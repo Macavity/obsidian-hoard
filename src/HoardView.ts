@@ -4,6 +4,7 @@ import type { DataManager } from './DataManager';
 import { DashboardTab } from './DashboardTab';
 import { ListTab } from './ListTab';
 import { ReadingTab } from './ReadingTab';
+import { GamesTab } from './GamesTab';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';
 
@@ -62,6 +63,13 @@ const TABS: TabDefinition[] = [
 		icon: 'book-open',
 		cls: 'hoard-reading-tab',
 		create: (ctx) => new ReadingTab(ctx.containerEl, ctx.plugin, ctx.plugin.readingDataManager),
+	},
+	{
+		name: 'games',
+		label: 'Games',
+		icon: 'gamepad-2',
+		cls: 'hoard-games-tab',
+		create: (ctx) => new GamesTab(ctx.containerEl, ctx.plugin, ctx.plugin.gameDataManager),
 	},
 ];
 
