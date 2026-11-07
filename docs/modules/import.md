@@ -33,7 +33,7 @@ types from `schema1Types.ts`.
 | Entry point | Called from | Does |
 |---|---|---|
 | `loadOwnOrWatchLog` | `LocalStore.load` in `main.ts` | adopts a WatchLog `data.json` while Hoard's is empty |
-| `migrateFromWatchLog` | `startVaultStorage` | base rename, data adoption, schema-1 conversion, widget fences; one summary Notice, plus an error Notice when the conversion failed |
+| `migrateFromWatchLog` | `startVaultStorage` | base rename, data adoption, schema-1 conversion, widget fences; a summary Notice when there is completed work to report, plus an error Notice when the conversion failed |
 | `watchLogRoot` | `startVaultStorage` | root folder for a pending schema-1 conversion |
 | `WATCHLOG_PLUGIN_IDS` | `warnIfWatchLogEnabled` | warns while the old plugin is still enabled |
 | `parseWatchLogBackup`, `restoreWatchLogBackup` | [backup](backup.md) | v1 to v3 export files → `importWatchLogData` |
