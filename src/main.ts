@@ -1,4 +1,4 @@
-import { Notice, Platform, Plugin, parseYaml, setIcon, stringifyYaml } from 'obsidian';
+import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, parseYaml, setIcon, stringifyYaml } from 'obsidian';
 import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, HoardPluginSettings, setActiveDateFormat } from './types';
 import { cardSizeToMinWidth } from './VirtualGrid';
 import type { CardStyleTab, HoardData } from './types';
@@ -17,6 +17,7 @@ import { HoardView, HOARD_VIEW_TYPE, TabName } from './HoardView';
 import { AddTitleModal } from './AddTitleModal';
 import { TitleDetailModal } from './TitleDetailModal';
 import { InsertWidgetModal } from './InsertWidgetModal';
+import { WidgetRenderer } from './WidgetRenderer';
 import { AirtimeTab } from './AirtimeTab';
 import { runAirtimeScheduler } from './airtimeScheduler';
 import { hasHoardKey } from './storage/baseFile';
@@ -84,6 +85,7 @@ export default class HoardPlugin extends Plugin {
 		(ref) => this.registerEvent(ref),
 	));
 	posterService!: PosterService;
+	widgetRenderer?: WidgetRenderer;
 
 	// runtime import progress state (not persisted)
 	importProgress: { current: number; total: number; cancel: () => void } | null = null;
@@ -143,6 +145,8 @@ export default class HoardPlugin extends Plugin {
 			return new HoardView(leaf, this, this.dataManager);
 		});
 
+		this.widgetRenderer = new WidgetRenderer(this, this.dataManager);
+
 		this.addRibbonIcon('tv', 'Hoard', () => {
 			void this.activateView();
 		});
@@ -169,6 +173,14 @@ export default class HoardPlugin extends Plugin {
 						new TitleDetailModal(this.app, this, fresh).open();
 					});
 				}).open();
+			},
+		});
+
+		this.addCommand({
+			id: 'insert-widget',
+			name: 'Insert widget',
+			editorCallback: (editor: Editor) => {
+				this.openWidgetPalette(editor);
 			},
 		});
 
@@ -200,6 +212,7 @@ export default class HoardPlugin extends Plugin {
 		this.dataManager.flushQueuedSaveSync();
 		const flushes = [this.readingDataManager?.flushPending(), this.gameDataManager?.flushPending()];
 		this.posterService?.destroy();
+		this.widgetRenderer?.cleanup();
 		this.index.stop();
 		this.shared.stop();
 		// local state last: the note flushes above may still touch it
@@ -481,6 +494,52 @@ export default class HoardPlugin extends Plugin {
 		return exists(choice) ? choice : firstAvailable;
 	}
 
+	private openWidgetPalette(editor: Editor): void {
+		const widgets = [
+			{ name: 'hoard-todo: Track a title (full)', id: 'hoard-todo' },
+			{ name: 'hoard-todo mini: Track a title (compact)', id: 'hoard-todo:mini' },
+			{ name: 'hoard-stat: watched: Time watched (mini)', id: 'hoard-stat:watched' },
+			{ name: 'hoard-stat: completed: Completed titles (mini)', id: 'hoard-stat:completed' },
+			{ name: 'hoard-stat: remaining: Time remaining (mini)', id: 'hoard-stat:remaining' },
+			{ name: 'hoard-stat: time: Watched + remaining (mini)', id: 'hoard-stat:time' },
+			{ name: 'hoard-upcoming: next: Next upcoming (mini)', id: 'hoard-upcoming:next' },
+			{ name: 'hoard-stat: time completed full: Time · Remaining · Completed card', id: 'hoard-stat:time completed full' },
+			{ name: 'hoard-now-next: Now Watching + Up Next card', id: 'hoard-now-next' },
+		];
+
+		new WidgetSelectModal(this.app, widgets, (selected) => {
+			if (selected.id === 'hoard-todo' || selected.id === 'hoard-todo:mini') {
+				const titles = this.dataManager.getTitles();
+				if (titles.length === 0) {
+					new Notice('No titles in your Hoard library yet.');
+					return;
+				}
+				const isMini = selected.id === 'hoard-todo:mini';
+				new InsertWidgetModal(this.app, titles, (title) => {
+					if (isMini) {
+						editor.replaceSelection(`\`\`\`hoard-todo\n${title.title}\nmini\n\`\`\``);
+					} else {
+						editor.replaceSelection(`\`\`\`hoard-todo\n${title.title}\n\`\`\``);
+					}
+				}).open();
+			} else if (selected.id === 'hoard-stat:watched') {
+				editor.replaceSelection('```hoard-stat\nwatched\n```');
+			} else if (selected.id === 'hoard-stat:completed') {
+				editor.replaceSelection('```hoard-stat\ncompleted\n```');
+			} else if (selected.id === 'hoard-stat:remaining') {
+				editor.replaceSelection('```hoard-stat\nremaining\n```');
+			} else if (selected.id === 'hoard-stat:time') {
+				editor.replaceSelection('```hoard-stat\ntime\n```');
+			} else if (selected.id === 'hoard-upcoming:next') {
+				editor.replaceSelection('```hoard-upcoming\nnext\n```');
+			} else if (selected.id === 'hoard-stat:time completed full') {
+				editor.replaceSelection('```hoard-stat\ntime completed full\n```');
+			} else if (selected.id === 'hoard-now-next') {
+				editor.replaceSelection('```hoard-now-next\n```');
+			}
+		}).open();
+	}
+
 	private async activateView(tab?: TabName): Promise<void> {
 		const { workspace } = this.app;
 
@@ -497,4 +556,24 @@ export default class HoardPlugin extends Plugin {
 		void workspace.revealLeaf(leaf);
 		if (tab && leaf.view instanceof HoardView) leaf.view.setActiveTab(tab);
 	}
+}
+
+// Widget selection modal
+
+interface WidgetItem { name: string; id: string; }
+
+class WidgetSelectModal extends FuzzySuggestModal<WidgetItem> {
+	private items: WidgetItem[];
+	private onSelect: (item: WidgetItem) => void;
+
+	constructor(app: App, items: WidgetItem[], onSelect: (item: WidgetItem) => void) {
+		super(app);
+		this.items = items;
+		this.onSelect = onSelect;
+		this.setPlaceholder('Select a widget to insert...');
+	}
+
+	getItems(): WidgetItem[] { return this.items; }
+	getItemText(item: WidgetItem): string { return item.name; }
+	onChooseItem(item: WidgetItem): void { this.onSelect(item); }
 }
