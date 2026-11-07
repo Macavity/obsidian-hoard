@@ -18,8 +18,8 @@ Obsidian knowledge lives in `.claude/skills/` (`obsidian-dev`, `obsidian-ops`, `
 
 ## Codebase wiki
 
-- `wiki/` is the source-grounded wiki of this codebase, maintained via the `codebase-wiki` skill. Before touching an unfamiliar area, read `wiki/OVERVIEW.md` and follow its links instead of re-exploring `src/`. Load pages on demand; the code stays the source of truth. Until the wiki exists, generate it with the skill once `src/` has real structure.
-- **At the end of every plan execution** (before the final commit), refresh the wiki: invoke the `codebase-wiki` skill in refresh mode (diff the last commit that touched `wiki/` against the working tree), update only affected pages, and commit the wiki together with the change. The freshness anchor is derived from git, so every code change lands with its wiki refresh in the same PR.
+- `docs/` is the source-grounded wiki of this codebase, maintained via the `codebase-wiki` skill. Before touching an unfamiliar area, read `docs/index.md` and follow its links instead of re-exploring `src/`. Load pages on demand; the code stays the source of truth. `docs/values.md` is hand-written and never regenerated.
+- **At the end of every plan execution** (before the final commit), refresh the wiki: invoke the `codebase-wiki` skill in refresh mode (it diffs each page's `source_commit` against the working tree), update only affected pages, and commit the wiki together with the change. The freshness anchor is derived from git, so every code change lands with its wiki refresh in the same PR.
 
 ## Core Policies
 - **NEVER speak as the human on GitHub.** `gh` and `git` are authenticated as the repository owner, so anything an agent writes through them carries their name and avatar. An "automated by …" footer does not make it acceptable.

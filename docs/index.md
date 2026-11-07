@@ -1,0 +1,102 @@
+---
+title: Hoard wiki
+description: Router into the source-grounded wiki of the Hoard Obsidian plugin; pick one page by the question it answers.
+profile:
+  depth: standard
+  coverage:
+    - src/
+  exclusions:
+    - node_modules/
+    - dist/
+    - coverage/
+    - hoard-test-vault/
+    - pnpm-lock.yaml
+    - versions.json
+    - "*.test.ts"
+    - scripts/
+    - test/
+source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+---
+
+# Context
+
+Hoard is an Obsidian plugin: a media library for movies, TV, anime, books, manga and games, stored
+as Markdown notes with properties in the user's vault. A sidebar view with eight tabs, code-block
+widgets inside notes, optional API enrichment, and a one-time import from its predecessor WatchLog.
+Read [values](values.md) first; every rule below serves one of them.
+
+- **Entry**: one note = one title, book, manga or game; its id is the note path below the root.
+- **Root**: the folder holding `Hoard.base`; type folders and `Books/`, `Manga/`, `Games/` sit below it.
+- **Properties**: the YAML block at the top of a note; the only place entry fields live.
+- **Base**: `Hoard.base`, whose `hoard:` block carries the shared vocabulary; nothing else syncs settings.
+- **Cache**: `data.json`, device-local; API keys, fetched data, UI state.
+- **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the only writers of notes.
+- **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
+- **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
+- **Maybe**: a note with `maybe: true`, considered but not in the library.
+- **Airtime**: a schedule on a note (`airtime*` properties) or a derived "to be released" card.
+
+```mermaid
+flowchart TD
+  main[main.ts] --> View[HoardView: 8 tabs]
+  main --> Widgets[WidgetRenderer]
+  View --> Managers[Data / Reading / Game managers]
+  Widgets --> Managers
+  Managers --> API[ApiService, PosterService]
+  Managers --> Storage[EntryIndex, codecs, stores]
+  Storage --> Vault[(notes, Hoard.base, History.md)]
+  Storage --> Local[(data.json)]
+  main --> Import[migration/watchlog]
+  Import --> Storage
+```
+
+# Types
+
+The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow`). No additions.
+
+# Architecture
+
+- [Overview](architecture/overview.md): which layers exist, who may depend on whom, and what the `hoard-data-changed` event ties together.
+- [Storage](architecture/storage.md): where each piece of state lives (notes, base, History.md, data.json) and how reads and writes propagate.
+- [API layer](architecture/api-layer.md): which services exist, how errors and rate limits are handled, and how fetched data reaches cache and notes.
+- [UI kit](architecture/ui-kit.md): how `HoardView` hosts tabs and which shared building blocks tabs and modals compose.
+
+# Modules
+
+- [Watchlist](modules/watchlist.md): what the movies/TV/anime domain does, who owns what, and where to change a title behaviour.
+- [Reading](modules/reading.md): how books and manga are modelled, written, imported and exported.
+- [Games](modules/games.md): how games are modelled, how Steam sync and cover resolution work.
+- [Upcoming](modules/upcoming.md): how the airtime tab derives its entries, counts what is due and writes schedules back.
+- [Custom lists](modules/custom-lists.md): how user-defined tables are stored as notes and edited inline.
+- [Drafts](modules/drafts.md): how tagged lines in vault notes become add candidates and how the badge is counted.
+- [Dashboard](modules/dashboard.md): what the dashboard computes and from which managers.
+- [Log](modules/log.md): what the activity log records and how the Log tab reads it.
+- [Widgets](modules/widgets.md): how the `hoard-*` code blocks render and stay live.
+- [Settings](modules/settings.md): how the settings tab is laid out, what syncs, and how to add a setting.
+- [Backup](modules/backup.md): the backup file format, the two export variants and the restore contract.
+- [Import](modules/import.md): how data from another tracker (today WatchLog) enters the vault, and where a new source goes.
+
+# Flows
+
+- [Startup](flows/startup.md): from plugin load to a ready library, including fresh install and second device.
+- [Entry write](flows/entry-write.md): from a user edit to the note on disk without a double render.
+- [Add title](flows/add-title.md): from the search box to a new note, with API routing and duplicate guard.
+- [Airtime notifications](flows/airtime-notifications.md): how the minute scheduler produces notices, badges and the status bar count.
+- [Backup and restore](flows/backup-restore.md): what a backup holds, which copy loses the keys, and the restore order.
+- [WatchLog import](flows/watchlog-import.md): the one-time migration step by step and why a rerun is a no-op.
+
+# Concepts
+
+- [Entry id](concepts/entry-id.md): what an id is, how it maps to a path, what a rename does.
+- [Shared vs local](concepts/shared-vs-local.md): which settings sync through the base and which stay in data.json.
+- [Entry cache](concepts/entry-cache.md): what data.json keeps per entry and how note and cache merge.
+- [External id](concepts/external-id.md): the `externalId` grammar and how it is derived from links and API ids.
+- [Episode range](concepts/episode-range.md): the `S01E01-E12` notation and its mapping to absolute episodes.
+- [Maybe title](concepts/maybe-title.md): what a Maybe note is and how it is promoted.
+- [Airtime](concepts/airtime.md): manual schedules versus derived cards and the acknowledgement rule.
+- [Baseline](concepts/baseline.md): how a UI copy remembers its stored state so a write touches only its own changes.
+- [History line](concepts/history-line.md): the one-line-per-event format of History.md.
+
+Existing documentation this wiki links instead of repeating: [README](../README.md),
+[CONTRIBUTING](../CONTRIBUTING.md), [CLAUDE.md](../CLAUDE.md) and the project skill at
+`.claude/skills/project/SKILL.md`.
