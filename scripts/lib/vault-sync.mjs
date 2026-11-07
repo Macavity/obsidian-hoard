@@ -22,10 +22,10 @@ function removeStale(vault) {
 	}
 }
 
-/** Makes `vault` contain exactly the files of `fixtures`, except local state. Both must be a `test-vault` directory. */
+/** Makes `vault` contain exactly the files of `fixtures`, except local state. Both must be a `hoard-test-vault` directory. */
 export function syncVault(fixtures, vault) {
 	for (const dir of [fixtures, vault]) {
-		if (basename(dir) !== "test-vault") throw new Error(`refusing to sync ${dir}: not a test-vault directory`);
+		if (basename(dir) !== "hoard-test-vault") throw new Error(`refusing to sync ${dir}: not a hoard-test-vault directory`);
 		if (!existsSync(dir)) throw new Error(`${dir} does not exist`);
 	}
 	removeStale(vault);

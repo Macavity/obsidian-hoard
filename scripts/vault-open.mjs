@@ -1,4 +1,4 @@
-// Opens test-vault in Obsidian (one-time registration: confirm the dialog).
+// Opens hoard-test-vault in Obsidian (one-time registration: confirm the dialog).
 import { execFileSync } from "node:child_process";
 import { VAULT_PATH } from "./lib/cli.mjs";
 

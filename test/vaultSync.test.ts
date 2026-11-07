@@ -26,8 +26,8 @@ describe("isLocalState", () => {
 describe("syncVault", () => {
   function setup() {
     const root = mkdtempSync(join(tmpdir(), "ib-sync-"));
-    const fixtures = join(root, "src", "test-vault");
-    const vault = join(root, "dst", "test-vault");
+    const fixtures = join(root, "src", "hoard-test-vault");
+    const vault = join(root, "dst", "hoard-test-vault");
     file(fixtures, "Teams.base", "new");
     file(fixtures, "Teams/Alpha.md");
     file(fixtures, ".obsidian/app.json");
@@ -55,9 +55,9 @@ describe("syncVault", () => {
     expect(existsSync(join(vault, ".trash/gone.md"))).toBe(true);
   });
 
-  it("refuses directories that are not a test-vault", () => {
+  it("refuses directories that are not a hoard-test-vault", () => {
     const { root, fixtures } = setup();
-    expect(() => syncVault(fixtures, join(root, "dst"))).toThrow(/not a test-vault/);
-    expect(() => syncVault(fixtures, join(root, "missing", "test-vault"))).toThrow(/does not exist/);
+    expect(() => syncVault(fixtures, join(root, "dst"))).toThrow(/not a hoard-test-vault/);
+    expect(() => syncVault(fixtures, join(root, "missing", "hoard-test-vault"))).toThrow(/does not exist/);
   });
 });

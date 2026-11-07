@@ -10,7 +10,7 @@ Obsidian plugin (id `hoard`). Package manager: pnpm.
 - `pnpm quality` – fallow full-repo analysis (dead code, dupes, complexity); must pass before a PR
 - `pnpm quality:audit` – fallow audit of changed files vs `main`; also runs in CI and in the commit/push gate
 - `pnpm check` – typecheck + lint + test + quality
-- `pnpm smoke` – integration check against `test-vault/` in a running Obsidian (see CONTRIBUTING.md)
+- `pnpm smoke` – integration check against `hoard-test-vault/` in a running Obsidian (see CONTRIBUTING.md)
 - Any fallow exception (`thresholdOverrides`, `fallow-ignore` comments, suppressions) needs the user's explicit approval first. Never add one on your own.
 
 ## Skills
@@ -36,7 +36,7 @@ Who opens the PR decides the body. Check once with `gh api user -q .login`.
 **Repository owner (`Macavity`)** – the PR carries the owner's name and nobody else reviews it; local verification already happened. Body, nothing more:
 - **What changed** – behaviour from the user's point of view, one paragraph.
 - **Why** – one to three sentences.
-- **Screenshot** of the visible change, taken in the test vault with `obsidian vault="test-vault" dev:screenshot path=<file>`. Push it as `pr-<branch>.png` to the orphan branch `screenshots` (never to `main`) and embed the `raw.githubusercontent.com` URL. Omit with a one-line note only for changes without UI.
+- **Screenshot** of the visible change, taken in the test vault with `obsidian vault="hoard-test-vault" dev:screenshot path=<file>`. Push it as `pr-<branch>.png` to the orphan branch `screenshots` (never to `main`) and embed the `raw.githubusercontent.com` URL. Omit with a one-line note only for changes without UI.
 - One line linking the wiki pages changed in this PR; they hold the decisions. No "how to verify" and no "notable decisions" section.
 - Known, untouched problems may follow as a final line.
 

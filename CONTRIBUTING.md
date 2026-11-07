@@ -15,19 +15,19 @@ Build artifacts (`main.js`, `manifest.json`, `styles.css`) are produced in `dist
 ## Testing
 
 - Unit: `pnpm test` (vitest + happy-dom, `obsidian` mocked in `test/__mocks__/obsidian.ts`). `pnpm check` = typecheck + lint + test + quality.
-- Integration: `pnpm smoke` runs against the versioned vault `test-vault/`, never against a working vault. All CLI calls go through `scripts/lib/cli.mjs`, which always passes `vault="test-vault"` and aborts unless that vault is registered at the main checkout's `test-vault` (override with `HOARD_TEST_VAULT`). Git worktrees share that vault: `vault:reset` mirrors the worktree's fixtures into it and `vault:link-test` points the plugin symlink at the worktree's `dist/`.
+- Integration: `pnpm smoke` runs against the versioned vault `hoard-test-vault/`, never against a working vault. All CLI calls go through `scripts/lib/cli.mjs`, which always passes `vault="hoard-test-vault"` and aborts unless that vault is registered at the main checkout's `hoard-test-vault` (override with `HOARD_TEST_VAULT`). Git worktrees share that vault: `vault:reset` mirrors the worktree's fixtures into it and `vault:link-test` points the plugin symlink at the worktree's `dist/`.
 
 Test vault setup (once):
 
-1. `pnpm vault:link-test` creates the symlink `test-vault/.obsidian/plugins/hoard` -> `dist/` (a symlink, not a Finder alias).
+1. `pnpm vault:link-test` creates the symlink `hoard-test-vault/.obsidian/plugins/hoard` -> `dist/` (a symlink, not a Finder alias).
 2. `pnpm vault:open`, confirm "Open folder as vault" in Obsidian, turn off Restricted mode and make sure `hoard` is enabled.
 3. `pnpm dev` in one terminal; `pnpm reload` after each rebuild.
 
-CLI calls time out after 30 s; keep the test-vault window visible while running `pnpm smoke`, otherwise Chromium throttling causes timeouts. If Obsidian hangs, run `obsidian vault="test-vault" reload` and `pnpm vault:reset`.
+CLI calls time out after 30 s; keep the hoard-test-vault window visible while running `pnpm smoke`, otherwise Chromium throttling causes timeouts. If Obsidian hangs, run `obsidian vault="hoard-test-vault" reload` and `pnpm vault:reset`.
 
-`pnpm vault:reset` restores `test-vault/` to `HEAD`, removes untracked files and, from a worktree, mirrors the result into the registered vault (the plugin symlink, themes, `workspace*.json`, cache and `.trash` stay). Change fixtures only in a commit.
+`pnpm vault:reset` restores `hoard-test-vault/` to `HEAD`, removes untracked files and, from a worktree, mirrors the result into the registered vault (the plugin symlink, themes, `workspace*.json`, cache and `.trash` stay). Change fixtures only in a commit.
 
-Themes: `pnpm vault:theme <label|default>` switches the test vault to a theme from `scripts/themes.json` (downloaded on first use into `test-vault/.obsidian/themes/`, not versioned). Check any change to `styles.css` against a few of them, light and dark.
+Themes: `pnpm vault:theme <label|default>` switches the test vault to a theme from `scripts/themes.json` (downloaded on first use into `hoard-test-vault/.obsidian/themes/`, not versioned). Check any change to `styles.css` against a few of them, light and dark.
 
 To install the build into a real vault, `pnpm vault:link [vault-name]` copies `dist/` into that vault's plugin folder.
 

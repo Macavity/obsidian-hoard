@@ -38,7 +38,7 @@ Entries, groups, progress, ratings live in note properties (frontmatter). `<root
 
 - `pnpm build` — tsc + bundle. `pnpm test`. `pnpm lint` — eslint plus dead-CSS check: every class in `styles.css` must appear literally in `src/`, so no template-string class names (`hoard-${x}`); write the full class names.
 - `pnpm quality` / `quality:audit` — fallow; no exceptions or suppressions without user approval.
-- `pnpm smoke`, `pnpm mobile:smoke` — need running Obsidian with `test-vault/`.
+- `pnpm smoke`, `pnpm mobile:smoke` — need running Obsidian with `hoard-test-vault/`.
 
 ## Known debt
 

@@ -1,6 +1,6 @@
 // Installs the build output dist/ into a vault's .obsidian/plugins/hoard. Idempotent.
 // Usage:
-//   node scripts/vault-link.mjs --test            -> the registered test-vault, symlinked to this checkout (pnpm vault:link-test)
+//   node scripts/vault-link.mjs --test            -> the registered hoard-test-vault, symlinked to this checkout (pnpm vault:link-test)
 //   node scripts/vault-link.mjs [vault-name]      -> a vault registered in Obsidian, gets a copy of dist/ (Obsidian Sync skips symlinks);
 //                                                    without a name, pick from a list
 import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, realpathSync, symlinkSync, unlinkSync } from "node:fs";
@@ -38,7 +38,7 @@ async function askVault(vaults) {
 
 async function pickVault() {
 	const vaults = listVaults().filter((v) => resolve(v.path) !== resolve(VAULT_PATH));
-	if (vaults.length === 0) throw new Error("No vaults registered in Obsidian (besides test-vault).");
+	if (vaults.length === 0) throw new Error("No vaults registered in Obsidian (besides hoard-test-vault).");
 	if (wanted) {
 		const hit = findByName(vaults, wanted);
 		if (hit) return hit;
