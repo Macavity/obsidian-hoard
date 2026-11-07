@@ -6,12 +6,41 @@
     "esbuild.config.mjs",
     "version-bump.mjs"
   ],
+  "typeAware": {
+    "enabled": true
+  },
   "usedClassMembers": [
+    {
+      "extends": "FuzzySuggestModal",
+      "members": [
+        "getItems",
+        "getItemText",
+        "onChooseItem"
+      ]
+    },
     {
       "extends": "PluginSettingTab",
       "members": [
         "display",
+        "hide",
         "getSettingDefinitions"
+      ]
+    },
+    {
+      "extends": "ItemView",
+      "members": [
+        "getViewType",
+        "getDisplayText",
+        "getIcon",
+        "onOpen",
+        "onClose"
+      ]
+    },
+    {
+      "extends": "Modal",
+      "members": [
+        "onOpen",
+        "onClose"
       ]
     }
   ],

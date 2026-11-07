@@ -56,5 +56,8 @@
 	"homepage": "https://github.com/Macavity/obsidian-hoard#readme",
 	"engines": {
 		"node": ">=20"
+	},
+	"dependencies": {
+		"fuse.js": "^7.3.0"
 	}
 }

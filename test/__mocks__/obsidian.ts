@@ -1,6 +1,7 @@
+import { vi } from "vitest";
 import { parse, stringify } from "yaml";
 
-type Handler = (...args: unknown[]) => unknown;
+export type Handler = (...args: unknown[]) => unknown;
 
 export class Events {
 	private handlers = new Map<string, Set<Handler>>();
@@ -64,11 +65,98 @@ export class Plugin extends Component {
 	}
 }
 
-export class TFile {
+export function normalizePath(path: string): string {
+	return path
+		.replace(/\\/g, "/")
+		.replace(/\/+/g, "/")
+		.replace(/^\/|\/$/g, "");
+}
+
+export class TAbstractFile {
 	path = "";
 	name = "";
+	parent: TFolder | null = null;
+}
+
+export class TFile extends TAbstractFile {
 	basename = "";
 	extension = "";
+	stat = { ctime: 0, mtime: 0, size: 0 };
+}
+
+export class TFolder extends TAbstractFile {
+	children: TAbstractFile[] = [];
+}
+
+/** Network stand-in; tests set the response with mockResolvedValue and read the sent params from mock.calls. */
+export const requestUrl = vi.fn(
+	(_params: unknown): Promise<{ status: number; text: string; json: unknown }> =>
+		Promise.resolve({ status: 200, text: "{}", json: {} }),
+);
+
+/** Trailing-edge debounce like Obsidian's; `resetTimer` restarts the wait on every call. */
+export function debounce<T extends unknown[]>(
+	cb: (...args: T) => unknown,
+	timeout = 0,
+	resetTimer = false,
+): ((...args: T) => void) & { cancel(): void; run(): void } {
+	let timer: ReturnType<typeof setTimeout> | null = null;
+	let pending: T | null = null;
+	const run = (): void => {
+		if (timer !== null) clearTimeout(timer);
+		timer = null;
+		const args = pending;
+		pending = null;
+		if (args) cb(...args);
+	};
+	const fn = (...args: T): void => {
+		pending = args;
+		if (timer !== null && !resetTimer) return;
+		if (timer !== null) clearTimeout(timer);
+		timer = setTimeout(run, timeout);
+	};
+	return Object.assign(fn, {
+		cancel(): void {
+			if (timer !== null) clearTimeout(timer);
+			timer = null;
+			pending = null;
+		},
+		run,
+	});
+}
+
+export class WorkspaceLeaf {
+	view: unknown = null;
+	setViewState(state: { type: string; active?: boolean }): Promise<void> {
+		this.viewState = state;
+		return Promise.resolve();
+	}
+	viewState: { type: string; active?: boolean } | null = null;
+	detach(): void {}
+}
+
+export abstract class ItemView extends Component {
+	app: unknown = {};
+	containerEl: HTMLElement;
+	contentEl: HTMLElement;
+	constructor(public leaf: WorkspaceLeaf) {
+		super();
+		this.containerEl = document.createElement("div");
+		this.containerEl.appendChild(document.createElement("div"));
+		this.contentEl = this.containerEl.appendChild(document.createElement("div"));
+		leaf.view = this;
+	}
+	abstract getViewType(): string;
+	abstract getDisplayText(): string;
+	getIcon(): string {
+		return "";
+	}
+	onOpen(): Promise<void> {
+		return Promise.resolve();
+	}
+	onClose(): Promise<void> {
+		return Promise.resolve();
+	}
 }
 
 export class Notice {
@@ -101,7 +189,7 @@ export class Modal {
 	}
 }
 
-interface MockMatch<T> {
+export interface MockMatch<T> {
 	item: T;
 	match: { score: number; matches: [number, number][] };
 }

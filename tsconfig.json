@@ -1,16 +1,15 @@
 {
 	"compilerOptions": {
-		"baseUrl": "src",
 		"inlineSourceMap": true,
 		"inlineSources": true,
 		"module": "ESNext",
-		"target": "ES6",
+		"target": "ES2017",
 		"allowJs": true,
 		"resolveJsonModule": true,
 		"noImplicitAny": true,
 		"noImplicitThis": true,
 		"noImplicitReturns": true,
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"noUncheckedIndexedAccess": true,
 		"isolatedModules": true,
 		"strictNullChecks": true,
@@ -18,9 +17,12 @@
 		"allowSyntheticDefaultImports": true,
 		"useUnknownInCatchVariables": true,
 		"lib": [
-      "DOM",
-      "ES2022"
-    ]
+			"DOM",
+			"ES5",
+			"ES6",
+			"ES2017",
+			"ES2022"
+		]
 	},
 	"include": [
 		"src/**/*.ts",
