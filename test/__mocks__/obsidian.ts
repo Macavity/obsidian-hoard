@@ -160,7 +160,11 @@ export abstract class ItemView extends Component {
 }
 
 export class Notice {
-	constructor(public message?: string | DocumentFragment, public duration?: number) {}
+	/** Messages of every string notice shown, for assertions. */
+	static shown: string[] = [];
+	constructor(public message?: string | DocumentFragment, public duration?: number) {
+		if (typeof message === "string") Notice.shown.push(message);
+	}
 	hide(): void {}
 }
 
