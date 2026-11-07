@@ -9,16 +9,21 @@ knowledge_base:
 reviews:
   profile: chill
   path_filters:
-    - "!watchlog-test-vault/**"
+    - "!hoard-test-vault/**"
     - "!screenshots/**"
   path_instructions:
     - path: "src/**"
       instructions: |
         User data lives in vault notes that several devices edit through sync. Treat any path
-        that can lose or corrupt a note, its properties, History.md or WatchLog.base as a
+        that can lose or corrupt a note, its properties, History.md or Hoard.base as a
         blocking bug: concurrent edits from another device, malformed YAML, files appearing or
         disappearing mid-operation, keys dropped on re-encode. Also report mobile-only breakage
         (no Node or Electron APIs, layout below 600px). Prefer simple, readable fixes.
+    - path: "src/migration/watchlog/**"
+      instructions: |
+        One-time migration of vaults that were used with the WatchLog plugin. This is the only
+        module that may know WatchLog names (watchlog: key, WatchLog.base, wl-* code blocks,
+        watchlog-sync data.json). Report any WatchLog knowledge that leaks outside this folder.
     - path: "scripts/**"
       instructions: |
         Local dev tooling, run only by the maintainer on own machine.
