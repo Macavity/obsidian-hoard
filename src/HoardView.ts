@@ -7,6 +7,7 @@ import { AirtimeTab } from './AirtimeTab';
 import { ReadingTab } from './ReadingTab';
 import { GamesTab } from './GamesTab';
 import { CustomListsTab } from './CustomListsTab';
+import { DraftsTab } from './DraftsTab';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';
 
@@ -92,6 +93,17 @@ const TABS: TabDefinition[] = [
 		icon: 'list',
 		cls: 'hoard-custom-lists',
 		create: (ctx) => new CustomListsTab(ctx.containerEl, ctx.plugin, ctx.dataManager),
+	},
+	{
+		name: 'drafts',
+		label: 'Drafts',
+		icon: 'square-pen',
+		cls: 'hoard-drafts',
+		create: (ctx) => new DraftsTab(ctx.containerEl, ctx.plugin, ctx.dataManager, ctx.setBadge),
+		badge: {
+			count: (plugin, dataManager) => DraftsTab.computePendingCount(plugin, dataManager),
+			refreshOn: 'metadata-resolved',
+		},
 	},
 ];
 
