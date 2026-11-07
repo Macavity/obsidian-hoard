@@ -2,6 +2,8 @@ import { normalizePath } from 'obsidian';
 import type { EntryKind } from './storageTypes';
 
 const BASE_FILE = 'Hoard.base';
+/** Base file name of WatchLog Sync; an existing one is kept and used in place. */
+const LEGACY_BASE_FILE = 'WatchLog.base';
 const HISTORY_FILE = 'History.md';
 export const FOLDERS = { book: 'Books', manga: 'Manga', game: 'Games', customLists: 'CustomLists' } as const;
 
@@ -39,7 +41,7 @@ export class VaultLayout {
 		this.root = normalizePath(root);
 	}
 
-	/** Root = folder of the first (path-sorted) `.base` with a `hoard:` key. */
+	/** Root = folder of the first (path-sorted) `.base` with a `hoard:` (or legacy `watchlog:`) key. */
 	static findRoot(bases: { path: string; hasHoardKey: boolean }[]): string | null {
 		const first = bases.filter((b) => b.hasHoardKey).map((b) => b.path).sort()[0];
 		if (first === undefined) return null;
@@ -47,7 +49,10 @@ export class VaultLayout {
 		return i < 0 ? '' : first.slice(0, i);
 	}
 
+	/** Where a new base is created. */
 	get basePath(): string { return this.join(BASE_FILE); }
+	/** Candidate base files in lookup order: the own one, then a legacy WatchLog Sync one. */
+	get basePaths(): string[] { return [this.basePath, this.join(LEGACY_BASE_FILE)]; }
 	get historyPath(): string { return this.join(HISTORY_FILE); }
 	get customListsFolder(): string { return this.join(FOLDERS.customLists); }
 
