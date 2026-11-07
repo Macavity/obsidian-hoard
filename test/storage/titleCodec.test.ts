@@ -26,11 +26,12 @@ describe('titleCodec', () => {
     expect(out).not.toHaveProperty('seasons');
     expect(splitCache(entry).seasons).toEqual(seasons); // cache seasons carry no skippedEpisodes (those live in the note)
   });
-  it('drops an empty priority and reads a missing one back as no priority', () => {
+  it('reads a missing priority as Medium and keeps an explicit empty one', () => {
+    expect(decodeTitle('TV Show/P', { title: 'P', type: 'TV Show' }, undefined).entry.priority).toBe('Medium');
     const { entry } = decodeTitle('TV Show/P', { title: 'P', type: 'TV Show', priority: 'High' }, undefined);
     entry.priority = '';
     const out = encodeTitle(entry, 0);
-    expect(out).not.toHaveProperty('priority');
+    expect(out.priority).toBe('');
     expect(decodeTitle('TV Show/P', out, undefined).entry.priority).toBe('');
   });
   it('writes seasons only on override', () => {

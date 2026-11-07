@@ -83,18 +83,18 @@ describe('episode completion rules', () => {
 		const actions = (log: ReturnType<typeof vi.fn>): string[] =>
 			log.mock.calls.map((c) => (c[1] as { action: string }).action);
 
-		it('markEpisodeWatched logs a completed line and drops the priority key', async () => {
+		it('markEpisodeWatched logs a completed line and clears the priority', async () => {
 			const { dm, f } = await setup(NOTE);
 			const log = vi.fn(() => Promise.resolve());
 			dm.setHistoryManager({ log } as never);
 			await dm.markEpisodeWatched(ID, 1, true);
 			await dm.markEpisodeWatched(ID, 2, true);
 			expect(actions(log)).toEqual(['watched', 'watched', 'completed']);
-			expect(f.files.get('W/TV Show/S.md')).not.toMatch(/priority/);
+			expect(f.files.get('W/TV Show/S.md')).toMatch(/priority: ""/);
 			expect(dm.getTitle(ID)!.priority).toBe('');
 		});
 
-		it('applyEpisodeWatchedToggle logs a completed line and drops the priority key', async () => {
+		it('applyEpisodeWatchedToggle logs a completed line and clears the priority', async () => {
 			const { dm, f } = await setup(NOTE);
 			const log = vi.fn(() => Promise.resolve());
 			dm.setHistoryManager({ log } as never);
@@ -102,7 +102,7 @@ describe('episode completion rules', () => {
 			dm.applyEpisodeWatchedToggle(ID, 2, true);
 			await dm.flushPendingSave();
 			expect(actions(log)).toEqual(['watched', 'watched', 'completed']);
-			expect(f.files.get('W/TV Show/S.md')).not.toMatch(/priority/);
+			expect(f.files.get('W/TV Show/S.md')).toMatch(/priority: ""/);
 		});
 
 		it('markSeasonWatched logs a completed line', async () => {

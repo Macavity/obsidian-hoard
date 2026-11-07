@@ -152,8 +152,8 @@ export function decodeTitle(id: string, fm: Record<string, unknown>, cache: Entr
 		title: r.str('title') ?? id.split('/').pop() ?? id,
 		type: r.str('type') ?? 'TV Show',
 		status,
-		// absent key = no priority (encodeTitle drops an empty one)
-		priority: r.str('priority') ?? '',
+		// absent key = Medium; an explicit empty value means no priority
+		priority: r.str('priority') ?? 'Medium',
 		review: r.str('review') ?? '',
 		rating: r.num('rating') ?? 0,
 		notes: '',
@@ -311,7 +311,7 @@ export function encodeTitle(t: HoardTitle, progress: number, seasonsPending = fa
 	out.title = t.title;
 	out.type = t.type;
 	out.status = t.status;
-	if (t.priority) out.priority = t.priority;
+	out.priority = t.priority;
 	if (t.review) out.review = t.review;
 	out.rating = t.rating;
 	out.progress = `${progress}%`;
