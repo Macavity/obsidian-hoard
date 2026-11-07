@@ -1,0 +1,10 @@
+{
+	"id": "hoard",
+	"name": "Hoard",
+	"version": "0.0.1",
+	"minAppVersion": "1.11.0",
+	"description": "Hoard plugin for Obsidian.",
+	"author": "Alexander Pape",
+	"authorUrl": "https://github.com/apape",
+	"isDesktopOnly": false
+}
