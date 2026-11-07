@@ -6,7 +6,7 @@ import globals from "globals";
 
 export default defineConfig([
   {
-    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "scripts/**", ".ref/**"]
+    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "vitest.config.ts", "scripts/**", ".ref/**", "spike/**", ".claude/**"]
   },
   // obsidianmd recommended rules require type info, so only apply to TS files
   ...obsidianmd.configs.recommended.map((config) =>
@@ -52,10 +52,6 @@ export default defineConfig([
       "@typescript-eslint/no-empty-function": "off",
       "no-prototype-builtins": "off",
       "@typescript-eslint/no-misused-promises": ["error",{"checksVoidReturn":{"attributes":false,"properties":false,"returns":false,"variables":false}}],
-      // Disable sample code rules for template repository
-      // These are intentional placeholder names and sample code that users should customize
-      "obsidianmd/sample-names": "off",
-      "obsidianmd/no-sample-code": "off",
       // Console rules: Match Obsidian bot requirements (only warn/error/debug allowed)
       "no-console": ["error", { "allow": ["warn", "error", "debug"] }],
       // Require await in async functions (matches Obsidian bot)
@@ -82,5 +78,12 @@ export default defineConfig([
       "obsidianmd/rule-custom-message": "off",
       "no-console": "off"
     }
+  },
+  {
+    // Tests run in Node/happy-dom, not in the plugin sandbox: obsidianmd rules off.
+    files: ["test/**/*.ts"],
+    rules: Object.fromEntries(
+      Object.keys(obsidianmd.rules).map((name) => [`obsidianmd/${name}`, "off"]),
+    ),
   },
 ]);

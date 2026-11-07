@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting, SettingDefinitionItem } from "obsidian";
-import HoardPlugin from "./main";
+import type HoardPlugin from "./main";
 
 export interface HoardSettings {
 	mySetting: string;

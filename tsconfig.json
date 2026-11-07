@@ -6,11 +6,11 @@
 		"module": "ESNext",
 		"target": "ES6",
 		"allowJs": true,
+		"resolveJsonModule": true,
 		"noImplicitAny": true,
 		"noImplicitThis": true,
 		"noImplicitReturns": true,
 		"moduleResolution": "node",
-		"importHelpers": true,
 		"noUncheckedIndexedAccess": true,
 		"isolatedModules": true,
 		"strictNullChecks": true,
@@ -19,10 +19,12 @@
 		"useUnknownInCatchVariables": true,
 		"lib": [
       "DOM",
-      "ES2020"
+      "ES2022"
     ]
 	},
 	"include": [
-		"src/**/*.ts"
+		"src/**/*.ts",
+		"test/**/*.ts",
+		"vitest.config.ts"
 	]
 }

@@ -1,7 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from 'node:module';
-import { existsSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, watch } from "fs";
 
 const banner =
 `/*
@@ -26,8 +26,24 @@ if (!hasSrcMain && !hasRootMain) {
 // Set entry point based on what exists
 const entryPoint = hasSrcMain ? "src/main.ts" : "main.ts";
 
-// Always build to root for simplicity
-const outfile = "main.js";
+// Everything Obsidian loads goes to dist/, so a vault links just that folder
+const outdir = "dist";
+const outfile = `${outdir}/main.js`;
+const staticFiles = ["manifest.json", "styles.css"];
+
+function copyStatic(file) {
+	if (existsSync(file)) copyFileSync(file, `${outdir}/${file}`);
+}
+
+const copyStaticPlugin = {
+	name: "copy-static",
+	setup(build) {
+		build.onEnd(() => {
+			mkdirSync(outdir, { recursive: true });
+			staticFiles.forEach(copyStatic);
+		});
+	},
+};
 
 // Production builds must be reproducible. An inline sourcemap embeds the
 // build machine's absolute file paths into main.js, so CI and the Obsidian
@@ -66,6 +82,7 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: outfile,
 	minify: false,
+	plugins: [copyStaticPlugin],
 });
 
 // Check if this is a one-time build or watch mode
@@ -77,13 +94,10 @@ if (isOneTimeBuild) {
 	// Production build: build once and exit
 	await context.rebuild();
 	console.log("\n✓ Build complete!");
-	console.log("📦 Release files:");
+	console.log(`📦 Release files in ${outdir}/:`);
 	console.log("   - main.js");
-	if (existsSync("manifest.json")) {
-		console.log("   - manifest.json");
-	}
-	if (existsSync("styles.css")) {
-		console.log("   - styles.css");
+	for (const f of staticFiles) {
+		if (existsSync(f)) console.log(`   - ${f}`);
 	}
 	console.log("\n💡 Upload these files to GitHub releases\n");
 	await context.dispose();
@@ -91,7 +105,11 @@ if (isOneTimeBuild) {
 } else {
 	// Development mode: watch for changes
 	console.log("\n✓ Development build running in watch mode");
-	console.log("📝 Building to main.js in root");
+	console.log(`📝 Building to ${outdir}/`);
 	console.log("💡 For production builds, run: pnpm build\n");
 	await context.watch();
+	// esbuild only watches imported files; keep the copies in sync by hand
+	for (const f of staticFiles) {
+		if (existsSync(f)) watch(f, () => copyStatic(f));
+	}
 }

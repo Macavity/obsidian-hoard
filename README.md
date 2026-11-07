@@ -11,7 +11,7 @@ pnpm build   # typecheck + production build
 pnpm lint
 ```
 
-Copy `main.js`, `manifest.json` and `styles.css` into `<vault>/.obsidian/plugins/hoard/` or symlink the repo there.
+`pnpm check` runs typecheck, lint, unit tests and the fallow quality analysis. Build output lands in `dist/`; `pnpm vault:link` installs it into a vault. See CONTRIBUTING.md for the test vault and smoke tests.
 
 ## Release
 

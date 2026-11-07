@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+
+  fallow:
+    name: Code quality (fallow)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history: audit compares the PR against its base commit.
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      # Dependency findings need node_modules; the action reads the fallow
+      # version to install from the devDependency in package.json.
+      - run: pnpm install --frozen-lockfile
+      # Coverage feeds fallow's CRAP scores (health.coverage in .fallowrc.json).
+      - run: pnpm test
+      # Pull requests: `fallow audit` gates only findings the PR introduces and
+      # posts a sticky summary comment. Pushes to main: full analysis with the
+      # health score; any finding fails the job because the repo is kept clean.
+      - uses: fallow-rs/fallow@v3
+        with:
+          command: ${{ github.event_name == 'pull_request' && 'audit' || '' }}
+          comment: ${{ github.event_name == 'pull_request' }}
+          score: true

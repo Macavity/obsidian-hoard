@@ -2,7 +2,7 @@
 
 /**
  * ESLint wrapper that adds helpful success messages
- * Also checks for undescribed eslint-disable comments (mimics Obsidian bot)
+ * Also checks eslint-disable directives (mimics Obsidian bot)
  */
 
 import { spawn, execSync } from 'child_process';
@@ -16,28 +16,18 @@ const __dirname = dirname(__filename);
 const args = process.argv.slice(2);
 const hasFix = args.includes('--fix');
 
-// First, check for undescribed eslint-disable comments (mimics Obsidian bot)
-try {
-	execSync('node scripts/check-disable-comments.mjs', { 
-		stdio: 'inherit', 
-		shell: true,
-		cwd: join(__dirname, '..')
-	});
-} catch (error) {
-	// Script will have already printed the error
-	process.exit(1);
-}
-
-// Check for attempts to disable non-disablable rules (mimics Obsidian bot)
-try {
-	execSync('node scripts/check-disallowed-disables.mjs', { 
-		stdio: 'inherit', 
-		shell: true,
-		cwd: join(__dirname, '..')
-	});
-} catch (error) {
-	// Script will have already printed the error
-	process.exit(1);
+// Mimic the Obsidian bot: every eslint-disable needs a description, some rules may never be disabled
+for (const script of ['scripts/check-eslint-disables.mjs', 'scripts/check-css-classes.mjs']) {
+	try {
+		execSync(`node ${script}`, {
+			stdio: 'inherit',
+			shell: true,
+			cwd: join(__dirname, '..')
+		});
+	} catch (error) {
+		// Script will have already printed the error
+		process.exit(1);
+	}
 }
 
 // Detect which package manager to use

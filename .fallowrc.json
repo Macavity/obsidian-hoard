@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "entry": [
+    "src/main.ts",
+    "scripts/*.mjs",
+    "esbuild.config.mjs",
+    "version-bump.mjs"
+  ],
+  "usedClassMembers": [
+    {
+      "extends": "PluginSettingTab",
+      "members": [
+        "display",
+        "getSettingDefinitions"
+      ]
+    }
+  ],
+  "duplicates": {
+    "minOccurrences": 2
+  },
+  "health": {
+    "coverage": "coverage/coverage-final.json",
+    "thresholdOverrides": [
+      {
+        "files": [
+          "scripts/**"
+        ],
+        "maxCrap": 60,
+        "reason": "Obsidian CLI scripts need a live app; no unit coverage possible"
+      }
+    ]
+  },
+  "audit": {
+    "gate": "new-only"
+  },
+  "rules": {
+    "css-dead-surface": "off"
+  }
+}

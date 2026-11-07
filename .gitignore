@@ -8,9 +8,9 @@
 # npm
 node_modules
 
-# Don't include the compiled main.js file in the repo.
-# They should be uploaded to GitHub releases instead.
-main.js
+# Build output (main.js plus copied manifest.json/styles.css).
+# Uploaded to GitHub releases instead.
+dist/
 
 # Exclude sourcemaps
 *.map
@@ -24,6 +24,23 @@ data.json
 # Reference materials
 .ref/
 
-# Personal sync scripts (not relevant for template users)
-scripts/sync-agents.ps1
-scripts/sync-agents.sh
+# Local plans and specs (not versioned)
+.claude/plans/
+.claude/specs/
+
+# test vault
+test-vault/.obsidian/plugins/
+test-vault/.obsidian/themes/
+test-vault/.obsidian/workspace*.json
+test-vault/.obsidian/cache
+test-vault/.trash/
+.claude/state.md
+.claude/worktrees
+.fallow/
+coverage/
+
+# Design inputs (not part of the plugin)
+*.zip
+
+# Agent session memory (local)
+session-log.md

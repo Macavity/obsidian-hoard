@@ -51,18 +51,42 @@ jobs:
         id: version
         run: echo "version=$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
 
-      # Collect the release assets that actually exist. main.js and manifest.json
+      # Collect the release assets from dist/ that actually exist. main.js and manifest.json
       # are always present; styles.css is optional, so a plugin that needs no
       # stylesheet doesn't have to ship an empty one just to satisfy the release.
       - name: Collect release assets
         id: assets
         run: |
-          FILES="main.js manifest.json"
-          [ -f styles.css ] && FILES="$FILES styles.css"
+          FILES="dist/main.js dist/manifest.json"
+          [ -f dist/styles.css ] && FILES="$FILES dist/styles.css"
           echo "list=$FILES" >> "$GITHUB_OUTPUT"
           {
             echo "paths<<EOF"
             for f in $FILES; do echo "$f"; done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # Release notes come from CHANGELOG.md: the section headed
+      # "## [<version>]" up to the next "## " heading or the link reference
+      # block at the end of the file. A missing section only warns (a hotfix
+      # may go out without an entry); the release then carries the compare
+      # link alone and the notes can be edited on GitHub afterwards.
+      - name: Read release notes from CHANGELOG
+        id: notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          SECTION=$(awk -v v="$VERSION" '
+            /^## \[/ { if (found) exit; found = ($0 ~ "^## \\[" v "\\]"); next }
+            /^\[[^]]+\]: / { if (found) exit }
+            found { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+          if [ -z "$SECTION" ]; then
+            echo "::warning::CHANGELOG.md has no section '## [$VERSION]'; release notes are the compare link only"
+          fi
+          {
+            echo "body<<EOF"
+            echo "$SECTION"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -76,23 +100,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
           ASSETS: ${{ steps.assets.outputs.list }}
+          CHANGELOG_NOTES: ${{ steps.notes.outputs.body }}
         run: |
           if gh release view "$VERSION" >/dev/null 2>&1; then
             echo "Release $VERSION already exists; re-uploading assets"
             gh release upload "$VERSION" $ASSETS --clobber
           else
-            # Build release notes from the latest commit message, followed by a
-            # Full Changelog compare link against the previous tag (when one
-            # exists). This gives readers the "why" up front instead of just a
-            # diff URL.
-            COMMIT_NOTES=$(git log -1 --pretty=format:%B)
+            # Release notes are the CHANGELOG.md section for this version,
+            # followed by a Full Changelog compare link against the previous
+            # tag (when one exists).
             PREV_TAG=$(git tag --sort=-creatordate --merged HEAD | grep -v "^${VERSION}$" | head -n 1 || true)
             if [ -n "$PREV_TAG" ]; then
               COMPARE="**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${VERSION}"
             else
               COMPARE="**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/commits/${VERSION}"
             fi
-            NOTES=$(printf "%s\n\n---\n\n%s\n" "$COMMIT_NOTES" "$COMPARE")
+            if [ -n "$CHANGELOG_NOTES" ]; then
+              NOTES=$(printf "%s\n\n---\n\n%s\n" "$CHANGELOG_NOTES" "$COMPARE")
+            else
+              NOTES="$COMPARE"
+            fi
             gh release create "$VERSION" \
               --title="$VERSION" \
               --notes "$NOTES" \
