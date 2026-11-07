@@ -1,98 +1,564 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, HoardSettings, HoardSettingTab} from "./settings";
+import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, parseYaml, setIcon, stringifyYaml } from 'obsidian';
+import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, HoardPluginSettings, setActiveDateFormat } from './types';
+import { cardSizeToMinWidth } from './VirtualGrid';
+import type { CardStyleTab } from './types';
+import { DataManager } from './DataManager';
+import { ReadingDataManager } from './ReadingDataManager';
+import { GameDataManager } from './GameDataManager';
+import { ApiService } from './ApiService';
+import { HistoryManager } from './HistoryManager';
+import { PosterService } from './PosterService';
+import { VaultLayout, detectRoot } from './storage/VaultLayout';
+import { LocalStore } from './storage/LocalStore';
+import { SharedConfigStore } from './storage/SharedConfigStore';
+import { EntryIndex } from './storage/EntryIndex';
+import { HistoryStore } from './storage/HistoryStore';
+import { HoardView, HOARD_VIEW_TYPE, TabName } from './HoardView';
+import { AddTitleModal } from './AddTitleModal';
+import { TitleDetailModal } from './TitleDetailModal';
+import { InsertWidgetModal } from './InsertWidgetModal';
+import { WidgetRenderer } from './WidgetRenderer';
+import { HoardSettingsTab } from './SettingsTab';
+import { AirtimeTab } from './AirtimeTab';
+import { runAirtimeScheduler } from './airtimeScheduler';
+import {
+	WATCHLOG_PLUGIN_IDS, loadOwnOrWatchLog, migrateFromWatchLog, watchLogRoot, type WatchLogData, type WatchLogSource,
+} from './migration/watchlog';
+import type { BackupManagers } from './backup';
+import { composeSettings, persistSettings } from './settingsSplit';
+import { resolveJikanEndpoint } from './jikanBase';
 
+/** Root folder created on a fresh install (no `.base` with a `hoard:` key found). */
+const DEFAULT_ROOT = 'Hoard';
 
 export default class HoardPlugin extends Plugin {
-	settings: HoardSettings;
+	settings: HoardPluginSettings = DEFAULT_SETTINGS;
+	// schema-1 data.json awaiting conversion into notes; LocalStore never writes data.json meanwhile
+	private pendingSchema1: WatchLogData | null = null;
+	// set when data.json was taken over from a WatchLog plugin
+	private adoptedFrom: WatchLogSource | null = null;
+	private indexReady = false;
+	private typeNamesKey: string | null = null;
+	private layout = new VaultLayout(DEFAULT_ROOT, () => this.settings.types.map((t) => t.name));
+	private local = new LocalStore({
+		loadData: async () => {
+			const loaded = await loadOwnOrWatchLog(() => this.loadData(), {
+				configDir: this.app.vault.configDir,
+				adapter: this.app.vault.adapter,
+			});
+			this.adoptedFrom = loaded.source ?? null;
+			return loaded.raw;
+		},
+		saveData: (d) => this.saveData(d),
+	});
+	private yaml = { parse: parseYaml, stringify: stringifyYaml };
+	private shared = new SharedConfigStore(
+		this.app,
+		() => this.layout,
+		this.yaml,
+		(ref) => this.registerEvent(ref),
+	);
+	private index = new EntryIndex(this.app, () => this.layout, this.local, (ref) => this.registerEvent(ref));
+	dataManager: DataManager = new DataManager(this, {
+		index: this.index,
+		local: this.local,
+		shared: this.shared,
+		layout: () => this.layout,
+	});
+	readingDataManager: ReadingDataManager = new ReadingDataManager(this, {
+		index: this.index,
+		local: this.local,
+		shared: this.shared,
+		layout: () => this.layout,
+	});
+	gameDataManager: GameDataManager = new GameDataManager(this, {
+		index: this.index,
+		local: this.local,
+		shared: this.shared,
+		layout: () => this.layout,
+	});
+	apiService: ApiService = new ApiService('', '');
+	/** TMDB/OMDb key snapshot of the last settings save; null before onload set it */
+	private apiKeys: string | null = null;
+	historyManager: HistoryManager = new HistoryManager(this, new HistoryStore(
+		this.app,
+		() => this.layout,
+		(ref) => this.registerEvent(ref),
+	));
+	posterService!: PosterService;
+	widgetRenderer?: WidgetRenderer;
 
-	async onload() {
+	// runtime import progress state (not persisted)
+	importProgress: { current: number; total: number; cancel: () => void } | null = null;
+
+	// which entry+day combos have already fired a notification
+	private notifiedEntries: Set<string> = new Set();
+
+	// status-bar Upcoming "due" counter (desktop only; null on mobile)
+	private statusBarEl: HTMLElement | null = null;
+
+	async onload(): Promise<void> {
+		const loaded = await this.local.load();
+		if (loaded.schema === 1) {
+			// converted in startVaultStorage, once the vault is ready; until then its settings act as local
+			this.pendingSchema1 = loaded.data;
+		} else if (loaded.schema === 'newer') {
+			new Notice('Hoard: data.json was written by a newer plugin version. Device settings are not saved until you update.', 0);
+		}
+		this.warnIfWatchLogEnabled();
+		// local + defaults only; shared keys are re-composed once the base is loaded (startVaultStorage)
 		await this.loadSettings();
+		// the card-size CSS var must be live before any view or modal renders a grid
+		this.applyCardSizeCssVar();
+		this.register(() => activeDocument.body.style.removeProperty('--hoard-card-min-width'));
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Hoard', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.apiService = new ApiService(
+			this.settings.omdbApiKey,
+			this.settings.tmdbApiKey,
+			this.settings.googleBooksApiKey,
+			this.settings.rawgApiKey,
+			this.settings.igdbClientId,
+			this.settings.igdbClientSecret,
+			this.settings.steamApiKey,
+			this.settings.steamId,
+			resolveJikanEndpoint(this.settings.jikanBaseUrl),
+		);
+		this.apiKeys = [this.settings.tmdbApiKey, this.settings.omdbApiKey].join('\n');
+		this.dataManager.setHistoryManager(this.historyManager);
+		this.readingDataManager.setHistoryManager(this.historyManager);
+		this.gameDataManager.setHistoryManager(this.historyManager);
+		// history binds first so any reading-load logging has a live target
+		await this.historyManager.load();
+
+		this.posterService = new PosterService(
+			this.dataManager,
+			() => this.settings,
+		);
+
+		this.startAirtimeScheduler();
+		// notes are read once the vault and metadata cache are ready
+		this.app.workspace.onLayoutReady(() => void this.startVaultStorage());
+
+		this.registerView(HOARD_VIEW_TYPE, (leaf) => {
+			return new HoardView(leaf, this, this.dataManager);
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
+		this.widgetRenderer = new WidgetRenderer(this, this.dataManager);
 
-		// This adds a simple command that can be triggered anywhere
+		this.addRibbonIcon('tv', 'Hoard', () => {
+			void this.activateView();
+		});
+
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
+			id: 'open-panel',
+			name: 'Open panel',
+			callback: () => void this.activateView(),
+		});
+
+		this.addCommand({
+			id: 'add-title',
+			name: 'Add title',
 			callback: () => {
-				new HoardModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Hoard editor command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new HoardModal(this.app).open();
+				new AddTitleModal(this.app, this, this.dataManager, (entry) => {
+					// setting off = just reveal whatever tab was open, no modal
+					if (!(this.settings.openWatchlistAfterAdd ?? true)) {
+						void this.activateView();
+						return;
 					}
+					void this.activateView('watchlist').then(() => {
+						// re-read: addTitle may have forced "To be released"
+						const fresh = this.dataManager.getTitle(entry.id) ?? entry;
+						new TitleDetailModal(this.app, this, fresh).open();
+					});
+				}).open();
+			},
+		});
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
+		this.addCommand({
+			id: 'insert-widget',
+			name: 'Insert widget',
+			editorCallback: (editor: Editor) => {
+				this.openWidgetPalette(editor);
+			},
+		});
+
+		this.addCommand({
+			id: 'search-title',
+			name: 'Search title',
+			callback: () => {
+				const titles = this.dataManager.getTitles();
+				new InsertWidgetModal(this.app, titles, (title) => {
+					void this.activateView().then(() => {
+						new Notice(`"${title.title}" · ${title.type} · ${title.status}`);
+					});
+				}).open();
+			},
+		});
+
+		this.addSettingTab(new HoardSettingsTab(this.app, this));
+
+		this.setupStatusBar();
+		// keep the status bar in sync with data edits (no new timer: the 60s airtime interval drives the
+		// time-based refresh). 'hoard-data-changed' is a custom event, so register the listener directly.
+		const statusBarListener = (): void => this.updateStatusBar();
+		activeDocument.addEventListener('hoard-data-changed', statusBarListener);
+		this.register(() => activeDocument.removeEventListener('hoard-data-changed', statusBarListener));
+	}
+
+	onunload(): void {
+		// synchronously flush pending debounced saves so no in-memory edits are lost
+		this.dataManager.flushPendingSaveSync();
+		this.dataManager.flushPosterSaveSync();
+		this.dataManager.flushQueuedSaveSync();
+		const flushes = [this.readingDataManager?.flushPending(), this.gameDataManager?.flushPending()];
+		this.posterService?.destroy();
+		this.widgetRenderer?.cleanup();
+		this.index.stop();
+		this.shared.stop();
+		// local state last: the note flushes above may still touch it
+		void Promise.allSettled(flushes).then(() => this.local.flush());
+	}
+
+	/**
+	 * Migrates a WatchLog vault once, locates the root (folder of the first `.base` with a `hoard:`
+	 * key), defers the base on a fresh install, loads the shared config and builds the entry index.
+	 */
+	private async startVaultStorage(): Promise<void> {
+		try {
+			await this.migrateWatchLog();
+			const root = await detectRoot(this.app.vault);
+			const pending = this.pendingSchema1;
+			this.layout = new VaultLayout(
+				root ?? (pending ? watchLogRoot(pending) : DEFAULT_ROOT),
+				() => this.settings.types.map((t) => t.name),
+			);
+			if (root === null && !pending) {
+				// fresh install (or base not synced yet): no base until the first write; a synced one is adopted
+				this.shared.deferBase({
+					create: async () => {
+						await this.dataManager.ensureFolder(this.layout.root);
+						await this.shared.createBase(this.settings as unknown as Record<string, unknown>);
+					},
+					appeared: () => this.adoptSyncedBase(),
+				});
+				this.index.onLocalWrite(() => void this.shared.ensureBase().catch((e) => console.error('[Hoard] could not create the base', e)));
 			}
+			await this.shared.load();
+			await this.applySharedSettings();
+			this.shared.onChange(() => void this.applySharedSettings());
+			if (root !== null && (await this.shared.ensureFilter()) === 'missing') {
+				const name = this.shared.baseFile()?.name ?? 'Hoard.base';
+				new Notice(`Hoard: the folder filter in ${name} was not found; the base view may list other notes.`);
+			}
+			this.shared.start();
+			await this.index.build();
+			this.index.sweepCache();
+			this.indexReady = true;
+			this.index.start();
+			await this.historyManager.start();
+			await this.dataManager.init();
+			await this.readingDataManager.init();
+			await this.gameDataManager.init();
+			await this.dataManager.ensureFolders();
+		} catch (e) {
+			console.error('[Hoard] vault storage failed to start', e);
+			new Notice('Hoard could not load its notes. See the developer console for details.');
+		}
+	}
+
+	/** A base appeared by sync after startup: take over its root and settings, then rebuild and refresh. */
+	private async adoptSyncedBase(): Promise<void> {
+		try {
+			const root = await detectRoot(this.app.vault);
+			if (root !== null) {
+				this.layout = new VaultLayout(root, () => this.settings.types.map((t) => t.name));
+			}
+			await this.shared.load();
+			await this.applySharedSettings();
+			await this.shared.ensureFilter();
+			await this.index.rebuild();
+			activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+		} catch (e) {
+			console.error('[Hoard] could not adopt the synced base', e);
+		}
+	}
+
+	/** Type names drive classification: a change (local or synced) needs a re-scan of all notes. */
+	private syncTypeNames(): void {
+		const key = this.settings.types.map((t) => t.name).join('\n');
+		const changed = this.typeNamesKey !== null && key !== this.typeNamesKey;
+		this.typeNamesKey = key;
+		if (!changed || !this.indexReady) return;
+		void this.index.rebuild().then(() => activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed')));
+	}
+
+	/** Both plugins manage the same folders; WatchLog would keep writing from its own data.json. */
+	private warnIfWatchLogEnabled(): void {
+		const plugins = (this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } }).plugins;
+		if (WATCHLOG_PLUGIN_IDS.some((id) => plugins?.enabledPlugins?.has(id))) {
+			new Notice('WatchLog is still enabled. Disable it, otherwise both plugins write the same notes.', 0);
+		}
+	}
+
+	/** Base, plugin data, schema-1 data and widget code blocks of WatchLog; a failed conversion retries next start. */
+	private async migrateWatchLog(): Promise<void> {
+		const report = await migrateFromWatchLog({
+			app: this.app,
+			local: this.local,
+			yaml: this.yaml,
+			pluginDir: this.manifest.dir,
+			adopted: this.adoptedFrom,
+			schema1: this.pendingSchema1,
+			typeNames: () => this.settings.types.map((t) => t.name),
 		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new HoardSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.debug('setInterval'), 5 * 60 * 1000));
-
+		this.adoptedFrom = null;
+		if (report?.schema1 && report.schema1.errors.length === 0) {
+			this.pendingSchema1 = null;
+			await this.loadSettings();
+		}
 	}
 
-	onunload() {
+	/** Everything backup export and restore need. */
+	backupManagers(): BackupManagers {
+		return {
+			dataManager: this.dataManager,
+			readingDataManager: this.readingDataManager,
+			gameDataManager: this.gameDataManager,
+			historyManager: this.historyManager,
+			storage: {
+				local: this.local,
+				shared: this.shared,
+				importContext: () => ({
+					app: this.app,
+					local: this.local,
+					shared: this.shared,
+					history: new HistoryStore(this.app, () => this.layout),
+					yaml: this.yaml,
+					layout: this.layout,
+				}),
+			},
+		};
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<HoardSettings>);
+	/** Current vault layout (root and central folders). */
+	getLayout(): VaultLayout {
+		return this.layout;
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
+	/** Re-composes settings from the (re)loaded base, then refreshes derived state and views. */
+	private async applySharedSettings(): Promise<void> {
+		await this.loadSettings();
+		this.applyCardSizeCssVar();
+		activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+	}
+
+	private startAirtimeScheduler(): void {
+		this.checkAirtimeNotifications();
+		this.registerInterval(window.setInterval(() => {
+			this.checkAirtimeNotifications();
+		}, 60000));
+	}
+
+	/** Lets AirtimeTab prevent the scheduler from double-firing after a manual tick. */
+	markAirtimeHandled(key: string): void {
+		this.notifiedEntries.add(key);
+	}
+
+	private checkAirtimeNotifications(): void {
+		runAirtimeScheduler({
+			dataManager: this.dataManager,
+			readingDataManager: this.readingDataManager,
+			gameDataManager: this.gameDataManager,
+			notify: (name) => new Notice(name, 8000),
+		}, this.notifiedEntries);
+
+		// the due count is time-based, so refresh the status bar on every tick
+		this.updateStatusBar();
+	}
+
+	// Status bar: Upcoming "due" counter
+	private setupStatusBar(): void {
+		// the status bar doesn't exist on mobile: skip entirely there
+		if (Platform.isMobile) return;
+		this.statusBarEl = this.addStatusBarItem();
+		this.statusBarEl.addClass('hoard-statusbar-upcoming');
+		this.statusBarEl.setAttribute('aria-label', 'Hoard: Upcoming due');
+		this.statusBarEl.addEventListener('click', () => void this.activateView('upcoming'));
+		this.updateStatusBar();
+	}
+
+	/** Refreshes the status-bar Upcoming counter. Hidden when off or when 0 due. */
+	updateStatusBar(): void {
+		const el = this.statusBarEl;
+		if (!el) return;
+		if (!this.settings.showUpcomingStatusBar) {
+			el.hide();
+			return;
+		}
+		const count =
+			AirtimeTab.getAiredDueCount(this.dataManager, this.readingDataManager, this.gameDataManager) +
+			AirtimeTab.getMaybeDueCount(this.dataManager);
+		if (count <= 0) {
+			el.hide();
+			return;
+		}
+		el.empty();
+		el.show();
+		// orange icon + "N due" (colour from .hoard-statusbar-upcoming), reusing the ribbon's 'tv' icon
+		const icon = el.createSpan({ cls: 'hoard-statusbar-icon' });
+		setIcon(icon, 'tv');
+		el.createSpan({ cls: 'hoard-statusbar-text', text: `${count} due` });
+	}
+
+	/**
+	 * Minimum card width (px) for every poster/cover grid and shelf, from the card-size step for this
+	 * device class (desktop vs mobile).
+	 */
+	getCardMinWidth(): number {
+		return cardSizeToMinWidth(
+			Platform.isMobile ? this.settings.cardSizeMobile : this.settings.cardSize,
+		);
+	}
+
+	/**
+	 * Whether a tab's poster cards show their text under the poster (the per-tab cardTextStyles
+	 * setting; 'under' is the default for data saved before it existed).
+	 */
+	isCardTextUnder(tab: CardStyleTab): boolean {
+		return this.settings.cardTextStyles?.[tab] !== 'inside';
+	}
+
+	/**
+	 * Publish the resolved card size as a body-level CSS var, so the plain-CSS grids (detail-modal
+	 * member grids, non-virtual fallbacks) track the setting too. Called on load and on every change.
+	 */
+	applyCardSizeCssVar(): void {
+		activeDocument.body.style.setProperty('--hoard-card-min-width', `${this.getCardMinWidth()}px`);
+	}
+
+	/** Composes settings from defaults, data.json and the shared base (shared keys win). */
+	loadSettings(): Promise<void> {
+		// a schema-1 data.json is not converted yet: its settings are the local part until then
+		const localSettings = this.pendingSchema1?.settings ?? this.local.data.settings;
+		this.settings = composeSettings(
+			localSettings,
+			this.shared.get().settings,
+		);
+		// mirror into types.ts so the pure formatters render in the chosen order without a settings ref
+		setActiveDateFormat(this.settings.dateFormat);
+		this.syncTypeNames();
+		// a restored backup can bring another endpoint; PosterService reads it per request anyway
+		this.apiService.setJikanEndpoint(resolveJikanEndpoint(this.settings.jikanBaseUrl));
+		return Promise.resolve();
+	}
+
+	async saveSettings(): Promise<void> {
+		// keep the date formatters in step with the setting on every save
+		setActiveDateFormat(this.settings.dateFormat);
+		this.syncTypeNames();
+		// a changed key makes "no key" checks worth repeating
+		const keys = [this.settings.tmdbApiKey, this.settings.omdbApiKey].join('\n');
+		if (this.apiKeys !== null && keys !== this.apiKeys) this.dataManager.resetNoKeyChecks();
+		this.apiKeys = keys;
+		await persistSettings(this.settings, this.local, this.shared);
+	}
+
+	/**
+	 * Type slug the Add modal preselects. The sentinel → the last added type if it still exists, else
+	 * the first available; a real, still-existing type → itself; otherwise the first available. Never
+	 * returns a non-existent type while at least one exists.
+	 */
+	resolveDefaultAddType(): string {
+		const types = this.settings.types ?? [];
+		const firstAvailable = types[0]?.name ?? '';
+		const exists = (name: string): boolean => !!name && types.some((t) => t.name === name);
+		const choice = this.settings.defaultAddType ?? LAST_USED_TYPE_SENTINEL;
+		if (choice === LAST_USED_TYPE_SENTINEL) {
+			return exists(this.settings.lastAddedType) ? this.settings.lastAddedType : firstAvailable;
+		}
+		return exists(choice) ? choice : firstAvailable;
+	}
+
+	private openWidgetPalette(editor: Editor): void {
+		const widgets = [
+			{ name: 'hoard-todo: Track a title (full)', id: 'hoard-todo' },
+			{ name: 'hoard-todo mini: Track a title (compact)', id: 'hoard-todo:mini' },
+			{ name: 'hoard-stat: watched: Time watched (mini)', id: 'hoard-stat:watched' },
+			{ name: 'hoard-stat: completed: Completed titles (mini)', id: 'hoard-stat:completed' },
+			{ name: 'hoard-stat: remaining: Time remaining (mini)', id: 'hoard-stat:remaining' },
+			{ name: 'hoard-stat: time: Watched + remaining (mini)', id: 'hoard-stat:time' },
+			{ name: 'hoard-upcoming: next: Next upcoming (mini)', id: 'hoard-upcoming:next' },
+			{ name: 'hoard-stat: time completed full: Time · Remaining · Completed card', id: 'hoard-stat:time completed full' },
+			{ name: 'hoard-now-next: Now Watching + Up Next card', id: 'hoard-now-next' },
+		];
+
+		new WidgetSelectModal(this.app, widgets, (selected) => {
+			if (selected.id === 'hoard-todo' || selected.id === 'hoard-todo:mini') {
+				const titles = this.dataManager.getTitles();
+				if (titles.length === 0) {
+					new Notice('No titles in your Hoard library yet.');
+					return;
+				}
+				const isMini = selected.id === 'hoard-todo:mini';
+				new InsertWidgetModal(this.app, titles, (title) => {
+					if (isMini) {
+						editor.replaceSelection(`\`\`\`hoard-todo\n${title.title}\nmini\n\`\`\``);
+					} else {
+						editor.replaceSelection(`\`\`\`hoard-todo\n${title.title}\n\`\`\``);
+					}
+				}).open();
+			} else if (selected.id === 'hoard-stat:watched') {
+				editor.replaceSelection('```hoard-stat\nwatched\n```');
+			} else if (selected.id === 'hoard-stat:completed') {
+				editor.replaceSelection('```hoard-stat\ncompleted\n```');
+			} else if (selected.id === 'hoard-stat:remaining') {
+				editor.replaceSelection('```hoard-stat\nremaining\n```');
+			} else if (selected.id === 'hoard-stat:time') {
+				editor.replaceSelection('```hoard-stat\ntime\n```');
+			} else if (selected.id === 'hoard-upcoming:next') {
+				editor.replaceSelection('```hoard-upcoming\nnext\n```');
+			} else if (selected.id === 'hoard-stat:time completed full') {
+				editor.replaceSelection('```hoard-stat\ntime completed full\n```');
+			} else if (selected.id === 'hoard-now-next') {
+				editor.replaceSelection('```hoard-now-next\n```');
+			}
+		}).open();
+	}
+
+	private async activateView(tab?: TabName): Promise<void> {
+		const { workspace } = this.app;
+
+		const existing = workspace.getLeavesOfType(HOARD_VIEW_TYPE);
+		if (existing.length > 0) {
+			const leaf = existing[0]!;
+			void workspace.revealLeaf(leaf);
+			if (tab && leaf.view instanceof HoardView) leaf.view.setActiveTab(tab);
+			return;
+		}
+
+		const leaf = workspace.getLeaf('tab');
+		await leaf.setViewState({ type: HOARD_VIEW_TYPE, active: true });
+		void workspace.revealLeaf(leaf);
+		if (tab && leaf.view instanceof HoardView) leaf.view.setActiveTab(tab);
 	}
 }
 
-class HoardModal extends Modal {
-	constructor(app: App) {
+// Widget selection modal
+
+interface WidgetItem { name: string; id: string; }
+
+class WidgetSelectModal extends FuzzySuggestModal<WidgetItem> {
+	private items: WidgetItem[];
+	private onSelect: (item: WidgetItem) => void;
+
+	constructor(app: App, items: WidgetItem[], onSelect: (item: WidgetItem) => void) {
 		super(app);
+		this.items = items;
+		this.onSelect = onSelect;
+		this.setPlaceholder('Select a widget to insert...');
 	}
 
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
+	getItems(): WidgetItem[] { return this.items; }
+	getItemText(item: WidgetItem): string { return item.name; }
+	onChooseItem(item: WidgetItem): void { this.onSelect(item); }
 }

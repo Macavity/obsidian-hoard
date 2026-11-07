@@ -12,7 +12,13 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Classes Obsidian renders itself; the stylesheet only hooks into them. */
 export const OBSIDIAN_CLASSES = [
-	// { cls: "modal-content", reason: "Modal body rendered by Obsidian" },
+	{ cls: "is-mobile", reason: "Body class Obsidian sets on mobile" },
+	{ cls: "is-tablet", reason: "Body class Obsidian sets on tablets" },
+	{ cls: "modal-content", reason: "Modal body rendered by Obsidian" },
+	{ cls: "setting-item", reason: "Row rendered by Obsidian's Setting" },
+	{ cls: "setting-item-description", reason: "Description rendered by Obsidian's Setting" },
+	{ cls: "setting-item-name", reason: "Name rendered by Obsidian's Setting" },
+	{ cls: "svg-icon", reason: "Icon element rendered by Obsidian's setIcon" },
 ];
 
 export function sourceFiles(dir = join(root, "src")) {

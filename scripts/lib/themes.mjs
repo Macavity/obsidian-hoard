@@ -1,5 +1,5 @@
 // Third-party themes for compatibility checks. They are downloaded on demand into the registered vault
-// (test-vault/.obsidian/themes/, gitignored) and never versioned; scripts/themes.json maps a label → GitHub repo.
+// (hoard-test-vault/.obsidian/themes/, gitignored) and never versioned; scripts/themes.json maps a label → GitHub repo.
 // Obsidian only registers a theme whose folder is named exactly like `name` in its manifest, so the folder is derived
 // from the downloaded manifest, not from the label.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";

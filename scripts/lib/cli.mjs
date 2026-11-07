@@ -1,15 +1,15 @@
-// Obsidian CLI wrapper. Every call targets vault="test-vault"; nothing else is allowed.
+// Obsidian CLI wrapper. Every call targets vault="hoard-test-vault"; nothing else is allowed.
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const VAULT = "test-vault";
+const VAULT = "hoard-test-vault";
 export const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** This checkout's versioned fixtures. */
-export const FIXTURES = join(REPO, "test-vault");
-/** The vault registered in Obsidian: the main checkout's test-vault (worktrees mirror into it), or $HOARD_TEST_VAULT. */
-export const VAULT_PATH = process.env.HOARD_TEST_VAULT ? resolve(process.env.HOARD_TEST_VAULT) : join(mainCheckout(), "test-vault");
+export const FIXTURES = join(REPO, "hoard-test-vault");
+/** The vault registered in Obsidian: the main checkout's hoard-test-vault (worktrees mirror into it), or $HOARD_TEST_VAULT. */
+export const VAULT_PATH = process.env.HOARD_TEST_VAULT ? resolve(process.env.HOARD_TEST_VAULT) : join(mainCheckout(), "hoard-test-vault");
 
 function mainCheckout() {
 	try {
@@ -37,11 +37,11 @@ function afterTimeout(args, e) {
 	if (out.trim() !== "" && !out.trimStart().startsWith("Error:")) return out;
 	throw new Error(
 		`obsidian ${args.slice(1, 2).join(" ")} timed out after ${CLI_TIMEOUT_MS / 1000}s. ` +
-			"Obsidian is probably hung or its window is hidden: run `obsidian vault=\"test-vault\" reload`, then `pnpm vault:reset`.",
+			"Obsidian is probably hung or its window is hidden: run `obsidian vault=\"hoard-test-vault\" reload`, then `pnpm vault:reset`.",
 	);
 }
 
-/** Runs `obsidian vault="test-vault" <cmd> key=value ...`. Throws if the output starts with "Error:". */
+/** Runs `obsidian vault="hoard-test-vault" <cmd> key=value ...`. Throws if the output starts with "Error:". */
 export function obs(cmd, args = {}) {
 	const argv = [`vault=${VAULT}`, cmd];
 	for (const [k, v] of Object.entries(args)) argv.push(v === true ? k : `${k}=${v}`);
@@ -105,7 +105,7 @@ export function listVaults() {
 		.map(([name, path]) => ({ name, path }));
 }
 
-/** Aborts unless exactly one registered vault is named "test-vault" and it points to <repo>/test-vault. */
+/** Aborts unless exactly one registered vault is named "hoard-test-vault" and it points to <repo>/hoard-test-vault. */
 export function ensureVault() {
 	const rows = listVaults().map(({ name, path }) => [name, path]);
 	const hits = rows.filter(([name]) => name === VAULT);

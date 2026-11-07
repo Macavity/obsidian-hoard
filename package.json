@@ -23,7 +23,8 @@
 		"vault:reset": "node scripts/vault-reset.mjs",
 		"vault:theme": "node scripts/vault-theme.mjs",
 		"reload": "node scripts/reload.mjs",
-		"smoke": "pnpm vault:reset && pnpm vault:link-test && pnpm build && pnpm reload && node scripts/smoke.mjs"
+		"smoke": "pnpm vault:reset && pnpm vault:link-test && pnpm build && pnpm reload && node scripts/smoke.mjs",
+		"mobile:smoke": "node scripts/mobile-smoke.mjs"
 	},
 	"author": "Alexander Pape",
 	"license": "MIT",
@@ -56,5 +57,8 @@
 	"homepage": "https://github.com/Macavity/obsidian-hoard#readme",
 	"engines": {
 		"node": ">=20"
+	},
+	"dependencies": {
+		"fuse.js": "^7.3.0"
 	}
 }

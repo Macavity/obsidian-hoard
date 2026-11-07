@@ -29,11 +29,11 @@ data.json
 .claude/specs/
 
 # test vault
-test-vault/.obsidian/plugins/
-test-vault/.obsidian/themes/
-test-vault/.obsidian/workspace*.json
-test-vault/.obsidian/cache
-test-vault/.trash/
+hoard-test-vault/.obsidian/plugins/
+hoard-test-vault/.obsidian/themes/
+hoard-test-vault/.obsidian/workspace*.json
+hoard-test-vault/.obsidian/cache
+hoard-test-vault/.trash/
 .claude/state.md
 .claude/worktrees
 .fallow/

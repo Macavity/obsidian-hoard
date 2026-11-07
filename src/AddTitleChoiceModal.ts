@@ -1,0 +1,42 @@
+import { App, Modal } from 'obsidian';
+
+export type AddTitleChoice = 'url' | 'manual';
+
+/**
+ * Chooser shown when adding a title to the Watchlist: Add from URL, or Add manually / via API. This
+ * modal only routes — no form logic.
+ */
+export class AddTitleChoiceModal extends Modal {
+	constructor(
+		app: App,
+		private onChoice: (choice: AddTitleChoice) => void,
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass('hoard-draft-choice-modal');
+
+		this.titleEl.setText('Add title');
+
+		const grid = contentEl.createDiv({ cls: 'hoard-draft-choice-grid' });
+
+		const makeOption = (label: string, choice: AddTitleChoice): void => {
+			const btn = grid.createEl('button', { cls: 'hoard-draft-choice-btn' });
+			btn.createDiv({ cls: 'hoard-draft-choice-label', text: label });
+			btn.addEventListener('click', () => {
+				this.close();
+				this.onChoice(choice);
+			});
+		};
+
+		makeOption('Add from URL', 'url');
+		makeOption('Add manually / via API', 'manual');
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}
