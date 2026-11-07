@@ -708,12 +708,14 @@ export class DataManager {
 				{ source: 'Watchlist', action: 'rating', titleName: updated.title, titleId: updated.id },
 			);
 		}
-		if (old.status !== updated.status && updated.status === 'Completed') {
-			void this.historyManager?.log(
-				`${updated.title} (${updated.type}) was marked as watched on ${formatHistoryDate(now)}`,
-				{ source: 'Watchlist', action: 'completed', titleName: updated.title, titleId: updated.id },
-			);
-		}
+		if (old.status !== updated.status && updated.status === 'Completed') this.logCompleted(updated);
+	}
+
+	private logCompleted(title: HoardTitle): void {
+		void this.historyManager?.log(
+			`${title.title} (${title.type}) was marked as watched on ${formatHistoryDate(new Date().toISOString())}`,
+			{ source: 'Watchlist', action: 'completed', titleName: title.title, titleId: title.id },
+		);
 	}
 
 	async updateTitle(updated: HoardTitle): Promise<void> {
@@ -1274,7 +1276,10 @@ export class DataManager {
 		if (watched) this.logEpisodeWatched(title, episodeNumber);
 
 		title.dateModified = new Date().toISOString();
+		const wasCompleted = title.status === 'Completed';
 		this.applyAutoCompleteRules(title);
+		// the debounced write skips updateTitle's logChanges, so the completion is logged here
+		if (!wasCompleted && title.status === 'Completed') this.logCompleted(title);
 		this.scheduleEpisodeSave(id);
 		return title;
 	}

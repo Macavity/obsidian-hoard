@@ -22,9 +22,6 @@ function steamFailureLabel(reason: SteamFailureReason): string {
 /** sample date behind the Date-format preview labels */
 const DATE_PREVIEW = '2026-03-09';
 
-/** donation link behind the header coffee button */
-const BMC_URL = 'https://buymeacoffee.com/bogdanyo17i';
-
 /**
  * Accessors for one colour-list section in Customize. Omitting add/remove/rename hides
  * that control — how colour-only sections are expressed.
@@ -400,18 +397,6 @@ export class HoardSettingsTab extends PluginSettingTab {
 			});
 	}
 
-	/** Buy Me a Coffee link, parked at the tail of a group header. */
-	private renderCoffeeButton(head: HTMLElement): void {
-		const link = head.createEl('a', {
-			cls: 'hoard-bmc-btn',
-			href: BMC_URL,
-			attr: { target: '_blank', rel: 'noopener' },
-		});
-		const icon = link.createSpan({ cls: 'hoard-bmc-icon' });
-		setIcon(icon, 'coffee');
-		link.createSpan({ cls: 'hoard-bmc-text', text: 'Buy me a coffee' });
-	}
-
 	private renderGeneral(container: HTMLElement): void {
 		const page = container.createDiv({ cls: 'hoard-sg-page' });
 
@@ -424,8 +409,6 @@ export class HoardSettingsTab extends PluginSettingTab {
 			rows: true,
 		});
 		const el = mainGroup.body;
-
-		this.renderCoffeeButton(mainGroup.head);
 
 		new Setting(el)
 			.setName('Dashboard card style')

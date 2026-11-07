@@ -13,25 +13,28 @@ export interface AirtimeSchedulerDeps {
 const pad = (n: number): string => String(n).padStart(2, '0');
 
 /**
- * One scheduler pass: notifies once per entry and day at its airing minute. Never writes a note;
- * recurring watch schedules get their API airing pointer refreshed (forced at the airing minute,
- * otherwise throttled by refreshAiring).
+ * How far back a missed airing minute still notifies. Catches ticks lost to a sleeping machine or
+ * a late timer without a burst of stale notices after a long sleep. Only today's airing counts.
+ */
+const AIRTIME_CATCH_UP_MINUTES = 12 * 60;
+
+/**
+ * One scheduler pass: notifies once per entry and day, on the first tick at or after its airing
+ * minute (within AIRTIME_CATCH_UP_MINUTES). Never writes a note; recurring watch schedules get their
+ * API airing pointer refreshed (forced on the notifying tick, otherwise throttled by refreshAiring).
  */
 export function runAirtimeScheduler(deps: AirtimeSchedulerDeps, notified: Set<string>, now = new Date()): void {
-	const currentHHMM = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 	const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
 	for (const entry of deps.dataManager.getAirtimeEntries()) {
-		// only fire when the entry has a specific time set and it matches now; direct day check
-		// avoids the getAirtimeCountdown rollover bug
-		const due = entry.schedule.releaseTime === currentHHMM && isScheduledForToday(entry.schedule, now);
-		const isWatch = entry.source !== 'reading' && entry.source !== 'game';
-		if (isWatch && entry.schedule.recurrence !== 'once') void deps.dataManager.refreshAiring(entry.titleId, due);
-		if (!due) continue;
-
+		// direct day check avoids the getAirtimeCountdown rollover bug
+		const due = isDueNow(entry.schedule.releaseTime, now) && isScheduledForToday(entry.schedule, now);
 		// deduplicate: only fire once per entry per day
 		const notifKey = `${entry.id}-${today}`;
-		if (notified.has(notifKey)) continue;
+		const fire = due && !notified.has(notifKey);
+		const isWatch = entry.source !== 'reading' && entry.source !== 'game';
+		if (isWatch && entry.schedule.recurrence !== 'once') void deps.dataManager.refreshAiring(entry.titleId, fire);
+		if (!fire) continue;
 		notified.add(notifKey);
 
 		// resolve the entry's subject — a watch title, a reading item, or a game
@@ -47,6 +50,14 @@ export function runAirtimeScheduler(deps: AirtimeSchedulerDeps, notified: Set<st
 		}
 		if (name !== undefined) deps.notify(name);
 	}
+}
+
+/** True when today's `HH:MM` has passed, at most AIRTIME_CATCH_UP_MINUTES ago. */
+function isDueNow(releaseTime: string | undefined, now: Date): boolean {
+	const m = /^(\d{1,2}):(\d{2})$/.exec(releaseTime ?? '');
+	if (!m) return false;
+	const late = now.getHours() * 60 + now.getMinutes() - (Number(m[1]) * 60 + Number(m[2]));
+	return late >= 0 && late <= AIRTIME_CATCH_UP_MINUTES;
 }
 
 function isScheduledForToday(schedule: AirtimeSchedule, now: Date): boolean {

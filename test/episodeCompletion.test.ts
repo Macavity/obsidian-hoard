@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { setupDataManager } from './helpers/setupDataManager';
 
 const NOTE = '---\ntitle: S\ntype: TV Show\ntotalEpisodes: 2\nstatus: Watching\npriority: High\n---\n';
@@ -77,5 +77,40 @@ describe('episode completion rules', () => {
 		expect(t.status).toBe('Watching');
 		expect(t.dateFinished).toBeNull();
 		expect(t.watchedEpisodes).toEqual([]);
+	});
+
+	describe('history and note after auto-complete', () => {
+		const actions = (log: ReturnType<typeof vi.fn>): string[] =>
+			log.mock.calls.map((c) => (c[1] as { action: string }).action);
+
+		it('markEpisodeWatched logs a completed line and drops the priority key', async () => {
+			const { dm, f } = await setup(NOTE);
+			const log = vi.fn(() => Promise.resolve());
+			dm.setHistoryManager({ log } as never);
+			await dm.markEpisodeWatched(ID, 1, true);
+			await dm.markEpisodeWatched(ID, 2, true);
+			expect(actions(log)).toEqual(['watched', 'watched', 'completed']);
+			expect(f.files.get('W/TV Show/S.md')).not.toMatch(/priority/);
+			expect(dm.getTitle(ID)!.priority).toBe('');
+		});
+
+		it('applyEpisodeWatchedToggle logs a completed line and drops the priority key', async () => {
+			const { dm, f } = await setup(NOTE);
+			const log = vi.fn(() => Promise.resolve());
+			dm.setHistoryManager({ log } as never);
+			dm.applyEpisodeWatchedToggle(ID, 1, true);
+			dm.applyEpisodeWatchedToggle(ID, 2, true);
+			await dm.flushPendingSave();
+			expect(actions(log)).toEqual(['watched', 'watched', 'completed']);
+			expect(f.files.get('W/TV Show/S.md')).not.toMatch(/priority/);
+		});
+
+		it('markSeasonWatched logs a completed line', async () => {
+			const { dm } = await setup(NOTE);
+			const log = vi.fn(() => Promise.resolve());
+			dm.setHistoryManager({ log } as never);
+			await dm.markSeasonWatched(ID, [1, 2], true);
+			expect(actions(log)).toContain('completed');
+		});
 	});
 });

@@ -26,6 +26,13 @@ describe('titleCodec', () => {
     expect(out).not.toHaveProperty('seasons');
     expect(splitCache(entry).seasons).toEqual(seasons); // cache seasons carry no skippedEpisodes (those live in the note)
   });
+  it('drops an empty priority and reads a missing one back as no priority', () => {
+    const { entry } = decodeTitle('TV Show/P', { title: 'P', type: 'TV Show', priority: 'High' }, undefined);
+    entry.priority = '';
+    const out = encodeTitle(entry, 0);
+    expect(out).not.toHaveProperty('priority');
+    expect(decodeTitle('TV Show/P', out, undefined).entry.priority).toBe('');
+  });
   it('writes seasons only on override', () => {
     const { entry } = decodeTitle('Anime/X', { title: 'X', type: 'Anime', seasons: ['Season 1: 12'], watched: 'S01E01-E03' }, undefined);
     expect(entry.seasonsOverride).toBe(true);

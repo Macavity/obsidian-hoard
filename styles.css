@@ -20,10 +20,11 @@
 .hoard-wupcoming,
 .hoard-wnowwatching,
 .hoard-wnownext {
-  --hoard-accent: hsl(258deg 6.48% 13.98%);
+  /* default theme follows Obsidian's own colours, so it reads on light and dark backgrounds */
+  --hoard-accent: var(--interactive-accent);
   --hoard-rating-color: #BA7517;
   --hoard-watched-color: #1D9E75;
-  --hoard-group-border-overlay: rgb(0 0 0 / 20%);
+  --hoard-group-border-overlay: var(--background-modifier-border);
 }
 
 /* Tab bar */
@@ -1825,6 +1826,7 @@
 
 .hoard-settings-nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   margin-bottom: 16px;
   border-bottom: 0.5px solid var(--background-modifier-border);
@@ -2001,52 +2003,6 @@
   margin-left: auto;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
-}
-
-/* Buy Me a Coffee button in a group header — brand yellow, dark text in both themes */
-.hoard-sg-head .hoard-bmc-btn {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 8px;
-  background: #FFDD00;
-  border: 2px solid #E5C700;
-  color: #0D0C0C;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  text-decoration: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-}
-
-.hoard-sg-head .hoard-bmc-btn:hover {
-  background: #FFE84D;
-  text-decoration: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.24);
-}
-
-.hoard-bmc-icon {
-  display: grid;
-  place-items: center;
-}
-
-.hoard-bmc-icon .svg-icon {
-  width: 15px;
-  height: 15px;
-  color: #0D0C0C;
-}
-
-/* header stacks on narrow panes; keep the button on its own line, not squeezed */
-@media (max-width: 480px) {
-  .hoard-sg-head .hoard-bmc-btn .hoard-bmc-text {
-    display: none;
-  }
-  .hoard-sg-head .hoard-bmc-btn {
-    padding: 5px 8px;
-  }
 }
 
 .hoard-sg-chip-dot {
