@@ -14,6 +14,14 @@ g.window ??= globalThis;
 g.activeDocument ??= { dispatchEvent: () => true };
 
 export const tick = (ms = 200) => new Promise<void>((r) => setTimeout(r, ms));
+/** Polls until `done` holds; fails after `timeoutMs` so a slow CI runner does not turn into a flaky assertion. */
+export async function until(done: () => boolean, timeoutMs = 3000): Promise<void> {
+	const start = Date.now();
+	while (!done()) {
+		if (Date.now() - start > timeoutMs) throw new Error(`until: condition not met within ${timeoutMs}ms`);
+		await tick(20);
+	}
+}
 
 export interface StoreOptions {
 	/** Watch types by name; defaults to Movie only. */

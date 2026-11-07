@@ -4,6 +4,7 @@ import { VaultLayout } from '../../src/storage/VaultLayout';
 import { LocalStore } from '../../src/storage/LocalStore';
 import { EntryIndex } from '../../src/storage/EntryIndex';
 import type { HoardTitle } from '../../src/types';
+import { until } from '../helpers/common';
 const note = (fm: string) => `---\n${fm}\n---\n\n## Notes\n`;
 async function setup(files: Record<string, string>) {
 	const f = createFakeApp(files);
@@ -45,7 +46,7 @@ describe('EntryIndex', () => {
 		const files: Record<string, string> = {};
 		const { f, cb } = await setup(files);
 		for (let i = 0; i < 300; i++) f.externalWrite(`W/Movie/M${i}.md`, note(`title: M${i}`));
-		await tick();
+		await until(() => cb.mock.calls.length > 0);
 		expect(cb).toHaveBeenCalledTimes(1);
 		expect((cb.mock.calls[0]![0] as Set<string>).size).toBe(300);
 	});
