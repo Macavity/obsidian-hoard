@@ -6,4 +6,20 @@ The release workflow takes the section of the released version from this file as
 
 ## [Unreleased]
 
+### Added
+
+- Port of the WatchLog Sync plugin as Hoard: vault-backed storage (notes as records, `Hoard.base` for shared settings, `History.md` log, `data.json` for per-device state).
+- Watchlist, Upcoming and Dashboard tabs with episode tracking, schedules, ratings and posters.
+- Reading tab for books and manga; Games tab with RAWG/IGDB search and Steam sync.
+- Custom lists, Drafts (vault tag scan) and Log (activity timeline) tabs.
+- Code-block widgets `hoard`, `hoard-todo`, `hoard-stat`, `hoard-upcoming`, `hoard-nowwatching`, `hoard-now-next`; legacy `watchlog` / `wl-*` names still render.
+- Settings tab with API, Customize and General pages, JSON backup and restore.
+- Migration from WatchLog: `WatchLog.base` key rewrite and adoption of `watchlog-sync` / `watchlog` plugin data.
+- Test vault fixtures and a mobile smoke script.
+
+### Known issues
+
+- Large files and low UI test coverage are inherited from the fork; the full `fallow` analysis is red.
+- `obsidianmd/settings-tab/prefer-setting-definitions` is disabled until the settings tab is migrated.
+
 [Unreleased]: https://github.com/Macavity/obsidian-hoard/compare/0.0.1...HEAD
