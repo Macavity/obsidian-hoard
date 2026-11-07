@@ -8,6 +8,7 @@ import { ReadingTab } from './ReadingTab';
 import { GamesTab } from './GamesTab';
 import { CustomListsTab } from './CustomListsTab';
 import { DraftsTab } from './DraftsTab';
+import { LogTab } from './LogTab';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';
 
@@ -104,6 +105,13 @@ const TABS: TabDefinition[] = [
 			count: (plugin, dataManager) => DraftsTab.computePendingCount(plugin, dataManager),
 			refreshOn: 'metadata-resolved',
 		},
+	},
+	{
+		name: 'log',
+		label: 'Log',
+		icon: 'history',
+		cls: 'hoard-log-tab',
+		create: (ctx) => new LogTab(ctx.containerEl, ctx.plugin),
 	},
 ];
 
