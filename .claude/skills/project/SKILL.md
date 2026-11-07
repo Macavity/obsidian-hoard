@@ -48,4 +48,4 @@ Entries, groups, progress, ratings live in note properties (frontmatter). `<root
 
 ## Key files
 
-`manifest.json`, `styles.css`, `src/types.ts` (data model), `src/storage/VaultLayout.ts` (paths), `src/HoardView.ts`, `src/main.ts`, `wiki/OVERVIEW.md` when present.
+`manifest.json`, `styles.css`, `src/types.ts` (data model), `src/storage/VaultLayout.ts` (paths), `src/HoardView.ts`, `src/main.ts`, `docs/index.md` (wiki router).
