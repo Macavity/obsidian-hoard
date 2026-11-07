@@ -31,6 +31,12 @@ reviews:
         happy path. No security or filesystem-hardening findings.
     - path: "CLAUDE.md"
       instructions: "Agent instructions. Do not review policy content."
+    - path: "docs/**"
+      instructions: |
+        Source-grounded wiki that agents read instead of the code. Each page lists the files it
+        describes under `source`. Report only statements that contradict those files or the
+        code in the same PR (a confidently wrong page is the one defect that matters). Do not
+        review style, completeness, wording or the hand-written docs/values.md and docs/CLAUDE.md.
     - path: ".claude/**"
       instructions: "Agent skill docs, maintained by hand. Do not review."
   pre_merge_checks:
