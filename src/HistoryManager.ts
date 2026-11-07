@@ -17,7 +17,7 @@ export interface HistoryEntry {
 }
 
 /**
- * Resolve an entry's action: structured metadata when present, else parsed from the legacy message
+ * Resolve an entry's action: structured metadata when present, else parsed from the message
  * string. Shared by the Log tab and the Rows view's Recently Watched shelf.
  */
 export function inferHistoryAction(entry: HistoryEntry): HistoryAction {
@@ -36,6 +36,52 @@ export function inferHistoryAction(entry: HistoryEntry): HistoryAction {
 /** Entries logged before structured metadata are all Watchlist events. */
 export function inferHistorySource(entry: HistoryEntry): HistorySource {
 	return entry.source ?? 'Watchlist';
+}
+
+export interface WatchedTitle { id: string; title: string; type: string }
+
+/** Several titles share a name or basename: the plain message embeds "(Type)". */
+function pickByType<T extends WatchedTitle>(candidates: T[], entry: HistoryEntry): T | undefined {
+	if (candidates.length <= 1) return candidates[0];
+	const type = /\(([^)]+)\)/.exec(entry.message)?.[1];
+	return candidates.find((t) => t.type === type) ?? candidates[0];
+}
+
+/**
+ * Resolves one entry to a title: exact note id, then the basename of a link Obsidian shortened
+ * after a rename, then the title name (entries without an id). Undefined when the title is gone.
+ */
+function resolveEntryTitle<T extends WatchedTitle>(entry: HistoryEntry, titles: T[], byId: Map<string, T>): T | undefined {
+	if (entry.titleId) {
+		const exact = byId.get(entry.titleId);
+		if (exact) return exact;
+		const base = entry.titleId.split('/').pop() ?? entry.titleId;
+		const short = pickByType(titles.filter((t) => t.id === base || t.id.endsWith(`/${base}`)), entry);
+		if (short) return short;
+	}
+	const name = entry.titleName ?? /^(.+?)\s*\(/.exec(entry.message)?.[1];
+	return name ? pickByType(titles.filter((t) => t.title === name), entry) : undefined;
+}
+
+/**
+ * Titles with a real watch event (Watchlist `watched`/`completed`), in entry order (pass newest
+ * first), without duplicates, at most `limit`. Entries whose title no longer exists are skipped.
+ */
+export function resolveRecentlyWatched<T extends WatchedTitle>(entries: HistoryEntry[], titles: T[], limit = 10): T[] {
+	const byId = new Map(titles.map((t) => [t.id, t]));
+	const out: T[] = [];
+	const seen = new Set<string>();
+	for (const entry of entries) {
+		if (out.length >= limit) break;
+		if (inferHistorySource(entry) !== 'Watchlist') continue;
+		const action = inferHistoryAction(entry);
+		if (action !== 'watched' && action !== 'completed') continue;
+		const title = resolveEntryTitle(entry, titles, byId);
+		if (!title || seen.has(title.id)) continue;
+		seen.add(title.id);
+		out.push(title);
+	}
+	return out;
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

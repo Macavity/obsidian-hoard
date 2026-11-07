@@ -7,7 +7,7 @@ import { searchItems, yearOf, type SearchFieldSpec } from './SearchQuery';
 import { renderSearchHelpButton } from './SearchHelpModal';
 import { createDatePicker } from './DatePicker';
 import { renderCommunityRating, maybeAutoRefreshCommunityRating, refreshCommunityRating } from './CommunityRating';
-import { inferHistoryAction, inferHistorySource } from './HistoryManager';
+import { resolveRecentlyWatched } from './HistoryManager';
 import { AddTitleModal } from './AddTitleModal';
 import { AddFromUrlModal } from './AddFromUrlModal';
 import { AddTitleChoiceModal } from './AddTitleChoiceModal';
@@ -681,39 +681,10 @@ export class ListTab {
 
 	/**
 	 * Titles with a real watch event in the log, most recent first (max 10).
-	 * dateModified is deliberately NOT used — it bumps on any edit. Entries match
-	 * by name, so a renamed title drops out.
+	 * dateModified is deliberately NOT used — it bumps on any edit. Entries resolve by note id.
 	 */
 	private getRecentlyWatchedTitles(allTitles: HoardTitle[]): HoardTitle[] {
-		const byName = new Map<string, HoardTitle[]>();
-		for (const t of allTitles) {
-			const list = byName.get(t.title);
-			if (list) list.push(t);
-			else byName.set(t.title, [t]);
-		}
-
-		const out: HoardTitle[] = [];
-		const seen = new Set<string>();
-		for (const entry of this.plugin.historyManager.getEntries()) { // newest-first
-			if (inferHistorySource(entry) !== 'Watchlist') continue;
-			const action = inferHistoryAction(entry);
-			if (action !== 'watched' && action !== 'completed') continue;
-			const name = entry.titleName ?? entry.message.match(/^(.+?)\s*\(/)?.[1];
-			if (!name) continue;
-			const candidates = byName.get(name);
-			if (!candidates || candidates.length === 0) continue;
-			let title = candidates[0]!;
-			if (candidates.length > 1) {
-				// same name under several types — the message embeds "(Type)"
-				const type = entry.message.match(/\(([^)]+)\)/)?.[1];
-				title = candidates.find((t) => t.type === type) ?? title;
-			}
-			if (seen.has(title.id)) continue;
-			seen.add(title.id);
-			out.push(title);
-			if (out.length >= 10) break;
-		}
-		return out;
+		return resolveRecentlyWatched(this.plugin.historyManager.getEntries(), allTitles); // newest-first
 	}
 
 	private buildCardElement(

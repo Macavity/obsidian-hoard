@@ -8,7 +8,18 @@
   overflow: hidden;
   font-size: var(--font-ui-small);
   color: var(--text-normal);
-  /* default accents; themes override below */
+}
+
+/* Default accents; themes override below on .hoard-view[data-theme]. Code-block widgets render in
+   notes outside the view, so their roots need the defaults too. */
+.hoard-view,
+.hoard-widget,
+.hoard-widget-minimal,
+.hoard-wstat,
+.hoard-wstat-triple,
+.hoard-wupcoming,
+.hoard-wnowwatching,
+.hoard-wnownext {
   --hoard-accent: hsl(258deg 6.48% 13.98%);
   --hoard-rating-color: #BA7517;
   --hoard-watched-color: #1D9E75;
