@@ -1,6 +1,7 @@
-import { Notice, Plugin, parseYaml, stringifyYaml } from 'obsidian';
+import { Notice, Platform, Plugin, parseYaml, stringifyYaml } from 'obsidian';
 import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, HoardPluginSettings, setActiveDateFormat } from './types';
-import type { HoardData } from './types';
+import { cardSizeToMinWidth } from './VirtualGrid';
+import type { CardStyleTab, HoardData } from './types';
 import { DataManager } from './DataManager';
 import { ReadingDataManager } from './ReadingDataManager';
 import { GameDataManager } from './GameDataManager';
@@ -12,6 +13,10 @@ import { LocalStore } from './storage/LocalStore';
 import { SharedConfigStore } from './storage/SharedConfigStore';
 import { EntryIndex } from './storage/EntryIndex';
 import { HistoryStore } from './storage/HistoryStore';
+import { HoardView, HOARD_VIEW_TYPE, TabName } from './HoardView';
+import { AddTitleModal } from './AddTitleModal';
+import { TitleDetailModal } from './TitleDetailModal';
+import { InsertWidgetModal } from './InsertWidgetModal';
 import { hasHoardKey } from './storage/baseFile';
 import { legacyRoot, migrateV1 } from './storage/migrateV1';
 import { loadOwnOrOriginal, LEGACY_PLUGIN_IDS } from './storage/legacyPlugin';
@@ -95,6 +100,9 @@ export default class HoardPlugin extends Plugin {
 		this.warnIfOriginalEnabled();
 		// local + defaults only; shared keys are re-composed once the base is loaded (startVaultStorage)
 		await this.loadSettings();
+		// the card-size CSS var must be live before any view or modal renders a grid
+		this.applyCardSizeCssVar();
+		this.register(() => activeDocument.body.style.removeProperty('--hoard-card-min-width'));
 
 		this.apiService = new ApiService(
 			this.settings.omdbApiKey,
@@ -121,6 +129,52 @@ export default class HoardPlugin extends Plugin {
 
 		// notes are read once the vault and metadata cache are ready
 		this.app.workspace.onLayoutReady(() => void this.startVaultStorage());
+
+		this.registerView(HOARD_VIEW_TYPE, (leaf) => {
+			return new HoardView(leaf, this, this.dataManager);
+		});
+
+		this.addRibbonIcon('tv', 'Hoard', () => {
+			void this.activateView();
+		});
+
+		this.addCommand({
+			id: 'open-panel',
+			name: 'Open panel',
+			callback: () => void this.activateView(),
+		});
+
+		this.addCommand({
+			id: 'add-title',
+			name: 'Add title',
+			callback: () => {
+				new AddTitleModal(this.app, this, this.dataManager, (entry) => {
+					// setting off = just reveal whatever tab was open, no modal
+					if (!(this.settings.openWatchlistAfterAdd ?? true)) {
+						void this.activateView();
+						return;
+					}
+					void this.activateView('watchlist').then(() => {
+						// re-read: addTitle may have forced "To be released"
+						const fresh = this.dataManager.getTitle(entry.id) ?? entry;
+						new TitleDetailModal(this.app, this, fresh).open();
+					});
+				}).open();
+			},
+		});
+
+		this.addCommand({
+			id: 'search-title',
+			name: 'Search title',
+			callback: () => {
+				const titles = this.dataManager.getTitles();
+				new InsertWidgetModal(this.app, titles, (title) => {
+					void this.activateView().then(() => {
+						new Notice(`"${title.title}" · ${title.type} · ${title.status}`);
+					});
+				}).open();
+			},
+		});
 	}
 
 	onunload(): void {
@@ -270,6 +324,7 @@ export default class HoardPlugin extends Plugin {
 	/** Re-composes settings from the (re)loaded base, then refreshes derived state and views. */
 	private async applySharedSettings(): Promise<void> {
 		await this.loadSettings();
+		this.applyCardSizeCssVar();
 		activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
 	}
 
@@ -284,6 +339,32 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/** Composes settings from defaults, data.json and the shared base (shared keys win). */
+	/**
+	 * Minimum card width (px) for every poster/cover grid and shelf, from the card-size step for this
+	 * device class (desktop vs mobile).
+	 */
+	getCardMinWidth(): number {
+		return cardSizeToMinWidth(
+			Platform.isMobile ? this.settings.cardSizeMobile : this.settings.cardSize,
+		);
+	}
+
+	/**
+	 * Whether a tab's poster cards show their text under the poster (the per-tab cardTextStyles
+	 * setting; 'under' is the default for data saved before it existed).
+	 */
+	isCardTextUnder(tab: CardStyleTab): boolean {
+		return this.settings.cardTextStyles?.[tab] !== 'inside';
+	}
+
+	/**
+	 * Publish the resolved card size as a body-level CSS var, so the plain-CSS grids (detail-modal
+	 * member grids, non-virtual fallbacks) track the setting too. Called on load and on every change.
+	 */
+	applyCardSizeCssVar(): void {
+		activeDocument.body.style.setProperty('--hoard-card-min-width', `${this.getCardMinWidth()}px`);
+	}
+
 	loadSettings(): Promise<void> {
 		// a schema-1 data.json is not adopted yet: its settings are the local part until migration
 		const localSettings = this.legacyData?.settings ?? this.local.data.settings;
@@ -324,5 +405,22 @@ export default class HoardPlugin extends Plugin {
 			return exists(this.settings.lastAddedType) ? this.settings.lastAddedType : firstAvailable;
 		}
 		return exists(choice) ? choice : firstAvailable;
+	}
+
+	private async activateView(tab?: TabName): Promise<void> {
+		const { workspace } = this.app;
+
+		const existing = workspace.getLeavesOfType(HOARD_VIEW_TYPE);
+		if (existing.length > 0) {
+			const leaf = existing[0]!;
+			void workspace.revealLeaf(leaf);
+			if (tab && leaf.view instanceof HoardView) leaf.view.setActiveTab(tab);
+			return;
+		}
+
+		const leaf = workspace.getLeaf('tab');
+		await leaf.setViewState({ type: HOARD_VIEW_TYPE, active: true });
+		void workspace.revealLeaf(leaf);
+		if (tab && leaf.view instanceof HoardView) leaf.view.setActiveTab(tab);
 	}
 }
