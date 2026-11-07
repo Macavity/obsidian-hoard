@@ -14,7 +14,7 @@ Obsidian plugin (id `hoard`). Package manager: pnpm.
 - Any fallow exception (`thresholdOverrides`, `fallow-ignore` comments, suppressions) needs the user's explicit approval first. Never add one on your own.
 
 ## Skills
-Obsidian knowledge lives in `.claude/skills/` (`obsidian-dev`, `obsidian-ops`, `obsidian-ref`, `project`, `release`, `codebase-wiki`). These are maintained by hand; there is no generator.
+Obsidian knowledge lives in `.claude/skills/` (`obsidian-dev`, `obsidian-ops`, `obsidian-ref`, `project`, `release`). These are maintained by hand; there is no generator.
 
 ## Codebase wiki
 
