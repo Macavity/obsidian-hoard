@@ -27,7 +27,8 @@ An entry id is **the note path relative to the Hoard root, without `.md`**: `Ani
 ## Consequences
 
 - **A title or type change renames the file**, and the id with it. `DataManager.writeTitle` renames
-  first, then calls `moveId` to re-key per-id state; [EntryIndex](../../src/storage/EntryIndex.ts)
+  first (unless the target path exists: Notice, old name and id kept, properties still written),
+  then calls `moveId` to re-key per-id state; [EntryIndex](../../src/storage/EntryIndex.ts)
   follows vault `rename` events and moves the [entry cache](entry-cache.md) key via
   `LocalStore.renameCache`. History lines link `[[<id>]]`, so Obsidian updates them on rename.
 - Moving a note out of the entry folders acts as a delete; moving one in acts as a create.

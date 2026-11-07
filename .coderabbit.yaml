@@ -34,9 +34,10 @@ reviews:
     - path: "docs/**"
       instructions: |
         Source-grounded wiki that agents read instead of the code. Each page lists the files it
-        describes under `source`. Report only statements that contradict those files or the
-        code in the same PR (a confidently wrong page is the one defect that matters). Do not
-        review style, completeness, wording or the hand-written docs/values.md and docs/CLAUDE.md.
+        describes under `source`; index.md describes the whole tree. Report only statements that
+        contradict the code (a confidently wrong page is the one defect that matters). Do not
+        review style, completeness, wording, edge cases a page does not claim to cover, or the
+        hand-written docs/values.md and docs/CLAUDE.md.
     - path: ".claude/**"
       instructions: "Agent skill docs, maintained by hand. Do not review."
   pre_merge_checks:

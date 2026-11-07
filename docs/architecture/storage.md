@@ -44,10 +44,11 @@ flowchart LR
 
 [EntryIndex.ts](../../src/storage/EntryIndex.ts) scans `vault.getMarkdownFiles()`, classifies each
 path with `VaultLayout.classify` ([entry id](../concepts/entry-id.md)), decodes the cached
-frontmatter with the matching codec and keeps `id → {entry, invalidFields}`. It never writes.
-`metadataCache.changed` upserts (deep-equal check, so echoes of own writes are no-ops), vault
-`delete`/`rename` remove or re-key, and `rebuild()` re-scans after a root or type-name change.
-Changes are batched 150 ms and emitted as a set of ids.
+frontmatter with the matching codec and keeps `id → {entry, invalidFields}`. It never writes a
+note; on vault `delete`/`rename` it does drop or re-key the entry's cache in `data.json`.
+`metadataCache.changed` upserts (deep-equal check, so echoes of own writes are no-ops, and a
+change that only alters unreadable fields is not emitted), and `rebuild()` re-scans after a root
+or type-name change. Changes are batched 150 ms and emitted as a set of ids.
 
 Codecs are pure: `decodeTitle(id, properties, cache)` / `encodeTitle`, `decodeBook`/`encodeBook`,
 `decodeManga`/`encodeManga`, `decodeGame`/`encodeGame`. Each returns `invalidFields` for values of the

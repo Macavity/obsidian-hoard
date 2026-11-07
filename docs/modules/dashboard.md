@@ -33,7 +33,8 @@ the reading aggregates once, then draws cards, "More statistics", suggestions an
   by type, by year; Watchlist only: time by year and top actors, directors, studios
   (`dashboardTopCredits`, default 5).
 - **Suggestions** exist only with "Plan to watch" titles: shortest Anime, Movie and TV Show by
-  `totalEpisodes * (episodeDuration || 24)`, type names hardcoded, plus a random pick.
+  `totalEpisodes * (episodeDuration || 24)`, or by `episodeDuration` alone when the episode count
+  is zero; type names hardcoded; plus a random pick.
 - **Recently watched / added**: `getRecentlyWatched(3)`, `getRecentlyAdded(3)`, Watchlist only.
 
 ## Mobile

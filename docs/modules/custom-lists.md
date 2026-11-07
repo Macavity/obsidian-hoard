@@ -22,7 +22,7 @@ also used by the settings tab for default columns), `EditColumnsModal` / `Defaul
 
 ## File format
 
-```
+````
 # <name>
 ## Notes
 <free text>
@@ -30,10 +30,11 @@ also used by the settings tab for default columns), `EditColumnsModal` / `Defaul
 ```json
 { "columns": [...], "rows": [...], "tabColor": "...", "nameWidth": 0 }
 ```
-```
+````
 
 The JSON block is the source of truth; there is no Markdown table and no properties block.
-`parse` drops malformed columns and rows; a JSON parse error puts the list into `corruptLists`,
+`parse` drops columns and rows that lack required keys (presence only, values are not
+type-checked); a JSON parse error puts the list into `corruptLists`,
 shows a Notice, and `saveList` refuses to overwrite it. File name = list name, rename = vault
 rename. Saves are serialised per list so table and notes writes cannot clobber each other;
 `saveNotes` rewrites only the `## Notes` section. Tab order is the device-local
@@ -53,7 +54,7 @@ rename. Saves are serialised per list so table and notes writes cannot clobber e
   (`AddRouter`), shared with [drafts](drafts.md).
 - **Auto time column**: a number column with `autoTime` is filled by `autoPopulateTimeColumn`:
   exact match of the row name against watchlist titles, then `DataManager.calcTimeRemainingForModal`;
-  no match writes the string `Not found`. Runs after saving columns and on the header refresh
+  no match writes the string `Not found`; rows with an empty name are skipped and keep their value. Runs after saving columns and on the header refresh
   button, not on data changes. Books and games are not matched.
 - Search filters on the name only; sort is a string compare on the chosen column.
 

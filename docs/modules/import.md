@@ -25,13 +25,15 @@ convert into notes through the storage codecs, never overwrite existing values, 
 ## Boundary
 
 Only this folder and its tests may know WatchLog: plugin ids, `WatchLog.base`, the `watchlog:` key,
-`wl-*` widget names, schema-1 data (`.claude/skills/project/SKILL.md`). Everything else imports from
-[index.ts](../../src/migration/watchlog/index.ts).
+`wl-*` widget names, schema-1 data (`.claude/skills/project/SKILL.md`). `main.ts` imports from
+[index.ts](../../src/migration/watchlog/index.ts); `backup.ts` and the settings tab import the
+backup functions from `backupImport.ts` directly, and `backup.ts` and `LocalStore.ts` import
+types from `schema1Types.ts`.
 
 | Entry point | Called from | Does |
 |---|---|---|
 | `loadOwnOrWatchLog` | `LocalStore.load` in `main.ts` | adopts a WatchLog `data.json` while Hoard's is empty |
-| `migrateFromWatchLog` | `startVaultStorage` | base rename, data adoption, schema-1 conversion, widget fences; one Notice |
+| `migrateFromWatchLog` | `startVaultStorage` | base rename, data adoption, schema-1 conversion, widget fences; one summary Notice, plus an error Notice when the conversion failed |
 | `watchLogRoot` | `startVaultStorage` | root folder for a pending schema-1 conversion |
 | `WATCHLOG_PLUGIN_IDS` | `warnIfWatchLogEnabled` | warns while the old plugin is still enabled |
 | `parseWatchLogBackup`, `restoreWatchLogBackup` | [backup](backup.md) | v1 to v3 export files → `importWatchLogData` |

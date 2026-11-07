@@ -21,9 +21,9 @@ Settings are one object in memory (`plugin.settings`) but two on disk:
 
 The whitelist is `SHARED_SETTING_KEYS` and `NESTED_SHARED_KEYS` in
 [SharedConfigStore.ts](../../src/storage/SharedConfigStore.ts). `pick()` applies it on every read and
-write, so a key that is not listed can never reach the base, whatever the caller passes. `RETIRED_KEYS`
-(`ratingSystem`, `seasonPalette`, `readingTypeColors`) were once shared and are deleted from the block
-on the next write.
+write, so the plugin never writes an unlisted key into the base, whatever the caller passes. A key
+someone put into the block by hand is preserved on update, not purged; only `RETIRED_KEYS`
+(`ratingSystem`, `seasonPalette`, `readingTypeColors`) are deleted on the next write.
 
 ## Composition and persistence
 
@@ -40,8 +40,9 @@ on the next write.
 
 ## Fresh install and sync
 
-Without a base, `deferBase` holds a creator: the base is created on the first user-initiated note
-write (`EntryIndex.onLocalWrite`), or adopted when one appears by sync (`appeared`). See
+Without a base, `deferBase` holds a creator: the base is created on the first write that needs
+it, a user-initiated note write (`EntryIndex.onLocalWrite`) or a changed shared setting
+(`update` → `ensureBase`), or adopted when one appears by sync (`appeared`). See
 [flows/startup](../flows/startup.md).
 
 Backups follow the same split: `withoutSecrets` strips key-like local settings before a copy is

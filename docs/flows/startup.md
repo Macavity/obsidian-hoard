@@ -55,8 +55,8 @@ sequenceDiagram
 4. **`startVaultStorage`**: [WatchLog import](watchlog-import.md) first, then `detectRoot`. Root
    priority: a base with `hoard:` → the pending schema-1 root folder → `Hoard`.
 5. **Fresh install** (no base, nothing pending): `deferBase` registers a creator; the base is
-   written on the first user-initiated note write (`EntryIndex.onLocalWrite` → `ensureBase`), or
-   adopted when a synced base appears (`adoptSyncedBase`: new layout, reload settings, rebuild
+   written on the first user-initiated note write (`EntryIndex.onLocalWrite` → `ensureBase`) or
+   the first changed shared setting, or adopted when a synced base appears (`adoptSyncedBase`: new layout, reload settings, rebuild
    index). This is what lets a second device start on a half-synced vault without becoming the
    first one.
 6. Shared config loads and `applySharedSettings` re-composes settings; a missing
@@ -68,7 +68,8 @@ sequenceDiagram
 ## Failure points
 
 - Any error in `startVaultStorage` is caught once: console error plus Notice "could not load its
-  notes"; the UI stays up with an empty library.
+  notes"; the UI stays up with whatever was loaded before the failure (an already built index is
+  not cleared).
 - A failed schema-1 conversion keeps `data.json` as schema 1 and retries next start.
 - Type-name changes after start trigger `syncTypeNames` → `index.rebuild()`.
 

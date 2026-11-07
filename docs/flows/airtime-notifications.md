@@ -47,5 +47,6 @@ flowchart TD
    Clicking opens the Upcoming tab.
 7. The Upcoming tab badge uses the same counts via the `TABS` registry (`refreshOn: 'data-change'`).
 
-Failure points: a missing or malformed `releaseTime` never fires; an entry whose subject no longer
+Failure points: a `releaseTime` not shaped `H:MM` / `HH:MM` never fires (digits are not
+range-checked); an entry whose subject no longer
 exists is skipped silently. Details of the tab: [modules/upcoming](../modules/upcoming.md).

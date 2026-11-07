@@ -1,7 +1,7 @@
 ---
 type: Flow
 title: WatchLog import
-description: The one-time migration of a WatchLog or WatchLog Sync vault on first start, step by step, and why a second start is a no-op.
+description: The one-time migration of a WatchLog or WatchLog Sync vault on first start, step by step, and why a later start normally finds nothing.
 source:
   - src/migration/watchlog/index.ts
   - src/migration/watchlog/detect.ts
@@ -9,6 +9,7 @@ source:
   - src/migration/watchlog/pluginData.ts
   - src/migration/watchlog/schema1.ts
   - src/migration/watchlog/widgets.ts
+  - src/storage/VaultLayout.ts
   - src/main.ts
 source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
 ---
@@ -44,7 +45,8 @@ flowchart TD
    renamed to `Hoard.base` in place, so links follow. If a `Hoard.base` already sits beside it, the
    old file is left alone (`blocked`, console warning).
 3. **Schema-1 conversion** ([schema1.ts](../../src/migration/watchlog/schema1.ts)): root = folder
-   of the migrated base, else WatchLog's `rootFolder` setting, else `WatchLog`. A copy
+   of the first path-sorted base with a `hoard:` block (`detectRoot`, normally the one just
+   migrated), else WatchLog's `rootFolder` setting, else `WatchLog`. A copy
    `data.v1-backup.json` is written next to the source first. Titles, books, manga, games become
    notes (`NoteWriter`), groups and airtime are applied, history goes to `History.md`, shared
    settings fill the base, the cache is merged, and a schema-2 `data.json` is built. Every step
@@ -56,7 +58,8 @@ flowchart TD
    `hoard` names; attributes after the language stay.
 5. **Report**: one Notice summarising what was done; skipped items and errors go to the console.
    `migrateFromWatchLog` returns null when nothing WatchLog-related was found, so the vault scan
-   for widgets runs only on the start that found WatchLog.
+   for widgets runs only on a start that found WatchLog. A `WatchLog.base` left blocked beside a
+   `Hoard.base` is found again on every start and repeats the warning and the scan.
 
 The same converter serves backup restore of WatchLog exports (`importWatchLogData`: no backup
 file, no folder moves, schema version untouched). See [modules/import](../modules/import.md).

@@ -30,7 +30,7 @@ Read [values](values.md) first; every rule below serves one of them.
 - **Properties**: the YAML block at the top of a note; the only place entry fields live.
 - **Base**: `Hoard.base`, whose `hoard:` block carries the shared vocabulary; nothing else syncs settings.
 - **Cache**: `data.json`, device-local; API keys, fetched data, UI state.
-- **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the only writers of notes.
+- **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (the import writes them once, custom lists write their own notes).
 - **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
 - **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
 - **Maybe**: a note with `maybe: true`, considered but not in the library.

@@ -27,12 +27,13 @@ around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../
 
 ## Restore
 
-1. `parseBackup` validates the whole file before anything is written; anything that is not a
+1. `parseBackup` validates the file's shape (sections present, lists are arrays; entries
+   themselves are not checked) before anything is written; anything that is not a
    version-2 Hoard file is handed to `parseWatchLogBackup` (WatchLog exports v1 to v3), which the
    [import module](../modules/import.md) restores through the schema-1 importer.
 2. `restoreBackup` writes in this order: shared settings into the base (`restoreSharedSettings`),
-   local settings into `data.json` (shared keys and prototype-polluting keys skipped, so a backup
-   can never push a key into the base), titles and Maybe titles that do not exist yet
+   local settings into `data.json` (shared keys and prototype-polluting keys skipped, so the
+   local section can never push a key into the base), titles and Maybe titles that do not exist yet
    (`addTitleSilent` / `addMaybeTitle`, one notify), then reading, games and history through their
    managers' `restore`.
 3. Existing notes are kept; a restore adds, it does not overwrite.

@@ -72,5 +72,5 @@ status bar recounts. External changes (sync, hand edits) arrive through `EntryIn
   [shared vs local](../concepts/shared-vs-local.md).
 - Errors from APIs are classified once (`ApiError`, `apiErrorMessage`) so every caller shows the
   same wording; note writes with invalid YAML show a Notice and skip.
-- Mobile: `Platform.isMobile` toggles `hoard-mobile` on the view; card size and card text style are
-  per device class (`getCardMinWidth`, `isCardTextUnder` in `main.ts`).
+- Mobile: `Platform.isMobile` toggles `hoard-mobile` on the view; card size is per device class
+  (`getCardMinWidth`), card text placement is per tab (`isCardTextUnder`), both in `main.ts`.

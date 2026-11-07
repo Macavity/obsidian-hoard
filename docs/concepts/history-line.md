@@ -19,7 +19,8 @@ source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
 ```
 
 Grammar ([historyLine.ts](../../src/storage/historyLine.ts)): `- <ISO timestamp> · <action> ·
-<target> [· <message>] [#watchlist|#reading|#games]`, separator ` · `. Actions: `added`,
+<target>[ · <message>][ #watchlist|#reading|#games]`, separator ` · `; the source tag is the
+tail of the fourth part, so a tag without a message still follows a ` · `. Actions: `added`,
 `completed`, `deleted`, `status`, `rating`, `watched`, `group-created`. A target in `[[...]]` is the
 [entry id](entry-id.md) (decision C1 in code comments), so Obsidian keeps the link on rename; a plain
 target is a name. Whitespace in names is collapsed so one entry is always one line.

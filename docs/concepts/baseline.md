@@ -26,6 +26,7 @@ The symbol property is enumerable so it survives object spread, but `Object.keys
   [flows/entry-write](../flows/entry-write.md).
 - After a write the copy becomes the UI's live view only if `basedOnStored` holds: its baseline
   still equals what the index holds now, with the id blanked (`sameStoredState`), so a rename
-  does not invalidate it. A stale copy keeps nothing; the next read builds a fresh one.
+  does not invalidate it; an id the index does not know yet (a note being created) counts as
+  fresh. A stale copy keeps nothing; the next read builds a fresh one.
 
 Reading and game managers apply the same rules (`basedOnStored`, `afterWrite`).

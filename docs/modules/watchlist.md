@@ -44,9 +44,10 @@ here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API client
   [baseline](../concepts/baseline.md); the write diff is in [flows/entry-write](../flows/entry-write.md).
   Variants: `updateTitle` (stamps `dateModified`, clears priority on Completed, logs rating and
   completion); `updateTitleSilent` + `save()` for batches; `scheduleEpisodeSave` (debounced, no
-  notify, caller updates its own DOM); backfills `updatePosterUrl`, `updateCommunityRating`,
-  `updateTrailerUrl`, `updateCredits`, `updateStudio`, `updateTmdbIdentity` write the cache only,
-  no `dateModified`; `updateManualCredits`, `setFavorite` and group changes write the note without a
+  notify, caller updates its own DOM); backfills `updateCommunityRating`, `updateTrailerUrl`,
+  `updateCredits`, `updateStudio`, `updateTmdbIdentity` write the cache only, no `dateModified`;
+  `updatePosterUrl` writes the note's `poster` when it is empty (or on explicit refresh);
+  `updateManualCredits`, `setFavorite` and group changes write the note without a
   `dateModified` stamp.
 - **Note vs cache.** API fields are device-local cache ([entry cache](../concepts/entry-cache.md)).
   Into the note go user overrides (manual trailer, manual credits, a typed poster), the poster an
@@ -61,7 +62,8 @@ here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API client
   level of the tab; a group shows when any member passes search and filters. Pinned group and
   saved filter preset are device-local UI state.
 - **Release date.** A future full date forces status "To be released" and therefore an Upcoming
-  card; a past or cleared date reverts to "Plan to watch" (`applyReleaseDateChange`).
+  card; a past or cleared date reverts a "To be released" title to "Plan to watch" and leaves any
+  other status alone (`applyReleaseDateChange`).
 - **Credits** are backfilled once per detail-modal open for absent fields; a miss stores the
   `'none'` marker so it is not retried. Shown credits are fetched merged with manual.
 - **Collections** are movies only: the verdict (collection id or `COLLECTION_NONE`) is cached via
