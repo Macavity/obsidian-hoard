@@ -1,7 +1,7 @@
 ---
 type: Domain
 title: Shared vs local settings
-description: Which settings sync through Hoard.base, which stay in data.json, and why API keys never cross.
+description: Which settings sync through Hoard.base, which stay in data.json, and why the plugin never writes an API key into the base.
 source:
   - src/storage/SharedConfigStore.ts
   - src/settingsSplit.ts
@@ -21,9 +21,11 @@ Settings are one object in memory (`plugin.settings`) but two on disk:
 
 The whitelist is `SHARED_SETTING_KEYS` and `NESTED_SHARED_KEYS` in
 [SharedConfigStore.ts](../../src/storage/SharedConfigStore.ts). `pick()` applies it on every read and
-write, so the plugin never writes an unlisted key into the base, whatever the caller passes. A key
-someone put into the block by hand is preserved on update, not purged; only `RETIRED_KEYS`
-(`ratingSystem`, `seasonPalette`, `readingTypeColors`) are deleted on the next write.
+write, so the plugin never writes an unlisted key into the base, whatever the caller passes. An unlisted
+top-level key someone put into the block by hand is preserved on update, not purged (so a key
+pasted there stays synced until removed by hand); only `RETIRED_KEYS` (`ratingSystem`,
+`seasonPalette`, `readingTypeColors`) are deleted on the next write. Inside `reading` and `games`
+the whole object is replaced, so unlisted nested keys do not survive.
 
 ## Composition and persistence
 
