@@ -3,6 +3,7 @@ import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import { DashboardTab } from './DashboardTab';
 import { ListTab } from './ListTab';
+import { AirtimeTab } from './AirtimeTab';
 import { ReadingTab } from './ReadingTab';
 import { GamesTab } from './GamesTab';
 
@@ -56,6 +57,19 @@ const TABS: TabDefinition[] = [
 		icon: 'tv',
 		cls: 'hoard-list',
 		create: (ctx) => new ListTab(ctx.containerEl, ctx.plugin, ctx.dataManager),
+	},
+	{
+		name: 'upcoming',
+		label: 'Upcoming',
+		icon: 'calendar',
+		cls: 'hoard-airtime',
+		create: (ctx) => new AirtimeTab(ctx.containerEl, ctx.plugin, ctx.dataManager, ctx.setBadge),
+		badge: {
+			count: (plugin, dataManager) =>
+				AirtimeTab.getAiredDueCount(dataManager, plugin.readingDataManager, plugin.gameDataManager) +
+				AirtimeTab.getMaybeDueCount(dataManager),
+			refreshOn: 'data-change',
+		},
 	},
 	{
 		name: 'reading',

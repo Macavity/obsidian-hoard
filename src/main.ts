@@ -1,4 +1,4 @@
-import { Notice, Platform, Plugin, parseYaml, stringifyYaml } from 'obsidian';
+import { Notice, Platform, Plugin, parseYaml, setIcon, stringifyYaml } from 'obsidian';
 import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, HoardPluginSettings, setActiveDateFormat } from './types';
 import { cardSizeToMinWidth } from './VirtualGrid';
 import type { CardStyleTab, HoardData } from './types';
@@ -17,6 +17,8 @@ import { HoardView, HOARD_VIEW_TYPE, TabName } from './HoardView';
 import { AddTitleModal } from './AddTitleModal';
 import { TitleDetailModal } from './TitleDetailModal';
 import { InsertWidgetModal } from './InsertWidgetModal';
+import { AirtimeTab } from './AirtimeTab';
+import { runAirtimeScheduler } from './airtimeScheduler';
 import { hasHoardKey } from './storage/baseFile';
 import { legacyRoot, migrateV1 } from './storage/migrateV1';
 import { loadOwnOrOriginal, LEGACY_PLUGIN_IDS } from './storage/legacyPlugin';
@@ -86,6 +88,12 @@ export default class HoardPlugin extends Plugin {
 	// runtime import progress state (not persisted)
 	importProgress: { current: number; total: number; cancel: () => void } | null = null;
 
+	// which entry+day combos have already fired a notification
+	private notifiedEntries: Set<string> = new Set();
+
+	// status-bar Upcoming "due" counter (desktop only; null on mobile)
+	private statusBarEl: HTMLElement | null = null;
+
 	async onload(): Promise<void> {
 		const loaded = await this.local.load();
 		if (loaded.schema === 1) {
@@ -127,6 +135,7 @@ export default class HoardPlugin extends Plugin {
 			() => this.settings,
 		);
 
+		this.startAirtimeScheduler();
 		// notes are read once the vault and metadata cache are ready
 		this.app.workspace.onLayoutReady(() => void this.startVaultStorage());
 
@@ -175,6 +184,13 @@ export default class HoardPlugin extends Plugin {
 				}).open();
 			},
 		});
+
+		this.setupStatusBar();
+		// keep the status bar in sync with data edits (no new timer: the 60s airtime interval drives the
+		// time-based refresh). 'hoard-data-changed' is a custom event, so register the listener directly.
+		const statusBarListener = (): void => this.updateStatusBar();
+		activeDocument.addEventListener('hoard-data-changed', statusBarListener);
+		this.register(() => activeDocument.removeEventListener('hoard-data-changed', statusBarListener));
 	}
 
 	onunload(): void {
@@ -336,6 +352,64 @@ export default class HoardPlugin extends Plugin {
 				.map(async (f) => ({ path: f.path, hasHoardKey: hasHoardKey(await vault.cachedRead(f)) })),
 		);
 		return VaultLayout.findRoot(bases);
+	}
+
+	private startAirtimeScheduler(): void {
+		this.checkAirtimeNotifications();
+		this.registerInterval(window.setInterval(() => {
+			this.checkAirtimeNotifications();
+		}, 60000));
+	}
+
+	/** Lets AirtimeTab prevent the scheduler from double-firing after a manual tick. */
+	markAirtimeHandled(key: string): void {
+		this.notifiedEntries.add(key);
+	}
+
+	private checkAirtimeNotifications(): void {
+		runAirtimeScheduler({
+			dataManager: this.dataManager,
+			readingDataManager: this.readingDataManager,
+			gameDataManager: this.gameDataManager,
+			notify: (name) => new Notice(name, 8000),
+		}, this.notifiedEntries);
+
+		// the due count is time-based, so refresh the status bar on every tick
+		this.updateStatusBar();
+	}
+
+	// Status bar: Upcoming "due" counter
+	private setupStatusBar(): void {
+		// the status bar doesn't exist on mobile: skip entirely there
+		if (Platform.isMobile) return;
+		this.statusBarEl = this.addStatusBarItem();
+		this.statusBarEl.addClass('hoard-statusbar-upcoming');
+		this.statusBarEl.setAttribute('aria-label', 'Hoard: Upcoming due');
+		this.statusBarEl.addEventListener('click', () => void this.activateView('upcoming'));
+		this.updateStatusBar();
+	}
+
+	/** Refreshes the status-bar Upcoming counter. Hidden when off or when 0 due. */
+	updateStatusBar(): void {
+		const el = this.statusBarEl;
+		if (!el) return;
+		if (!this.settings.showUpcomingStatusBar) {
+			el.hide();
+			return;
+		}
+		const count =
+			AirtimeTab.getAiredDueCount(this.dataManager, this.readingDataManager, this.gameDataManager) +
+			AirtimeTab.getMaybeDueCount(this.dataManager);
+		if (count <= 0) {
+			el.hide();
+			return;
+		}
+		el.empty();
+		el.show();
+		// orange icon + "N due" (colour from .hoard-statusbar-upcoming), reusing the ribbon's 'tv' icon
+		const icon = el.createSpan({ cls: 'hoard-statusbar-icon' });
+		setIcon(icon, 'tv');
+		el.createSpan({ cls: 'hoard-statusbar-text', text: `${count} due` });
 	}
 
 	/** Composes settings from defaults, data.json and the shared base (shared keys win). */
