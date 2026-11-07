@@ -6,6 +6,7 @@ import { ListTab } from './ListTab';
 import { AirtimeTab } from './AirtimeTab';
 import { ReadingTab } from './ReadingTab';
 import { GamesTab } from './GamesTab';
+import { CustomListsTab } from './CustomListsTab';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';
 
@@ -84,6 +85,13 @@ const TABS: TabDefinition[] = [
 		icon: 'gamepad-2',
 		cls: 'hoard-games-tab',
 		create: (ctx) => new GamesTab(ctx.containerEl, ctx.plugin, ctx.plugin.gameDataManager),
+	},
+	{
+		name: 'custom-lists',
+		label: 'Custom lists',
+		icon: 'list',
+		cls: 'hoard-custom-lists',
+		create: (ctx) => new CustomListsTab(ctx.containerEl, ctx.plugin, ctx.dataManager),
 	},
 ];
 

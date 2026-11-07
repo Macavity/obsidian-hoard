@@ -1,0 +1,1918 @@
+import { App, Component, MarkdownRenderer, Modal, Notice, Platform, TFile, normalizePath, Setting } from 'obsidian';
+import type HoardPlugin from './main';
+import type { DataManager } from './DataManager';
+import type { CustomListColumn, CustomListRow, CustomList } from './types';
+import { DEFAULT_FIELD_COLOR } from './types';
+import { ConfirmModal } from './ConfirmModal';
+import { openColorPicker, deriveFillColor, deriveBorderColor } from './ColorPicker';
+import { openStatusDropdown } from './StatusDropdown';
+import { openAddForTitle } from './AddRouter';
+import { cloneColumns, renderCancelSave, renderColumnsEditor } from './ui/ColumnsEditor';
+
+/** Row name, trimmed — the index signature types it loosely. */
+function rowName(row: CustomListRow): string {
+	return String((row as Record<string, string | undefined>)['name'] ?? '').trim();
+}
+
+/** Key handling of an inline cell editor: Tab / Shift+Tab / Enter commit and navigate, Escape cancels. */
+function handleEditKey(
+	e: KeyboardEvent,
+	commit: (nav: 'tab' | 'shift-tab' | 'enter') => void,
+	cancel: () => void,
+): void {
+	if (e.key === 'Tab') { e.preventDefault(); commit(e.shiftKey ? 'shift-tab' : 'tab'); }
+	else if (e.key === 'Enter') { e.preventDefault(); commit('enter'); }
+	else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); cancel(); }
+}
+
+/** Minimum width (px) a resizable column can be dragged to. */
+const MIN_COL_WIDTH = 60;
+/** Fallback width (px) for a resizable column with no explicit width. */
+const DEFAULT_COL_WIDTH = 140;
+
+// CustomListManager — vault I/O
+
+export class CustomListManager {
+	/** Names of lists whose ## Data JSON is corrupt — never overwrite these. */
+	corruptLists: Set<string> = new Set();
+
+	/**
+	 * Per-list save queue: serializes writes to the same file so table and notes saves can't race
+	 * and clobber each other.
+	 */
+	private saveQueues: Map<string, Promise<void>> = new Map();
+
+	constructor(
+		private readonly app: App,
+		private readonly plugin: HoardPlugin,
+	) {}
+
+	private async saveSerialized(listName: string, saveFn: () => Promise<void>): Promise<void> {
+		const prev = this.saveQueues.get(listName) ?? Promise.resolve();
+		const next = prev.then(saveFn).catch(e => console.error('[WL] Save error for list:', listName, e));
+		this.saveQueues.set(listName, next);
+		await next;
+	}
+
+	get folderPath(): string {
+		return this.plugin.getLayout().customListsFolder;
+	}
+
+	async ensureFolder(): Promise<void> {
+		const path = normalizePath(this.folderPath);
+		if (!this.app.vault.getAbstractFileByPath(path)) {
+			try { await this.app.vault.createFolder(path); } catch { /* ok */ }
+		}
+	}
+
+	listNames(): string[] {
+		const dir = normalizePath(this.folderPath);
+		return this.app.vault.getFiles()
+			.filter(f => {
+				const parentPath = f.parent?.path ?? '';
+				return parentPath === dir && f.extension === 'md';
+			})
+			.map(f => f.basename)
+			.sort((a, b) => a.localeCompare(b));
+	}
+
+	async loadList(name: string): Promise<CustomList | null> {
+		const path = normalizePath(`${this.folderPath}/${name}.md`);
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!(file instanceof TFile)) return null;
+		try {
+			const content = await this.app.vault.read(file);
+			return this.parse(name, content);
+		} catch (e) {
+			console.warn('[WL] Failed to read custom list', name, e);
+			return null;
+		}
+	}
+
+	/**
+	 * Reads each named list into a `name → tabColor` map for tab rendering. Lists without a colour,
+	 * or that fail to load, are omitted.
+	 */
+	async loadTabColors(names: string[]): Promise<Map<string, string>> {
+		const out = new Map<string, string>();
+		await Promise.all(names.map(async (name) => {
+			const list = await this.loadList(name);
+			if (list?.tabColor) out.set(name, list.tabColor);
+		}));
+		return out;
+	}
+
+	private parse(name: string, content: string): CustomList | null {
+		const notesMatch = content.match(/## Notes\n([\s\S]*?)(?=\n## |\s*$)/);
+		const notes = (notesMatch?.[1] ?? '').trim();
+
+		const dataMatch = content.match(/## Data\n```json\n([\s\S]*?)\n```/);
+		let columns: CustomListColumn[] = [];
+		let rows: CustomListRow[] = [];
+		let tabColor: string | undefined;
+		let nameWidth: number | undefined;
+
+		if (dataMatch?.[1]) {
+			try {
+				const p = JSON.parse(dataMatch[1]) as { columns?: unknown; rows?: unknown; tabColor?: unknown; nameWidth?: unknown };
+				if (typeof p.tabColor === 'string') tabColor = p.tabColor;
+				if (typeof p.nameWidth === 'number') nameWidth = p.nameWidth;
+				if (Array.isArray(p.columns)) {
+					columns = (p.columns as unknown[]).filter((c): c is CustomListColumn =>
+						typeof c === 'object' && c !== null &&
+						'id' in c && 'label' in c && 'type' in c,
+					);
+				}
+				if (Array.isArray(p.rows)) {
+					rows = (p.rows as unknown[]).filter((r): r is CustomListRow =>
+						typeof r === 'object' && r !== null && 'id' in r,
+					);
+				}
+			} catch (e) {
+				console.warn('[WL] Custom list JSON parse failed for', name, e);
+				new Notice(`Custom list "${name}" has corrupt data and cannot be loaded.`);
+				this.corruptLists.add(name);
+				return null;
+			}
+		}
+
+		return { name, columns, rows, notes, tabColor, nameWidth };
+	}
+
+	async saveList(list: CustomList): Promise<void> {
+		await this.saveSerialized(list.name, async () => {
+			if (this.corruptLists.has(list.name)) {
+				console.warn('[WL] Refusing to save corrupt custom list', list.name);
+				return;
+			}
+			await this.ensureFolder();
+			const path = normalizePath(`${this.folderPath}/${list.name}.md`);
+			const content = this.serialize(list);
+			const existing = this.app.vault.getAbstractFileByPath(path);
+			try {
+				if (existing instanceof TFile) {
+					await this.app.vault.modify(existing, content);
+				} else {
+					await this.app.vault.create(path, content);
+				}
+			} catch (e) {
+				console.error('Hoard: failed to save custom list', e);
+			}
+		});
+	}
+
+	/** Saves only the ## Notes section, without touching ## Data JSON. */
+	async saveNotes(name: string, notes: string): Promise<void> {
+		await this.saveSerialized(name, async () => {
+			const path = normalizePath(`${this.folderPath}/${name}.md`);
+			const file = this.app.vault.getAbstractFileByPath(path);
+			if (!(file instanceof TFile)) return;
+			try {
+				const content = await this.app.vault.read(file);
+				const notesMarker = '## Notes\n';
+				const dataMarker = '\n## Data\n';
+				const notesIdx = content.indexOf(notesMarker);
+				if (notesIdx === -1) return;
+				const afterNotes = notesIdx + notesMarker.length;
+				const dataIdx = content.indexOf(dataMarker, afterNotes);
+				const updated = dataIdx !== -1
+					? content.slice(0, afterNotes) + notes + content.slice(dataIdx)
+					: content.slice(0, afterNotes) + notes + '\n';
+				await this.app.vault.modify(file, updated);
+			} catch (e) {
+				console.error('Hoard: failed to save notes', e);
+			}
+		});
+	}
+
+	private serialize(list: CustomList): string {
+		const json = JSON.stringify(
+			{ columns: list.columns, rows: list.rows, tabColor: list.tabColor, nameWidth: list.nameWidth },
+			null,
+			2,
+		);
+		return `# ${list.name}\n\n## Notes\n${list.notes}\n\n## Data\n\`\`\`json\n${json}\n\`\`\`\n`;
+	}
+
+	async deleteList(name: string): Promise<void> {
+		const path = normalizePath(`${this.folderPath}/${name}.md`);
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (file instanceof TFile) {
+			try { await this.app.fileManager.trashFile(file); } catch { /* ok */ }
+		}
+	}
+
+	async renameList(oldName: string, newName: string): Promise<void> {
+		const newPath = normalizePath(`${this.folderPath}/${newName}.md`);
+		const oldPath = normalizePath(`${this.folderPath}/${oldName}.md`);
+		const file = this.app.vault.getAbstractFileByPath(oldPath);
+		if (file instanceof TFile) {
+			try { await this.app.vault.rename(file, newPath); } catch { /* ok */ }
+		}
+	}
+
+	generateColId(existingColumns: CustomListColumn[]): string {
+		const ids = new Set(existingColumns.map(c => c.id));
+		let i = 1;
+		while (ids.has(`col_${i}`)) i++;
+		return `col_${i}`;
+	}
+
+	generateRowId(rows: CustomListRow[]): string {
+		const ids = new Set(rows.map(r => r.id));
+		let i = 1;
+		while (ids.has(`row_${i}`)) i++;
+		return `row_${i}`;
+	}
+}
+
+// EditColumnsModal
+
+class EditColumnsModal extends Modal {
+	private list: CustomList;
+	private manager: CustomListManager;
+	private onSave: (columns: CustomListColumn[]) => Promise<void>;
+	private cols: CustomListColumn[];
+	private tabColor: string | undefined;
+	// colId → (original option value → latest value). Applied to row cells on Save only — never live,
+	// so a Cancel can't leak a rename into a later cell-edit save.
+	private optionRenames: Map<string, Map<string, string>> = new Map();
+
+	constructor(
+		app: App,
+		list: CustomList,
+		manager: CustomListManager,
+		onSave: (columns: CustomListColumn[]) => Promise<void>,
+	) {
+		super(app);
+		this.list = list;
+		this.manager = manager;
+		this.onSave = onSave;
+		this.tabColor = list.tabColor;
+		this.cols = cloneColumns(list.columns.filter(c => !c.locked));
+	}
+
+	onOpen(): void {
+		this.modalEl.addClass('hoard-editcol-modal');
+		this.titleEl.setText(`Table settings: ${this.list.name}`);
+		this.contentEl.addClass('hoard-editcols-modal');
+		this.renderBody();
+	}
+
+	private renderBody(): void {
+		renderColumnsEditor(this.contentEl, { cols: this.cols }, {
+			app: this.app,
+			rows: this.list.rows,
+			renderHeader: (parent) => this.renderTabColorRow(parent),
+			newColumnId: (cols) => this.manager.generateColId([...this.list.columns.filter(c => !c.locked), ...cols]),
+			onOptionRename: (colId, oldVal, newVal) => this.recordOptionRename(colId, oldVal, newVal),
+			onSave: (cols) => this.handleSave(cols),
+			onCancel: () => this.close(),
+		});
+	}
+
+	private renderTabColorRow(parent: HTMLElement): void {
+		const row = parent.createDiv({ cls: 'hoard-editcols-tabcolor-row' });
+		row.createSpan({ cls: 'hoard-editcols-tabcolor-label', text: 'Tab color' });
+
+		const dot = row.createEl('button', { cls: 'hoard-reading-col-color-dot hoard-editcols-tabcolor-dot' });
+
+		const sync = (): void => {
+			if (this.tabColor) {
+				dot.removeClass('is-unset');
+				// colour flows through a CSS var; .is-unset gates whether it applies
+				dot.setCssProps({ '--hoard-dot-fill': this.tabColor });
+			} else {
+				dot.addClass('is-unset');
+			}
+		};
+		sync();
+
+		dot.title = 'Choose tab color';
+		dot.addEventListener('click', (e) => {
+			e.stopPropagation();
+			openColorPicker({
+				anchor: dot,
+				container: this.contentEl,
+				current: this.tabColor ?? DEFAULT_FIELD_COLOR,
+				allowCustom: true,
+				// clear swatch → null → revert to the default (uncoloured) tab name
+				onPick: (color) => { this.tabColor = color ?? undefined; sync(); },
+			});
+		});
+	}
+
+	/**
+	 * Accumulates a net (original → latest) rename per option, composing keystrokes so
+	 * "A"→"Ap"→"Apple" collapses to "A"→"Apple".
+	 */
+	private recordOptionRename(colId: string, oldVal: string, newVal: string): void {
+		let m = this.optionRenames.get(colId);
+		if (!m) { m = new Map(); this.optionRenames.set(colId, m); }
+		// if some original already maps to oldVal, extend that chain; else start fresh
+		let origKey: string | null = null;
+		for (const [orig, cur] of m) { if (cur === oldVal) { origKey = orig; break; } }
+		m.set(origKey ?? oldVal, newVal);
+	}
+
+	/**
+	 * Migrates row cells from each original option value to its final value. Only exact matches in
+	 * the renamed column are touched; orphan values that were never an option, and options created
+	 * fresh this session (orig ''), are left alone.
+	 */
+	private applyOptionRenamesToRows(): void {
+		for (const [colId, m] of this.optionRenames) {
+			for (const [orig, final] of m) {
+				if (orig === '' || orig === final) continue;
+				for (const r of this.list.rows) {
+					if ((r as Record<string, unknown>)[colId] === orig) {
+						(r as Record<string, unknown>)[colId] = final;
+					}
+				}
+			}
+		}
+	}
+
+	private handleSave(cols: CustomListColumn[]): void {
+		this.applyOptionRenamesToRows();
+		this.list.tabColor = this.tabColor;
+		void this.onSave(cols).then(() => this.close());
+	}
+}
+
+// DefaultColumnsModal — for Settings
+
+export class DefaultColumnsModal extends Modal {
+	private plugin: HoardPlugin;
+	private cols: CustomListColumn[];
+	private manager: CustomListManager;
+
+	constructor(app: App, plugin: HoardPlugin) {
+		super(app);
+		this.plugin = plugin;
+		this.manager = new CustomListManager(app, plugin);
+		this.cols = cloneColumns(plugin.settings.defaultCustomColumns ?? []);
+	}
+
+	onOpen(): void {
+		this.modalEl.addClass('hoard-editcol-modal');
+		this.titleEl.setText('Default columns');
+		this.contentEl.addClass('hoard-editcols-modal');
+		this.renderBody();
+	}
+
+	private renderBody(): void {
+		renderColumnsEditor(this.contentEl, { cols: this.cols }, {
+			app: this.app,
+			rows: [],
+			renderHeader: (parent) => {
+				parent.createDiv({
+					cls: 'hoard-settings-info',
+					text: 'These columns are pre-populated when creating a new list. The Name column is always added automatically.',
+				});
+			},
+			newColumnId: (cols) => this.manager.generateColId(cols),
+			onSave: (cols) => void this.handleSave(cols),
+			onCancel: () => this.close(),
+		});
+	}
+
+	private async handleSave(cols: CustomListColumn[]): Promise<void> {
+		this.plugin.settings.defaultCustomColumns = cols;
+		await this.plugin.saveSettings();
+		new Notice('Default columns saved.');
+		this.close();
+	}
+}
+
+// NotesModal — edits a list's notes in a textarea
+
+class NotesModal extends Modal {
+	private previewComponent = new Component();
+
+	constructor(
+		app: App,
+		private listName: string,
+		private initialNotes: string,
+		private onSave: (notes: string) => Promise<void>,
+	) { super(app); }
+
+	onOpen(): void {
+		this.previewComponent.load();
+		this.titleEl.setText(`Notes: ${this.listName}`);
+		const { contentEl } = this;
+		contentEl.addClass('hoard-notes-modal');
+
+		const modeBar = contentEl.createDiv({ cls: 'hoard-notes-mode-bar' });
+		const editBtn = modeBar.createEl('button', { cls: 'hoard-btn hoard-btn-sm is-active', text: 'Edit' });
+		const previewBtn = modeBar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: 'Preview' });
+
+		const editArea = contentEl.createDiv({ cls: 'hoard-notes-edit-area' });
+		const textarea = editArea.createEl('textarea', {
+			cls: 'hoard-modal-textarea hoard-notes-textarea',
+			attr: { placeholder: 'Add notes, links, or any text here...' },
+		});
+		textarea.value = this.initialNotes;
+		window.setTimeout(() => {
+			textarea.focus();
+			textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+		}, 0);
+
+		const previewArea = contentEl.createDiv({ cls: 'hoard-notes-preview-area' });
+		previewArea.hide();
+
+		const showEdit = (): void => {
+			editArea.show();
+			previewArea.hide();
+			editBtn.addClass('is-active');
+			previewBtn.removeClass('is-active');
+			textarea.focus();
+		};
+
+		const showPreview = async (): Promise<void> => {
+			editArea.hide();
+			previewArea.show();
+			previewArea.empty();
+			editBtn.removeClass('is-active');
+			previewBtn.addClass('is-active');
+			const source = textarea.value.trim() || '*No notes yet.*';
+			await MarkdownRenderer.render(this.app, source, previewArea, '', this.previewComponent);
+		};
+
+		editBtn.addEventListener('click', showEdit);
+		previewBtn.addEventListener('click', () => void showPreview());
+
+		// Ctrl+B / Ctrl+I shortcuts in the textarea
+		textarea.addEventListener('keydown', (e) => {
+			if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+				e.preventDefault();
+				wrapSelection(textarea, '**', '**');
+			} else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+				e.preventDefault();
+				wrapSelection(textarea, '*', '*');
+			}
+		});
+
+		const footer = contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
+		renderCancelSave(footer, {
+			onCancel: () => this.close(),
+			onSave: () => void this.onSave(textarea.value).then(() => this.close()),
+		});
+	}
+
+	onClose(): void { this.previewComponent.unload(); this.contentEl.empty(); }
+}
+
+/** Wraps the current selection in a textarea with a prefix/suffix pair. */
+function wrapSelection(ta: HTMLTextAreaElement, before: string, after: string): void {
+	const start = ta.selectionStart;
+	const end = ta.selectionEnd;
+	const selected = ta.value.slice(start, end);
+	const replacement = before + selected + after;
+	ta.setRangeText(replacement, start, end, 'select');
+	// place the cursor inside the markers when nothing was selected
+	if (start === end) {
+		ta.selectionStart = start + before.length;
+		ta.selectionEnd = start + before.length;
+	}
+}
+
+// ListNameModal — text-input modal (window.prompt() is blocked in Electron)
+
+class ListNameModal extends Modal {
+	constructor(
+		app: App,
+		private existingNames: string[],
+		private onSubmit: (name: string) => void,
+	) { super(app); }
+
+	onOpen(): void {
+		this.titleEl.setText('New custom list');
+		const { contentEl } = this;
+
+		let value = '';
+		const errorEl = contentEl.createDiv({ cls: 'hoard-cl-name-error' });
+		errorEl.hide();
+
+		new Setting(contentEl)
+			.setName('List name')
+			.addText((t) => {
+				t.setPlaceholder('E.g. Marvel movies')
+					.onChange((v) => { value = v; errorEl.hide(); });
+				window.setTimeout(() => t.inputEl.focus(), 0);
+				t.inputEl.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter') { e.preventDefault(); submit(); }
+				});
+			});
+
+		const submit = (): void => {
+			const trimmed = value.trim();
+			if (!trimmed) { errorEl.textContent = 'Please enter a name.'; errorEl.show(); return; }
+			if (this.existingNames.includes(trimmed)) {
+				errorEl.textContent = `A list named "${trimmed}" already exists.`;
+				errorEl.show();
+				return;
+			}
+			this.close();
+			this.onSubmit(trimmed);
+		};
+
+		const btnRow = contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
+		btnRow.createEl('button', { cls: 'hoard-btn', text: 'Cancel' }).addEventListener('click', () => this.close());
+		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: 'Create' }).addEventListener('click', submit);
+	}
+
+	onClose(): void { this.contentEl.empty(); }
+}
+
+// CustomListsTab
+
+export class CustomListsTab {
+	private container: HTMLElement;
+	private plugin: HoardPlugin;
+	private dataManager: DataManager;
+	private manager: CustomListManager;
+
+	private listNames: string[] = [];
+	activeListName: string | null = null;
+	private currentList: CustomList | null = null;
+	private sortCol: string | null = null;
+	private sortDir: 'asc' | 'desc' = 'asc';
+	searchQuery = '';
+	private duplicatedRowIds: Set<string> = new Set();
+	private _escapeKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+
+	// cleanup for the inline editor's document / visualViewport listeners
+	private activeCleanups: Array<() => void> = [];
+
+	// generation counter guarding against stale renders
+	private renderGeneration = 0;
+
+	// per-list save queue preventing overlapping table + notes writes
+	private saveQueues: Map<string, Promise<void>> = new Map();
+
+	// kept for keyboard navigation (set at buildTable time)
+	private _countEl: HTMLElement | null = null;
+	private _tableContainer: HTMLElement | null = null;
+
+	constructor(container: HTMLElement, plugin: HoardPlugin, dataManager: DataManager) {
+		this.container = container;
+		this.plugin = plugin;
+		this.dataManager = dataManager;
+		this.manager = new CustomListManager(plugin.app, plugin);
+	}
+
+	/** listNames merged with the persisted tab order (new lists appended at the end). */
+	private applyTabOrder(names: string[]): string[] {
+		const saved = this.plugin.settings.customListTabOrder ?? [];
+		const ordered = saved.filter(n => names.includes(n));
+		const unordered = names.filter(n => !ordered.includes(n));
+		return [...ordered, ...unordered];
+	}
+
+	/** Tear down active inline-editor listeners (on rerender / view close). */
+	destroy(): void {
+		for (const fn of this.activeCleanups) {
+			try { fn(); } catch { /* ignore */ }
+		}
+		this.activeCleanups = [];
+		// belt-and-braces for the inline editor's Escape swallower: the cleanup above normally removes
+		// it, but the flag has to match the `capture: true` it was registered with (and both events),
+		// otherwise removeEventListener silently does nothing.
+		if (this._escapeKeyHandler) {
+			const handler = this._escapeKeyHandler;
+			try {
+				activeDocument.removeEventListener('keydown', handler, true);
+				activeDocument.removeEventListener('keyup', handler, true);
+			} catch { /* ignore */ }
+			this._escapeKeyHandler = null;
+		}
+	}
+
+	addCleanup(fn: () => void): void {
+		this.activeCleanups.push(fn);
+	}
+
+	/** Serializes saves per list so notes + table writes don't overlap. */
+	saveSerialized(listName: string, saveFn: () => Promise<void>): Promise<void> {
+		const prev = this.saveQueues.get(listName) ?? Promise.resolve();
+		const next = prev.then(saveFn).catch((e) => console.error('[WL] custom-list save failed:', e));
+		this.saveQueues.set(listName, next);
+		return next;
+	}
+
+	async render(): Promise<void> {
+		const gen = ++this.renderGeneration;
+		this.destroy();
+		this.container.empty();
+		this.container.addClass('hoard-custom-lists');
+
+		const rawNames = this.manager.listNames();
+		this.listNames = this.applyTabOrder(rawNames);
+
+		if (this.listNames.length === 0) {
+			this.buildEmptyState();
+			return;
+		}
+
+		if (!this.activeListName || !this.listNames.includes(this.activeListName)) {
+			this.activeListName = this.listNames[0] ?? null;
+		}
+
+		if (this.activeListName) {
+			this.currentList = await this.manager.loadList(this.activeListName);
+		}
+
+		const tabColors = await this.manager.loadTabColors(this.listNames);
+
+		if (gen !== this.renderGeneration) return; // stale render
+		this.container.empty();
+		this.buildSubTabs(tabColors);
+
+		if (this.currentList) {
+			this.buildListView(this.currentList);
+		}
+	}
+
+	private buildEmptyState(): void {
+		const es = this.container.createDiv({ cls: 'hoard-cl-empty-state' });
+		es.createDiv({ cls: 'hoard-cl-empty-text', text: 'No custom lists yet.' });
+		const btn = es.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: 'Create your first list' });
+		btn.addEventListener('click', () => this.promptCreateList());
+	}
+
+	private buildSubTabs(tabColors: Map<string, string>): void {
+		const tabBar = this.container.createDiv({ cls: 'hoard-cl-sub-tabs' });
+		let dragFromName: string | null = null;
+
+		for (const name of this.listNames) {
+			const tab = tabBar.createDiv({
+				cls: `hoard-cl-sub-tab${name === this.activeListName ? ' is-active' : ''}`,
+			});
+			tab.setAttribute('draggable', 'true');
+
+			const nameSpan = tab.createSpan({ cls: 'hoard-cl-sub-tab-name', text: name });
+			const tabColor = tabColors.get(name);
+			if (tabColor) nameSpan.style.color = tabColor;
+			nameSpan.addEventListener('dblclick', (e) => {
+				e.stopPropagation();
+				this.startRenameTab(tab, nameSpan, name);
+			});
+
+			const delBtn = tab.createSpan({ cls: 'hoard-cl-sub-tab-del', text: '×' });
+			delBtn.addEventListener('click', (e) => { e.stopPropagation(); void this.deleteList(name); });
+
+			tab.addEventListener('click', () => {
+				if (this.activeListName === name) return;
+				this.activeListName = name;
+				this.sortCol = null;
+				this.sortDir = 'asc';
+				this.searchQuery = '';
+				this.duplicatedRowIds.clear();
+				void this.render();
+			});
+
+			tab.addEventListener('dragstart', (e) => {
+				dragFromName = name;
+				e.dataTransfer?.setData('text/plain', name);
+				tab.addClass('hoard-cl-dragging');
+			});
+			tab.addEventListener('dragend', () => tab.removeClass('hoard-cl-dragging'));
+			tab.addEventListener('dragover', (e) => { e.preventDefault(); tab.addClass('hoard-cl-drag-over'); });
+			tab.addEventListener('dragleave', () => tab.removeClass('hoard-cl-drag-over'));
+			tab.addEventListener('drop', (e) => {
+				e.preventDefault();
+				tab.removeClass('hoard-cl-drag-over');
+				if (!dragFromName || dragFromName === name) return;
+				const fromIdx = this.listNames.indexOf(dragFromName);
+				const toIdx = this.listNames.indexOf(name);
+				if (fromIdx < 0 || toIdx < 0) return;
+				this.listNames.splice(fromIdx, 1);
+				this.listNames.splice(toIdx, 0, dragFromName);
+				this.plugin.settings.customListTabOrder = [...this.listNames];
+				void this.plugin.saveSettings().then(() => void this.render());
+			});
+		}
+
+		const addBtn = tabBar.createEl('button', { cls: 'hoard-cl-sub-tab-add hoard-btn-success', text: '+' });
+		addBtn.addEventListener('click', () => this.promptCreateList());
+	}
+
+	private startRenameTab(tab: HTMLElement, nameSpan: HTMLElement, oldName: string): void {
+		nameSpan.hide();
+		const input = tab.createEl('input', {
+			cls: 'hoard-cl-sub-tab-rename',
+			attr: { type: 'text', value: oldName },
+		});
+		input.focus();
+		input.select();
+
+		let finished = false;
+		const finish = async (save: boolean): Promise<void> => {
+			if (finished) return;
+			finished = true;
+			input.remove();
+			nameSpan.show();
+			if (!save) return;
+			const newName = input.value.trim();
+			if (!newName || newName === oldName) return;
+			if (this.listNames.includes(newName)) { new Notice(`A list named "${newName}" already exists.`); return; }
+			await this.manager.renameList(oldName, newName);
+			if (this.activeListName === oldName) this.activeListName = newName;
+			await this.render();
+		};
+
+		input.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') { e.preventDefault(); void finish(true); }
+			if (e.key === 'Escape') { void finish(false); }
+		});
+		input.addEventListener('blur', () => void finish(true));
+	}
+
+	private promptCreateList(): void {
+		new ListNameModal(this.plugin.app, this.listNames, (trimmed) => {
+			const defaultCols = (this.plugin.settings.defaultCustomColumns ?? [])
+				.map(c => ({
+					...c,
+					id: c.id,
+					options: c.options ? [...c.options] : undefined,
+					optionColors: c.optionColors ? { ...c.optionColors } : undefined,
+				}));
+
+			const newList: CustomList = { name: trimmed, columns: defaultCols, rows: [], notes: '' };
+
+			new EditColumnsModal(
+				this.plugin.app,
+				newList,
+				this.manager,
+				async (cols) => {
+					newList.columns = cols;
+					await this.manager.saveList(newList);
+					this.activeListName = trimmed;
+					this.sortCol = null;
+					this.sortDir = 'asc';
+					this.searchQuery = '';
+					this.duplicatedRowIds.clear();
+					await this.render();
+				},
+			).open();
+		}).open();
+	}
+
+	private deleteList(name: string): void {
+		new ConfirmModal(this.plugin.app, `Delete list "${name}"? This cannot be undone.`, () => {
+			void (async () => {
+				await this.manager.deleteList(name);
+				if (this.activeListName === name) { this.activeListName = null; this.currentList = null; }
+				await this.render();
+			})();
+		}).open();
+	}
+
+	private buildListView(list: CustomList): void {
+		const view = this.container.createDiv({ cls: 'hoard-cl-list-view' });
+
+		const header = view.createDiv({ cls: 'hoard-cl-header' });
+		const countEl = header.createSpan({ cls: 'hoard-results-count hoard-cl-count' });
+		const toolbar = header.createDiv({ cls: 'hoard-cl-toolbar' });
+
+		const notesBtn = toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: 'Notes' });
+		notesBtn.addEventListener('click', () => {
+			new NotesModal(
+				this.plugin.app,
+				list.name,
+				list.notes,
+				async (notes) => {
+					await this.manager.saveNotes(list.name, notes);
+					list.notes = notes;
+				},
+			).open();
+		});
+
+		const sortBtn = toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: 'Sort' });
+		let sortPanel: HTMLElement | null = null;
+		sortBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			if (sortPanel) { sortPanel.remove(); sortPanel = null; return; }
+			sortPanel = this.buildSortPanel(list, toolbar, () => { sortPanel = null; });
+			activeDocument.addEventListener('click', () => { sortPanel?.remove(); sortPanel = null; }, { once: true });
+		});
+
+		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: 'Export' })
+			.addEventListener('click', () => this.exportToClipboard(list));
+
+		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: 'Import' })
+			.addEventListener('click', () => this.openImport(list));
+
+		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: 'Table settings' })
+			.addEventListener('click', () => {
+				new EditColumnsModal(
+					this.plugin.app,
+					list,
+					this.manager,
+					async (cols) => {
+						const colIds = new Set(cols.map(c => c.id));
+						for (const row of list.rows) {
+							for (const key of Object.keys(row)) {
+								if (key !== 'id' && key !== 'name' && key !== 'checked' && !colIds.has(key)) {
+									delete (row as Record<string, unknown>)[key];
+								}
+							}
+						}
+						list.columns = cols;
+						for (const col of cols) {
+							if (col.type === 'number' && col.autoTime) {
+								this.autoPopulateTimeColumn(list, col);
+							}
+						}
+						await this.manager.saveList(list);
+						await this.render();
+					},
+				).open();
+			});
+
+		const searchWrap = view.createDiv({ cls: 'hoard-search-wrap' });
+		const searchInput = searchWrap.createEl('input', {
+			cls: 'hoard-search-input',
+			attr: { type: 'text', placeholder: 'Search...', value: this.searchQuery },
+		});
+		let searchDebounce: number | null = null;
+		searchInput.addEventListener('input', () => {
+			this.searchQuery = searchInput.value;
+			if (searchDebounce !== null) window.clearTimeout(searchDebounce);
+			searchDebounce = window.setTimeout(() => {
+				searchDebounce = null;
+				if (this._tableContainer && this._countEl) {
+					this._tableContainer.empty();
+					this.buildTable(this._tableContainer, list, this._countEl);
+				}
+			}, 250);
+		});
+
+		if (this.plugin.settings.showHintBanners) {
+			view.createDiv({
+				cls: 'hoard-cl-draft-banner',
+				text: '⚠ This is a draft list. Titles here are not included in any stats or counts.',
+			});
+		}
+
+		const tableWrap = view.createDiv({ cls: 'hoard-cl-table-wrap' });
+		this.buildTable(tableWrap, list, countEl);
+	}
+
+	private buildSortPanel(list: CustomList, anchor: HTMLElement, onClose: () => void): HTMLElement {
+		const panel = anchor.createDiv({ cls: 'hoard-cl-sort-panel' });
+
+		const row1 = panel.createDiv({ cls: 'hoard-filter-row' });
+		row1.createSpan({ cls: 'hoard-filter-label', text: 'Sort by' });
+		const colSel = row1.createEl('select', { cls: 'hoard-select' });
+		colSel.createEl('option', { value: 'name', text: 'Name' });
+		for (const col of list.columns.filter(c => !c.locked)) {
+			colSel.createEl('option', { value: col.id, text: col.label });
+		}
+		if (this.sortCol) colSel.value = this.sortCol;
+
+		const row2 = panel.createDiv({ cls: 'hoard-filter-row' });
+		row2.createSpan({ cls: 'hoard-filter-label', text: 'Direction' });
+		const dirSel = row2.createEl('select', { cls: 'hoard-select' });
+		dirSel.createEl('option', { value: 'asc', text: 'A → z' });
+		dirSel.createEl('option', { value: 'desc', text: 'Z → a' });
+		dirSel.value = this.sortDir;
+
+		const btnRow = panel.createDiv({ cls: 'hoard-modal-btn-row' });
+		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: 'Clear sort' })
+			.addEventListener('click', (e) => { e.stopPropagation(); this.sortCol = null; this.sortDir = 'asc'; onClose(); void this.render(); });
+		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-btn-primary', text: 'Apply' })
+			.addEventListener('click', (e) => {
+				e.stopPropagation();
+				this.sortCol = colSel.value;
+				this.sortDir = dirSel.value as 'asc' | 'desc';
+				onClose();
+				void this.render();
+			});
+
+		panel.addEventListener('click', (e) => e.stopPropagation());
+		return panel;
+	}
+
+	/** Gather the export table (headers + plain string cells) once, reused by every format. */
+	private gatherExportData(list: CustomList): { headers: string[]; rows: string[][] } {
+		const nonLockedCols = list.columns.filter(c => !c.locked);
+		const allCols = [{ id: '#', label: '#' }, { id: 'name', label: 'Name' }, ...nonLockedCols];
+		const headers = allCols.map(c => c.label);
+		const rows = this.getFilteredSortedRows(list).map((row, i) => allCols.map(c => {
+			if (c.id === '#') return String(i + 1);
+			const val = (row as Record<string, string | number | null | undefined>)[c.id];
+			return val !== undefined && val !== null ? String(val) : '';
+		}));
+		return { headers, rows };
+	}
+
+	private buildMarkdown(data: { headers: string[]; rows: string[][] }): string {
+		const header = '| ' + data.headers.join(' | ') + ' |';
+		const sep = '| ' + data.headers.map(() => '---').join(' | ') + ' |';
+		const rows = data.rows.map(cells => '| ' + cells.join(' | ') + ' |');
+		return [header, sep, ...rows].join('\n');
+	}
+
+	private buildTsv(data: { headers: string[]; rows: string[][] }): string {
+		return [data.headers, ...data.rows].map(cells => cells.join('\t')).join('\n');
+	}
+
+	private exportToClipboard(list: CustomList): void {
+		new ExportFormatModal(this.plugin.app, (format) => {
+			const data = this.gatherExportData(list);
+			const text = format === 'tsv' ? this.buildTsv(data) : this.buildMarkdown(data);
+			navigator.clipboard.writeText(text)
+				.then(() => new Notice('Copied to clipboard!'))
+				.catch(() => new Notice('Failed to copy to clipboard.'));
+		}).open();
+	}
+
+	private openImport(list: CustomList): void {
+		new ImportListModal(this.plugin.app, list, this.manager, async () => {
+			await this.manager.saveList(list);
+			await this.render();
+		}).open();
+	}
+
+	private getFilteredSortedRows(list: CustomList): CustomListRow[] {
+		let rows = [...list.rows];
+		if (this.searchQuery.trim()) {
+			const q = this.searchQuery.toLowerCase();
+			rows = rows.filter(r => String((r as Record<string, string | undefined>)['name'] ?? '').toLowerCase().includes(q));
+		}
+		if (this.sortCol) {
+			const col = this.sortCol;
+			const dir = this.sortDir;
+			rows.sort((a, b) => {
+				const av = String((a as Record<string, string | number | undefined>)[col] ?? '').toLowerCase();
+				const bv = String((b as Record<string, string | number | undefined>)[col] ?? '').toLowerCase();
+				return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+			});
+		}
+		return rows;
+	}
+
+	// Table
+
+	private buildTable(container: HTMLElement, list: CustomList, countEl: HTMLElement): void {
+		// refs for keyboard navigation and the search rebuild
+		this._countEl = countEl;
+		this._tableContainer = container;
+
+		const visibleRows = this.getFilteredSortedRows(list);
+		countEl.textContent = `${visibleRows.length} title${visibleRows.length !== 1 ? 's' : ''}`;
+
+		const nonLockedCols = list.columns.filter(c => !c.locked);
+
+		const table = container.createDiv({ cls: 'hoard-cl-table' });
+
+		const thead = table.createDiv({ cls: 'hoard-cl-thead' });
+		const hRow = thead.createDiv({ cls: 'hoard-cl-tr hoard-cl-tr-header' });
+		// tick column header: a two-state select-all over the visible rows
+		const tickTh = hRow.createDiv({ cls: 'hoard-cl-th hoard-cl-th-tick' });
+		const allChecked = visibleRows.length > 0 && visibleRows.every(r => r.checked === true);
+		const selectAllBtn = tickTh.createDiv({ cls: `hoard-cl-tick-btn${allChecked ? ' is-checked' : ''}` });
+		selectAllBtn.title = allChecked ? 'Uncheck all visible rows' : 'Check all visible rows';
+		selectAllBtn.textContent = allChecked ? '✓' : '○';
+		selectAllBtn.addEventListener('click', () => {
+			// only affect currently visible (filtered/searched) rows
+			const visibleIds = new Set(visibleRows.map(r => r.id));
+			const next = !allChecked;
+			for (const r of list.rows) if (visibleIds.has(r.id)) r.checked = next;
+			void this.manager.saveList(list).then(() => { container.empty(); this.buildTable(container, list, countEl); });
+		});
+		hRow.createDiv({ cls: 'hoard-cl-th hoard-cl-th-num', text: '#' });
+		const nameTh = hRow.createDiv({ cls: 'hoard-cl-th', text: 'Name' });
+		nameTh.dataset.wlCol = '__name';
+		this.addResizeHandle(nameTh, '__name', list, table);
+		for (const col of nonLockedCols) {
+			const th = hRow.createDiv({ cls: 'hoard-cl-th' });
+			th.dataset.wlCol = col.id;
+			th.createSpan({ text: col.label });
+			this.addResizeHandle(th, col.id, list, table);
+			if (col.type === 'number' && col.autoTime) {
+				const refreshBtn = th.createSpan({ cls: 'hoard-cl-autotime-refresh', text: '↻' });
+				refreshBtn.title = 'Refresh remaining time values';
+				refreshBtn.addEventListener('click', (e) => {
+					e.stopPropagation();
+					this.autoPopulateTimeColumn(list, col);
+					void this.manager.saveList(list).then(() => {
+						container.empty();
+						this.buildTable(container, list, countEl);
+					});
+				});
+			}
+		}
+		hRow.createDiv({ cls: 'hoard-cl-th hoard-cl-th-actions' });
+
+		const tbody = table.createDiv({ cls: 'hoard-cl-tbody' });
+		let dragFromIndex = -1;
+
+		// one listener for every row's add button — the table rebuilds on each edit, so per-row
+		// listeners here would be re-bound N times per keystroke
+		tbody.addEventListener('click', (e) => {
+			const btn = (e.target as HTMLElement).closest('.hoard-cl-add-btn');
+			if (!btn) return;
+			const rowId = btn.closest<HTMLElement>('[data-row-id]')?.dataset.rowId;
+			const target = list.rows.find((r) => r.id === rowId);
+			const name = target ? rowName(target) : '';
+			if (!name) return;
+			openAddForTitle({
+				plugin: this.plugin,
+				dataManager: this.dataManager,
+				title: name,
+				heading: 'Add title',
+			});
+		});
+
+		visibleRows.forEach((row, displayIdx) => {
+			const isChecked = row.checked === true;
+			const tr = tbody.createDiv({ cls: `hoard-cl-tr hoard-cl-tr-body${isChecked ? ' hoard-cl-tr-checked' : ''}` });
+			tr.dataset.rowId = row.id;
+
+			const tickCell = tr.createDiv({ cls: 'hoard-cl-td hoard-cl-td-tick' });
+			const tickBtn = tickCell.createDiv({ cls: `hoard-cl-tick-btn${isChecked ? ' is-checked' : ''}` });
+			tickBtn.title = isChecked ? 'Uncheck row' : 'Check row';
+			tickBtn.textContent = isChecked ? '✓' : '○';
+			tickBtn.addEventListener('click', () => {
+				const realRow = list.rows.find((r) => r.id === row.id);
+				if (!realRow) return;
+				realRow.checked = !realRow.checked;
+				void this.manager.saveList(list).then(() => { container.empty(); this.buildTable(container, list, countEl); });
+			});
+
+			tr.createDiv({ cls: 'hoard-cl-td hoard-cl-td-num', text: String(displayIdx + 1) });
+
+			const nameCell = tr.createDiv({ cls: 'hoard-cl-td hoard-cl-td-name' });
+			nameCell.dataset.wlCol = '__name';
+			this.renderNameCell(nameCell, row, list, countEl, nonLockedCols, container);
+
+			for (const col of nonLockedCols) {
+				const td = tr.createDiv({ cls: 'hoard-cl-td' });
+				td.dataset.wlCol = col.id;
+				this.renderCustomCell(td, row, col, list);
+			}
+
+			const actCell = tr.createDiv({ cls: 'hoard-cl-td hoard-cl-td-actions' });
+
+			const dragHandle = actCell.createDiv({ cls: 'hoard-cl-row-action hoard-cl-drag-handle', text: '⠿' });
+			dragHandle.title = 'Drag to reorder';
+
+			// unnamed rows have nothing to send to a library
+			if (rowName(row)) {
+				const addBtn = actCell.createDiv({ cls: 'hoard-cl-row-action hoard-cl-add-btn', text: '+' });
+				addBtn.title = 'Add to Watchlist, Reading or Games';
+			}
+
+			const dupBtn = actCell.createDiv({ cls: 'hoard-cl-row-action hoard-cl-dup-btn', text: '⧉' });
+			dupBtn.title = 'Duplicate row';
+			dupBtn.addEventListener('click', () => {
+				const realIdx = list.rows.findIndex(r => r.id === row.id);
+				if (realIdx < 0) return;
+				const newRow: CustomListRow = {
+					...list.rows[realIdx],
+					id: this.manager.generateRowId(list.rows),
+				};
+				list.rows.splice(realIdx + 1, 0, newRow);
+				this.duplicatedRowIds.add(newRow.id);
+				void this.manager.saveList(list).then(() => { container.empty(); this.buildTable(container, list, countEl); });
+			});
+
+			const rowDelBtn = actCell.createDiv({ cls: 'hoard-cl-row-action hoard-cl-row-del', text: '×' });
+			rowDelBtn.title = 'Delete row';
+			rowDelBtn.addEventListener('click', () => {
+				list.rows = list.rows.filter(r => r.id !== row.id);
+				this.duplicatedRowIds.delete(row.id);
+				void this.manager.saveList(list).then(() => { container.empty(); this.buildTable(container, list, countEl); });
+			});
+
+			// drag & drop (handle-initiated only)
+			tr.setAttribute('draggable', 'false');
+			dragHandle.addEventListener('mousedown', () => tr.setAttribute('draggable', 'true'));
+			tr.addEventListener('dragstart', (e) => {
+				dragFromIndex = list.rows.findIndex(r => r.id === row.id);
+				e.dataTransfer?.setData('text/plain', row.id);
+				tr.addClass('hoard-cl-dragging');
+			});
+			tr.addEventListener('dragend', () => { tr.removeClass('hoard-cl-dragging'); tr.setAttribute('draggable', 'false'); });
+			tr.addEventListener('dragover', (e) => { e.preventDefault(); tr.addClass('hoard-cl-drag-over'); });
+			tr.addEventListener('dragleave', () => tr.removeClass('hoard-cl-drag-over'));
+			tr.addEventListener('drop', (e) => {
+				e.preventDefault();
+				tr.removeClass('hoard-cl-drag-over');
+				const toRealIdx = list.rows.findIndex(r => r.id === row.id);
+				if (dragFromIndex !== toRealIdx && dragFromIndex >= 0) {
+					const [moved] = list.rows.splice(dragFromIndex, 1);
+					list.rows.splice(dragFromIndex < toRealIdx ? toRealIdx - 1 : toRealIdx, 0, moved!);
+					void this.manager.saveList(list).then(() => { container.empty(); this.buildTable(container, list, countEl); });
+				}
+			});
+		});
+
+		// apply persisted column widths — switches the table into resizable mode
+		this.applyColumnWidths(table, list);
+
+		const addRowEl = container.createDiv({ cls: 'hoard-cl-add-row' });
+		addRowEl.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-btn-success', text: '+ add row' })
+			.addEventListener('click', () => {
+				const newRow: CustomListRow = { id: this.manager.generateRowId(list.rows), name: '' };
+				list.rows.push(newRow);
+				void this.manager.saveList(list).then(() => {
+					container.empty();
+					this.buildTable(container, list, countEl);
+					window.setTimeout(() => {
+						const newTbody = container.querySelector('.hoard-cl-tbody');
+						const lastTr = newTbody?.querySelector('.hoard-cl-tr-body:last-child') as HTMLElement | null;
+						(lastTr?.querySelector('.hoard-cl-td-name') as HTMLElement | null)?.click();
+					}, 0);
+				});
+			});
+	}
+
+	// Column resize (Excel-style)
+
+	/** True when the Name column or any custom column has an explicit width. */
+	private isTableResizable(list: CustomList): boolean {
+		return list.nameWidth !== undefined || list.columns.some((c) => !c.locked && c.width !== undefined);
+	}
+
+	private getColWidth(list: CustomList, key: string): number | undefined {
+		if (key === '__name') return list.nameWidth;
+		return list.columns.find((c) => c.id === key)?.width;
+	}
+
+	private setColWidth(list: CustomList, key: string, width: number): void {
+		if (key === '__name') { list.nameWidth = width; return; }
+		const col = list.columns.find((c) => c.id === key);
+		if (col) col.width = width;
+	}
+
+	/**
+	 * Applies persisted widths to every resizable column. Once any width exists the table enters
+	 * explicit-width mode (no flex redistribution, horizontal scroll); resizable columns without a
+	 * stored width fall back to a default fixed width, so they can't compress to absorb a
+	 * neighbour's resize. Lists never resized keep the flex layout untouched.
+	 */
+	private applyColumnWidths(table: HTMLElement, list: CustomList): void {
+		if (!this.isTableResizable(list)) {
+			table.removeClass('hoard-cl-table-resizable');
+			return;
+		}
+		table.addClass('hoard-cl-table-resizable');
+		const apply = (key: string, width: number | undefined): void => {
+			const w = width ?? DEFAULT_COL_WIDTH;
+			table.querySelectorAll<HTMLElement>(`[data-hoard-col="${key}"]`).forEach((el) => {
+				el.addClass('hoard-cl-col-fixed');
+				el.setCssProps({ '--hoard-cl-cw': `${w}px` });
+			});
+		};
+		apply('__name', list.nameWidth);
+		for (const col of list.columns) {
+			if (col.locked) continue;
+			apply(col.id, col.width);
+		}
+	}
+
+	/**
+	 * Pins every resizable column to its current rendered width. Called the first time a handle is
+	 * grabbed, so switching into explicit-width mode doesn't make the columns jump.
+	 */
+	private pinCurrentWidths(table: HTMLElement, list: CustomList): void {
+		const measure = (key: string): number => {
+			const el = table.querySelector<HTMLElement>(`.hoard-cl-th[data-hoard-col="${key}"]`);
+			return el ? Math.round(el.getBoundingClientRect().width) : DEFAULT_COL_WIDTH;
+		};
+		if (list.nameWidth === undefined) list.nameWidth = measure('__name');
+		for (const col of list.columns) {
+			if (col.locked || col.width !== undefined) continue;
+			col.width = measure(col.id);
+		}
+	}
+
+	/** Adds a right-edge drag handle to a resizable header cell (desktop only). */
+	private addResizeHandle(th: HTMLElement, key: string, list: CustomList, table: HTMLElement): void {
+		if (Platform.isMobile) return;
+		th.addClass('hoard-cl-th-resizable');
+		const handle = th.createDiv({ cls: 'hoard-cl-col-resize' });
+		handle.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			// pin every column to its current width, then switch to explicit-width mode
+			this.pinCurrentWidths(table, list);
+			this.applyColumnWidths(table, list);
+			const startX = e.clientX;
+			const startWidth = this.getColWidth(list, key) ?? DEFAULT_COL_WIDTH;
+			const onMove = (ev: MouseEvent): void => {
+				const newWidth = Math.max(MIN_COL_WIDTH, Math.round(startWidth + (ev.clientX - startX)));
+				this.setColWidth(list, key, newWidth);
+				table.querySelectorAll<HTMLElement>(`[data-hoard-col="${key}"]`).forEach((el) => {
+					el.setCssProps({ '--hoard-cl-cw': `${newWidth}px` });
+				});
+			};
+			const onUp = (): void => {
+				activeDocument.removeEventListener('mousemove', onMove);
+				activeDocument.removeEventListener('mouseup', onUp);
+				activeDocument.body.removeClass('hoard-cl-col-resizing');
+				// persist only on drag end
+				void this.manager.saveList(list);
+			};
+			activeDocument.addEventListener('mousemove', onMove);
+			activeDocument.addEventListener('mouseup', onUp);
+			activeDocument.body.addClass('hoard-cl-col-resizing');
+		});
+	}
+
+	// Cell rendering
+
+	/**
+	 * Mobile: scrolls the active element into view when the keyboard shrinks the viewport.
+	 * Returns a function that detaches the listener (also registered as cleanup).
+	 */
+	private watchKeyboardScroll(cell: HTMLElement): () => void {
+		const onResize = (): void => {
+			const active = activeDocument.activeElement as HTMLElement | null;
+			if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		};
+		const detach = (): void => {
+			if (window.visualViewport) window.visualViewport.removeEventListener('resize', onResize);
+		};
+		if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+		this.addCleanup(detach);
+		window.setTimeout(() => cell.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 50);
+		return detach;
+	}
+
+	/** Removes the capture-phase Escape guard installed while a name cell is edited. */
+	private releaseEscapeGuard(): void {
+		if (!this._escapeKeyHandler) return;
+		activeDocument.removeEventListener('keydown', this._escapeKeyHandler, true);
+		activeDocument.removeEventListener('keyup', this._escapeKeyHandler, true);
+		this._escapeKeyHandler = null;
+	}
+
+	private renderNameCell(
+		cell: HTMLElement,
+		row: CustomListRow,
+		list: CustomList,
+		countEl: HTMLElement,
+		nonLockedCols: CustomListColumn[],
+		tableContainer: HTMLElement,
+	): void {
+		cell.empty();
+		cell.removeClass('hoard-cl-editing');
+		const nameVal = String((row as Record<string, string | undefined>)['name'] ?? '');
+		const isDuplicated = this.duplicatedRowIds.has(row.id);
+
+		if (nameVal) {
+			const span = cell.createSpan({ cls: 'hoard-cl-cell-text', text: nameVal });
+			if (isDuplicated) span.addClass('hoard-cl-dup-name');
+		} else {
+			cell.createSpan({ cls: 'hoard-cl-cell-empty', text: '—' });
+		}
+
+		cell.addEventListener('click', () => {
+			this.startNameEdit(cell, row, list, countEl, nonLockedCols, tableContainer);
+		}, { once: true });
+	}
+
+	private startNameEdit(
+		cell: HTMLElement,
+		row: CustomListRow,
+		list: CustomList,
+		countEl: HTMLElement,
+		nonLockedCols: CustomListColumn[],
+		tableContainer: HTMLElement,
+	): void {
+		const prevVal = String((row as Record<string, string | undefined>)['name'] ?? '');
+
+		cell.empty();
+		cell.addClass('hoard-cl-editing');
+		this._escapeKeyHandler = (e: KeyboardEvent) => {
+    		if (e.key === 'Escape') {
+        		e.stopPropagation();
+        		e.stopImmediatePropagation();
+        		e.preventDefault();
+    		}
+		};
+		activeDocument.addEventListener('keydown', this._escapeKeyHandler, true);
+		activeDocument.addEventListener('keyup', this._escapeKeyHandler, true);
+		const escHandler = this._escapeKeyHandler;
+		this.addCleanup(() => {
+			activeDocument.removeEventListener('keydown', escHandler, true);
+			activeDocument.removeEventListener('keyup', escHandler, true);
+		});
+
+		const stopKeyboardScroll = this.watchKeyboardScroll(cell);
+
+		const wrap = cell.createDiv({ cls: 'hoard-cl-autofill-wrap' });
+		const input = wrap.createEl('input', {
+			cls: 'hoard-cl-cell-input',
+			attr: { type: 'text', value: prevVal },
+		});
+		input.focus();
+		input.select();
+
+		// autofill renders on document.body, position:fixed, to escape the table's overflow:hidden
+		let dropdown: HTMLElement | null = null;
+		let focusedSuggestionIdx = -1;
+		const clearDropdown = (): void => { dropdown?.remove(); dropdown = null; focusedSuggestionIdx = -1; };
+
+		input.addEventListener('input', () => {
+			clearDropdown();
+			const q = input.value.toLowerCase();
+			if (!q) return;
+			// suggestions come from every library: Watchlist, Reading (Books + Manga) and Games
+			const reading = this.plugin.readingDataManager;
+			const suggestions: { title: string; meta: string }[] = [
+				...this.dataManager.getTitles().map(t => ({ title: t.title, meta: `${t.type} · ${t.status}` })),
+				...reading.getBooks().map(b => ({ title: b.title, meta: `Book · ${b.status}` })),
+				...reading.getMangaList().map(m => ({ title: m.title, meta: `Manga · ${m.status}` })),
+				...this.plugin.gameDataManager.getGames().map(g => ({ title: g.title, meta: `Game · ${g.status}` })),
+			]
+				.filter(s => s.title.toLowerCase().includes(q))
+				.slice(0, 10);
+			if (!suggestions.length) return;
+			const rect = input.getBoundingClientRect();
+			dropdown = activeDocument.body.createDiv({ cls: 'hoard-cl-autofill-dropdown hoard-pos-fixed' });
+			dropdown.style.top = `${rect.bottom}px`;
+			dropdown.style.left = `${rect.left}px`;
+			dropdown.style.width = `${rect.width}px`;
+			for (const sug of suggestions) {
+				const item = dropdown.createDiv({ cls: 'hoard-result-item' });
+				item.createDiv({ cls: 'hoard-result-title', text: sug.title });
+				item.createDiv({ cls: 'hoard-result-meta', text: sug.meta });
+				item.addEventListener('mousedown', (e) => { e.preventDefault(); input.value = sug.title; clearDropdown(); });
+			}
+		});
+
+		let saved = false;
+		let navDirection: 'tab' | 'shift-tab' | 'enter' | null = null;
+
+		const doSave = async (cancel: boolean): Promise<void> => {
+			if (saved) return;
+			saved = true;
+			stopKeyboardScroll();
+			this.releaseEscapeGuard();
+			clearDropdown();
+			const newVal = input.value.trim();
+			if (!cancel) {
+				const isDup = this.duplicatedRowIds.has(row.id);
+				(row as Record<string, unknown>)['name'] = newVal;
+				if (isDup && newVal !== prevVal) this.duplicatedRowIds.delete(row.id);
+				await this.manager.saveList(list);
+			}
+			this.renderNameCell(cell, row, list, countEl, nonLockedCols, tableContainer);
+			if (!cancel && navDirection) this.navigateCell(cell, navDirection);
+		};
+
+		input.addEventListener('blur', () => void doSave(false));
+		input.addEventListener('keydown', (e) => {
+			if (dropdown) {
+				const items = Array.from(dropdown.querySelectorAll<HTMLElement>('.hoard-result-item'));
+				if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+					e.preventDefault();
+					focusedSuggestionIdx = e.key === 'ArrowDown'
+						? Math.min(focusedSuggestionIdx + 1, items.length - 1)
+						: Math.max(focusedSuggestionIdx - 1, 0);
+					items.forEach((item, i) => item.toggleClass('hoard-result-item-focused', i === focusedSuggestionIdx));
+					return;
+				}
+				if (e.key === 'Enter' && focusedSuggestionIdx >= 0) {
+					e.preventDefault();
+					const titleText = items[focusedSuggestionIdx]?.querySelector<HTMLElement>('.hoard-result-title')?.textContent ?? '';
+					if (titleText) input.value = titleText;
+					clearDropdown();
+					return;
+				}
+				if (e.key === 'Escape') {
+					e.preventDefault();
+					e.stopPropagation();
+					e.stopImmediatePropagation();
+					clearDropdown();
+					return;
+				}
+			}
+
+			handleEditKey(e, (nav) => { navDirection = nav; void doSave(false); }, () => void doSave(true));
+		});
+	}
+
+	private renderCustomCell(
+		cell: HTMLElement,
+		row: CustomListRow,
+		col: CustomListColumn,
+		list: CustomList,
+	): void {
+		cell.empty();
+		cell.removeClass('hoard-cl-editing');
+		const val = (row as Record<string, string | number | undefined>)[col.id];
+
+		if (col.type === 'select') {
+			const strVal = String(val ?? '');
+			if (strVal) {
+				const badge = cell.createSpan({ cls: 'hoard-cl-select-badge', text: strVal });
+				const optColor = col.optionColors?.[strVal];
+				// no colour assigned → leave the badge exactly as the default CSS renders it
+				if (optColor) {
+					badge.style.backgroundColor = deriveFillColor(optColor);
+					badge.style.borderColor = deriveBorderColor(optColor);
+					badge.style.color = deriveBorderColor(optColor);
+				}
+			} else {
+				cell.createSpan({ cls: 'hoard-cl-cell-empty', text: '—' });
+			}
+		} else {
+			const strVal = val !== undefined && val !== null && val !== '' ? String(val) : '';
+			if (strVal) {
+				const span = cell.createSpan({ cls: 'hoard-cl-cell-text', text: strVal });
+				if (col.bold) span.addClass('hoard-cell-bold');
+				if (col.italic) span.addClass('hoard-cell-italic');
+			} else {
+				cell.createSpan({ cls: 'hoard-cl-cell-empty', text: '—' });
+			}
+		}
+
+		// select cells open the shared dropdown on a single click (the native <select> needed a second);
+		// other types enter the inline editor
+		cell.addEventListener('click', () => {
+			if (col.type === 'select') this.openSelectDropdown(cell, row, col, list);
+			else this.startCustomEdit(cell, row, col, list);
+		}, { once: true });
+	}
+
+	/**
+	 * Opens the shared status-style dropdown for a select cell, colouring each option's dot from the
+	 * column's per-option colours (unset → default dot).
+	 */
+	private openSelectDropdown(
+		cell: HTMLElement,
+		row: CustomListRow,
+		col: CustomListColumn,
+		list: CustomList,
+	): void {
+		const currentVal = String((row as Record<string, string | number | undefined>)[col.id] ?? '');
+		const options = [
+			{ value: '', label: '—' },
+			...(col.options ?? []).map((opt) => ({ value: opt, label: opt })),
+		];
+		openStatusDropdown({
+			anchor: cell,
+			container: activeDocument.body,
+			options,
+			getOptionColor: (value) => col.optionColors?.[value] ?? null,
+			onSelect: (value) => {
+				if (value !== currentVal) {
+					(row as Record<string, unknown>)[col.id] = value === '' ? undefined : value;
+					void this.manager.saveList(list).then(() => this.renderCustomCell(cell, row, col, list));
+				} else {
+					this.renderCustomCell(cell, row, col, list);
+				}
+			},
+			// re-render to re-attach the cell's once-only click handler
+			onClose: () => this.renderCustomCell(cell, row, col, list),
+		});
+	}
+
+	private startCustomEdit(
+		cell: HTMLElement,
+		row: CustomListRow,
+		col: CustomListColumn,
+		list: CustomList,
+	): void {
+		const currentVal = (row as Record<string, string | number | undefined>)[col.id];
+
+		cell.empty();
+		cell.addClass('hoard-cl-editing');
+
+		const stopKeyboardScroll = this.watchKeyboardScroll(cell);
+
+		let getValue: () => string | number | undefined;
+		let saved = false;
+		let navDirection: 'tab' | 'shift-tab' | 'enter' | null = null;
+
+		const doSave = async (cancel: boolean): Promise<void> => {
+			if (saved) return;
+			saved = true;
+			stopKeyboardScroll();
+			this.releaseEscapeGuard();
+			cell.removeClass('hoard-cl-editing');
+			if (!cancel) {
+				const newVal = getValue();
+				(row as Record<string, unknown>)[col.id] = (newVal === '' || newVal === undefined) ? undefined : newVal;
+				await this.manager.saveList(list);
+			}
+			this.renderCustomCell(cell, row, col, list);
+			if (!cancel && navDirection) this.navigateCell(cell, navDirection);
+		};
+
+		// select cells never reach startCustomEdit — they open the shared dropdown (openSelectDropdown)
+		const isNumber = col.type === 'number';
+		const input = cell.createEl('input', {
+			cls: 'hoard-cl-cell-input',
+			attr: { type: isNumber ? 'number' : 'text', value: currentVal !== undefined && currentVal !== null ? String(currentVal) : '' },
+		});
+		getValue = isNumber
+			? () => { const n = parseFloat(input.value); return isNaN(n) ? '' : n; }
+			: () => input.value;
+		input.focus();
+		input.select();
+		input.addEventListener('blur', () => void doSave(false));
+		input.addEventListener('keydown', (e) => {
+			handleEditKey(e, (nav) => { navDirection = nav; void doSave(false); }, () => void doSave(true));
+		});
+	}
+
+	// Auto-populate time column
+
+	private autoPopulateTimeColumn(list: CustomList, col: CustomListColumn): void {
+		const titles = this.dataManager.getTitles();
+		for (const row of list.rows) {
+			const rowName = String(row['name'] ?? '').trim();
+			if (!rowName) continue;
+			const match = titles.find(t => t.title === rowName);
+			if (!match) {
+				row[col.id] = 'Not found';
+				continue;
+			}
+			const remainingMinutes = this.dataManager.calcTimeRemainingForModal(match);
+			row[col.id] = remainingMinutes;
+		}
+	}
+
+	// Keyboard navigation
+
+	/** Editable cells (Name + custom) in a row, skipping # and actions. */
+	private getEditableCells(tr: Element): Element[] {
+		return Array.from(tr.querySelectorAll(':scope > .hoard-cl-td'))
+			.filter(c => !c.classList.contains('hoard-cl-td-num') && !c.classList.contains('hoard-cl-td-actions'));
+	}
+
+	private navigateCell(cell: HTMLElement, direction: 'tab' | 'shift-tab' | 'enter'): void {
+		const tr = cell.closest('.hoard-cl-tr-body');
+		if (!tr) return;
+		const tbody = tr.parentElement;
+		if (!tbody) return;
+
+		const rows = Array.from(tbody.querySelectorAll(':scope > .hoard-cl-tr-body'));
+		const rowIdx = rows.indexOf(tr);
+		const editableCells = this.getEditableCells(tr);
+		const colIdx = editableCells.indexOf(cell);
+
+		if (direction === 'tab') {
+			if (colIdx >= 0 && colIdx < editableCells.length - 1) {
+				// Next cell in same row
+				window.setTimeout(() => (editableCells[colIdx + 1] as HTMLElement | undefined)?.click(), 10);
+			} else if (rowIdx >= 0 && rowIdx < rows.length - 1) {
+				// First cell of next row
+				const nextRow = rows[rowIdx + 1];
+				if (nextRow) {
+					const nextCells = this.getEditableCells(nextRow);
+					if (nextCells.length) window.setTimeout(() => (nextCells[0] as HTMLElement | undefined)?.click(), 10);
+				}
+			} else {
+				// Last cell of last row → add new row, focus name
+				this.addRowForNavigation(0);
+			}
+		} else if (direction === 'shift-tab') {
+			if (colIdx > 0) {
+				// Previous cell in same row
+				window.setTimeout(() => (editableCells[colIdx - 1] as HTMLElement | undefined)?.click(), 10);
+			} else if (rowIdx > 0) {
+				// Last cell of previous row
+				const prevRow = rows[rowIdx - 1];
+				if (prevRow) {
+					const prevCells = this.getEditableCells(prevRow);
+					if (prevCells.length) window.setTimeout(() => (prevCells[prevCells.length - 1] as HTMLElement | undefined)?.click(), 10);
+				}
+			}
+			// First cell of first row → do nothing
+		} else { // enter
+			if (rowIdx >= 0 && rowIdx < rows.length - 1) {
+				// Same column in next row
+				const nextRow = rows[rowIdx + 1];
+				if (nextRow) {
+					const nextCells = this.getEditableCells(nextRow);
+					const targetIdx = Math.min(colIdx >= 0 ? colIdx : 0, nextCells.length - 1);
+					if (nextCells.length) window.setTimeout(() => (nextCells[targetIdx] as HTMLElement | undefined)?.click(), 10);
+				}
+			} else {
+				// Last row → add new row, focus same column
+				this.addRowForNavigation(colIdx >= 0 ? colIdx : 0);
+			}
+		}
+	}
+
+	private addRowForNavigation(colIdx: number): void {
+		const list = this.currentList;
+		const tableContainer = this._tableContainer;
+		const countEl = this._countEl;
+		if (!list || !tableContainer || !countEl) return;
+
+		const newRow: CustomListRow = { id: this.manager.generateRowId(list.rows), name: '' };
+		list.rows.push(newRow);
+		void this.manager.saveList(list).then(() => {
+			tableContainer.empty();
+			this.buildTable(tableContainer, list, countEl);
+			window.setTimeout(() => {
+				const newTbody = tableContainer.querySelector('.hoard-cl-tbody');
+				if (!newTbody) return;
+				const allRows = Array.from(newTbody.querySelectorAll('.hoard-cl-tr-body'));
+				const lastRow = allRows[allRows.length - 1];
+				if (!lastRow) return;
+				const cells = this.getEditableCells(lastRow);
+				const target = cells[Math.min(colIdx, cells.length - 1)] as HTMLElement | undefined;
+				target?.click();
+			}, 50);
+		});
+	}
+}
+
+// ExportFormatModal — export format chooser
+
+class ExportFormatModal extends Modal {
+	private onChoose: (format: 'tsv' | 'md') => void;
+
+	constructor(app: App, onChoose: (format: 'tsv' | 'md') => void) {
+		super(app);
+		this.onChoose = onChoose;
+	}
+
+	onOpen(): void {
+		this.titleEl.setText('Export list');
+		this.contentEl.addClass('hoard-export-modal');
+
+		this.contentEl.createDiv({
+			cls: 'hoard-settings-info',
+			text: 'TSV pastes into spreadsheets as columns. Markdown produces a table you can paste into notes.',
+		});
+
+		const row = this.contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
+		const tsvBtn = row.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: 'Copy as TSV' });
+		tsvBtn.addEventListener('click', () => { this.close(); this.onChoose('tsv'); });
+		const mdBtn = row.createEl('button', { cls: 'hoard-btn', text: 'Copy as Markdown' });
+		mdBtn.addEventListener('click', () => { this.close(); this.onChoose('md'); });
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}
+
+// ImportListModal — paste TSV from a spreadsheet, preview, append rows
+
+/** Result of analysing the pasted TSV against the list's current columns. */
+interface ImportAnalysis {
+	header: string[];
+	dataRows: string[][];
+	rowCount: number;
+	/** Max column count across every pasted line (header + data). */
+	totalCols: number;
+	/** How many existing data columns there are (Name + non-locked). */
+	existingCount: number;
+	/** New text columns auto-created to match wider pasted data. */
+	newColCount: number;
+	/** Per select column: distinct new option values that will be added. */
+	selectAdditions: { label: string; values: string[] }[];
+	/** Labels of number columns receiving non-numeric values (blocking). */
+	numberConflicts: string[];
+}
+
+class ImportListModal extends Modal {
+	private list: CustomList;
+	private manager: CustomListManager;
+	private onApplied: () => Promise<void>;
+
+	private textarea!: HTMLTextAreaElement;
+	private previewEl!: HTMLElement;
+	private addBtn!: HTMLButtonElement;
+	private firstRowIsHeader = true;
+
+	constructor(app: App, list: CustomList, manager: CustomListManager, onApplied: () => Promise<void>) {
+		super(app);
+		this.list = list;
+		this.manager = manager;
+		this.onApplied = onApplied;
+	}
+
+	onOpen(): void {
+		this.titleEl.setText('Import rows');
+		this.contentEl.addClass('hoard-import-modal');
+
+		this.contentEl.createDiv({
+			cls: 'hoard-settings-info',
+			text: 'Paste tab-separated values copied from a spreadsheet (Google Sheets / Excel). Rows are appended to the end of the list. Do not include an index/# column; rows are numbered automatically.',
+		});
+
+		this.textarea = this.contentEl.createEl('textarea', {
+			cls: 'hoard-modal-textarea hoard-import-textarea',
+			attr: { placeholder: 'Paste here…', rows: '8' },
+		});
+		this.textarea.addEventListener('input', () => this.refreshPreview());
+
+		const headerToggleRow = this.contentEl.createDiv({ cls: 'hoard-import-header-toggle' });
+		const headerCheckbox = headerToggleRow.createEl('input', {
+			cls: 'hoard-import-header-checkbox',
+			attr: { type: 'checkbox', id: 'hoard-import-header-cb' },
+		});
+		headerCheckbox.checked = this.firstRowIsHeader;
+		headerToggleRow.createEl('label', {
+			text: 'First row is a header (column names, not imported as data)',
+			attr: { for: 'hoard-import-header-cb' },
+		});
+		headerCheckbox.addEventListener('change', () => {
+			this.firstRowIsHeader = headerCheckbox.checked;
+			this.refreshPreview();
+		});
+
+		this.previewEl = this.contentEl.createDiv({ cls: 'hoard-import-preview' });
+
+		const btnRow = this.contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
+		this.addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: 'Add' });
+		this.addBtn.addEventListener('click', () => void this.apply());
+		btnRow.createEl('button', { cls: 'hoard-btn', text: 'Cancel' })
+			.addEventListener('click', () => this.close());
+
+		this.refreshPreview();
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+
+	/** Splits the pasted text into header + data rows (tab-delimited). */
+	private parse(): { header: string[]; dataRows: string[][] } | null {
+		const lines = this.textarea.value
+			.replace(/\r\n?/g, '\n')
+			.split('\n')
+			.filter(l => l.length > 0);
+		if (lines.length === 0) return null;
+		if (!this.firstRowIsHeader) {
+			// every line is a data row; columns map positionally and no line is consumed as a header, so a
+			// single lone row can be imported
+			return {
+				header: [],
+				dataRows: lines.map(l => l.split('\t').map(c => c.trim())),
+			};
+		}
+		const [headerLine, ...rest] = lines;
+		return {
+			header: headerLine!.split('\t').map(c => c.trim()),
+			dataRows: rest.map(l => l.split('\t').map(c => c.trim())),
+		};
+	}
+
+	/**
+	 * The positional data columns the import maps onto: Name first, then non-locked columns — the
+	 * exact inverse of the export set, minus #.
+	 */
+	private nonLockedColumns(): CustomListColumn[] {
+		return this.list.columns.filter(c => !c.locked);
+	}
+
+	private analyse(): ImportAnalysis | null {
+		const parsed = this.parse();
+		if (!parsed || parsed.dataRows.length === 0) return null;
+
+		const nonLocked = this.nonLockedColumns();
+		const existingCount = 1 + nonLocked.length; // Name + non-locked columns
+		const totalCols = Math.max(
+			parsed.header.length,
+			...parsed.dataRows.map(r => r.length),
+		);
+		const newColCount = Math.max(0, totalCols - existingCount);
+
+		const numberConflicts = new Set<string>();
+		const selectNewValues = new Map<number, { label: string; values: Set<string> }>();
+
+		for (const row of parsed.dataRows) {
+			for (let i = 1; i < row.length && i < existingCount; i++) {
+				const col = nonLocked[i - 1]!; // i === 0 is Name (text, no conflict)
+				const cell = row[i]!;
+				if (cell === '') continue;
+				if (col.type === 'number') {
+					if (!Number.isFinite(Number(cell))) numberConflicts.add(col.label || '(unnamed)');
+				} else if (col.type === 'select') {
+					const known = new Set(col.options ?? []);
+					if (!known.has(cell)) {
+						let entry = selectNewValues.get(i);
+						if (!entry) { entry = { label: col.label || '(unnamed)', values: new Set() }; selectNewValues.set(i, entry); }
+						entry.values.add(cell);
+					}
+				}
+			}
+		}
+
+		return {
+			header: parsed.header,
+			dataRows: parsed.dataRows,
+			rowCount: parsed.dataRows.length,
+			totalCols,
+			existingCount,
+			newColCount,
+			selectAdditions: [...selectNewValues.values()].map(e => ({ label: e.label, values: [...e.values] })),
+			numberConflicts: [...numberConflicts],
+		};
+	}
+
+	private refreshPreview(): void {
+		this.previewEl.empty();
+		const a = this.analyse();
+
+		if (!a) {
+			this.addBtn.disabled = true;
+			this.previewEl.createDiv({ cls: 'hoard-import-counts', text: 'Paste TSV data to preview the import.' });
+			return;
+		}
+
+		this.previewEl.createDiv({
+			cls: 'hoard-import-counts',
+			text: `${a.rowCount} row${a.rowCount === 1 ? '' : 's'} × ${a.totalCols} column${a.totalCols === 1 ? '' : 's'} detected.`,
+		});
+
+		const blocking = a.numberConflicts.length > 0;
+
+		if (a.newColCount > 0) {
+			this.previewEl.createDiv({
+				cls: 'hoard-import-banner',
+				text: `⚠ ${a.newColCount} new text column${a.newColCount === 1 ? '' : 's'} will be created to match the pasted data.`,
+			});
+		}
+
+		for (const sel of a.selectAdditions) {
+			this.previewEl.createDiv({
+				cls: 'hoard-import-banner',
+				text: `⚠ Select column "${sel.label}" will gain ${sel.values.length} new option${sel.values.length === 1 ? '' : 's'}: ${sel.values.join(', ')}.`,
+			});
+		}
+
+		if (a.totalCols < a.existingCount) {
+			this.previewEl.createDiv({
+				cls: 'hoard-import-banner',
+				text: '⚠ Fewer columns than the list; missing trailing cells will be left empty.',
+			});
+		}
+
+		for (const label of a.numberConflicts) {
+			this.previewEl.createDiv({
+				cls: 'hoard-import-banner-error',
+				text: `⛔ Number column "${label}" received non-numeric values. Reorder your columns or change the column type, then paste again.`,
+			});
+		}
+
+		this.addBtn.disabled = blocking;
+	}
+
+	private async apply(): Promise<void> {
+		const a = this.analyse();
+		if (!a || a.numberConflicts.length > 0) return;
+
+		const list = this.list;
+		const nonLocked = this.nonLockedColumns();
+
+		// 1. Auto-create the missing trailing text columns.
+		const newCols: CustomListColumn[] = [];
+		for (let pos = a.existingCount; pos < a.totalCols; pos++) {
+			const label = (a.header[pos] ?? '').trim() || `Column ${pos + 1}`;
+			const col: CustomListColumn = {
+				id: this.manager.generateColId(list.columns),
+				label,
+				type: 'text',
+				bold: false,
+				italic: false,
+			};
+			list.columns.push(col);
+			newCols.push(col);
+		}
+
+		// 2. Positional slots: index 0 = Name, then non-locked columns, then new columns.
+		const slots: (CustomListColumn | 'name')[] = ['name', ...nonLocked, ...newCols];
+
+		// 3. Add any new select options encountered (text only, no colour).
+		for (const sel of a.selectAdditions) {
+			const col = nonLocked.find(c => (c.label || '(unnamed)') === sel.label && c.type === 'select');
+			if (!col) continue;
+			col.options = [...(col.options ?? [])];
+			for (const v of sel.values) if (!col.options.includes(v)) col.options.push(v);
+		}
+
+		// 4. Append the parsed rows as NEW rows (never touch existing rows).
+		for (const cells of a.dataRows) {
+			const row: CustomListRow = { id: this.manager.generateRowId(list.rows), name: '' };
+			list.rows.push(row); // push first so the next generated id stays unique
+			for (let i = 0; i < a.totalCols; i++) {
+				const slot = slots[i];
+				if (!slot) continue;
+				const cell = (cells[i] ?? '').trim();
+				if (slot === 'name') { row.name = cell; continue; }
+				if (cell === '') { row[slot.id] = undefined; continue; }
+				row[slot.id] = slot.type === 'number' ? Number(cell) : cell;
+			}
+		}
+
+		this.close();
+		await this.onApplied();
+		new Notice(`Imported ${a.rowCount} row${a.rowCount === 1 ? '' : 's'}.`);
+	}
+}
