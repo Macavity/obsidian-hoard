@@ -1,14 +1,14 @@
 import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, parseYaml, setIcon, stringifyYaml } from 'obsidian';
 import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, HoardPluginSettings, setActiveDateFormat } from './types';
 import { cardSizeToMinWidth } from './VirtualGrid';
-import type { CardStyleTab, HoardData } from './types';
+import type { CardStyleTab } from './types';
 import { DataManager } from './DataManager';
 import { ReadingDataManager } from './ReadingDataManager';
 import { GameDataManager } from './GameDataManager';
 import { ApiService } from './ApiService';
 import { HistoryManager } from './HistoryManager';
 import { PosterService } from './PosterService';
-import { VaultLayout } from './storage/VaultLayout';
+import { VaultLayout, detectRoot } from './storage/VaultLayout';
 import { LocalStore } from './storage/LocalStore';
 import { SharedConfigStore } from './storage/SharedConfigStore';
 import { EntryIndex } from './storage/EntryIndex';
@@ -21,9 +21,9 @@ import { WidgetRenderer } from './WidgetRenderer';
 import { HoardSettingsTab } from './SettingsTab';
 import { AirtimeTab } from './AirtimeTab';
 import { runAirtimeScheduler } from './airtimeScheduler';
-import { hasHoardKey } from './storage/baseFile';
-import { legacyRoot, migrateV1 } from './storage/migrateV1';
-import { loadOwnOrOriginal, LEGACY_PLUGIN_IDS } from './storage/legacyPlugin';
+import {
+	WATCHLOG_PLUGIN_IDS, loadOwnOrWatchLog, migrateFromWatchLog, watchLogRoot, type WatchLogData, type WatchLogSource,
+} from './migration/watchlog';
 import type { BackupManagers } from './backup';
 import { composeSettings, persistSettings } from './settingsSplit';
 import { resolveJikanEndpoint } from './jikanBase';
@@ -33,20 +33,20 @@ const DEFAULT_ROOT = 'Hoard';
 
 export default class HoardPlugin extends Plugin {
 	settings: HoardPluginSettings = DEFAULT_SETTINGS;
-	// schema-1 data.json awaiting migration; LocalStore never writes data.json meanwhile
-	private legacyData: HoardData | null = null;
-	// folder of the original plugin when its data.json was adopted; backups go next to it
-	private legacySourceDir: string | null = null;
+	// schema-1 data.json awaiting conversion into notes; LocalStore never writes data.json meanwhile
+	private pendingSchema1: WatchLogData | null = null;
+	// set when data.json was taken over from a WatchLog plugin
+	private adoptedFrom: WatchLogSource | null = null;
 	private indexReady = false;
 	private typeNamesKey: string | null = null;
 	private layout = new VaultLayout(DEFAULT_ROOT, () => this.settings.types.map((t) => t.name));
 	private local = new LocalStore({
 		loadData: async () => {
-			const loaded = await loadOwnOrOriginal(() => this.loadData(), {
+			const loaded = await loadOwnOrWatchLog(() => this.loadData(), {
 				configDir: this.app.vault.configDir,
 				adapter: this.app.vault.adapter,
 			});
-			this.legacySourceDir = loaded.dir ?? null;
+			this.adoptedFrom = loaded.source ?? null;
 			return loaded.raw;
 		},
 		saveData: (d) => this.saveData(d),
@@ -100,15 +100,12 @@ export default class HoardPlugin extends Plugin {
 	async onload(): Promise<void> {
 		const loaded = await this.local.load();
 		if (loaded.schema === 1) {
-			// migrated in startVaultStorage, once the vault is ready; until then its settings act as local
-			this.legacyData = loaded.legacy;
+			// converted in startVaultStorage, once the vault is ready; until then its settings act as local
+			this.pendingSchema1 = loaded.data;
 		} else if (loaded.schema === 'newer') {
 			new Notice('Hoard: data.json was written by a newer plugin version. Device settings are not saved until you update.', 0);
-		} else if (this.legacySourceDir !== null) {
-			// a schema-2 data.json taken over from the original plugin: persist the copy as our own
-			this.local.queueSave();
 		}
-		this.warnIfOriginalEnabled();
+		this.warnIfWatchLogEnabled();
 		// local + defaults only; shared keys are re-composed once the base is loaded (startVaultStorage)
 		await this.loadSettings();
 		// the card-size CSS var must be live before any view or modal renders a grid
@@ -223,19 +220,19 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/**
-	 * Locates the root (folder of the first `.base` with a `hoard:` key), creates the base on a
-	 * fresh install, loads the shared config and builds the entry index from the notes.
+	 * Migrates a WatchLog vault once, locates the root (folder of the first `.base` with a `hoard:`
+	 * key), defers the base on a fresh install, loads the shared config and builds the entry index.
 	 */
 	private async startVaultStorage(): Promise<void> {
 		try {
-			const root = await this.findRoot();
-			const legacy = this.legacyData;
+			await this.migrateWatchLog();
+			const root = await detectRoot(this.app.vault);
+			const pending = this.pendingSchema1;
 			this.layout = new VaultLayout(
-				root ?? (legacy ? legacyRoot(legacy) : DEFAULT_ROOT),
+				root ?? (pending ? watchLogRoot(pending) : DEFAULT_ROOT),
 				() => this.settings.types.map((t) => t.name),
 			);
-			if (legacy) await this.migrate(legacy);
-			if (root === null && !legacy) {
+			if (root === null && !pending) {
 				// fresh install (or base not synced yet): no base until the first write; a synced one is adopted
 				this.shared.deferBase({
 					create: async () => {
@@ -250,7 +247,8 @@ export default class HoardPlugin extends Plugin {
 			await this.applySharedSettings();
 			this.shared.onChange(() => void this.applySharedSettings());
 			if (root !== null && (await this.shared.ensureFilter()) === 'missing') {
-				new Notice('Hoard: the folder filter in Hoard.base was not found; the base view may list other notes.');
+				const name = this.shared.baseFile()?.name ?? 'Hoard.base';
+				new Notice(`Hoard: the folder filter in ${name} was not found; the base view may list other notes.`);
 			}
 			this.shared.start();
 			await this.index.build();
@@ -271,7 +269,7 @@ export default class HoardPlugin extends Plugin {
 	/** A base appeared by sync after startup: take over its root and settings, then rebuild and refresh. */
 	private async adoptSyncedBase(): Promise<void> {
 		try {
-			const root = await this.findRoot();
+			const root = await detectRoot(this.app.vault);
 			if (root !== null) {
 				this.layout = new VaultLayout(root, () => this.settings.types.map((t) => t.name));
 			}
@@ -294,36 +292,30 @@ export default class HoardPlugin extends Plugin {
 		void this.index.rebuild().then(() => activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed')));
 	}
 
-	/** Both plugins manage the same folders; the original would keep writing from its own data.json. */
-	private warnIfOriginalEnabled(): void {
+	/** Both plugins manage the same folders; WatchLog would keep writing from its own data.json. */
+	private warnIfWatchLogEnabled(): void {
 		const plugins = (this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } }).plugins;
-		if (LEGACY_PLUGIN_IDS.some((id) => plugins?.enabledPlugins?.has(id))) {
-			new Notice('A predecessor of this plugin is still enabled. Disable it, otherwise both plugins write the same notes.', 0);
+		if (WATCHLOG_PLUGIN_IDS.some((id) => plugins?.enabledPlugins?.has(id))) {
+			new Notice('WatchLog is still enabled. Disable it, otherwise both plugins write the same notes.', 0);
 		}
 	}
 
-	/** Moves a schema-1 data.json into notes, base and History.md; on failure it is retried next start. */
-	private async migrate(legacy: HoardData): Promise<void> {
-		const report = await migrateV1({
+	/** Base, plugin data, schema-1 data and widget code blocks of WatchLog; a failed conversion retries next start. */
+	private async migrateWatchLog(): Promise<void> {
+		const report = await migrateFromWatchLog({
 			app: this.app,
-			plugin: { manifest: { dir: this.legacySourceDir ?? this.manifest.dir } },
 			local: this.local,
-			legacy,
-			shared: this.shared,
-			history: new HistoryStore(this.app, () => this.layout),
 			yaml: this.yaml,
-			layout: this.layout,
+			pluginDir: this.manifest.dir,
+			adopted: this.adoptedFrom,
+			schema1: this.pendingSchema1,
+			typeNames: () => this.settings.types.map((t) => t.name),
 		});
-		if (report.skipped.length > 0) console.warn('[Hoard] migration skipped', report.skipped);
-		if (report.errors.length > 0) {
-			console.error('[Hoard] migration failed; data.json is kept and the migration retried next start', report.errors);
-			new Notice('Hoard could not migrate its data to notes. It will retry on the next start; see the developer console.', 0);
-			return;
+		this.adoptedFrom = null;
+		if (report?.schema1 && report.schema1.errors.length === 0) {
+			this.pendingSchema1 = null;
+			await this.loadSettings();
 		}
-		this.legacyData = null;
-		await this.loadSettings();
-		const skipped = report.skipped.length > 0 ? ` ${report.skipped.length} item(s) were skipped, see the developer console.` : '';
-		new Notice(`Hoard moved its data into notes (backup: data.v1-backup.json).${skipped}`, 10000);
 	}
 
 	/** Everything backup export and restore need. */
@@ -358,16 +350,6 @@ export default class HoardPlugin extends Plugin {
 		await this.loadSettings();
 		this.applyCardSizeCssVar();
 		activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
-	}
-
-	private async findRoot(): Promise<string | null> {
-		const { vault } = this.app;
-		const bases = await Promise.all(
-			vault.getFiles()
-				.filter((f) => f.extension === 'base')
-				.map(async (f) => ({ path: f.path, hasHoardKey: hasHoardKey(await vault.cachedRead(f)) })),
-		);
-		return VaultLayout.findRoot(bases);
 	}
 
 	private startAirtimeScheduler(): void {
@@ -428,7 +410,6 @@ export default class HoardPlugin extends Plugin {
 		el.createSpan({ cls: 'hoard-statusbar-text', text: `${count} due` });
 	}
 
-	/** Composes settings from defaults, data.json and the shared base (shared keys win). */
 	/**
 	 * Minimum card width (px) for every poster/cover grid and shelf, from the card-size step for this
 	 * device class (desktop vs mobile).
@@ -455,9 +436,10 @@ export default class HoardPlugin extends Plugin {
 		activeDocument.body.style.setProperty('--hoard-card-min-width', `${this.getCardMinWidth()}px`);
 	}
 
+	/** Composes settings from defaults, data.json and the shared base (shared keys win). */
 	loadSettings(): Promise<void> {
-		// a schema-1 data.json is not adopted yet: its settings are the local part until migration
-		const localSettings = this.legacyData?.settings ?? this.local.data.settings;
+		// a schema-1 data.json is not converted yet: its settings are the local part until then
+		const localSettings = this.pendingSchema1?.settings ?? this.local.data.settings;
 		this.settings = composeSettings(
 			localSettings,
 			this.shared.get().settings,

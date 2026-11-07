@@ -19,7 +19,7 @@ describe('game codec', () => {
 		expect(encodeGame(entry)).toMatchObject({ playtime: '12h 30m', achievements: '10/49', externalId: 'rawg:274755', steamAppId: '1145360', lastPlayed: '2026-10-01T20:00:00Z' });
 	});
 
-	it('keeps legacy keys, groups, airtime and igdb ids', () => {
+	it('keeps older keys, groups, airtime and igdb ids', () => {
 		const fm = { title: 'G', developer: 'D', publisher: 'P', genre: 'RPG', status: 'Playing', priority: 'High', wishlist: true,
 			externalId: 'igdb:1942', groups: ['A'], airtimeRecurrence: 'once', airtimeAcknowledged: '2026-10-01',
 			coverUrl: 'c', storeUrl: 's', dateAdded: 'x', dateModified: 'y' };

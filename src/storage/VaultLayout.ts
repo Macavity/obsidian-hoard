@@ -1,9 +1,8 @@
-import { normalizePath } from 'obsidian';
+import { normalizePath, type Vault } from 'obsidian';
 import type { EntryKind } from './storageTypes';
+import { hasHoardKey } from './baseFile';
 
 const BASE_FILE = 'Hoard.base';
-/** Base file name of WatchLog Sync; an existing one is kept and used in place. */
-const LEGACY_BASE_FILE = 'WatchLog.base';
 const HISTORY_FILE = 'History.md';
 export const FOLDERS = { book: 'Books', manga: 'Manga', game: 'Games', customLists: 'CustomLists' } as const;
 
@@ -13,7 +12,7 @@ const LEADING_DOTS = /^\.+/;
 const WINDOWS_RESERVED = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
 const RESERVED_FOLDERS = new Set(Object.values(FOLDERS).map((f) => f.toLowerCase()));
 
-/** A note or folder name that every OS and Obsidian accept; the legacy `UNSAFE` form plus the above. */
+/** A note or folder name that every OS and Obsidian accept; the plain `UNSAFE` form plus the above. */
 function safeFileName(name: string): string {
 	const safe = name.replace(UNSAFE, '-').replace(LEADING_DOTS, (d) => '-'.repeat(d.length));
 	return WINDOWS_RESERVED.test(safe) ? `${safe}-` : safe;
@@ -41,7 +40,7 @@ export class VaultLayout {
 		this.root = normalizePath(root);
 	}
 
-	/** Root = folder of the first (path-sorted) `.base` with a `hoard:` (or legacy `watchlog:`) key. */
+	/** Root = folder of the first (path-sorted) `.base` with a `hoard:` key. */
 	static findRoot(bases: { path: string; hasHoardKey: boolean }[]): string | null {
 		const first = bases.filter((b) => b.hasHoardKey).map((b) => b.path).sort()[0];
 		if (first === undefined) return null;
@@ -49,10 +48,8 @@ export class VaultLayout {
 		return i < 0 ? '' : first.slice(0, i);
 	}
 
-	/** Where a new base is created. */
+	/** The base file: where it is read from and where a new one is created. */
 	get basePath(): string { return this.join(BASE_FILE); }
-	/** Candidate base files in lookup order: the own one, then a legacy WatchLog Sync one. */
-	get basePaths(): string[] { return [this.basePath, this.join(LEGACY_BASE_FILE)]; }
 	get historyPath(): string { return this.join(HISTORY_FILE); }
 	get customListsFolder(): string { return this.join(FOLDERS.customLists); }
 
@@ -61,7 +58,7 @@ export class VaultLayout {
 	}
 
 	notePath(kind: EntryKind, title: string, type?: string): string {
-		// Titles keep the legacy untrimmed form; other kinds trim and fall back like their managers.
+		// Titles keep their untrimmed form; other kinds trim and fall back like their managers.
 		const safe = kind === 'title'
 			? safeFileName(title)
 			: safeFileName(title).trim() || kind;
@@ -97,4 +94,14 @@ export class VaultLayout {
 	private join(rel: string): string {
 		return normalizePath(this.root ? `${this.root}/${rel}` : rel);
 	}
+}
+
+/** Root of the vault's Hoard data (see `VaultLayout.findRoot`); null when no base has a `hoard:` key. */
+export async function detectRoot(vault: Pick<Vault, 'getFiles' | 'cachedRead'>): Promise<string | null> {
+	const bases = await Promise.all(
+		vault.getFiles()
+			.filter((f) => f.extension === 'base')
+			.map(async (f) => ({ path: f.path, hasHoardKey: hasHoardKey(await vault.cachedRead(f)) })),
+	);
+	return VaultLayout.findRoot(bases);
 }

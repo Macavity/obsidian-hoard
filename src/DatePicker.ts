@@ -72,7 +72,7 @@ function isoOf(y: number, m: number, d: number): string {
 
 export function createDatePicker(cfg: DatePickerConfig): DatePickerHandle {
 	let value: string | null = cfg.value && /^\d{4}-\d{2}-\d{2}$/.test(cfg.value) ? cfg.value : null;
-	// non-ISO leftovers (a legacy release date) are shown but not treated as a selectable value — the
+	// non-ISO leftovers (a free-text release date) are shown but not treated as a selectable value — the
 	// calendar opens on today instead
 	const passthrough = !value && cfg.value ? cfg.value : '';
 

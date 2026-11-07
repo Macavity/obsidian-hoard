@@ -48,18 +48,10 @@ describe('baseFile', () => {
 		expect(base.findInFolderPath(c)).toBe('Hoard');
 		expect((yaml.parse(c) as { views: unknown[] }).views.length).toBe(1);
 	});
-	it('reads a legacy watchlog block', () => {
-		const legacy = `${src}watchlog:\n  version: 1\n  halfStarRatings: true\n`;
-		expect(base.hasHoardKey(legacy)).toBe(true);
-		expect(base.readHoardBlock(legacy, yaml)).toEqual({ version: 1, halfStarRatings: true });
-	});
-	it('prefers the hoard block over a legacy one', () => {
-		const both = 'watchlog:\n  version: 1\nhoard:\n  version: 2\n';
-		expect(base.readHoardBlock(both, yaml)).toEqual({ version: 2 });
-	});
-	it('rewrites a legacy block under hoard and drops the watchlog key', () => {
-		const legacy = `a: 1\nwatchlog:\n  version: 1\n\n# note\nb: 2\n`;
-		const out = base.writeHoardBlock(legacy, { version: 2 }, yaml);
-		expect(out).toBe(`a: 1\nhoard:\n  version: 2\n\n# note\nb: 2\n`);
+	it('ignores blocks under other keys', () => {
+		const other = `${src}other:\n  version: 1\n`;
+		expect(base.hasHoardKey(other)).toBe(false);
+		expect(base.readHoardBlock(other, yaml)).toBeNull();
+		expect(base.hasTopLevelKey(other, 'other')).toBe(true);
 	});
 });

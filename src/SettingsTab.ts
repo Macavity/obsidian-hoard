@@ -142,7 +142,8 @@ import { ConfirmModal } from './ConfirmModal';
 import { refreshAllCovers } from './coverRefresh';
 import { apiErrorMessage, apiErrorShort } from './ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from './jikanBase';
-import { buildBackup, parseBackup, restoreBackup, restoreLegacyBackup, withoutSecrets } from './backup';
+import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from './backup';
+import { restoreWatchLogBackup } from './migration/watchlog/backupImport';
 
 /** Chip for the MyAnimeList endpoint field: default, custom, or rejected and falling back. */
 function jikanEndpointStatus(raw: string): ChipStatus {
@@ -196,7 +197,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			{ key: 'customize', label: 'Customize', icon: 'palette' },
 			{ key: 'watchlist', label: 'Watchlist', icon: 'tv' },
 			{ key: 'drafts', label: 'Drafts', icon: 'square-pen' },
-			{ key: 'custom-lists', label: 'Custom Lists', icon: 'list' },
+			{ key: 'custom-lists', label: 'Custom lists', icon: 'list' },
 			{ key: 'reading', label: 'Reading', icon: 'book-open' },
 			{ key: 'widgets', label: 'Widgets', icon: 'layout-grid' },
 			{ key: 'quick-info', label: 'Quick Info', icon: 'help-circle' },
@@ -504,7 +505,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 		new Setting(el)
 			.setName('Rewrite all note frontmatter')
-			.setDesc('Rewrites the YAML frontmatter on every existing Watchlist and Reading note, applying newer frontmatter fields to older notes. Body content (## Notes / ## Quotes) is preserved. Notes without a file on disk are skipped; use Regenerate to create them.')
+			.setDesc('Rewrites the YAML frontmatter on every existing Watchlist and Reading note, applying newer frontmatter fields to older notes. Body content (the notes and quotes sections) is preserved. Notes without a file on disk are skipped; use Regenerate to create them.')
 			.addButton((b) =>
 				b.setButtonText('Rewrite frontmatter').onClick(() => {
 					const titles = this.plugin.dataManager.getTitles();
@@ -539,7 +540,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 		new Setting(el)
 			.setName('Show hint banners')
-			.setDesc('Show informational hint banners in Upcoming, Custom Lists, and Drafts tabs.')
+			.setDesc('Show informational hint banners in the Upcoming, Drafts and custom lists tabs.')
 			.addToggle((t) =>
 				t
 					.setValue(this.plugin.settings.showHintBanners)
@@ -704,15 +705,15 @@ export class HoardSettingsTab extends PluginSettingTab {
 					return;
 				}
 				// validated as a whole before anything is written
-				const legacy = 'legacy' in result ? result.legacy : null;
-				const prompt = legacy
-					? 'This is a backup from an older plugin version. Missing notes are created and missing note properties filled; existing values are kept. Continue?'
+				const watchLog = 'watchLog' in result ? result.watchLog : null;
+				const prompt = watchLog
+					? 'This is a WatchLog backup (v1–v3). Import it? Missing notes are created and missing note properties filled; existing values are kept.'
 					: 'This restores the backup into your vault: missing notes are created, the shared settings, device settings (API keys included) and the activity log are replaced. Existing notes are kept. Continue?';
 				new ConfirmModal(this.app, prompt, () => {
 					void (async () => {
 						const managers = this.plugin.backupManagers();
-						if (legacy) {
-							const errors = await restoreLegacyBackup(managers, legacy);
+						if (watchLog) {
+							const errors = await restoreWatchLogBackup(managers, watchLog);
 							if (errors.length > 0) {
 								new Notice(`Backup import failed: ${errors.join('; ')}`);
 								return;
@@ -2593,7 +2594,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 		new Setting(el)
 			.setName('Default status for new entries')
-			.setDesc('Status pre-selected in the Add book / Add manga modal.')
+			.setDesc('Status pre-selected in the add book / add manga modal.')
 			.addDropdown((d) => {
 				const opts: Record<string, string> = {};
 				for (const s of SELECTABLE_READING_STATUSES) opts[s] = s;

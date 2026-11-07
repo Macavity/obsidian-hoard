@@ -548,7 +548,7 @@ export class GamesTab {
 		if (allGames.length === 0 && this.gameData.getGroups().length === 0) {
 			const empty = content.createDiv({ cls: 'hoard-cards-empty' });
 			empty.createSpan({ cls: 'hoard-cards-empty-icon', text: '🎮' });
-			empty.createEl('p', { cls: 'hoard-cards-empty-msg', text: 'No games yet; click + Add to track your first game.' });
+			empty.createEl('p', { cls: 'hoard-cards-empty-msg', text: 'No games yet; click + add to track your first game.' });
 			return;
 		}
 
@@ -1280,7 +1280,7 @@ export class GamesTab {
 	private async refreshCover(game: Game): Promise<void> {
 		const res = await this.resolveCover(game);
 		if (!res.url) {
-			new Notice('Could not fetch a cover; check the game\'s title and your Settings → API → Games setup.');
+			new Notice('Could not fetch a cover; check the game\'s title and your settings → API → Games setup.');
 			return;
 		}
 		const fresh = this.gameData.getGame(game.id);

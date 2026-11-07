@@ -1,21 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
-import legacy from './fixtures/data-v1.json';
 import { decodeTitle, encodeTitle, splitCache } from '../src/storage/titleCodec';
 import { decodeBook, encodeBook } from '../src/storage/readingCodec';
 import { decodeGame, encodeGame } from '../src/storage/gameCodec';
 import { getDisplayPoster } from '../src/types';
-import type { LocalData } from '../src/storage/storageTypes';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
 import { setupGames } from './helpers/setupGameDataManager';
-import { setupMigration } from './helpers/setupMigration';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>
 	parse(/^---\n([\s\S]*?)\n?---/.exec(src ?? '')?.[1] ?? '') as Record<string, unknown>;
 
 describe('images are note fields (E12)', () => {
-	it('title codec: poster round-trips; legacy keys are read; none is never written', () => {
+	it('title codec: poster round-trips; older keys are read; none is never written', () => {
 		const fromNote = decodeTitle('Movie/A', { title: 'A', poster: 'https://mine' }, { posterUrl: 'https://cache' }).entry;
 		expect(fromNote.posterUrl).toBe('https://mine');
 		expect(encodeTitle(fromNote, 0).poster).toBe('https://mine');
@@ -62,7 +59,7 @@ describe('images are note fields (E12)', () => {
 		expect(dm.getTitle('Movie/A')?.posterUrl).toBe('https://api');
 	});
 
-	it('title: a legacy manualPosterUrl blocks the background write', async () => {
+	it('title: an older manualPosterUrl blocks the background write', async () => {
 		const note = '---\ntitle: A\ntype: Movie\nmanualPosterUrl: https://old\n---\n';
 		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': note });
 		await dm.updatePosterUrl('Movie/A', 'https://api');
@@ -129,23 +126,4 @@ describe('images are note fields (E12)', () => {
 		expect(fmOf(r.f.files.get('W/Books/Dune.md')).coverUrl).toBe('https://c');
 	});
 
-	it('migration keeps poster and coverUrl; a legacy poster fills a note without one, manual wins', async () => {
-		const data = structuredClone(legacy);
-		const dune = data.reading.books[0] as { coverUrl: string };
-		dune.coverUrl = 'https://legacy-cover';
-		(data.titles[0] as Record<string, unknown>).manualPosterUrl = 'https://manual';
-		const files = {
-			'WatchLog/Books/Dune.md': '---\ntitle: "Dune"\ntype: book\ncoverUrl: https://legacy-cover\n---\n',
-			'WatchLog/TV Show/Dark.md': '---\ntitle: "Dark"\ntype: "TV Show"\nposter: https://own\n---\n',
-		};
-		const setup = await setupMigration(data, files);
-		const r = await setup.run();
-		expect(r.errors).toEqual([]);
-		expect(fmOf(setup.f.files.get('WatchLog/Movie/A.md')).poster).toBe('https://manual');
-		expect(fmOf(setup.f.files.get('WatchLog/TV Show/Dark.md')).poster).toBe('https://own');
-		expect(fmOf(setup.f.files.get('WatchLog/Books/Dune.md')).coverUrl).toBe('https://legacy-cover');
-		const cache = (setup.f.plugin.data as LocalData).cache;
-		expect(cache['Movie/A']).not.toHaveProperty('posterUrl');
-		expect((cache['Books/Dune'] as Record<string, unknown> | undefined)?.['coverUrl']).toBeUndefined();
-	});
 });

@@ -41,7 +41,7 @@ const TITLE_KEYS: readonly string[] = [
 ];
 
 /** The note-side schedule of an Upcoming entry; the 'once' date lives in the note's releaseDate. */
-function toEntryAirtime(e: AirtimeEntry): EntryAirtime {
+export function toEntryAirtime(e: AirtimeEntry): EntryAirtime {
 	const s = e.schedule;
 	const a: EntryAirtime = { recurrence: s.recurrence };
 	const day = s.recurrence === 'weekly' ? s.dayOfWeek : s.recurrence === 'monthly' ? s.dayOfMonth : undefined;
@@ -219,8 +219,8 @@ export class DataManager {
 		const cache = this.local.getCache(id);
 		const check = cache?.apiCheck?.[kind];
 		if (!check) {
-			const legacy = kind === 'airing' ? Date.parse(cache?.airing?.refreshedAt ?? '') : NaN;
-			return isNaN(legacy) || Date.now() - legacy >= API_CHECK_TTL_MS.ok;
+			const refreshedAt = kind === 'airing' ? Date.parse(cache?.airing?.refreshedAt ?? '') : NaN;
+			return isNaN(refreshedAt) || Date.now() - refreshedAt >= API_CHECK_TTL_MS.ok;
 		}
 		if (check.result === 'nokey') return false;
 		const at = Date.parse(check.at);

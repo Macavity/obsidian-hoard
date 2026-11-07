@@ -1,11 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
-import legacy from './fixtures/data-v1.json';
 import { decodeTitle, encodeTitle } from '../src/storage/titleCodec';
 import { getCommunityRating, getDisplayTrailer, getTitleCredits } from '../src/types';
-import type { LocalData } from '../src/storage/storageTypes';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
-import { setupMigration } from './helpers/setupMigration';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>
 	parse(/^---\n([\s\S]*?)\n?---/.exec(src ?? '')?.[1] ?? '') as Record<string, unknown>;
@@ -72,37 +69,4 @@ describe('API values live in the cache, note values override (E9)', () => {
 		for (const k of API_KEYS) expect(fm, k).not.toHaveProperty(k);
 		expect(local.getCache('Movie/A')).toMatchObject({ director: ['Dir'] });
 	});
-
-	it('migration strips credits equal to the legacy API value and keeps differing ones', async () => {
-		const original = (director: string, poster: string): string =>
-			`---\ntitle: "A"\ntype: "Movie"\nstatus: "Completed"\nrating: 2\ndirector: [${director}]\nposter: ${poster}\n---\n\n## Notes\n`;
-		for (const joined of [false, true]) {
-			const files: Record<string, string> = {
-				'WatchLog/Movie/A.md': original('Some Director', 'https://img.example/a.jpg'),
-				'WatchLog/Movie/Das doppelte Lottchen.md': '---\ntitle: "Das doppelte Lottchen"\ntype: "Movie"\ndirector: [Mine]\n---\n',
-				'WatchLog/Books/Dune.md': '---\ntitle: "Dune"\ntype: book\ncoverUrl: https://legacy-cover\n---\n',
-			};
-			let setup = await setupMigration(withCovers(), files);
-			if (joined) {
-				const first = await setupMigration(withCovers(), {});
-				await first.run();
-				setup = await setupMigration(withCovers(), { ...files, 'WatchLog/Hoard.base': first.f.files.get('WatchLog/Hoard.base')! });
-			}
-			const r = await setup.run();
-			expect(r.errors).toEqual([]);
-			const a = fmOf(setup.f.files.get('WatchLog/Movie/A.md'));
-			expect(a, `joined=${joined}`).not.toHaveProperty('director');
-			expect(fmOf(setup.f.files.get('WatchLog/Movie/Das doppelte Lottchen.md')).director).toEqual(['Mine']);
-			const data = setup.f.plugin.data as LocalData;
-			expect(data.cache['Movie/A']).toMatchObject({ director: ['Some Director'] });
-		}
-	});
 });
-
-/** The fixture with a legacy cover on the book. */
-function withCovers(): typeof legacy {
-	const data = structuredClone(legacy);
-	const dune = data.reading.books[0] as { coverUrl: string };
-	dune.coverUrl = 'https://legacy-cover';
-	return data;
-}

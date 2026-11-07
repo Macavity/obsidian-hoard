@@ -292,7 +292,7 @@ export class PosterService {
 				const data = (await this.fetchJson(url, headers)) as TmdbFindPosterResult | null;
 				const hit = data?.movie_results?.[0] ?? data?.tv_results?.[0] ?? null;
 				if (hit?.poster_path) return `${TMDB_IMG_BASE}${hit.poster_path}`;
-				// no poster on the exact match — fall through to a typed/legacy search
+				// no poster on the exact match — fall through to a typed/untyped search
 			}
 			// 2/3/4. type-aware movie/tv search with year preference
 			if (kind !== null) {
@@ -304,7 +304,7 @@ export class PosterService {
 				if (poster) return `${TMDB_IMG_BASE}${poster}`;
 				return null;
 			}
-			// safety net: no type signal → legacy multi-search
+			// safety net: no type signal → untyped multi-search
 			const q = encodeURIComponent(searchName);
 			const url = `${TMDB_BASE}/search/multi?query=${q}&page=1`;
 			const data = (await this.fetchJson(url, headers)) as TmdbMultiResult | null;
@@ -328,7 +328,7 @@ export class PosterService {
 				const data = (await this.fetchJson(url)) as OmdbResult | null;
 				const poster = data?.Poster;
 				if (poster && httpsOrEmpty(poster)) return poster;
-				// no poster on the exact match — fall through to a typed/legacy search
+				// no poster on the exact match — fall through to a typed/untyped search
 			}
 			const q = encodeURIComponent(searchName);
 			// 2/3/4. type-aware movie/series search, preferring the matching year
@@ -347,7 +347,7 @@ export class PosterService {
 				if (poster && httpsOrEmpty(poster)) return poster;
 				return null;
 			}
-			// safety net: no type signal → legacy untyped lookup
+			// safety net: no type signal → untyped lookup
 			const url = `${OMDB_BASE}/?t=${q}&apikey=${key}`;
 			const data = (await this.fetchJson(url)) as OmdbResult | null;
 			const poster = data?.Poster;

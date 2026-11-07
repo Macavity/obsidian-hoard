@@ -1,8 +1,6 @@
 import type { YamlIO } from './storageTypes';
 
 const KEY = 'hoard';
-/** Top-level key written by WatchLog Sync; read as a fallback and replaced on the next write. */
-const LEGACY_KEY = 'watchlog';
 const INFOLDER_RE = /^(\s*-\s+file\.inFolder\(")((?:[^"\\]|\\.)*)("\)\s*)$/;
 
 const indentOf = (line: string): number => line.length - line.trimStart().length;
@@ -22,40 +20,55 @@ function blockRange(ls: string[], key: string): [number, number] | null {
 	return [start, end];
 }
 
-/** The `hoard:` block, else the legacy `watchlog:` one, with the key it was found under. */
-function findBlock(ls: string[]): { key: string; range: [number, number] } | null {
-	for (const key of [KEY, LEGACY_KEY]) {
-		const range = blockRange(ls, key);
-		if (range) return { key, range };
-	}
-	return null;
+/** True when the YAML text holds a top-level `<key>:` block. */
+export function hasTopLevelKey(src: string, key: string): boolean {
+	return blockRange(lines(src), key) !== null;
 }
 
-/** True when the base holds a `hoard:` or a legacy `watchlog:` block. */
+/** True when the base holds a `hoard:` block. */
 export function hasHoardKey(src: string): boolean {
-	return findBlock(lines(src)) !== null;
+	return hasTopLevelKey(src, KEY);
+}
+
+/**
+ * Removes every top-level `<from>:` block. Without a `<to>:` block the first one becomes it (key
+ * renamed, content kept); the rest stays byte-identical. Returns `src` when there is none.
+ */
+export function renameTopLevelBlock(src: string, from: string, to: string): string {
+	let ls = lines(src);
+	let hasTarget = blockRange(ls, to) !== null;
+	for (let r = blockRange(ls, from); r; r = blockRange(ls, from)) {
+		const [start, end] = r;
+		if (hasTarget) {
+			ls = [...ls.slice(0, start), ...ls.slice(end)];
+		} else {
+			ls[start] = to + (ls[start] ?? '').slice(from.length);
+			hasTarget = true;
+		}
+	}
+	return ls.join('\n');
 }
 
 export function readHoardBlock(src: string, yaml: YamlIO): Record<string, unknown> | null {
 	const ls = lines(src);
-	const found = findBlock(ls);
-	if (!found) return null;
-	const [start, end] = found.range;
+	const range = blockRange(ls, KEY);
+	if (!range) return null;
+	const [start, end] = range;
 	const parsed = yaml.parse(ls.slice(start, end).join('\n')) as Record<string, unknown> | null;
-	const block = parsed?.[found.key];
+	const block = parsed?.[KEY];
 	return block && typeof block === 'object' && !Array.isArray(block) ? (block as Record<string, unknown>) : null;
 }
 
-/** Replaces or appends only the `hoard:` block (a legacy `watchlog:` one is replaced by it); the rest stays byte-identical. */
+/** Replaces or appends only the `hoard:` block; the rest stays byte-identical. */
 export function writeHoardBlock(src: string, block: Record<string, unknown>, yaml: YamlIO): string {
 	const text = yaml.stringify({ [KEY]: block }).replace(/\n+$/, '');
 	const ls = lines(src);
-	const found = findBlock(ls);
-	if (!found) {
+	const range = blockRange(ls, KEY);
+	if (!range) {
 		const sep = src === '' || src.endsWith('\n') ? '' : '\n';
 		return `${src}${sep}${text}\n`;
 	}
-	const [start, end] = found.range;
+	const [start, end] = range;
 	return [...ls.slice(0, start), ...text.split('\n'), ...ls.slice(end)].join('\n');
 }
 

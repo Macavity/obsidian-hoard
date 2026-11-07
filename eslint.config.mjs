@@ -24,8 +24,8 @@ export default defineConfig([
         ignoreWords: [
           // Plugin / feature names
           "Hoard", "Watchlist", "Upcoming", "Reading", "Cards",
-          "Drafts", "Custom", "Lists", "Books", "Manga", "Games",
-          "Notes", "Quotes", "Regenerate", "Settings", "Add", "Last",
+          "Drafts", "Books", "Manga", "Games",
+          "Quotes", "Regenerate",
           // External services / acronyms not in the rule defaults
           "Google", "MAL", "TSV", "URLs", "APIs", "Steam", "Tenrai",
         ],

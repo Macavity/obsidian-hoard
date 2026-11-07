@@ -17,7 +17,7 @@ describe("eslint-disable checks", () => {
   });
 
   it("reports disallowed rules, also inside a comma-separated list", () => {
-    const line = "// eslint-disable-next-line no-console, @typescript-eslint/no-explicit-any -- legacy";
+    const line = "// eslint-disable-next-line no-console, @typescript-eslint/no-explicit-any -- old API";
     expect(findDisableIssues([line])).toEqual([
       { line: 1, content: line, problem: 'rule "@typescript-eslint/no-explicit-any" cannot be disabled' },
     ]);

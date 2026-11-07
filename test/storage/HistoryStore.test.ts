@@ -21,13 +21,13 @@ describe('HistoryStore', () => {
 		expect(f.files.get('W/History.md')!.startsWith('# My log\n')).toBe(true);
 	});
 
-	it('caps by timestamp, not position: a legacy import appended at the end keeps the newest', async () => {
+	it('caps by timestamp, not position: an import appended at the end keeps the newest', async () => {
 		const iso = (sec: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, sec)).toISOString();
 		const line = (sec: number) => `- ${iso(sec)} · added · T${sec} · m${sec}`;
 		// 1000 local entries (seconds 1000..1999), then an older import (seconds 0..4) appended at the end
 		const local = Array.from({ length: 1000 }, (_, i) => line(1000 + i));
-		const legacy = Array.from({ length: 5 }, (_, i) => line(i));
-		const f = createFakeApp({ 'W/History.md': ['# x', ...local, ...legacy, ''].join('\n') });
+		const imported = Array.from({ length: 5 }, (_, i) => line(i));
+		const f = createFakeApp({ 'W/History.md': ['# x', ...local, ...imported, ''].join('\n') });
 		const h = new HistoryStore(f.app, layout);
 		await h.append(entry(2000));
 		const all = await h.load();

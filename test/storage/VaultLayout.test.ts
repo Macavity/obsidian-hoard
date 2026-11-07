@@ -23,12 +23,6 @@ describe('VaultLayout', () => {
       { path: 'a/Hoard.base', hasHoardKey: true }])).toBe('a');
     expect(VaultLayout.findRoot([])).toBeNull();
   });
-  it('finds a legacy WatchLog base and keeps its file name', () => {
-    expect(VaultLayout.findRoot([{ path: 'Media/WatchLog.base', hasHoardKey: true }])).toBe('Media');
-    const legacy = new VaultLayout('Media', () => []);
-    expect(legacy.basePaths).toEqual(['Media/Hoard.base', 'Media/WatchLog.base']);
-    expect(legacy.basePath).toBe('Media/Hoard.base');
-  });
 });
 
 describe('safe names', () => {

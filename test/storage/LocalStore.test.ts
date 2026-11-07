@@ -20,14 +20,14 @@ describe('LocalStore', () => {
 		s.deleteCache('Movie/B'); await s.flush();
 		expect((p.data as { cache: object }).cache).toEqual({});
 	});
-	it('keeps legacy data untouched until adoptV2', async () => {
-		const legacy = { titles: [], groups: [], settings: {} };
-		const p = plugin(legacy); const s = new LocalStore(p);
+	it('keeps schema-1 data untouched until adoptV2', async () => {
+		const data = { titles: [], groups: [], settings: {} };
+		const p = plugin(data); const s = new LocalStore(p);
 		const r = await s.load();
-		expect(r).toEqual({ schema: 1, legacy });
+		expect(r).toEqual({ schema: 1, data });
 		s.setCache('Movie/A', { posterUrl: 'u' });
 		await s.flush();
-		expect(p.data).toBe(legacy);
+		expect(p.data).toBe(data);
 		await s.adoptV2({ schemaVersion: 2, settings: {}, cache: {}, ui: {} });
 		expect(p.data).toMatchObject({ schemaVersion: 2 });
 	});

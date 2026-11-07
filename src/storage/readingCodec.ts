@@ -105,7 +105,7 @@ function status(r: FmReader): ReadingStatus {
 	return 'Plan to Read';
 }
 
-/** Keys shared by Book and Manga, in the order the legacy writer emitted them. */
+/** Keys shared by Book and Manga, in the order the first writer emitted them. */
 function encodeCommon(e: Book | Manga, out: Fm): void {
 	out.title = e.title;
 	out.author = e.author ?? '';

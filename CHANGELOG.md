@@ -12,9 +12,9 @@ The release workflow takes the section of the released version from this file as
 - Watchlist, Upcoming and Dashboard tabs with episode tracking, schedules, ratings and posters.
 - Reading tab for books and manga; Games tab with RAWG/IGDB search and Steam sync.
 - Custom lists, Drafts (vault tag scan) and Log (activity timeline) tabs.
-- Code-block widgets `hoard`, `hoard-todo`, `hoard-stat`, `hoard-upcoming`, `hoard-nowwatching`, `hoard-now-next`; legacy `watchlog` / `wl-*` names still render.
+- Code-block widgets `hoard`, `hoard-todo`, `hoard-stat`, `hoard-upcoming`, `hoard-nowwatching`, `hoard-now-next`.
 - Settings tab with API, Customize and General pages, JSON backup and restore.
-- Migration from WatchLog: `WatchLog.base` key rewrite and adoption of `watchlog-sync` / `watchlog` plugin data.
+- One-time migration from WatchLog at first start: `WatchLog.base` renamed to `Hoard.base` with the key rewritten, `watchlog-sync` / `watchlog` plugin data adopted, schema-1 data converted into notes, `watchlog` / `wl-*` widget code blocks rewritten; WatchLog backups (v1–v3) can still be restored.
 - Test vault fixtures and a mobile smoke script.
 
 ### Known issues

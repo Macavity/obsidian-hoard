@@ -1531,7 +1531,7 @@ export class ReadingTab {
 				return;
 			}
 			if (!this.plugin.apiService.hasGoogleBooksKey()) {
-				new Notice('Google Books API key required; add one in Settings → API → Books.');
+				new Notice('Google Books API key required; add one in settings → API → Books.');
 				return;
 			}
 			void (async () => {

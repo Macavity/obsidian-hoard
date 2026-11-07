@@ -49,7 +49,7 @@ export class CustomListManager {
 
 	private async saveSerialized(listName: string, saveFn: () => Promise<void>): Promise<void> {
 		const prev = this.saveQueues.get(listName) ?? Promise.resolve();
-		const next = prev.then(saveFn).catch(e => console.error('[WL] Save error for list:', listName, e));
+		const next = prev.then(saveFn).catch(e => console.error('[Hoard] Save error for list:', listName, e));
 		this.saveQueues.set(listName, next);
 		await next;
 	}
@@ -84,7 +84,7 @@ export class CustomListManager {
 			const content = await this.app.vault.read(file);
 			return this.parse(name, content);
 		} catch (e) {
-			console.warn('[WL] Failed to read custom list', name, e);
+			console.warn('[Hoard] Failed to read custom list', name, e);
 			return null;
 		}
 	}
@@ -129,7 +129,7 @@ export class CustomListManager {
 					);
 				}
 			} catch (e) {
-				console.warn('[WL] Custom list JSON parse failed for', name, e);
+				console.warn('[Hoard] Custom list JSON parse failed for', name, e);
 				new Notice(`Custom list "${name}" has corrupt data and cannot be loaded.`);
 				this.corruptLists.add(name);
 				return null;
@@ -142,7 +142,7 @@ export class CustomListManager {
 	async saveList(list: CustomList): Promise<void> {
 		await this.saveSerialized(list.name, async () => {
 			if (this.corruptLists.has(list.name)) {
-				console.warn('[WL] Refusing to save corrupt custom list', list.name);
+				console.warn('[Hoard] Refusing to save corrupt custom list', list.name);
 				return;
 			}
 			await this.ensureFolder();
@@ -596,7 +596,7 @@ export class CustomListsTab {
 	/** Serializes saves per list so notes + table writes don't overlap. */
 	saveSerialized(listName: string, saveFn: () => Promise<void>): Promise<void> {
 		const prev = this.saveQueues.get(listName) ?? Promise.resolve();
-		const next = prev.then(saveFn).catch((e) => console.error('[WL] custom-list save failed:', e));
+		const next = prev.then(saveFn).catch((e) => console.error('[Hoard] custom-list save failed:', e));
 		this.saveQueues.set(listName, next);
 		return next;
 	}

@@ -83,13 +83,10 @@ export class SharedConfigStore {
 		private register: (ref: EventRef) => void = () => {},
 	) {}
 
-	/** The existing base: `Hoard.base`, else a legacy `WatchLog.base` in the same root. */
+	/** The existing base file at the root, if any. */
 	baseFile(): TFile | null {
-		for (const path of this.layout().basePaths) {
-			const f = this.app.vault.getAbstractFileByPath(path);
-			if (f instanceof TFile) return f;
-		}
-		return null;
+		const f = this.app.vault.getAbstractFileByPath(this.layout().basePath);
+		return f instanceof TFile ? f : null;
 	}
 
 	private parseBlock(src: string): SharedConfig | null {
@@ -156,8 +153,8 @@ export class SharedConfigStore {
 			return writeHoardBlock(src, block, this.yaml);
 		});
 		if (!written) {
-			console.warn('[WL] unreadable hoard block in the base; settings not written');
-			new Notice('Hoard: the settings block in Hoard.base is unreadable; settings were not saved.');
+			console.warn('[Hoard] unreadable hoard block in the base; settings not written');
+			new Notice(`Hoard: the settings block in ${f.name} is unreadable; settings were not saved.`);
 			return;
 		}
 		// only after a successful write, so the next save diffs against the file state and retries

@@ -153,30 +153,10 @@ describe('SharedConfigStore', () => {
 		expect(f.files.get('W/Hoard.base')).toContain('halfStarRatings: true');
 		expect(s.get().settings.halfStarRatings).toBe(true);
 	});
-	it('reads the settings of a legacy WatchLog.base', async () => {
-		const { s } = mk({ 'W/WatchLog.base': 'filters:\n  and:\n    - file.inFolder("W")\nwatchlog:\n  version: 1\n  halfStarRatings: true\n' });
+	it('reads only Hoard.base at the root', async () => {
+		const { s } = mk({ 'W/Other.base': 'hoard:\n  version: 1\n  halfStarRatings: true\n' });
 		await s.load();
-		expect(s.get().settings.halfStarRatings).toBe(true);
-		expect(await s.ensureFilter()).toBe('ok');
-		expect(s.baseFile()?.path).toBe('W/WatchLog.base');
-	});
-	it('rewrites the legacy block under hoard on the first write, keeping file and rest', async () => {
-		const { f, s } = mk({ 'W/WatchLog.base': 'filters:\n  and:\n    - file.inFolder("W")\nwatchlog:\n  version: 1\n  halfStarRatings: true\nviews: []\n' });
-		await s.load();
-		await s.update({ statuses: [{ name: 'A', color: '#000' }] });
-		const out = f.files.get('W/WatchLog.base')!;
-		expect(f.files.has('W/Hoard.base')).toBe(false);
-		expect(out).not.toMatch(/^watchlog:/m);
-		expect(out).toMatch(/^hoard:\n {2}version: 1\n {2}halfStarRatings: true\n {2}statuses:/m);
-		expect(out).toContain('file.inFolder("W")');
-		expect(out).toMatch(/views: \[\]\n$/);
-	});
-	it('reloads on external change of a legacy WatchLog.base', async () => {
-		const { f, s } = mk({ 'W/WatchLog.base': 'watchlog:\n  version: 1\n' });
-		await s.load(); s.start();
-		const cb = vi.fn(); s.onChange(cb);
-		f.externalWrite('W/WatchLog.base', 'watchlog:\n  version: 1\n  halfStarRatings: true\n');
-		await new Promise(r => setTimeout(r, 0));
-		expect(cb).toHaveBeenCalled();
+		expect(s.baseFile()).toBeNull();
+		expect(s.get().settings).toEqual({});
 	});
 });

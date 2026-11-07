@@ -497,9 +497,10 @@ export class HoardView extends ItemView {
 			if (def.badge?.refreshOn !== trigger) continue;
 			const { badge, label } = def;
 			const btn = this.tabButtons[def.name] ?? null;
-			void Promise.resolve(badge.count(this.plugin, this.dataManager)).then((count) => {
-				this.setTabBadge(btn, label, count);
-			});
+			const count = badge.count(this.plugin, this.dataManager);
+			// a plain number paints in the same frame; only async counts wait
+			if (typeof count === 'number') this.setTabBadge(btn, label, count);
+			else void count.then((n) => this.setTabBadge(btn, label, n));
 		}
 	}
 }

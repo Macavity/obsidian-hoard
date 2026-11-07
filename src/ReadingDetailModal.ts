@@ -980,7 +980,7 @@ export class ReadingDetailModal extends Modal {
 		try {
 			if (this.mode === 'book') {
 				if (!this.plugin.apiService.hasGoogleBooksKey()) {
-					new Notice('Google Books API key required; add one in Settings → API → Books.');
+					new Notice('Google Books API key required; add one in settings → API → Books.');
 					return;
 				}
 				const result = await this.plugin.apiService.getGoogleBookById(newId);
@@ -1347,7 +1347,7 @@ export class ReadingDetailModal extends Modal {
 					}
 				}
 			} catch (e) {
-				console.warn('[WL] quotes read failed:', e);
+				console.warn('[Hoard] quotes read failed:', e);
 			}
 		};
 
@@ -1407,7 +1407,7 @@ export class ReadingDetailModal extends Modal {
 					parent.empty();
 					await onSaved();
 				} catch (e) {
-					console.warn('[WL] appendQuote failed:', e);
+					console.warn('[Hoard] appendQuote failed:', e);
 					new Notice('Could not save quote.');
 				}
 			})();

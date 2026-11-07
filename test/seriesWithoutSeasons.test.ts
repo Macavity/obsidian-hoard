@@ -1,14 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Notice } from 'obsidian';
-import legacyJson from './fixtures/data-v1.json';
 import { setupDataManager } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
-import { setupMigration } from './helpers/setupMigration';
 import type { ApiOutcome } from '../src/ApiService';
-import type { HoardData, HoardTitle, Season } from '../src/types';
-
-const cloneLegacy = (): HoardData => structuredClone(legacyJson) as unknown as HoardData;
-const legacyTitle = (data: HoardData, id: string): HoardTitle => data.titles.find((t) => t.id === id)!;
+import type { Season } from '../src/types';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 const NOTE = '---\ntitle: N\ntype: TV Show\nexternalId: tmdb:tv:1\ntotalEpisodes: 10\n---\n';
@@ -64,43 +59,5 @@ describe('series without a season list', () => {
 		const content = f.files.get('W/TV Show/Dark.md')!;
 		expect(content).toContain('Season 1: 10');
 		expect(content).toContain('Season 2: 8');
-	});
-});
-
-describe('migration of series without a season list', () => {
-	it('keeps watched episodes of a title without seasons', async () => {
-		const legacy = cloneLegacy();
-		legacy.titles.push({ ...legacyTitle(legacy, 'dark'), id: 'x', title: 'NoSeasons', externalLink: '', seasons: [],
-			totalEpisodes: 10, watchedEpisodes: [1, 2, 3, 4, 5], tmdbId: undefined, malId: undefined, anilistId: undefined });
-		const { run, f } = await setupMigration(legacy, {});
-		const r = await run();
-		expect(r.errors).toEqual([]);
-		expect(f.files.get('WatchLog/TV Show/NoSeasons.md')).toContain('watched: S01E01-E05');
-	});
-
-	it.each([['https://youtu.be/api'], ['https://youtu.be/mine']])('second device keeps a manual trailer (API: %s)', async (api) => {
-		const legacy = cloneLegacy();
-		const a = legacyTitle(legacy, 'a');
-		a.manualTrailerUrl = 'https://youtu.be/mine';
-		a.trailerUrl = api;
-		const { run, rerunFromLegacy, f } = await setupMigration(legacy, {});
-		await run();
-		expect(f.files.get('WatchLog/Movie/A.md')).toContain('trailer: https://youtu.be/mine');
-		await rerunFromLegacy();
-		expect(f.files.get('WatchLog/Movie/A.md')).toContain('trailer: https://youtu.be/mine');
-	});
-
-	it('second device removes a trailer the API wrote', async () => {
-		const legacy = cloneLegacy();
-		const a = legacyTitle(legacy, 'a');
-		a.trailerUrl = 'https://youtu.be/api';
-		const { run, f } = await setupMigration(legacy, {});
-		const path = 'WatchLog/Movie/A.md';
-		await run();
-		// the original plugin had written the fetched trailer into the note
-		f.externalWrite(path, f.files.get(path)!.replace('---\n', '---\ntrailer: https://youtu.be/api\n'));
-		f.plugin.data = structuredClone(legacy);
-		await run();
-		expect(f.files.get(path)).not.toContain('trailer:');
 	});
 });

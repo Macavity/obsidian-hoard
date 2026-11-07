@@ -1,5 +1,3 @@
-import type { HistoryEntry } from './HistoryManager';
-
 export interface Season {
 	name: string;
 	episodes: number;
@@ -46,8 +44,6 @@ export interface HoardTitle {
 	dateFavorited?: string;
 	/** note field `poster`. '' = unfetched, 'none' = nothing found (cache only), else a URL */
 	posterUrl?: string;
-	/** legacy (schema 1 data, migration only): wins over posterUrl; v2 notes use `poster` */
-	manualPosterUrl?: string;
 	/** '' = unfetched, 'none' = source has no trailer (e.g. OMDb), else a YouTube URL */
 	trailerUrl?: string;
 	/** override — wins over trailerUrl when non-empty */
@@ -493,7 +489,7 @@ export interface HoardPluginSettings {
 		secondSort?: string;
 		secondSortDir?: 'asc' | 'desc';
 		ratingEmptyOnly?: boolean;
-		/** legacy — read once by migratePriorityExclude, never written */
+		/** written by WatchLog only — read once by migratePriorityExclude, never written */
 		priorityEmptyOnly?: boolean;
 		recentlyArrivedOnly?: boolean;
 		groupsOnly?: boolean;
@@ -512,7 +508,7 @@ export interface HoardPluginSettings {
 		secondSort?: string;
 		secondSortDir?: 'asc' | 'desc';
 		ratingEmptyOnly?: boolean;
-		/** legacy — read once by migratePriorityExclude, never written */
+		/** written by WatchLog only — read once by migratePriorityExclude, never written */
 		priorityEmptyOnly?: boolean;
 		recentlyArrivedOnly?: boolean;
 		favoritesOnly?: boolean;
@@ -819,7 +815,7 @@ export interface GamesSavedFilterPreset {
 	platformExclude: string[];
 	groupExclude: string[];
 	ratingEmptyOnly?: boolean;
-	/** legacy — read once by migratePriorityExclude, never written */
+	/** written by WatchLog only — read once by migratePriorityExclude, never written */
 	priorityEmptyOnly?: boolean;
 	recentlyArrivedOnly?: boolean;
 	favoritesOnly?: boolean;
@@ -981,7 +977,7 @@ export interface SavedFilterPreset {
 	ratingExclude: string[];
 	priorityExclude: string[];
 	ratingEmptyOnly?: boolean;
-	/** legacy — read once by migratePriorityExclude, never written */
+	/** written by WatchLog only — read once by migratePriorityExclude, never written */
 	priorityEmptyOnly?: boolean;
 	recentlyArrivedOnly?: boolean;
 	groupsOnly?: boolean;
@@ -995,27 +991,6 @@ export interface SavedFilterPreset {
 export interface RecommendedDaily {
 	date: string;   // YYYY-MM-DD the picks were rolled on ('' = never rolled)
 	ids: string[];  // chosen title ids
-}
-
-export interface HoardData {
-	titles: HoardTitle[];
-	groups: HoardGroup[];
-	settings: Partial<HoardPluginSettings>;
-	airtime?: AirtimeEntry[];
-	maybe?: MaybeTitle[];
-	pinnedGroupId?: string | null;
-	drafts?: DraftPersistState;
-	savedFilterPreset?: SavedFilterPreset | null;
-	posterRetryDone?: boolean;
-	recommendedDaily?: RecommendedDaily;
-	// reading + activity log now live in data.json (Obsidian saveData), so Sync replicates
-	// them alongside the watchlist. Migrated once from the legacy reading.json /
-	// history.json; the flag below gates that one-time migration.
-	reading?: ReadingData;
-	history?: HistoryEntry[];
-	migratedReadingHistory?: boolean;
-	/** Games dataset — same in-data.json pattern as `reading`, minus the migration. */
-	games?: GamesData;
 }
 
 // Airtime utility functions
@@ -1180,7 +1155,7 @@ export function formatPriorityOpt(opt: string): string {
 }
 
 /**
- * Legacy `priorityEmptyOnly` → exclude set. The old exclusive toggle meant "empty only",
+ * Saved `priorityEmptyOnly` → exclude set. The old exclusive toggle meant "empty only",
  * which is now the same as excluding every named priority.
  */
 export function migratePriorityExclude(
@@ -1409,11 +1384,8 @@ export function getCommunityRating(title: HoardTitle): {
 	};
 }
 
-/** Poster URL to render; a legacy `manualPosterUrl` (schema 1 data) wins over `posterUrl`. */
+/** Poster URL to render (the note's `poster`, else the fetched one). */
 export function getDisplayPoster(title: HoardTitle): string {
-	if (title.manualPosterUrl && title.manualPosterUrl.trim() !== '') {
-		return title.manualPosterUrl;
-	}
 	return title.posterUrl ?? '';
 }
 

@@ -45,16 +45,6 @@ export function findNextRelease(
 
 type WidgetLanguage = 'hoard' | 'hoard-todo' | 'hoard-stat' | 'hoard-upcoming' | 'hoard-nowwatching' | 'hoard-now-next';
 
-/** Code-block languages from before the rename; still rendered so existing notes keep working. */
-const LEGACY_WIDGET_LANGUAGES: Record<string, WidgetLanguage> = {
-	'watchlog': 'hoard',
-	'wl-todo': 'hoard-todo',
-	'wl-stat': 'hoard-stat',
-	'wl-upcoming': 'hoard-upcoming',
-	'wl-nowwatching': 'hoard-nowwatching',
-	'wl-now-next': 'hoard-now-next',
-};
-
 export class WidgetRenderer {
 	private plugin: HoardPlugin;
 	private dataManager: DataManager;
@@ -81,9 +71,6 @@ export class WidgetRenderer {
 		};
 		for (const [language, handler] of Object.entries(handlers) as [WidgetLanguage, typeof handlers[WidgetLanguage]][]) {
 			this.plugin.registerMarkdownCodeBlockProcessor(language, handler);
-		}
-		for (const [legacy, language] of Object.entries(LEGACY_WIDGET_LANGUAGES)) {
-			this.plugin.registerMarkdownCodeBlockProcessor(legacy, handlers[language]);
 		}
 
 		// re-render all active widgets on data change (list → widget sync)
@@ -129,7 +116,7 @@ export class WidgetRenderer {
 				staleGeneric.push(el);
 				continue;
 			}
-			try { rerender(); } catch (e) { console.warn('[WL] widget rerender failed:', e); }
+			try { rerender(); } catch (e) { console.warn('[Hoard] widget rerender failed:', e); }
 		}
 		for (const el of staleGeneric) this.widgetRerender.delete(el);
 	}
