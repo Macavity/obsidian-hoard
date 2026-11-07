@@ -1,59 +1,57 @@
 ---
 type: Module
 title: Drafts
-description: How the Drafts tab turns tagged lines in vault notes into pending add-candidates, computes the badge count and persists dismissed/added state; where to change each part.
+description: How tagged lines in vault notes become add candidates, why the pending count is computed twice, and what is persisted.
 source:
   - src/DraftsTab.ts
   - src/DraftChoiceModal.ts
   - src/AddRouter.ts
   - src/HoardView.ts
   - src/DataManager.ts
-  - src/types.ts
 source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
 ---
 
 # Drafts
 
-## Purpose / Boundary
+An inbox: the user writes `#hoard Some Title` anywhere in the vault; the Drafts tab
+([DraftsTab.ts](../../src/DraftsTab.ts)) lists those titles and routes each into Watchlist, Books,
+Manga or Games. Drafts are not entries and have no note; only triage state is persisted.
 
-A scratch inbox: the user writes `#hoard Some Title` anywhere in the vault; the Drafts tab lists those titles and routes each into Watchlist, Books, Manga or Games. Drafts are not entries and have no note of their own. The only persisted data is triage state.
+## Scan
 
-## Entry points
+`scanTaggedFiles` is static and pure: for every Markdown file whose `metadataCache` tags contain
+the tag exactly (inline tags only, properties ignored), each line holding the tag yields the text
+after the tag, split on commas; each trimmed non-empty segment up to 100 characters is one draft.
+Key = lowercased title, sources = the file basenames. `scanVault` merges persisted state: records
+`firstSeen` and display text for new keys, drops dismissed keys, marks added ones, sorts oldest
+first. While the tab is open, `metadataCache.on('changed')` re-renders after 500 ms.
 
-- `DraftsTab` ([DraftsTab.ts](../../src/DraftsTab.ts)): `render()` = load state, `scanVault`, `renderUI`, register change listener. Registered in the `TABS` array of [HoardView.ts](../../src/HoardView.ts) with a `badge` of `DraftsTab.computePendingCount` and `refreshOn: 'metadata-resolved'`.
-- `openAddForTitle` ([AddRouter.ts](../../src/AddRouter.ts)): shared with Custom Lists rows. Opens `DraftChoiceModal` ([DraftChoiceModal.ts](../../src/DraftChoiceModal.ts); four buttons: watchlist / book / manga / game), then the matching Add modal (`AddTitleModal` with type "Anime" default, `AddGameModal`, `AddReadingModal`) prefilled with the title.
-- Settings: `settings.draftsVaultTag` (default `#hoard`), `settings.draftsAfterAdding` (`keep` | `remove`, default `keep`), edited in SettingsTab. Both are device-local: they are not in `SHARED_SETTING_KEYS` ([shared vs local](../concepts/shared-vs-local.md)).
+## Pending count, twice
 
-## How it works
+A draft is pending when it is neither added nor dismissed and has no library match (Fuse over all
+titles, books, manga and games, threshold 0.35; matches show "In <library>" and are dimmed). The
+rule is implemented in two places that must agree: `renderUI` inside the tab, and the static
+DOM-free `computePendingCount`, which the `TABS` badge calls without opening the tab. The badge
+refreshes on `metadata-resolved`, not on `hoard-data-changed`, because it needs the vault scan
+([ui kit](../architecture/ui-kit.md)).
 
-### Scan: lines to entries
-`scanTaggedFiles` (static, pure): for each markdown file whose `metadataCache` tags include the tag exactly (inline tags only, frontmatter ignored), `cachedRead` the content, and for each line containing the tag take the text after the first occurrence of the tag; split on `,`; each trimmed, non-empty segment of at most 100 chars is one draft. Key = lowercased title; sources = set of file basenames. A line with the tag but nothing after it is skipped.
-`scanVault` adds persisted state: records `firstSeen` (ISO) and `titleDisplay` for new keys (saves if changed), drops `dismissed` keys, marks `added`, sorts oldest-first.
+## Actions and persistence
 
-### Duplicate detection and pending count
-`buildFuse` indexes all titles of Watchlist, Books, Manga and Games (Fuse threshold 0.35). `findLibraryMatch` returns the library of the best match with score <= 0.35. Cards with a match show "In <library>", are dimmed and show the label "Added" instead of an Add button; sorted after non-matching cards.
-Pending = not `added`, not `dismissed`, and no library match. Two computations that must agree:
-- `renderUI` (in-tab; calls `onCountChange`).
-- `computePendingCount` (static, DOM-free, used by the tab badge without opening the tab; reads `getDrafts()` itself, scans only tagged files).
-The badge refreshes on `metadata-resolved` (HoardView badge config), so it follows vault metadata, not `hoard-data-changed`. While the tab is open, `metadataCache.on('changed')` triggers a debounced (500 ms) full `render()`.
-
-### Actions and persistence
-- Dismiss (x): push key to `dismissed`, remove from `added`, save, `rerenderFromCache` (no rescan).
-- Add: `openAddForTitle` with `onAdded` -> `afterAdded`: `draftsAfterAdding === 'remove'` dismisses, else records the key in `added` (card stays, marked Added).
-- Persistence: `DraftPersistState` (types.ts) `{ dismissed[], added[], firstSeen{}, titleDisplay{} }`, all keyed by lowercase title. `DataManager.getDrafts()` / `setDrafts()` read/write `local.data.drafts` and `local.queueSave()`: device-local (LocalStore data.json), not synced via the vault. See [shared vs local](../concepts/shared-vs-local.md), [storage](../architecture/storage.md).
-- Dismissal is permanent per key: re-tagging the same title never reappears (no un-dismiss UI seen in DraftsTab.ts).
+- Add: `openAddForTitle` ([AddRouter.ts](../../src/AddRouter.ts), shared with custom lists) opens
+  `DraftChoiceModal` (watchlist, book, manga, game) and the matching add modal prefilled with the
+  title. After adding, `draftsAfterAdding` decides: `remove` dismisses, `keep` (default) marks the
+  card "Added".
+- Dismiss is permanent per key; there is no un-dismiss in the tab.
+- `DraftPersistState` (`dismissed`, `added`, `firstSeen`, `titleDisplay`, all keyed by lowercase
+  title) lives in `data.json` via `DataManager.getDrafts` / `setDrafts`, device-local. The tag
+  (`draftsVaultTag`, default `#hoard`) and `draftsAfterAdding` are device-local settings too.
 
 ## Where to change what
 
 | Change | Place |
 |---|---|
-| Tag syntax, line parsing, title splitting | `scanTaggedFiles` (affects badge and tab) |
-| Duplicate matching strictness | `buildFuse` options, `findLibraryMatch` |
+| Tag syntax, line parsing | `scanTaggedFiles` (badge and tab) |
+| Match strictness | `buildFuse`, `findLibraryMatch` |
 | Pending rule | both `renderUI` and `computePendingCount` |
-| Badge timing | `badge.refreshOn` in HoardView.ts |
-| After-add behaviour | `afterAdded`, `draftsAfterAdding` |
-| Routing choices / prefill | DraftChoiceModal.ts, AddRouter.ts |
-| Persisted fields | `DraftPersistState`, `getDrafts`/`setDrafts` |
-
-## Links
-[storage](../architecture/storage.md), [ui-kit](../architecture/ui-kit.md), [custom lists](custom-lists.md) (reuses `openAddForTitle`), [watchlist](watchlist.md), [settings](settings.md).
+| Badge timing | `badge.refreshOn` in `HoardView.ts` |
+| Routing and prefill | `DraftChoiceModal.ts`, `AddRouter.ts` |

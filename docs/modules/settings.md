@@ -1,59 +1,60 @@
 ---
 type: Module
 title: Settings
-description: How the settings tab is laid out, which settings sync via Hoard.base versus stay device-local, and where to add a new setting.
+description: How the settings tab is organised, how the API cards and type validation work, and the checklist for adding a setting.
 source:
   - src/SettingsTab.ts
   - src/settingsSplit.ts
   - src/storage/SharedConfigStore.ts
   - src/storage/VaultLayout.ts
-  - src/ColorPicker.ts
   - src/types.ts
   - src/main.ts
-  - src/backup.ts
 source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
 ---
 
 # Settings
 
-## Purpose / Boundary
-One plugin-wide `HoardPluginSettings` object (`plugin.settings`), edited by `HoardSettingsTab`, persisted in two places. Library-specific settings for Reading and Games live in their managers (`readingDataManager.getSettings()`, game manager), not in `HoardPluginSettings`, but use the same shared/local split. See [storage](../architecture/storage.md) and [shared vs local](../concepts/shared-vs-local.md).
+One `HoardPluginSettings` object (`plugin.settings`), composed from defaults, `data.json` and the
+base and persisted back by the whitelist; that split, the backfills in `composeSettings` and the
+diff-only write in `persistSettings` are in [shared vs local](../concepts/shared-vs-local.md).
+Reading and games keep their own settings objects in their managers, split the same way
+(`splitNested`). `main.ts` wraps the two in `loadSettings` / `saveSettings`; a changed TMDB or
+OMDb key also re-arms "no key" API checks; a synced base change re-composes and dispatches
+`hoard-data-changed`.
 
-## Entry points
-- [SettingsTab.ts](../../src/SettingsTab.ts): `HoardSettingsTab.display()` builds the nav, `renderSection()` switches on `activeSection`.
-- [settingsSplit.ts](../../src/settingsSplit.ts): `composeSettings(local, shared)` and `persistSettings(settings, local, shared)`.
-- [main.ts](../../src/main.ts): `loadSettings()` / `saveSettings()` wrap the two; `applySharedSettings()` reloads when the base changes (sync) and dispatches `hoard-data-changed`.
-- [SharedConfigStore.ts](../../src/storage/SharedConfigStore.ts): `SHARED_SETTING_KEYS`, `splitNested`.
+## The tab
 
-## How it works
+[SettingsTab.ts](../../src/SettingsTab.ts) renders one section at a time (nav: General, API,
+Customize, Watchlist, Drafts, Custom lists, Reading, Widgets, Quick Info; icon-only on mobile).
+Two helpers build every card: `settingsGroup` (accent header with a live status chip, variant
+classes spelled out in `SETTINGS_GROUP_CLASSES` for the dead-CSS lint) and `sgCard` (sub-card with
+optional help). Text inputs save debounced (500 ms); toggles and selects save at once. General
+holds Backup & Restore ([backup](backup.md)); Watchlist holds CSV import/export and type folders.
 
-### Sections (nav buttons; icon-only on mobile)
-General, API, Customize, Watchlist, Drafts, Custom lists, Reading, Widgets, Quick Info. Each `renderX(body)` builds `hoard-sg-page` containing cards from two helpers:
-- `settingsGroup(parent, {title, sub, icon, variant, rows?})`: accent header with live status chip (`setChip`). Variant maps to a class via `SETTINGS_GROUP_CLASSES` (full literal class names, for the dead-CSS lint). `rows: true` = body holds bare Obsidian `Setting` rows.
-- `sgCard(parent, {label, help?})`: sub-card with optional `(?)` help; used in Customize.
-- General: Main, Backup & Restore (export/restore, regenerate notes). Customize: Theme, Cards (size + per-tab text style), Watchlist/Reading/Games colours, Shared (priority, rating system). Watchlist: Main, Import/Export CSV, Folders, Type subfolders.
-- Colour pickers: most are native `<input type=color>`; the swatch popover `openColorPicker` in [ColorPicker.ts](../../src/ColorPicker.ts) (plus `deriveFillColor`/`deriveBorderColor`) is used by custom-list/reading column editors, not by SettingsTab (not verified for every SettingsTab colour field).
+## API cards
 
-### Shared vs device-local
-`SHARED_SETTING_KEYS` (whitelist): `types, statuses, reviews, priorities, halfStarRatings, typeApiMapping, episodeNumbering, defaultCustomColumns, autoCompleteOnLastEpisode, setFinishDateAutomatically, reading, games`. They live in the `hoard:` block of `Hoard.base` and sync with the vault. Inside `reading` / `games` only `NESTED_SHARED_KEYS` sync (reading: `defaultStatus, bookColumns, mangaColumns`; games: `defaultStatus, statuses, types, platforms`); `defaultFolder` is dropped. Everything else (colours, palettes, layouts, filters, card sizes, and all API keys/ids) goes to `data.json` via `LocalStore`. Rule: shared = vocabulary and schema every device needs to read/write the same notes; secrets are never shared. `RETIRED_KEYS` (`ratingSystem`, `seasonPalette`, `readingTypeColors`) are stripped from the block on next write. `backup.withoutSecrets` strips keys matching `SECRET_KEY` for the vault copy of a backup.
+`renderApi` groups Movies & TV, Anime, Books & manga, Games. `apiProvider(spec)` renders one card:
+fields (`secret: true` becomes a password input with reveal), a status chip recomputed on every
+keystroke so a stale "Connected" never outlives its key, a help link, and a Test button that calls
+the service's `check*Connection` and maps failures through `testFailure`. AniList and the manga
+card are keyless and have no Test; Steam's Test also resolves a vanity name to a SteamID64.
+`apiSegmented` picks the active service per group (`activeApi`, `animeApiSource`,
+`gamesApiSource`); `renderTypeApiMapping` routes custom types to the anime or movie API, with
+Anime, Movie and TV Show locked.
 
-### composeSettings
-`DEFAULT_SETTINGS <- local <- shared` (shared wins), on a `structuredClone`. Drops `REMOVED_KEYS`; per-key merge for `listFilters`, `cardTextStyles`. Backfills/migrates: `dateFormat` (invalid -> `european`), `defaultWatchlistView` (old `cards` -> `rows`), `readingTypeColors`, `showUpcomingStatusBar`, `defaultAddType`/`lastAddedType`, empty arrays (`types`, `statuses`, ...), `ratingSystem` (must be exactly 5 well-formed tiers), `rowsLayout` via `normalizeRowsLayout`, Plan-to-watch colour, and inserts the "To be released" status.
+## Types as folders
 
-### persistSettings
-1. Non-shared keys -> `local.data.settings`, `local.queueSave()`.
-2. Baseline = `composeSettings({}, shared.get().settings)`; only keys whose JSON differs from the baseline go through `shared.diff` (whitelist filter + canonical compare) and `shared.update`. No diff = no write to the base. `update` patches the `hoard:` block with `vault.process`; an unreadable block aborts with a Notice. In-memory config only advances after a successful write, so a failed save retries on the next diff.
-- Text inputs call `debouncedSaveSettings()` (500 ms); toggles/selects call `plugin.saveSettings()` directly. `saveSettings` also resets "no key" checks when TMDB/OMDb keys change.
+A type name is a folder under the root, so the tag editor validates with `typeNameError`
+([VaultLayout.ts](../../src/storage/VaultLayout.ts)): a message when `safeTypeName` would change
+the input (unsafe characters, leading dots, Windows device names, or a reserved folder such as
+Books, Manga, Games, CustomLists). Built-in types (`LOCKED_TYPES`) cannot be removed; statuses
+are colour-only.
 
-### API cards
-`renderApi` has groups Movies & TV, Anime, Books & manga, Games. `apiProvider(parent, ApiProviderSpec)` renders one card: fields (`secret: true` -> password input with reveal button), a status chip (`status()` recomputed on every keystroke, so an old "Connected" never outlives its key), link, `(?)` help, and a `Test` button (`test()` returns `ChipStatus`; failures go through `testFailure`). Providers with `test`: OMDb, TMDB, MyAnimeList (Jikan endpoint), Google Books, RAWG, IGDB, Steam (also resolves vanity name to SteamID64); AniList and the Manga (MyAnimeList) card are keyless with no Test. Secret fields: OMDb, TMDB, Google Books, RAWG, IGDB client id/secret, Steam key. `apiSegmented` picks the active API per group (`activeApi`, `animeApiSource`, `gamesApiSource`). `renderTypeApiMapping` maps custom types to the anime or movie API; Anime/Movie/TV Show are locked.
+## Adding a setting
 
-### Types as folders
-Type names are folder names under the root. `renderTagSection(..., 'types')` passes `validateName: typeNameError` to the tag list; `typeNameError` returns a message when `safeTypeName(name)` differs from the input. `safeTypeName` replaces `* " \ / < > : | ?` with `-`, neutralises leading dots and Windows device names, and appends ` (type)` for reserved folders (`Books`, `Manga`, `Games`, `CustomLists`). `CsvModal` also applies `safeTypeName`. Built-in types (`LOCKED_TYPES`: Anime, Movie, TV Show) cannot be removed; statuses are colour-only.
-
-## Where to change what: new setting checklist
-1. [types.ts](../../src/types.ts): add the field to `HoardPluginSettings` and `DEFAULT_SETTINGS`.
-2. [settingsSplit.ts](../../src/settingsSplit.ts): add a backfill/validation in `composeSettings` only if old or hand-edited data can be invalid.
-3. [SettingsTab.ts](../../src/SettingsTab.ts): add a `Setting`/card in the matching `renderX`; call `plugin.saveSettings()` (debounced for text).
-4. Synced across devices? Add the key to `SHARED_SETTING_KEYS` (and `NESTED_SHARED_KEYS` for `reading`/`games`). Never for secrets. Default is device-local.
-5. Needs to react live? Dispatch `hoard-data-changed` or call `refreshOpenViews()` as neighbours do.
+1. `HoardPluginSettings` and `DEFAULT_SETTINGS` in [types.ts](../../src/types.ts).
+2. A backfill in `composeSettings` only if old or hand-edited data can be invalid.
+3. A `Setting` or card in the matching `render*` of the tab, saving through `plugin.saveSettings()`.
+4. Synced across devices? Add the key to `SHARED_SETTING_KEYS` (or `NESTED_SHARED_KEYS` for
+   reading/games). Never a secret. Default is device-local.
+5. Needs a live effect? Dispatch `hoard-data-changed` as neighbouring settings do.

@@ -19,20 +19,13 @@ from ([baseline.ts](../../src/storage/baseline.ts): `setBaseline`, `getBaseline`
 The symbol property is enumerable so it survives object spread, but `Object.keys`, JSON and
 `structuredClone` skip it: it never reaches a note, a backup or a deep compare.
 
-## How a write uses it
+## The two rules it enables
 
-In `DataManager.writeTitle` ([DataManager.ts](../../src/DataManager.ts)):
+- A write diffs the encoded baseline against the encoded copy and touches only the properties
+  that differ; the `## Notes` body is written only when the copy changed it. Sequence in
+  [flows/entry-write](../flows/entry-write.md).
+- After a write the copy becomes the UI's live view only if `basedOnStored` holds: its baseline
+  still equals what the index holds now, with the id blanked (`sameStoredState`), so a rename
+  does not invalidate it. A stale copy keeps nothing; the next read builds a fresh one.
 
-1. `baselineOf(t)` = the copy's baseline, else the current slot's source, else the index entry.
-2. Encode both baseline and copy; only properties whose encoded value differs are set or deleted
-   through `processFrontMatter`. Unreadable or foreign properties stay untouched unless the edit
-   changes exactly that field.
-3. The `## Notes` body is written only when it differs from the body the copy started from.
-4. `afterWrite` decides whether the copy becomes the UI's live view: only if `basedOnStored` holds
-   (its baseline equals what the index holds now, ignoring the id). A stale copy keeps nothing; the
-   next read builds a fresh one.
-
-`sameStoredState` compares JSON with the id blanked, so a rename does not invalidate a copy.
-Reading and game managers follow the same pattern (`basedOnStored`, `afterWrite`).
-
-Related: [flows/entry-write](../flows/entry-write.md).
+Reading and game managers apply the same rules (`basedOnStored`, `afterWrite`).

@@ -25,6 +25,7 @@ Obsidian knowledge lives in `.claude/skills/` (`obsidian-dev`, `obsidian-ops`, `
 - **NEVER speak as the human on GitHub.** `gh` and `git` are authenticated as the repository owner, so anything an agent writes through them carries their name and avatar. An "automated by …" footer does not make it acceptable.
 - When in doubt about any other outward action through their account, ask first.
 - **No hidden memory — this repo is the only source of truth.** Agent memory outside the repo is not documentation: it is unreviewed, invisible to the human, and drifts against the code. Never cite it as fact or act on it without re-deriving from the repo first. Findings worth keeping get written into the repo.
+- **Never commit on `main`.** Every change, docs included, goes on a branch and lands through a PR. Before the first commit, check the branch; on `main`, create one first.
 - Commit your work as you go — don't wait to be asked. Each plan phase usually gets its own commit; otherwise commit in logical groups (one concern per commit).
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): summary`, e.g. `feat(settings): add sync toggle`, `fix`, `refactor`, `docs`, `test`, `chore`, `ci`.
 - Don't defer tasks when planning or implementing a plan.
