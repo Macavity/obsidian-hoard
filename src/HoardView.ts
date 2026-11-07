@@ -40,7 +40,7 @@ interface TabDefinition {
 	label: string;
 	icon: string;
 	/** Class the tab adds to the tab-content element; stripped before another tab renders. */
-	cls: string;
+	cls?: string;
 	create(ctx: TabContext): TabInstance;
 	badge?: TabBadge;
 }
@@ -99,7 +99,6 @@ const TABS: TabDefinition[] = [
 		name: 'drafts',
 		label: 'Drafts',
 		icon: 'square-pen',
-		cls: 'hoard-drafts',
 		create: (ctx) => new DraftsTab(ctx.containerEl, ctx.plugin, ctx.dataManager, ctx.setBadge),
 		badge: {
 			count: (plugin, dataManager) => DraftsTab.computePendingCount(plugin, dataManager),
@@ -451,7 +450,9 @@ export class HoardView extends ItemView {
 
 	private stripTabClasses(): void {
 		if (!this.tabContentEl) return;
-		for (const def of TABS) this.tabContentEl.removeClass(def.cls);
+		for (const def of TABS) {
+			if (def.cls) this.tabContentEl.removeClass(def.cls);
+		}
 	}
 
 	/**

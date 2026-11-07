@@ -18,6 +18,7 @@ import { AddTitleModal } from './AddTitleModal';
 import { TitleDetailModal } from './TitleDetailModal';
 import { InsertWidgetModal } from './InsertWidgetModal';
 import { WidgetRenderer } from './WidgetRenderer';
+import { HoardSettingsTab } from './SettingsTab';
 import { AirtimeTab } from './AirtimeTab';
 import { runAirtimeScheduler } from './airtimeScheduler';
 import { hasHoardKey } from './storage/baseFile';
@@ -196,6 +197,8 @@ export default class HoardPlugin extends Plugin {
 				}).open();
 			},
 		});
+
+		this.addSettingTab(new HoardSettingsTab(this.app, this));
 
 		this.setupStatusBar();
 		// keep the status bar in sync with data edits (no new timer: the 60s airtime interval drives the

@@ -76,6 +76,14 @@ type DetailedCountdown = {
 };
 
 /** One renderable tracker entry: the airtime entry, its resolved subject and its countdown state. */
+/** Countdown badge state class per kind; spelled out so every class name appears literally. */
+const COUNTDOWN_KIND_CLASSES: Record<DetailedCountdown['kind'], string> = {
+	'future': 'is-future',
+	'today-before': 'is-today-before',
+	'aired': 'is-aired',
+	'due': 'is-due',
+};
+
 type TrackerCardData = { entry: AirtimeEntry; r: ResolvedUpcoming; countdown: DetailedCountdown };
 
 /**
@@ -1419,7 +1427,7 @@ export class AirtimeTab {
 		if (r.typeColor) typeBadge.style.backgroundColor = r.typeColor;
 
 		// countdown badge — top-right: big number + DAYS, or the state word
-		const cd = card.createDiv({ cls: `hoard-tracker-countdown is-${countdown.kind}` });
+		const cd = card.createDiv({ cls: `hoard-tracker-countdown ${COUNTDOWN_KIND_CLASSES[countdown.kind]}` });
 		if (countdown.kind === 'future') {
 			if (countdown.daysUntil >= 9999) {
 				cd.createSpan({ cls: 'hoard-tracker-countdown-word', text: '—' });

@@ -4,6 +4,14 @@ import type { SearchFieldSpec } from './SearchQuery';
 /** A query rendered as coloured parts: v = value, f = field prefix, o = operator. */
 type Part = [kind: 'v' | 'f' | 'o' | 'p', text: string];
 
+/** Span class per part kind; spelled out so every class name appears literally. */
+const PART_CLASSES: Record<Part[0], string> = {
+	v: 'hoard-shq-v',
+	f: 'hoard-shq-f',
+	o: 'hoard-shq-o',
+	p: 'hoard-shq-p',
+};
+
 interface HelpExample {
 	parts: Part[];
 	says: string;
@@ -70,7 +78,7 @@ class SearchHelpModal<T> extends Modal {
 			const row = list.createDiv({ cls: 'hoard-search-help-row' });
 			const q = row.createDiv({ cls: 'hoard-search-help-query' });
 			for (const [kind, text] of ex.parts) {
-				q.createSpan({ cls: `hoard-shq-${kind}`, text });
+				q.createSpan({ cls: PART_CLASSES[kind], text });
 			}
 			row.createDiv({ cls: 'hoard-search-help-says', text: ex.says });
 		}

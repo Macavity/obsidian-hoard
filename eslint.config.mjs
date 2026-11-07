@@ -42,6 +42,8 @@ export default defineConfig([
           "^\\d+h$",                 // duration placeholder (0h)
         ],
       }],
+      // Declarative settings API (Obsidian 1.13+) is a separate migration of the whole SettingsTab.
+      "obsidianmd/settings-tab/prefer-setting-definitions": "off",
     },
   },
   {

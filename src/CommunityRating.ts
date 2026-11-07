@@ -6,6 +6,14 @@ import { apiErrorMessage } from './ApiService';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
+/** Per-source badge class; spelled out so every class name appears literally. */
+const SOURCE_CLASSES: Record<string, string> = {
+	imdb: 'hoard-community-source--imdb',
+	mal: 'hoard-community-source--mal',
+	anilist: 'hoard-community-source--anilist',
+	tmdb: 'hoard-community-source--tmdb',
+};
+
 const SOURCE_LABELS: Record<string, string> = {
 	imdb: 'IMDb',
 	mal: 'MAL',
@@ -37,7 +45,7 @@ export function renderCommunityRating(
 		const source = community.source ?? '';
 		const label = SOURCE_LABELS[source] ?? source.toUpperCase();
 		badge.createSpan({
-			cls: `hoard-community-source hoard-community-source--${source}`,
+			cls: `hoard-community-source ${SOURCE_CLASSES[source] ?? ''}`.trimEnd(),
 			text: label,
 		});
 		badge.createSpan({
