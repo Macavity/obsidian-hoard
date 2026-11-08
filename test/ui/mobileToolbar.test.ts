@@ -50,6 +50,14 @@ describe('renderToolbarWithMobileToggle', () => {
 		expect(onToggleChange).toHaveBeenCalledWith(true);
 	});
 
+	it('mobile: the hidden pane is inert, so keyboard focus cannot reach its controls', () => {
+		const { controls } = setup(true);
+		const [search, actions] = controls.find('hoard-toolbar-slot')!.children as unknown as Array<El & { inert?: boolean }>;
+		expect([search!.inert, actions!.inert]).toEqual([false, true]);
+		controls.find('hoard-toolbar-toggle-btn')!.fire('click');
+		expect([search!.inert, actions!.inert]).toEqual([true, false]);
+	});
+
 	it('desktop: search, actions, add inline in order; add keeps its text', () => {
 		const { controls, addBtn } = setup(false);
 		expect(controls.children.map((c) => [...c.classes][0])).toEqual(['search', 'actions', 'hoard-add-btn']);

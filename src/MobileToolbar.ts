@@ -46,6 +46,9 @@ export function renderToolbarWithMobileToggle(options: MobileToolbarOptions): vo
 	const applyState = (): void => {
 		searchWrap.toggleClass('hoard-toolbar-pane-hidden', expanded);
 		actionsWrap.toggleClass('hoard-toolbar-pane-hidden', !expanded);
+		// the faded-out pane stays in the DOM; inert keeps Tab and typing out of it
+		searchWrap.inert = expanded;
+		actionsWrap.inert = !expanded;
 	};
 	applyState();
 
