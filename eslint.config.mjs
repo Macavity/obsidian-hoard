@@ -80,6 +80,8 @@ const sentenceCaseOptions = {
       "^Note: when adding a new season",
       // detail area: lowercase link/caption/unit words, placeholder naming MAL
       "^(show less|eps|cover art|not linked|chapters|volumes|MAL manga ID)$",
+      // sweep: lowercase counter word between two numbers ("3 of 12")
+      "^of$",
     ],
   };
 

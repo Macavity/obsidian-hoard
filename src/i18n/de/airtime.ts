@@ -33,6 +33,10 @@ const airtime = {
 		july: 'Juli', august: 'August', september: 'September', october: 'Oktober', november: 'November',
 		december: 'Dezember',
 	},
+	monthsShort: {
+		january: 'Jan', february: 'Feb', march: 'Mär', april: 'Apr', may: 'Mai', june: 'Jun',
+		july: 'Jul', august: 'Aug', september: 'Sep', october: 'Okt', november: 'Nov', december: 'Dez',
+	},
 	type: { book: 'Buch', manga: 'Manga', game: 'Spiel' },
 	badge: {
 		season: 'Staffel {n}',

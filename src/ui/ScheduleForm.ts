@@ -218,8 +218,7 @@ export function renderCounterRow(parent: HTMLElement, groups: CounterGroup[]): v
 		if (i > 0) progRow.createSpan({ cls: 'hoard-schedule-progress-sep hoard-schedule-progress-dot', text: '·' });
 		progRow.createSpan({ cls: 'hoard-modal-label', text: group.label });
 		makeNum(group.current);
-		// the leaf is capitalized for the sentence-case lint; it reads as a lowercase connector between inputs
-		progRow.createSpan({ cls: 'hoard-schedule-progress-sep', text: t('ui.schedule.of').toLocaleLowerCase() });
+		progRow.createSpan({ cls: 'hoard-schedule-progress-sep', text: t('ui.schedule.of') });
 		makeNum(group.total);
 	});
 }
