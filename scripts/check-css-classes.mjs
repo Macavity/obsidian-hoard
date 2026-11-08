@@ -3,7 +3,7 @@
 // Runs from `pnpm lint`; the same check is a unit test in test/cssClasses.test.ts.
 
 import { readFileSync, readdirSync } from "fs";
-import { join, dirname } from "path";
+import { basename, join, dirname } from "path";
 import { fileURLToPath } from "url";
 import process from "process";
 import { checkCssClasses } from "./lib/css-classes.mjs";
@@ -32,18 +32,29 @@ export function stylesheetFiles(dir = join(root, "src", "styles")) {
 	return readdirSync(dir).filter((f) => f.endsWith(".css")).sort().map((f) => join(dir, f));
 }
 
+/** Partials index.css does not @import: they never reach dist/styles.css, yet the class check would read them. */
+export function unimportedPartials(indexCss, partials) {
+	const imported = new Set([...indexCss.matchAll(/^@import "\.\/(.+?)";/gm)].map((m) => m[1]));
+	return partials.filter((f) => f !== "index.css" && !imported.has(f));
+}
+
 export function runCheck() {
-	return checkCssClasses({
-		css: stylesheetFiles().map((p) => readFileSync(p, "utf8")).join("\n"),
-		sources: sourceFiles().map((p) => readFileSync(p, "utf8")),
-		allowlist: OBSIDIAN_CLASSES,
-	});
+	const files = stylesheetFiles();
+	return {
+		...checkCssClasses({
+			css: files.map((p) => readFileSync(p, "utf8")).join("\n"),
+			sources: sourceFiles().map((p) => readFileSync(p, "utf8")),
+			allowlist: OBSIDIAN_CLASSES,
+		}),
+		unimported: unimportedPartials(readFileSync(join(root, "src", "styles", "index.css"), "utf8"), files.map((p) => basename(p))),
+	};
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-	const { unreferenced, staleAllowlist } = runCheck();
+	const { unreferenced, staleAllowlist, unimported } = runCheck();
 	if (unreferenced.length) console.error(`Dead CSS: no source references ${unreferenced.map((c) => `.${c}`).join(", ")}`);
 	if (staleAllowlist.length) console.error(`Stale OBSIDIAN_CLASSES entries in scripts/check-css-classes.mjs: ${staleAllowlist.join(", ")}`);
-	if (unreferenced.length || staleAllowlist.length) process.exit(1);
+	if (unimported.length) console.error(`Not imported by src/styles/index.css: ${unimported.join(", ")}`);
+	if (unreferenced.length || staleAllowlist.length || unimported.length) process.exit(1);
 	console.log("✓ Every CSS class is referenced");
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { checkCssClasses, classesInCss, wordsInStrings } from "../scripts/lib/css-classes.mjs";
-import { runCheck } from "../scripts/check-css-classes.mjs";
+import { runCheck, unimportedPartials } from "../scripts/check-css-classes.mjs";
 
 describe("css class check", () => {
 	it("collects classes from selectors only", () => {
@@ -22,7 +22,12 @@ describe("css class check", () => {
 		expect(out).toEqual({ unreferenced: ["dead"], staleAllowlist: ["gone-core", "missing"] });
 	});
 
+	it("reports stylesheet partials index.css does not import", () => {
+		const index = '@import "./base.css";\n@import "./list.css";\n';
+		expect(unimportedPartials(index, ["base.css", "index.css", "list.css", "orphan.css"])).toEqual(["orphan.css"]);
+	});
+
 	it("passes on the repository", () => {
-		expect(runCheck()).toEqual({ unreferenced: [], staleAllowlist: [] });
+		expect(runCheck()).toEqual({ unreferenced: [], staleAllowlist: [], unimported: [] });
 	});
 });
