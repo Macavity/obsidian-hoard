@@ -648,7 +648,9 @@ button.hoard-api-action-btn {
   cursor: pointer;
 }
 
-.hoard-tag-dot-wrap:hover .hoard-tag-dot {
+/* the hidden native picker takes keyboard focus, so the dot shows it */
+.hoard-tag-dot-wrap:hover .hoard-tag-dot,
+.hoard-tag-dot-wrap:focus-within .hoard-tag-dot {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 1px;
 }
@@ -741,11 +743,15 @@ button.hoard-api-action-btn {
   font-weight: 500;
   width: 100px;
   flex-shrink: 0;
+  overflow-wrap: anywhere;
 }
 
+/* long unbroken names wrap instead of overflowing a narrow settings pane */
 .hoard-folder-path {
+  min-width: 0;
   color: var(--text-muted);
   font-family: var(--font-monospace);
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
