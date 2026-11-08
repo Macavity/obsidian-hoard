@@ -503,3 +503,8 @@ body.hoard-cl-col-resizing {
   padding: 6px 0;
 }
 
+/* a long column name truncates in the select so the panel stays inside a phone-width tab */
+.hoard-cl-sort-panel .hoard-select {
+  max-width: 180px;
+}
+
