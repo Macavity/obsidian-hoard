@@ -1,8 +1,9 @@
 import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from 'node:module';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, watch, writeFileSync } from "fs";
-import { dirname, join } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, watch, writeFileSync } from "fs";
+import { dirname } from "node:path";
+import { bundleStyles } from "./scripts/lib/bundle-styles.mjs";
 
 const banner =
 `/*
@@ -36,15 +37,9 @@ const staticFiles = ["manifest.json"];
 // Inlined verbatim (no CSS rewriting) so the shipped rules equal the partials byte for byte.
 const stylesEntry = "src/styles/index.css";
 
-function bundleStyles(entry = stylesEntry) {
-	return readFileSync(entry, "utf8").replace(/^@import "(.+?)";\n?/gm, (_, rel) =>
-		bundleStyles(join(dirname(entry), rel)),
-	);
-}
-
 function buildStyles() {
 	mkdirSync(outdir, { recursive: true });
-	writeFileSync(`${outdir}/styles.css`, bundleStyles());
+	writeFileSync(`${outdir}/styles.css`, bundleStyles(stylesEntry));
 }
 
 // an editor may replace a partial by delete + write; a read in between fails, the write's own event rebuilds
