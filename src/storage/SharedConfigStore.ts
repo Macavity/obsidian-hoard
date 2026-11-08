@@ -1,5 +1,5 @@
-import { Notice, TFile, type App, type EventRef } from 'obsidian';
-import type { SharedConfig, YamlIO } from './storageTypes';
+import { TFile, type App, type EventRef } from 'obsidian';
+import type { Notify, SharedConfig, YamlIO } from './storageTypes';
 import type { VaultLayout } from './VaultLayout';
 import {
 	createBaseFile, findInFolderPath, hasHoardKey, readHoardBlock, replaceInFolderPath, writeHoardBlock,
@@ -81,6 +81,7 @@ export class SharedConfigStore {
 		private layout: () => VaultLayout,
 		private yaml: YamlIO,
 		private register: (ref: EventRef) => void = () => {},
+		private notify: Notify = () => {},
 	) {}
 
 	/** The existing base file at the root, if any. */
@@ -154,7 +155,7 @@ export class SharedConfigStore {
 		});
 		if (!written) {
 			console.warn('[Hoard] unreadable hoard block in the base; settings not written');
-			new Notice(`Hoard: the settings block in ${f.name} is unreadable; settings were not saved.`);
+			this.notify({ code: 'sharedConfigUnreadable', file: f.name });
 			return;
 		}
 		// only after a successful write, so the next save diffs against the file state and retries

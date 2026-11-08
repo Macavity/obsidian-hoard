@@ -9,7 +9,8 @@ source:
   - src/storage/VaultLayout.ts
   - src/types.ts
   - src/main.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+  - src/ui/problemText.ts
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # Settings
@@ -44,8 +45,9 @@ Anime, Movie and TV Show locked.
 
 ## Types as folders
 
-A type name is a folder under the root, so the tag editor validates with `typeNameError`
-([VaultLayout.ts](../../src/storage/VaultLayout.ts)): a message when `safeTypeName` would change
+A type name is a folder under the root, so the tag editor validates with `typeNameProblem`
+([VaultLayout.ts](../../src/storage/VaultLayout.ts)): a `{ reason: 'reserved' | 'unsafe' }` code (text from
+`typeNameProblemText` in `ui/problemText.ts`) when `safeTypeName` would change
 the input (unsafe characters, leading dots, Windows device names, or a reserved folder such as
 Books, Manga, Games, CustomLists). Built-in types (`LOCKED_TYPES`) cannot be removed; statuses
 are colour-only.

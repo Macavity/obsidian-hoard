@@ -1,9 +1,10 @@
 import { Notice, type App } from 'obsidian';
+import { t } from '../../i18n';
 import type { LocalStore } from '../../storage/LocalStore';
 import { SharedConfigStore } from '../../storage/SharedConfigStore';
 import { HistoryStore } from '../../storage/HistoryStore';
 import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
-import type { YamlIO } from '../../storage/storageTypes';
+import type { Notify, YamlIO } from '../../storage/storageTypes';
 import { findWatchLogBase } from './detect';
 import { migrateWatchLogBase, type BaseMigration } from './base';
 import type { WatchLogSource } from './pluginData';
@@ -28,6 +29,8 @@ export interface WatchLogMigrationContext {
 	schema1: WatchLogData | null;
 	/** Type names of the current settings; type folders below the root hold the titles. */
 	typeNames: () => string[];
+	/** Reports storage notices (e.g. an unreadable settings block) the way the plugin shows them. */
+	notify: Notify;
 }
 
 export interface MigrationReport {
@@ -80,7 +83,7 @@ async function convertSchema1(ctx: WatchLogMigrationContext, data: WatchLogData)
 		local: ctx.local,
 		yaml: ctx.yaml,
 		layout,
-		shared: new SharedConfigStore(ctx.app, () => layout, ctx.yaml),
+		shared: new SharedConfigStore(ctx.app, () => layout, ctx.yaml, undefined, ctx.notify),
 		history: new HistoryStore(ctx.app, () => layout),
 		pluginDir: ctx.adopted?.dir ?? ctx.pluginDir,
 		data,
@@ -90,21 +93,21 @@ async function convertSchema1(ctx: WatchLogMigrationContext, data: WatchLogData)
 function announce(r: MigrationReport): void {
 	const done: string[] = [];
 	if (r.base?.status === 'migrated') {
-		done.push(r.base.from === r.base.to ? `settings block in ${r.base.to}` : `${r.base.from} → ${r.base.to}`);
+		done.push(r.base.from === r.base.to ? t('notices.migration.settingsBlock', { to: r.base.to }) : `${r.base.from} → ${r.base.to}`);
 	} else if (r.base) {
 		console.warn(`[Hoard] ${r.base.path} left untouched: ${r.base.existing} already exists`);
 	}
-	if (r.adoptedFrom) done.push(`settings of ${r.adoptedFrom}`);
+	if (r.adoptedFrom) done.push(t('notices.migration.adoptedFrom', { from: r.adoptedFrom }));
 	const s1 = r.schema1;
 	if (s1 && s1.errors.length > 0) {
 		console.error('[Hoard] WatchLog data could not be moved into notes; data.json is kept and the migration retried next start', s1.errors);
-		new Notice('Hoard could not migrate the WatchLog data to notes. It will retry on the next start; see the developer console.', 0);
+		new Notice(t('notices.migration.failed'), 0);
 	} else if (s1) {
-		done.push(`data into notes (${s1.notesCreated} created, ${s1.notesFilled} filled; backup: ${SCHEMA1_BACKUP_FILE})`);
+		done.push(t('notices.migration.data', { created: s1.notesCreated, filled: s1.notesFilled, file: SCHEMA1_BACKUP_FILE }));
 	}
 	if (s1 && s1.skipped.length > 0) console.warn('[Hoard] WatchLog migration skipped', s1.skipped);
-	if (r.widgetNotes > 0) done.push(`widget code blocks in ${r.widgetNotes} note(s)`);
+	if (r.widgetNotes > 0) done.push(t('notices.migration.widgets', { count: r.widgetNotes }));
 	if (done.length === 0) return;
-	const skipped = s1 && s1.skipped.length > 0 ? ` ${s1.skipped.length} item(s) were skipped, see the developer console.` : '';
-	new Notice(`Hoard migrated from WatchLog: ${done.join('; ')}.${skipped}`, 10000);
+	const skipped = s1 && s1.skipped.length > 0 ? ` ${t('notices.migration.skipped', { count: s1.skipped.length })}` : '';
+	new Notice(`${t('notices.migration.summary', { done: done.join('; ') })}${skipped}`, 10000);
 }

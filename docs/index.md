@@ -15,7 +15,7 @@ profile:
     - "*.test.ts"
     - scripts/
     - test/
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # Context
@@ -59,6 +59,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Overview](architecture/overview.md): which layers exist, who may depend on whom, and what the `hoard-data-changed` event ties together.
 - [Storage](architecture/storage.md): where each piece of state lives (notes, base, History.md, data.json) and how reads and writes propagate.
 - [API layer](architecture/api-layer.md): which services exist, how errors and rate limits are handled, and how fetched data reaches cache and notes.
+- [Internationalisation](architecture/i18n.md): how to add a string, why stored values and storage messages are codes not text, and which tests enforce it.
 - [UI kit](architecture/ui-kit.md): how `HoardView` hosts tabs and which shared building blocks tabs and modals compose.
 
 # Modules

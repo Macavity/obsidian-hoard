@@ -1,13 +1,14 @@
 /* Minimal stand-ins for Obsidian's DOM helpers (happy-dom has none). */
-type Opts = { cls?: string | string[]; text?: string; attr?: Record<string, string> } | string;
+type Opts = { cls?: string | string[]; text?: string; value?: string; attr?: Record<string, string> } | string;
 
 const normalize = (o?: Opts): Exclude<Opts, string> => (typeof o === "string" ? { cls: o } : (o ?? {}));
 
 function build<K extends keyof HTMLElementTagNameMap>(tag: K, opts?: Opts): HTMLElementTagNameMap[K] {
 	const el = document.createElement(tag);
-	const { cls, text, attr } = normalize(opts);
+	const { cls, text, value, attr } = normalize(opts);
 	if (cls) el.className = Array.isArray(cls) ? cls.join(" ") : cls;
 	if (text !== undefined) el.textContent = text;
+	if (value !== undefined) el.setAttribute("value", value);
 	for (const [k, v] of Object.entries(attr ?? {})) el.setAttribute(k, v);
 	return el;
 }
@@ -35,9 +36,15 @@ proto.createSpan ??= function (this: Node, o?: Opts) { return createEl.call(this
 proto.instanceOf ??= function (this: Node, type: abstract new (...a: never[]) => unknown) { return this instanceof type; };
 proto.addClass ??= function (this: Element, ...c: string[]) { this.classList.add(...c); };
 proto.removeClass ??= function (this: Element, ...c: string[]) { this.classList.remove(...c); };
+proto.removeClasses ??= function (this: Element, c: string[]) { this.classList.remove(...c); };
 proto.setText ??= function (this: Element, t: string) { this.textContent = t; };
 proto.toggleClass ??= function (this: Element, c: string, on: boolean) { this.classList.toggle(c, on); };
 proto.setCssProps ??= function (this: HTMLElement, props: Record<string, string>) {
 	for (const [k, v] of Object.entries(props)) this.style.setProperty(k, v);
 };
+proto.findAll ??= function (this: Element, sel: string) { return Array.from(this.querySelectorAll(sel)); };
 proto.empty ??= function (this: Element) { this.replaceChildren(); };
+proto.setAttr ??= function (this: Element, k: string, v: string) { this.setAttribute(k, v); };
+proto.hide ??= function (this: HTMLElement) { this.style.display = "none"; };
+proto.show ??= function (this: HTMLElement) { this.style.display = ""; };
+proto.toggle ??= function (this: HTMLElement, on: boolean) { this.style.display = on ? "" : "none"; };

@@ -1,5 +1,7 @@
 import { App, FuzzySuggestModal } from 'obsidian';
 import type { HoardTitle } from './types';
+import { t } from './i18n';
+import { typeLabel } from './i18n/labels';
 
 export class InsertWidgetModal extends FuzzySuggestModal<HoardTitle> {
 	private onSelect: (title: HoardTitle) => void;
@@ -9,7 +11,7 @@ export class InsertWidgetModal extends FuzzySuggestModal<HoardTitle> {
 		super(app);
 		this.titles = titles;
 		this.onSelect = onSelect;
-		this.setPlaceholder('Search for a title to insert...');
+		this.setPlaceholder(t('widget.insertPlaceholder'));
 	}
 
 	getItems(): HoardTitle[] {
@@ -17,7 +19,7 @@ export class InsertWidgetModal extends FuzzySuggestModal<HoardTitle> {
 	}
 
 	getItemText(title: HoardTitle): string {
-		return `${title.title} (${title.type})`;
+		return `${title.title} (${typeLabel(title.type)})`;
 	}
 
 	onChooseItem(title: HoardTitle): void {

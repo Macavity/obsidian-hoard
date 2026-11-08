@@ -5,7 +5,7 @@ import type { HistoryEntry, HistoryManager } from './HistoryManager';
 import type { GamesData, MaybeTitle, ReadingData, HoardTitle } from './types';
 import type { LocalStore } from './storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from './storage/SharedConfigStore';
-import { parseWatchLogBackup, type WatchLogBackup } from './migration/watchlog/backupImport';
+import { parseWatchLogBackup, type WatchLogBackup, type WatchLogBackupErrorCode } from './migration/watchlog/backupImport';
 import type { ImportContext } from './migration/watchlog/schema1Types';
 import { withoutCredentials } from './jikanBase';
 
@@ -72,25 +72,30 @@ export function withoutSecrets(b: BackupFile): BackupFile {
 	return { ...b, local };
 }
 
+/** Why a backup file was rejected; the settings tab renders it (`settings.backup.restore.errors.<code>`). */
+export type BackupErrorCode =
+	| 'parseJson' | 'notObject' | 'titlesMissing' | 'readingMissing' | 'gamesMissing' | 'sharedMissing'
+	| 'historyInvalid' | 'localInvalid' | WatchLogBackupErrorCode;
+
 /** Validates the whole file before anything is written; a WatchLog export is handed to its importer. */
-export function parseBackup(text: string): { backup: BackupFile } | WatchLogBackup | { error: string } {
+export function parseBackup(text: string): { backup: BackupFile } | WatchLogBackup | { error: BackupErrorCode } {
 	let parsed: unknown;
-	try { parsed = JSON.parse(text); } catch { return { error: 'could not parse JSON.' }; }
-	if (!isRecord(parsed)) return { error: 'not an object.' };
+	try { parsed = JSON.parse(text); } catch { return { error: 'parseJson' }; }
+	if (!isRecord(parsed)) return { error: 'notObject' };
 	if (parsed['version'] !== 2 || !isRecord(parsed['entries'])) return parseWatchLogBackup(parsed);
 	const e = parsed['entries'];
 	const reading = e['reading'];
 	const games = e['games'];
-	if (!Array.isArray(e['titles']) || !Array.isArray(e['maybe'])) return { error: 'titles are missing.' };
+	if (!Array.isArray(e['titles']) || !Array.isArray(e['maybe'])) return { error: 'titlesMissing' };
 	if (!isRecord(reading) || !Array.isArray(reading['books']) || !Array.isArray(reading['manga'])) {
-		return { error: 'reading data is missing books or manga.' };
+		return { error: 'readingMissing' };
 	}
 	if (!isRecord(games) || !Array.isArray(games['games']) || !isRecord(games['settings'])) {
-		return { error: 'games data is missing games or settings.' };
+		return { error: 'gamesMissing' };
 	}
-	if (!isRecord(parsed['shared'])) return { error: 'shared settings are missing.' };
-	if (!Array.isArray(parsed['history'])) return { error: 'activity log is not a list.' };
-	if (parsed['local'] !== undefined && !isRecord(parsed['local'])) return { error: 'local settings are invalid.' };
+	if (!isRecord(parsed['shared'])) return { error: 'sharedMissing' };
+	if (!Array.isArray(parsed['history'])) return { error: 'historyInvalid' };
+	if (parsed['local'] !== undefined && !isRecord(parsed['local'])) return { error: 'localInvalid' };
 	return { backup: { ...parsed, local: parsed['local'] ?? {} } as unknown as BackupFile };
 }
 

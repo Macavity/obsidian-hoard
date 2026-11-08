@@ -3,6 +3,7 @@ import type HoardPlugin from './main';
 import type { HoardTitle, AnimeSearchResult } from './types';
 import { formatVoteCount, getApiGroupForType, getCommunityRating } from './types';
 import { apiErrorMessage } from './ApiService';
+import { t } from './i18n';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -59,13 +60,13 @@ export function renderCommunityRating(
 			});
 		}
 	} else {
-		badge.createSpan({ cls: 'hoard-community-empty', text: 'No community rating' });
+		badge.createSpan({ cls: 'hoard-community-empty', text: t('detail.community.empty') });
 	}
 
 	const refreshBtn = badge.createEl('button', {
 		cls: 'hoard-community-refresh',
 		text: '⟳',
-		attr: { title: 'Refresh community rating', type: 'button' },
+		attr: { title: t('detail.community.refresh'), type: 'button' },
 	});
 	refreshBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
@@ -153,7 +154,7 @@ export async function refreshCommunityRating(
 
 		if (group === '') {
 			if (showNotice) {
-				new Notice(`No API configured for type "${title.type}". Configure it in Settings → API.`);
+				new Notice(t('detail.community.noApi', { type: title.type }));
 			}
 			return false;
 		}
@@ -169,7 +170,7 @@ export async function refreshCommunityRating(
 				const matched = await searchForMatch(plugin, title, wantsAniList);
 				if (!matched) {
 					if (showNotice) {
-						new Notice(`Could not find matching title on ${wantsAniList ? 'AniList' : 'MAL'}.`);
+						new Notice(t('detail.community.noMatch', { source: wantsAniList ? 'AniList' : 'MAL' }));
 					}
 					return false;
 				}
@@ -199,7 +200,7 @@ export async function refreshCommunityRating(
 
 		const result = await plugin.apiService.fetchCommunityRating(title, animeSource, group);
 		if (!result) {
-			if (showNotice) new Notice('Could not fetch community rating.');
+			if (showNotice) new Notice(t('detail.community.fetchFailed'));
 			return false;
 		}
 		plugin.dataManager.updateCommunityRating(
@@ -210,7 +211,7 @@ export async function refreshCommunityRating(
 		);
 		if (showNotice) {
 			const label = SOURCE_LABELS[result.source] ?? result.source;
-			new Notice(`Rating updated from ${label}.`);
+			new Notice(t('detail.community.updated', { source: label }));
 		}
 		return true;
 	} catch (err) {

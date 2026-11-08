@@ -11,7 +11,7 @@ source:
   - src/jikanBase.ts
   - src/httpsUrl.ts
   - src/DataManager.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # API layer
@@ -50,7 +50,7 @@ books (`searchGoogleBooks`), manga (`searchManga`, `getMangaByMalId`), games (`s
 
 - Requests go through `requestVia` with Obsidian's `requestUrl`, `throw: false`, a timeout, and a
   classifier that maps status and body to `ApiError { source, reason }` (reasons: `no-key`, `auth`, `not-enabled`,
-  `rate-limited`, `not-found`, `server`, `http`, `parse`, `network`). `apiErrorMessage` / `apiErrorShort` turn that into one user-facing wording.
+  `rate-limited`, `not-found`, `server`, `http`, `parse`, `network`). `apiErrorMessage` / `apiErrorShort` turn that into one user-facing wording via `t('notices.api.*')` ([i18n](i18n.md)); `ApiError` messages themselves stay English, for developers.
 - AniList calls are serialised with a minimum gap; GraphQL errors in a 200 body are detected.
 - IGDB needs a Twitch app token (`getIgdbToken`, cached with expiry); a rejected client id/secret
   reports source `twitch`, not `igdb`.
