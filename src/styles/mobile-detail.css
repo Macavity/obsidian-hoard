@@ -50,13 +50,6 @@
   gap: 8px;
 }
 
-.hoard-detail-community-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 .hoard-detail-mobile .hoard-star {
   font-size: 20px;
 }
@@ -94,8 +87,9 @@
   gap: 6px;
 }
 
-.hoard-detail-mobile .hoard-detail-badge-row .hoard-acc-link-icon,
-.hoard-detail-mobile .hoard-detail-badge-row .hoard-credits-refresh {
+/* in the mobile modal these icon buttons only live in the badge row */
+.hoard-detail-modal.hoard-detail-mobile .hoard-acc-link-icon,
+.hoard-detail-modal.hoard-detail-mobile .hoard-credits-refresh {
   width: 34px;
   height: 30px;
   min-height: 30px;
@@ -108,11 +102,6 @@
   opacity: 1;
   font-size: 15px;
   --icon-size: 16px;
-}
-
-.hoard-detail-mobile .hoard-detail-badge-row .hoard-acc-link-icon svg {
-  width: 16px;
-  height: 16px;
 }
 
 /* stats: plain text line, full-width bar, caption under it */
@@ -172,10 +161,7 @@
   margin-right: 0;
   color: var(--text-muted);
   white-space: nowrap;
-}
-
-.hoard-detail-mobile .hoard-credits-label-text::after {
-  content: '';
+  --hoard-credits-label-suffix: '';
 }
 
 .hoard-detail-mobile .hoard-credits-values {
@@ -213,8 +199,8 @@
 }
 
 /* 48px cuts "Date started" in half */
-.hoard-detail-mobile .hoard-date-field .hoard-stars-label {
-  width: 72px;
+.hoard-detail-mobile .hoard-date-field {
+  --hoard-stars-label-width: 72px;
 }
 
 /* episode boxes keep their desktop 28px — the mock's oversized grid was rejected */
@@ -263,11 +249,6 @@
   border-radius: 8px;
   opacity: 1;
   --icon-size: 16px;
-}
-
-.is-mobile .hoard-reading-detail-meta-row .hoard-acc-link-icon svg {
-  width: 16px;
-  height: 16px;
 }
 
 .is-mobile .hoard-reading-detail-grid {
@@ -332,23 +313,25 @@
   flex-wrap: wrap;
 }
 
-.is-mobile .hoard-search-fields .hoard-search-query {
+.is-mobile .hoard-modal-input.hoard-search-query {
   box-sizing: border-box;
   flex: 1 0 100%;
 }
 
-.is-mobile .hoard-search-row .hoard-search-year {
+.is-mobile .hoard-modal-input.hoard-search-year {
   box-sizing: border-box;
   flex: 0 0 auto;
   width: 90px;
 }
 
-.is-mobile .hoard-search-fields .hoard-btn {
+/* Search button to the right edge; a no-op on desktop, where the flex-grow query takes all free space */
+.hoard-search-fields .hoard-btn {
   margin-left: auto;
 }
 
-/* needs 3 classes: Obsidian's `body.is-mobile input[type=text] { width: 100% }` outweighs 2 */
-.is-mobile .hoard-reading-detail-details .hoard-reading-detail-date-input {
+/* needs 3 classes: Obsidian's `.is-mobile input[type=text] { width: 100% }` outweighs 2.
+   These date inputs only live in the details section. */
+.is-mobile .hoard-datepicker-input.hoard-reading-detail-date-input {
   height: auto;
   min-height: 0;
   flex: none;
@@ -379,12 +362,6 @@
   background-color: var(--background-modifier-border);
   opacity: 1;
   --icon-size: 16px;
-}
-
-.hoard-game-modal-actions .hoard-acc-link-icon svg,
-.hoard-game-modal-actions .hoard-store-btn .svg-icon {
-  width: 16px;
-  height: 16px;
 }
 
 /* Modes left the head column — space it like a section so it lines up with Progress */

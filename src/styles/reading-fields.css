@@ -63,16 +63,17 @@
   color: var(--text-normal);
 }
 
-/* fill mode: --hoard-field-bg per column */
-.hoard-reading-custom-table:not(.is-border-mode) .hoard-reading-custom-label {
+/* fill mode: --hoard-field-bg per column (only set in fill mode, so border mode keeps the default bg) */
+.hoard-reading-custom-table .hoard-reading-custom-label {
   background: var(--hoard-field-bg, var(--background-secondary));
   color: #1e1e1e;
 }
 
-/* border mode: --hoard-field-border per column */
+/* border mode: --hoard-field-border per column; keeps the base label's muted text */
 .hoard-reading-custom-table.is-border-mode .hoard-reading-custom-label {
   border: 1.5px solid var(--hoard-field-border, var(--background-modifier-border));
   box-sizing: border-box;
+  color: var(--text-muted);
 }
 
 .hoard-reading-custom-table.is-border-mode .hoard-reading-custom-value {
@@ -136,13 +137,6 @@
   line-height: 1.5;
   color: var(--text-normal);
   white-space: pre-wrap;
-}
-
-.hoard-reading-quote-ref {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 4px;
-  font-style: italic;
 }
 
 .hoard-reading-quote-form-host {

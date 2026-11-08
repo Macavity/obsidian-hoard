@@ -55,8 +55,9 @@
   margin-right: 6px;
 }
 
+/* the mobile detail modal drops the colon via --hoard-credits-label-suffix */
 .hoard-credits-label-text::after {
-  content: ':';
+  content: var(--hoard-credits-label-suffix, ':');
 }
 
 .hoard-credits-name-text.is-clickable {

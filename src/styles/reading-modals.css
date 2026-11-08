@@ -1,23 +1,7 @@
 /* Reading context menu, add modals */
 /* Reading card context menu */
+/* base look shared with .hoard-card-menu-btn in detail-rating.css */
 .hoard-reading-card-menu-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: #fff;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-  padding: 0;
   z-index: 5;
 }
 

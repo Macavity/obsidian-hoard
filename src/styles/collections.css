@@ -95,7 +95,8 @@
   background: var(--background-secondary);
 }
 
-.hoard-collection-cover-img {
+.hoard-collection-cover-img,
+.hoard-reading-detail-cover-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -313,24 +314,13 @@
   flex-wrap: wrap;
 }
 
-.hoard-card-poster {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  /* block from first paint so the box is reserved; hidden by opacity, fades in on load */
-  display: block;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
 /* opacity, not display — zero layout shift */
 .hoard-card.has-poster .hoard-card-poster {
   opacity: 1;
 }
 
-.hoard-card-overlay {
+.hoard-card-overlay,
+.hoard-reading-card-overlay {
   position: absolute;
   bottom: 0;
   left: 0;

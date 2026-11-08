@@ -9,7 +9,9 @@
   margin: 4px 0;
 }
 
-.hoard-widget-main-row {
+.hoard-widget-main-row,
+.hoard-airtime-card-meta,
+.hoard-detail-community-row {
   display: flex;
   align-items: center;
   gap: 6px;

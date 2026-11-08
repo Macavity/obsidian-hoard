@@ -79,11 +79,11 @@
   color: var(--text-normal);
 }
 
-/* center the SVG at glyph size (13px) */
+/* center the SVG at glyph size (--icon-size: 13px, 16px where the mobile modals enlarge the chip) */
 .hoard-acc-link-icon svg {
   display: block;
-  width: 13px;
-  height: 13px;
+  width: var(--icon-size);
+  height: var(--icon-size);
 }
 
 .hoard-acc-link-icon:hover {

@@ -134,7 +134,8 @@
   margin: 2px 0;
 }
 
-.hoard-upcoming-card {
+.hoard-upcoming-card,
+.hoard-nowwatching-card {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -172,18 +173,6 @@
 .hoard-wnowwatching {
   display: inline-block;
   margin: 2px 0;
-}
-
-.hoard-nowwatching-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border: 0.5px solid var(--background-modifier-border);
-  border-radius: 8px;
-  background: var(--background-secondary);
-  white-space: nowrap;
-  flex-wrap: wrap;
 }
 
 .hoard-nowwatching-empty {
@@ -229,7 +218,8 @@
   width: 200px;
 }
 
-.hoard-nw-bottom-row {
+.hoard-nw-bottom-row,
+.hoard-reading-detail-actions {
   display: flex;
   align-items: center;
   gap: 6px;

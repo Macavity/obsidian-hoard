@@ -41,14 +41,6 @@
   line-height: 1;
 }
 
-.hoard-rect-bar-wrap {
-  height: 3px;
-  background: var(--background-modifier-border);
-  border-radius: 2px;
-  overflow: hidden;
-  width: 100%;
-}
-
 .hoard-rect-bar {
   height: 100%;
   border-radius: 2px;

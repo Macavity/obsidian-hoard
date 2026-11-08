@@ -463,7 +463,7 @@
   color: var(--text-normal);
 }
 
-.hoard-game-modal .hoard-game-modal-links-toggle:hover .hoard-game-modal-links-caret {
+.hoard-game-modal-links-toggle:hover .hoard-game-modal-links-caret {
   color: var(--text-muted);
 }
 

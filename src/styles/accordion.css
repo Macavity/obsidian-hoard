@@ -229,10 +229,11 @@
   gap: 8px;
 }
 
+/* the mobile detail modal widens date-field labels via --hoard-stars-label-width */
 .hoard-stars-label {
   font-size: 11px;
   color: var(--text-muted);
-  width: 48px;
+  width: var(--hoard-stars-label-width, 48px);
   flex-shrink: 0;
 }
 
@@ -289,13 +290,13 @@
   color: var(--text-faint);
 }
 
-.hoard-star-rating .hoard-star.is-active,
-.hoard-star-rating .hoard-star.is-active:hover {
+/* same specificity as the :hover kill above and later, so it wins while hovered too */
+.hoard-star-rating .hoard-star.is-active {
   color: var(--hoard-rating-color);
 }
 
-/* half star: clipped overlay glyph over a faint base */
-.hoard-star-rating .hoard-star.is-half::after {
+/* half star: clipped overlay glyph over a faint base (is-half is only set by StarRating) */
+.hoard-star.is-half::after {
   content: '★';
   position: absolute;
   left: 0;

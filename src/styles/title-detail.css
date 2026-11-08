@@ -13,12 +13,6 @@
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.hoard-rows-bytype .hoard-cards-grid:not(.hoard-cards-grid-virtual) {
-  /* Align the grid with the shelf strips (the base .hoard-cards-grid pads 8px). */
-  padding: 4px 2px 8px;
-  margin-bottom: 12px;
-}
-
 /* fixed-height wrapper; the inline height reserves the grid's full extent up-front */
 .hoard-rows-bytype-spacer {
   position: relative;
@@ -90,12 +84,14 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-.hoard-detail-cover-img {
+.hoard-detail-cover-img,
+.hoard-card-poster {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* block from first paint so the box is reserved; hidden by opacity, fades in on load */
   display: block;
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -125,7 +121,7 @@
   color: var(--text-muted);
 }
 
-.hoard-detail-studio-chip:not(:last-child)::after {
+.hoard-detail-studio-chip:nth-last-child(n + 2)::after {
   content: '·';
   margin-left: 6px;
   color: var(--text-faint);

@@ -6,7 +6,9 @@
   position: relative;
 }
 
-.hoard-dropdown {
+/* popover box shared with the Custom Lists sort panel */
+.hoard-dropdown,
+.hoard-cl-sort-panel {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
@@ -15,6 +17,9 @@
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.hoard-dropdown {
   min-width: 168px;
   padding: 4px 0;
 }

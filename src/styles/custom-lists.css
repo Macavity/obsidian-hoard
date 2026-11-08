@@ -156,12 +156,6 @@
 /* Draft banner */
 .hoard-cl-draft-banner {
   margin: 6px 0;
-  padding: 6px 10px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--background-secondary) 80%, #BA7517 20%);
-  border: 0.5px solid color-mix(in srgb, var(--background-modifier-border) 60%, #BA7517 40%);
-  font-size: 11px;
-  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -212,6 +206,8 @@
   right: 0;
   z-index: 1;
   background-color: var(--background-primary);
+  /* the row's hover / checked tint, layered over the opaque bg (set on .hoard-cl-tr-body) */
+  background-image: var(--hoard-cl-row-tint, none);
 }
 
 .hoard-cl-table-resizable .hoard-cl-th-actions {
@@ -220,18 +216,6 @@
   right: 0;
   z-index: 3;
   background-color: var(--background-secondary);
-}
-
-.hoard-cl-table-resizable .hoard-cl-tr-body:hover .hoard-cl-td-actions {
-  background-image: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover));
-}
-
-.hoard-cl-table-resizable .hoard-cl-tr-body.hoard-cl-tr-checked .hoard-cl-td-actions,
-.hoard-cl-table-resizable .hoard-cl-tr-body.hoard-cl-tr-checked:hover .hoard-cl-td-actions {
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--color-green) 5%, transparent),
-    color-mix(in srgb, var(--color-green) 5%, transparent)
-  );
 }
 
 .hoard-cl-th-resizable {
@@ -293,6 +277,7 @@ body.hoard-cl-col-resizing {
 
 .hoard-cl-tr-body:hover {
   background: var(--background-modifier-hover);
+  --hoard-cl-row-tint: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover));
 }
 
 .hoard-cl-tr-body:hover .hoard-cl-row-action {
@@ -514,14 +499,6 @@ body.hoard-cl-col-resizing {
 
 /* Sort panel */
 .hoard-cl-sort-panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 200;
-  background: var(--background-primary);
-  border: 0.5px solid var(--background-modifier-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
   min-width: 200px;
   padding: 6px 0;
 }

@@ -415,13 +415,19 @@
   color: var(--text-muted);
 }
 
-.hoard-import-banner {
+/* amber notice banner, shared by import, Custom Lists drafts and the Drafts tab */
+.hoard-import-banner,
+.hoard-cl-draft-banner,
+.hoard-drafts-notice {
   padding: 6px 10px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--background-secondary) 80%, #BA7517 20%);
   border: 0.5px solid color-mix(in srgb, var(--background-modifier-border) 60%, #BA7517 40%);
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.hoard-import-banner {
   line-height: 1.5;
 }
 

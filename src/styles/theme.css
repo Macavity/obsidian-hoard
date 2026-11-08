@@ -7,6 +7,7 @@
   --hoard-rating-color: #C77DFF;
   --hoard-watched-color: #7B2CBF;
   --hoard-group-border-overlay: rgba(92, 31, 154, 0.25);
+  --hoard-due-border-color: #7B2CBF;
 }
 
 /* Bluez theme — accent colors only, no background/text overrides */
@@ -15,6 +16,7 @@
   --hoard-rating-color: #61A5C2;
   --hoard-watched-color: #2C7DA0;
   --hoard-group-border-overlay: rgba(1, 73, 124, 0.3);
+  --hoard-due-border-color: #2C7DA0;
 }
 
 /* ══ THEME PICKER (Settings → Customize) ══ */

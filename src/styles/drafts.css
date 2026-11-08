@@ -4,12 +4,6 @@
 /* Notice banner (matches Custom Lists draft banner) */
 .hoard-drafts-notice {
   margin: 4px 0 10px;
-  padding: 6px 10px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--background-secondary) 80%, #BA7517 20%);
-  border: 0.5px solid color-mix(in srgb, var(--background-modifier-border) 60%, #BA7517 40%);
-  font-size: 11px;
-  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -99,7 +93,8 @@
 }
 
 /* Action buttons */
-.hoard-drafts-card-actions {
+.hoard-drafts-card-actions,
+.hoard-maybe-card-right {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -137,7 +132,8 @@
 }
 
 /* Season total preview (Edit modal) */
-.hoard-modal-season-total {
+.hoard-modal-season-total,
+.hoard-reading-quote-ref {
   font-size: 11px;
   color: var(--text-muted);
   margin-top: 4px;

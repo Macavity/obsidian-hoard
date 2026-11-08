@@ -7,16 +7,7 @@
 }
 
 /* Feature 5: Custom Lists tick button */
-.hoard-cl-th-tick {
-  width: 28px;
-  max-width: 28px;
-  flex-shrink: 0;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+.hoard-cl-th-tick,
 .hoard-cl-td-tick {
   width: 28px;
   max-width: 28px;
@@ -48,6 +39,10 @@
 .hoard-cl-tr-body.hoard-cl-tr-checked:hover {
   border-left: 3px solid var(--color-green);
   background: color-mix(in srgb, var(--color-green) 5%, transparent);
+  --hoard-cl-row-tint: linear-gradient(
+    color-mix(in srgb, var(--color-green) 5%, transparent),
+    color-mix(in srgb, var(--color-green) 5%, transparent)
+  );
 }
 
 /* doubled class outranks single-class display rules */
@@ -79,7 +74,8 @@
   box-sizing: border-box;
 }
 
-.hoard-cards-grid.hoard-cards-grid-virtual .hoard-card {
+/* direct children only: text-under cells (.hoard-card-cell, .hoard-tracker-cell) size their own card */
+.hoard-cards-grid.hoard-cards-grid-virtual > .hoard-card {
   width: 100%;
   height: var(--hoard-card-height, auto);
   /* --hoard-card-height rules; cancel the 2:3 aspect-ratio or the card overflows its row (CLS) */
@@ -176,12 +172,14 @@
 /* strip scrollbars hidden until hover, same size in both states so nothing shifts; webkit path
    is for iOS */
 .hoard-rows-strip {
+  --hoard-strip-thumb: transparent;
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-color: var(--hoard-strip-thumb) transparent;
 }
 
+/* one hover rule drives both scrollbar paths */
 .hoard-rows-shelf:hover .hoard-rows-strip {
-  scrollbar-color: var(--scrollbar-thumb-bg) transparent;
+  --hoard-strip-thumb: var(--scrollbar-thumb-bg);
 }
 
 .hoard-rows-strip::-webkit-scrollbar {
@@ -190,11 +188,7 @@
 }
 
 .hoard-rows-strip::-webkit-scrollbar-thumb {
-  background-color: transparent;
+  background-color: var(--hoard-strip-thumb);
   border-radius: 4px;
-}
-
-.hoard-rows-shelf:hover .hoard-rows-strip::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb-bg);
 }
 

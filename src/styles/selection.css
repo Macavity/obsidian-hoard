@@ -19,8 +19,9 @@
   min-width: 0;
 }
 
-/* Add buttons pinned to the far right of the toolbar row */
-.hoard-header-controls-right {
+/* Add buttons (and the Reading gear + Add group) pinned to the far right of the toolbar row */
+.hoard-header-controls-right,
+.hoard-reading-toolbar-right {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -75,19 +76,10 @@
   pointer-events: none;
 }
 
-/* Square chevron toggle button at the right end of the toolbar row. */
-.hoard-toolbar-toggle-btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-}
-
-/* Mobile: icon-only add button between the slot and the toggle, always visible.
+/* Square chevron toggle button at the right end of the toolbar row, and the mobile
+   icon-only add button between the slot and the toggle, always visible.
    `.hoard-view button` outranks the per-tab add padding and the narrow-screen toolbar rule. */
+.hoard-toolbar-toggle-btn,
 .hoard-view button.hoard-toolbar-add-btn {
   flex-shrink: 0;
   display: flex;
@@ -167,19 +159,9 @@
   border-color: var(--interactive-accent);
 }
 
-/* Due / Aired highlight borders — per theme */
-.hoard-view:not([data-theme]) .hoard-airtime-card.is-due,
-.hoard-view:not([data-theme]) .hoard-airtime-card.is-aired {
-  border: 2px solid #207119;
-}
-
-.hoard-view[data-theme="nightfall"] .hoard-airtime-card.is-due,
-.hoard-view[data-theme="nightfall"] .hoard-airtime-card.is-aired {
-  border: 2px solid #7B2CBF;
-}
-
-.hoard-view[data-theme="bluez"] .hoard-airtime-card.is-due,
-.hoard-view[data-theme="bluez"] .hoard-airtime-card.is-aired {
-  border: 2px solid #2C7DA0;
+/* Due / Aired highlight borders — colour per theme via --hoard-due-border-color */
+.hoard-view .hoard-airtime-card.is-due,
+.hoard-view .hoard-airtime-card.is-aired {
+  border: 2px solid var(--hoard-due-border-color);
 }
 

@@ -12,15 +12,6 @@
 
 .hoard-settings-nav-btn {
   padding: 6px 16px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: var(--font-ui-small);
-  font-weight: 500;
-  margin-bottom: -0.5px;
-  transition: color 0.15s, border-color 0.15s;
 }
 
 .hoard-settings-nav-btn:hover {
@@ -243,12 +234,12 @@
   padding-bottom: 0;
 }
 
-.hoard-sg-body--rows > .setting-item .setting-item-name {
+.hoard-sg-body--rows .setting-item-name {
   font-size: 13.5px;
   font-weight: 600;
 }
 
-.hoard-sg-body--rows > .setting-item .setting-item-description {
+.hoard-sg-body--rows .setting-item-description {
   font-size: 11.5px;
   line-height: 1.45;
 }
@@ -263,7 +254,8 @@
   margin: 0;
 }
 
-.hoard-sg-body > .hoard-folder-list > .hoard-folder-row:last-child {
+/* the folder list only lives in a group body */
+.hoard-folder-list > .hoard-folder-row:last-child {
   border-bottom: none;
 }
 
@@ -288,7 +280,8 @@
   color: var(--text-normal);
 }
 
-.hoard-sg-card-tools {
+.hoard-sg-card-tools,
+.hoard-api-actions {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -303,8 +296,8 @@
   margin-bottom: 0;
 }
 
-/* keep the +add row compact */
-.hoard-sg-card .hoard-tag-add-row .hoard-modal-input {
+/* keep the +add row compact (tag lists always sit in a sub-card) */
+.hoard-tag-add-row .hoard-modal-input {
   flex: 0 1 200px;
   min-width: 0;
 }
@@ -510,13 +503,6 @@ button.hoard-sg-help-btn.is-active {
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 10px;
-}
-
-.hoard-api-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
 }
 
 .hoard-api-link {

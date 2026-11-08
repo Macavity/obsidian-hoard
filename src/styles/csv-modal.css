@@ -108,7 +108,8 @@
   margin-bottom: 8px;
 }
 
-.hoard-csv-step-title {
+.hoard-csv-step-title,
+.hoard-settings-card-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-normal);

@@ -173,10 +173,14 @@
   border-right: 2px solid rgb(255 255 255 / 20%);
 }
 
-/* gap between top-level rows and after accordions */
-.hoard-row + .hoard-row:not(.hoard-row-indented),
-.hoard-accordion + .hoard-row:not(.hoard-row-indented) {
+/* gap between top-level rows and after accordions; indented member rows stay flush */
+.hoard-row + .hoard-row,
+.hoard-accordion + .hoard-row {
   margin-top: 8px;
+}
+
+.hoard-row.hoard-row-indented {
+  margin-top: 0;
 }
 
 .hoard-row:hover {
@@ -247,7 +251,8 @@
 }
 
 /* Progress bar */
-.hoard-progress-wrap {
+.hoard-progress-wrap,
+.hoard-rect-bar-wrap {
   height: 3px;
   background: var(--background-modifier-border);
   border-radius: 2px;

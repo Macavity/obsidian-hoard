@@ -33,7 +33,8 @@
 }
 
 /* Left section */
-.hoard-airtime-card-left {
+.hoard-airtime-card-left,
+.hoard-reading-detail-info {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -47,13 +48,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.hoard-airtime-card-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .hoard-airtime-schedule {
@@ -160,14 +154,15 @@
   margin: 0 0 6px 2px;
 }
 
-/* divider above later months; pseudo-element so it can be faded */
-.hoard-tracker-month-spacer + .hoard-tracker-month-title {
+/* divider above later months (titles alternate with spacers, so every title but the
+   first); pseudo-element so it can be faded */
+.hoard-tracker-month-title:nth-child(n + 2) {
   position: relative;
   margin-top: -4px;
   padding-top: 8px;
 }
 
-.hoard-tracker-month-spacer + .hoard-tracker-month-title::before {
+.hoard-tracker-month-title:nth-child(n + 2)::before {
   content: '';
   position: absolute;
   top: 0;
@@ -193,15 +188,6 @@
   min-width: 0;
 }
 
-/* keep the 2:3 poster; cancel the virtual-grid full-height rule */
-.hoard-cards-grid.hoard-cards-grid-virtual .hoard-tracker-cell .hoard-card,
-.hoard-cards-grid.hoard-cards-grid-virtual .hoard-card-cell .hoard-card {
-  height: auto;
-  aspect-ratio: 2 / 3;
-  flex: 0 0 auto;
-  width: 100%;
-}
-
 /* same cell outside a virtual grid (rows strips, plain grids) */
 .hoard-card-cell {
   display: flex;
@@ -210,7 +196,9 @@
   cursor: pointer;
 }
 
-.hoard-card-cell .hoard-card {
+/* the poster keeps its 2:3 ratio; the virtual-grid full-height rule only hits bare cards */
+.hoard-card-cell .hoard-card,
+.hoard-tracker-cell .hoard-card {
   width: 100%;
   flex: 0 0 auto;
 }
@@ -226,7 +214,8 @@
   padding: 6px 2px 0;
 }
 
-.hoard-card-under-title {
+.hoard-card-under-title,
+.hoard-tracker-card-title {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-normal);
@@ -345,7 +334,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
-.hoard-tracker-card button.hoard-tracker-tick-btn:hover {
+.hoard-tracker-card .hoard-tracker-tick-btn:hover {
   background-color: #178563;
 }
 
@@ -372,16 +361,6 @@
   flex-direction: column;
   gap: 3px;
   padding: 6px 2px 0;
-}
-
-.hoard-tracker-card-title {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-normal);
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .hoard-tracker-card-sub {

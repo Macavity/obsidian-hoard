@@ -35,7 +35,8 @@
   height: 14px;
 }
 
-.hoard-card-menu-btn {
+.hoard-card-menu-btn,
+.hoard-reading-card-menu-btn {
   position: absolute;
   top: 4px;
   right: 4px;
@@ -198,6 +199,7 @@
   box-shadow: none;
   height: 22px;
   width: 28px;
+  --icon-size: 20px;
 }
 
 .hoard-store-btn:hover {
@@ -206,8 +208,8 @@
 }
 
 .hoard-store-btn .svg-icon {
-  width: 20px;
-  height: 20px;
+  width: var(--icon-size);
+  height: var(--icon-size);
 }
 
 /* Wishlist toggle beside the store button: muted until set, amber when on. */

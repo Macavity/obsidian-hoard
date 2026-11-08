@@ -65,9 +65,11 @@ button.hoard-seg-toggle-btn.is-active {
   border-left: 1px solid var(--background-modifier-border);
 }
 
+/* inactive segments dim their icon */
 .hoard-mode-pill-icon {
   display: inline-flex;
   align-items: center;
+  opacity: 0.7;
 }
 
 .hoard-mode-pill-icon .svg-icon {
@@ -75,8 +77,8 @@ button.hoard-seg-toggle-btn.is-active {
   height: 14px;
 }
 
-.hoard-mode-pill-seg:not(.is-active) .hoard-mode-pill-icon {
-  opacity: 0.7;
+.hoard-mode-pill-seg.is-active .hoard-mode-pill-icon {
+  opacity: 1;
 }
 
 .hoard-mode-pill-seg:not(.is-active):hover {
@@ -125,13 +127,6 @@ input.hoard-settings-count-input {
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   background-color: var(--background-secondary);
-}
-
-.hoard-settings-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: var(--text-normal);
 }
 
 .hoard-settings-card-desc {

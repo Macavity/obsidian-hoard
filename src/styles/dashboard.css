@@ -43,7 +43,8 @@
 }
 
 /* Unified card on mobile */
-/* stacks to ONE column: the only arrangement where every value shares a right edge */
+/* stacks to ONE column: the only arrangement where every value shares a right edge.
+   The hoard-dash container exists on .hoard-mobile only, so these queries are mobile-only. */
 @container hoard-dash (max-width: 559px) {
   .hoard-mobile .hoard-dash-unified-4 {
     grid-template-columns: 1fr;
@@ -51,7 +52,7 @@
     gap: 1px;
   }
 
-  .hoard-mobile .hoard-dash-unified-4 .hoard-dash-seg-time {
+  .hoard-dash-unified-4 .hoard-dash-seg-time {
     flex-direction: row;
     align-items: baseline;
     justify-content: space-between;
@@ -59,11 +60,12 @@
     text-align: left;
   }
 
-  .hoard-mobile .hoard-dash-unified-4 .hoard-dash-seg-time .hoard-dash-seg-label {
+  /* label and value only exist inside the time segments */
+  .hoard-dash-unified-4 .hoard-dash-seg-label {
     margin-bottom: 0;
   }
 
-  .hoard-mobile .hoard-dash-unified-4 .hoard-dash-seg-time .hoard-dash-seg-value {
+  .hoard-dash-unified-4 .hoard-dash-seg-value {
     font-size: 16px;
   }
 }
@@ -83,11 +85,11 @@
     text-align: left;
   }
 
-  .hoard-mobile .hoard-dash-seg-time .hoard-dash-seg-label {
+  .hoard-mobile .hoard-dash-seg-label {
     margin-bottom: 0;
   }
 
-  .hoard-mobile .hoard-dash-seg-time .hoard-dash-seg-value {
+  .hoard-mobile .hoard-dash-seg-value {
     font-size: 16px;
   }
 }
@@ -273,7 +275,8 @@
   transition: transform 0.25s ease;
 }
 
-.hoard-accordion.is-open > .hoard-accordion-header .hoard-accordion-chevron {
+/* the chevron only exists in this (non-nested) dashboard accordion */
+.hoard-accordion.is-open .hoard-accordion-chevron {
   transform: rotate(90deg);
 }
 
@@ -293,7 +296,7 @@
   min-height: 0;
 }
 
-.hoard-more-stats > .hoard-accordion-body > .hoard-accordion-inner {
+.hoard-more-stats .hoard-accordion-inner {
   padding: 0 10px;
 }
 

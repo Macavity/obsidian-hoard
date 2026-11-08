@@ -26,6 +26,7 @@
   --hoard-rating-color: #BA7517;
   --hoard-watched-color: #1D9E75;
   --hoard-group-border-overlay: var(--background-modifier-border);
+  --hoard-due-border-color: #207119;
 }
 
 /* Tab bar */
@@ -72,8 +73,10 @@
   background-color: #7F77DD;
 }
 
-.hoard-tab-btn {
-  padding: 5px 14px;
+/* underlined tab look, shared by the main tabs, Reading sub-tabs and settings nav */
+.hoard-tab-btn,
+.hoard-settings-nav-btn,
+.hoard-reading-subtab {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -83,6 +86,10 @@
   font-weight: 500;
   margin-bottom: -0.5px;
   transition: color 0.15s, border-color 0.15s;
+}
+
+.hoard-tab-btn {
+  padding: 5px 14px;
 }
 
 .hoard-tab-btn:hover {
