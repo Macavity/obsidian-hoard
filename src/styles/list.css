@@ -247,6 +247,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* lets the track cap the badge instead of the badge widening the track */
+  min-width: 0;
+}
+
+.hoard-col-status .hoard-badge,
+.hoard-col-status .hoard-badge-plain {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* season headers only */

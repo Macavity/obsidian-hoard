@@ -26,15 +26,16 @@
   }
 }
 
+/* status as wide as its badge, at most 90px; a longer label ends in an ellipsis */
 @container hoard-table (max-width: 356px) {
   .hoard-table-header-row,
   .hoard-row {
-    grid-template-columns: 1fr 56px 20px;
+    grid-template-columns: 1fr fit-content(90px) 20px;
   }
 
   .hoard-table.hoard-selection-mode .hoard-table-header-row,
   .hoard-table.hoard-selection-mode .hoard-row {
-    grid-template-columns: 24px 1fr 56px 20px;
+    grid-template-columns: 24px 1fr fit-content(90px) 20px;
   }
 }
 

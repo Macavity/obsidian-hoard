@@ -1814,6 +1814,8 @@ export class ListTab {
 		const statusBadge = colStatus.createSpan({
 			cls: colored ? 'hoard-badge' : 'hoard-badge-plain',
 			text: label,
+			// the narrowest table can cut the label short; the tooltip keeps it readable
+			attr: { title: label },
 		});
 		if (!colored) return;
 		const statusDef = this.getTagDef(status, this.plugin.settings.statuses);
