@@ -1799,84 +1799,16 @@ export class ListTab {
 		const row = parent.createDiv({ cls: classes });
 		row.dataset['titleId'] = title.id;
 
-		if (this.selectionMode) {
-			const cbCol = row.createDiv({ cls: 'hoard-col-select' });
-			const cb = cbCol.createEl('input', { attr: { type: 'checkbox' } });
-			cb.checked = isSelected;
-			cb.addEventListener('click', (e) => e.stopPropagation());
-			cb.addEventListener('change', () => {
-				this.toggleRowSelection(row, title.id);
-			});
-		}
-
-		const colTitle = row.createDiv({ cls: 'hoard-col-title' });
-		colTitle.createDiv({ cls: 'hoard-row-title-text', text: title.title });
-		const colored = this.plugin.settings.coloredTypeBadges;
-		const badgeRow = colTitle.createDiv({ cls: 'hoard-badge-row' });
-		renderTypeBadge(badgeRow, title.type, this.plugin.settings);
-		// release year after the type badge; omitted when unknown
-		const yearMatch = title.releaseDate?.match(/^(\d{4})/);
-		if (yearMatch) badgeRow.createSpan({ cls: 'hoard-row-year', text: yearMatch[1] });
-		if (isRecentlyReleased(title.releaseDate)) {
-			badgeRow.createSpan({ cls: 'hoard-recently-arrived', text: `· ${t('ui.filters.recentlyArrived')}` });
-		}
-		const barWrap = colTitle.createDiv({ cls: 'hoard-progress-wrap' });
-		const bar = barWrap.createDiv({ cls: 'hoard-progress-bar' });
-		bar.style.width = `${this.dataManager.getProgress(title)}%`;
-
-		const colPriority = row.createDiv({ cls: 'hoard-col-priority' });
-		if (title.priority) {
-			const priorityDef = this.getTagDef(title.priority, this.plugin.settings.priorities);
-			const pBadge = colPriority.createSpan({ cls: 'hoard-priority-badge', text: priorityLabel(title.priority) });
-			if (priorityDef) pBadge.style.color = priorityDef.color;
-		}
+		this.renderSelectCell(row, title.id, isSelected);
+		this.renderTitleCell(row, title);
+		this.renderPriorityCell(row, title.priority);
 
 		const colStarted = row.createDiv({ cls: 'hoard-col-started' });
 		colStarted.textContent = title.dateStarted ? formatDateDisplay(title.dateStarted) : '—';
 
-		const colRating = row.createDiv({ cls: 'hoard-col-rating' });
-		if (title.rating > 0) {
-			const ratingEl = colRating.createSpan({ cls: 'hoard-row-rating', text: `★ ${title.rating}/5` });
-			ratingEl.style.color = ratingColor(title.rating, this.plugin.settings.ratingSystem);
-		} else {
-			colRating.createSpan({ cls: 'hoard-row-rating hoard-row-rating-empty', text: '—' });
-		}
-
-		// status badge (respects coloredTypeBadges)
-		const colStatus = row.createDiv({ cls: 'hoard-col-status' });
-		const statusDef = this.getTagDef(title.status, this.plugin.settings.statuses);
-		const statusBadge = colStatus.createSpan({
-			cls: colored ? 'hoard-badge' : 'hoard-badge-plain',
-			text: statusLabel(title.status),
-		});
-		if (colored && statusDef) statusBadge.style.backgroundColor = getThemedColor(title.status, statusDef.color, this.plugin.settings.colorTheme);
-
-		const colPin = row.createDiv({ cls: 'hoard-col-pin' });
-		const pinIcon = colPin.createSpan({
-			cls: `hoard-pin-icon${title.pinned ? ' is-pinned' : ''}`,
-			text: '📌',
-		});
-		pinIcon.title = title.pinned ? t('list.unpin') : t('list.pin');
-		pinIcon.addEventListener('click', (e) => {
-			e.stopPropagation();
-			void (async () => {
-				const t = this.dataManager.getTitle(title.id);
-				if (!t) return;
-				const newPinned = !t.pinned;
-				// unpin all others first
-				if (newPinned) {
-					for (const other of this.dataManager.getTitles()) {
-						if (other.id !== t.id && other.pinned) {
-							other.pinned = false;
-							await this.dataManager.updateTitle(other);
-						}
-					}
-				}
-				t.pinned = newPinned;
-				await this.dataManager.updateTitle(t);
-				this.rerenderTable();
-			})();
-		});
+		this.renderRatingCell(row, title.rating, (r) => `★ ${r}/5`);
+		this.renderStatusCell(row, title.status, statusLabel(title.status));
+		this.renderTitlePinCell(row, title);
 
 		row.addEventListener('click', () => {
 			if (this.selectionMode) {
@@ -1895,6 +1827,97 @@ export class ListTab {
 		}
 	}
 
+	/** Selection checkbox column; only present in selection mode. `id` is a title id or groupKey. */
+	private renderSelectCell(row: HTMLElement, id: string, isSelected: boolean): void {
+		if (!this.selectionMode) return;
+		const cbCol = row.createDiv({ cls: 'hoard-col-select' });
+		const cb = cbCol.createEl('input', { attr: { type: 'checkbox' } });
+		cb.checked = isSelected;
+		cb.addEventListener('click', (e) => e.stopPropagation());
+		cb.addEventListener('change', () => {
+			this.toggleRowSelection(row, id);
+		});
+	}
+
+	private renderTitleCell(row: HTMLElement, title: HoardTitle): void {
+		const colTitle = row.createDiv({ cls: 'hoard-col-title' });
+		colTitle.createDiv({ cls: 'hoard-row-title-text', text: title.title });
+		const badgeRow = colTitle.createDiv({ cls: 'hoard-badge-row' });
+		renderTypeBadge(badgeRow, title.type, this.plugin.settings);
+		// release year after the type badge; omitted when unknown
+		const yearMatch = title.releaseDate?.match(/^(\d{4})/);
+		if (yearMatch) badgeRow.createSpan({ cls: 'hoard-row-year', text: yearMatch[1] });
+		if (isRecentlyReleased(title.releaseDate)) {
+			badgeRow.createSpan({ cls: 'hoard-recently-arrived', text: `· ${t('ui.filters.recentlyArrived')}` });
+		}
+		const barWrap = colTitle.createDiv({ cls: 'hoard-progress-wrap' });
+		const bar = barWrap.createDiv({ cls: 'hoard-progress-bar' });
+		bar.style.width = `${this.dataManager.getProgress(title)}%`;
+	}
+
+	private renderPriorityCell(row: HTMLElement, priority: string | null): void {
+		const colPriority = row.createDiv({ cls: 'hoard-col-priority' });
+		if (!priority) return;
+		const priorityDef = this.getTagDef(priority, this.plugin.settings.priorities);
+		const pBadge = colPriority.createSpan({ cls: 'hoard-priority-badge', text: priorityLabel(priority) });
+		if (priorityDef) pBadge.style.color = priorityDef.color;
+	}
+
+	private renderRatingCell(row: HTMLElement, rating: number, format: (rating: number) => string): void {
+		const colRating = row.createDiv({ cls: 'hoard-col-rating' });
+		if (rating <= 0) {
+			colRating.createSpan({ cls: 'hoard-row-rating hoard-row-rating-empty', text: '—' });
+			return;
+		}
+		const ratingEl = colRating.createSpan({ cls: 'hoard-row-rating', text: format(rating) });
+		ratingEl.style.color = ratingColor(rating, this.plugin.settings.ratingSystem);
+	}
+
+	/** Status badge (respects coloredTypeBadges); `fallbackColor` colors a status without a tag definition. */
+	private renderStatusCell(row: HTMLElement, status: string, label: string, fallbackColor?: string): void {
+		const colored = this.plugin.settings.coloredTypeBadges;
+		const colStatus = row.createDiv({ cls: 'hoard-col-status' });
+		const statusBadge = colStatus.createSpan({
+			cls: colored ? 'hoard-badge' : 'hoard-badge-plain',
+			text: label,
+		});
+		if (!colored) return;
+		const statusDef = this.getTagDef(status, this.plugin.settings.statuses);
+		const color = statusDef?.color ?? fallbackColor;
+		if (color) statusBadge.style.backgroundColor = getThemedColor(status, color, this.plugin.settings.colorTheme);
+	}
+
+	private renderTitlePinCell(row: HTMLElement, title: HoardTitle): void {
+		const colPin = row.createDiv({ cls: 'hoard-col-pin' });
+		const pinIcon = colPin.createSpan({
+			cls: `hoard-pin-icon${title.pinned ? ' is-pinned' : ''}`,
+			text: '📌',
+		});
+		pinIcon.title = title.pinned ? t('list.unpin') : t('list.pin');
+		pinIcon.addEventListener('click', (e) => {
+			e.stopPropagation();
+			void this.toggleTitlePin(title.id);
+		});
+	}
+
+	/** Pins/unpins a title; pinning unpins every other pinned title first. */
+	private async toggleTitlePin(titleId: string): Promise<void> {
+		const current = this.dataManager.getTitle(titleId);
+		if (!current) return;
+		const newPinned = !current.pinned;
+		if (newPinned) {
+			for (const other of this.dataManager.getTitles()) {
+				if (other.id !== current.id && other.pinned) {
+					other.pinned = false;
+					await this.dataManager.updateTitle(other);
+				}
+			}
+		}
+		current.pinned = newPinned;
+		await this.dataManager.updateTitle(current);
+		this.rerenderTable();
+	}
+
 	// Group header row
 
 	private renderGroupRow(
@@ -1908,94 +1931,64 @@ export class ListTab {
 			cls: `hoard-row hoard-group-row${isExpanded ? ' is-expanded' : ''}${isSelected ? ' hoard-row-selected' : ''}`,
 		});
 
+		const highestPriority = this.getGroupHighestPriority(members);
+		const groupStatus = this.getGroupStatus(members);
 		// data-* so filters can evaluate group rows like title rows
 		row.dataset['type'] = members[0]?.type ?? '';
-		row.dataset['status'] = this.getGroupStatus(members);
-		row.dataset['priority'] = this.getGroupHighestPriority(members) ?? '';
+		row.dataset['status'] = groupStatus;
+		row.dataset['priority'] = highestPriority ?? '';
 		row.dataset['rating'] = `${Math.round(this.getGroupRating(members))}★`;
 		row.dataset['group'] = group.name;
 
-		if (this.selectionMode) {
-			const cbCol = row.createDiv({ cls: 'hoard-col-select' });
-			const cb = cbCol.createEl('input', { attr: { type: 'checkbox' } });
-			cb.checked = isSelected;
-			cb.addEventListener('click', (e) => e.stopPropagation());
-			cb.addEventListener('change', () => {
+		this.renderSelectCell(row, groupKey(group.id), isSelected);
+		this.renderGroupTitleCell(row, group, members);
+		this.renderPriorityCell(row, highestPriority);
+
+		// started: earliest among members
+		const colStarted = row.createDiv({ cls: 'hoard-col-started' });
+		const groupStarted = this.getGroupStartedDate(members);
+		colStarted.textContent = groupStarted ? formatDateDisplay(groupStarted) : '—';
+
+		// rating: average
+		this.renderRatingCell(row, this.getGroupRating(members), (r) => `★ ${r.toFixed(1)}/5`);
+
+		// status: per priority rule
+		const inProgress = groupStatus === 'In Progress';
+		this.renderStatusCell(
+			row, groupStatus,
+			inProgress ? t('list.inProgress') : statusLabel(groupStatus),
+			inProgress ? '#724CF9' : undefined,
+		);
+		this.renderGroupPinCell(row, group);
+
+		// no expand while renaming or selecting
+		row.addEventListener('click', () => {
+			if (this.renamingGroupId === group.id) return;
+			if (this.selectionMode) {
 				this.toggleRowSelection(row, groupKey(group.id));
-			});
+				return;
+			}
+			if (isExpanded) {
+				this.expandedGroups.delete(group.id);
+			} else {
+				this.expandedGroups.add(group.id);
+			}
+			this.rerenderTable();
+		});
+
+		if (isExpanded) {
+			for (const member of members) {
+				this.renderRow(parent, member, true);
+			}
 		}
+	}
 
+	private renderGroupTitleCell(row: HTMLElement, group: HoardGroup, members: HoardTitle[]): void {
 		const colTitle = row.createDiv({ cls: 'hoard-col-title' });
-
 		if (this.renamingGroupId === group.id) {
-			// rename mode
-			const renameRow = colTitle.createDiv({ cls: 'hoard-group-name-row' });
-			const nameInput = renameRow.createEl('input', {
-				cls: 'hoard-group-rename-input',
-				attr: { type: 'text', value: group.name },
-			});
-			nameInput.addEventListener('click', (e) => e.stopPropagation());
-			nameInput.addEventListener('keydown', (e) => {
-				e.stopPropagation();
-				if (e.key === 'Enter') {
-					void (async () => {
-						const newName = nameInput.value.trim();
-						if (newName && newName !== group.name) {
-							const updated = { ...group, name: newName };
-							await this.dataManager.updateGroup(updated);
-						}
-						this.renamingGroupId = null;
-						this.rerenderTable();
-					})();
-				} else if (e.key === 'Escape') {
-					this.renamingGroupId = null;
-					this.rerenderTable();
-				}
-			});
-			const saveBtn = renameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✓' });
-			saveBtn.title = t('common.save');
-			saveBtn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				void (async () => {
-					const newName = nameInput.value.trim();
-					if (newName && newName !== group.name) {
-						const updated = { ...group, name: newName };
-						await this.dataManager.updateGroup(updated);
-					}
-					this.renamingGroupId = null;
-					this.rerenderTable();
-				})();
-			});
-			const cancelBtn = renameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✕' });
-			cancelBtn.title = t('common.cancel');
-			cancelBtn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				this.renamingGroupId = null;
-				this.rerenderTable();
-			});
-			window.setTimeout(() => nameInput.focus(), 0);
+			this.renderGroupRenameRow(colTitle, group);
 		} else {
-			// normal mode
-			const nameRow = colTitle.createDiv({ cls: 'hoard-group-name-row' });
-			nameRow.createSpan({ cls: 'hoard-row-title-text hoard-group-name', text: group.name });
-			const renameBtn = nameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✏' });
-			renameBtn.title = t('ui.toolbar.renameGroup');
-			renameBtn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				this.renamingGroupId = group.id;
-				this.rerenderTable();
-			});
-			const deleteBtn = nameRow.createEl('button', { cls: 'hoard-group-action-btn hoard-group-action-btn-delete hoard-btn-danger', text: '✕' });
-			deleteBtn.title = t('list.deleteGroupTip');
-			deleteBtn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				new ConfirmModal(this.plugin.app, t('list.deleteGroupConfirm', { name: group.name }), () => {
-					void this.dataManager.removeGroup(group.id).then(() => {
-						this.expandedGroups.delete(group.id);
-						this.rerenderTable();
-					});
-				}).open();
-			});
+			this.renderGroupNameRow(colTitle, group);
 		}
 
 		const primaryType = members[0]?.type ?? '';
@@ -2013,51 +2006,77 @@ export class ListTab {
 		const barWrap = colTitle.createDiv({ cls: 'hoard-progress-wrap' });
 		barWrap.createDiv({ cls: 'hoard-progress-bar' }).style.width =
 			`${this.getGroupProgress(members)}%`;
+	}
 
-		// priority: highest among members
-		const colGrpPriority = row.createDiv({ cls: 'hoard-col-priority' });
-		const highestPriority = this.getGroupHighestPriority(members);
-		if (highestPriority) {
-			const pDef = this.getTagDef(highestPriority, this.plugin.settings.priorities);
-			const pBadge = colGrpPriority.createSpan({ cls: 'hoard-priority-badge', text: priorityLabel(highestPriority) });
-			if (pDef) pBadge.style.color = pDef.color;
-		}
-
-		// started: earliest among members
-		const colStarted = row.createDiv({ cls: 'hoard-col-started' });
-		const groupStarted = this.getGroupStartedDate(members);
-		colStarted.textContent = groupStarted ? formatDateDisplay(groupStarted) : '—';
-
-		// rating: average
-		const colRating = row.createDiv({ cls: 'hoard-col-rating' });
-		const avgRating = this.getGroupRating(members);
-		if (avgRating > 0) {
-			const avgRatingEl = colRating.createSpan({
-				cls: 'hoard-row-rating',
-				text: `★ ${avgRating.toFixed(1)}/5`,
-			});
-			avgRatingEl.style.color = ratingColor(avgRating, this.plugin.settings.ratingSystem);
-		} else {
-			colRating.createSpan({ cls: 'hoard-row-rating hoard-row-rating-empty', text: '—' });
-		}
-
-		// status: per priority rule, respects coloredTypeBadges
-		const colStatus = row.createDiv({ cls: 'hoard-col-status' });
-		const groupStatus = this.getGroupStatus(members);
-		const groupStatusDef = this.getTagDef(groupStatus, this.plugin.settings.statuses);
-		const groupColored = this.plugin.settings.coloredTypeBadges;
-		const statusBadge = colStatus.createSpan({
-			cls: groupColored ? 'hoard-badge' : 'hoard-badge-plain',
-			text: groupStatus === 'In Progress' ? t('list.inProgress') : statusLabel(groupStatus),
+	/** Name input with save/cancel buttons. */
+	private renderGroupRenameRow(colTitle: HTMLElement, group: HoardGroup): void {
+		const renameRow = colTitle.createDiv({ cls: 'hoard-group-name-row' });
+		const nameInput = renameRow.createEl('input', {
+			cls: 'hoard-group-rename-input',
+			attr: { type: 'text', value: group.name },
 		});
-		if (groupColored) {
-			if (groupStatusDef) {
-				statusBadge.style.backgroundColor = getThemedColor(groupStatus, groupStatusDef.color, this.plugin.settings.colorTheme);
-			} else if (groupStatus === 'In Progress') {
-				statusBadge.style.backgroundColor = getThemedColor('In Progress', '#724CF9', this.plugin.settings.colorTheme);
+		nameInput.addEventListener('click', (e) => e.stopPropagation());
+		nameInput.addEventListener('keydown', (e) => {
+			e.stopPropagation();
+			if (e.key === 'Enter') {
+				void this.commitGroupRename(group, nameInput.value);
+			} else if (e.key === 'Escape') {
+				this.cancelGroupRename();
 			}
-		}
+		});
+		const saveBtn = renameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✓' });
+		saveBtn.title = t('common.save');
+		saveBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			void this.commitGroupRename(group, nameInput.value);
+		});
+		const cancelBtn = renameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✕' });
+		cancelBtn.title = t('common.cancel');
+		cancelBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.cancelGroupRename();
+		});
+		window.setTimeout(() => nameInput.focus(), 0);
+	}
 
+	private async commitGroupRename(group: HoardGroup, rawName: string): Promise<void> {
+		const newName = rawName.trim();
+		if (newName && newName !== group.name) {
+			await this.dataManager.updateGroup({ ...group, name: newName });
+		}
+		this.cancelGroupRename();
+	}
+
+	private cancelGroupRename(): void {
+		this.renamingGroupId = null;
+		this.rerenderTable();
+	}
+
+	/** Group name with rename and delete buttons. */
+	private renderGroupNameRow(colTitle: HTMLElement, group: HoardGroup): void {
+		const nameRow = colTitle.createDiv({ cls: 'hoard-group-name-row' });
+		nameRow.createSpan({ cls: 'hoard-row-title-text hoard-group-name', text: group.name });
+		const renameBtn = nameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✏' });
+		renameBtn.title = t('ui.toolbar.renameGroup');
+		renameBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.renamingGroupId = group.id;
+			this.rerenderTable();
+		});
+		const deleteBtn = nameRow.createEl('button', { cls: 'hoard-group-action-btn hoard-group-action-btn-delete hoard-btn-danger', text: '✕' });
+		deleteBtn.title = t('list.deleteGroupTip');
+		deleteBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			new ConfirmModal(this.plugin.app, t('list.deleteGroupConfirm', { name: group.name }), () => {
+				void this.dataManager.removeGroup(group.id).then(() => {
+					this.expandedGroups.delete(group.id);
+					this.rerenderTable();
+				});
+			}).open();
+		});
+	}
+
+	private renderGroupPinCell(row: HTMLElement, group: HoardGroup): void {
 		const isGrpPinned = this.pinnedGroupId === group.id;
 		const colGrpPin = row.createDiv({ cls: 'hoard-col-pin' });
 		const grpPinIcon = colGrpPin.createSpan({
@@ -2080,27 +2099,6 @@ export class ListTab {
 			}
 			this.rerenderTable();
 		});
-
-		// no expand while renaming or selecting
-		row.addEventListener('click', () => {
-			if (this.renamingGroupId === group.id) return;
-			if (this.selectionMode) {
-				this.toggleRowSelection(row, groupKey(group.id));
-				return;
-			}
-			if (isExpanded) {
-				this.expandedGroups.delete(group.id);
-			} else {
-				this.expandedGroups.add(group.id);
-			}
-			this.rerenderTable();
-		});
-
-		if (isExpanded) {
-			for (const member of members) {
-				this.renderRow(parent, member, true);
-			}
-		}
 	}
 
 	// Group helper calculations
