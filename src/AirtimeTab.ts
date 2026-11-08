@@ -294,56 +294,62 @@ export class AirtimeTab {
 	 * reading item. null for orphan entries.
 	 */
 	private resolveEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
-		if (entry.source === 'reading') {
-			const kind = entry.readingKind ?? 'book';
-			const item: Book | Manga | undefined =
-				kind === 'book' ? this.readingDataManager.getBook(entry.titleId) : this.readingDataManager.getManga(entry.titleId);
-			if (!item) return null;
-			const totalUnits = entry.totalEpisodes ?? item.totalChapters ?? 0;
-			return {
-				source: 'reading',
-				id: item.id,
-				title: item.title,
-				typeName: kind === 'book' ? 'Book' : 'Manga',
-				typeLabel: t(`airtime.type.${kind}`),
-				typeColor: this.plugin.settings.coloredTypeBadges
-					? getReadingTypeColor(kind, this.plugin.settings)
-					: null,
-				externalLink: item.externalLink ?? '',
-				// the schedule's mode decides single vs recurring — a multi-chapter item scheduled as a one-off
-				// release date still ticks like one
-				isSingle: entry.schedule.recurrence === 'once',
-				totalUnits,
-				unit: 'chapter',
-				group: 'volume',
-				next: 'nextReading',
-				planStatus: 'Plan to Read',
-			};
-		}
+		if (entry.source === 'reading') return this.resolveReadingEntry(entry);
+		if (entry.source === 'game') return this.resolveGameEntry(entry);
+		return this.resolveWatchEntry(entry);
+	}
 
-		if (entry.source === 'game') {
-			const game = this.gameDataManager.getGame(entry.titleId);
-			if (!game) return null;
-			return {
-				source: 'game',
-				id: game.id,
-				title: game.title,
-				typeName: 'Game',
-				typeLabel: t('airtime.type.game'),
-				// games have no per-source badge color setting — always plain
-				typeColor: null,
-				// store page first (the GameDetailModal priority), then external link
-				externalLink: game.storeUrl || game.externalLink,
-				// games are always single releases — no episode/chapter counters
-				isSingle: true,
-				totalUnits: 0,
-				unit: 'release',
-				group: 'season',
-				next: 'nextGame',
-				planStatus: this.gameDataManager.getSettings().defaultStatus || 'Not started',
-			};
-		}
+	private resolveReadingEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
+		const kind = entry.readingKind ?? 'book';
+		const item: Book | Manga | undefined =
+			kind === 'book' ? this.readingDataManager.getBook(entry.titleId) : this.readingDataManager.getManga(entry.titleId);
+		if (!item) return null;
+		const totalUnits = entry.totalEpisodes ?? item.totalChapters ?? 0;
+		return {
+			source: 'reading',
+			id: item.id,
+			title: item.title,
+			typeName: kind === 'book' ? 'Book' : 'Manga',
+			typeLabel: t(`airtime.type.${kind}`),
+			typeColor: this.plugin.settings.coloredTypeBadges
+				? getReadingTypeColor(kind, this.plugin.settings)
+				: null,
+			externalLink: item.externalLink ?? '',
+			// the schedule's mode decides single vs recurring — a multi-chapter item scheduled as a one-off
+			// release date still ticks like one
+			isSingle: entry.schedule.recurrence === 'once',
+			totalUnits,
+			unit: 'chapter',
+			group: 'volume',
+			next: 'nextReading',
+			planStatus: 'Plan to Read',
+		};
+	}
 
+	private resolveGameEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
+		const game = this.gameDataManager.getGame(entry.titleId);
+		if (!game) return null;
+		return {
+			source: 'game',
+			id: game.id,
+			title: game.title,
+			typeName: 'Game',
+			typeLabel: t('airtime.type.game'),
+			// games have no per-source badge color setting — always plain
+			typeColor: null,
+			// store page first (the GameDetailModal priority), then external link
+			externalLink: game.storeUrl || game.externalLink,
+			// games are always single releases — no episode/chapter counters
+			isSingle: true,
+			totalUnits: 0,
+			unit: 'release',
+			group: 'season',
+			next: 'nextGame',
+			planStatus: this.gameDataManager.getSettings().defaultStatus || 'Not started',
+		};
+	}
+
+	private resolveWatchEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
 		const title = this.dataManager.getTitle(entry.titleId);
 		if (!title) return null;
 		const typeDef = this.plugin.settings.types.find((t) => t.name === title.type);
