@@ -1,4 +1,6 @@
 import { setIcon } from 'obsidian';
+import { t, type TranslationKey } from './i18n';
+import { statusLabel, typeLabel } from './i18n/labels';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardGroup, TagDefinition, SavedFilterPreset, Season } from './types';
@@ -346,18 +348,18 @@ export class ListTab {
 		// customize-shelves gear, far right on the count line
 		countEl.addClass('hoard-results-count-rows');
 		const gearBtn = countEl.createEl('button', { cls: 'hoard-rows-customize-btn' });
-		gearBtn.setAttr('aria-label', 'Customize rows');
+		gearBtn.setAttr('aria-label', t('list.rows.customize'));
 		setIcon(gearBtn, 'settings');
 		gearBtn.addEventListener('click', () => {
 			new RowsCustomizeModal(this.plugin.app, this.plugin, {
-				shelves: ROWS_SHELVES,
+				shelves: ROWS_SHELVES.map((sh) => ({ id: sh.id, label: t(`list.shelves.${sh.id}` as TranslationKey) })),
 				getLayout: () => this.plugin.settings.rowsLayout,
 				setLayout: (layout) => { this.plugin.settings.rowsLayout = layout; },
 				// live update while the modal reorders shelves behind it
 				onChanged: () => {
 					if (this.currentView === 'rows') this.rerenderActiveView();
 				},
-				hint: 'Reorder the sections or switch them off. "By type" and "By status" are the grouped grid sections; only one can be on at a time, and with both off the titles show as one flat grid.',
+				hint: t('list.rows.watchlistHint'),
 				exclusiveGroups: ROWS_EXCLUSIVE_SHELVES,
 			}).open();
 		});
@@ -405,16 +407,16 @@ export class ListTab {
 					titles.filter((t) => t.favorite === true && titleVisible(t)),
 				);
 				renderShelf(
-					scroll, 'Favorites', favorites,
-					'No favorites yet; mark a title as favorite to see it here.',
+					scroll, t('list.shelves.favorites'), favorites,
+					t('list.empty.favorites'),
 					filtering, titleCard, sel(favorites),
 				);
 			},
 			recommended: () => {
 				const recommended = this.getRecommendedTitles(titles).filter(titleVisible);
 				renderShelf(
-					scroll, 'Recommended', recommended,
-					'Nothing to recommend; add titles to "Plan to watch" or "Watching".',
+					scroll, t('list.shelves.recommended'), recommended,
+					t('list.empty.recommended'),
 					filtering, titleCard, sel(recommended),
 				);
 			},
@@ -425,16 +427,16 @@ export class ListTab {
 					.slice(0, 10)
 					.filter(titleVisible);
 				renderShelf(
-					scroll, 'Recently Added', recentlyAdded,
-					'Nothing here yet; added titles will show up in this row.',
+					scroll, t('list.shelves.recentlyAdded'), recentlyAdded,
+					t('list.empty.recentlyAdded'),
 					filtering, titleCard, sel(recentlyAdded),
 				);
 			},
 			recentlyWatched: () => {
 				const recentlyWatched = this.getRecentlyWatchedTitles(titles).filter(titleVisible);
 				renderShelf(
-					scroll, 'Recently Watched', recentlyWatched,
-					'Nothing watched yet; episodes you tick or titles you complete will show up here.',
+					scroll, t('list.shelves.recentlyWatched'), recentlyWatched,
+					t('list.empty.recentlyWatched'),
 					filtering, titleCard, sel(recentlyWatched),
 				);
 			},
@@ -456,8 +458,8 @@ export class ListTab {
 					.slice(0, 10)
 					.filter(titleVisible);
 				renderShelf(
-					scroll, 'Recently Released', recentlyReleased,
-					'No released titles yet; titles with a past release date show up here.',
+					scroll, t('list.shelves.recentlyReleased'), recentlyReleased,
+					t('list.empty.recentlyReleased'),
 					filtering, titleCard, sel(recentlyReleased),
 				);
 			},
@@ -504,11 +506,11 @@ export class ListTab {
 	): void {
 		if (filtering && groups.length === 0) return;
 		const shelf = parent.createDiv({ cls: 'hoard-rows-shelf' });
-		renderShelfTitle(shelf, 'Groups', groups.length, this.shelfSelect(groups.map((g) => groupKey(g.id))));
+		renderShelfTitle(shelf, t('list.shelves.groups'), groups.length, this.shelfSelect(groups.map((g) => groupKey(g.id))));
 		if (groups.length === 0) {
 			shelf.createDiv({
 				cls: 'hoard-rows-shelf-empty',
-				text: 'No groups yet; group related titles to see their covers here.',
+				text: t('list.empty.groups'),
 			});
 			return;
 		}
@@ -569,7 +571,7 @@ export class ListTab {
 		const keyOf = (t: HoardTitle): string => (byType ? t.type : t.status);
 
 		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
-		section.createDiv({ cls: 'hoard-rows-bytype-title', text: byType ? 'By type' : 'By status' });
+		section.createDiv({ cls: 'hoard-rows-bytype-title', text: byType ? t('list.shelves.byType') : t('list.shelves.byStatus') });
 
 		const titles = this.dataManager.getTitles();
 		let rendered = 0;
@@ -580,7 +582,7 @@ export class ListTab {
 			);
 			if (bucketTitles.length === 0) continue;
 			rendered++;
-			renderShelfTitle(section, def.name, bucketTitles.length, this.shelfSelect(bucketTitles.map((t) => t.id)));
+			renderShelfTitle(section, byType ? typeLabel(def.name) : statusLabel(def.name), bucketTitles.length, this.shelfSelect(bucketTitles.map((t) => t.id)));
 			const spacer = section.createDiv({ cls: 'hoard-rows-bytype-spacer' });
 			// same classes as the flat grid so the CLS fix applies unchanged
 			const grid = spacer.createDiv({ cls: 'hoard-cards-grid hoard-cards-grid-virtual' });
@@ -605,7 +607,7 @@ export class ListTab {
 			}
 			section.createDiv({
 				cls: 'hoard-rows-shelf-empty',
-				text: `No titles yet; added titles are grouped by ${byType ? 'type' : 'status'} here.`,
+				text: byType ? t('list.empty.byType') : t('list.empty.byStatus'),
 			});
 		}
 	}
@@ -623,12 +625,12 @@ export class ListTab {
 			if (!titled) {
 				const empty = parent.createDiv({ cls: 'hoard-cards-empty' });
 				empty.createSpan({ cls: 'hoard-cards-empty-icon', text: '🎬' });
-				empty.createEl('p', { cls: 'hoard-cards-empty-msg', text: 'No titles match your filters' });
+				empty.createEl('p', { cls: 'hoard-cards-empty-msg', text: t('list.empty.noMatchCards') });
 			}
 			return;
 		}
 		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
-		if (titled) renderShelfTitle(section, 'All titles', items.length, this.shelfSelect(items.map(itemKey)));
+		if (titled) renderShelfTitle(section, t('list.shelves.allTitles'), items.length, this.shelfSelect(items.map(itemKey)));
 		const spacer = section.createDiv({ cls: 'hoard-rows-bytype-spacer' });
 		const grid = spacer.createDiv({ cls: 'hoard-cards-grid hoard-cards-grid-virtual' });
 		const vgrid = new VirtualGrid(spacer, grid, items.length, {
@@ -796,11 +798,11 @@ export class ListTab {
 			cardWidth,
 			cardHeight,
 			selected: this.selectedItems.has(title.id),
-			statusLabel: statusDef ? title.status : undefined,
+			statusLabel: statusDef ? statusLabel(title.status) : undefined,
 			statusColor: statusDef
 				? getThemedColor(title.status, statusDef.color, this.plugin.settings.colorTheme)
 				: undefined,
-			typeLabel: title.type,
+			typeLabel: typeLabel(title.type),
 			typeColor,
 			year: title.releaseDate?.match(/^(\d{4})/)?.[1],
 			progressRatio,
@@ -810,9 +812,9 @@ export class ListTab {
 				void this.dataManager.updatePosterUrl(title.id, 'none');
 			},
 			menuItems: [
-				{ label: 'Edit title', onClick: () => this.openEditModalForTitle(title.id) },
-				{ label: 'Refresh poster', onClick: (card) => this.refreshPosterForCard(card, title.id) },
-				{ label: 'Refresh rating', onClick: () => void refreshCommunityRating(this.plugin, title.id, null, true) },
+				{ label: t('list.card.editTitle'), onClick: () => this.openEditModalForTitle(title.id) },
+				{ label: t('list.card.refreshPoster'), onClick: (card) => this.refreshPosterForCard(card, title.id) },
+				{ label: t('list.card.refreshRating'), onClick: () => void refreshCommunityRating(this.plugin, title.id, null, true) },
 			],
 			onClick: (card) => {
 				if (this.selectionMode) {
@@ -874,7 +876,7 @@ export class ListTab {
 			container: this.container,
 			cleanups: this.activeCleanups,
 			onRename: () => this.openRenameGroupPrompt(group),
-			deleteMessage: `Delete group "${group.name}"? All titles inside will be returned to the main list.`,
+			deleteMessage: t('list.deleteGroupConfirm', { name: group.name }),
 			onDelete: () => {
 				void this.dataManager.removeGroup(group.id).then(() => {
 					this.expandedGroups.delete(group.id);
@@ -934,7 +936,7 @@ export class ListTab {
 			const fill = track.createDiv({ cls: 'hoard-header-import-fill' });
 			fill.style.width = `${total > 0 ? Math.round((current / total) * 100) : 0}%`;
 			progWrap.createSpan({ cls: 'hoard-header-import-text', text: `${current} / ${total}` });
-			const cancelBtn = progWrap.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: 'Cancel import' });
+			const cancelBtn = progWrap.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('list.cancelImport') });
 			cancelBtn.addEventListener('click', () => cancel());
 		}
 
@@ -1114,8 +1116,9 @@ export class ListTab {
 				return {
 					sections: buildFilterSections({
 						lead: [{
-							label: 'Type',
-							opts: this.plugin.settings.types.map((t) => t.name),
+							label: t('list.filter.type'),
+							opts: this.plugin.settings.types.map((ty) => ty.name),
+							formatOpt: typeLabel,
 							excludeSet: draft.typeExclude,
 						}],
 						statusOpts: this.plugin.settings.statuses.map((s) => s.name),
@@ -1159,10 +1162,7 @@ export class ListTab {
 	private renderSortingDropdown(parent: HTMLElement): void {
 		renderSortingDropdown(parent, this.sort, {
 			registerCleanup: (fn) => this.activeCleanups.push(fn),
-			options: [
-				'Title', 'Date added', 'Progress', 'Rating', 'Priority',
-				'Started', 'Status', 'Date watched', 'Time left', 'Time watched',
-			],
+			options: ListTab.SORT_KEYS.map((k) => t(`list.sort.${k}`)),
 			labelToKey: (label) => this.sortLabelToKey(label),
 			defaultDirs: ListTab.SORT_DEFAULT_DIR,
 			onSorted: () => {
@@ -1177,8 +1177,8 @@ export class ListTab {
 		renderViewDropdown<'list' | 'rows'>(parent, {
 			current: this.currentView,
 			options: [
-				{ key: 'rows', label: 'Cards', icon: 'layout-grid' },
-				{ key: 'list', label: 'List', icon: 'list' },
+				{ key: 'rows', label: t('list.view.cards'), icon: 'layout-grid' },
+				{ key: 'list', label: t('list.view.list'), icon: 'list' },
 			],
 			onSelect: (key) => {
 				if (this.currentView === 'rows') {
@@ -1201,9 +1201,9 @@ export class ListTab {
 
 	private renderActionBar(parent: HTMLElement): void {
 		const bar = renderActionBar(parent, this.plugin.app, {
-			title: 'Delete selected',
+			title: t('list.deleteSelected'),
 			selected: this.selectedItems,
-			message: (count) => `Delete ${count} selected item${count !== 1 ? 's' : ''}? This cannot be undone.`,
+			message: (count) => t('list.deleteSelectedConfirm', { count }),
 			onConfirm: async () => {
 				const groupIds = new Map(this.dataManager.getGroups().map((g) => [groupKey(g.id), g.id]));
 				const titleIds: string[] = [];
@@ -1292,8 +1292,8 @@ export class ListTab {
 	private renderSearch(parent: HTMLElement): void {
 		renderSearchBox(parent, {
 			value: this.searchQuery,
-			placeholder: 'Search titles, cast, studio…',
-			help: (host) => renderSearchHelpButton(host, this.plugin.app, 'Watchlist', () => this.searchFields()),
+			placeholder: t('list.searchPlaceholder'),
+			help: (host) => renderSearchHelpButton(host, this.plugin.app, t('app.tabs.watchlist'), () => this.searchFields()),
 			onChange: (q) => { this.searchQuery = q; },
 			onCommit: () => this.rerenderActiveView(),
 		});
@@ -1301,20 +1301,13 @@ export class ListTab {
 
 
 	private sortLabelToKey(label: string): string {
-		const map: Record<string, string> = {
-			'Title':        'title',
-			'Date added':   'dateAdded',
-			'Progress':     'progress',
-			'Rating':       'rating',
-			'Priority':     'priority',
-			'Started':      'started',
-			'Status':       'status',
-			'Date watched': 'dateWatched',
-			'Time left':    'timeLeft',
-			'Time watched': 'timeWatched',
-		};
-		return map[label] ?? 'dateAdded';
+		return ListTab.SORT_KEYS.find((k) => t(`list.sort.${k}`) === label) ?? 'dateAdded';
 	}
+
+	private static readonly SORT_KEYS = [
+		'title', 'dateAdded', 'progress', 'rating', 'priority',
+		'started', 'status', 'dateWatched', 'timeLeft', 'timeWatched',
+	] as const;
 
 	private static readonly SORT_DEFAULT_DIR: Record<string, 'asc' | 'desc'> = {
 		title:       'asc',
@@ -1411,9 +1404,9 @@ export class ListTab {
 	private renderCountLine(parent: HTMLElement, titleCount: number, groupCount: number): HTMLElement {
 		const countEl = parent.createDiv({ cls: 'hoard-results-count' });
 		const parts: string[] = [];
-		if (titleCount > 0) parts.push(`${titleCount} title${titleCount !== 1 ? 's' : ''}`);
-		if (groupCount > 0) parts.push(`${groupCount} group${groupCount !== 1 ? 's' : ''}`);
-		countEl.textContent = parts.length > 0 ? parts.join(', ') : '0 titles';
+		if (titleCount > 0) parts.push(t('ui.group.countTitle', { count: titleCount }));
+		if (groupCount > 0) parts.push(t('list.count.group', { count: groupCount }));
+		countEl.textContent = parts.length > 0 ? parts.join(', ') : t('ui.group.countTitle', { count: 0 });
 		return countEl;
 	}
 
@@ -1434,14 +1427,14 @@ export class ListTab {
 		if (this.selectionMode) {
 			colHeader.createDiv({ cls: 'hoard-col-select-h' });
 		}
-		colHeader.createDiv({ cls: 'hoard-col-title-h', text: 'Title' });
-		colHeader.createDiv({ cls: 'hoard-col-priority-h', text: 'Priority' });
-		colHeader.createDiv({ cls: 'hoard-col-started-h', text: 'Started' });
-		colHeader.createDiv({ cls: 'hoard-col-rating-h', text: 'Rating' });
-		colHeader.createDiv({ cls: 'hoard-col-status-h', text: 'Status' });
+		colHeader.createDiv({ cls: 'hoard-col-title-h', text: t('list.columns.title') });
+		colHeader.createDiv({ cls: 'hoard-col-priority-h', text: t('list.columns.priority') });
+		colHeader.createDiv({ cls: 'hoard-col-started-h', text: t('list.columns.started') });
+		colHeader.createDiv({ cls: 'hoard-col-rating-h', text: t('list.columns.rating') });
+		colHeader.createDiv({ cls: 'hoard-col-status-h', text: t('list.columns.status') });
 
 		if (items.length === 0) {
-			table.createDiv({ cls: 'hoard-empty-state', text: 'No titles match your filters.' });
+			table.createDiv({ cls: 'hoard-empty-state', text: t('list.empty.noMatchList') });
 			return;
 		}
 
@@ -1819,14 +1812,14 @@ export class ListTab {
 		const badgeRow = colTitle.createDiv({ cls: 'hoard-badge-row' });
 		const typeBadge = badgeRow.createSpan({
 			cls: colored ? 'hoard-badge hoard-badge-sm' : 'hoard-badge-plain',
-			text: title.type,
+			text: typeLabel(title.type),
 		});
 		if (colored && typeDef) typeBadge.style.backgroundColor = getThemedColor(title.type, typeDef.color, this.plugin.settings.colorTheme);
 		// release year after the type badge; omitted when unknown
 		const yearMatch = title.releaseDate?.match(/^(\d{4})/);
 		if (yearMatch) badgeRow.createSpan({ cls: 'hoard-row-year', text: yearMatch[1] });
 		if (isRecentlyReleased(title.releaseDate)) {
-			badgeRow.createSpan({ cls: 'hoard-recently-arrived', text: '· Recently arrived' });
+			badgeRow.createSpan({ cls: 'hoard-recently-arrived', text: `· ${t('ui.filters.recentlyArrived')}` });
 		}
 		const barWrap = colTitle.createDiv({ cls: 'hoard-progress-wrap' });
 		const bar = barWrap.createDiv({ cls: 'hoard-progress-bar' });
@@ -1855,7 +1848,7 @@ export class ListTab {
 		const statusDef = this.getTagDef(title.status, this.plugin.settings.statuses);
 		const statusBadge = colStatus.createSpan({
 			cls: colored ? 'hoard-badge' : 'hoard-badge-plain',
-			text: title.status,
+			text: statusLabel(title.status),
 		});
 		if (colored && statusDef) statusBadge.style.backgroundColor = getThemedColor(title.status, statusDef.color, this.plugin.settings.colorTheme);
 
@@ -1864,7 +1857,7 @@ export class ListTab {
 			cls: `hoard-pin-icon${title.pinned ? ' is-pinned' : ''}`,
 			text: '📌',
 		});
-		pinIcon.title = title.pinned ? 'Unpin' : 'Pin to top';
+		pinIcon.title = title.pinned ? t('list.unpin') : t('list.pin');
 		pinIcon.addEventListener('click', (e) => {
 			e.stopPropagation();
 			void (async () => {
@@ -1961,7 +1954,7 @@ export class ListTab {
 				}
 			});
 			const saveBtn = renameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✓' });
-			saveBtn.title = 'Save';
+			saveBtn.title = t('common.save');
 			saveBtn.addEventListener('click', (e) => {
 				e.stopPropagation();
 				void (async () => {
@@ -1975,7 +1968,7 @@ export class ListTab {
 				})();
 			});
 			const cancelBtn = renameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✕' });
-			cancelBtn.title = 'Cancel';
+			cancelBtn.title = t('common.cancel');
 			cancelBtn.addEventListener('click', (e) => {
 				e.stopPropagation();
 				this.renamingGroupId = null;
@@ -1987,17 +1980,17 @@ export class ListTab {
 			const nameRow = colTitle.createDiv({ cls: 'hoard-group-name-row' });
 			nameRow.createSpan({ cls: 'hoard-row-title-text hoard-group-name', text: group.name });
 			const renameBtn = nameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✏' });
-			renameBtn.title = 'Rename group';
+			renameBtn.title = t('ui.toolbar.renameGroup');
 			renameBtn.addEventListener('click', (e) => {
 				e.stopPropagation();
 				this.renamingGroupId = group.id;
 				this.rerenderTable();
 			});
 			const deleteBtn = nameRow.createEl('button', { cls: 'hoard-group-action-btn hoard-group-action-btn-delete hoard-btn-danger', text: '✕' });
-			deleteBtn.title = 'Delete group (titles are kept)';
+			deleteBtn.title = t('list.deleteGroupTip');
 			deleteBtn.addEventListener('click', (e) => {
 				e.stopPropagation();
-				new ConfirmModal(this.plugin.app, `Delete group "${group.name}"? All titles inside will be returned to the main list.`, () => {
+				new ConfirmModal(this.plugin.app, t('list.deleteGroupConfirm', { name: group.name }), () => {
 					void this.dataManager.removeGroup(group.id).then(() => {
 						this.expandedGroups.delete(group.id);
 						this.rerenderTable();
@@ -2012,7 +2005,7 @@ export class ListTab {
 			const colored = this.plugin.settings.coloredTypeBadges;
 			const typeBadge = colTitle.createSpan({
 				cls: colored ? 'hoard-badge hoard-badge-sm' : 'hoard-badge-plain',
-				text: primaryType,
+				text: typeLabel(primaryType),
 			});
 			if (colored && typeDef) typeBadge.style.backgroundColor = getThemedColor(primaryType, typeDef.color, this.plugin.settings.colorTheme);
 		}
@@ -2020,9 +2013,9 @@ export class ListTab {
 		const statsEl = colTitle.createDiv({ cls: 'hoard-group-stats' });
 		const timeWatched = members.reduce((s, t) => s + this.dataManager.calcTimeWatched(t), 0);
 		const timeLeft = members.reduce((s, t) => s + this.dataManager.calcTimeRemaining(t), 0);
-		statsEl.createSpan({ text: `${members.length} title${members.length !== 1 ? 's' : ''}` });
-		statsEl.createSpan({ text: `  ·  ${formatTime(timeWatched)} watched` });
-		statsEl.createSpan({ text: `  ·  ${formatTime(timeLeft)} left` });
+		statsEl.createSpan({ text: t('ui.group.countTitle', { count: members.length }) });
+		statsEl.createSpan({ text: `  ·  ${t('list.stats.watched', { time: formatTime(timeWatched) })}` });
+		statsEl.createSpan({ text: `  ·  ${t('list.stats.left', { time: formatTime(timeLeft) })}` });
 
 		const barWrap = colTitle.createDiv({ cls: 'hoard-progress-wrap' });
 		barWrap.createDiv({ cls: 'hoard-progress-bar' }).style.width =
@@ -2062,7 +2055,7 @@ export class ListTab {
 		const groupColored = this.plugin.settings.coloredTypeBadges;
 		const statusBadge = colStatus.createSpan({
 			cls: groupColored ? 'hoard-badge' : 'hoard-badge-plain',
-			text: groupStatus,
+			text: groupStatus === 'In Progress' ? t('list.inProgress') : statusLabel(groupStatus),
 		});
 		if (groupColored) {
 			if (groupStatusDef) {
@@ -2078,7 +2071,7 @@ export class ListTab {
 			cls: `hoard-pin-icon${isGrpPinned ? ' is-pinned' : ''}`,
 			text: '📌',
 		});
-		grpPinIcon.title = isGrpPinned ? 'Unpin' : 'Pin to top';
+		grpPinIcon.title = isGrpPinned ? t('list.unpin') : t('list.pin');
 		grpPinIcon.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.pinnedGroupId = isGrpPinned ? null : group.id;
@@ -2162,22 +2155,29 @@ export class ListTab {
 
 	// Accordion
 
+	private static seasonCountText(season: Season): string {
+		const skipCount = (season.skippedEpisodes ?? []).length;
+		return skipCount > 0
+			? t('list.season.epsToSkip', { eps: season.episodes, skip: skipCount })
+			: t('list.season.eps', { count: season.episodes });
+	}
+
 	private renderAccordion(parent: HTMLElement, title: HoardTitle): void {
 		const accordion = parent.createDiv({ cls: 'hoard-accordion' });
 		accordion.addEventListener('click', (e) => e.stopPropagation());
 
 		const accHeader = accordion.createDiv({ cls: 'hoard-accordion-header' });
 		const accLeft = accHeader.createDiv({ cls: 'hoard-acc-header-left' });
-		const episodeTotal = title.totalEpisodes > 0 ? ` · ${title.totalEpisodes} eps total` : '';
+		const episodeTotal = title.totalEpisodes > 0 ? ` · ${t('list.epsTotal', { count: title.totalEpisodes })}` : '';
 		const startedStr = title.dateStarted
-			? `Started ${formatDateDisplay(title.dateStarted)}`
-			: 'Not started';
+			? t('list.started', { date: formatDateDisplay(title.dateStarted) })
+			: t('list.notStarted');
 		const subtitleRow = accLeft.createDiv({ cls: 'hoard-acc-subtitle' });
 		subtitleRow.createSpan({ cls: 'hoard-acc-subtitle-text', text: `${startedStr}${episodeTotal}` });
 		if (title.externalLink) {
 			const linkIcon = subtitleRow.createEl('a', { cls: 'hoard-acc-link-icon', text: '🌐' });
 			linkIcon.href = title.externalLink;
-			linkIcon.title = 'Open external link';
+			linkIcon.title = t('list.openExternalLink');
 			linkIcon.target = '_blank';
 			linkIcon.rel = 'noopener noreferrer';
 			linkIcon.addEventListener('click', (e) => e.stopPropagation());
@@ -2217,13 +2217,13 @@ export class ListTab {
 			block.createDiv({ cls: 'hoard-acc-percent', text: value });
 			block.createDiv({ cls: 'hoard-acc-progress-label', text: label });
 		};
-		makeStatBlock(formatTime(timeLeft), 'left');
-		makeStatBlock(formatTime(timeWatched), 'watched');
-		makeStatBlock(`${watchedEps} / ${effectiveTotal}`, 'episodes');
+		makeStatBlock(formatTime(timeLeft), t('list.stat.left'));
+		makeStatBlock(formatTime(timeWatched), t('list.stat.watched'));
+		makeStatBlock(`${watchedEps} / ${effectiveTotal}`, t('list.stat.episodes'));
 
 		const accRight = accRightGroup.createDiv({ cls: 'hoard-acc-header-right' });
 		accRight.createDiv({ cls: 'hoard-acc-percent', text: `${progress}%` });
-		accRight.createDiv({ cls: 'hoard-acc-progress-label', text: 'progress' });
+		accRight.createDiv({ cls: 'hoard-acc-progress-label', text: t('list.stat.progress') });
 		const accBarWrap = accRight.createDiv({ cls: 'hoard-acc-progress-wrap' });
 		accBarWrap.createDiv({ cls: 'hoard-progress-bar' }).style.width = `${progress}%`;
 
@@ -2260,9 +2260,7 @@ export class ListTab {
 			badge.textContent = season.name;
 			const palette = this.plugin.settings.seasonPalette;
 			badge.style.backgroundColor = palette[seasonIdx % palette.length] ?? '#888780';
-			const skipCount = (season.skippedEpisodes ?? []).length;
-			const skipSuffix = skipCount > 0 ? ` (${skipCount} to skip)` : '';
-			seasonHeader.createSpan({ cls: 'hoard-season-ep-count', text: `${season.episodes} eps${skipSuffix}` });
+			seasonHeader.createSpan({ cls: 'hoard-season-ep-count', text: ListTab.seasonCountText(season) });
 			const chevron = seasonHeader.createSpan({
 				cls: `hoard-chevron${isCollapsed ? '' : ' is-open'}`,
 				text: '›',
@@ -2311,8 +2309,8 @@ export class ListTab {
 			fillBtn.classList.toggle('is-fill', !allWatched);
 			fillBtn.textContent = allWatched ? '✗' : '✓';
 			fillBtn.title = allWatched
-				? 'Clear all episodes in this season'
-				: 'Mark all episodes in this season as watched';
+				? t('list.season.clearAll')
+				: t('list.season.markAll');
 		};
 		refreshFillBtn();
 		fillBtn.addEventListener('click', (e) => {
@@ -2339,7 +2337,7 @@ export class ListTab {
 				box.classList.toggle('is-watched', isWatched);
 				box.classList.toggle('is-skipped', isSkipped);
 				box.textContent = isSkipped && !isWatched ? '—' : (isWatched ? '✓' : String(displayNum));
-				box.title = `Episode ${epNum}${isSkipped ? ' (skipped)' : ''}`;
+				box.title = t(isSkipped ? 'list.episodeSkipped' : 'list.episode', { num: epNum });
 			};
 			refreshBox();
 
@@ -2389,9 +2387,7 @@ export class ListTab {
 			const seasonWrap = grid?.parentElement;
 			const countEl = seasonWrap?.querySelector<HTMLElement>('.hoard-season-header .hoard-season-ep-count');
 			if (countEl) {
-				const skipCount = (season.skippedEpisodes ?? []).length;
-				const skipSuffix = skipCount > 0 ? ` (${skipCount} to skip)` : '';
-				countEl.textContent = `${season.episodes} eps${skipSuffix}`;
+				countEl.textContent = ListTab.seasonCountText(season);
 			}
 		}
 	}
@@ -2414,8 +2410,8 @@ export class ListTab {
 		});
 		const todayBtn = wrap.createEl('button', {
 			cls: 'hoard-btn hoard-btn-sm hoard-footer-today-btn',
-			text: 'Today',
-			attr: { title: 'Fill with today’s date' },
+			text: t('list.footer.today'),
+			attr: { title: t('list.footer.fillToday') },
 		});
 		const picker = createDatePicker({
 			parent: wrap,
@@ -2448,7 +2444,7 @@ export class ListTab {
 		const footer = parent.createDiv({ cls: 'hoard-accordion-footer' });
 
 		const starsRow = footer.createDiv({ cls: 'hoard-stars-row' });
-		starsRow.createSpan({ cls: 'hoard-stars-label', text: 'Rating' });
+		starsRow.createSpan({ cls: 'hoard-stars-label', text: t('list.footer.rating') });
 		const starsWrap = starsRow.createDiv({ cls: 'hoard-stars' });
 		// star clicks must not bubble up and toggle the accordion
 		starsWrap.addEventListener('click', (e) => e.stopPropagation());
@@ -2483,7 +2479,7 @@ export class ListTab {
 		const notesRow = footer.createDiv({ cls: 'hoard-footer-row' });
 		const notesInput = notesRow.createEl('input', {
 			cls: 'hoard-notes-input',
-			attr: { type: 'text', placeholder: 'Add a note...' },
+			attr: { type: 'text', placeholder: t('list.footer.addNote') },
 		});
 		notesInput.value = title.notes;
 		notesInput.addEventListener('click', (e) => e.stopPropagation());
@@ -2499,16 +2495,16 @@ export class ListTab {
 
 		// started + watched share a row; only the first label keeps the fixed width
 		const dateRow = footer.createDiv({ cls: 'hoard-footer-row hoard-footer-row-pair' });
-		this.renderFooterDateField(dateRow, title, 'Date started', 'dateStarted', false);
-		this.renderFooterDateField(dateRow, title, 'Date watched', 'dateFinished', true);
+		this.renderFooterDateField(dateRow, title, t('list.footer.dateStarted'), 'dateStarted', false);
+		this.renderFooterDateField(dateRow, title, t('list.footer.dateWatched'), 'dateFinished', true);
 
 		const statusRow = footer.createDiv({ cls: 'hoard-footer-row hoard-footer-row-pair' });
 		const statusField = statusRow.createDiv({ cls: 'hoard-date-field' });
-		statusField.createSpan({ cls: 'hoard-footer-label', text: 'Status' });
+		statusField.createSpan({ cls: 'hoard-footer-label', text: t('list.footer.status') });
 		const statusSelect = statusField.createEl('select', { cls: 'hoard-select hoard-select-sm' });
 		for (const s of this.plugin.settings.statuses) {
 			if (s.name === 'To be released') continue; // auto-managed; not user-selectable here
-			const opt = statusSelect.createEl('option', { text: s.name, value: s.name });
+			const opt = statusSelect.createEl('option', { text: statusLabel(s.name), value: s.name });
 			if (s.name === title.status) opt.selected = true;
 		}
 		statusSelect.addEventListener('click', (e) => e.stopPropagation());
@@ -2523,10 +2519,10 @@ export class ListTab {
 		});
 
 		const priField = statusRow.createDiv({ cls: 'hoard-date-field' });
-		priField.createSpan({ cls: 'hoard-footer-label hoard-footer-label-auto', text: 'Priority' });
+		priField.createSpan({ cls: 'hoard-footer-label hoard-footer-label-auto', text: t('list.footer.priority') });
 		const prioritySelect = priField.createEl('select', { cls: 'hoard-select hoard-select-sm' });
 		// blank option clears the priority
-		prioritySelect.createEl('option', { text: 'No priority', value: '' });
+		prioritySelect.createEl('option', { text: t('list.footer.noPriority'), value: '' });
 		for (const p of this.plugin.settings.priorities) {
 			const opt = prioritySelect.createEl('option', { text: p.name, value: p.name });
 			if (p.name === title.priority) opt.selected = true;
@@ -2543,7 +2539,7 @@ export class ListTab {
 		});
 
 		const releaseRow = footer.createDiv({ cls: 'hoard-footer-row' });
-		releaseRow.createSpan({ cls: 'hoard-footer-label', text: 'Release date' });
+		releaseRow.createSpan({ cls: 'hoard-footer-label', text: t('list.footer.releaseDate') });
 		createDatePicker({
 			parent: releaseRow,
 			inputCls: 'hoard-footer-date hoard-date-input',
@@ -2565,10 +2561,10 @@ export class ListTab {
 
 		const actionRow = footer.createDiv({ cls: 'hoard-footer-row hoard-footer-action-row' });
 
-		const deleteBtn = actionRow.createEl('button', { cls: 'hoard-delete-btn hoard-btn-danger', text: 'Remove' });
+		const deleteBtn = actionRow.createEl('button', { cls: 'hoard-delete-btn hoard-btn-danger', text: t('common.remove') });
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			new ConfirmModal(this.plugin.app, `Remove "${title.title}" from hoard?`, () => {
+			new ConfirmModal(this.plugin.app, t('list.removeTitleConfirm', { title: title.title }), () => {
 				void this.dataManager.removeTitle(title.id).then(() => {
 					this.expandedId = null;
 					this.rerenderTable();
@@ -2577,7 +2573,7 @@ export class ListTab {
 		});
 
 		const editBtnWrap = actionRow.createDiv({ cls: 'hoard-add-btn-wrap' });
-		const editBtn = editBtnWrap.createEl('button', { cls: 'hoard-edit-btn', text: 'Edit' });
+		const editBtn = editBtnWrap.createEl('button', { cls: 'hoard-edit-btn', text: t('common.edit') });
 		editBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			const current = this.dataManager.getTitle(title.id);
@@ -2637,12 +2633,12 @@ export class ListTab {
 	/** Fields the Watchlist search covers — also drives the "?" help panel. */
 	searchFields(): SearchFieldSpec<HoardTitle>[] {
 		return [
-			{ name: 'title', label: 'Title', weight: 0.6, text: (t) => [t.title] },
-			{ name: 'director', label: 'Director', weight: 0.2, aliases: ['dir'], text: (t) => getTitleCredits(t, 'director') },
-			{ name: 'studio', label: 'Studio', weight: 0.1, text: (t) => getTitleCredits(t, 'studio') },
-			{ name: 'cast', label: 'Cast', weight: 0.1, aliases: ['actor'], text: (t) => getTitleCredits(t, 'cast') },
-			{ name: 'year', label: 'Year', weight: 0.05, text: (t) => { const y = yearOf(t.releaseDate); return y ? [String(y)] : []; }, number: (t) => yearOf(t.releaseDate) },
-			{ name: 'rating', label: 'Rating', number: (t) => t.rating },
+			{ name: 'title', label: t('list.searchField.title'), weight: 0.6, text: (t) => [t.title] },
+			{ name: 'director', label: t('list.searchField.director'), weight: 0.2, aliases: ['dir'], text: (t) => getTitleCredits(t, 'director') },
+			{ name: 'studio', label: t('list.searchField.studio'), weight: 0.1, text: (t) => getTitleCredits(t, 'studio') },
+			{ name: 'cast', label: t('list.searchField.cast'), weight: 0.1, aliases: ['actor'], text: (t) => getTitleCredits(t, 'cast') },
+			{ name: 'year', label: t('list.searchField.year'), weight: 0.05, text: (t) => { const y = yearOf(t.releaseDate); return y ? [String(y)] : []; }, number: (t) => yearOf(t.releaseDate) },
+			{ name: 'rating', label: t('list.searchField.rating'), number: (t) => t.rating },
 		];
 	}
 
