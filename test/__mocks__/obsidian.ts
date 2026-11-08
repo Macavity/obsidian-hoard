@@ -162,6 +162,7 @@ export abstract class ItemView extends Component {
 export class Notice {
 	/** Messages of every string notice shown, for assertions. */
 	static shown: string[] = [];
+	messageEl: HTMLElement = document.createElement("div");
 	constructor(public message?: string | DocumentFragment, public duration?: number) {
 		if (typeof message === "string") Notice.shown.push(message);
 	}
@@ -370,6 +371,27 @@ export class DropdownComponent {
 	}
 	onChange(cb: (value: string) => unknown): this {
 		this.selectEl.addEventListener("change", () => cb(this.selectEl.value));
+		return this;
+	}
+}
+
+export class SliderComponent {
+	sliderEl: HTMLInputElement;
+	constructor(containerEl: HTMLElement) {
+		this.sliderEl = containerEl.createEl("input", { attr: { type: "range" } });
+	}
+	setLimits(min: number, max: number, step: number): this {
+		this.sliderEl.min = String(min);
+		this.sliderEl.max = String(max);
+		this.sliderEl.step = String(step);
+		return this;
+	}
+	setValue(value: number): this {
+		this.sliderEl.value = String(value);
+		return this;
+	}
+	onChange(cb: (value: number) => unknown): this {
+		this.sliderEl.addEventListener("input", () => cb(Number(this.sliderEl.value)));
 		return this;
 	}
 }
