@@ -111,7 +111,7 @@ const settings = {
 			desc: 'Füllt Studio oder Sender für jeden Watchlist-Titel, der noch keins hat. Filme und Serien nutzen den eingestellten Filmdienst, Anime die eingestellte Anime-Quelle. Titel mit Eintrag werden übersprungen, ein erneuter Lauf ist also günstig.',
 			button: 'Studios abrufen',
 			allHave: 'Jeder Titel hat bereits ein Studio.',
-			confirm: { one: 'Das löst etwa eine API-Anfrage für den {count} Titel ohne Studio aus. Du kannst jederzeit abbrechen. Fortfahren?', other: 'Das löst etwa eine API-Anfrage für jeden der {count} Titel ohne Studio aus. Du kannst jederzeit abbrechen. Fortfahren?' },
+			confirm: { one: 'Das löst etwa eine API-Anfrage für {count} Titel ohne Studio aus. Du kannst jederzeit abbrechen. Fortfahren?', other: 'Das löst etwa eine API-Anfrage für jeden der {count} Titel ohne Studio aus. Du kannst jederzeit abbrechen. Fortfahren?' },
 			progress: 'Rufe Studios ab… {done} / {total}',
 			result: { one: '{state}: {count} Titel ergänzt.', other: '{state}: {count} Titel ergänzt.' },
 			resultMissed: { one: '{state}: {count} Titel ergänzt, {missed} ohne verfügbares Studio.', other: '{state}: {count} Titel ergänzt, {missed} ohne verfügbares Studio.' },
@@ -389,7 +389,7 @@ const settings = {
 			button: 'Neu erzeugen',
 			note: 'Du kannst die Einstellungen schließen; die Neuerzeugung läuft im Hintergrund weiter.',
 			none: 'Fertig: keine fehlenden Dateien gefunden',
-			result: { one: 'Fertig: {count} Datei erstellt, {skipped} existierten bereits', other: 'Fertig: {count} Dateien erstellt, {skipped} existierten bereits' },
+			result: { one: 'Fertig: {count} Datei erstellt, {skipped} bereits vorhanden', other: 'Fertig: {count} Dateien erstellt, {skipped} bereits vorhanden' },
 		},
 	},
 	csv: {

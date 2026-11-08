@@ -25,6 +25,12 @@ export function gameStatusLabel(status: string): string {
 	return label('gameStatus', status);
 }
 
+/** The type in brackets on a History.md line: a reading/games library (Book, Manga, Game) or a watch type. */
+export function historyTypeLabel(type: string): string {
+	const library = label('libraryType', type);
+	return library !== type ? library : typeLabel(type);
+}
+
 /** '' (no priority) stays '' — callers show their own "No priority" text. */
 export function priorityLabel(priority: string): string {
 	return label('priority', priority);

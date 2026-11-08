@@ -37,7 +37,7 @@ describe('display labels', () => {
 
 	it('translates game statuses and priorities in de', () => {
 		setLocale('de');
-		expect(gameStatusLabel('Playing')).toBe('Spiele');
+		expect(gameStatusLabel('Playing')).toBe('Am Spielen');
 		expect(gameStatusLabel('Not started')).toBe('Nicht begonnen');
 		expect(gameStatusLabel('To be released')).toBe('Noch nicht erschienen');
 		expect(priorityLabel('High')).toBe('Hoch');

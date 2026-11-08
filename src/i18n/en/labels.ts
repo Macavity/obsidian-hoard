@@ -29,6 +29,12 @@ const labels = {
 		'To be released': 'To be released',
 		TBA: 'TBA',
 	},
+	// the library a reading or games history line names in brackets
+	libraryType: {
+		Book: 'Book',
+		Manga: 'Manga',
+		Game: 'Game',
+	},
 	priority: {
 		Low: 'Low',
 		Medium: 'Medium',

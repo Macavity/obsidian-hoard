@@ -3,7 +3,7 @@ import type { DeepPartial } from '../index';
 
 export default {
 	status: {
-		Watching: 'Schaue',
+		Watching: 'Am Schauen',
 		'Plan to watch': 'Geplant',
 		Completed: 'Abgeschlossen',
 		'To be released': 'Noch nicht erschienen',
@@ -17,19 +17,24 @@ export default {
 		Animation: 'Animation',
 	},
 	readingStatus: {
-		Reading: 'Lese',
+		Reading: 'Am Lesen',
 		Completed: 'Abgeschlossen',
 		'Plan to Read': 'Geplant',
 		'To be released': 'Noch nicht erschienen',
 		Dropped: 'Abgebrochen',
 	},
 	gameStatus: {
-		Playing: 'Spiele',
+		Playing: 'Am Spielen',
 		'Not started': 'Nicht begonnen',
 		Finished: 'Beendet',
 		Dropped: 'Abgebrochen',
 		'To be released': 'Noch nicht erschienen',
 		TBA: 'Noch offen',
+	},
+	libraryType: {
+		Book: 'Buch',
+		Manga: 'Manga',
+		Game: 'Spiel',
 	},
 	priority: {
 		Low: 'Niedrig',

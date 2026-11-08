@@ -80,7 +80,7 @@ describe('reading and games i18n', () => {
 		Object.assign(modal as object, { badgeRowEl: badgeRow, contentEl: new El('div'), mobile: true });
 		(modal as unknown as { renderBadgeRow: () => void }).renderBadgeRow();
 		const texts = allText(badgeRow);
-		expect(texts).toContain('Spiele');
+		expect(texts).toContain('Am Spielen');
 		expect(texts).toContain('Hoch');
 		expect(texts).not.toContain('Playing');
 		expect((modal as unknown as { draft: { status: string } }).draft.status).toBe('Playing');

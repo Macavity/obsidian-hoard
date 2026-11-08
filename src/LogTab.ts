@@ -1,6 +1,6 @@
 import { setIcon } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
-import { readingStatusLabel, statusLabel } from './i18n/labels';
+import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from './i18n/labels';
 import { dayName, monthName } from './ui/dateNames';
 import type HoardPlugin from './main';
 import type { HistoryEntry } from './HistoryManager';
@@ -27,10 +27,13 @@ const SOURCE_COLORS: Record<string, string> = {
 	Games: '#8B5CF6',
 };
 
-/** The stored status of a history line, shown in the UI language: watch statuses first, then reading ones; anything else as stored. */
+/** The stored status of a history line, shown in the UI language: watch, reading, then game statuses; anything else as stored. */
 function storedStatusLabel(status: string): string {
-	const watch = statusLabel(status);
-	return watch !== status ? watch : readingStatusLabel(status as ReadingStatus);
+	for (const toLabel of [statusLabel, (s: string) => readingStatusLabel(s as ReadingStatus), gameStatusLabel]) {
+		const shown = toLabel(status);
+		if (shown !== status) return shown;
+	}
+	return status;
 }
 
 // the patterns match the stored History.md lines; only the label built from them is localized
@@ -77,7 +80,8 @@ function typeFromEntry(entry: HistoryEntry): string {
 	return m ? m[1]! : '';
 }
 
-function titleFromEntry(entry: HistoryEntry): string {
+/** Exported for tests. */
+export function titleFromEntry(entry: HistoryEntry): string {
 	let title: string;
 	if (entry.titleName) {
 		title = entry.titleName;
@@ -86,11 +90,12 @@ function titleFromEntry(entry: HistoryEntry): string {
 		title = m ? m[1]! : entry.message;
 	}
 	const type = typeFromEntry(entry);
-	if (type) return `${title} (${type})`;
+	if (type) return `${title} (${historyTypeLabel(type)})`;
 	return title;
 }
 
-function formatDayHeader(dateStr: string): string {
+/** Exported for tests. */
+export function formatDayHeader(dateStr: string): string {
 	const d = new Date(dateStr + 'T12:00:00');
 	// month name, ordered by the user's date-format setting
 	if (getActiveDateFormat() === 'american') {
@@ -99,7 +104,7 @@ function formatDayHeader(dateStr: string): string {
 	if (getActiveDateFormat() === 'iso') {
 		return `${dayName(d.getDay())}, ${dateStr}`;
 	}
-	return `${dayName(d.getDay())}, ${d.getDate()} ${monthName(d.getMonth())} ${d.getFullYear()}`;
+	return t('dashboard.log.dayHeader', { weekday: dayName(d.getDay()), day: d.getDate(), month: monthName(d.getMonth()), year: d.getFullYear() });
 }
 
 function formatTime(isoTs: string): string {

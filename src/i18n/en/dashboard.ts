@@ -47,6 +47,7 @@ const dashboard = {
 	log: {
 		empty: 'No events yet. Actions from Watchlist, Reading and Games will appear here.',
 		emptySource: 'No {source} events yet.',
+		dayHeader: '{weekday}, {day} {month} {year}',
 		deleteEvent: 'Delete event',
 		confirmDelete: 'Delete this log event? ({title} · {action})',
 		action: {

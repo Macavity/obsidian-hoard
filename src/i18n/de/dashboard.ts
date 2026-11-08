@@ -48,8 +48,9 @@ const dashboard = {
 		episode: 'Folge {n}',
 	},
 	log: {
-		empty: 'Noch keine Ereignisse. Aktionen aus Watchlist, Lesen und Spiele erscheinen hier.',
-		emptySource: 'Noch keine Ereignisse in {source}.',
+		empty: 'Noch keine Ereignisse. Aktionen aus den Bereichen Watchlist, Lesen und Spiele erscheinen hier.',
+		emptySource: 'Noch keine Ereignisse im Bereich {source}.',
+		dayHeader: '{weekday}, {day}. {month} {year}',
 		deleteEvent: 'Ereignis löschen',
 		confirmDelete: 'Dieses Verlaufsereignis löschen? ({title} · {action})',
 		action: {

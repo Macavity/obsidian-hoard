@@ -66,7 +66,7 @@ const airtime = {
 	notices: {
 		noLinkTitle: 'Für diesen Titel ist kein externer Link gesetzt.',
 		noLink: 'Kein externer Link gesetzt.',
-		noTitles: 'Noch keine Titel in Hoard, Lesen oder Spiele.',
+		noTitles: 'Noch keine Titel in den Bereichen Watchlist, Lesen oder Spiele.',
 		allAdded: 'Alles ist schon in Demnächst.',
 		autoFilled: 'Termin automatisch von myanimelist übernommen.',
 	},
