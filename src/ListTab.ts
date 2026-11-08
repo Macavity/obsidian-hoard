@@ -18,7 +18,7 @@ import { renderTypeBadge } from './ui/typeBadge';
 import { renderEpisodeGrid } from './ui/EpisodeGrid';
 import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from './ui/ActionBar';
 import { renderGroupCard } from './ui/GroupCard';
-import { PRIORITY_ORDER, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from './ui/TabHelpers';
+import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from './ui/TabHelpers';
 import { renderHeaderToolbar } from './MobileToolbar';
 import { EditTitleModal } from './EditTitleModal';
 import { ConfirmModal } from './ConfirmModal';
@@ -633,9 +633,7 @@ export class ListTab {
 		}
 		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
 		if (titled) renderShelfTitle(section, t('list.shelves.allTitles'), items.length, this.shelfSelect(items.map(itemKey)));
-		const spacer = section.createDiv({ cls: 'hoard-rows-bytype-spacer' });
-		const grid = spacer.createDiv({ cls: 'hoard-cards-grid hoard-cards-grid-virtual' });
-		const vgrid = new VirtualGrid(spacer, grid, items.length, {
+		const { spacer, vgrid } = mountVirtualCardGrid(section, items.length, {
 			buildItem: (i, w, h) => this.buildCardElement(i, w, h),
 			removeItem: (el) => this.cardsObserver?.unobserveAndRemove(el),
 		});

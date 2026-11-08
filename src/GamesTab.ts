@@ -19,7 +19,7 @@ import { renderShelf, renderShelfTitle, type ShelfSelect } from './RowsView';
 import { renderSearchBox, openRenameGroupPrompt, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, type SortFields } from './ui/TabToolbar';
 import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from './ui/ActionBar';
 import { renderGroupCard } from './ui/GroupCard';
-import { PRIORITY_ORDER, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from './ui/TabHelpers';
+import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from './ui/TabHelpers';
 import { renderHeaderToolbar } from './MobileToolbar';
 import { rawgResizedCover } from './ApiService';
 import { resolveGameCover, type GameCover } from './coverRefresh';
@@ -806,9 +806,7 @@ export class GamesTab {
 		}
 		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
 		if (titled) renderShelfTitle(section, t('games.shelves.allGames'), items.length, this.shelfSelect(items.map((i) => i.data.id)));
-		const spacer = section.createDiv({ cls: 'hoard-rows-bytype-spacer' });
-		const grid = spacer.createDiv({ cls: 'hoard-cards-grid hoard-cards-grid-virtual' });
-		const vgrid = new VirtualGrid(spacer, grid, items.length, {
+		const { spacer, vgrid } = mountVirtualCardGrid(section, items.length, {
 			buildItem: (i, w, h) => {
 				const item = items[i];
 				if (!item) return null;
