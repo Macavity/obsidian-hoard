@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Notice } from 'obsidian';
+import { FuzzySuggestModal, Notice } from 'obsidian';
 import { ReadingDetailModal } from '../src/ReadingDetailModal';
 import { t } from '../src/i18n';
 import type { Book, Manga, ReadingCustomColumn } from '../src/types';
@@ -257,7 +257,10 @@ describe('ReadingDetailModal.renderVaultRow', () => {
 		const { modal } = build({ files: [] });
 		const row = document.createElement('div');
 		modal.renderVaultRow(row);
-		expect(() => (row.querySelector('button') as HTMLElement).click()).not.toThrow();
+		const opened = vi.spyOn(FuzzySuggestModal.prototype, 'open');
+		(row.querySelector('button') as HTMLElement).click();
+		expect(opened).toHaveBeenCalledTimes(1);
+		opened.mockRestore();
 	});
 });
 

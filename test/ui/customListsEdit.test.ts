@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
 import { until } from '../helpers/common';
 import { makeList, setupCustomLists } from '../helpers/setupCustomLists';
@@ -63,7 +63,14 @@ describe('inline cell editing', () => {
 	});
 
 	it('saves only once when Enter is followed by blur', async () => {
-		const { container, stored } = await setupCustomLists([makeList()]);
+		const { f, container, stored } = await setupCustomLists([makeList()]);
+		const listPath = [...f.files.keys()].find((p) => p.endsWith('/Backlog.md'))!;
+		const writes: string[] = [];
+		const record = (path: string): void => { if (path === listPath) writes.push(path); };
+		const process = f.app.vault.process.bind(f.app.vault);
+		const modify = f.app.vault.modify.bind(f.app.vault);
+		vi.spyOn(f.app.vault, 'process').mockImplementation((file, fn) => { record(file.path); return process(file, fn); });
+		vi.spyOn(f.app.vault, 'modify').mockImplementation((file, data) => { record(file.path); return modify(file, data); });
 		cell(container, 0, 'col_1').click();
 		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
 		input.value = '8';
@@ -71,6 +78,10 @@ describe('inline cell editing', () => {
 		input.value = '9';
 		input.dispatchEvent(new Event('blur'));
 		await until(() => stored('Backlog').rows[0]!.col_1 === 8);
+		// let a stray blur save (the 9) land, if there were one
+		await new Promise((r) => setTimeout(r, 50));
+		expect(stored('Backlog').rows[0]!.col_1).toBe(8);
+		expect(writes).toHaveLength(1);
 	});
 
 	it('moves editing to the next cell on Tab', async () => {
