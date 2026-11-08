@@ -4,44 +4,49 @@ import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 
+// Cosmetic-only: keep UI sentence-case visible without failing the lint.
+// ignoreWords/ignoreRegex teach the rules this plugin's proper nouns
+// (tab, modal and feature names) and format-mask placeholders; genuine
+// sentence-case violations are still reported. Shared by the UI rule and the
+// English locale-module rule.
+const sentenceCaseOptions = {
+    ignoreWords: [
+      // Plugin / feature names
+      "Hoard", "Watchlist", "Upcoming", "Reading", "Cards",
+      "Drafts", "Books", "Manga", "Games",
+      "Quotes", "Regenerate",
+      // External services / acronyms not in the rule defaults
+      "Google", "MAL", "TSV", "URLs", "APIs", "Steam", "Tenrai",
+    ],
+    ignoreRegex: [
+      "^DD/MM/YYYY$",            // date format mask
+      "^https://",               // URL placeholder
+      "^Season \\d",             // season-spec example placeholder
+      "^p\\. 123",               // quote-location example placeholder
+      "^APIs & Services",        // Google Cloud console path
+      '"N due"',                 // N is a number placeholder
+      "^\\* Last type used$",    // sentinel option; * confuses sentence-start detection
+      '"Last type used"',        // quotes that sentinel option's label
+      "^#\\w+$",                 // tag placeholder (#hoard)
+      "^\\d+h$",                 // duration placeholder (0h)
+    ],
+  };
+
 export default defineConfig([
   {
     ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "vitest.config.ts", "scripts/**", ".ref/**", "spike/**", ".claude/**"]
   },
   // obsidianmd recommended rules require type info, so only apply to TS files
-  ...obsidianmd.configs.recommended.map((config) =>
+  ...obsidianmd.configs.recommendedWithLocalesEn.map((config) =>
     config.rules ? { ...config, files: config.files ?? ["**/*.ts"] } : config,
   ),
   {
-    // Cosmetic-only: keep UI sentence-case visible without failing the lint.
-    // ignoreWords/ignoreRegex teach the rule this plugin's proper nouns
-    // (tab, modal and feature names) and format-mask placeholders; genuine
-    // sentence-case violations are still reported.
+    // Options: see sentenceCaseOptions above.
     files: ["**/*.ts"],
     plugins: { obsidianmd },
     rules: {
-      "obsidianmd/ui/sentence-case": ["warn", {
-        ignoreWords: [
-          // Plugin / feature names
-          "Hoard", "Watchlist", "Upcoming", "Reading", "Cards",
-          "Drafts", "Books", "Manga", "Games",
-          "Quotes", "Regenerate",
-          // External services / acronyms not in the rule defaults
-          "Google", "MAL", "TSV", "URLs", "APIs", "Steam", "Tenrai",
-        ],
-        ignoreRegex: [
-          "^DD/MM/YYYY$",            // date format mask
-          "^https://",               // URL placeholder
-          "^Season \\d",             // season-spec example placeholder
-          "^p\\. 123",               // quote-location example placeholder
-          "^APIs & Services",        // Google Cloud console path
-          '"N due"',                 // N is a number placeholder
-          "^\\* Last type used$",    // sentinel option; * confuses sentence-start detection
-          '"Last type used"',        // quotes that sentinel option's label
-          "^#\\w+$",                 // tag placeholder (#hoard)
-          "^\\d+h$",                 // duration placeholder (0h)
-        ],
-      }],
+      "obsidianmd/ui/sentence-case": ["warn", sentenceCaseOptions],
+      "obsidianmd/ui/sentence-case-locale-module": ["warn", sentenceCaseOptions],
       // Declarative settings API (Obsidian 1.13+) is a separate migration of the whole SettingsTab.
       "obsidianmd/settings-tab/prefer-setting-definitions": "off",
     },
