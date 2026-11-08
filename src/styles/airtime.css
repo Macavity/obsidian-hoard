@@ -441,8 +441,8 @@
   margin: 0 4px;
 }
 
-/* date input, sized like the time input */
-.hoard-date-input {
+/* schedule form date input, sized like the time input; footer date inputs keep their compact width */
+.hoard-modal-input.hoard-date-input {
   min-width: 130px;
   max-width: 160px;
   flex: unset;
