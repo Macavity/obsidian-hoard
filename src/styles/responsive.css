@@ -1,7 +1,9 @@
 /* Mobile responsive base rules */
 /* ══ MOBILE RESPONSIVE ══ */
 
-@media (max-width: 600px) {
+/* table columns follow the pane (hoard-table container), so a narrow split or sidebar compacts too.
+   556/356px = the old 600/400px viewport breakpoints minus the view and tab-content padding (44px). */
+@container hoard-table (max-width: 556px) {
   /* hide Priority / Started / Rating */
   .hoard-col-priority,
   .hoard-col-priority-h,
@@ -17,6 +19,26 @@
     grid-template-columns: 1fr 90px 20px;
   }
 
+  /* selection mode keeps its checkbox track in front */
+  .hoard-table.hoard-selection-mode .hoard-table-header-row,
+  .hoard-table.hoard-selection-mode .hoard-row {
+    grid-template-columns: 24px 1fr 90px 20px;
+  }
+}
+
+@container hoard-table (max-width: 356px) {
+  .hoard-table-header-row,
+  .hoard-row {
+    grid-template-columns: 1fr 56px 20px;
+  }
+
+  .hoard-table.hoard-selection-mode .hoard-table-header-row,
+  .hoard-table.hoard-selection-mode .hoard-row {
+    grid-template-columns: 24px 1fr 56px 20px;
+  }
+}
+
+@media (max-width: 600px) {
   /* smaller toolbar buttons */
   .hoard-header-controls .hoard-btn,
   .hoard-header-controls .hoard-add-btn {
@@ -29,20 +51,6 @@
   /* tighter rings gap on very small screens */
   .hoard-rings-grid {
     gap: 8px;
-  }
-
-  .hoard-table-header-row,
-  .hoard-row {
-    grid-template-columns: 1fr 56px 20px;
-  }
-
-  .hoard-col-started,
-  .hoard-col-rating,
-  .hoard-col-started-h,
-  .hoard-col-rating-h,
-  .hoard-col-priority,
-  .hoard-col-priority-h {
-    display: none;
   }
 
   .hoard-episode-grid {

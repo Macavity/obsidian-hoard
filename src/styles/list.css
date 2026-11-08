@@ -120,6 +120,9 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* the compact column layout follows the pane width, not the window (responsive.css) */
+  container-type: inline-size;
+  container-name: hoard-table;
 }
 
 .hoard-table {
@@ -171,6 +174,12 @@
   border-top: 2px solid var(--hoard-group-border-overlay);
   border-left: 2px solid rgb(255 255 255 / 20%);
   border-right: 2px solid rgb(255 255 255 / 20%);
+}
+
+/* Selection mode — add checkbox column; before responsive.css so its compact tracks win */
+.hoard-table.hoard-selection-mode .hoard-table-header-row,
+.hoard-table.hoard-selection-mode .hoard-row {
+  grid-template-columns: 24px 1fr 56px 72px 56px 90px 20px;
 }
 
 /* gap between top-level rows and after accordions; indented member rows stay flush */
