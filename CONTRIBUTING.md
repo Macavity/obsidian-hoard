@@ -10,7 +10,7 @@ pnpm dev        # watch build
 pnpm build      # typecheck + production build
 ```
 
-Build artifacts (`main.js`, `manifest.json`, `styles.css`) are produced in `dist/`; `manifest.json` and `styles.css` are copied there from the repo root (also on change during `pnpm dev`).
+Build artifacts (`main.js`, `manifest.json`, `styles.css`) are produced in `dist/`; `manifest.json` is copied there from the repo root and `styles.css` is bundled from the partials in `src/styles/` (`index.css` `@import`s them in cascade order; both are rebuilt on change during `pnpm dev`).
 
 ## Testing
 
@@ -27,7 +27,7 @@ CLI calls time out after 30 s; keep the hoard-test-vault window visible while ru
 
 `pnpm vault:reset` restores `hoard-test-vault/` to `HEAD`, removes untracked files and, from a worktree, mirrors the result into the registered vault (the plugin symlink, themes, `workspace*.json`, cache and `.trash` stay). Change fixtures only in a commit.
 
-Themes: `pnpm vault:theme <label|default>` switches the test vault to a theme from `scripts/themes.json` (downloaded on first use into `hoard-test-vault/.obsidian/themes/`, not versioned). Check any change to `styles.css` against a few of them, light and dark.
+Themes: `pnpm vault:theme <label|default>` switches the test vault to a theme from `scripts/themes.json` (downloaded on first use into `hoard-test-vault/.obsidian/themes/`, not versioned). Check any change to `src/styles/` against a few of them, light and dark.
 
 To install the build into a real vault, `pnpm vault:link [vault-name]` copies `dist/` into that vault's plugin folder.
 
@@ -44,7 +44,7 @@ To install the build into a real vault, `pnpm vault:link [vault-name]` copies `d
 
 Run `pnpm check` before you push: typecheck, lint, unit tests and the fallow quality analysis in one go. The individual steps (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm quality`) exist for quick iteration.
 
-`pnpm lint` mirrors the Obsidian review bot: every `eslint-disable` needs a `-- reason`, some rules can never be disabled (`scripts/lib/eslint-disables.mjs`), and every class in `styles.css` must be referenced from `src/` (`scripts/check-css-classes.mjs`).
+`pnpm lint` mirrors the Obsidian review bot: every `eslint-disable` needs a `-- reason`, some rules can never be disabled (`scripts/lib/eslint-disables.mjs`), and every class in `src/styles/*.css` must be referenced from `src/` (`scripts/check-css-classes.mjs`).
 
 ## Pull requests
 

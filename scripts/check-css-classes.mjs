@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fails when styles.css defines a class that no source file references (dead CSS).
+// Fails when the stylesheet (src/styles/*.css) defines a class that no source file references (dead CSS).
 // Runs from `pnpm lint`; the same check is a unit test in test/cssClasses.test.ts.
 
 import { readFileSync, readdirSync } from "fs";
@@ -28,9 +28,13 @@ export function sourceFiles(dir = join(root, "src")) {
 	});
 }
 
+export function stylesheetFiles(dir = join(root, "src", "styles")) {
+	return readdirSync(dir).filter((f) => f.endsWith(".css")).sort().map((f) => join(dir, f));
+}
+
 export function runCheck() {
 	return checkCssClasses({
-		css: readFileSync(join(root, "styles.css"), "utf8"),
+		css: stylesheetFiles().map((p) => readFileSync(p, "utf8")).join("\n"),
 		sources: sourceFiles().map((p) => readFileSync(p, "utf8")),
 		allowlist: OBSIDIAN_CLASSES,
 	});
