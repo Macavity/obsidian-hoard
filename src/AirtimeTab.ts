@@ -101,6 +101,68 @@ function isAirtimePassedNow(schedule: AirtimeSchedule): boolean {
 	return now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m);
 }
 
+const MS_PER_DAY = 86400000;
+
+function localDateStamp(d: Date): string {
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Airtime reached: movies are due, everything else has aired. */
+function passedCountdown(isMovie: boolean): DetailedCountdown {
+	return isMovie
+		? { kind: 'due', label: t('airtime.countdown.due'), daysUntil: 0 }
+		: { kind: 'aired', label: t('airtime.countdown.aired'), daysUntil: 0 };
+}
+
+/** Today is a release day not yet ticked: aired once the time passed, otherwise still ahead. */
+function releaseDayCountdown(schedule: AirtimeSchedule): DetailedCountdown {
+	if (isAirtimePassedNow(schedule)) return { kind: 'aired', label: t('airtime.countdown.aired'), daysUntil: 0 };
+	return { kind: 'today-before', label: t('airtime.countdown.today'), daysUntil: 0 };
+}
+
+function futureCountdown(daysUntil: number): DetailedCountdown {
+	if (daysUntil === 1) return { kind: 'future', label: t('airtime.countdown.tomorrow'), daysUntil: 1 };
+	return { kind: 'future', label: formatDaysWithMonths(daysUntil), daysUntil };
+}
+
+const NO_COUNTDOWN: DetailedCountdown = { kind: 'future', label: '—', daysUntil: 9999 };
+
+function onceCountdown(schedule: AirtimeSchedule, isMovie: boolean, today: Date): DetailedCountdown {
+	if (!schedule.releaseDate) return NO_COUNTDOWN;
+	const rel = new Date(schedule.releaseDate + 'T00:00:00');
+	const relDay = new Date(rel.getFullYear(), rel.getMonth(), rel.getDate());
+	if (relDay.getTime() < today.getTime()) return passedCountdown(isMovie);
+	if (relDay.getTime() === today.getTime()) {
+		return isAirtimePassedNow(schedule) ? passedCountdown(isMovie) : releaseDayCountdown(schedule);
+	}
+	return futureCountdown(Math.round((relDay.getTime() - today.getTime()) / MS_PER_DAY));
+}
+
+function dailyCountdown(schedule: AirtimeSchedule, acknowledgedToday: boolean): DetailedCountdown {
+	// already ticked today → advance to tomorrow
+	if (acknowledgedToday && isAirtimePassedNow(schedule)) return futureCountdown(1);
+	return releaseDayCountdown(schedule);
+}
+
+function weeklyCountdown(schedule: AirtimeSchedule, dayOfWeek: number, now: Date, acknowledgedToday: boolean): DetailedCountdown {
+	const currentDay = now.getDay();
+	const isScheduledDay = currentDay === dayOfWeek;
+	if (isScheduledDay && !acknowledgedToday) return releaseDayCountdown(schedule);
+	// acknowledged on the scheduled day → a full week until the next occurrence
+	const daysUntil = (dayOfWeek - currentDay + 7) % 7;
+	return futureCountdown(daysUntil === 0 ? 7 : daysUntil);
+}
+
+function monthlyCountdown(schedule: AirtimeSchedule, dayOfMonth: number, now: Date, today: Date, acknowledgedToday: boolean): DetailedCountdown {
+	const isScheduledDay = now.getDate() === dayOfMonth;
+	if (isScheduledDay && !acknowledgedToday) return releaseDayCountdown(schedule);
+	const thisMonth = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+	// acknowledged on the scheduled day, or the day already passed → next month
+	const rollOver = isScheduledDay || thisMonth.getTime() <= today.getTime();
+	const nextDate = rollOver ? new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth) : thisMonth;
+	return futureCountdown(Math.round((nextDate.getTime() - today.getTime()) / MS_PER_DAY));
+}
+
 /**
  * Countdown state for a card, handling the "airtime passed today" case that getAirtimeCountdown
  * rolls over to next week. `lastAcknowledgedDate` makes recurring cards reset to the next
@@ -113,75 +175,21 @@ export function getDetailedCountdown(
 ): DetailedCountdown {
 	const now = new Date();
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-	const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-	const acknowledgedToday = lastAcknowledgedDate === todayStr;
+	const acknowledgedToday = lastAcknowledgedDate === localDateStamp(now);
 
-	if (schedule.recurrence === 'once') {
-		if (!schedule.releaseDate) return { kind: 'future', label: '—', daysUntil: 9999 };
-		const rel = new Date(schedule.releaseDate + 'T00:00:00');
-		const relDay = new Date(rel.getFullYear(), rel.getMonth(), rel.getDate());
-
-		if (relDay.getTime() < today.getTime()) {
-			return isMovie ? { kind: 'due', label: t('airtime.countdown.due'), daysUntil: 0 } : { kind: 'aired', label: t('airtime.countdown.aired'), daysUntil: 0 };
-		}
-		if (relDay.getTime() === today.getTime()) {
-			if (isAirtimePassedNow(schedule)) {
-				return isMovie ? { kind: 'due', label: t('airtime.countdown.due'), daysUntil: 0 } : { kind: 'aired', label: t('airtime.countdown.aired'), daysUntil: 0 };
-			}
-			return { kind: 'today-before', label: t('airtime.countdown.today'), daysUntil: 0 };
-		}
-		const daysUntil = Math.round((relDay.getTime() - today.getTime()) / 86400000);
-		if (daysUntil === 1) return { kind: 'future', label: t('airtime.countdown.tomorrow'), daysUntil: 1 };
-		return { kind: 'future', label: formatDaysWithMonths(daysUntil), daysUntil };
+	switch (schedule.recurrence) {
+		case 'once':
+			return onceCountdown(schedule, isMovie, today);
+		case 'daily':
+			return dailyCountdown(schedule, acknowledgedToday);
+		case 'weekly':
+			if (schedule.dayOfWeek !== undefined) return weeklyCountdown(schedule, schedule.dayOfWeek, now, acknowledgedToday);
+			break;
+		case 'monthly':
+			if (schedule.dayOfMonth) return monthlyCountdown(schedule, schedule.dayOfMonth, now, today, acknowledgedToday);
+			break;
 	}
-
-	if (schedule.recurrence === 'daily') {
-		const passed = isAirtimePassedNow(schedule);
-		// already ticked today → advance to tomorrow
-		if (passed && acknowledgedToday) return { kind: 'future', label: t('airtime.countdown.tomorrow'), daysUntil: 1 };
-		if (passed) return { kind: 'aired', label: t('airtime.countdown.aired'), daysUntil: 0 };
-		return { kind: 'today-before', label: t('airtime.countdown.today'), daysUntil: 0 };
-	}
-
-	if (schedule.recurrence === 'weekly' && schedule.dayOfWeek !== undefined) {
-		const currentDay = now.getDay();
-		const isScheduledDay = currentDay === schedule.dayOfWeek;
-		if (isScheduledDay && !acknowledgedToday) {
-			if (isAirtimePassedNow(schedule)) return { kind: 'aired', label: t('airtime.countdown.aired'), daysUntil: 0 };
-			return { kind: 'today-before', label: t('airtime.countdown.today'), daysUntil: 0 };
-		}
-		// acknowledged on the scheduled day → force 7 days until the next occurrence
-		let daysUntil = (isScheduledDay && acknowledgedToday)
-			? 7
-			: (schedule.dayOfWeek - currentDay + 7) % 7;
-		if (daysUntil === 0) daysUntil = 7;
-		if (daysUntil === 1) return { kind: 'future', label: t('airtime.countdown.tomorrow'), daysUntil: 1 };
-		return { kind: 'future', label: formatDaysWithMonths(daysUntil), daysUntil };
-	}
-
-	if (schedule.recurrence === 'monthly' && schedule.dayOfMonth) {
-		const currentDate = now.getDate();
-		const isScheduledDay = currentDate === schedule.dayOfMonth;
-		if (isScheduledDay && !acknowledgedToday) {
-			if (isAirtimePassedNow(schedule)) return { kind: 'aired', label: t('airtime.countdown.aired'), daysUntil: 0 };
-			return { kind: 'today-before', label: t('airtime.countdown.today'), daysUntil: 0 };
-		}
-		// acknowledged on the scheduled day → advance to next month
-		let nextDate: Date;
-		if (isScheduledDay && acknowledgedToday) {
-			nextDate = new Date(now.getFullYear(), now.getMonth() + 1, schedule.dayOfMonth);
-		} else {
-			nextDate = new Date(now.getFullYear(), now.getMonth(), schedule.dayOfMonth);
-			if (nextDate.getTime() <= today.getTime()) {
-				nextDate = new Date(now.getFullYear(), now.getMonth() + 1, schedule.dayOfMonth);
-			}
-		}
-		const daysUntil = Math.round((nextDate.getTime() - today.getTime()) / 86400000);
-		if (daysUntil === 1) return { kind: 'future', label: t('airtime.countdown.tomorrow'), daysUntil: 1 };
-		return { kind: 'future', label: formatDaysWithMonths(daysUntil), daysUntil };
-	}
-
-	return { kind: 'future', label: '—', daysUntil: 9999 };
+	return NO_COUNTDOWN;
 }
 
 // "X days ago" label
