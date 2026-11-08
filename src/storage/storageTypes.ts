@@ -82,6 +82,8 @@ export interface LocalData {
 		pinnedGroup?: string | null;
 		savedFilterPreset?: SavedFilterPreset | null;
 		recommendedDaily?: RecommendedDaily;
+		/** Per-device outcome of the WatchLog import offer, by source kind. */
+		watchlogImport?: Partial<Record<'original' | 'fork', 'imported' | 'declined'>>;
 	};
 }
 

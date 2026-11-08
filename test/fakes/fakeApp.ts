@@ -149,6 +149,7 @@ export function createFakeApp(initial: Record<string, string> = {}) {
 	}
 
 	const vault = {
+		configDir: '.obsidian',
 		on: (name: string, cb: Cb) => vaultEvents.on(name, cb),
 		off: (name: string, cb: Cb) => vaultEvents.off(name, cb),
 		offref: (ref: Ref) => vaultEvents.offref(ref),
