@@ -10,6 +10,15 @@ const notices = {
 		episodesLoading: 'Folgen von "{title}" werden noch geladen.',
 		sharedConfigUnreadable: 'Hoard: Der Einstellungsblock in {file} ist nicht lesbar; Einstellungen wurden nicht gespeichert.',
 	},
+	migration: {
+		failed: 'Hoard konnte die WatchLog-Daten nicht in Notizen überführen. Der Versuch wird beim nächsten Start wiederholt; siehe die Entwicklerkonsole.',
+		summary: 'Hoard hat von WatchLog migriert: {done}.',
+		settingsBlock: 'Einstellungsblock in {to}',
+		adoptedFrom: 'Einstellungen von {from}',
+		data: 'Daten in Notizen übernommen ({created} erstellt, {filled} ergänzt; Sicherung: {file})',
+		widgets: { one: 'Widget-Codeblock in {count} Notiz', other: 'Widget-Codeblöcke in {count} Notizen' },
+		skipped: { one: '{count} Eintrag wurde übersprungen, siehe die Entwicklerkonsole.', other: '{count} Einträge wurden übersprungen, siehe die Entwicklerkonsole.' },
+	},
 	api: {
 		requestFailed: 'Anfrage fehlgeschlagen; prüfe deine Verbindung.',
 		unknownService: 'Die API',
