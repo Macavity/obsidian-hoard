@@ -1,6 +1,6 @@
 import { setIcon } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
-import { statusLabel, typeLabel } from './i18n/labels';
+import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardGroup, TagDefinition, SavedFilterPreset, Season } from './types';
@@ -1827,7 +1827,7 @@ export class ListTab {
 		const colPriority = row.createDiv({ cls: 'hoard-col-priority' });
 		if (title.priority) {
 			const priorityDef = this.getTagDef(title.priority, this.plugin.settings.priorities);
-			const pBadge = colPriority.createSpan({ cls: 'hoard-priority-badge', text: title.priority });
+			const pBadge = colPriority.createSpan({ cls: 'hoard-priority-badge', text: priorityLabel(title.priority) });
 			if (priorityDef) pBadge.style.color = priorityDef.color;
 		}
 
@@ -2019,7 +2019,7 @@ export class ListTab {
 		const highestPriority = this.getGroupHighestPriority(members);
 		if (highestPriority) {
 			const pDef = this.getTagDef(highestPriority, this.plugin.settings.priorities);
-			const pBadge = colGrpPriority.createSpan({ cls: 'hoard-priority-badge', text: highestPriority });
+			const pBadge = colGrpPriority.createSpan({ cls: 'hoard-priority-badge', text: priorityLabel(highestPriority) });
 			if (pDef) pBadge.style.color = pDef.color;
 		}
 
@@ -2482,7 +2482,7 @@ export class ListTab {
 		// blank option clears the priority
 		prioritySelect.createEl('option', { text: t('list.footer.noPriority'), value: '' });
 		for (const p of this.plugin.settings.priorities) {
-			const opt = prioritySelect.createEl('option', { text: p.name, value: p.name });
+			const opt = prioritySelect.createEl('option', { text: priorityLabel(p.name), value: p.name });
 			if (p.name === title.priority) opt.selected = true;
 		}
 		prioritySelect.addEventListener('click', (e) => e.stopPropagation());
