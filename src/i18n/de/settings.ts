@@ -378,11 +378,8 @@ const settings = {
 				historyInvalid: 'Aktivitätsprotokoll ist keine Liste.',
 				localInvalid: 'lokale Einstellungen sind ungültig.',
 				unsupportedFormat: 'nicht unterstütztes Format.',
-				watchMissing: 'Titel, Gruppen oder Einstellungen fehlen in den Watchlist-Daten.',
 			},
-			confirmWatchLog: 'Dies ist ein WatchLog-Backup (v1–v3). Importieren? Fehlende Notizen werden angelegt und fehlende Notiz-Eigenschaften ergänzt; vorhandene Werte bleiben erhalten.',
 			confirm: 'Das stellt das Backup in deinem Vault wieder her: Fehlende Notizen werden angelegt, die geteilten Einstellungen, Geräteeinstellungen (inklusive API-Schlüssel) und der Verlauf werden ersetzt. Vorhandene Notizen bleiben erhalten. Fortfahren?',
-			failed: 'Backup-Import fehlgeschlagen: {errors}',
 			done: 'Backup erfolgreich wiederhergestellt.',
 		},
 		regenerate: {

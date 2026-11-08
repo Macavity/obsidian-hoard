@@ -2,10 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { LocalStore } from '../../src/storage/LocalStore';
 const plugin = (data: unknown) => { const p = { data, loadData: () => Promise.resolve(p.data), saveData: (d: unknown) => { p.data = d; return Promise.resolve(); } }; return p; };
 describe('LocalStore', () => {
-	it('detects schema 1', async () => {
-		const r = await new LocalStore(plugin({ titles: [], groups: [], settings: {} })).load();
-		expect(r.schema).toBe(1);
-	});
 	it('initialises empty data as schema 2', async () => {
 		const p = plugin(null); const s = new LocalStore(p);
 		expect((await s.load()).schema).toBe(2);
@@ -20,16 +16,14 @@ describe('LocalStore', () => {
 		s.deleteCache('Movie/B'); await s.flush();
 		expect((p.data as { cache: object }).cache).toEqual({});
 	});
-	it('keeps schema-1 data untouched until adoptV2', async () => {
+	it('treats schema-1 data as empty and never overwrites it', async () => {
 		const data = { titles: [], groups: [], settings: {} };
 		const p = plugin(data); const s = new LocalStore(p);
-		const r = await s.load();
-		expect(r).toEqual({ schema: 1, data });
+		expect(await s.load()).toEqual({ schema: 2 });
+		expect(s.isWritable).toBe(false);
 		s.setCache('Movie/A', { posterUrl: 'u' });
 		await s.flush();
 		expect(p.data).toBe(data);
-		await s.adoptV2({ schemaVersion: 2, settings: {}, cache: {}, ui: {} });
-		expect(p.data).toMatchObject({ schemaVersion: 2 });
 	});
 	it('never writes a data.json from a newer version', async () => {
 		const newer = { schemaVersion: 3, settings: { x: 1 } };

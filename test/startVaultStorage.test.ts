@@ -14,9 +14,8 @@ interface Harness {
 
 interface Opts {
 	bases?: Record<string, string>;
-	pending?: unknown;
 	filter?: 'ok' | 'missing';
-	failAt?: 'migrate' | 'index';
+	failAt?: 'index';
 }
 
 function harness(o: Opts = {}): Harness {
@@ -27,9 +26,7 @@ function harness(o: Opts = {}): Harness {
 	const plugin = Object.create(HoardPlugin.prototype) as Record<string, unknown>;
 	Object.assign(plugin, {
 		settings: { types: [{ name: 'Movie' }] },
-		pendingSchema1: o.pending ?? null,
 		app: { vault: { getFiles: () => files, cachedRead: (f: { path: string }) => Promise.resolve(o.bases?.[f.path] ?? '') } },
-		migrateWatchLog: o.failAt === 'migrate' ? () => Promise.reject(new Error('boom')) : track('migrate'),
 		applySharedSettings: track('applySettings'),
 		adoptSyncedBase: h.adopt,
 		shared: {
@@ -72,7 +69,7 @@ describe('startVaultStorage', () => {
 		expect(h.layoutRoot()).toBe('Lib');
 		expect(h.deferred).toBeNull();
 		expect(h.calls).toEqual([
-			'migrate', 'shared.load', 'applySettings', 'shared.onChange', 'ensureFilter', 'shared.start',
+			'shared.load', 'applySettings', 'shared.onChange', 'ensureFilter', 'shared.start',
 			'index.build', 'sweepCache', 'index.start', 'history.start', 'dm.init', 'rdm.init', 'gdm.init', 'ensureFolders',
 		]);
 		expect((h.plugin as unknown as { indexReady: boolean }).indexReady).toBe(true);
@@ -101,20 +98,10 @@ describe('startVaultStorage', () => {
 		expect(h.calls).toContain('ensureBase');
 	});
 
-	it('uses the WatchLog root while its schema-1 data awaits conversion', async () => {
-		const h = harness({ pending: { settings: { rootFolder: 'Legacy' } } });
-		await start(h);
-		expect(h.layoutRoot()).toBe('Legacy');
-		expect(h.deferred).toBeNull();
-	});
-
 	it('reports a failed start without throwing', async () => {
 		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-		for (const failAt of ['migrate', 'index'] as const) {
-			Notice.shown.length = 0;
-			await start(harness({ bases: { 'a/Hoard.base': 'hoard: {}\n' }, failAt }));
-			expect(Notice.shown).toHaveLength(1);
-		}
-		expect(err).toHaveBeenCalledTimes(2);
+		await start(harness({ bases: { 'a/Hoard.base': 'hoard: {}\n' }, failAt: 'index' }));
+		expect(Notice.shown).toHaveLength(1);
+		expect(err).toHaveBeenCalledTimes(1);
 	});
 });

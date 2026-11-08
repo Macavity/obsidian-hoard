@@ -1,11 +1,9 @@
-import type { EntryAirtime, GamesData, ReadingData, RecommendedDaily } from '../../types';
+import type { EntryAirtime, GamesData, ReadingData } from '../../types';
 import { toEntryAirtime } from '../../DataManager';
 import type { HistoryEntry } from '../../HistoryManager';
-import { SHARED_SETTING_KEYS, splitNested } from '../../storage/SharedConfigStore';
 import { historyKey, type HistoryStore } from '../../storage/HistoryStore';
-import type { EntryCache, LocalData } from '../../storage/storageTypes';
 import { isoOf } from './schema1Normalize';
-import { REMOVED_SETTINGS, WISHLIST, isRecord, type IdMaps, type WatchLogData } from './schema1Types';
+import { isRecord, type IdMaps, type WatchLogData } from './schema1Types';
 
 /** WatchLog's history plus one `group-created` per group; events already in History.md are skipped. */
 export async function importHistory(history: HistoryStore, data: WatchLogData, ids: IdMaps): Promise<void> {
@@ -50,52 +48,6 @@ export async function importHistory(history: HistoryStore, data: WatchLogData, i
 		})
 		.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 	await history.appendMany(fresh);
-}
-
-/** The schema-2 data.json: device-local settings, cache and UI state with ids translated to note ids. */
-export function buildLocalData(data: WatchLogData, ids: IdMaps, cache: Record<string, EntryCache>): LocalData {
-	const settings: Record<string, unknown> = {};
-	for (const [k, v] of Object.entries(data.settings)) {
-		if (!SHARED_SETTING_KEYS.includes(k) && !REMOVED_SETTINGS.includes(k)) settings[k] = v;
-	}
-	// 'Wishlist' is a flag now; a stored exclude would linger as a filter without a checkbox
-	const filters = settings.gamesFilters;
-	if (isRecord(filters) && Array.isArray(filters.statusExclude)) {
-		filters.statusExclude = (filters.statusExclude as unknown[]).filter((n) => n !== WISHLIST);
-	}
-
-	const translate = (map: Map<string, string>, ids: unknown): string[] =>
-		(Array.isArray(ids) ? ids : []).flatMap((id) => {
-			const next = typeof id === 'string' ? map.get(id) : undefined;
-			return next === undefined ? [] : [next];
-		});
-	const daily = (rec: RecommendedDaily | undefined, map: Map<string, string>): RecommendedDaily | undefined =>
-		isRecord(rec) ? { date: typeof rec.date === 'string' ? rec.date : '', ids: translate(map, rec.ids) } : undefined;
-
-	const ui: LocalData['ui'] & { gamesRecommendedDaily?: RecommendedDaily } = {};
-	if (typeof data.pinnedGroupId === 'string') ui.pinnedGroup = ids.group.get(data.pinnedGroupId) ?? null;
-	if (data.savedFilterPreset !== undefined) ui.savedFilterPreset = data.savedFilterPreset;
-	const recommended = daily(data.recommendedDaily, ids.title);
-	if (recommended) ui.recommendedDaily = recommended;
-	const gamesRecommended = daily(data.games?.recommendedDaily, ids.game);
-	if (gamesRecommended) ui.gamesRecommendedDaily = gamesRecommended;
-	const collapsed = (data as { collapsedSeasons?: unknown }).collapsedSeasons;
-	if (isRecord(collapsed)) {
-		const out: Record<string, number[]> = {};
-		for (const [id, seasons] of Object.entries(collapsed)) {
-			const next = ids.title.get(id);
-			if (next !== undefined && Array.isArray(seasons)) out[next] = seasons as number[];
-		}
-		ui.collapsedSeasons = out;
-	}
-
-	const local: LocalData = { schemaVersion: 2, settings, cache: cache, ui };
-	// the device-local half of the reading / games settings (colors, layouts, saved filters)
-	const reading = data.reading as ReadingData;
-	local.reading = splitNested('reading', { ...reading.settings }).local;
-	local.games = splitNested('games', { ...(data.games as GamesData).settings }).local;
-	if (data.drafts) local.drafts = data.drafts;
-	return local;
 }
 
 /** Group names per `<kind>:<WatchLog id>`; fills `ids.group` on the way. */

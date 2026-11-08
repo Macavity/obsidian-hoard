@@ -1,6 +1,5 @@
 import { TFile, type App } from 'obsidian';
 import type { YamlIO } from '../../storage/storageTypes';
-import { ensureFolder } from './schema1Folders';
 import { isRecord, type Fm, type Schema1Report } from './schema1Types';
 
 const FM_RE = /^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(\r?\n|$)/;
@@ -11,6 +10,16 @@ export const sameValue = (a: unknown, b: unknown): boolean => {
 	const norm = (v: unknown): string => JSON.stringify(Array.isArray(v) ? v.map(scalar) : scalar(v));
 	return norm(a) === norm(b);
 };
+
+/** Creates a folder unless it exists (or another writer created it meanwhile). */
+export async function ensureFolder(app: App, path: string): Promise<void> {
+	if (!path || app.vault.getAbstractFileByPath(path)) return;
+	try {
+		await app.vault.createFolder(path);
+	} catch {
+		// created concurrently
+	}
+}
 
 /** Creates notes or fills the keys they lack; existing values are never overwritten. */
 export class NoteWriter {

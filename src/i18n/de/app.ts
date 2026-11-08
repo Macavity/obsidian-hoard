@@ -41,7 +41,6 @@ const app = {
 		newerSchema: 'Hoard: data.json stammt von einer neueren Plugin-Version. Geräteeinstellungen werden erst nach einem Update gespeichert.',
 		baseFilterMissing: 'Hoard: Der Ordnerfilter in {file} wurde nicht gefunden; die Base-Ansicht zeigt eventuell andere Notizen.',
 		loadFailed: 'Hoard konnte seine Notizen nicht laden. Details stehen in der Entwicklerkonsole.',
-		watchLogEnabled: 'WatchLog ist noch aktiv. Deaktiviere es, sonst schreiben beide Plugins dieselben Notizen.',
 		noTitles: 'Noch keine Titel in deiner Hoard-Bibliothek.',
 	},
 } satisfies DeepPartial<typeof enApp>;

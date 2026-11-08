@@ -11,21 +11,14 @@ const storageFiles = readdirSync(join(root, 'src/storage'))
 	.filter((f) => f.endsWith('.ts'))
 	.map((f) => `src/storage/${f}`);
 
-// @types/node here has no readdirSync({ recursive }), so subfolders are walked explicitly.
-function tsFilesUnder(dir: string): string[] {
-	return readdirSync(join(root, dir), { withFileTypes: true }).flatMap((e) => {
-		const rel = `${dir}/${e.name}`;
-		if (e.isDirectory()) return tsFilesUnder(rel);
-		return e.name.endsWith('.ts') ? [rel] : [];
-	});
-}
-
-// Only the WatchLog migration's Notices are translated; the rest of src/migration stays i18n-free.
-const migrationFiles = tsFilesUnder('src/migration').filter((f) => f !== 'src/migration/watchlog/index.ts');
+// the WatchLog import writes notes; its UI texts live in the onboarding modal only
+const importFiles = readdirSync(join(root, 'src/import/watchlog'))
+	.filter((f) => f.endsWith('.ts'))
+	.map((f) => `src/import/watchlog/${f}`);
 
 const files = [
 	...storageFiles,
-	...migrationFiles,
+	...importFiles,
 	'src/types.ts',
 	'src/DataManager.ts',
 	'src/ReadingDataManager.ts',

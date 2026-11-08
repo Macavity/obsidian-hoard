@@ -24,9 +24,6 @@ import { WidgetRenderer } from './WidgetRenderer';
 import { HoardSettingsTab } from './SettingsTab';
 import { AirtimeTab } from './AirtimeTab';
 import { runAirtimeScheduler } from './airtimeScheduler';
-import {
-	WATCHLOG_PLUGIN_IDS, loadOwnOrWatchLog, migrateFromWatchLog, watchLogRoot, type WatchLogData, type WatchLogSource,
-} from './migration/watchlog';
 import type { BackupManagers } from './backup';
 import { composeSettings, persistSettings } from './settingsSplit';
 import { resolveJikanEndpoint } from './jikanBase';
@@ -36,22 +33,11 @@ const DEFAULT_ROOT = 'Hoard';
 
 export default class HoardPlugin extends Plugin {
 	settings: HoardPluginSettings = DEFAULT_SETTINGS;
-	// schema-1 data.json awaiting conversion into notes; LocalStore never writes data.json meanwhile
-	private pendingSchema1: WatchLogData | null = null;
-	// set when data.json was taken over from a WatchLog plugin
-	private adoptedFrom: WatchLogSource | null = null;
 	private indexReady = false;
 	private typeNamesKey: string | null = null;
 	private layout = new VaultLayout(DEFAULT_ROOT, () => this.settings.types.map((t) => t.name));
 	private local = new LocalStore({
-		loadData: async () => {
-			const loaded = await loadOwnOrWatchLog(() => this.loadData(), {
-				configDir: this.app.vault.configDir,
-				adapter: this.app.vault.adapter,
-			});
-			this.adoptedFrom = loaded.source ?? null;
-			return loaded.raw;
-		},
+		loadData: () => this.loadData(),
 		saveData: (d) => this.saveData(d),
 	});
 	private yaml = { parse: parseYaml, stringify: stringifyYaml };
@@ -107,13 +93,9 @@ export default class HoardPlugin extends Plugin {
 	async onload(): Promise<void> {
 		setLocale(getLanguage());
 		const loaded = await this.local.load();
-		if (loaded.schema === 1) {
-			// converted in startVaultStorage, once the vault is ready; until then its settings act as local
-			this.pendingSchema1 = loaded.data;
-		} else if (loaded.schema === 'newer') {
+		if (loaded.schema === 'newer') {
 			new Notice(t('app.notices.newerSchema'), 0);
 		}
-		this.warnIfWatchLogEnabled();
 		// local + defaults only; shared keys are re-composed once the base is loaded (startVaultStorage)
 		await this.loadSettings();
 		// the card-size CSS var must be live before any view or modal renders a grid
@@ -234,19 +216,14 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/**
-	 * Migrates a WatchLog vault once, locates the root (folder of the first `.base` with a `hoard:`
+	 * Locates the root (folder of the first `.base` with a `hoard:`
 	 * key), defers the base on a fresh install, loads the shared config and builds the entry index.
 	 */
 	private async startVaultStorage(): Promise<void> {
 		try {
-			await this.migrateWatchLog();
 			const root = await detectRoot(this.app.vault);
-			const pending = this.pendingSchema1;
-			this.layout = new VaultLayout(
-				root ?? (pending ? watchLogRoot(pending) : DEFAULT_ROOT),
-				() => this.settings.types.map((t) => t.name),
-			);
-			if (root === null && !pending) {
+			this.layout = new VaultLayout(root ?? DEFAULT_ROOT, () => this.settings.types.map((t) => t.name));
+			if (root === null) {
 				// fresh install (or base not synced yet): no base until the first write; a synced one is adopted
 				this.shared.deferBase({
 					create: async () => {
@@ -304,33 +281,6 @@ export default class HoardPlugin extends Plugin {
 		this.typeNamesKey = key;
 		if (!changed || !this.indexReady) return;
 		void this.index.rebuild().then(() => activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed')));
-	}
-
-	/** Both plugins manage the same folders; WatchLog would keep writing from its own data.json. */
-	private warnIfWatchLogEnabled(): void {
-		const plugins = (this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } }).plugins;
-		if (WATCHLOG_PLUGIN_IDS.some((id) => plugins?.enabledPlugins?.has(id))) {
-			new Notice(t('app.notices.watchLogEnabled'), 0);
-		}
-	}
-
-	/** Base, plugin data, schema-1 data and widget code blocks of WatchLog; a failed conversion retries next start. */
-	private async migrateWatchLog(): Promise<void> {
-		const report = await migrateFromWatchLog({
-			app: this.app,
-			local: this.local,
-			yaml: this.yaml,
-			pluginDir: this.manifest.dir,
-			adopted: this.adoptedFrom,
-			schema1: this.pendingSchema1,
-			typeNames: () => this.settings.types.map((t) => t.name),
-			notify: (n) => this.notifyManager(n),
-		});
-		this.adoptedFrom = null;
-		if (report?.schema1 && report.schema1.errors.length === 0) {
-			this.pendingSchema1 = null;
-			await this.loadSettings();
-		}
 	}
 
 	/** Everything backup export and restore need. */
@@ -453,12 +403,7 @@ export default class HoardPlugin extends Plugin {
 
 	/** Composes settings from defaults, data.json and the shared base (shared keys win). */
 	loadSettings(): Promise<void> {
-		// a schema-1 data.json is not converted yet: its settings are the local part until then
-		const localSettings = this.pendingSchema1?.settings ?? this.local.data.settings;
-		this.settings = composeSettings(
-			localSettings,
-			this.shared.get().settings,
-		);
+		this.settings = composeSettings(this.local.data.settings, this.shared.get().settings);
 		// mirror into types.ts so the pure formatters render in the chosen order without a settings ref
 		setActiveDateFormat(this.settings.dateFormat);
 		this.syncTypeNames();
