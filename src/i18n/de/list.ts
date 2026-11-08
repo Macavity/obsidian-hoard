@@ -118,8 +118,8 @@ const list = {
 		clearAll: 'Alle Episoden dieser Staffel zurücksetzen',
 		markAll: 'Alle Episoden dieser Staffel als gesehen markieren',
 	},
-	episode: 'Episode {num}',
-	episodeSkipped: 'Episode {num} (übersprungen)',
+	episode: 'Folge {num}',
+	episodeSkipped: 'Folge {num} (übersprungen)',
 	footer: {
 		rating: 'Bewertung',
 		addNote: 'Notiz hinzufügen...',

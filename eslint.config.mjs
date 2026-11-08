@@ -16,7 +16,7 @@ const sentenceCaseOptions = {
       "Drafts", "Books", "Manga", "Games",
       "Quotes", "Regenerate", "Settings",
       // External services / acronyms not in the rule defaults
-      "Google", "MAL", "TSV", "URLs", "APIs", "Steam", "Tenrai", "English",
+      "Google", "MAL", "TSV", "URLs", "APIs", "Steam", "Tenrai",
       // Stored type name, Steam's privacy option and the default rating-tier label
       "Book", "Public", "Good",
       // API provider names (proper nouns)
