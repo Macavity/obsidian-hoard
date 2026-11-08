@@ -1,0 +1,351 @@
+/* Reading tab */
+/* ══ READING TAB ══ */
+
+.hoard-reading-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hoard-reading-filter-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 14px;
+  text-align: center;
+}
+
+/* Sub-tab bar */
+.hoard-reading-subtabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+  margin: 8px -2px 0;
+}
+
+.hoard-reading-subtab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+}
+
+.hoard-reading-subtab:hover {
+  color: var(--text-normal);
+}
+
+.hoard-reading-subtab.is-active {
+  color: #1D9E75;
+  border-bottom-color: #1D9E75;
+}
+
+/* Toolbar */
+.hoard-reading-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hoard-reading-search-wrap {
+  flex: 1;
+  min-width: 0;
+  max-width: 240px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hoard-reading-search-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 6px 26px 6px 10px;
+  border-radius: 5px;
+  border: 0.5px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  box-sizing: border-box;
+}
+
+.hoard-reading-search-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+/* clear (X) inside the search box — shown only when the input has text */
+.hoard-search-clear {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.hoard-search-clear.is-visible {
+  display: flex;
+}
+
+.hoard-search-clear:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.hoard-search-clear .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.hoard-reading-add-btn {
+  /* color via .hoard-btn-success */
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+}
+
+.hoard-reading-manage-btn {
+  padding: 4px 8px;
+  font-size: 14px;
+}
+
+/* Card grid (placeholder for Phase 2 cards) */
+.hoard-reading-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hoard-reading-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--hoard-card-min-width, 160px), 1fr));
+  gap: 12px;
+}
+
+/* Empty state */
+.hoard-reading-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.hoard-reading-empty-icon {
+  font-size: 2.5rem;
+  opacity: 0.6;
+}
+
+.hoard-reading-empty-msg {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.hoard-reading-empty-link {
+  color: var(--interactive-accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.hoard-reading-empty-link:hover {
+  filter: brightness(1.15);
+}
+
+.hoard-reading-empty-search {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Reading cards */
+.hoard-reading-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px;
+  transition: background 0.15s;
+}
+
+.hoard-reading-card:hover {
+  background: var(--background-modifier-hover);
+}
+
+.hoard-reading-card-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 5px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-secondary);
+}
+
+.hoard-reading-card-cover.is-loading {
+  animation: hoard-poster-pulse 1.5s ease-in-out infinite;
+}
+
+.hoard-reading-card-cover-img {
+  /* absolutely fill the 2:3 cover box so a lazy cover causes zero layout shift */
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hoard-reading-card-cover-icon {
+  font-size: 2.5rem;
+  opacity: 0.75;
+}
+
+.hoard-reading-card-status-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 0.6rem;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #fff;
+}
+
+.hoard-reading-card-title {
+  margin-top: 4px;
+  font-weight: 600;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-reading-card-author {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-reading-card-progress-bar {
+  margin-top: 4px;
+  width: 100%;
+  height: 3px;
+  background: var(--background-modifier-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hoard-reading-card-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.hoard-reading-card-progress-text {
+  display: flex;
+  gap: 8px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-reading-card-progress-piece {
+  white-space: nowrap;
+}
+
+/* Reading cards, text-inside mode — title/author/progress overlay inside the cover
+   (base box shared with .hoard-card-overlay in collections.css) */
+.hoard-reading-card-overlay .hoard-reading-card-title {
+  margin-top: 0;
+  color: #fff;
+}
+
+.hoard-reading-card-overlay .hoard-reading-card-author {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.hoard-reading-card-overlay .hoard-reading-card-progress-bar {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.hoard-reading-card-overlay .hoard-reading-card-progress-text {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Reading virtual scroll */
+.hoard-reading-scroll-container {
+  position: relative;
+  width: 100%;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.hoard-reading-grid.hoard-reading-grid-virtual {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--hoard-reading-cols, 1), 1fr);
+  /* pin rows to the virtual-scroll height, same as the Cards grid */
+  grid-auto-rows: var(--hoard-reading-card-height, auto);
+  align-content: start;
+  gap: 12px;
+  /* inline padding-top, NOT translateY (Chromium CLS pitfall — see VirtualGrid.update) */
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.hoard-reading-grid.hoard-reading-grid-virtual .hoard-reading-card {
+  width: 100%;
+  height: var(--hoard-reading-card-height, auto);
+  overflow: hidden;
+}
+
+.hoard-reading-grid.hoard-reading-grid-virtual .hoard-reading-card-cover {
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+/* in a Rows strip the card takes --hoard-rows-card-width instead of a grid track */
+.hoard-rows-strip .hoard-reading-card {
+  flex: 0 0 var(--hoard-rows-card-width, 160px);
+  width: var(--hoard-rows-card-width, 160px);
+}
+

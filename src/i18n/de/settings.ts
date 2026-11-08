@@ -17,6 +17,7 @@ const settings = {
 		main: 'Haupteinstellungen',
 	},
 	about: 'Über {label}',
+	colorFor: 'Farbe für {name}',
 	progress: {
 		done: 'Fertig',
 		cancelled: 'Abgebrochen',
@@ -174,6 +175,7 @@ const settings = {
 			label: 'Bewertungssystem',
 			help: 'Farbe und Text jeder Sternebewertung in Watchlist, Lesen und Spiele. Ein ganzer Stern teilt sich eine Stufe mit dem halben Schritt darunter; z. B. gehören 2,5★ und 3★ beide zu "Good".',
 			labelAria: 'Beschriftung für {tier}-Sterne-Bewertung',
+			colorAria: 'Farbe für {tier}-Sterne-Bewertung',
 		},
 		season: {
 			label: 'Staffelfarben',

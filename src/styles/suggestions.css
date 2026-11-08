@@ -1,0 +1,61 @@
+/* Dashboard suggestions */
+/* ══ SUGGESTIONS SECTION (Dashboard) ══ */
+
+.hoard-suggestions {
+  margin-bottom: 16px;
+}
+
+.hoard-suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.hoard-suggestion-card {
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--background-secondary);
+}
+
+.hoard-suggestion-label {
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.hoard-suggestion-title {
+  font-size: 13px;
+  color: var(--text-normal);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.hoard-suggestion-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.hoard-suggestion-random-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.hoard-suggestion-shuffle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.hoard-suggestion-shuffle:hover {
+  opacity: 1;
+}
+

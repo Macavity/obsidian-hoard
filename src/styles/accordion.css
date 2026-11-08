@@ -1,0 +1,438 @@
+/* List accordion rows */
+/* ══ ACCORDION ══ */
+
+.hoard-accordion {
+  padding: 12px 10px;
+  background: var(--background-primary-alt);
+  border-bottom: 0.5px solid var(--background-modifier-border);
+}
+
+/* Accordion header */
+.hoard-accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+.hoard-acc-header-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.hoard-acc-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hoard-acc-header-right {
+  flex-shrink: 0;
+  text-align: right;
+  min-width: 70px;
+}
+
+.hoard-acc-percent {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hoard-acc-progress-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.hoard-acc-progress-wrap {
+  height: 3px;
+  background: var(--background-modifier-border);
+  border-radius: 2px;
+  overflow: hidden;
+  width: 70px;
+}
+
+/* Accordion body */
+.hoard-accordion-body {
+  margin-bottom: 12px;
+}
+
+/* Season */
+.hoard-season-wrap {
+  margin-bottom: 10px;
+}
+
+.hoard-season-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 0;
+  user-select: none;
+}
+
+.hoard-season-header:hover {
+  opacity: 0.85;
+}
+
+.hoard-season-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.hoard-season-ep-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+/* Episode grid */
+.hoard-episode-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0;
+}
+
+.hoard-episode-box {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 0.5px solid var(--background-modifier-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.hoard-episode-box:hover {
+  border-color: var(--interactive-accent);
+  color: var(--text-normal);
+}
+
+.hoard-episode-box.is-watched {
+  background: var(--hoard-watched-color);
+  border-color: var(--hoard-watched-color);
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.hoard-episode-box.is-skipped {
+  border-color: #6b2972;
+  color: #6b2972;
+  font-size: 14px;
+}
+
+/* Watched + skipped: keep watched background, override border to purple */
+.hoard-episode-box.is-watched.is-skipped {
+  border-color: #6b2972;
+}
+
+/* Season fill/clear button */
+.hoard-season-fill-btn {
+  width: 20px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.hoard-season-fill-btn.is-fill {
+  background: #1D9E75;
+  border: 0.5px solid #1D9E75;
+  color: #ffffff;
+}
+
+.hoard-season-fill-btn.is-clear {
+  background: #E24B4A;
+  border: 0.5px solid #E24B4A;
+  color: #ffffff;
+}
+
+.hoard-season-fill-btn:hover {
+  opacity: 0.75;
+}
+
+/* Movie row */
+.hoard-movie-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+/* detail-modal stand-in for the movie checkbox; green once watched */
+.hoard-mark-watched-btn {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  background: transparent;
+  border: 0.5px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  box-shadow: none;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.hoard-mark-watched-btn:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--background-modifier-border-hover);
+  color: var(--text-normal);
+}
+
+.hoard-mark-watched-btn.is-watched {
+  background: transparent;
+  border-color: rgba(var(--color-green-rgb), 0.65);
+  color: var(--color-green);
+}
+
+/* watched hover fills green */
+.hoard-mark-watched-btn.is-watched:hover {
+  background: var(--color-green);
+  border-color: var(--color-green);
+  color: var(--text-on-accent);
+}
+
+/* Accordion footer */
+.hoard-accordion-footer {
+  border-top: 0.5px solid var(--background-modifier-border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hoard-stars-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* the mobile detail modal widens date-field labels via --hoard-stars-label-width */
+.hoard-stars-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  width: var(--hoard-stars-label-width, 48px);
+  flex-shrink: 0;
+}
+
+.hoard-stars {
+  display: flex;
+  gap: 3px;
+}
+
+.hoard-star {
+  font-size: 18px;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: color 0.12s;
+  line-height: 1;
+}
+
+.hoard-star:hover,
+.hoard-star.is-active {
+  color: var(--hoard-rating-color);
+}
+
+/* Shared star-rating control (StarRating.ts) */
+/* JS drives hover via is-active/is-half, so kill the CSS :hover here */
+/* doubled class beats any caller class regardless of order */
+.hoard-star-rating.hoard-star-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hoard-star-rating-stars {
+  display: inline-flex;
+  gap: 3px;
+}
+
+/* tier text; JS sets the color */
+.hoard-star-rating-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.hoard-star-rating-label.is-unrated {
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.hoard-star-rating .hoard-star {
+  position: relative;
+}
+
+.hoard-star-rating .hoard-star:hover {
+  color: var(--text-faint);
+}
+
+/* same specificity as the :hover kill above and later, so it wins while hovered too */
+.hoard-star-rating .hoard-star.is-active {
+  color: var(--hoard-rating-color);
+}
+
+/* half star: clipped overlay glyph over a faint base (is-half is only set by StarRating) */
+.hoard-star.is-half::after {
+  content: '★';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  overflow: hidden;
+  color: var(--hoard-rating-color);
+}
+
+/* Rating system (Settings → Customize) */
+.hoard-rating-tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.hoard-rating-tier-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* static preview; stars are direct children, so restate the gap */
+.hoard-rating-tier-preview {
+  pointer-events: none;
+  flex-shrink: 0;
+  gap: 3px;
+}
+
+.hoard-rating-tier-preview .hoard-star {
+  font-size: 15px;
+  cursor: default;
+}
+
+.hoard-rating-tier-label {
+  flex: 1;
+  min-width: 0;
+  max-width: 200px;
+}
+
+.hoard-footer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hoard-footer-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 80px;
+  flex-shrink: 0;
+}
+
+/* second label hugs its text */
+.hoard-footer-label-auto {
+  width: auto;
+}
+
+/* Date field (label + Today + input) */
+/* shared by the detail modal and the List expanded footer */
+.hoard-date-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+/* fits dd/mm/yyyy */
+.hoard-date-input {
+  box-sizing: border-box;
+  width: calc(10ch + 13px);
+  flex-shrink: 0;
+}
+
+/* wrap to two lines in a narrow sidebar */
+.hoard-footer-row-pair {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.hoard-notes-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.hoard-footer-date {
+  padding: 3px 6px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.hoard-footer-today-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+
+.hoard-footer-today-btn.is-dimmed {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.hoard-footer-action-row {
+  margin-top: 4px;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+.hoard-edit-btn {
+  padding: 3px 10px;
+  background: transparent;
+  border: 0.5px solid var(--color-cyan);
+  color: var(--text-normal);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.hoard-edit-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.hoard-delete-btn {
+  /* color via .hoard-btn-danger */
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+

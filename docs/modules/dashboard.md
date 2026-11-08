@@ -6,7 +6,7 @@ source:
   - src/DashboardTab.ts
   - src/HoardView.ts
   - src/DataManager.ts
-  - styles.css
+  - src/styles/dashboard.css
 source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
 ---
 
@@ -40,7 +40,7 @@ the reading aggregates once, then draws cards, "More statistics", suggestions an
 ## Mobile
 
 The TypeScript has no platform branch. `HoardView` toggles `hoard-mobile` from `Platform.isMobile`;
-in `styles.css` the desktop grid is a fixed three columns, the mobile grid is `auto-fit` and a
+in [dashboard.css](../../src/styles/dashboard.css) the desktop grid is a fixed three columns, the mobile grid is `auto-fit` and a
 container-query context (`hoard-dash`) under which the unified card re-flows.
 
 ## Where to change what
@@ -51,4 +51,4 @@ container-query context (`hoard-dash`) under which the unified card re-flows.
 | Reading ring maths | `aggregateBooks`, `aggregateManga`, `bookPageEquivalents` in `types.ts` |
 | Time totals | `calcTimeWatched`, `calcTimeRemaining` in `DataManager.ts` |
 | A new statistic | `renderStatsContent`, extend `StatItem` if needed |
-| Mobile layout | `.hoard-mobile` and `@container hoard-dash` rules in `styles.css` |
+| Mobile layout | `.hoard-mobile` and `@container hoard-dash` rules in `src/styles/dashboard.css` |

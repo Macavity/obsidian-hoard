@@ -1,0 +1,404 @@
+/* Reading detail modal */
+/* Reading detail modal */
+.hoard-reading-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hoard-reading-detail-header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.hoard-reading-detail-cover {
+  position: relative;
+  width: 90px;
+  aspect-ratio: 2 / 3;
+  flex-shrink: 0;
+  border-radius: 5px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-secondary);
+}
+
+.hoard-reading-detail-cover-icon {
+  font-size: 2.2rem;
+  opacity: 0.75;
+}
+
+.hoard-reading-detail-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-normal);
+}
+
+.hoard-reading-detail-author {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.hoard-reading-detail-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.hoard-reading-detail-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* colour dot inside the pill (Games) */
+.hoard-detail-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  flex-shrink: 0;
+}
+
+.hoard-detail-priority-empty .hoard-detail-status-dot {
+  background: var(--text-faint);
+}
+
+/* placeholder priority pill, muted */
+.hoard-detail-priority-empty {
+  background-color: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.hoard-reading-detail-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.hoard-reading-external-link-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hoard-reading-external-link-input {
+  flex: 1;
+  min-width: 160px;
+  font-size: 12px;
+}
+
+.hoard-reading-detail-vault-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.hoard-reading-detail-vault-path {
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.hoard-reading-detail-vault-empty {
+  font-style: italic;
+}
+
+/* Detail progress */
+.hoard-reading-detail-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hoard-reading-arc-row {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.hoard-reading-arc-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 110px;
+}
+
+/* words mode: 6-digit counters need more room */
+.hoard-reading-arc-col-wide {
+  min-width: 150px;
+}
+
+.hoard-reading-arc-col-wide .hoard-reading-arc-input {
+  width: 74px;
+}
+
+.hoard-reading-arc-col-wide .hoard-reading-arc-total-input {
+  width: 70px;
+}
+
+.hoard-reading-arc-svg-wrap {
+  width: 100px;
+  height: 56px;
+  overflow: hidden;
+}
+
+.hoard-reading-arc-svg {
+  width: 100px;
+  height: 100px;
+  display: block;
+}
+
+.hoard-reading-arc-pct {
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--text-normal);
+}
+
+.hoard-reading-arc-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hoard-reading-step-btn {
+  min-width: 32px;
+  padding: 2px 8px;
+}
+
+.hoard-reading-arc-input {
+  width: 52px;
+  text-align: center;
+}
+
+.hoard-reading-arc-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.hoard-reading-arc-total-input {
+  width: 48px;
+  text-align: center;
+}
+
+/* Detail details grid */
+.hoard-reading-detail-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hoard-reading-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+}
+
+.hoard-reading-detail-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ADDED + RELEASE share one grid cell so the modal keeps its height. */
+.hoard-reading-detail-cell-pair {
+  flex-direction: row;
+  gap: 16px;
+}
+
+.hoard-reading-detail-pair-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hoard-reading-detail-cell-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.hoard-reading-detail-cell-value {
+  font-size: 13px;
+  color: var(--text-normal);
+}
+
+.hoard-reading-detail-link {
+  color: var(--interactive-accent);
+  text-decoration: underline;
+}
+
+.hoard-reading-detail-id-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hoard-reading-detail-id-edit {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  min-width: 0;
+  line-height: 1.6;
+}
+
+/* Inline-editable title / author */
+.hoard-reading-detail-title-wrap {
+  line-height: 1;
+}
+
+.hoard-reading-detail-author-wrap {
+  line-height: 1;
+}
+
+/* dotted editable hint: transparent border-bottom that gains colour */
+.hoard-reading-detail-editable-text {
+  cursor: text;
+  border-bottom: 1px dotted transparent;
+}
+
+.hoard-reading-detail-editable-text:hover {
+  border-bottom-color: var(--text-faint);
+}
+
+.hoard-reading-detail-title-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--interactive-accent);
+  border-radius: 0;
+  padding: 0;
+  color: var(--text-normal);
+  outline: none;
+  box-shadow: none;
+  height: auto;
+  line-height: 1.2;
+}
+
+.hoard-reading-detail-author-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 13px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: 0;
+  padding: 0;
+  color: var(--text-muted);
+  outline: none;
+  box-shadow: none;
+  height: auto;
+}
+
+/* Inline status badge & dropdown */
+.hoard-reading-detail-status-wrap {
+  display: inline-block;
+}
+
+.hoard-reading-status-dropdown {
+  position: fixed;
+  background: var(--background-primary);
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  min-width: 148px;
+  z-index: 1000;
+}
+
+.hoard-reading-status-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-normal);
+}
+
+.hoard-reading-status-option:hover {
+  background: var(--background-modifier-hover);
+}
+
+.hoard-reading-status-option-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* neutral dot; status options set an inline background */
+  background: var(--background-modifier-border);
+}
+
+/* Editable date cells */
+.hoard-reading-detail-cell-date {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.hoard-reading-detail-today-btn {
+  font-size: 10px;
+  padding: 1px 6px;
+  line-height: 1.4;
+}
+
+.hoard-reading-detail-today-btn.is-dimmed {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.hoard-reading-detail-date-input {
+  font-size: 12px;
+  width: 88px;
+  padding: 1px 5px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 3px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  box-sizing: border-box;
+}
+
+/* Detail footer */
+.hoard-reading-detail-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--background-modifier-border);
+}
+
+.hoard-reading-detail-footer-left,
+.hoard-reading-detail-footer-right {
+  display: flex;
+  gap: 8px;
+}
+
+.hoard-reading-detail-delete {
+  /* uses .hoard-delete-btn — color via .hoard-btn-danger */
+}
+

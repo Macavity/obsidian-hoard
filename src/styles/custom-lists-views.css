@@ -1,0 +1,195 @@
+/* Custom lists tick button, cards and rows views */
+/* Feature 4: Sort direction toggle */
+.hoard-sort-dir-btn {
+  min-width: 28px;
+  padding: 3px 6px;
+  font-size: 13px;
+}
+
+/* Feature 5: Custom Lists tick button */
+.hoard-cl-th-tick,
+.hoard-cl-td-tick {
+  width: 28px;
+  max-width: 28px;
+  flex-shrink: 0;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hoard-cl-tick-btn {
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1;
+  user-select: none;
+  transition: color 0.1s;
+}
+
+.hoard-cl-tick-btn:hover { color: var(--color-green); }
+
+.hoard-cl-tick-btn.is-checked {
+  color: var(--color-green);
+  font-weight: bold;
+}
+
+/* Row scope + :hover variant outrank .hoard-cl-tr-body:hover. */
+.hoard-cl-tr-body.hoard-cl-tr-checked,
+.hoard-cl-tr-body.hoard-cl-tr-checked:hover {
+  border-left: 3px solid var(--color-green);
+  background: color-mix(in srgb, var(--color-green) 5%, transparent);
+  --hoard-cl-row-tint: linear-gradient(
+    color-mix(in srgb, var(--color-green) 5%, transparent),
+    color-mix(in srgb, var(--color-green) 5%, transparent)
+  );
+}
+
+/* doubled class outranks single-class display rules */
+.hoard-hidden.hoard-hidden { display: none; }
+
+/* Cards view */
+
+.hoard-cards-grid {
+  display: grid;
+  /* --hoard-card-min-width is the card-size setting; the JS grid math uses the same value */
+  grid-template-columns: repeat(auto-fill, minmax(var(--hoard-card-min-width, 160px), 1fr));
+  gap: 12px;
+  padding: 8px;
+}
+
+.hoard-cards-grid.hoard-cards-grid-virtual {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--hoard-cards-cols, 1), 1fr);
+  /* pin rows to the virtual-scroll height or content stretches them (CLS) */
+  grid-auto-rows: var(--hoard-card-height, auto);
+  align-content: start;
+  gap: 12px;
+  /* inline padding-top, NOT translateY — translateY made Chromium report phantom CLS */
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* direct children only: text-under cells (.hoard-card-cell, .hoard-tracker-cell) size their own card */
+.hoard-cards-grid.hoard-cards-grid-virtual > .hoard-card {
+  width: 100%;
+  height: var(--hoard-card-height, auto);
+  /* --hoard-card-height rules; cancel the 2:3 aspect-ratio or the card overflows its row (CLS) */
+  aspect-ratio: auto;
+}
+
+/* Rows view (horizontal shelves) */
+
+.hoard-rows-scroll-container {
+  width: 100%;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  /* fill remaining height */
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px;
+}
+
+.hoard-rows-shelf {
+  margin-bottom: 20px;
+}
+
+.hoard-rows-shelf-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin: 0 0 8px 2px;
+  display: flex;
+  align-items: center;
+}
+
+/* per-section select-all box, selection mode only. Tri-state: empty / dash / check */
+.hoard-shelf-select.hoard-shelf-select {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  min-width: 0;
+  margin: 0 8px 0 0;
+  padding: 0;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--background-modifier-border-hover);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-on-accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hoard-shelf-select.hoard-shelf-select:hover {
+  border-color: var(--interactive-accent);
+}
+
+.hoard-shelf-select.is-all,
+.hoard-shelf-select.is-partial {
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+}
+
+.hoard-rows-shelf-count {
+  margin-left: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.hoard-rows-shelf-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 4px 2px 8px;
+}
+
+.hoard-rows-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* room for the card's hover translateY(-2px) */
+  padding: 4px 2px 8px;
+}
+
+.hoard-rows-strip > .hoard-card,
+.hoard-rows-strip > .hoard-card-cell {
+  /* fixed-width cards so the strip scrolls; direct children only (text-under wraps the card) */
+  flex: 0 0 var(--hoard-rows-card-width, 160px);
+  width: var(--hoard-rows-card-width, 160px);
+}
+
+/* strip scrollbars hidden until hover, same size in both states so nothing shifts; webkit path
+   is for iOS */
+.hoard-rows-strip {
+  --hoard-strip-thumb: transparent;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hoard-strip-thumb) transparent;
+}
+
+/* one rule drives both scrollbar paths; focus shows it for keyboard users too */
+.hoard-rows-shelf:hover .hoard-rows-strip,
+.hoard-rows-strip:focus-within {
+  --hoard-strip-thumb: var(--scrollbar-thumb-bg);
+}
+
+.hoard-rows-strip::-webkit-scrollbar {
+  height: 8px;
+  background: transparent;
+}
+
+.hoard-rows-strip::-webkit-scrollbar-thumb {
+  background-color: var(--hoard-strip-thumb);
+  border-radius: 4px;
+}
+

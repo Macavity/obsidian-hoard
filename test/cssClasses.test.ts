@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { checkCssClasses, classesInCss, wordsInStrings } from "../scripts/lib/css-classes.mjs";
-import { runCheck } from "../scripts/check-css-classes.mjs";
+import { runCheck, unimportedPartials } from "../scripts/check-css-classes.mjs";
+import { bundleStyles } from "../scripts/lib/bundle-styles.mjs";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 describe("css class check", () => {
 	it("collects classes from selectors only", () => {
@@ -22,7 +25,19 @@ describe("css class check", () => {
 		expect(out).toEqual({ unreferenced: ["dead"], staleAllowlist: ["gone-core", "missing"] });
 	});
 
+	it("reports stylesheet partials index.css does not import", () => {
+		const index = '@import "./base.css";\n@import "list.css";\n';
+		expect(unimportedPartials(index, ["base.css", "index.css", "list.css", "orphan.css"])).toEqual(["orphan.css"]);
+	});
+
 	it("passes on the repository", () => {
-		expect(runCheck()).toEqual({ unreferenced: [], staleAllowlist: [] });
+		expect(runCheck()).toEqual({ unreferenced: [], staleAllowlist: [], unimported: [] });
+	});
+
+	it("bundles the partials in index.css order", () => {
+		const dir = join("src", "styles");
+		const order = [...readFileSync(join(dir, "index.css"), "utf8").matchAll(/^@import "(.+?)";/gm)].map((m) => m[1]!);
+		const expected = order.map((rel) => readFileSync(join(dir, rel), "utf8")).join("");
+		expect(bundleStyles(join(dir, "index.css"))).toBe(expected);
 	});
 });

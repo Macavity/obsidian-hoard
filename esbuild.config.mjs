@@ -1,7 +1,9 @@
 import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from 'node:module';
-import { copyFileSync, existsSync, mkdirSync, watch } from "fs";
+import { copyFileSync, existsSync, mkdirSync, watch, writeFileSync } from "fs";
+import { dirname } from "node:path";
+import { bundleStyles } from "./scripts/lib/bundle-styles.mjs";
 
 const banner =
 `/*
@@ -29,7 +31,25 @@ const entryPoint = hasSrcMain ? "src/main.ts" : "main.ts";
 // Everything Obsidian loads goes to dist/, so a vault links just that folder
 const outdir = "dist";
 const outfile = `${outdir}/main.js`;
-const staticFiles = ["manifest.json", "styles.css"];
+const staticFiles = ["manifest.json"];
+
+// Stylesheet partials live in src/styles/; index.css @imports them in cascade order.
+// Inlined verbatim (no CSS rewriting) so the shipped rules equal the partials byte for byte.
+const stylesEntry = "src/styles/index.css";
+
+function buildStyles() {
+	mkdirSync(outdir, { recursive: true });
+	writeFileSync(`${outdir}/styles.css`, bundleStyles(stylesEntry));
+}
+
+// an editor may replace a partial by delete + write; a read in between fails, the write's own event rebuilds
+function rebuildStyles() {
+	try {
+		buildStyles();
+	} catch (e) {
+		console.warn(`styles: rebuild skipped (${e instanceof Error ? e.message : String(e)}); retrying on the next change`);
+	}
+}
 
 function copyStatic(file) {
 	if (existsSync(file)) copyFileSync(file, `${outdir}/${file}`);
@@ -41,6 +61,7 @@ const copyStaticPlugin = {
 		build.onEnd(() => {
 			mkdirSync(outdir, { recursive: true });
 			staticFiles.forEach(copyStatic);
+			buildStyles();
 		});
 	},
 };
@@ -96,6 +117,7 @@ if (isOneTimeBuild) {
 	console.log("\n✓ Build complete!");
 	console.log(`📦 Release files in ${outdir}/:`);
 	console.log("   - main.js");
+	console.log("   - styles.css");
 	for (const f of staticFiles) {
 		if (existsSync(f)) console.log(`   - ${f}`);
 	}
@@ -112,4 +134,5 @@ if (isOneTimeBuild) {
 	for (const f of staticFiles) {
 		if (existsSync(f)) watch(f, () => copyStatic(f));
 	}
+	watch(dirname(stylesEntry), rebuildStyles);
 }

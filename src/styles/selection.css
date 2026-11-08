@@ -1,0 +1,167 @@
+/* Selection mode */
+/* ══ SELECTION MODE ══ */
+
+/* Header controls area (right side of header) */
+.hoard-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* nested flex row so the buttons lay out as direct items; ListTab rebuilds it alone */
+.hoard-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Add buttons (and the Reading gear + Add group) pinned to the far right of the toolbar row */
+.hoard-header-controls-right,
+.hoard-reading-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Small button variant */
+.hoard-btn-sm {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+/* Cancel button inside the persistent rewrite-frontmatter progress notice */
+.hoard-notice-cancel-btn {
+  margin-left: 8px;
+}
+
+/* overflow guard (HoardView.guardOverflow); two-class beats single-class rules */
+.hoard-tab-content.hoard-force-overflow-auto {
+  overflow: auto;
+}
+
+/* Mobile toolbar crossfade — search and actions overlap in one slot; only opacity animates */
+.hoard-toolbar-slot {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+}
+
+.hoard-toolbar-slot-pane {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* search fills the slot on mobile */
+.hoard-toolbar-slot-pane .hoard-reading-search-wrap {
+  max-width: none;
+}
+
+/* Animate opacity only — never width/flex/layout. */
+.hoard-toolbar-fade {
+  transition: opacity 180ms ease;
+}
+
+.hoard-toolbar-pane-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Square chevron toggle button at the right end of the toolbar row, and the mobile
+   icon-only add button between the slot and the toggle, always visible.
+   `.hoard-view button` outranks the per-tab add padding and the narrow-screen toolbar rule. */
+.hoard-toolbar-toggle-btn,
+.hoard-view button.hoard-toolbar-add-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+}
+
+.hoard-header-controls > .hoard-add-btn-wrap {
+  flex-shrink: 0;
+}
+
+/* Active (selected) state for the selection mode toggle button */
+.hoard-btn.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+/* Select button while selection mode is on — reads Cancel, red text + border */
+.hoard-btn.hoard-btn-cancel {
+  color: var(--text-error);
+  border-color: var(--text-error);
+}
+
+.hoard-btn.hoard-btn-cancel:hover {
+  color: var(--text-error);
+  background: var(--background-modifier-error-hover, var(--background-modifier-hover));
+}
+
+/* Saved filter preset button — active state (green tint) */
+.hoard-btn.hoard-btn-preset-active {
+  background: rgba(29, 158, 117, 0.15);
+  border-color: #1D9E75;
+  color: #1D9E75;
+}
+
+/* Action bar container */
+.hoard-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* selected row; :hover variant outranks the other row states */
+.hoard-row.hoard-row-selected,
+.hoard-row.hoard-row-selected:hover {
+  background: color-mix(in srgb, var(--background-secondary) 80%, var(--interactive-accent) 20%);
+}
+
+/* Selection checkbox column */
+.hoard-col-select-h,
+.hoard-col-select {
+  width: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Extend grid template when selection mode is active — see v0.5.5 override below */
+
+/* Airtime card selection checkbox */
+.hoard-airtime-select-cb {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+/* Make selected airtime cards have a subtle highlight */
+.hoard-airtime-card.hoard-row-selected {
+  background: color-mix(in srgb, var(--background-secondary) 80%, var(--interactive-accent) 20%);
+  border-color: var(--interactive-accent);
+}
+
+/* Due / Aired highlight borders — colour per theme via --hoard-due-border-color */
+.hoard-view .hoard-airtime-card.is-due,
+.hoard-view .hoard-airtime-card.is-aired {
+  border: 2px solid var(--hoard-due-border-color);
+}
+

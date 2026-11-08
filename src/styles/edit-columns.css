@@ -1,0 +1,318 @@
+/* Edit columns modal */
+/* ══ EDIT COLUMNS MODAL (v0.8.0) ══ */
+
+.hoard-editcol-modal {
+  --dialog-width: 820px;
+}
+
+.hoard-editcols-modal {
+  min-width: 90%;
+  width: calc(100% - 40px);
+  max-width: calc(100% - 40px);
+}
+
+.hoard-editcols-list {
+  margin-bottom: 10px;
+  max-height: 460px;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* Horizontal card layout for Edit Columns */
+
+.hoard-editcol-card-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px;
+}
+
+.hoard-editcol-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 130px;
+  flex: 0 0 130px;
+  padding: 6px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 5px;
+  background: var(--background-secondary);
+  box-sizing: border-box;
+}
+
+.hoard-editcol-card.hoard-cl-dragging {
+  opacity: 0.5;
+}
+
+.hoard-editcol-card.hoard-cl-drag-over {
+  border-left: 2px solid var(--interactive-accent);
+}
+
+.hoard-editcol-card-handle {
+  cursor: grab;
+  color: var(--text-faint);
+  font-size: 11px;
+  text-align: center;
+  user-select: none;
+  line-height: 1;
+}
+
+.hoard-editcol-card-handle:hover {
+  color: var(--text-muted);
+}
+
+.hoard-editcol-card-name,
+.hoard-editcol-card-type {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  height: 26px;
+  padding: 2px 6px;
+}
+
+.hoard-editcol-card-name-wrap {
+  width: 100%;
+}
+
+.hoard-editcol-card-name-label {
+  width: 100%;
+  padding: 2px 6px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary-alt);
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.hoard-editcol-card-type-locked {
+  width: 100%;
+  padding: 3px 6px;
+  border: 0.5px dashed var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.hoard-editcol-card-toggles {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.hoard-editcol-card-toggle {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hoard-editcol-card-del {
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.hoard-editcol-card-del:hover {
+  color: var(--text-error);
+}
+
+.hoard-editcol-card-spacer {
+  flex: 1;
+  min-height: 4px;
+}
+
+.hoard-editcol-card-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 0.5px dashed var(--background-modifier-border);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.hoard-editcol-card-opt-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.hoard-editcol-card-opt-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  padding: 1px 4px;
+  height: 22px;
+}
+
+.hoard-editcol-card-opt-del {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.hoard-editcol-card-opt-del:hover {
+  color: var(--text-error);
+}
+
+.hoard-editcol-card-opt-add {
+  font-size: 11px;
+  padding: 1px 4px;
+  height: 22px;
+}
+
+/* Auto card (# and Name) — sized individually via data-auto attr */
+.hoard-editcol-card.hoard-editcol-card-auto {
+  opacity: 0.5;
+  pointer-events: none;
+  background: var(--background-modifier-hover);
+}
+
+.hoard-editcol-card.hoard-editcol-card-auto[data-auto="#"] {
+  width: 40px;
+  flex: 0 0 40px;
+  padding: 4px;
+}
+
+.hoard-editcol-card.hoard-editcol-card-auto[data-auto="Name"] {
+  width: 70px;
+  flex: 0 0 70px;
+  padding: 4px 6px;
+}
+
+/* Add-column card */
+.hoard-editcol-card.hoard-editcol-card-add {
+  width: 80px;
+  flex: 0 0 80px;
+  border: 1px dashed var(--background-modifier-border);
+  background: transparent;
+  align-items: center;
+  justify-content: center;
+  min-height: unset;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 6px;
+}
+
+.hoard-editcol-card.hoard-editcol-card-add:hover {
+  border-color: var(--interactive-accent);
+  color: var(--text-normal);
+}
+
+.hoard-editcol-card-add-label {
+  font-size: 12px;
+  text-align: center;
+}
+
+.hoard-cl-name-error {
+  font-size: 12px;
+  color: var(--text-error);
+  margin: -4px 0 6px;
+}
+
+/* Notes modal */
+
+.hoard-notes-modal {
+  display: flex;
+  flex-direction: column;
+}
+
+.hoard-notes-mode-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.hoard-notes-edit-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.hoard-modal-textarea.hoard-notes-textarea {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  font-family: var(--font-monospace);
+  font-size: 13px;
+  padding: 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+
+.hoard-notes-preview-area {
+  min-height: 160px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Edit Columns modal — mobile responsive */
+
+@media (max-width: 720px) {
+  .hoard-editcols-modal {
+    min-width: unset;
+    width: calc(100% - 16px);
+    max-width: calc(100% - 16px);
+  }
+
+  .hoard-editcols-list {
+    max-height: 260px;
+  }
+}
+
+/* Clear filters button */
+
+.hoard-btn-clear-filters {
+  color: var(--text-muted);
+}
+
+.hoard-btn-clear-filters:hover {
+  color: var(--text-normal);
+}
+
+/* Filter active dot */
+
+.hoard-filter-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  vertical-align: middle;
+  margin-left: 3px;
+  margin-bottom: 1px;
+}
+

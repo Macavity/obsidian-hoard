@@ -1,0 +1,173 @@
+/* Reading custom fields and favorite quotes */
+/* Reading custom fields */
+.hoard-reading-detail-custom-heading,
+.hoard-reading-detail-quotes-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.hoard-reading-detail-custom-manage {
+  font-size: 12px;
+  color: var(--interactive-accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.hoard-reading-detail-custom-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.hoard-reading-custom-table {
+  display: flex;
+  flex-direction: column;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hoard-reading-custom-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  min-height: 32px;
+  border-top: 0.5px solid var(--background-modifier-border);
+}
+
+.hoard-reading-custom-row:first-child {
+  border-top: none;
+}
+
+.hoard-reading-custom-table.is-border-mode .hoard-reading-custom-row {
+  border-top: none;
+}
+
+.hoard-reading-custom-label {
+  background: var(--background-secondary);
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.hoard-reading-custom-value {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: var(--text-normal);
+}
+
+/* fill mode: --hoard-field-bg per column (only set in fill mode, so border mode keeps the default bg) */
+.hoard-reading-custom-table .hoard-reading-custom-label {
+  background: var(--hoard-field-bg, var(--background-secondary));
+  color: #1e1e1e;
+}
+
+/* border mode: --hoard-field-border per column; keeps the base label's muted text */
+.hoard-reading-custom-table.is-border-mode .hoard-reading-custom-label {
+  border: 1.5px solid var(--hoard-field-border, var(--background-modifier-border));
+  box-sizing: border-box;
+  color: var(--text-muted);
+}
+
+.hoard-reading-custom-table.is-border-mode .hoard-reading-custom-value {
+  border: 0.5px solid var(--background-modifier-border);
+  box-sizing: border-box;
+}
+
+.hoard-reading-custom-display {
+  display: inline-block;
+  min-height: 22px;
+  padding: 2px 4px;
+  cursor: text;
+  border-radius: 3px;
+}
+
+.hoard-reading-custom-display:hover {
+  background: var(--background-modifier-hover);
+}
+
+.hoard-reading-custom-display.is-placeholder {
+  color: var(--text-faint);
+}
+
+.hoard-reading-custom-input {
+  width: 100%;
+  font-size: 13px;
+}
+
+/* Reading favorite quotes */
+.hoard-reading-detail-quotes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hoard-reading-detail-quotes-add {
+  font-size: 12px;
+}
+
+.hoard-reading-quote-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 6px 0;
+}
+
+.hoard-reading-quote-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hoard-reading-quote-card {
+  background: var(--background-secondary);
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: 0 4px 4px 0;
+  padding: 8px 12px;
+}
+
+.hoard-reading-quote-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-normal);
+  white-space: pre-wrap;
+}
+
+.hoard-reading-quote-form-host {
+  margin-top: 4px;
+}
+
+.hoard-reading-quote-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  border: 0.5px solid var(--background-modifier-border);
+}
+
+.hoard-reading-quote-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+.hoard-reading-quote-ref-input {
+  width: 100%;
+  max-width: 240px;
+}
+
+.hoard-reading-quote-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+

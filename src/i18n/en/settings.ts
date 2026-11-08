@@ -14,6 +14,7 @@ const settings = {
 		main: 'Main',
 	},
 	about: 'About {label}',
+	colorFor: 'Color for {name}',
 	progress: {
 		done: 'Done',
 		cancelled: 'Cancelled',
@@ -171,6 +172,7 @@ const settings = {
 			label: 'Rating system',
 			help: 'The color and text shown for each star rating across Watchlist, Reading, and Games. A whole star shares a tier with the half-step below it; e.g. 2.5★ and 3★ are both "Good".',
 			labelAria: 'Label for {tier}-star rating',
+			colorAria: 'Color for {tier}-star rating',
 		},
 		season: {
 			label: 'Season colors',

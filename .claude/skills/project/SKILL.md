@@ -37,7 +37,7 @@ Entries, groups, progress, ratings live in note properties (frontmatter). `<root
 
 ## Checks
 
-- `pnpm build` — tsc + bundle. `pnpm test`. `pnpm lint` — eslint plus dead-CSS check: every class in `styles.css` must appear literally in `src/`, so no template-string class names (`hoard-${x}`); write the full class names.
+- `pnpm build` — tsc + bundle. `pnpm test`. `pnpm lint` — eslint plus dead-CSS check: every class in `src/styles/*.css` must appear literally in `src/`, so no template-string class names (`hoard-${x}`); write the full class names.
 - `pnpm quality` / `quality:audit` — fallow; no exceptions or suppressions without user approval.
 - `pnpm smoke`, `pnpm mobile:smoke` — need running Obsidian with `hoard-test-vault/`.
 
@@ -48,4 +48,4 @@ Entries, groups, progress, ratings live in note properties (frontmatter). `<root
 
 ## Key files
 
-`manifest.json`, `styles.css`, `src/types.ts` (data model), `src/storage/VaultLayout.ts` (paths), `src/HoardView.ts`, `src/main.ts`, `docs/index.md` (wiki router).
+`manifest.json`, `src/styles/` (CSS partials, bundled to `dist/styles.css`), `src/types.ts` (data model), `src/storage/VaultLayout.ts` (paths), `src/HoardView.ts`, `src/main.ts`, `docs/index.md` (wiki router).

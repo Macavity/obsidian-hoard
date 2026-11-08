@@ -1,0 +1,122 @@
+/* Shared date picker */
+/* Shared date picker (src/DatePicker.ts) — the field keeps its call-site classes; the calendar
+   is a fixed layer in body, placed via --hoard-dp-top/left */
+
+.hoard-datepicker-input {
+  cursor: pointer;
+}
+
+.hoard-datepicker-panel {
+  position: fixed;
+  top: var(--hoard-dp-top, 0);
+  left: var(--hoard-dp-left, 0);
+  z-index: var(--layer-menu);
+  width: 252px;
+  max-width: calc(100vw - 16px);
+  padding: 8px;
+  background: var(--background-primary);
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+  font-size: var(--font-ui-small);
+}
+
+.hoard-datepicker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.hoard-datepicker-month {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.hoard-datepicker-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.hoard-datepicker-nav:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.hoard-datepicker-dow,
+.hoard-datepicker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.hoard-datepicker-dow {
+  margin-bottom: 2px;
+}
+
+.hoard-datepicker-dow span {
+  text-align: center;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.hoard-datepicker-day {
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.hoard-datepicker-day:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* Obsidian's accent, not --hoard-accent (near-black in the default theme) */
+.hoard-datepicker-day.is-today {
+  font-weight: 700;
+  color: var(--interactive-accent);
+}
+
+.hoard-datepicker-day.is-selected {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.hoard-datepicker-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 0.5px solid var(--background-modifier-border);
+}
+
+/* Phones: a touch-sized grid, still anchored to the field. */
+@media (max-width: 600px) {
+  .hoard-datepicker-panel {
+    width: 280px;
+  }
+
+  .hoard-datepicker-day {
+    height: 34px;
+  }
+}
+

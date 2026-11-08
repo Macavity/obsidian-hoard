@@ -20,6 +20,7 @@ describe('ListTab title rows', () => {
 		expect(q(row, '.hoard-priority-badge').textContent).toBe('High');
 		expect(q(row, '.hoard-col-rating').textContent).toContain('4/5');
 		expect(q(row, '.hoard-col-status .hoard-badge').textContent).toBe('Watching');
+		expect(q(row, '.hoard-col-status .hoard-badge').getAttribute('title')).toBe('Watching');
 		expect(q(row, '.hoard-col-started').textContent).not.toBe('—');
 		expect(row.querySelector('.hoard-recently-arrived')).toBeNull();
 	});

@@ -1,0 +1,456 @@
+/* Shared modals */
+/* ══ MODALS ══ */
+
+.hoard-add-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.hoard-modal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hoard-modal-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  width: 110px;
+  flex-shrink: 0;
+}
+
+/* Add-from-URL: source name only, so the 110px form label is far too wide */
+.hoard-url-row-label {
+  width: 40px;
+}
+
+/* two fields per row, fixed-width inputs in two columns */
+.hoard-modal-pair-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hoard-modal-pair-cell-right {
+  margin-left: auto;
+}
+
+/* 110px label lines its input up with the full-width one */
+.hoard-modal-pair-cell-right .hoard-modal-label {
+  width: auto;
+}
+
+.hoard-modal-pair-cell .hoard-modal-input,
+.hoard-modal-pair-cell .hoard-select {
+  flex: 0 0 auto;
+  width: 110px;
+  min-width: 0;
+}
+
+.hoard-modal-pair-cell .hoard-modal-input[type='number'] {
+  box-sizing: border-box;
+  width: 50px;
+}
+
+.hoard-modal-input {
+  flex: 1;
+  padding: 5px 8px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.hoard-modal-input-sm {
+  max-width: 80px;
+  flex: unset;
+}
+
+/* add-flow search: query, year and button share a wrapper so mobile can stack them */
+.hoard-search-fields {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* add-flow search: optional YYYY filter beside the query */
+.hoard-search-year {
+  flex: 0 0 auto;
+  width: 60px;
+  min-width: 0;
+  text-align: center;
+}
+
+.hoard-modal-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.hoard-modal-info {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.hoard-modal-error {
+  font-size: 11px;
+  color: var(--text-error);
+  font-style: italic;
+}
+
+/* doubled class outranks Obsidian's input[type=…] rules */
+.hoard-input-error.hoard-input-error,
+.hoard-input-error.hoard-input-error:focus {
+  border-color: var(--text-error);
+}
+
+/* Full-width text input (group rename prompt). */
+.hoard-input {
+  width: 100%;
+}
+
+.hoard-modal-textarea {
+  flex: 1;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.hoard-modal-textarea:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.hoard-modal-input-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hoard-modal-results {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 5px;
+  margin-top: 2px;
+}
+
+/* add-flow search: 3 posters per row, text beneath */
+.hoard-modal-results.hoard-results-grid {
+  display: grid;
+  /* minmax(0,1fr) so long meta can't widen the column */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px;
+  align-content: start;
+}
+
+/* Loading / no-API / empty messages span the whole grid width. */
+.hoard-results-grid > .hoard-modal-loading,
+.hoard-results-grid > .hoard-modal-no-api {
+  grid-column: 1 / -1;
+}
+
+/* 9 results per page; empty when there is only one page */
+.hoard-result-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.hoard-result-pager-info {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.hoard-result-pager-btn {
+  padding: 2px 10px;
+  line-height: 1.2;
+}
+
+.hoard-result-pager-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* text-only rows: maybe-add modal + autofill dropdown */
+.hoard-result-item {
+  padding: 7px 10px;
+  cursor: pointer;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+  transition: background 0.1s;
+}
+
+.hoard-result-item:last-child {
+  border-bottom: none;
+}
+
+.hoard-result-item:hover,
+.hoard-result-item.is-selected,
+.hoard-result-item.hoard-result-item-focused {
+  background: var(--background-modifier-hover);
+}
+
+/* Card — add-flow search results. */
+.hoard-result-card {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.hoard-result-card:hover,
+.hoard-result-card.is-selected {
+  background: var(--background-modifier-hover);
+  border-color: var(--background-modifier-border);
+}
+
+.hoard-result-card .hoard-result-text {
+  min-width: 0;
+  margin-top: 6px;
+}
+
+/* cover: full card width, 2:3 */
+.hoard-result-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--background-modifier-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hoard-result-thumb-icon {
+  font-size: 28px;
+  opacity: 0.6;
+  line-height: 1;
+}
+
+.hoard-result-thumb-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* already-in-library marker */
+.hoard-result-card.is-in-library .hoard-result-thumb-img,
+.hoard-result-card.is-in-library .hoard-result-thumb-icon {
+  opacity: 0.45;
+}
+
+.hoard-result-card.is-in-library .hoard-result-title {
+  color: var(--text-muted);
+}
+
+.hoard-result-owned-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-on-accent);
+  background: var(--color-green);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-result-owned-check {
+  flex-shrink: 0;
+}
+
+.hoard-result-title {
+  font-weight: 500;
+  font-size: var(--font-ui-small);
+}
+
+.hoard-result-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* clamp title to 2 lines, ellipsis the meta */
+.hoard-result-card .hoard-result-title {
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hoard-result-card .hoard-result-meta {
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-modal-loading {
+  padding: 10px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-ui-small);
+}
+
+.hoard-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--background-modifier-border);
+}
+
+.hoard-modal-btn-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.hoard-duplicate-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in srgb, var(--background-modifier-error) 60%, transparent 40%);
+  border: 0.5px solid color-mix(in srgb, var(--background-modifier-border) 50%, #E24B4A 50%);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hoard-btn {
+  padding: 5px 12px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+
+.hoard-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.hoard-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hoard-btn:disabled:hover {
+  background: var(--background-secondary);
+}
+
+/* Custom Lists import modal */
+.hoard-import-textarea {
+  min-height: 140px;
+  margin: 8px 0;
+  font-family: var(--font-monospace);
+}
+
+.hoard-import-header-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+
+.hoard-import-header-toggle label {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.hoard-import-header-checkbox {
+  cursor: pointer;
+}
+
+.hoard-import-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.hoard-import-counts {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+/* amber notice banner, shared by import, Custom Lists drafts and the Drafts tab */
+.hoard-import-banner,
+.hoard-cl-draft-banner,
+.hoard-drafts-notice {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--background-secondary) 80%, #BA7517 20%);
+  border: 0.5px solid color-mix(in srgb, var(--background-modifier-border) 60%, #BA7517 40%);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.hoard-import-banner {
+  line-height: 1.5;
+}
+
+.hoard-import-banner-error {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--background-modifier-error) 50%, transparent 50%);
+  border: 0.5px solid color-mix(in srgb, var(--background-modifier-border) 50%, #E24B4A 50%);
+  font-size: 11px;
+  color: var(--text-normal);
+  line-height: 1.5;
+}
+
+.hoard-btn-primary {
+  /* green color scheme — matches .hoard-btn-success */
+  background: transparent;
+  color: var(--color-green);
+  border-color: var(--color-green);
+}
+
+.hoard-btn-primary:hover {
+  background: var(--color-green);
+  color: var(--text-on-accent);
+  border-color: var(--color-green);
+}
+

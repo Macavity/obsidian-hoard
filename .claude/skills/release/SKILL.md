@@ -36,7 +36,7 @@ Base the proposal on **user-visible change**, not commit subjects. Read the diff
 
 ```bash
 LAST=$(git describe --tags --abbrev=0)
-git diff --stat "$LAST"..HEAD -- src styles.css manifest.json README.md
+git diff --stat "$LAST"..HEAD -- src manifest.json README.md
 git diff "$LAST"..HEAD -- manifest.json README.md
 ```
 

@@ -72,7 +72,10 @@ export class WidgetRenderer {
 			'hoard-now-next': (source, el) => this.processWlNowNext(source, el),
 		};
 		for (const [language, handler] of Object.entries(handlers) as [WidgetLanguage, typeof handlers[WidgetLanguage]][]) {
-			this.plugin.registerMarkdownCodeBlockProcessor(language, handler);
+			this.plugin.registerMarkdownCodeBlockProcessor(language, (source, el, ctx) => {
+				this.applyColorTheme(el);
+				handler(source, el, ctx);
+			});
 		}
 
 		// re-render all active widgets on data change (list → widget sync)
@@ -83,6 +86,12 @@ export class WidgetRenderer {
 		plugin.register(() => {
 			activeDocument.removeEventListener('hoard-data-changed', this.dataChangedListener);
 		});
+	}
+
+	/** Theme vars are keyed off data-theme (theme.css); widgets live in notes, outside the themed view. */
+	private applyColorTheme(el: HTMLElement): void {
+		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
+		if (colorTheme !== 'default') el.setAttribute('data-theme', colorTheme);
 	}
 
 	/** Called by the `hoard-data-changed` DOM event. Re-renders all live widgets. */

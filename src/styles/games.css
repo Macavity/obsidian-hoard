@@ -1,0 +1,552 @@
+/* Games tab and game detail modal */
+/* Games tab */
+.hoard-games-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+
+/* own flex column so the rows scroller's fill-height sizing still works */
+.hoard-games-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Game detail modal */
+/* no width override on purpose: matches the Watchlist / Reading modals */
+
+/* .hoard-view's height:100% + overflow:hidden would block scrolling */
+.hoard-game-modal .modal-content.hoard-view {
+  height: auto;
+  max-height: calc(85vh - 40px);
+  overflow-y: auto;
+}
+
+.hoard-game-modal-header {
+  display: flex;
+  gap: 18px;
+}
+
+.hoard-game-modal-cover {
+  flex: none;
+  width: 108px;
+  height: 152px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--background-secondary) 0 10px,
+    var(--background-secondary-alt) 10px 20px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hoard-game-modal-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hoard-game-modal-cover-hint {
+  font-size: 10px;
+  font-family: var(--font-monospace);
+  color: var(--text-faint);
+}
+
+.hoard-game-modal-head {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hoard-game-modal-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+/* shared .hoard-reading-detail-status pill; only the spacing is game-specific */
+
+.hoard-game-modal-rating {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.hoard-game-modal-section {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hoard-game-modal-details-section {
+  padding-top: 16px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.hoard-game-modal-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* progress: drag bar + typed %, ±5 steppers, stat strip */
+.hoard-game-modal-progress {
+  /* Genre colour, set per game; falls back to the original violet ramp. */
+  --hoard-game-progress-color: #8b5cf6;
+}
+
+.hoard-game-modal-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.hoard-game-modal-progress-pct {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-normal);
+}
+
+.hoard-game-modal-progress-input {
+  width: 6ch;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+
+.hoard-game-modal-progress-input::-webkit-outer-spin-button,
+.hoard-game-modal-progress-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.hoard-game-modal-progress-input:hover {
+  border-bottom-color: var(--background-modifier-border);
+}
+
+.hoard-game-modal-progress-input:focus {
+  border-bottom-color: var(--hoard-game-progress-color);
+  outline: none;
+}
+
+.hoard-game-modal-progress-sign {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* The 100% check sits before the number, hidden until complete. */
+.hoard-game-modal-progress-done {
+  display: none;
+  align-items: center;
+  color: #2DA873;
+}
+
+.hoard-game-modal-progress-done .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.hoard-game-modal-progress-pct.is-complete .hoard-game-modal-progress-done {
+  display: inline-flex;
+}
+
+.hoard-game-modal-progress-pct.is-complete .hoard-game-modal-progress-input {
+  color: #2DA873;
+}
+
+.hoard-game-modal-progress-bar {
+  position: relative;
+  height: 12px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--background-modifier-border);
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none; /* the bar owns horizontal drags */
+}
+
+.hoard-game-modal-progress-bar:focus-visible {
+  outline: 2px solid var(--hoard-game-progress-color);
+  outline-offset: 2px;
+}
+
+.hoard-game-modal-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--hoard-game-progress-color) 55%, transparent),
+    var(--hoard-game-progress-color)
+  );
+  border-radius: 999px;
+  transition: width 90ms linear;
+}
+
+/* Stat strip: steppers on the left, play stats trailing. */
+.hoard-game-modal-progress-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 10px;
+}
+
+.hoard-game-modal-step-group {
+  display: inline-flex;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.hoard-game-modal-step {
+  padding: 3px 11px;
+  border: none;
+  border-radius: 0;
+  background: var(--background-secondary);
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.hoard-game-modal-step + .hoard-game-modal-step {
+  border-left: 1px solid var(--background-modifier-border);
+}
+
+.hoard-game-modal-step:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.hoard-game-modal-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.hoard-game-modal-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.75;
+}
+
+.hoard-game-modal-stat-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.hoard-game-modal-stat-input {
+  padding: 1px 4px;
+  border: none;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 600;
+  -moz-appearance: textfield;
+}
+
+.hoard-game-modal-stat-input::-webkit-outer-spin-button,
+.hoard-game-modal-stat-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.hoard-game-modal-stat-input:hover {
+  border-bottom-color: var(--background-modifier-border);
+}
+
+.hoard-game-modal-stat-input:focus {
+  border-bottom-color: var(--hoard-game-progress-color);
+  outline: none;
+}
+
+.hoard-game-modal-stat-time { width: 8ch; }
+.hoard-game-modal-stat-num  { width: 6ch; text-align: right; }
+.hoard-game-modal-stat-sep  { color: var(--text-faint); }
+
+/* "= 62%" — pushes the achievement ratio into the bar, only when they differ. */
+.hoard-game-modal-derive {
+  padding: 1px 7px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hoard-game-modal-derive:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.hoard-game-modal-derive.is-hidden {
+  display: none;
+}
+
+.hoard-game-modal-platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hoard-game-modal-platform {
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+/* filled with --hoard-chip-color from renderTagChips (Settings → Games) */
+.hoard-game-modal-platform.is-active {
+  border-color: var(--hoard-chip-color, var(--interactive-accent));
+  background: var(--hoard-chip-color, var(--interactive-accent));
+  color: var(--text-on-accent);
+}
+
+.hoard-game-modal-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 18px;
+}
+
+.hoard-game-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hoard-game-modal-field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.hoard-game-modal-field input {
+  width: 100%;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text-normal);
+  font-size: 13.5px;
+  outline: none;
+}
+
+.hoard-game-modal-field input:focus {
+  border-color: var(--interactive-accent);
+  box-shadow: none;
+}
+
+/* group row: the dropdown and the create-new input disable each other */
+.hoard-game-modal-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.hoard-game-modal-group-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.hoard-game-modal-group-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.hoard-game-modal-group-controls > * {
+  min-width: 0;
+}
+
+.hoard-game-modal-group-controls select,
+.hoard-game-modal-group-new {
+  width: 100%;
+  box-sizing: border-box;
+  height: 30px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--text-normal);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.hoard-game-modal-group-controls select:focus,
+.hoard-game-modal-group-new:focus {
+  border-color: var(--interactive-accent);
+  box-shadow: none;
+}
+
+.hoard-game-modal-group-controls select:disabled,
+.hoard-game-modal-group-new:disabled {
+  opacity: 0.45;
+}
+
+/* links disclosure: set once by the add flow, rarely edited */
+.hoard-game-modal-links {
+  margin-top: 12px;
+}
+
+/* scoped: a bare class ties themes' `.modal button` on specificity and themes load later */
+.hoard-game-modal .hoard-game-modal-links-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 0;
+  background: none;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Hover moves the text only — no fill, no border, no shadow. */
+.hoard-game-modal .hoard-game-modal-links-toggle:hover,
+.hoard-game-modal .hoard-game-modal-links-toggle:focus,
+.hoard-game-modal .hoard-game-modal-links-toggle:focus-visible,
+.hoard-game-modal .hoard-game-modal-links-toggle:active {
+  background: none;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-normal);
+}
+
+.hoard-game-modal-links-toggle:hover .hoard-game-modal-links-caret {
+  color: var(--text-muted);
+}
+
+.hoard-game-modal-links-caret {
+  width: 9px;
+  font-size: 9px;
+  color: var(--text-faint);
+}
+
+.hoard-game-modal-links-body {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0 2px 15px;
+}
+
+.hoard-game-modal-links.is-open .hoard-game-modal-links-body {
+  display: flex;
+}
+
+.hoard-game-modal-link-row {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.hoard-game-modal-link-row label {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.hoard-game-modal-link-row input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 26px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 0 8px;
+  color: var(--text-normal);
+  font-size: 12px;
+  outline: none;
+}
+
+.hoard-game-modal-link-row input:focus {
+  border-color: var(--interactive-accent);
+  box-shadow: none;
+}
+
+/* Steam pull button in the progress stat strip. */
+.hoard-game-modal .hoard-game-modal-steam-pull {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.hoard-game-modal .hoard-game-modal-steam-pull:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+  box-shadow: none;
+}
+
+.hoard-game-modal-steam-pull .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.hoard-game-modal-steam-pull.is-loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.hoard-game-modal-steam-pull.is-loading .svg-icon {
+  animation: hoard-spin 0.9s linear infinite;
+}
+
