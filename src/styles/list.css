@@ -210,6 +210,8 @@
 }
 
 .hoard-row-title-text {
+  /* flex-start leaves it at max-content; cap it so long titles end in an ellipsis */
+  max-width: 100%;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
