@@ -45,6 +45,7 @@ const groupKey = (id: string): string => GROUP_KEY_PREFIX + id;
 const itemKey = (item: DisplayItem): string => (item.kind === 'group' ? groupKey(item.data.id) : item.data.id);
 
 
+
 export class ListTab {
 	private container: HTMLElement;
 	private plugin: HoardPlugin;
@@ -2540,48 +2541,44 @@ export class ListTab {
 
 	// Filter + sort
 
+	private titleComparators?: Record<string, TitleComparator>;
+
 	private compareTitlesByKey(key: string, a: HoardTitle, b: HoardTitle): number {
-		switch (key) {
-			case 'title-asc':        return a.title.localeCompare(b.title);
-			case 'title-desc':       return b.title.localeCompare(a.title);
-			case 'dateAdded-newest': return new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime();
-			case 'dateAdded-oldest': return new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime();
-			case 'progress-high':    return this.dataManager.getProgress(b) - this.dataManager.getProgress(a);
-			case 'progress-low':     return this.dataManager.getProgress(a) - this.dataManager.getProgress(b);
-			case 'rating-high':      return compareUnsetLast(a.rating, b.rating, 'desc');
-			case 'rating-low':       return compareUnsetLast(a.rating, b.rating, 'asc');
-			case 'priority':         return comparePriority(a.priority, b.priority);
-			case 'started-asc': {
-				const da = a.dateStarted ? new Date(a.dateStarted).getTime() : Infinity;
-				const db = b.dateStarted ? new Date(b.dateStarted).getTime() : Infinity;
-				return da - db;
-			}
-			case 'started-desc': {
-				const da2 = a.dateStarted ? new Date(a.dateStarted).getTime() : null;
-				const db2 = b.dateStarted ? new Date(b.dateStarted).getTime() : null;
-				if (da2 == null && db2 == null) return 0;
-				if (da2 == null) return 1;
-				if (db2 == null) return -1;
-				return db2 - da2;
-			}
-			case 'status-asc':  return this.getStatusIndex(a.status) - this.getStatusIndex(b.status);
-			case 'status-desc': return this.getStatusIndex(b.status) - this.getStatusIndex(a.status);
-			case 'dateWatched-newest': {
-				const da = a.dateFinished ? new Date(a.dateFinished).getTime() : 0;
-				const db = b.dateFinished ? new Date(b.dateFinished).getTime() : 0;
-				return db - da;
-			}
-			case 'dateWatched-oldest': {
-				const da = a.dateFinished ? new Date(a.dateFinished).getTime() : Infinity;
-				const db = b.dateFinished ? new Date(b.dateFinished).getTime() : Infinity;
-				return da - db;
-			}
-			case 'timeLeft-high':    return this.dataManager.calcTimeRemaining(b) - this.dataManager.calcTimeRemaining(a);
-			case 'timeLeft-low':     return this.dataManager.calcTimeRemaining(a) - this.dataManager.calcTimeRemaining(b);
-			case 'timeWatched-high': return this.dataManager.calcTimeWatched(b) - this.dataManager.calcTimeWatched(a);
-			case 'timeWatched-low':  return this.dataManager.calcTimeWatched(a) - this.dataManager.calcTimeWatched(b);
-			default: return 0;
-		}
+		this.titleComparators ??= this.buildTitleComparators();
+		return this.titleComparators[key]?.(a, b) ?? 0;
+	}
+
+	/** One comparator per sort key; `desc` flips an ascending one. */
+	private buildTitleComparators(): Record<string, TitleComparator> {
+		const dm = this.dataManager;
+		const byTitle: TitleComparator = (a, b) => a.title.localeCompare(b.title);
+		const added = byNumber((t) => new Date(t.dateAdded).getTime());
+		const progress = byNumber((t) => dm.getProgress(t));
+		const status = byNumber((t) => this.getStatusIndex(t.status));
+		const timeLeft = byNumber((t) => dm.calcTimeRemaining(t));
+		const timeWatched = byNumber((t) => dm.calcTimeWatched(t));
+		return {
+			'title-asc': byTitle,
+			'title-desc': desc(byTitle),
+			'dateAdded-newest': desc(added),
+			'dateAdded-oldest': added,
+			'progress-high': desc(progress),
+			'progress-low': progress,
+			'rating-high': (a, b) => compareUnsetLast(a.rating, b.rating, 'desc'),
+			'rating-low': (a, b) => compareUnsetLast(a.rating, b.rating, 'asc'),
+			'priority': (a, b) => comparePriority(a.priority, b.priority),
+			// no start date sorts last both ways
+			'started-asc': byNumber((t) => timeOr(t.dateStarted, Infinity)),
+			'started-desc': (a, b) => newestFirstUnsetLast(a.dateStarted, b.dateStarted),
+			'status-asc': status,
+			'status-desc': desc(status),
+			'dateWatched-newest': desc(byNumber((t) => timeOr(t.dateFinished, 0))),
+			'dateWatched-oldest': byNumber((t) => timeOr(t.dateFinished, Infinity)),
+			'timeLeft-high': desc(timeLeft),
+			'timeLeft-low': timeLeft,
+			'timeWatched-high': desc(timeWatched),
+			'timeWatched-low': timeWatched,
+		};
 	}
 
 	/** Fields the Watchlist search covers — also drives the "?" help panel. */
@@ -2638,3 +2635,15 @@ export class ListTab {
 
 }
 
+type TitleComparator = (a: HoardTitle, b: HoardTitle) => number;
+
+const byNumber = (value: (t: HoardTitle) => number): TitleComparator => (a, b) => value(a) - value(b);
+const desc = (compare: TitleComparator): TitleComparator => (a, b) => compare(b, a);
+const timeOr = (date: string | null | undefined, fallback: number): number => (date ? new Date(date).getTime() : fallback);
+
+function newestFirstUnsetLast(a: string | null | undefined, b: string | null | undefined): number {
+	if (!a && !b) return 0;
+	if (!a) return 1;
+	if (!b) return -1;
+	return new Date(b).getTime() - new Date(a).getTime();
+}
