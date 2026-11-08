@@ -435,6 +435,10 @@ export class HoardView extends ItemView {
 		this.destroyActiveTab();
 		this.tabContentEl.empty();
 		this.stripTabClasses();
+		if (this.plugin.importRunning) {
+			this.tabContentEl.createDiv({ text: t('onboarding.running') });
+			return;
+		}
 
 		const def = TABS.find((d) => d.name === this.activeTab) ?? TABS[0];
 		if (!def) return;
@@ -464,7 +468,7 @@ export class HoardView extends ItemView {
 	private refreshActiveTab(): void {
 		this.applyColorTheme(this.contentEl);
 		this.stripTabClasses();
-		if (!this.activeInstance) {
+		if (!this.activeInstance || this.plugin.importRunning) {
 			this.renderTabContent();
 			return;
 		}

@@ -144,6 +144,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { refreshAllCovers } from './coverRefresh';
 import { apiErrorMessage, apiErrorShort } from './ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from './jikanBase';
+import { getDecision } from './import/watchlog/onboardingState';
 import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from './backup';
 
 /** Chip for the MyAnimeList endpoint field: default, custom, or rejected and falling back. */
@@ -582,6 +583,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				b.setButtonText(t('settings.backup.restore.button')).onClick(() => this.openRestoreDialog()),
 			);
 
+		this.addWatchLogImportRows(bk);
+
 		const regenHolder = {
 			wrap: null as HTMLElement | null,
 			fill: null as HTMLElement | null,
@@ -608,6 +611,18 @@ export class HoardSettingsTab extends PluginSettingTab {
 		regenHolder.wrap = regenProgressWrap;
 		regenHolder.fill = regenProgressFill;
 		regenHolder.text = regenProgressText;
+	}
+
+	private addWatchLogImportRows(el: HTMLElement): void {
+		new Setting(el)
+			.setName(t('onboarding.settings.importButton'))
+			.setDesc(t('onboarding.settings.importDesc'))
+			.addButton((b) => b.setButtonText(t('onboarding.settings.importButton')).onClick(() => void this.plugin.openWatchLogImport('found')));
+		if (!(['original', 'fork'] as const).some((k) => getDecision(this.plugin.backupManagers().storage.local, k) === 'imported')) return;
+		new Setting(el)
+			.setName(t('onboarding.settings.cleanupButton'))
+			.setDesc(t('onboarding.settings.cleanupDesc'))
+			.addButton((b) => b.setButtonText(t('onboarding.settings.cleanupButton')).onClick(() => void this.plugin.openWatchLogImport('cleanup')));
 	}
 
 	private async exportBackup(): Promise<void> {

@@ -25,6 +25,11 @@ import { HoardSettingsTab } from './SettingsTab';
 import { AirtimeTab } from './AirtimeTab';
 import { runAirtimeScheduler } from './airtimeScheduler';
 import type { BackupManagers } from './backup';
+import { WatchLogOnboardingModal } from './WatchLogOnboardingModal';
+import { detectWatchLogSources } from './import/watchlog/detect';
+import type { WatchLogSourceKind, WatchLogSources } from './import/watchlog/detect';
+import { createImporter } from './import/watchlog/importer';
+import { getDecision, pendingSources } from './import/watchlog/onboardingState';
 import { composeSettings, persistSettings } from './settingsSplit';
 import { resolveJikanEndpoint } from './jikanBase';
 
@@ -34,6 +39,7 @@ const DEFAULT_ROOT = 'Hoard';
 export default class HoardPlugin extends Plugin {
 	settings: HoardPluginSettings = DEFAULT_SETTINGS;
 	private indexReady = false;
+	private wizardOpen = false;
 	private typeNamesKey: string | null = null;
 	private layout = new VaultLayout(DEFAULT_ROOT, () => this.settings.types.map((t) => t.name));
 	private local = new LocalStore({
@@ -224,7 +230,7 @@ export default class HoardPlugin extends Plugin {
 	 */
 	private async startVaultStorage(): Promise<void> {
 		try {
-			const root = await detectRoot(this.app.vault);
+			let root = await detectRoot(this.app.vault);
 			this.layout = new VaultLayout(root ?? DEFAULT_ROOT, () => this.settings.types.map((t) => t.name));
 			if (root === null) {
 				// fresh install (or base not synced yet): no base until the first write; a synced one is adopted
@@ -239,6 +245,8 @@ export default class HoardPlugin extends Plugin {
 			}
 			await this.shared.load();
 			await this.applySharedSettings();
+			// the WatchLog import may create the base: take over its root before indexing
+			if (await this.runOnboarding({ force: false })) root = (await detectRoot(this.app.vault)) ?? root;
 			this.shared.onChange(() => void this.applySharedSettings());
 			if (root !== null && (await this.shared.ensureFilter()) === 'missing') {
 				const name = this.shared.baseFile()?.name ?? 'Hoard.base';
@@ -257,6 +265,78 @@ export default class HoardPlugin extends Plugin {
 		} catch (e) {
 			console.error('[Hoard] vault storage failed to start', e);
 			new Notice(t('app.notices.loadFailed'));
+		}
+	}
+
+	/** True while the WatchLog onboarding wizard is open (the view shows a placeholder). */
+	get importRunning(): boolean {
+		return this.wizardOpen;
+	}
+
+	/**
+	 * Opens the onboarding wizard when WatchLog data awaits a decision (or always with `force`).
+	 * Returns whether it ran; a failure never blocks Hoard's start.
+	 */
+	private async runOnboarding(opts: { force: boolean; startAt?: 'found' | 'cleanup' }): Promise<boolean> {
+		try {
+			const sources = await detectWatchLogSources(this.app);
+			if (!opts.force && pendingSources(this.local, sources).length === 0) return false;
+			await this.openWizard(sources, opts.startAt);
+			return true;
+		} catch (e) {
+			console.error('[Hoard] WatchLog onboarding failed', e);
+			return false;
+		}
+	}
+
+	private async openWizard(sources: WatchLogSources, startAt?: 'found' | 'cleanup'): Promise<void> {
+		const kinds: WatchLogSourceKind[] = ['original', 'fork'];
+		const imported = startAt === 'cleanup' ? kinds.filter((k) => getDecision(this.local, k) === 'imported') : undefined;
+		const importer = createImporter({
+			app: this.app,
+			local: this.local,
+			ctx: () => this.backupManagers().storage.importContext(),
+			layout: () => this.layout,
+			openFile: (path) => {
+				const file = this.app.vault.getFileByPath(path);
+				if (file) void this.app.workspace.getLeaf('tab').openFile(file);
+			},
+		}, sources);
+		this.wizardOpen = true;
+		try {
+			const modal = new WatchLogOnboardingModal(this.app, importer, { startAt, imported });
+			modal.open();
+			activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+			await modal.finished;
+		} finally {
+			this.wizardOpen = false;
+		}
+		await this.adoptImportedData();
+	}
+
+	/** The import may have written the base and device settings: re-detect the root, reload, refresh views. */
+	private async adoptImportedData(): Promise<void> {
+		const root = await detectRoot(this.app.vault);
+		if (root !== null) this.layout = new VaultLayout(root, () => this.settings.types.map((t) => t.name));
+		await this.shared.load();
+		await this.applySharedSettings();
+	}
+
+	/** Settings entry: re-runs the wizard (ignoring earlier decisions) on the found sources or the cleanup step. */
+	async openWatchLogImport(startAt: 'found' | 'cleanup' = 'found'): Promise<void> {
+		if (this.wizardOpen) return;
+		const sources = await detectWatchLogSources(this.app);
+		if (!sources.original && !sources.fork) {
+			new Notice(t('onboarding.none'));
+			return;
+		}
+		this.index.stop();
+		try {
+			await this.openWizard(sources, startAt);
+		} finally {
+			await this.index.rebuild();
+			this.index.start();
+			activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
 		}
 	}
 
