@@ -88,4 +88,4 @@ table. See CONTRIBUTING.
 A new tab: a `TabDefinition` in `TABS` plus `TabName`. Shared toolbar, filter or sort behaviour:
 `src/ui/`. A new add modal: extend `SearchFormModal`, build a `LibraryIndex` and a
 `DuplicateGuard`. Grid geometry: `VirtualGrid.ts` / `VirtualScroller.ts`; card look:
-`PosterCard.ts` and `styles.css`. Search syntax: `SearchQuery.ts` and `SearchHelpModal.ts`.
+`PosterCard.ts` and the stylesheets in `src/styles/` (one per UI area, imported in cascade order by `index.css`). Search syntax: `SearchQuery.ts` and `SearchHelpModal.ts`.
