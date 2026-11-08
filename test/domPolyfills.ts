@@ -1,13 +1,14 @@
 /* Minimal stand-ins for Obsidian's DOM helpers (happy-dom has none). */
-type Opts = { cls?: string | string[]; text?: string; attr?: Record<string, string> } | string;
+type Opts = { cls?: string | string[]; text?: string; value?: string; attr?: Record<string, string> } | string;
 
 const normalize = (o?: Opts): Exclude<Opts, string> => (typeof o === "string" ? { cls: o } : (o ?? {}));
 
 function build<K extends keyof HTMLElementTagNameMap>(tag: K, opts?: Opts): HTMLElementTagNameMap[K] {
 	const el = document.createElement(tag);
-	const { cls, text, attr } = normalize(opts);
+	const { cls, text, value, attr } = normalize(opts);
 	if (cls) el.className = Array.isArray(cls) ? cls.join(" ") : cls;
 	if (text !== undefined) el.textContent = text;
+	if (value !== undefined) el.setAttribute("value", value);
 	for (const [k, v] of Object.entries(attr ?? {})) el.setAttribute(k, v);
 	return el;
 }

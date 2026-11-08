@@ -76,6 +76,15 @@ function schemaFor(kind: ReadingCsvKind): ReadingSchema {
 }
 
 
+/**
+ * An explicit Progress Unit column wins; otherwise a CSV carrying only word counts is taken to be
+ * words-tracked.
+ */
+function bookProgressUnit(entry: Partial<Book>): 'words' | 'pages' {
+	if (entry.progressUnit === 'words' || entry.progressUnit === 'pages') return entry.progressUnit;
+	return (entry.totalWords ?? 0) > 0 || (entry.wordsRead ?? 0) > 0 ? 'words' : 'pages';
+}
+
 // Modal
 
 export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
@@ -176,29 +185,17 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 
 	// Import
 
-	private buildBook(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus): Book {
-		const titleName = entry.title!.trim();
+	/** Fields books and manga share, defaulted for a CSV row that left them out. */
+	private commonFields(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus) {
 		const now = new Date().toISOString();
 		return {
-			id: this.plugin.readingDataManager.generateBookId(titleName),
-			title: titleName,
+			title: entry.title!.trim(),
 			author: entry.author ?? '',
 			status: (entry.status) || defaultStatus,
 			rating: entry.rating ?? 0,
-			// an explicit Progress Unit column wins; otherwise a CSV carrying only word counts is taken to be
-			// words-tracked
-			progressUnit: entry.progressUnit === 'words' ? 'words'
-				: entry.progressUnit === 'pages' ? 'pages'
-				: ((entry.totalWords ?? 0) > 0 || (entry.wordsRead ?? 0) > 0) ? 'words'
-				: 'pages',
-			pagesRead: entry.pagesRead ?? 0,
-			totalPages: entry.totalPages ?? 0,
-			wordsRead: entry.wordsRead ?? 0,
-			totalWords: entry.totalWords ?? 0,
 			chaptersRead: entry.chaptersRead ?? 0,
 			totalChapters: entry.totalChapters ?? 0,
 			coverUrl: '',
-			googleBooksId: entry.googleBooksId ?? '',
 			externalLink: entry.externalLink ?? '',
 			vaultPage: '',
 			dateStarted: entry.dateStarted ?? null,
@@ -210,29 +207,28 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 		};
 	}
 
-	private buildManga(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus): Manga {
-		const titleName = entry.title!.trim();
-		const now = new Date().toISOString();
+	private buildBook(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus): Book {
+		const common = this.commonFields(entry, defaultStatus);
 		return {
-			id: this.plugin.readingDataManager.generateMangaId(titleName),
-			title: titleName,
-			author: entry.author ?? '',
-			status: (entry.status) || defaultStatus,
-			rating: entry.rating ?? 0,
-			chaptersRead: entry.chaptersRead ?? 0,
-			totalChapters: entry.totalChapters ?? 0,
+			...common,
+			id: this.plugin.readingDataManager.generateBookId(common.title),
+			progressUnit: bookProgressUnit(entry),
+			pagesRead: entry.pagesRead ?? 0,
+			totalPages: entry.totalPages ?? 0,
+			wordsRead: entry.wordsRead ?? 0,
+			totalWords: entry.totalWords ?? 0,
+			googleBooksId: entry.googleBooksId ?? '',
+		};
+	}
+
+	private buildManga(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus): Manga {
+		const common = this.commonFields(entry, defaultStatus);
+		return {
+			...common,
+			id: this.plugin.readingDataManager.generateMangaId(common.title),
 			volumesRead: entry.volumesRead ?? 0,
 			totalVolumes: entry.totalVolumes ?? 0,
-			coverUrl: '',
 			malId: entry.malId ?? '',
-			externalLink: entry.externalLink ?? '',
-			vaultPage: '',
-			dateStarted: entry.dateStarted ?? null,
-			dateFinished: entry.dateFinished ?? null,
-			releaseDate: entry.releaseDate ?? null,
-			dateAdded: now,
-			dateModified: now,
-			customFields: {},
 		};
 	}
 
