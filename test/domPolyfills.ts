@@ -42,6 +42,7 @@ proto.toggleClass ??= function (this: Element, c: string, on: boolean) { this.cl
 proto.setCssProps ??= function (this: HTMLElement, props: Record<string, string>) {
 	for (const [k, v] of Object.entries(props)) this.style.setProperty(k, v);
 };
+proto.findAll ??= function (this: Element, sel: string) { return Array.from(this.querySelectorAll(sel)); };
 proto.empty ??= function (this: Element) { this.replaceChildren(); };
 proto.setAttr ??= function (this: Element, k: string, v: string) { this.setAttribute(k, v); };
 proto.hide ??= function (this: HTMLElement) { this.style.display = "none"; };
