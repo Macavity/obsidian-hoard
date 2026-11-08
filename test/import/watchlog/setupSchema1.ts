@@ -5,6 +5,7 @@ import { VaultLayout, detectRoot } from '../../../src/storage/VaultLayout';
 import { LocalStore } from '../../../src/storage/LocalStore';
 import { SharedConfigStore } from '../../../src/storage/SharedConfigStore';
 import { HistoryStore } from '../../../src/storage/HistoryStore';
+import type { OriginalSource } from '../../../src/import/watchlog/detect';
 import { importWatchLogData } from '../../../src/import/watchlog/schema1';
 import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
 
@@ -37,4 +38,24 @@ export function setupSchema1(data: unknown, files: Record<string, string>) {
 	const rerun = run;
 
 	return Promise.resolve({ run, rerun, f, local });
+}
+
+const ORIGINAL_DIR = '.obsidian/plugins/watchlog';
+
+/** Like `setupSchema1`, plus WatchLog's data.json in its plugin folder and the original source for `importOriginal`. */
+export async function setupOriginal(data: unknown, files: Record<string, string>) {
+	const base = await setupSchema1(data, files);
+	const { f, local } = base;
+	const d = data as WatchLogData;
+	f.adapterFiles.set(`${ORIGINAL_DIR}/data.json`, JSON.stringify(d));
+	const types = (d.settings.types ?? []).map((t) => t.name);
+	const layout = new VaultLayout((await detectRoot(f.app.vault)) ?? 'Hoard', () => types);
+	const shared = new SharedConfigStore(f.app, () => layout, yaml);
+	const history = new HistoryStore(f.app, () => layout);
+	const ctx = { app: f.app, local, shared, history, yaml, layout };
+	const src: OriginalSource = {
+		kind: 'original', dir: ORIGINAL_DIR, data: d, pluginEnabled: false,
+		counts: { titles: d.titles.length, books: 0, manga: 0, games: 0, lists: 0, notes: 0 },
+	};
+	return { f, ctx, src };
 }

@@ -51,7 +51,7 @@ describe('importWatchLogData', () => {
 		const snapshot = new Map(f.files);
 		const r = await rerun(); // same data again (simulates another device)
 		expect(r.errors).toEqual([]);
-		expect(r.notesCreated + r.notesFilled).toBe(0);
+		expect(r.created + r.filled).toBe(0);
 		expect(f.files).toEqual(snapshot);
 	});
 
