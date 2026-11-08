@@ -31,6 +31,16 @@ function forms(leaf: Leaf): [string, string][] {
 	return typeof leaf === 'string' ? [['', leaf]] : Object.entries(leaf);
 }
 
+/** Every form of every en leaf that has a de leaf, with its de counterpart (undefined when that form is missing). */
+function formPairs(): { label: string; form: string; enText: string; deText: string | undefined }[] {
+	return [...enLeaves].flatMap(([path, enLeaf]) => {
+		const deLeaf = deLeaves.get(path);
+		if (deLeaf === undefined) return [];
+		const deForms = new Map(forms(deLeaf));
+		return forms(enLeaf).map(([form, enText]) => ({ label: form ? `${path}.${form}` : path, form, enText, deText: deForms.get(form) }));
+	});
+}
+
 // Words that are identical in German (cognates, proper nouns, service/unit names). A de leaf may equal en
 // only if every word outside {placeholders} is listed here; glyph-only templates such as '{a}: {b}' pass.
 const IDENTICAL_WORDS = new Set([
@@ -106,29 +116,16 @@ describe('i18n', () => {
 		expect([...deLeaves.keys()].filter((p) => !enLeaves.has(p))).toEqual([]);
 	});
 	it('placeholders match between en and de', () => {
-		const bad: string[] = [];
-		for (const [path, enLeaf] of enLeaves) {
-			const deLeaf = deLeaves.get(path);
-			if (deLeaf === undefined) continue;
-			const deForms = new Map(forms(deLeaf));
-			for (const [form, text] of forms(enLeaf)) {
-				const other = deForms.get(form);
-				if (other === undefined) { if (form !== 'zero') bad.push(`${path}${form && '.' + form} (form missing)`); continue; }
-				if (placeholders(text) !== placeholders(other)) bad.push(`${path}${form && '.' + form}: {${placeholders(text)}} vs {${placeholders(other)}}`);
-			}
-		}
+		const bad = formPairs().flatMap(({ label, form, enText, deText }) => {
+			if (deText === undefined) return form === 'zero' ? [] : [`${label} (form missing)`];
+			return placeholders(enText) === placeholders(deText) ? [] : [`${label}: {${placeholders(enText)}} vs {${placeholders(deText)}}`];
+		});
 		expect(bad).toEqual([]);
 	});
 	it('de leaves differ from en unless allowlisted', () => {
-		const same: string[] = [];
-		for (const [path, enLeaf] of enLeaves) {
-			const deLeaf = deLeaves.get(path);
-			if (deLeaf === undefined) continue;
-			const deForms = new Map(forms(deLeaf));
-			for (const [form, text] of forms(enLeaf)) {
-				if (deForms.get(form) === text && !isAllowedIdentical(text)) same.push(`${path}${form && '.' + form}: ${text}`);
-			}
-		}
+		const same = formPairs()
+			.filter(({ enText, deText }) => deText === enText && !isAllowedIdentical(enText))
+			.map(({ label, enText }) => `${label}: ${enText}`);
 		expect(same).toEqual([]);
 	});
 });
