@@ -695,7 +695,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				cleanupInput();
 				const result = parseBackup(e.target?.result as string);
 				if ('error' in result) {
-					new Notice(t('settings.backup.restore.invalid', { error: result.error }));
+					new Notice(t('settings.backup.restore.invalid', { error: t(`settings.backup.restore.errors.${result.error}`) }));
 					return;
 				}
 				// validated as a whole before anything is written

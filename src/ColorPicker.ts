@@ -1,4 +1,5 @@
 import { FIELD_COLORS, DEFAULT_FIELD_COLOR } from './types';
+import { t } from './i18n';
 
 // ColorPicker — shared swatch-picker UI + fill/border colour derivation.
 //
@@ -123,7 +124,7 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 		const customSwatch = palette.createEl('button', {
 			cls: 'hoard-reading-col-palette-swatch hoard-color-custom-swatch',
 		});
-		customSwatch.title = 'Custom color…';
+		customSwatch.title = t('misc.colorPicker.custom');
 		if (matchedPreset) {
 			// current colour is a preset: present the custom swatch as a rainbow invite
 			customSwatch.addClass('hoard-color-custom-rainbow');
@@ -155,7 +156,7 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 	const clearSwatch = palette.createEl('button', {
 		cls: 'hoard-reading-col-palette-swatch hoard-color-clear-swatch',
 	});
-	clearSwatch.title = 'No color (reset to default)';
+	clearSwatch.title = t('misc.colorPicker.clear');
 	clearSwatch.addEventListener('click', (e) => {
 		e.stopPropagation();
 		dismiss();
