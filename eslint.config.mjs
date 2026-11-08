@@ -37,6 +37,12 @@ const sentenceCaseOptions = {
       "^TV Show$",
       "^Korean TV Show$",
       "^Plan to Read$",
+      // Reading / Games locale leaves that the rule misreads: lowercase unit nouns that follow a number,
+      // a link fragment that continues a sentence, and a hint that quotes section names
+      "^pages$",
+      "^words$",
+      "^add your first (book|manga)$",
+      '^Reorder the sections or switch them off\\. "By ',
       // list area: lowercase stat captions under a value, and quoted stored status/section names
       "^(left|watched|episodes|progress)$",
       '^Nothing to recommend; add titles to "Plan to watch" or "Watching"\\.$',
@@ -46,6 +52,10 @@ const sentenceCaseOptions = {
       "^(NOW WATCHING|UPCOMING NEXT)$",
       "^Missing id field\\.$",
       "^These columns are pre-populated when creating a new list\\.",
+      // airtime area: lowercase unit word that follows a number (uppercased in code), quoted section name, time zone note
+      "^(day|days)$",
+      '^No "Maybe" titles yet\\.',
+      "^JST —$",
       "^TSV pastes into spreadsheets",
       "^Paste tab-separated values copied from a spreadsheet",
     ],
