@@ -20,6 +20,8 @@ describe("Obsidian DOM polyfills", () => {
 		expect(createSpan().tagName).toBe("SPAN");
 		el.addClass("a", "b");
 		el.removeClass("a");
+		el.addClass("d", "e");
+		el.removeClasses(["d", "e"]);
 		el.toggleClass("c", true);
 		el.setText("t");
 		el.setCssProps({ "--w": "1px" });
@@ -29,6 +31,20 @@ describe("Obsidian DOM polyfills", () => {
 		expect(el.instanceOf(HTMLDivElement)).toBe(true);
 		el.empty();
 		expect(el.childNodes.length).toBe(0);
+	});
+
+	it("hides, shows and toggles elements and sets attributes", () => {
+		const el = createDiv();
+		el.setAttr("aria-label", "x");
+		expect(el.getAttribute("aria-label")).toBe("x");
+		el.hide();
+		expect(el.style.display).toBe("none");
+		el.show();
+		expect(el.style.display).toBe("");
+		el.toggle(false);
+		expect(el.style.display).toBe("none");
+		el.toggle(true);
+		expect(el.style.display).toBe("");
 	});
 
 	it("adds Array.prototype.remove", () => {

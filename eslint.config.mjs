@@ -25,6 +25,7 @@ const sentenceCaseOptions = {
       "^https://",               // URL placeholder
       "^Season \\d",             // season-spec example placeholder
       "\\(Season 1 = color 1",    // season example inside the help text
+      '"Game details" to Public', // Steam's own profile privacy wording
       "^p\\. 123",               // quote-location example placeholder
       "^APIs & Services",        // Google Cloud console path
       '"N due"',                 // N is a number placeholder

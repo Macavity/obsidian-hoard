@@ -35,9 +35,14 @@ proto.createSpan ??= function (this: Node, o?: Opts) { return createEl.call(this
 proto.instanceOf ??= function (this: Node, type: abstract new (...a: never[]) => unknown) { return this instanceof type; };
 proto.addClass ??= function (this: Element, ...c: string[]) { this.classList.add(...c); };
 proto.removeClass ??= function (this: Element, ...c: string[]) { this.classList.remove(...c); };
+proto.removeClasses ??= function (this: Element, c: string[]) { this.classList.remove(...c); };
 proto.setText ??= function (this: Element, t: string) { this.textContent = t; };
 proto.toggleClass ??= function (this: Element, c: string, on: boolean) { this.classList.toggle(c, on); };
 proto.setCssProps ??= function (this: HTMLElement, props: Record<string, string>) {
 	for (const [k, v] of Object.entries(props)) this.style.setProperty(k, v);
 };
 proto.empty ??= function (this: Element) { this.replaceChildren(); };
+proto.setAttr ??= function (this: Element, k: string, v: string) { this.setAttribute(k, v); };
+proto.hide ??= function (this: HTMLElement) { this.style.display = "none"; };
+proto.show ??= function (this: HTMLElement) { this.style.display = ""; };
+proto.toggle ??= function (this: HTMLElement, on: boolean) { this.style.display = on ? "" : "none"; };

@@ -360,6 +360,10 @@ export class DropdownComponent {
 		this.selectEl.createEl("option", { text: display, attr: { value } });
 		return this;
 	}
+	addOptions(options: Record<string, string>): this {
+		for (const [value, display] of Object.entries(options)) this.addOption(value, display);
+		return this;
+	}
 	setValue(value: string): this {
 		this.selectEl.value = value;
 		return this;
@@ -392,17 +396,20 @@ export class ToggleComponent {
 export class Setting {
 	settingEl: HTMLElement;
 	nameEl: HTMLElement;
+	descEl: HTMLElement;
 	controlEl: HTMLElement;
 	constructor(containerEl: HTMLElement) {
 		this.settingEl = containerEl.createDiv({ cls: "setting-item" });
 		this.nameEl = this.settingEl.createDiv({ cls: "setting-item-name" });
+		this.descEl = this.settingEl.createDiv({ cls: "setting-item-description" });
 		this.controlEl = this.settingEl.createDiv({ cls: "setting-item-control" });
 	}
 	setName(name: string): this {
 		this.nameEl.textContent = name;
 		return this;
 	}
-	setDesc(_desc: string): this {
+	setDesc(desc: string): this {
+		this.descEl.textContent = desc;
 		return this;
 	}
 	addButton(cb: (b: ButtonComponent) => unknown): this {
