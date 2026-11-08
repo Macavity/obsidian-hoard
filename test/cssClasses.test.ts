@@ -23,7 +23,7 @@ describe("css class check", () => {
 	});
 
 	it("reports stylesheet partials index.css does not import", () => {
-		const index = '@import "./base.css";\n@import "./list.css";\n';
+		const index = '@import "./base.css";\n@import "list.css";\n';
 		expect(unimportedPartials(index, ["base.css", "index.css", "list.css", "orphan.css"])).toEqual(["orphan.css"]);
 	});
 

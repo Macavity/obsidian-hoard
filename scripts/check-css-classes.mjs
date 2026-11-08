@@ -34,7 +34,7 @@ export function stylesheetFiles(dir = join(root, "src", "styles")) {
 
 /** Partials index.css does not @import: they never reach dist/styles.css, yet the class check would read them. */
 export function unimportedPartials(indexCss, partials) {
-	const imported = new Set([...indexCss.matchAll(/^@import "\.\/(.+?)";/gm)].map((m) => m[1]));
+	const imported = new Set([...indexCss.matchAll(/^@import "(?:\.\/)?(.+?)";/gm)].map((m) => m[1]));
 	return partials.filter((f) => f !== "index.css" && !imported.has(f));
 }
 
