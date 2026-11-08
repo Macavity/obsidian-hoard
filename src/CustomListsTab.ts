@@ -1681,6 +1681,9 @@ interface ImportAnalysis {
 	numberConflicts: string[];
 }
 
+/** Target of one pasted column: the row name or a list column. */
+type ImportSlot = CustomListColumn | 'name';
+
 class ImportListModal extends Modal {
 	private list: CustomList;
 	private manager: CustomListManager;
@@ -1873,10 +1876,21 @@ class ImportListModal extends Modal {
 		const a = this.analyse();
 		if (!a || a.numberConflicts.length > 0) return;
 
-		const list = this.list;
 		const nonLocked = this.nonLockedColumns();
+		const newCols = this.appendMissingColumns(a);
+		// positional slots: index 0 = Name, then non-locked columns, then new columns
+		const slots: ImportSlot[] = ['name', ...nonLocked, ...newCols];
+		this.addSelectOptions(a.selectAdditions, nonLocked);
+		this.appendParsedRows(a, slots);
 
-		// 1. Auto-create the missing trailing text columns.
+		this.close();
+		await this.onApplied();
+		new Notice(t('lists.imported', { count: a.rowCount }));
+	}
+
+	/** Auto-creates the missing trailing text columns. */
+	private appendMissingColumns(a: ImportAnalysis): CustomListColumn[] {
+		const list = this.list;
 		const newCols: CustomListColumn[] = [];
 		for (let pos = a.existingCount; pos < a.totalCols; pos++) {
 			const label = (a.header[pos] ?? '').trim() || `Column ${pos + 1}`;
@@ -1890,34 +1904,39 @@ class ImportListModal extends Modal {
 			list.columns.push(col);
 			newCols.push(col);
 		}
+		return newCols;
+	}
 
-		// 2. Positional slots: index 0 = Name, then non-locked columns, then new columns.
-		const slots: (CustomListColumn | 'name')[] = ['name', ...nonLocked, ...newCols];
-
-		// 3. Add any new select options encountered (text only, no colour).
-		for (const sel of a.selectAdditions) {
+	/** Adds any new select options encountered (text only, no colour). */
+	private addSelectOptions(additions: ImportAnalysis['selectAdditions'], nonLocked: CustomListColumn[]): void {
+		for (const sel of additions) {
 			const col = nonLocked.find(c => (c.label || '(unnamed)') === sel.label && c.type === 'select');
 			if (!col) continue;
 			col.options = [...(col.options ?? [])];
 			for (const v of sel.values) if (!col.options.includes(v)) col.options.push(v);
 		}
+	}
 
-		// 4. Append the parsed rows as NEW rows (never touch existing rows).
+	/** Appends the parsed rows as NEW rows (never touches existing rows). */
+	private appendParsedRows(a: ImportAnalysis, slots: ImportSlot[]): void {
+		const list = this.list;
 		for (const cells of a.dataRows) {
 			const row: CustomListRow = { id: this.manager.generateRowId(list.rows), name: '' };
 			list.rows.push(row); // push first so the next generated id stays unique
 			for (let i = 0; i < a.totalCols; i++) {
 				const slot = slots[i];
-				if (!slot) continue;
-				const cell = (cells[i] ?? '').trim();
-				if (slot === 'name') { row.name = cell; continue; }
-				if (cell === '') { row[slot.id] = undefined; continue; }
-				row[slot.id] = slot.type === 'number' ? Number(cell) : cell;
+				if (slot) ImportListModal.fillCell(row, slot, (cells[i] ?? '').trim());
 			}
 		}
+	}
 
-		this.close();
-		await this.onApplied();
-		new Notice(t('lists.imported', { count: a.rowCount }));
+	private static fillCell(row: CustomListRow, slot: ImportSlot, cell: string): void {
+		if (slot === 'name') {
+			row.name = cell;
+		} else if (cell === '') {
+			row[slot.id] = undefined;
+		} else {
+			row[slot.id] = slot.type === 'number' ? Number(cell) : cell;
+		}
 	}
 }
