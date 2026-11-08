@@ -3,6 +3,7 @@ import { CsvModalBase, rowsToCsv, type CsvFieldDef, type CsvExportRow, type CsvS
 import { t } from './i18n';
 import { readingStatusLabel } from './i18n/labels';
 import type HoardPlugin from './main';
+import type { ReadingDataManager } from './ReadingDataManager';
 import type { Book, Manga, ReadingStatus } from './types';
 import { READING_STATUSES, SELECTABLE_READING_STATUSES } from './types';
 import type { ReadingCsvKind } from './ReadingCsvChoiceModal';
@@ -77,9 +78,7 @@ function schemaFor(kind: ReadingCsvKind): ReadingSchema {
 
 // Modal
 
-type ReadingEntry = Partial<Book & Manga>;
-
-export class ReadingCsvModal extends CsvModalBase<ReadingEntry> {
+export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 	private schema: ReadingSchema;
 
 	private get kindLabel(): string {
@@ -156,12 +155,12 @@ export class ReadingCsvModal extends CsvModalBase<ReadingEntry> {
 		return this.getItems();
 	}
 
-	protected buildEntry(get: (fieldKey: string) => string): ReadingEntry | null {
-		const entry = this.coerceFields(get) as ReadingEntry;
+	protected buildEntry(get: (fieldKey: string) => string): Partial<Book & Manga> | null {
+		const entry = this.coerceFields(get) as Partial<Book & Manga>;
 		return entry.title && entry.title.trim() ? entry : null;
 	}
 
-	protected previewMeta(entry: ReadingEntry): string {
+	protected previewMeta(entry: Partial<Book & Manga>): string {
 		return [entry.author, entry.status ? readingStatusLabel(entry.status) : ''].filter(Boolean).join(' · ');
 	}
 
@@ -177,7 +176,7 @@ export class ReadingCsvModal extends CsvModalBase<ReadingEntry> {
 
 	// Import
 
-	private buildBook(entry: ReadingEntry, defaultStatus: ReadingStatus): Book {
+	private buildBook(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus): Book {
 		const titleName = entry.title!.trim();
 		const now = new Date().toISOString();
 		return {
@@ -211,7 +210,7 @@ export class ReadingCsvModal extends CsvModalBase<ReadingEntry> {
 		};
 	}
 
-	private buildManga(entry: ReadingEntry, defaultStatus: ReadingStatus): Manga {
+	private buildManga(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus): Manga {
 		const titleName = entry.title!.trim();
 		const now = new Date().toISOString();
 		return {
@@ -243,7 +242,7 @@ export class ReadingCsvModal extends CsvModalBase<ReadingEntry> {
 
 		this.startImportUi(toImport.length);
 
-		const reading = this.plugin.readingDataManager;
+		const reading: ReadingDataManager = this.plugin.readingDataManager;
 		const defaultStatus: ReadingStatus = reading.getSettings().defaultStatus ?? 'Plan to Read';
 
 		let added = 0;
