@@ -1,5 +1,6 @@
-import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, parseYaml, setIcon, stringifyYaml } from 'obsidian';
-import { t } from './i18n';
+import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, getLanguage, parseYaml, setIcon, stringifyYaml } from 'obsidian';
+import { setLocale, t } from './i18n';
+import { statusLabel, typeLabel } from './i18n/labels';
 import type { ManagerNotice } from './storage/storageTypes';
 import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, HoardPluginSettings, setActiveDateFormat } from './types';
 import { cardSizeToMinWidth } from './VirtualGrid';
@@ -104,12 +105,13 @@ export default class HoardPlugin extends Plugin {
 	private statusBarEl: HTMLElement | null = null;
 
 	async onload(): Promise<void> {
+		setLocale(getLanguage());
 		const loaded = await this.local.load();
 		if (loaded.schema === 1) {
 			// converted in startVaultStorage, once the vault is ready; until then its settings act as local
 			this.pendingSchema1 = loaded.data;
 		} else if (loaded.schema === 'newer') {
-			new Notice('Hoard: data.json was written by a newer plugin version. Device settings are not saved until you update.', 0);
+			new Notice(t('app.notices.newerSchema'), 0);
 		}
 		this.warnIfWatchLogEnabled();
 		// local + defaults only; shared keys are re-composed once the base is loaded (startVaultStorage)
@@ -151,19 +153,19 @@ export default class HoardPlugin extends Plugin {
 
 		this.widgetRenderer = new WidgetRenderer(this, this.dataManager);
 
-		this.addRibbonIcon('tv', 'Hoard', () => {
+		this.addRibbonIcon('tv', t('app.ribbon'), () => {
 			void this.activateView();
 		});
 
 		this.addCommand({
 			id: 'open-panel',
-			name: 'Open panel',
+			name: t('app.commands.openPanel'),
 			callback: () => void this.activateView(),
 		});
 
 		this.addCommand({
 			id: 'add-title',
-			name: 'Add title',
+			name: t('app.commands.addTitle'),
 			callback: () => {
 				new AddTitleModal(this.app, this, this.dataManager, (entry) => {
 					// setting off = just reveal whatever tab was open, no modal
@@ -182,7 +184,7 @@ export default class HoardPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'insert-widget',
-			name: 'Insert widget',
+			name: t('app.commands.insertWidget'),
 			editorCallback: (editor: Editor) => {
 				this.openWidgetPalette(editor);
 			},
@@ -190,12 +192,12 @@ export default class HoardPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'search-title',
-			name: 'Search title',
+			name: t('app.commands.searchTitle'),
 			callback: () => {
 				const titles = this.dataManager.getTitles();
 				new InsertWidgetModal(this.app, titles, (title) => {
 					void this.activateView().then(() => {
-						new Notice(`"${title.title}" · ${title.type} · ${title.status}`);
+						new Notice(t('app.titleNotice', { title: title.title, type: typeLabel(title.type), status: statusLabel(title.status) }));
 					});
 				}).open();
 			},
@@ -260,7 +262,7 @@ export default class HoardPlugin extends Plugin {
 			this.shared.onChange(() => void this.applySharedSettings());
 			if (root !== null && (await this.shared.ensureFilter()) === 'missing') {
 				const name = this.shared.baseFile()?.name ?? 'Hoard.base';
-				new Notice(`Hoard: the folder filter in ${name} was not found; the base view may list other notes.`);
+				new Notice(t('app.notices.baseFilterMissing', { file: name }));
 			}
 			this.shared.start();
 			await this.index.build();
@@ -274,7 +276,7 @@ export default class HoardPlugin extends Plugin {
 			await this.dataManager.ensureFolders();
 		} catch (e) {
 			console.error('[Hoard] vault storage failed to start', e);
-			new Notice('Hoard could not load its notes. See the developer console for details.');
+			new Notice(t('app.notices.loadFailed'));
 		}
 	}
 
@@ -308,7 +310,7 @@ export default class HoardPlugin extends Plugin {
 	private warnIfWatchLogEnabled(): void {
 		const plugins = (this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } }).plugins;
 		if (WATCHLOG_PLUGIN_IDS.some((id) => plugins?.enabledPlugins?.has(id))) {
-			new Notice('WatchLog is still enabled. Disable it, otherwise both plugins write the same notes.', 0);
+			new Notice(t('app.notices.watchLogEnabled'), 0);
 		}
 	}
 
@@ -394,7 +396,7 @@ export default class HoardPlugin extends Plugin {
 		if (Platform.isMobile) return;
 		this.statusBarEl = this.addStatusBarItem();
 		this.statusBarEl.addClass('hoard-statusbar-upcoming');
-		this.statusBarEl.setAttribute('aria-label', 'Hoard: Upcoming due');
+		this.statusBarEl.setAttribute('aria-label', t('app.statusBar.label'));
 		this.statusBarEl.addEventListener('click', () => void this.activateView('upcoming'));
 		this.updateStatusBar();
 	}
@@ -419,7 +421,7 @@ export default class HoardPlugin extends Plugin {
 		// orange icon + "N due" (colour from .hoard-statusbar-upcoming), reusing the ribbon's 'tv' icon
 		const icon = el.createSpan({ cls: 'hoard-statusbar-icon' });
 		setIcon(icon, 'tv');
-		el.createSpan({ cls: 'hoard-statusbar-text', text: `${count} due` });
+		el.createSpan({ cls: 'hoard-statusbar-text', text: t('app.statusBar.due', { count }) });
 	}
 
 	/**
@@ -493,22 +495,22 @@ export default class HoardPlugin extends Plugin {
 
 	private openWidgetPalette(editor: Editor): void {
 		const widgets = [
-			{ name: 'hoard-todo: Track a title (full)', id: 'hoard-todo' },
-			{ name: 'hoard-todo mini: Track a title (compact)', id: 'hoard-todo:mini' },
-			{ name: 'hoard-stat: watched: Time watched (mini)', id: 'hoard-stat:watched' },
-			{ name: 'hoard-stat: completed: Completed titles (mini)', id: 'hoard-stat:completed' },
-			{ name: 'hoard-stat: remaining: Time remaining (mini)', id: 'hoard-stat:remaining' },
-			{ name: 'hoard-stat: time: Watched + remaining (mini)', id: 'hoard-stat:time' },
-			{ name: 'hoard-upcoming: next: Next upcoming (mini)', id: 'hoard-upcoming:next' },
-			{ name: 'hoard-stat: time completed full: Time · Remaining · Completed card', id: 'hoard-stat:time completed full' },
-			{ name: 'hoard-now-next: Now Watching + Up Next card', id: 'hoard-now-next' },
+			{ name: `hoard-todo: ${t('app.widgets.todoFull')}`, id: 'hoard-todo' },
+			{ name: `hoard-todo mini: ${t('app.widgets.todoMini')}`, id: 'hoard-todo:mini' },
+			{ name: `hoard-stat: watched: ${t('app.widgets.statWatched')}`, id: 'hoard-stat:watched' },
+			{ name: `hoard-stat: completed: ${t('app.widgets.statCompleted')}`, id: 'hoard-stat:completed' },
+			{ name: `hoard-stat: remaining: ${t('app.widgets.statRemaining')}`, id: 'hoard-stat:remaining' },
+			{ name: `hoard-stat: time: ${t('app.widgets.statTime')}`, id: 'hoard-stat:time' },
+			{ name: `hoard-upcoming: next: ${t('app.widgets.upcomingNext')}`, id: 'hoard-upcoming:next' },
+			{ name: `hoard-stat: time completed full: ${t('app.widgets.statTimeCompletedFull')}`, id: 'hoard-stat:time completed full' },
+			{ name: `hoard-now-next: ${t('app.widgets.nowNext')}`, id: 'hoard-now-next' },
 		];
 
 		new WidgetSelectModal(this.app, widgets, (selected) => {
 			if (selected.id === 'hoard-todo' || selected.id === 'hoard-todo:mini') {
 				const titles = this.dataManager.getTitles();
 				if (titles.length === 0) {
-					new Notice('No titles in your Hoard library yet.');
+					new Notice(t('app.notices.noTitles'));
 					return;
 				}
 				const isMini = selected.id === 'hoard-todo:mini';
@@ -567,7 +569,7 @@ class WidgetSelectModal extends FuzzySuggestModal<WidgetItem> {
 		super(app);
 		this.items = items;
 		this.onSelect = onSelect;
-		this.setPlaceholder('Select a widget to insert...');
+		this.setPlaceholder(t('app.widgetPlaceholder'));
 	}
 
 	getItems(): WidgetItem[] { return this.items; }
