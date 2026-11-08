@@ -324,6 +324,7 @@ export default class HoardPlugin extends Plugin {
 			adopted: this.adoptedFrom,
 			schema1: this.pendingSchema1,
 			typeNames: () => this.settings.types.map((t) => t.name),
+			notify: (n) => this.notifyManager(n),
 		});
 		this.adoptedFrom = null;
 		if (report?.schema1 && report.schema1.errors.length === 0) {

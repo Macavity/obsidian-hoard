@@ -4,7 +4,7 @@ import type { LocalStore } from '../../storage/LocalStore';
 import { SharedConfigStore } from '../../storage/SharedConfigStore';
 import { HistoryStore } from '../../storage/HistoryStore';
 import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
-import type { YamlIO } from '../../storage/storageTypes';
+import type { Notify, YamlIO } from '../../storage/storageTypes';
 import { findWatchLogBase } from './detect';
 import { migrateWatchLogBase, type BaseMigration } from './base';
 import type { WatchLogSource } from './pluginData';
@@ -29,6 +29,8 @@ export interface WatchLogMigrationContext {
 	schema1: WatchLogData | null;
 	/** Type names of the current settings; type folders below the root hold the titles. */
 	typeNames: () => string[];
+	/** Reports storage notices (e.g. an unreadable settings block) the way the plugin shows them. */
+	notify: Notify;
 }
 
 export interface MigrationReport {
@@ -81,7 +83,7 @@ async function convertSchema1(ctx: WatchLogMigrationContext, data: WatchLogData)
 		local: ctx.local,
 		yaml: ctx.yaml,
 		layout,
-		shared: new SharedConfigStore(ctx.app, () => layout, ctx.yaml),
+		shared: new SharedConfigStore(ctx.app, () => layout, ctx.yaml, undefined, ctx.notify),
 		history: new HistoryStore(ctx.app, () => layout),
 		pluginDir: ctx.adopted?.dir ?? ctx.pluginDir,
 		data,
