@@ -1,4 +1,6 @@
 import { App, Modal } from 'obsidian';
+import { t } from './i18n';
+import { renderChoiceGrid } from './ui/choiceGrid';
 
 export type AddTitleChoice = 'url' | 'manual';
 
@@ -19,21 +21,19 @@ export class AddTitleChoiceModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass('hoard-draft-choice-modal');
 
-		this.titleEl.setText('Add title');
+		this.titleEl.setText(t('add.choice.title'));
 
-		const grid = contentEl.createDiv({ cls: 'hoard-draft-choice-grid' });
-
-		const makeOption = (label: string, choice: AddTitleChoice): void => {
-			const btn = grid.createEl('button', { cls: 'hoard-draft-choice-btn' });
-			btn.createDiv({ cls: 'hoard-draft-choice-label', text: label });
-			btn.addEventListener('click', () => {
+		renderChoiceGrid<AddTitleChoice>(
+			contentEl,
+			[
+				{ label: t('add.choice.fromUrl'), choice: 'url' },
+				{ label: t('add.choice.manual'), choice: 'manual' },
+			],
+			(choice) => {
 				this.close();
 				this.onChoice(choice);
-			});
-		};
-
-		makeOption('Add from URL', 'url');
-		makeOption('Add manually / via API', 'manual');
+			},
+		);
 	}
 
 	onClose(): void {
