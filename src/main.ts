@@ -306,10 +306,12 @@ export default class HoardPlugin extends Plugin {
 		try {
 			const modal = new WatchLogOnboardingModal(this.app, importer, { startAt, imported });
 			modal.open();
-			activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+			// views listen on the data manager: show the "import running" placeholder
+			this.dataManager.notifyChange();
 			await modal.finished;
 		} finally {
 			this.wizardOpen = false;
+			this.dataManager.notifyChange();
 		}
 		await this.adoptImportedData();
 	}

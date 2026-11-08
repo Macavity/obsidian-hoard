@@ -40,7 +40,10 @@ function setup(sources: WatchLogSources | Error) {
 		shared: { deferBase: () => {}, load: track('shared.load'), onChange: () => {}, ensureFilter: () => Promise.resolve('ok'), start: () => {} },
 		index: { onLocalWrite: () => {}, build: track('index:build'), sweepCache: () => {}, start: () => {} },
 		historyManager: { start: track('h') },
-		dataManager: { init: track('d'), ensureFolders: track('e'), ensureFolder: track('f') },
+		dataManager: {
+			init: track('d'), ensureFolders: track('e'), ensureFolder: track('f'),
+			notifyChange: () => { hoisted.order.push(`notify:${String((plugin as unknown as HoardPlugin).importRunning)}`); },
+		},
 		readingDataManager: { init: track('r') },
 		gameDataManager: { init: track('g') },
 	});
@@ -64,6 +67,8 @@ describe('start order', () => {
 		await started;
 		expect(calls.filter((c) => c.startsWith('wizard') || c.startsWith('index'))).toEqual(['wizard:open', 'wizard:finished', 'index:build']);
 		expect(plugin.importRunning).toBe(false);
+		// views listen on the data manager: placeholder on open, real content after close
+		expect(calls.filter((c) => c.startsWith('notify'))).toEqual(['notify:true', 'notify:false']);
 	});
 
 	it('opens no wizard without pending sources', async () => {
