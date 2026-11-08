@@ -14,7 +14,7 @@ const sentenceCaseOptions = {
       // Plugin / feature names
       "Hoard", "Watchlist", "Upcoming", "Reading", "Cards",
       "Drafts", "Books", "Manga", "Games",
-      "Quotes", "Regenerate",
+      "Quotes", "Regenerate", "Settings",
       // External services / acronyms not in the rule defaults
       "Google", "MAL", "TSV", "URLs", "APIs", "Steam", "Tenrai", "English",
       // Stored type name, Steam's privacy option and the default rating-tier label
@@ -64,6 +64,20 @@ const sentenceCaseOptions = {
       "^JST —$",
       "^TSV pastes into spreadsheets",
       "^Paste tab-separated values copied from a spreadsheet",
+      // csv/steam areas: lowercase badge and caption, quoted dropdown/privacy names, MAL ID acronym label
+      "^(duplicate|never played|\\(no title\\))$",
+      '^Match each Hoard field to a column from your CSV\\. Select "Skip"',
+      "^MAL ID$",
+      '^Steam returned no library\\. Your profile.s "Game details"',
+      // add/edit areas: service URL example, IGDB wording, ISBN acronym, parenthesised fallback, abbreviation, quoted format examples
+      "^Please enter an IMDb or TMDB URL",
+      "^No IGDB credentials configured\\.",
+      "^Search by title or ISBN\\.\\.\\.$",
+      "^\\(untitled\\)$",
+      "^Ep\\. duration \\(min\\)$",
+      '^Format: "Season Name',
+      '^Skip episodes: add "',
+      "^Note: when adding a new season",
     ],
   };
 
