@@ -20,6 +20,11 @@ import {
 
 export type ReadingMode = 'book' | 'manga';
 
+type LookupOutcome =
+	| { kind: 'message'; text: string }
+	| { kind: 'books'; results: BookSearchResult[] }
+	| { kind: 'manga'; results: MangaSearchResult[] };
+
 interface ReadingFormState {
 	title: string;
 	author: string;
@@ -273,37 +278,46 @@ export class AddReadingModal extends Modal {
 		this.lookupResultsEl.createDiv({ cls: 'hoard-modal-loading', text: t('ui.picker.searching') });
 
 		try {
-			if (this.mode === 'book') {
-				if (!this.plugin.apiService.hasGoogleBooksKey()) {
-					if (gen !== this.lookupSearchGen) return;
-					this.lookupResultsEl.empty();
-					this.lookupResultsEl.createDiv({
-						cls: 'hoard-modal-loading',
-						text: t('add.reading.needGoogleKey'),
-					});
-					return;
-				}
-				const results = await this.plugin.apiService.searchGoogleBooks(query);
-				if (gen !== this.lookupSearchGen) return;
-				this.renderLookupResults(results, '📖', (r) => this.applyBookResult(r), bookResultIdKeys);
-			} else {
-				const isNumeric = /^\d+$/.test(query);
-				let results: MangaSearchResult[];
-				if (isNumeric) {
-					const single = await this.plugin.apiService.getMangaByMalId(parseInt(query, 10));
-					if (gen !== this.lookupSearchGen) return;
-					results = single ? [single] : [];
-				} else {
-					results = await this.plugin.apiService.searchManga(query);
-					if (gen !== this.lookupSearchGen) return;
-				}
-				this.renderLookupResults(results, '📓', (r) => this.applyMangaResult(r), mangaResultIdKeys);
-			}
+			const outcome = this.mode === 'book'
+				? await this.lookupBooks(query)
+				: await this.lookupManga(query);
+			if (gen !== this.lookupSearchGen) return;
+			this.renderLookupOutcome(outcome);
 		} catch (err) {
 			if (gen !== this.lookupSearchGen) return;
-			this.lookupResultsEl.empty();
-			this.lookupResultsEl.createDiv({ cls: 'hoard-modal-error', text: apiErrorMessage(err) });
+			this.showLookupMessage('hoard-modal-error', apiErrorMessage(err));
 		}
+	}
+
+	private renderLookupOutcome(outcome: LookupOutcome): void {
+		if (outcome.kind === 'message') {
+			this.showLookupMessage('hoard-modal-loading', outcome.text);
+		} else if (outcome.kind === 'books') {
+			this.renderLookupResults(outcome.results, '📖', (r) => this.applyBookResult(r), bookResultIdKeys);
+		} else {
+			this.renderLookupResults(outcome.results, '📓', (r) => this.applyMangaResult(r), mangaResultIdKeys);
+		}
+	}
+
+	private showLookupMessage(cls: string, text: string): void {
+		if (!this.lookupResultsEl) return;
+		this.lookupResultsEl.empty();
+		this.lookupResultsEl.createDiv({ cls, text });
+	}
+
+	private async lookupBooks(query: string): Promise<LookupOutcome> {
+		if (!this.plugin.apiService.hasGoogleBooksKey()) {
+			return { kind: 'message', text: t('add.reading.needGoogleKey') };
+		}
+		return { kind: 'books', results: await this.plugin.apiService.searchGoogleBooks(query) };
+	}
+
+	private async lookupManga(query: string): Promise<LookupOutcome> {
+		if (!/^\d+$/.test(query)) {
+			return { kind: 'manga', results: await this.plugin.apiService.searchManga(query) };
+		}
+		const single = await this.plugin.apiService.getMangaByMalId(parseInt(query, 10));
+		return { kind: 'manga', results: single ? [single] : [] };
 	}
 
 	/**
