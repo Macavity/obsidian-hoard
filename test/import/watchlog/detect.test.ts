@@ -1,21 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createFakeApp } from '../../fakes/fakeApp';
 import { readFileSync } from 'node:fs';
-import {
-	detectWatchLogSources, findWatchLogBase, findWatchLogPluginData, WATCHLOG_PLUGIN_IDS,
-} from '../../../src/import/watchlog/detect';
+import { detectWatchLogSources, findWatchLogBase } from '../../../src/import/watchlog/detect';
 import { snapshot } from './helpers';
 import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
 
 const data = JSON.parse(readFileSync('test/fixtures/data-v1.json', 'utf8')) as WatchLogData;
-
-const src = (files: Record<string, string>) => ({
-	configDir: '.obsidian',
-	adapter: {
-		exists: (p: string) => Promise.resolve(p in files),
-		read: (p: string) => (p in files ? Promise.resolve(files[p]!) : Promise.reject(new Error('ENOENT'))),
-	},
-});
 
 describe('findWatchLogBase', () => {
 	it('finds a WatchLog.base by name, even without its key', async () => {
@@ -35,23 +25,6 @@ describe('findWatchLogBase', () => {
 	it('finds nothing in a Hoard vault', async () => {
 		const { app } = createFakeApp({ 'H/Hoard.base': 'hoard:\n  version: 1\n', 'H/Note.md': 'watchlog:\n' });
 		expect(await findWatchLogBase(app)).toBeNull();
-	});
-});
-
-describe('findWatchLogPluginData', () => {
-	it('checks WatchLog Sync before WatchLog', async () => {
-		expect(WATCHLOG_PLUGIN_IDS).toEqual(['watchlog-sync', 'watchlog']);
-		const both = src({
-			'.obsidian/plugins/watchlog-sync/data.json': '{"schemaVersion":2}',
-			'.obsidian/plugins/watchlog/data.json': '{"titles":[]}',
-		});
-		expect(await findWatchLogPluginData(both)).toEqual({
-			raw: { schemaVersion: 2 }, id: 'watchlog-sync', dir: '.obsidian/plugins/watchlog-sync',
-		});
-	});
-
-	it('finds nothing when no WatchLog data.json exists', async () => {
-		expect(await findWatchLogPluginData(src({}))).toBeNull();
 	});
 });
 

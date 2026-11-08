@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createFakeApp } from '../../fakes/fakeApp';
-import { migrateWidgetFences, rewriteWidgetFences } from '../../../src/import/watchlog/widgets';
+import { describe, it, expect } from 'vitest';
+import { rewriteWidgetFences } from '../../../src/import/watchlog/widgets';
 
 describe('rewriteWidgetFences', () => {
 	it('renames every WatchLog widget language', () => {
@@ -22,22 +21,5 @@ describe('rewriteWidgetFences', () => {
 	it('leaves other languages and plain text alone', () => {
 		const src = '```watchlogger\n```\n```wl-todos\n```\nwatchlog in text\n`wl-todo` inline\n```js\n```\n';
 		expect(rewriteWidgetFences(src)).toBe(src);
-	});
-});
-
-describe('migrateWidgetFences', () => {
-	it('changes only notes with a WatchLog fence and is idempotent', async () => {
-		const f = createFakeApp({
-			'A.md': '# A\n\n```wl-upcoming\n```\n',
-			'B.md': '# B\n\n```hoard\nid\n```\n',
-			'C.base': '```watchlog\n```\n',
-		});
-		const process = vi.spyOn(f.app.vault, 'process');
-		expect(await migrateWidgetFences(f.app)).toBe(1);
-		expect(f.files.get('A.md')).toBe('# A\n\n```hoard-upcoming\n```\n');
-		expect(f.files.get('B.md')).toBe('# B\n\n```hoard\nid\n```\n');
-		expect(f.files.get('C.base')).toBe('```watchlog\n```\n');
-		expect(process).toHaveBeenCalledTimes(1);
-		expect(await migrateWidgetFences(f.app)).toBe(0);
 	});
 });

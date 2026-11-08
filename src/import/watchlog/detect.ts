@@ -9,21 +9,18 @@ import type { WatchLogData } from './schema1Types';
 const WATCHLOG_KEY = 'watchlog';
 /** Base file name of WatchLog Sync. */
 const WATCHLOG_BASE_FILE = 'WatchLog.base';
-/** Plugin ids whose data.json is adopted: WatchLog Sync (schema 2) first, then WatchLog (schema 1). */
-export const WATCHLOG_PLUGIN_IDS = ['watchlog-sync', 'watchlog'] as const;
-
 /** Read access to the plugin folders below the config dir. */
-export interface PluginDataSource {
+interface PluginDataSource {
 	configDir: string;
 	adapter: { exists(path: string): Promise<boolean>; read(path: string): Promise<string> };
 }
 
 /** A WatchLog data.json found in the vault. */
-export interface WatchLogPluginData {
+interface WatchLogPluginData {
 	raw: unknown;
 	/** Plugin id it was read from. */
 	id: string;
-	/** Its plugin folder; the schema-1 backup is written next to it. */
+	/** Its plugin folder (side files of very old installs live there). */
 	dir: string;
 }
 
@@ -55,15 +52,6 @@ async function readPluginData(src: PluginDataSource, id: string): Promise<WatchL
 		console.warn(`[Hoard] could not read the data.json of ${id}`, e);
 		return null;
 	}
-}
-
-/** The first non-empty, readable data.json of `WATCHLOG_PLUGIN_IDS`, in that order. */
-export async function findWatchLogPluginData(src: PluginDataSource): Promise<WatchLogPluginData | null> {
-	for (const id of WATCHLOG_PLUGIN_IDS) {
-		const found = await readPluginData(src, id);
-		if (found) return found;
-	}
-	return null;
 }
 
 export type WatchLogSourceKind = 'original' | 'fork';
