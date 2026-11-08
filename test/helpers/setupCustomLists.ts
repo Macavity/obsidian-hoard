@@ -10,7 +10,7 @@ import { DEFAULT_SETTINGS, type CustomList, type HoardTitle } from '../../src/ty
 
 const layout = new VaultLayout('W', () => []);
 
-export function listFile(list: CustomList): string {
+function listFile(list: CustomList): string {
 	const json = JSON.stringify({ columns: list.columns, rows: list.rows, tabColor: list.tabColor, nameWidth: list.nameWidth }, null, 2);
 	return `# ${list.name}\n\n## Notes\n${list.notes}\n\n## Data\n\`\`\`json\n${json}\n\`\`\`\n`;
 }

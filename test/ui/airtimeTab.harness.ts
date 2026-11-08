@@ -27,7 +27,7 @@ export interface World {
 	animeThrows?: boolean;
 }
 
-export const pad = (n: number): string => String(n).padStart(2, '0');
+const pad = (n: number): string => String(n).padStart(2, '0');
 export const isoOffset = (days: number): string => {
 	const d = new Date();
 	d.setDate(d.getDate() + days);
