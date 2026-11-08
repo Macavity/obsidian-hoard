@@ -1,8 +1,10 @@
 /* Theme variables and theme picker */
 /* ══ THEME SYSTEM — CSS VARIABLES ══ */
 
-/* Nightfall theme — accent colors only, no background/text overrides */
-.hoard-view[data-theme="nightfall"] {
+/* Nightfall theme — accent colors only, no background/text overrides.
+   Note widget roots carry data-theme too (WidgetRenderer); .hoard-widget is the one reading these vars. */
+.hoard-view[data-theme="nightfall"],
+.hoard-widget[data-theme="nightfall"] {
   --hoard-accent: #4b246c;
   --hoard-rating-color: #C77DFF;
   --hoard-watched-color: #7B2CBF;
@@ -11,7 +13,8 @@
 }
 
 /* Bluez theme — accent colors only, no background/text overrides */
-.hoard-view[data-theme="bluez"] {
+.hoard-view[data-theme="bluez"],
+.hoard-widget[data-theme="bluez"] {
   --hoard-accent: #144a62;
   --hoard-rating-color: #61A5C2;
   --hoard-watched-color: #2C7DA0;

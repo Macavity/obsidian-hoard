@@ -21,6 +21,8 @@ are listed in the README; the mechanism is here.
 `registerMarkdownCodeBlockProcessor` once per language: `hoard` (block body `id: <entry id>`),
 `hoard-todo` (title name, optional `mini`), `hoard-stat` (`watched`, `completed`, `remaining`,
 `time`, `time completed full`), `hoard-upcoming` (`next`), `hoard-nowwatching`, `hoard-now-next`.
+Each handler first marks its container with `data-theme` when a non-default Hoard colour theme
+is picked, so `theme.css` themes `.hoard-widget` outside the view; it applies on the next render.
 
 ## Staying live
 
