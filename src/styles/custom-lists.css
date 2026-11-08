@@ -1,0 +1,528 @@
+/* Custom lists tab */
+/* ══ CUSTOM LISTS TAB (v0.8.0) ══ */
+
+.hoard-custom-lists {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Empty state */
+.hoard-cl-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 40px 20px;
+}
+
+.hoard-cl-empty-text {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* Sub-tab bar */
+.hoard-cl-sub-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px 0;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.hoard-cl-sub-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  background: var(--background-secondary);
+  border: 0.5px solid var(--background-modifier-border);
+  border-bottom: none;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  transition: background 0.12s, color 0.12s;
+  position: relative;
+  margin-bottom: -0.5px;
+}
+
+.hoard-cl-sub-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.hoard-cl-sub-tab.is-active {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-weight: 600;
+  border-bottom: 0.5px solid var(--background-primary);
+}
+
+.hoard-cl-sub-tab-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.hoard-cl-sub-tab-del {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+
+.hoard-cl-sub-tab:hover .hoard-cl-sub-tab-del {
+  opacity: 1;
+}
+
+.hoard-cl-sub-tab-del:hover {
+  color: var(--text-error);
+}
+
+.hoard-cl-sub-tab-add {
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 0.5px dashed var(--background-modifier-border);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.hoard-cl-sub-tab-add:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+.hoard-cl-sub-tab-rename {
+  max-width: 100px;
+  padding: 1px 4px;
+  border: 0.5px solid var(--interactive-accent);
+  border-radius: 3px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: 600;
+}
+
+.hoard-cl-sub-tab-rename:focus {
+  outline: none;
+}
+
+/* List view */
+.hoard-cl-list-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding-top: 8px;
+}
+
+/* Header */
+.hoard-cl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.hoard-cl-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.hoard-cl-toolbar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  position: relative;
+}
+
+/* Draft banner */
+.hoard-cl-draft-banner {
+  margin: 6px 0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--background-secondary) 80%, #BA7517 20%);
+  border: 0.5px solid color-mix(in srgb, var(--background-modifier-border) 60%, #BA7517 40%);
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Table */
+.hoard-cl-table-wrap {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.hoard-cl-table {
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 6px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.hoard-cl-thead {
+  background: var(--background-secondary);
+  border-bottom: 0.5px solid var(--background-modifier-border);
+}
+
+/* Column resize (Excel-style) */
+/* resizable: explicit widths, no flex, horizontal scroll */
+.hoard-cl-table-resizable {
+  width: max-content;
+  min-width: 100%;
+  /* the wrap owns the h-scroll so the sticky cell clamps to the viewport edge */
+  overflow: visible;
+}
+
+.hoard-cl-table-resizable .hoard-cl-tr {
+  min-width: 100%;
+}
+
+.hoard-cl-table-resizable .hoard-cl-th.hoard-cl-col-fixed,
+.hoard-cl-table-resizable .hoard-cl-td.hoard-cl-col-fixed {
+  flex: 0 0 var(--hoard-cl-cw);
+}
+
+/* Sticky row actions (resizable mode only) */
+/* pin actions to the visible right edge; opaque bg matches the row */
+.hoard-cl-table-resizable .hoard-cl-td-actions {
+  /* margin-left:auto pins right when the table fits, resolves to 0 when it overflows */
+  margin-left: auto;
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background-color: var(--background-primary);
+}
+
+.hoard-cl-table-resizable .hoard-cl-th-actions {
+  margin-left: auto;
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  background-color: var(--background-secondary);
+}
+
+.hoard-cl-table-resizable .hoard-cl-tr-body:hover .hoard-cl-td-actions {
+  background-image: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover));
+}
+
+.hoard-cl-table-resizable .hoard-cl-tr-body.hoard-cl-tr-checked .hoard-cl-td-actions,
+.hoard-cl-table-resizable .hoard-cl-tr-body.hoard-cl-tr-checked:hover .hoard-cl-td-actions {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--color-green) 5%, transparent),
+    color-mix(in srgb, var(--color-green) 5%, transparent)
+  );
+}
+
+.hoard-cl-th-resizable {
+  position: relative;
+}
+
+.hoard-cl-col-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+}
+
+/* quiet separator; brighter + thicker on hover to signal resize */
+.hoard-cl-col-resize::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 6px;
+  width: 1px;
+  background: var(--background-modifier-border);
+  transition: background 0.12s, width 0.12s;
+}
+
+.hoard-cl-col-resize:hover::after {
+  width: 2px;
+  background: var(--interactive-accent);
+}
+
+body.hoard-cl-col-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.hoard-cl-tr {
+  display: flex;
+  align-items: stretch;
+}
+
+.hoard-cl-tr-header {
+  padding: 4px 6px;
+}
+
+.hoard-cl-tr-body {
+  padding: 3px 6px;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+  transition: background 0.1s;
+  min-height: 28px;
+  align-items: center;
+}
+
+.hoard-cl-tr-body:last-child {
+  border-bottom: none;
+}
+
+.hoard-cl-tr-body:hover {
+  background: var(--background-modifier-hover);
+}
+
+.hoard-cl-tr-body:hover .hoard-cl-row-action {
+  opacity: 1;
+}
+
+/* no hover on touch — row actions would sit invisible but tappable */
+.is-mobile .hoard-cl-row-action {
+  opacity: 1;
+}
+
+.hoard-cl-th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-cl-autotime-refresh {
+  cursor: pointer;
+  margin-left: 4px;
+  font-size: 13px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.hoard-cl-autotime-refresh:hover {
+  opacity: 1;
+}
+
+.hoard-cl-th-num {
+  flex: 0 0 28px;
+  text-align: center;
+}
+
+.hoard-cl-th-actions {
+  flex: 0 0 86px;
+}
+
+.hoard-cl-td {
+  font-size: var(--font-ui-small);
+  padding: 2px 6px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.hoard-cl-td-num {
+  flex: 0 0 28px;
+  font-size: 11px;
+  color: var(--text-faint);
+  text-align: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.hoard-cl-td-name {
+  font-weight: 500;
+}
+
+.hoard-cl-td-actions {
+  flex: 0 0 86px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  justify-content: flex-end;
+  cursor: default;
+  overflow: visible;
+}
+
+/* Row actions */
+.hoard-cl-row-action {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.hoard-cl-drag-handle {
+  cursor: grab;
+  font-size: 14px;
+}
+
+.hoard-cl-drag-handle:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.hoard-cl-add-btn {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.hoard-cl-add-btn:hover {
+  color: var(--text-on-accent);
+  background: var(--color-green);
+}
+
+.hoard-cl-dup-btn:hover {
+  color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.hoard-cl-row-del:hover {
+  color: var(--text-on-accent);
+  background: #E24B4A;
+}
+
+/* Drag state */
+.hoard-cl-dragging {
+  opacity: 0.4;
+}
+
+/* element+state beats each target's own border rule */
+.hoard-cl-sub-tab.hoard-cl-drag-over,
+.hoard-cl-tr-body.hoard-cl-drag-over,
+.hoard-editcol-card.hoard-cl-drag-over,
+.hoard-reading-col-card.hoard-cl-drag-over {
+  border-top: 2px solid var(--interactive-accent);
+}
+
+/* Cell content */
+.hoard-cl-cell-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.hoard-cl-cell-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.hoard-cl-dup-name {
+  color: #E24B4A;
+}
+
+/* Editing state */
+.hoard-cl-editing {
+  overflow: visible;
+  z-index: 10;
+  position: relative;
+}
+
+/* Cell scope outranks the .hoard-cl-td base padding. */
+.hoard-cl-td.hoard-cl-editing {
+  padding: 0 4px;
+}
+
+.hoard-cl-cell-input {
+  width: 100%;
+  padding: 2px 5px;
+  border: 0.5px solid var(--interactive-accent);
+  border-radius: 3px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  outline: none;
+  box-sizing: border-box;
+}
+
+/* Autofill dropdown */
+.hoard-cl-autofill-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.hoard-cl-autofill-wrap .hoard-cl-cell-input {
+  width: 100%;
+}
+
+.hoard-cl-autofill-dropdown {
+  /* position/top/left/width are set inline via JS (fixed, body-level) */
+  max-height: 180px;
+  overflow-y: auto;
+  background: var(--background-primary);
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  z-index: 9999;
+}
+
+/* Select badge (neutral, no color) */
+.hoard-cl-select-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--background-secondary);
+  border: 0.5px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  white-space: nowrap;
+}
+
+/* Add row footer */
+.hoard-cl-add-row {
+  padding: 6px 2px;
+  border-top: 0.5px solid var(--background-modifier-border);
+}
+
+/* Sort panel */
+.hoard-cl-sort-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 200;
+  background: var(--background-primary);
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  min-width: 200px;
+  padding: 6px 0;
+}
+

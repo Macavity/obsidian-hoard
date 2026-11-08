@@ -1,0 +1,110 @@
+/* Search help button and tips modal */
+/* Search help ("?") button, at the right end of every search bar */
+/* element-qualified: plain .class loses to core's button:not(.clickable-icon) */
+button.hoard-search-help-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+button.hoard-search-help-btn:hover,
+button.hoard-search-help-btn:active,
+button.hoard-search-help-btn:focus {
+  color: var(--text-normal);
+  background: transparent;
+  box-shadow: none;
+}
+
+.hoard-search-help-btn .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Search tips modal */
+.hoard-search-help-intro {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.hoard-search-help-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hoard-search-help-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: var(--background-modifier-hover);
+}
+
+.hoard-search-help-query {
+  flex: 0 0 auto;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.hoard-search-help-says {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+/* syntax colours: field prefix / operator / value */
+.hoard-shq-f { color: var(--color-blue); font-weight: 600; }
+.hoard-shq-o { color: var(--color-orange); font-weight: 600; }
+.hoard-shq-v { color: var(--color-green); }
+.hoard-shq-p { color: var(--text-faint); }
+
+.hoard-search-help-fields {
+  margin-top: 12px;
+}
+
+.hoard-search-help-fields-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.hoard-search-help-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hoard-search-help-chip {
+  font-family: var(--font-monospace);
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--background-modifier-hover);
+}
+
+.hoard-search-help-note {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.4;
+}
+

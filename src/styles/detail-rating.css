@@ -1,0 +1,227 @@
+/* Detail rating, trailer, store and wishlist controls */
+/* release year in the List expanded row */
+.hoard-row-year {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.hoard-card-status-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #fff;
+}
+
+/* wishlist marker, parked left of the ⋮ so the menu never covers it */
+.hoard-card-flag-badge {
+  position: absolute;
+  top: 4px;
+  right: 32px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #EAB308;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hoard-card-flag-badge .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.hoard-card-menu-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0;
+}
+
+.hoard-card:hover .hoard-card-menu-btn {
+  opacity: 1;
+}
+
+.is-mobile .hoard-card-menu-btn {
+  opacity: 1;
+}
+
+/* Community rating */
+.hoard-rating-divider {
+  display: inline-block;
+  width: 1px;
+  height: 18px;
+  background-color: var(--background-modifier-border);
+  margin: 0 8px;
+  vertical-align: middle;
+}
+
+.hoard-community-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hoard-community-source {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.hoard-community-source--imdb    { background-color: #F5C518; color: #000000; }
+.hoard-community-source--mal     { background-color: #2E51A2; color: #FFFFFF; }
+.hoard-community-source--anilist { background-color: #3DB4F2; color: #FFFFFF; }
+.hoard-community-source--tmdb    { background-color: #01B4E4; color: #FFFFFF; }
+
+.hoard-community-score {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.hoard-community-votes {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.hoard-community-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.hoard-community-refresh {
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hoard-community-refresh:hover {
+  color: var(--text-normal);
+  background-color: var(--background-modifier-hover);
+}
+
+.hoard-community-refresh.is-loading {
+  animation: hoard-spin 0.9s linear infinite;
+  pointer-events: none;
+}
+
+/* Trailer control at the tail of the rating row (rating badge → refresh → YouTube). */
+.hoard-trailer-control {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.hoard-trailer-btn {
+  /* wide frame, icon stays its natural size */
+  min-width: 40px;
+  padding: 1px 3px;
+  margin-left: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #FF0000; /* Permanent red, not hover-only. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  box-shadow: none;
+  height: 23px;
+  width: 40px; 
+}
+
+.hoard-trailer-btn:hover {
+  color: #CC0000; /* Discreet darker-red + subtle wash so it still reads as clickable. */
+  background: var(--background-modifier-hover);
+}
+
+.hoard-trailer-btn .svg-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.hoard-trailer-refresh {
+  margin-left: 8px;
+}
+
+.hoard-trailer-refresh .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Store button — the trailer-button frame with a store glyph (Games). */
+.hoard-store-btn {
+  min-width: 28px;
+  padding: 1px 3px;
+  margin-left: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #4A89DC; /* Permanent store blue, the YouTube-button treatment. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  box-shadow: none;
+  height: 22px;
+  width: 28px;
+}
+
+.hoard-store-btn:hover {
+  color: #3A6FBE;
+  background: var(--background-modifier-hover);
+}
+
+.hoard-store-btn .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Wishlist toggle beside the store button: muted until set, amber when on. */
+.hoard-wishlist-btn {
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+.hoard-wishlist-btn:hover {
+  color: var(--text-normal);
+}
+
+.hoard-wishlist-btn.is-active,
+.hoard-wishlist-btn.is-active:hover {
+  color: #EAB308;
+}
+

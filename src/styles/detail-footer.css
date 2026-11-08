@@ -1,0 +1,67 @@
+/* Detail footer dates and favorite heart */
+/* started + watched, then release date; the field is shared with the List footer */
+.hoard-detail-date {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.hoard-detail-date-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.hoard-detail-notes-input {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.hoard-detail-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  gap: 12px;
+}
+
+/* favorite heart, centered by the footer's space-between */
+.hoard-detail-fav-btn {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--text-muted);
+}
+
+.hoard-detail-fav-btn:hover {
+  color: var(--text-normal);
+}
+
+.hoard-detail-fav-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.hoard-detail-fav-btn.is-active {
+  color: var(--text-error);
+}
+
+.hoard-detail-fav-btn.is-active svg {
+  fill: currentColor;
+}
+
+.hoard-detail-group-grid {
+  /* Scrolls inside the parent .hoard-detail-modal, no own scroll container. */
+}
+

@@ -1,0 +1,40 @@
+/* Tablet icon buttons */
+/* ══ TABLET ICON BUTTONS ══ */
+
+/* Core ships `.is-tablet button:not(.clickable-icon) { padding: 4px 20px }`.
+   Two classes + one element beats every plain `.hoard-x` rule, so our icon buttons
+   get 40px of side padding. They are border-box and narrower than that, so the
+   content box goes to 0 and the svg vanishes — button still paints, icon gone.
+   Phones and desktop never load that rule; only tablets break.
+   Prefixing `body` + qualifying `button` outranks it. Values copied from each
+   button's own rule. */
+body.is-tablet button.hoard-airtime-action-btn,
+body.is-tablet button.hoard-card-menu-btn,
+body.is-tablet button.hoard-community-refresh,
+body.is-tablet button.hoard-credit-chip-del,
+body.is-tablet button.hoard-credits-add,
+body.is-tablet button.hoard-credits-name-del,
+body.is-tablet button.hoard-credits-refresh,
+body.is-tablet button.hoard-datepicker-nav,
+body.is-tablet button.hoard-editcol-card-del,
+body.is-tablet button.hoard-editcol-card-opt-del,
+body.is-tablet button.hoard-editcol-card-toggle,
+body.is-tablet button.hoard-editcol-opt-color-dot,
+body.is-tablet button.hoard-group-action-btn,
+body.is-tablet button.hoard-log-del,
+body.is-tablet button.hoard-reading-card-menu-btn,
+body.is-tablet button.hoard-reading-col-color-dot,
+body.is-tablet button.hoard-reading-col-palette-swatch,
+body.is-tablet button.hoard-search-clear,
+body.is-tablet button.hoard-search-help-btn,
+body.is-tablet button.hoard-toolbar-add-btn,
+body.is-tablet button.hoard-toolbar-toggle-btn,
+body.is-tablet .hoard-game-modal-actions button.hoard-store-btn {
+  padding: 0;
+}
+
+/* these two keep their own non-zero padding */
+body.is-tablet button.hoard-store-btn,
+body.is-tablet button.hoard-trailer-btn {
+  padding: 1px 3px;
+}

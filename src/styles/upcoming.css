@@ -1,0 +1,54 @@
+/* Upcoming history and maybe cards */
+/* Feature 2: Upcoming History sub-tab */
+.hoard-airtime-history-card {
+  opacity: 0.92;
+}
+.hoard-airtime-history-right {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Feature 2c: Maybe cards */
+.hoard-maybe-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border: 1px solid var(--background-modifier-border);
+  min-height: 0;
+}
+
+.hoard-maybe-card.hoard-airtime-card-aired {
+  border-color: var(--color-orange);
+  background: color-mix(in srgb, var(--color-orange) 6%, var(--background-secondary));
+}
+
+.hoard-maybe-card-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hoard-maybe-card-title {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-maybe-card-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+

@@ -1,0 +1,47 @@
+/* Editable tag name, sticky modal footer */
+/* Editable tag name (Settings → Games) — reads as text until focused */
+
+.hoard-tag-name-input {
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 0 2px;
+  /* Width comes from the `size` attribute, set per entry from the name length. */
+  width: auto;
+  min-width: 4ch;
+  box-shadow: none;
+  border-radius: 3px;
+}
+
+.hoard-tag-name-input:hover {
+  background: var(--background-modifier-hover);
+}
+
+.hoard-tag-name-input:focus {
+  background: var(--background-primary);
+  box-shadow: 0 0 0 1px var(--interactive-accent);
+  outline: none;
+}
+
+/* Sticky modal footer (StickyModal.ts). Must be a direct child of the modal's scrolling
+   element. Placed last so it overrides each modal's own footer padding/border.
+   --modal-background, not --background-primary: on mobile those differ and the footer
+   painted itself as a black bar over a lighter modal. */
+
+.hoard-sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: var(--modal-background, var(--background-primary));
+  padding-top: 10px;
+  padding-bottom: 2px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+/* closes the gap under the bar — see pinModalFooter */
+.modal-content.hoard-has-sticky-footer {
+  padding-bottom: 0;
+}
+

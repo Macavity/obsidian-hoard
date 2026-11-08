@@ -1,0 +1,552 @@
+/* Airtime tab */
+/* ══ AIRTIME TAB ══ */
+
+.hoard-airtime {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Cards container */
+.hoard-airtime-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* Single card */
+.hoard-airtime-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 6px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-secondary);
+  transition: background 0.1s;
+}
+
+.hoard-airtime-card:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* Left section */
+.hoard-airtime-card-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hoard-airtime-card-title {
+  font-weight: 600;
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-airtime-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hoard-airtime-schedule {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Right section */
+.hoard-airtime-card-right {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* Countdown pill */
+.hoard-airtime-pill {
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hoard-airtime-pill-tomorrow {
+  background: #1D9E75;
+  color: #ffffff;
+}
+
+.hoard-airtime-pill-days {
+  background: var(--background-primary);
+  color: var(--text-muted);
+  border: 0.5px solid var(--background-modifier-border);
+}
+
+.hoard-airtime-pill-today-series {
+  background: #EEEDFE;
+  color: #3C3489;
+  border: 0.5px solid #AFA9EC;
+}
+
+.hoard-airtime-pill-aired {
+  background: #FAEEDA;
+  color: #633806;
+  border: 0.5px solid #FAC775;
+}
+
+.hoard-airtime-pill-due {
+  background: #FCEBEB;
+  color: #791F1F;
+  border: 0.5px solid #F7C1C1;
+}
+
+/* Episode badge */
+.hoard-ep-badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #EEEDFE;
+  color: #3C3489;
+  border: 0.5px solid #AFA9EC;
+}
+
+.hoard-ep-badge-final {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #FCEBEB;
+  color: #791F1F;
+  border: 0.5px solid #F7C1C1;
+}
+
+/* Tracker Cards view (poster grid, month-grouped) */
+
+.hoard-tracker-scroll {
+  position: relative;
+  width: 100%;
+  overflow-y: auto;
+  /* scrollbar-gutter: the virtual-scroll math reads clientWidth */
+  scrollbar-gutter: stable;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 4px;
+}
+
+/* month header "July 2026 (3)" */
+.hoard-tracker-month-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin: 0 0 6px 2px;
+}
+
+/* divider above later months; pseudo-element so it can be faded */
+.hoard-tracker-month-spacer + .hoard-tracker-month-title {
+  position: relative;
+  margin-top: -4px;
+  padding-top: 8px;
+}
+
+.hoard-tracker-month-spacer + .hoard-tracker-month-title::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 8px;
+  height: 2px;
+  background: var(--background-modifier-border);
+  opacity: 0.45;
+}
+
+/* spacer reserving the month's scroll extent */
+.hoard-tracker-month-spacer {
+  position: relative;
+  width: 100%;
+}
+
+/* poster + text cell; height pinned to what the scroll math reserves */
+.hoard-cards-grid.hoard-cards-grid-virtual .hoard-tracker-cell,
+.hoard-cards-grid.hoard-cards-grid-virtual .hoard-card-cell {
+  height: var(--hoard-card-height, auto);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* keep the 2:3 poster; cancel the virtual-grid full-height rule */
+.hoard-cards-grid.hoard-cards-grid-virtual .hoard-tracker-cell .hoard-card,
+.hoard-cards-grid.hoard-cards-grid-virtual .hoard-card-cell .hoard-card {
+  height: auto;
+  aspect-ratio: 2 / 3;
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+/* same cell outside a virtual grid (rows strips, plain grids) */
+.hoard-card-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.hoard-card-cell .hoard-card {
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+/* text under the poster; heights must add up to POSTER_CARD_TEXT_H */
+.hoard-card-under-info {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 2px 0;
+}
+
+.hoard-card-under-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-normal);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-card-under-year {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+/* progress bar on a normal bg (not the poster scrim) */
+.hoard-card-under-info .hoard-card-progress-bar {
+  margin-top: 2px;
+  background: var(--background-modifier-border);
+}
+
+.hoard-card-under-info .hoard-card-progress-fill {
+  background: var(--interactive-accent);
+}
+
+/* type badge, top-left over the poster */
+.hoard-tracker-type-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #fff;
+  max-width: calc(100% - 54px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-tracker-type-badge.is-plain {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* countdown badge, top-right */
+.hoard-tracker-countdown {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.hoard-tracker-countdown-num {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.hoard-tracker-countdown-label {
+  margin-top: 2px;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  opacity: 0.85;
+}
+
+.hoard-tracker-countdown-word {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+/* State colors mirror the List countdown pills. */
+.hoard-tracker-countdown.is-today-before {
+  background: #7F77DD;
+}
+
+.hoard-tracker-countdown.is-aired {
+  background: #FAEEDA;
+  color: #633806;
+  border: 0.5px solid #FAC775;
+}
+
+.hoard-tracker-countdown.is-due {
+  background: #FCEBEB;
+  color: #791F1F;
+  border: 0.5px solid #F7C1C1;
+}
+
+/* green tick once the release passed; the extra `button` outranks Obsidian's base rule */
+.hoard-tracker-card button.hoard-tracker-tick-btn {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: #1D9E75;
+  background-color: #1D9E75;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.hoard-tracker-card button.hoard-tracker-tick-btn:hover {
+  background-color: #178563;
+}
+
+/* globe in the corner, ⋮ above it; ancestor beats the base card-menu rule */
+.hoard-tracker-card .hoard-tracker-globe-btn {
+  top: auto;
+  bottom: 4px;
+  right: 4px;
+  font-size: 12px;
+}
+
+.hoard-tracker-card .hoard-tracker-menu-btn {
+  top: auto;
+  bottom: 32px;
+  right: 4px;
+}
+
+/* height = TRACKER_CARD_TEXT_H in AirtimeTab.ts — keep in sync */
+.hoard-tracker-card-info {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 2px 0;
+}
+
+.hoard-tracker-card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-normal);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-tracker-card-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* text-inside mode: same block as a bottom overlay on the poster */
+.hoard-tracker-card-overlay {
+  gap: 3px;
+}
+
+.hoard-tracker-card-overlay .hoard-tracker-card-title {
+  color: #fff;
+}
+
+.hoard-tracker-card-overlay .hoard-tracker-card-sub {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* season · episode · airing next */
+.hoard-ep-badge.hoard-tracker-ep-badge {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  font-size: 10px;
+  padding: 1px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Schedule hint text */
+.hoard-schedule-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Set-schedule modal: Single release / Recurring episodes toggle */
+.hoard-schedule-mode-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.hoard-schedule-mode-btn.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+/* One compact progress line: Season [2] of [3] · Episode [7] of [13] */
+.hoard-schedule-progress-row {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hoard-schedule-progress-row .hoard-modal-label {
+  width: auto;
+}
+
+.hoard-schedule-num {
+  width: 58px;
+  max-width: 58px;
+  flex: unset;
+}
+
+.hoard-schedule-progress-sep {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.hoard-schedule-progress-dot {
+  margin: 0 4px;
+}
+
+/* date input, sized like the time input */
+.hoard-date-input {
+  min-width: 130px;
+  max-width: 160px;
+  flex: unset;
+}
+
+/* Action buttons */
+.hoard-airtime-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.hoard-airtime-action-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-muted);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.hoard-airtime-action-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+/* .hoard-airtime-action-btn-delete — color via .hoard-btn-danger */
+
+/* Tick (complete) button */
+.hoard-airtime-action-btn-tick {
+  color: #1D9E75;
+  border-color: #1D9E75;
+  font-size: 14px;
+}
+
+.hoard-airtime-action-btn-tick:hover {
+  background: #1D9E75;
+  color: #ffffff;
+  border-color: #1D9E75;
+}
+
+/* Time input — wide enough for HH:MM */
+.hoard-time-input {
+  min-width: 110px;
+  max-width: 130px;
+  flex: unset;
+}
+
+/* JST clock display */
+.hoard-jst-clock {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-left: 4px;
+}
+
+/* Upcoming title count badge */
+.hoard-list-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hoard-list-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 20px;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+

@@ -1,0 +1,68 @@
+/* Theme variables and theme picker */
+/* ══ THEME SYSTEM — CSS VARIABLES ══ */
+
+/* Nightfall theme — accent colors only, no background/text overrides */
+.hoard-view[data-theme="nightfall"] {
+  --hoard-accent: #4b246c;
+  --hoard-rating-color: #C77DFF;
+  --hoard-watched-color: #7B2CBF;
+  --hoard-group-border-overlay: rgba(92, 31, 154, 0.25);
+}
+
+/* Bluez theme — accent colors only, no background/text overrides */
+.hoard-view[data-theme="bluez"] {
+  --hoard-accent: #144a62;
+  --hoard-rating-color: #61A5C2;
+  --hoard-watched-color: #2C7DA0;
+  --hoard-group-border-overlay: rgba(1, 73, 124, 0.3);
+}
+
+/* ══ THEME PICKER (Settings → Customize) ══ */
+
+.hoard-theme-cards {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.hoard-theme-card {
+  flex: 1;
+  min-width: 90px;
+  border: 1.5px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  background: var(--background-secondary);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.hoard-theme-card:hover {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.hoard-theme-card.is-selected {
+  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--background-secondary) 80%, var(--interactive-accent) 20%);
+}
+
+.hoard-theme-card-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin-bottom: 6px;
+}
+
+.hoard-theme-strip {
+  display: flex;
+  gap: 2px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hoard-theme-swatch {
+  flex: 1;
+  height: 12px;
+}
+

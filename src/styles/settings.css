@@ -1,0 +1,765 @@
+/* Settings tab */
+/* ══ SETTINGS ══ */
+
+.hoard-settings-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 16px;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+  padding-bottom: 0;
+}
+
+.hoard-settings-nav-btn {
+  padding: 6px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+  margin-bottom: -0.5px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.hoard-settings-nav-btn:hover {
+  color: var(--text-normal);
+}
+
+/* Mobile/tablet: icon-only nav — 9 text labels overflow the pane */
+.hoard-settings-mobile .hoard-settings-nav {
+  gap: 0;
+}
+
+.hoard-settings-nav-btn-icon {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.hoard-settings-nav-btn-icon .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.hoard-settings-nav-btn.is-active {
+  color: var(--text-accent);
+  border-bottom-color: var(--text-accent);
+}
+
+.hoard-settings-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 14px 0 8px;
+}
+
+.hoard-settings-info {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  background: var(--background-secondary);
+  border-radius: 5px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-left: 3px solid var(--interactive-accent);
+}
+
+.hoard-status-error {
+  color: #E24B4A;
+  font-weight: 600;
+}
+
+/* API page: groups & provider cards — accent is an "R, G, B" triple in --hoard-sg-accent, spent
+   on the header only */
+.hoard-sg-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 6px;
+}
+
+.hoard-sg {
+  --hoard-sg-accent: 74, 137, 220;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+
+/* watchlist = movies blue, reading = books yellow */
+.hoard-sg--movies,
+.hoard-sg--watchlist { --hoard-sg-accent: 74, 137, 220; }
+.hoard-sg--anime { --hoard-sg-accent: 45, 168, 115; }
+.hoard-sg--books,
+.hoard-sg--reading { --hoard-sg-accent: 214, 158, 46; }
+.hoard-sg--games { --hoard-sg-accent: 229, 72, 77; }
+.hoard-sg--theme { --hoard-sg-accent: 139, 92, 246; }
+.hoard-sg--cards { --hoard-sg-accent: 45, 168, 115; }
+.hoard-sg--shared { --hoard-sg-accent: 138, 143, 158; }
+
+/* Per-tab "Main" accents: one colour per settings page. */
+.hoard-sg--general { --hoard-sg-accent: 38, 166, 154; }
+.hoard-sg--drafts { --hoard-sg-accent: 196, 86, 170; }
+.hoard-sg--lists { --hoard-sg-accent: 32, 156, 190; }
+
+/* utility accents: green CSV, orange folders, purple tree, slate backup */
+.hoard-sg--csv { --hoard-sg-accent: 45, 168, 115; }
+.hoard-sg--folders { --hoard-sg-accent: 216, 128, 62; }
+.hoard-sg--subfolders { --hoard-sg-accent: 139, 92, 246; }
+.hoard-sg--backup { --hoard-sg-accent: 108, 122, 145; }
+
+.hoard-sg-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(
+    90deg,
+    rgba(var(--hoard-sg-accent), 0.16),
+    rgba(var(--hoard-sg-accent), 0.03)
+  );
+  border-bottom: 1px solid rgba(var(--hoard-sg-accent), 0.28);
+}
+
+.hoard-sg-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: rgb(var(--hoard-sg-accent));
+  background: rgba(var(--hoard-sg-accent), 0.16);
+  border: 1px solid rgba(var(--hoard-sg-accent), 0.28);
+}
+
+.hoard-sg-icon .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.hoard-sg-titles {
+  min-width: 0;
+}
+
+.hoard-sg-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(var(--hoard-sg-accent));
+}
+
+.hoard-sg-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* Status chips (group header + per provider) */
+.hoard-sg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+}
+
+.hoard-sg-head .hoard-sg-chip {
+  margin-left: auto;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+}
+
+.hoard-sg-chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+.hoard-sg-chip.is-ok { color: #1D9E75; }
+.hoard-sg-chip.is-warn { color: #D89A2B; }
+.hoard-sg-chip.is-error { color: #E24B4A; }
+.hoard-sg-chip.is-idle { color: var(--text-muted); }
+.hoard-sg-chip.is-pending { color: var(--text-muted); }
+.hoard-sg-chip.is-pending .hoard-sg-chip-dot {
+  animation: hoard-sg-pulse 1s ease-in-out infinite;
+}
+.hoard-sg-chip.is-idle .hoard-sg-chip-dot {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+/* neutral read-out; a dot would imply a state */
+.hoard-sg-chip.is-count {
+  color: var(--text-muted);
+}
+.hoard-sg-chip.is-count .hoard-sg-chip-dot {
+  display: none;
+}
+
+@keyframes hoard-sg-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+.hoard-sg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+/* Bodies of bare Obsidian `Setting` rows — those bring their own padding + separator, so the
+   group border is the frame */
+.hoard-sg-body--rows {
+  gap: 0;
+  padding: 4px 14px 12px;
+}
+
+.hoard-sg-body--rows > .setting-item {
+  padding: 11px 0;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.hoard-sg-body--rows > .setting-item:first-child {
+  border-top: none;
+}
+
+.hoard-sg-body--rows > .setting-item:last-child {
+  padding-bottom: 0;
+}
+
+.hoard-sg-body--rows > .setting-item .setting-item-name {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.hoard-sg-body--rows > .setting-item .setting-item-description {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+/* non-Setting children still need spacing */
+.hoard-sg-body--rows > .hoard-regen-progress-wrap {
+  margin: 10px 0 0;
+}
+
+/* group padding is the margin; the last rule would double the border */
+.hoard-sg-body > .hoard-folder-list {
+  margin: 0;
+}
+
+.hoard-sg-body > .hoard-folder-list > .hoard-folder-row:last-child {
+  border-bottom: none;
+}
+
+/* Sub-card inside a group (Customize lists) */
+.hoard-sg-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 9px;
+  padding: 10px 12px 11px;
+  background: var(--background-secondary);
+}
+
+.hoard-sg-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.hoard-sg-card-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.hoard-sg-card-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.hoard-sg-card-body {
+  margin-top: 9px;
+}
+
+.hoard-sg-card-body > *:last-child {
+  margin-bottom: 0;
+}
+
+/* keep the +add row compact */
+.hoard-sg-card .hoard-tag-add-row .hoard-modal-input {
+  flex: 0 1 200px;
+  min-width: 0;
+}
+
+/* help panel sits between head and body here */
+.hoard-sg-help--card {
+  margin-top: 9px;
+}
+
+/* Segmented "Active API" picker */
+.hoard-sg-seg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hoard-sg-seg-label {
+  font-size: 13px;
+  color: var(--text-normal);
+}
+
+.hoard-sg-seg {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+}
+
+button.hoard-sg-seg-btn {
+  padding: 4px 14px;
+  height: auto;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+button.hoard-sg-seg-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+button.hoard-sg-seg-btn.is-active {
+  background: rgba(var(--hoard-sg-accent), 0.14);
+  color: rgb(var(--hoard-sg-accent));
+  font-weight: 600;
+}
+
+/* Provider cards */
+.hoard-api-provider {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 9px;
+  padding: 10px 12px 11px;
+  background: var(--background-secondary);
+  transition: opacity 0.15s;
+}
+
+.hoard-api-provider.is-inactive {
+  opacity: 0.6;
+}
+
+.hoard-api-provider.is-inactive:hover,
+.hoard-api-provider.is-inactive:focus-within {
+  opacity: 1;
+}
+
+.hoard-api-provider-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hoard-api-provider-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgb(var(--hoard-sg-accent));
+  background: rgba(var(--hoard-sg-accent), 0.14);
+  border: 1px solid rgba(var(--hoard-sg-accent), 0.25);
+}
+
+.hoard-api-provider-names {
+  min-width: 0;
+}
+
+.hoard-api-provider-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.hoard-api-provider-note {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.hoard-api-provider-state {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  border: 1px solid var(--background-modifier-border);
+}
+
+.hoard-api-provider-state:empty {
+  display: none;
+}
+
+.hoard-api-provider-state.is-active {
+  color: rgb(var(--hoard-sg-accent));
+  background: rgba(var(--hoard-sg-accent), 0.12);
+  border-color: rgba(var(--hoard-sg-accent), 0.35);
+}
+
+/* Credential fields */
+.hoard-api-field {
+  margin-top: 10px;
+}
+
+.hoard-api-field-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.hoard-api-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* width of the reveal button + its gap */
+.hoard-api-field-row--plain {
+  padding-right: 34px;
+}
+
+input.hoard-api-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+button.hoard-sg-icon-btn {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+button.hoard-sg-icon-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+button.hoard-sg-icon-btn .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+button.hoard-sg-help-btn {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+button.hoard-sg-help-btn.is-active {
+  color: rgb(var(--hoard-sg-accent));
+  border-color: rgba(var(--hoard-sg-accent), 0.4);
+  background: rgba(var(--hoard-sg-accent), 0.1);
+}
+
+/* Provider footer */
+.hoard-api-provider-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.hoard-api-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.hoard-api-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.hoard-api-link:hover {
+  color: var(--text-accent);
+  background: var(--background-modifier-hover);
+  text-decoration: none;
+}
+
+.hoard-api-link-icon {
+  display: inline-flex;
+}
+
+.hoard-api-link-icon .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+button.hoard-api-test {
+  padding: 4px 12px;
+  height: auto;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.hoard-sg-help {
+  display: none;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 0 6px 6px 0;
+  border-left: 2px solid rgba(var(--hoard-sg-accent), 0.5);
+  background: var(--background-primary);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.hoard-sg-help.is-open {
+  display: block;
+}
+
+/* group-level footnote */
+.hoard-sg-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-faint);
+  padding: 0 2px;
+}
+
+/* Full cause of a failed Test — the chip only has room for the short label */
+.hoard-api-diagnosis {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--background-modifier-error) 35%, transparent 65%);
+  border: 0.5px solid color-mix(in srgb, var(--background-modifier-border) 50%, var(--text-error) 50%);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-normal);
+}
+
+/* Steam sync row, hanging off its provider card */
+.hoard-api-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.hoard-api-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.hoard-api-action-texts {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hoard-api-action-title {
+  font-size: 13px;
+  color: var(--text-normal);
+}
+
+.hoard-api-action-desc {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+button.hoard-api-action-btn {
+  flex: 0 0 auto;
+  padding: 5px 12px;
+  height: auto;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.hoard-sg-page .hoard-settings-card {
+  margin-top: 0;
+}
+
+/* Tag sections */
+.hoard-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  min-height: 24px;
+}
+
+.hoard-tag-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--background-secondary);
+  border: 0.5px solid var(--background-modifier-border);
+  font-size: 12px;
+}
+
+.hoard-tag-dot-wrap {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.hoard-tag-dot-wrap:hover .hoard-tag-dot {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.hoard-tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.hoard-tag-color-picker {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Season color palette */
+.hoard-season-colors-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.hoard-season-color-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
+.hoard-season-color-label {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.hoard-tag-name {
+  color: var(--text-normal);
+}
+
+.hoard-tag-del {
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  margin-left: 2px;
+}
+
+.hoard-tag-del:hover {
+  color: var(--text-error);
+}
+
+.hoard-tag-add-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.hoard-color-input {
+  width: 36px;
+  height: 28px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 2px;
+  cursor: pointer;
+  background: none;
+}
+
+/* Folders */
+.hoard-folder-list {
+  margin: 8px 0;
+}
+
+.hoard-folder-row {
+  display: flex;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+  font-size: var(--font-ui-small);
+}
+
+.hoard-folder-type {
+  font-weight: 500;
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.hoard-folder-path {
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: 11px;
+}
+

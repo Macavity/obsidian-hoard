@@ -1,0 +1,411 @@
+/* Mobile detail modals */
+/* ══ MOBILE DETAIL MODALS ══ */
+/* Phone layout for the three detail modals. Placed last so the single-class overrides here beat
+   each modal's own rules; see DEVLOG 2026-07-28. */
+
+/* — Watchlist detail modal — */
+
+/* poster + title/rating on top, everything else full width below it */
+/* stretch, not the base flex-start: in column direction that would shrink every row to
+   fit-content and squeeze the title to three lines.
+   nowrap, not the base wrap: column + wrap stretches the flex lines and left ~70px of dead
+   space under the poster row. */
+.hoard-detail-mobile .hoard-detail-header {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.hoard-detail-mobile .hoard-detail-header-top {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.hoard-detail-mobile .hoard-detail-cover {
+  width: 84px;
+  height: auto;
+}
+
+.hoard-detail-mobile .hoard-detail-header-left {
+  gap: 8px;
+}
+
+.hoard-detail-mobile .hoard-detail-title,
+.hoard-detail-mobile .hoard-detail-title-input {
+  font-size: 1.2rem;
+  line-height: 1.25;
+}
+
+.hoard-detail-mobile .hoard-detail-title-wrap {
+  line-height: 1.25;
+}
+
+/* stars, then community rating + trailer on their own line */
+.hoard-detail-rating-stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.hoard-detail-community-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hoard-detail-mobile .hoard-star {
+  font-size: 20px;
+}
+
+/* labelled trailer button replaces the icon-only one */
+.hoard-trailer-btn-labeled {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 30px;
+  gap: 6px;
+  padding: 2px 12px;
+  margin-left: 4px;
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+.hoard-trailer-btn-labeled:hover {
+  color: var(--text-normal);
+}
+
+.hoard-trailer-btn-labeled .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.hoard-trailer-btn-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* badge row: pills, then square icon buttons */
+.hoard-detail-mobile .hoard-detail-badge-row {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hoard-detail-mobile .hoard-detail-badge-row .hoard-acc-link-icon,
+.hoard-detail-mobile .hoard-detail-badge-row .hoard-credits-refresh {
+  width: 34px;
+  height: 30px;
+  min-height: 30px;
+  align-self: center;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--background-modifier-border);
+  color: var(--text-normal);
+  opacity: 1;
+  font-size: 15px;
+  --icon-size: 16px;
+}
+
+.hoard-detail-mobile .hoard-detail-badge-row .hoard-acc-link-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* stats: plain text line, full-width bar, caption under it */
+.hoard-detail-stats-line {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.hoard-detail-statline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.hoard-detail-statline-value {
+  font-weight: 700;
+  color: var(--text-normal);
+  margin-right: 4px;
+}
+
+.hoard-detail-stats-line .hoard-acc-progress-wrap {
+  width: 100%;
+}
+
+.hoard-detail-progress-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* studio / director / cast as a label-value grid */
+.hoard-detail-mobile .hoard-detail-credits {
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.hoard-detail-mobile .hoard-credits-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  font-size: 13px;
+}
+
+/* row-reverse parks the + after the label so every label starts at the column edge; nowrap
+   stops the + from pushing the text onto its own line */
+.hoard-detail-mobile .hoard-credits-label {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 2px;
+  font-weight: 400;
+  margin-right: 0;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.hoard-detail-mobile .hoard-credits-label-text::after {
+  content: '';
+}
+
+.hoard-detail-mobile .hoard-credits-values {
+  color: var(--text-normal);
+}
+
+.hoard-detail-mobile .hoard-credits-overflow {
+  padding-left: 98px;
+}
+
+/* Mark as Watched becomes the modal's primary action */
+.hoard-detail-mobile .hoard-movie-row {
+  display: block;
+  padding: 2px 0;
+}
+
+.hoard-detail-mobile .hoard-mark-watched-btn {
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  background: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+.hoard-detail-mobile .hoard-mark-watched-btn.is-watched {
+  background: transparent;
+}
+
+.hoard-detail-mobile .hoard-detail-date-row {
+  gap: 10px;
+}
+
+/* 48px cuts "Date started" in half */
+.hoard-detail-mobile .hoard-date-field .hoard-stars-label {
+  width: 72px;
+}
+
+/* episode boxes keep their desktop 28px — the mock's oversized grid was rejected */
+
+.is-mobile .hoard-season-badge,
+.is-mobile .hoard-season-ep-count {
+  font-size: 12px;
+}
+
+/* — shared: Obsidian pins mobile buttons to --input-height; the date shortcut stays small — */
+
+.is-mobile .hoard-footer-today-btn {
+  height: auto;
+  min-height: 0;
+  padding: 3px 9px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* — Reading detail modal — */
+
+.is-mobile .hoard-reading-detail-header {
+  gap: 12px;
+}
+
+.is-mobile .hoard-reading-detail-cover {
+  width: 78px;
+}
+
+.is-mobile .hoard-reading-detail-meta-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.is-mobile .hoard-reading-detail-stars-row {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.is-mobile .hoard-reading-detail-meta-row .hoard-acc-link-icon {
+  width: 38px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  opacity: 1;
+  --icon-size: 16px;
+}
+
+.is-mobile .hoard-reading-detail-meta-row .hoard-acc-link-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.is-mobile .hoard-reading-detail-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* — Games detail modal — */
+
+.is-mobile .hoard-game-modal-header {
+  gap: 12px;
+}
+
+.is-mobile .hoard-game-modal-cover {
+  width: 88px;
+  height: 124px;
+}
+
+.is-mobile .hoard-game-modal-badges,
+.is-mobile .hoard-game-modal-rating {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.is-mobile .hoard-game-modal-details {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* — Reading: external link + vault page share one row (desktop + mobile) — */
+
+.hoard-reading-detail-links-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 4px;
+}
+
+.hoard-reading-detail-links-row .hoard-reading-detail-actions,
+.hoard-reading-detail-links-row .hoard-reading-detail-vault-row {
+  margin-top: 0;
+}
+
+/* — Reading, phone: Obsidian pins buttons and inputs to --input-height and stretches inputs
+     to full width; restate the intended size so the row stays compact — */
+
+.is-mobile .hoard-reading-detail-links-row .hoard-btn,
+.is-mobile .hoard-reading-detail-today-btn {
+  height: auto;
+  min-height: 0;
+  padding: 3px 9px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.is-mobile .hoard-reading-detail-today-btn {
+  padding: 2px 7px;
+  font-size: 11px;
+}
+
+/* search row, phone: query on its own line, year + Search under it */
+.is-mobile .hoard-search-fields {
+  flex-wrap: wrap;
+}
+
+.is-mobile .hoard-search-fields .hoard-search-query {
+  box-sizing: border-box;
+  flex: 1 0 100%;
+}
+
+.is-mobile .hoard-search-row .hoard-search-year {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 90px;
+}
+
+.is-mobile .hoard-search-fields .hoard-btn {
+  margin-left: auto;
+}
+
+/* needs 3 classes: Obsidian's `body.is-mobile input[type=text] { width: 100% }` outweighs 2 */
+.is-mobile .hoard-reading-detail-details .hoard-reading-detail-date-input {
+  height: auto;
+  min-height: 0;
+  flex: none;
+  /* mask is 10 chars + padding + border — no slack */
+  width: calc(10ch + 14px);
+  max-width: calc(10ch + 14px);
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
+/* — Games, phone: note · store · wishlist on one line under the rating — */
+
+.hoard-game-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.hoard-game-modal-actions .hoard-acc-link-icon,
+.hoard-game-modal-actions .hoard-store-btn {
+  width: 34px;
+  height: 30px;
+  min-height: 30px;
+  margin-left: 0;
+  padding: 0;
+  border-radius: 8px;
+  background-color: var(--background-modifier-border);
+  opacity: 1;
+  --icon-size: 16px;
+}
+
+.hoard-game-modal-actions .hoard-acc-link-icon svg,
+.hoard-game-modal-actions .hoard-store-btn .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Modes left the head column — space it like a section so it lines up with Progress */
+.is-mobile .hoard-game-modal-modes {
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+/* the stat inputs stretch to full width on mobile; restore their intended widths */
+.is-mobile .hoard-game-modal-stat-input {
+  height: auto;
+  min-height: 0;
+  flex: none;
+  font-size: 13px;
+}
+
+.is-mobile .hoard-game-modal-stat-time {
+  width: 6ch;
+}
+
+.is-mobile .hoard-game-modal-stat-num {
+  width: 5ch;
+}
+

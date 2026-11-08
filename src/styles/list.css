@@ -1,0 +1,290 @@
+/* List tab */
+/* ══ LIST TAB ══ */
+
+.hoard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Header */
+.hoard-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 4px;
+}
+
+.hoard-add-btn {
+  /* color via .hoard-btn-success */
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+}
+
+/* Search */
+.hoard-search-wrap {
+  width: 100%;
+}
+
+.hoard-search-input {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: 0.5px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  box-sizing: border-box;
+}
+
+.hoard-search-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.hoard-select {
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 0.5px solid var(--background-modifier-border);
+  /* background-color, never the shorthand — shorthand resets background-repeat to
+     `repeat` and any theme arrow then tiles across the whole select */
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 11px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.hoard-select-sm {
+  flex: unset;
+  width: auto;
+}
+
+.hoard-select:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+/* Divider */
+.hoard-divider {
+  height: 0.5px;
+  background: var(--background-modifier-border);
+  margin: 2px 0;
+}
+
+/* Results count */
+.hoard-results-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-normal);
+  padding: 2px 0;
+}
+
+/* rows view: the count line also carries the gear */
+.hoard-results-count-rows {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hoard-rows-customize-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 2px 3px;
+  margin: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: var(--radius-s, 4px);
+}
+
+.hoard-rows-customize-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.hoard-rows-customize-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Table */
+.hoard-table-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hoard-table {
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* virtual scroll: fixed height, children absolute */
+.hoard-virt-container {
+  position: relative;
+}
+
+/* virtual scroll: top set inline from the offset table */
+.hoard-virt-item {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.hoard-table-header-row {
+  display: grid;
+  /* Title | Priority | Started | Rating | Status | Pin */
+  grid-template-columns: 1fr 56px 72px 56px 90px 20px;
+  padding: 5px 8px;
+  background: #626262;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+}
+
+.hoard-col-priority-h,
+.hoard-col-started-h,
+.hoard-col-rating-h,
+.hoard-col-status-h {
+  text-align: center;
+}
+
+/* Row */
+.hoard-row {
+  display: grid;
+  grid-template-columns: 1fr 56px 72px 56px 90px 20px;
+  padding: 7px 8px;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: 2px solid var(--hoard-group-border-overlay);
+  transition: background 0.1s;
+  border-top: 2px solid var(--hoard-group-border-overlay);
+  border-left: 2px solid rgb(255 255 255 / 20%);
+  border-right: 2px solid rgb(255 255 255 / 20%);
+}
+
+/* gap between top-level rows and after accordions */
+.hoard-row + .hoard-row:not(.hoard-row-indented),
+.hoard-accordion + .hoard-row:not(.hoard-row-indented) {
+  margin-top: 8px;
+}
+
+.hoard-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.hoard-row.is-expanded {
+  background: var(--background-secondary);
+}
+
+.hoard-col-title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  /* keep the badge from stretching the column */
+  align-items: flex-start;
+}
+
+.hoard-row-title-text {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hoard-col-started {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Rating column */
+.hoard-col-rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hoard-row-rating {
+  font-size: 11px;
+  color: var(--hoard-rating-color);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hoard-row-rating-empty {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+.hoard-col-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* season headers only */
+.hoard-chevron {
+  font-size: 18px;
+  color: var(--text-muted);
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.hoard-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+/* Progress bar */
+.hoard-progress-wrap {
+  height: 3px;
+  background: var(--background-modifier-border);
+  border-radius: 2px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.hoard-progress-bar {
+  height: 100%;
+  background: var(--hoard-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  min-width: 0;
+}
+
+/* Badges */
+.hoard-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #ffffff;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.hoard-badge-sm {
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.hoard-badge-plain {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-normal);
+  white-space: nowrap;
+}
+

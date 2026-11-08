@@ -1,0 +1,110 @@
+/* Utility classes, inner sub-tab bar */
+/* ══ utility classes replacing inline style= ══ */
+
+.hoard-modal-row-mt {
+  margin-top: 10px;
+}
+
+.hoard-btn-mr {
+  margin-right: 6px;
+}
+
+.hoard-editcols-bold-btn {
+  font-weight: bold;
+}
+
+.hoard-editcols-italic-btn {
+  font-style: italic;
+}
+
+.hoard-cell-bold {
+  font-weight: 700;
+}
+
+.hoard-cell-italic {
+  font-style: italic;
+}
+
+.hoard-pos-fixed {
+  position: fixed;
+}
+
+.hoard-group-name-input {
+  width: 110px;
+  font-size: 11px;
+  padding: 2px 6px;
+  flex: unset;
+}
+
+.hoard-filters-panel-popup {
+  position: fixed;
+  z-index: 9999;
+  max-height: 70vh;
+  overflow-y: auto;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 8px;
+  min-width: 230px;
+  width: 230px;
+}
+
+.hoard-sorting-panel-mobile {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.hoard-qi-section-body-hidden {
+  display: none;
+}
+
+/* Inner sub-tab bar (Upcoming Tracker/History/Maybe) */
+.hoard-inner-tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 6px 10px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.hoard-inner-tab-btn {
+  padding: 4px 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+  margin-bottom: -1px;
+}
+
+.hoard-inner-tab-btn:hover { color: var(--text-normal); }
+.hoard-inner-tab-btn.is-active {
+  color: var(--text-accent);
+  border-bottom-color: var(--text-accent);
+}
+
+/* Feature 1: Recently arrived label */
+.hoard-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.hoard-recently-arrived {
+  font-size: 10px;
+  color: var(--color-green);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.hoard-recently-arrived-filter {
+  color: var(--color-green);
+  font-size: 11px;
+}
+

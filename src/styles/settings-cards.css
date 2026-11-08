@@ -1,0 +1,213 @@
+/* Status bar counter, Customize cards settings */
+/* Status bar: Upcoming "due" counter */
+.hoard-statusbar-upcoming {
+  cursor: pointer;
+  color: var(--color-orange);
+}
+
+/* Cards group (Settings → Customize) */
+
+/* text-placement picker: two mini card previews */
+.hoard-card-style-picker {
+  display: flex;
+  gap: 10px;
+}
+
+.hoard-card-style-option {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px 10px;
+  /* Obsidian pins button height to --input-height; let the content size the tile */
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hoard-card-style-option:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* Selected option glows in the group's green accent (inherited from .hoard-sg--cards). */
+.hoard-card-style-option.is-active {
+  border-color: rgb(var(--hoard-sg-accent));
+  box-shadow: 0 0 0 1px rgb(var(--hoard-sg-accent));
+}
+
+/* fixed-height stage so both variants align */
+.hoard-card-style-thumb {
+  width: 46px;
+  height: 84px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hoard-card-style-thumb-poster {
+  position: relative;
+  width: 46px;
+  height: 69px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #6b7280, #3f4450);
+}
+
+.hoard-card-style-thumb.is-inside .hoard-card-style-thumb-poster {
+  height: 84px;
+}
+
+.hoard-card-style-thumb-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Inside variant: pin the lines to the poster bottom over a scrim. */
+.hoard-card-style-thumb.is-inside .hoard-card-style-thumb-lines {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  padding-top: 14px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+}
+
+.hoard-card-style-thumb-line {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.85;
+}
+
+.hoard-card-style-thumb.is-inside .hoard-card-style-thumb-line {
+  background: #fff;
+}
+
+.hoard-card-style-thumb-line.is-short {
+  width: 62%;
+}
+
+.hoard-card-style-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.hoard-card-style-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* Per-tab rows under the previews: icon · tab name · [Under | Inside]. */
+.hoard-card-style-tabs {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hoard-card-style-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hoard-card-style-tab-icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.hoard-card-style-tab-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.hoard-card-style-tab-label {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.hoard-card-style-tab-group {
+  display: flex;
+  gap: 4px;
+}
+
+.hoard-card-style-tab-btn {
+  font-size: 11px;
+  padding: 3px 12px;
+  height: 24px;
+  border-radius: 4px;
+  border: 0.5px solid var(--background-modifier-border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.hoard-card-style-tab-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* Active option tinted in the group's green accent (inherited from .hoard-sg--cards). */
+.hoard-card-style-tab-btn.is-active {
+  background: rgba(var(--hoard-sg-accent), 0.16);
+  border-color: rgb(var(--hoard-sg-accent));
+  color: var(--text-normal);
+}
+
+/* Size sliders: icon · label · slider · live "Default · 160 px" read-out. */
+.hoard-card-size-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hoard-card-size-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hoard-card-size-row-icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.hoard-card-size-row-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.hoard-card-size-row-label {
+  min-width: 62px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.hoard-card-size-row input[type='range'] {
+  flex: 1 1 auto;
+}
+
+.hoard-card-size-value {
+  min-width: 104px;
+  text-align: right;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+

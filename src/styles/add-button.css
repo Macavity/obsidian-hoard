@@ -1,0 +1,141 @@
+/* Add/Edit dropdown, minimal widget, group action buttons */
+/* ══ NEW IN 0.3.0 ══ */
+
+/* +Add / Edit button dropdown */
+.hoard-add-btn-wrap {
+  position: relative;
+}
+
+.hoard-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 200;
+  background: var(--background-primary);
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  min-width: 168px;
+  padding: 4px 0;
+}
+
+/* popovers anchored by inline top/left (ReadingTab) */
+.hoard-dropdown.hoard-popover-anchored {
+  right: auto;
+}
+
+/* Group header row */
+.hoard-table .hoard-group-row {
+    background: transparent;
+    border: 2px solid var(--hoard-group-border-overlay);
+    border-left: 4px solid var(--hoard-accent);
+    border-right: 4px solid var(--hoard-accent);
+}
+
+.hoard-group-name {
+  font-weight: 600;
+}
+
+.hoard-group-stats {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Indented member rows (inside expanded group) */
+.hoard-row-indented {
+  padding-left: 24px;
+  background: var(--background-primary-alt);
+  border-left: 2px solid var(--background-modifier-border);
+}
+
+/* per-title stats: 3 blocks + progress */
+.hoard-acc-right-group {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  flex-shrink: 0;
+  align-items: flex-start;
+  background: rgb(0 0 0 / 5%);
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 6px;
+  padding: 6px 6px;
+  font-size: 5px;
+}
+
+/* each stat block, centered */
+.hoard-acc-stat-block {
+  flex-shrink: 0;
+  text-align: center;
+  min-width: 50px;
+}
+
+/* ══ MINIMAL WIDGET ══ */
+
+.hoard-widget-minimal {
+  display: inline-flex;
+  margin: 2px 0;
+}
+
+.hoard-widget-minimal-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 20px;
+  background: var(--background-secondary);
+  white-space: nowrap;
+}
+
+/* ══ GROUP ACTION BUTTONS (rename / delete) ══ */
+
+.hoard-group-name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.hoard-group-action-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.hoard-group-action-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
+}
+
+/* .hoard-group-action-btn-delete — color via .hoard-btn-danger */
+
+.hoard-group-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 0.5px solid var(--interactive-accent);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: 600;
+}
+
+.hoard-group-rename-input:focus {
+  outline: none;
+}
+

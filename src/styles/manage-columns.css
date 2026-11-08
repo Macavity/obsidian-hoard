@@ -1,0 +1,331 @@
+/* Manage columns modal, colour pickers, drafts add choice */
+/* Manage columns — style toggle */
+.hoard-reading-cols-style-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.hoard-reading-cols-style-label {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.hoard-reading-cols-style-group {
+  display: flex;
+  gap: 4px;
+}
+
+.hoard-reading-cols-style-btn {
+  font-size: 11px;
+  padding: 2px 12px;
+  height: 24px;
+  border-radius: 4px;
+  border: 0.5px solid var(--background-modifier-border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.hoard-reading-cols-style-btn.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+/* Manage columns — color dot & palette */
+.hoard-reading-col-color-dot {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s, border-color 0.1s;
+}
+
+.hoard-reading-col-color-dot:hover {
+  transform: scale(1.2);
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+/* Per-list tab colour row in the Table settings modal. */
+.hoard-editcols-tabcolor-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.hoard-editcols-tabcolor-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+/* colour comes from CustomListsTab vars; .is-unset swaps in the checkerboard */
+.hoard-editcols-tabcolor-dot:not(.is-unset) {
+  background-color: var(--hoard-dot-fill);
+}
+
+.hoard-editcol-opt-color-dot:not(.is-unset) {
+  background-color: var(--hoard-dot-fill);
+  border-color: var(--hoard-dot-border);
+}
+
+.hoard-editcols-tabcolor-dot.is-unset,
+.hoard-editcol-opt-color-dot.is-unset {
+  background: repeating-conic-gradient(
+    var(--background-modifier-border) 0% 25%,
+    var(--background-primary) 0% 50%
+  ) 0 / 8px 8px;
+}
+
+.hoard-editcol-opt-color-dot {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.hoard-reading-col-palette {
+  position: fixed;
+  display: grid;
+  grid-template-columns: repeat(4, 24px);
+  gap: 5px;
+  padding: 8px;
+  background: var(--background-primary);
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 7px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  z-index: 1000;
+}
+
+.hoard-reading-col-palette-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s;
+}
+
+.hoard-reading-col-palette-swatch:hover {
+  transform: scale(1.18);
+}
+
+.hoard-reading-col-palette-swatch.is-active {
+  outline: 2px solid var(--text-normal);
+  outline-offset: 1px;
+}
+
+/* Custom full-spectrum swatch in the shared colour picker. */
+.hoard-color-custom-swatch {
+  position: relative;
+  overflow: hidden;
+}
+
+.hoard-color-custom-swatch.hoard-color-custom-rainbow {
+  background: conic-gradient(
+    from 90deg,
+    #f43f5e, #f59e0b, #facc15, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #f43f5e
+  );
+  border-color: var(--background-modifier-border);
+}
+
+.hoard-color-custom-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Clear / "no colour" swatch — checkerboard with a diagonal slash. */
+.hoard-color-clear-swatch {
+  border-color: var(--background-modifier-border);
+  background:
+    linear-gradient(
+      to top left,
+      transparent 0%,
+      transparent calc(50% - 1px),
+      var(--text-error, #e5484d) 50%,
+      transparent calc(50% + 1px),
+      transparent 100%
+    ),
+    repeating-conic-gradient(
+      var(--background-modifier-border) 0% 25%,
+      var(--background-primary) 0% 50%
+    ) 0 / 10px 10px;
+}
+
+/* Manage columns modal */
+.hoard-reading-manage-cols-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.hoard-reading-manage-cols-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.hoard-reading-manage-cols-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 10px 8px;
+  text-align: center;
+}
+
+/* Row layout — overrides the vertical card from .hoard-editcol-card */
+.hoard-reading-col-card {
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  flex: none;
+  border: none;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 5px 6px;
+  gap: 8px;
+}
+
+.hoard-reading-col-card:last-child {
+  border-bottom: none;
+}
+
+.hoard-reading-col-card.hoard-cl-dragging {
+  opacity: 0.5;
+}
+
+.hoard-reading-col-card.hoard-cl-drag-over {
+  border-left: 2px solid var(--interactive-accent);
+}
+
+.hoard-reading-col-card .hoard-editcol-card-handle {
+  flex: 0 0 16px;
+  width: 16px;
+}
+
+.hoard-reading-col-card .hoard-editcol-card-name {
+  flex: 1 1 130px;
+  min-width: 0;
+  width: auto;
+  height: 26px;
+}
+
+.hoard-reading-col-card .hoard-editcol-card-type {
+  flex: 0 0 90px;
+  width: 90px;
+  height: 26px;
+}
+
+.hoard-reading-col-card .hoard-reading-col-color-dot {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.hoard-reading-col-opts-input {
+  flex: 1 1 130px;
+  min-width: 0;
+  font-size: 12px;
+  height: 26px;
+  box-sizing: border-box;
+}
+
+.hoard-reading-col-card .hoard-editcol-card-del {
+  flex: 0 0 26px;
+  width: 26px;
+  margin-left: 0;
+}
+
+.hoard-reading-add-col {
+  margin-top: 12px;
+}
+
+.hoard-reading-add-col-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.hoard-reading-add-col-name {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.hoard-reading-add-col-type {
+  flex: 0 0 95px;
+}
+
+.hoard-reading-add-col-opts {
+  flex: 1 1 130px;
+  min-width: 0;
+}
+
+.hoard-reading-add-col-btn {
+  flex: 0 0 auto;
+}
+
+/* Drafts: Add choice modal */
+.hoard-draft-choice-subtitle {
+  margin-bottom: 14px;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-align: center;
+  word-break: break-word;
+}
+
+.hoard-draft-choice-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.hoard-draft-choice-btn {
+  flex: 1 1 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 65px;
+  padding: 12px 8px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.hoard-draft-choice-btn:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+
+.hoard-draft-choice-label {
+  font-size: 1.05em;
+  font-weight: 600;
+  text-align: center;
+}
+

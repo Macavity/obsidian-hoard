@@ -1,0 +1,356 @@
+/* Code-block widgets (stat, upcoming, now watching) */
+/* hoard-stat widget */
+.hoard-wstat {
+  display: inline-block;
+  margin: 2px 0;
+}
+
+.hoard-stat-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 20px;
+  background: var(--background-secondary);
+  white-space: nowrap;
+}
+
+.hoard-stat-icon {
+  font-size: 13px;
+}
+
+.hoard-stat-value {
+  font-weight: 700;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+}
+
+.hoard-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.hoard-stat-sep {
+  color: var(--text-faint);
+  margin: 0 2px;
+}
+
+/* Full cards (140×55px base) */
+.hoard-full-card {
+  display: flex;
+  flex-direction: column;
+  width: 160px;
+  height: 70px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--background-secondary);
+  border: 0.5px solid var(--background-modifier-border);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.hoard-full-card-header {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.hoard-full-card-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-normal);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.hoard-full-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.hoard-full-card-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+.hoard-full-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: auto;
+}
+
+.hoard-full-card-bar-wrap {
+  height: 3px;
+  background: var(--background-modifier-border);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.hoard-full-card-bar {
+  height: 100%;
+  background: var(--interactive-accent);
+  border-radius: 2px;
+}
+
+/* Time full card (280×55px, two-column) */
+.hoard-full-card-time {
+  width: 320px;
+}
+
+.hoard-full-card-time-cols {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+}
+
+.hoard-full-card-time-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.hoard-full-card-days {
+  font-size: 15px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* hoard-upcoming widget */
+.hoard-wupcoming {
+  display: inline-block;
+  margin: 2px 0;
+}
+
+.hoard-upcoming-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+  white-space: nowrap;
+  flex-wrap: wrap;
+}
+
+.hoard-upcoming-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-ui-small);
+}
+
+.hoard-upcoming-title {
+  font-weight: 600;
+  font-size: var(--font-ui-small);
+}
+
+.hoard-upcoming-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.hoard-upcoming-countdown {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--interactive-accent);
+}
+
+/* hoard-nowwatching widget */
+.hoard-wnowwatching {
+  display: inline-block;
+  margin: 2px 0;
+}
+
+.hoard-nowwatching-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+  white-space: nowrap;
+  flex-wrap: wrap;
+}
+
+.hoard-nowwatching-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-ui-small);
+}
+
+.hoard-nowwatching-title {
+  font-weight: 600;
+  font-size: var(--font-ui-small);
+}
+
+.hoard-nowwatching-ep {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.hoard-nowwatching-bar-wrap {
+  width: 60px;
+  height: 4px;
+  background: var(--background-modifier-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hoard-nowwatching-bar {
+  height: 100%;
+  background: var(--interactive-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.hoard-nowwatching-pct {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* hoard-nowwatching full layout */
+.hoard-full-card-nw {
+  height: auto;
+  width: 200px;
+}
+
+.hoard-nw-bottom-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.hoard-nw-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hoard-nw-pct {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* Shared vertical separator */
+.hoard-vert-sep {
+  width: 1px;
+  background: var(--background-modifier-border);
+  align-self: stretch;
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* hoard-stat: time completed full (triple card) */
+.hoard-wstat.hoard-wstat-triple {
+  display: block;
+}
+
+.hoard-full-card-triple {
+  width: 100%;
+  height: auto;
+  padding: 8px 10px;
+}
+
+.hoard-triple-cols {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.hoard-triple-col {
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.hoard-triple-col:first-child {
+  padding-left: 0;
+}
+
+/* hoard-now-next (combined now watching + up next) */
+.hoard-wnownext {
+  display: block;
+  margin: 2px 0;
+}
+
+.hoard-full-card-now-next {
+  width: 100%;
+  height: auto;
+  padding: 8px 10px;
+}
+
+.hoard-double-cols {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.hoard-double-col {
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.hoard-double-col:first-child {
+  padding-left: 0;
+}
+
+/* Widgets settings tab */
+.hoard-widget-info-section {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 0.5px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.hoard-widget-info-name {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-monospace);
+  color: var(--text-normal);
+  margin-bottom: 4px;
+}
+
+.hoard-widget-info-desc {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.hoard-widget-info-code-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.hoard-widget-info-code {
+  flex: 1;
+  font-size: 11px;
+  background: var(--background-primary-alt);
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: pre;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+}
+

@@ -1,0 +1,112 @@
+/* View shell, accent defaults, tab bar */
+/* ══ Hoard plugin styles — Obsidian CSS vars throughout ══ */
+
+/* View shell */
+.hoard-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+}
+
+/* Default accents; themes override below on .hoard-view[data-theme]. Code-block widgets render in
+   notes outside the view, so their roots need the defaults too. */
+.hoard-view,
+.hoard-widget,
+.hoard-widget-minimal,
+.hoard-wstat,
+.hoard-wstat-triple,
+.hoard-wupcoming,
+.hoard-wnowwatching,
+.hoard-wnownext {
+  /* default theme follows Obsidian's own colours, so it reads on light and dark backgrounds */
+  --hoard-accent: var(--interactive-accent);
+  --hoard-rating-color: #BA7517;
+  --hoard-watched-color: #1D9E75;
+  --hoard-group-border-overlay: var(--background-modifier-border);
+}
+
+/* Tab bar */
+.hoard-tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 8px 10px 0;
+  border-bottom: 0.5px solid var(--background-modifier-border);
+  flex-shrink: 0;
+  /* clip so the view can't be panned sideways */
+  overflow-x: hidden;
+}
+
+/* Mobile: icon-only tabs — 7 text labels overflow a phone panel */
+.hoard-view.hoard-mobile .hoard-tab-bar {
+  gap: 0;
+  padding: 6px 4px 0;
+}
+
+.hoard-tab-btn-icon {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 0;
+  position: relative;
+}
+
+.hoard-tab-btn-icon .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* icon mode: dot instead of (N) */
+.hoard-tab-btn-icon.hoard-tab-has-badge::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: calc(50% - 13px);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #7F77DD;
+}
+
+.hoard-tab-btn {
+  padding: 5px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+  margin-bottom: -0.5px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.hoard-tab-btn:hover {
+  color: var(--text-normal);
+}
+
+.hoard-tab-btn.is-active {
+  color: var(--text-accent);
+  border-bottom-color: var(--text-accent);
+}
+
+/* Tab content */
+.hoard-tab-content {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  /* overflow-y:auto forces overflow-x:auto per spec; clip it or mobile pans sideways */
+  overflow-x: hidden;
+  padding: 12px 10px;
+}
+
+/* mobile keyboard: HoardView pins a px height via --hoard-pinned-tab-height */
+.hoard-tab-content.hoard-tab-content-pinned {
+  flex: none;
+  height: var(--hoard-pinned-tab-height);
+}
+

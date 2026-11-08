@@ -1,0 +1,71 @@
+/* Mobile responsive base rules */
+/* ══ MOBILE RESPONSIVE ══ */
+
+@media (max-width: 600px) {
+  /* hide Priority / Started / Rating */
+  .hoard-col-priority,
+  .hoard-col-priority-h,
+  .hoard-col-started,
+  .hoard-col-started-h,
+  .hoard-col-rating,
+  .hoard-col-rating-h {
+    display: none;
+  }
+
+  .hoard-table-header-row,
+  .hoard-row {
+    grid-template-columns: 1fr 90px 20px;
+  }
+
+  /* smaller toolbar buttons */
+  .hoard-header-controls .hoard-btn,
+  .hoard-header-controls .hoard-add-btn {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+}
+
+@media (max-width: 400px) {
+  /* tighter rings gap on very small screens */
+  .hoard-rings-grid {
+    gap: 8px;
+  }
+
+  .hoard-table-header-row,
+  .hoard-row {
+    grid-template-columns: 1fr 56px 20px;
+  }
+
+  .hoard-col-started,
+  .hoard-col-rating,
+  .hoard-col-started-h,
+  .hoard-col-rating-h,
+  .hoard-col-priority,
+  .hoard-col-priority-h {
+    display: none;
+  }
+
+  .hoard-episode-grid {
+    gap: 3px;
+  }
+
+  .hoard-episode-box {
+    width: 30px;
+    height: 30px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+    .hoard-accordion-header {
+        flex-wrap: wrap;
+    }
+    .hoard-acc-header-left {
+        width: 100%;
+        margin-bottom: 6px;
+    }
+    .hoard-acc-right-group {
+        width: 100%;
+    }
+}
+
