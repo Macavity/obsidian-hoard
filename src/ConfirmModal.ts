@@ -24,7 +24,6 @@ export class ConfirmModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
-		this.titleEl.setText(t('misc.confirm.title'));
 		contentEl.createDiv({ cls: 'hoard-confirm-msg', text: this.message });
 		const btnRow = contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
 		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-danger', text: t('misc.confirm.confirm') })
