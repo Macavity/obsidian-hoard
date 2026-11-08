@@ -1,5 +1,5 @@
 import { App, Notice, Platform, PluginSettingTab, Setting, SliderComponent, normalizePath, setIcon } from 'obsidian';
-import { typeNameError } from './storage/VaultLayout';
+import { typeNameProblemText } from './ui/problemText';
 import { cardSizeToMinWidth } from './VirtualGrid';
 import type HoardPlugin from './main';
 import type { TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from './types';
@@ -2274,7 +2274,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			// statuses are colour-only; locked built-in types keep their picker but lose delete
 			isLocked: (name) =>
 				isStatuses || (isTypes && HoardSettingsTab.LOCKED_TYPES.includes(name)),
-			...(isTypes ? { validateName: typeNameError } : {}),
+			...(isTypes ? { validateName: typeNameProblemText } : {}),
 			...(isStatuses ? {} : {
 				add: async (name, color) => {
 					this.plugin.settings[key].push({ name, color });
