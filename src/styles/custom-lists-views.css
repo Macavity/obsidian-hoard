@@ -177,8 +177,9 @@
   scrollbar-color: var(--hoard-strip-thumb) transparent;
 }
 
-/* one hover rule drives both scrollbar paths */
-.hoard-rows-shelf:hover .hoard-rows-strip {
+/* one rule drives both scrollbar paths; focus shows it for keyboard users too */
+.hoard-rows-shelf:hover .hoard-rows-strip,
+.hoard-rows-strip:focus-within {
   --hoard-strip-thumb: var(--scrollbar-thumb-bg);
 }
 
