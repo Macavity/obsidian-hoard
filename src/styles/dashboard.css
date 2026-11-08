@@ -68,6 +68,12 @@
   .hoard-dash-unified-4 .hoard-dash-seg-value {
     font-size: 16px;
   }
+
+  /* nowrap holds the stacked values to a common right edge */
+  .hoard-dash-unified-4 .hoard-dash-seg-label,
+  .hoard-dash-unified-4 .hoard-dash-seg-value {
+    white-space: nowrap;
+  }
 }
 
 /* same stack for the 3-segment card; it flips at a different width */
@@ -92,12 +98,11 @@
   .hoard-mobile .hoard-dash-seg-value {
     font-size: 16px;
   }
-}
 
-/* nowrap holds the values to a common right edge */
-.hoard-mobile .hoard-dash-seg-label,
-.hoard-mobile .hoard-dash-seg-value {
-  white-space: nowrap;
+  .hoard-mobile .hoard-dash-seg-label,
+  .hoard-mobile .hoard-dash-seg-value {
+    white-space: nowrap;
+  }
 }
 
 .hoard-dash-unified-bordered {
