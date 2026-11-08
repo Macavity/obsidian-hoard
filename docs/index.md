@@ -15,14 +15,14 @@ profile:
     - "*.test.ts"
     - scripts/
     - test/
-source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
+source_commit: d4cf7e39e4fc24687cf810e7417d26726e840ee6
 ---
 
 # Context
 
 Hoard is an Obsidian plugin: a media library for movies, TV, anime, books, manga and games, stored
 as Markdown notes with properties in the user's vault. A sidebar view with eight tabs, code-block
-widgets inside notes, optional API enrichment, and WatchLog converters kept for a later import.
+widgets inside notes, optional API enrichment, and an optional, user-driven import from its predecessor WatchLog.
 Read [values](values.md) first; every rule below serves one of them.
 
 - **Entry**: one note = one title, book, manga or game; its id is the note path below the root.
@@ -30,7 +30,7 @@ Read [values](values.md) first; every rule below serves one of them.
 - **Properties**: the YAML block at the top of a note; the only place entry fields live.
 - **Base**: `Hoard.base`, whose `hoard:` block carries the shared vocabulary; nothing else syncs settings.
 - **Cache**: `data.json`, device-local; API keys, fetched data, UI state.
-- **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (the import writes them once, custom lists write their own notes).
+- **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (the import wizard writes notes once, custom lists write their own notes).
 - **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
 - **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
 - **Maybe**: a note with `maybe: true`, considered but not in the library.
@@ -46,12 +46,17 @@ flowchart TD
   Managers --> Storage[EntryIndex, codecs, stores]
   Storage --> Vault[(notes, Hoard.base, History.md)]
   Storage --> Local[(data.json)]
-  Import[import/watchlog, not wired yet] --> Storage
+  main --> Import[import/watchlog + onboarding wizard]
+  Import --> Storage
 ```
 
 # Types
 
 The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow`). No additions.
+
+# Start here
+
+- [Values](values.md): the hand-written principles every rule in this wiki serves; read before changing behaviour.
 
 # Architecture
 
@@ -74,15 +79,16 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Widgets](modules/widgets.md): how the `hoard-*` code blocks render and stay live.
 - [Settings](modules/settings.md): how the settings tab is laid out, what syncs, and how to add a setting.
 - [Backup](modules/backup.md): the backup file format, the two export variants and the restore contract.
-- [Import](modules/import.md): the WatchLog converters (not wired in yet), what happens today with WatchLog data, and where a new source goes.
+- [Import](modules/import.md): which module owns WatchLog knowledge, the report and importer contracts, the schema-1 converter, and where a new source goes.
 
 # Flows
 
-- [Startup](flows/startup.md): from plugin load to a ready library, including fresh install and second device.
+- [Startup](flows/startup.md): from plugin load to a ready library, including fresh install, second device and where the import wizard runs.
 - [Entry write](flows/entry-write.md): from a user edit to the note on disk without a double render.
 - [Add title](flows/add-title.md): from the search box to a new note, with API routing and duplicate guard.
 - [Airtime notifications](flows/airtime-notifications.md): how the minute scheduler produces notices, badges and the status bar count.
-- [Backup and restore](flows/backup-restore.md): what a backup holds, which copy loses the keys, and the restore order.
+- [Backup and restore](flows/backup-restore.md): what a backup holds, which copy loses the keys, and the restore order (WatchLog files are not restorable).
+- [WatchLog import](flows/watchlog-import.md): the import wizard step by step, when it opens at startup, what Later and Don't import mean, and what cleanup may remove.
 
 # Concepts
 

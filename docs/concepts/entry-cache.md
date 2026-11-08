@@ -8,7 +8,7 @@ source:
   - src/storage/LocalStore.ts
   - src/storage/EntryIndex.ts
   - src/DataManager.ts
-source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
+source_commit: d4cf7e39e4fc24687cf810e7417d26726e840ee6
 ---
 
 # Entry cache
@@ -39,8 +39,8 @@ only keeps the marker `'none'` for "the API has no poster".
 
 - `EntryIndex.sweepCache()` (once after build) drops entries whose note is gone.
 - `EntryIndex` deletes the cache on vault delete and re-keys it on rename.
-- `LocalStore` debounces writes (100 ms) and is **read-only** while `data.json` holds a WatchLog
-  schema-1 file or a newer schema version.
+- `LocalStore` debounces writes (100 ms) and is **read-only** for the session when `data.json` holds a
+  WatchLog schema-1 file or a newer schema version.
 - A device without cache (fresh sync) sees titles with an API identity but no poster or seasons;
   `DataManager.queueMissingPosters` / `queueMissingSeasons` refill through the throttled
   [ApiCheckQueue](../architecture/api-layer.md). Until seasons arrive, `seasonsPending` keeps episode
