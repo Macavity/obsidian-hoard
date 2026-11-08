@@ -120,7 +120,7 @@ describe('ListTab.renderActionBar batch status', () => {
 
 		const [, statuses, onChange] = vi.mocked(ActionBar.renderBatchStatusSelect).mock.calls[0]!;
 		expect(statuses).toEqual(['Watching']);
-		await (onChange as (s: string) => Promise<void>)('Watching');
+		await (onChange)('Watching');
 
 		expect(t1.status).toBe('Watching');
 		expect(t2.status).toBe('Watching');
@@ -142,7 +142,7 @@ describe('ListTab.renderActionBar batch status', () => {
 		});
 		vi.mocked(ActionBar.renderBatchStatusSelect).mockClear();
 		call(host, 'renderActionBar', {});
-		const onChange = vi.mocked(ActionBar.renderBatchStatusSelect).mock.calls[0]![2] as (s: string) => Promise<void>;
+		const onChange = vi.mocked(ActionBar.renderBatchStatusSelect).mock.calls[0]![2];
 		await onChange('Watching');
 		expect(dm.save).not.toHaveBeenCalled();
 		expect(render).toHaveBeenCalledOnce();
