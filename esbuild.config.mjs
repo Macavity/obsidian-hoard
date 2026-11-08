@@ -47,6 +47,15 @@ function buildStyles() {
 	writeFileSync(`${outdir}/styles.css`, bundleStyles());
 }
 
+// an editor may replace a partial by delete + write; a read in between fails, the write's own event rebuilds
+function rebuildStyles() {
+	try {
+		buildStyles();
+	} catch (e) {
+		console.warn(`styles: rebuild skipped (${e instanceof Error ? e.message : String(e)}); retrying on the next change`);
+	}
+}
+
 function copyStatic(file) {
 	if (existsSync(file)) copyFileSync(file, `${outdir}/${file}`);
 }
@@ -130,5 +139,5 @@ if (isOneTimeBuild) {
 	for (const f of staticFiles) {
 		if (existsSync(f)) watch(f, () => copyStatic(f));
 	}
-	watch(dirname(stylesEntry), buildStyles);
+	watch(dirname(stylesEntry), rebuildStyles);
 }
