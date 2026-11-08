@@ -6,6 +6,7 @@ import { createFakeApp } from '../../fakes/fakeApp';
 import { LocalStore } from '../../../src/storage/LocalStore';
 import { migrateFromWatchLog, type WatchLogSource } from '../../../src/migration/watchlog';
 import { WATCHLOG_NOTES } from './setupSchema1';
+import type { ManagerNotice, Notify } from '../../../src/storage/storageTypes';
 
 const yaml = { parse, stringify };
 const notices = Notice as unknown as { shown: string[] };
@@ -14,13 +15,14 @@ const SYNC_BASE = 'filters:\n  and:\n    - file.inFolder("Media")\nviews: []\nwa
 const FENCE_NOTE = '# Home\n\n```wl-todo\n```\n';
 
 /** Loads data.json like main.ts and runs the migration with what it found. */
-async function migrate(f: ReturnType<typeof createFakeApp>, adopted: WatchLogSource | null) {
+async function migrate(f: ReturnType<typeof createFakeApp>, adopted: WatchLogSource | null, notify: Notify = () => {}) {
 	const local = new LocalStore(f.plugin);
 	const loaded = await local.load();
 	const report = await migrateFromWatchLog({
 		app: f.app, local, yaml, pluginDir: f.plugin.manifest.dir, adopted,
 		schema1: loaded.schema === 1 ? loaded.data : null,
 		typeNames: () => ['Movie', 'TV Show'],
+		notify,
 	});
 	await local.flush();
 	return report;
@@ -103,5 +105,13 @@ describe('migrateFromWatchLog', () => {
 		expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^\[Hoard\] W\/WatchLog\.base left untouched/));
 		expect(notices.shown).toEqual([]);
 		warn.mockRestore();
+	});
+
+	it('reports an unreadable settings block in the base instead of failing silently', async () => {
+		const f = createFakeApp({ ...WATCHLOG_NOTES, 'WatchLog/Hoard.base': 'views: []\nhoard: [unclosed\n' });
+		f.plugin.data = structuredClone(watchLogData);
+		const seen: ManagerNotice[] = [];
+		await migrate(f, null, (n) => seen.push(n));
+		expect(seen).toContainEqual({ code: 'sharedConfigUnreadable', file: 'Hoard.base' });
 	});
 });

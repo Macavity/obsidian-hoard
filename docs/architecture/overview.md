@@ -8,7 +8,7 @@ source:
   - src/DataManager.ts
   - src/storage/EntryIndex.ts
   - src/WidgetRenderer.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # Overview
@@ -43,7 +43,7 @@ flowchart TD
 
 ## Layers
 
-1. **Storage** ([architecture/storage](storage.md)): `VaultLayout` (paths and ids), `EntryIndex`
+1. **Storage** ([architecture/storage](storage.md)), free of i18n imports ([i18n](i18n.md)): `VaultLayout` (paths and ids), `EntryIndex`
    (read-only map id → entry fed by `metadataCache`), codecs (properties ↔ objects), `LocalStore`
    (`data.json`), `SharedConfigStore` (`hoard:` block of `Hoard.base`), `HistoryStore` (`History.md`).
 2. **Managers**: [DataManager](../modules/watchlist.md) (titles, groups, Maybe, airtime entries,
@@ -71,6 +71,9 @@ status bar recounts. External changes (sync, hand edits) arrive through `EntryIn
 - Settings are composed from defaults, `data.json` and the base; see
   [shared vs local](../concepts/shared-vs-local.md).
 - Errors from APIs are classified once (`ApiError`, `apiErrorMessage`) so every caller shows the
-  same wording; note writes with invalid YAML show a Notice and skip.
+  same wording; note writes with invalid YAML emit a notice code and skip.
+- **Text**: only the UI layer renders display text. Storage and managers emit codes (`ManagerNotice`
+  through `notifyManager` in `main.ts`), `src/i18n/labels.ts` maps stored values; see
+  [i18n](i18n.md).
 - Mobile: `Platform.isMobile` toggles `hoard-mobile` on the view; card size is per device class
   (`getCardMinWidth`), card text placement is per tab (`isCardTextUnder`), both in `main.ts`.

@@ -1,3 +1,5 @@
+import { VirtualGrid, type VirtualGridCallbacks } from '../VirtualGrid';
+
 /** Priority names, highest first; anything else (empty) sorts last. */
 export const PRIORITY_ORDER = ['High', 'Medium', 'Low'] as const;
 
@@ -39,4 +41,15 @@ export function isRecentlyReleased(releaseDate: string | null): boolean {
 	today.setHours(0, 0, 0, 0);
 	const diffDays = (today.getTime() - releaseMs) / 86400000;
 	return diffDays >= 0 && diffDays <= 7;
+}
+
+/** Creates the spacer + virtual card grid inside `section` and wires up a VirtualGrid for `count` items. */
+export function mountVirtualCardGrid(
+	section: HTMLElement,
+	count: number,
+	callbacks: VirtualGridCallbacks,
+): { spacer: HTMLElement; vgrid: VirtualGrid } {
+	const spacer = section.createDiv({ cls: 'hoard-rows-bytype-spacer' });
+	const grid = spacer.createDiv({ cls: 'hoard-cards-grid hoard-cards-grid-virtual' });
+	return { spacer, vgrid: new VirtualGrid(spacer, grid, count, callbacks) };
 }

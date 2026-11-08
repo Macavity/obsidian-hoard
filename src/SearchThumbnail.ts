@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 /**
  * Renders a ~40×60 (2:3) cover thumbnail for an add-flow search-result row.
  *
@@ -56,7 +58,7 @@ export function renderSearchResultRow(
 		const badge = thumb.createDiv({ cls: 'hoard-result-owned-badge' });
 		badge.createSpan({ cls: 'hoard-result-owned-check', text: '✓' });
 		badge.createSpan({ text: spec.inLibrary });
-		item.title = `Already in ${spec.inLibrary}`;
+		item.title = t('misc.searchThumb.alreadyIn', { library: spec.inLibrary });
 	}
 	const text = item.createDiv({ cls: 'hoard-result-text' });
 	text.createDiv({ cls: 'hoard-result-title', text: spec.title });

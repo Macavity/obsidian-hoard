@@ -1,4 +1,5 @@
 import { Platform, setIcon } from 'obsidian';
+import { t } from './i18n';
 import { renderAddButton } from './ui/TabToolbar';
 
 export interface MobileToolbarOptions {
@@ -62,7 +63,7 @@ export function renderToolbarWithMobileToggle(options: MobileToolbarOptions): vo
 	const toggleBtn = controls.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-toolbar-toggle-btn' });
 	const applyIcon = (): void => {
 		setIcon(toggleBtn, expanded ? 'search' : 'sliders-horizontal');
-		toggleBtn.setAttr('aria-label', expanded ? 'Show search' : 'Show filters and actions');
+		toggleBtn.setAttr('aria-label', t(expanded ? 'airtime.toolbar.showSearch' : 'airtime.toolbar.showFilters'));
 		toggleBtn.setAttr('aria-expanded', String(expanded));
 	};
 	applyIcon();

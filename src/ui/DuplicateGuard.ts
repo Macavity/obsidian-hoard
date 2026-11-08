@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 /** Per-modal duplicate-warning state. */
 export interface DuplicateGuard {
 	/** Set by "Continue": the next check passes. */
@@ -20,8 +21,8 @@ function showWarning(
 	const warn = btnRow.createDiv({ cls: 'hoard-duplicate-warning' });
 	guard.warningEl = warn;
 	warn.createSpan({ text });
-	const continueBtn = warn.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: 'Continue' });
-	const cancelBtn = warn.createEl('button', { cls: 'hoard-btn', text: 'Cancel' });
+	const continueBtn = warn.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('ui.duplicate.continue') });
+	const cancelBtn = warn.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') });
 	continueBtn.addEventListener('click', () => {
 		guard.skip = true;
 		warn.remove();
@@ -52,7 +53,8 @@ export function blockDuplicate(contentEl: HTMLElement, guard: DuplicateGuard, ch
 	if (!guard.skip && check.isDuplicate) {
 		const btnRow = contentEl.querySelector<HTMLElement>('.hoard-modal-btn-row');
 		if (btnRow) {
-			showWarning(guard, btnRow, `"${check.name}" already exists. ${check.verb} anyway?`, check.retry);
+			const key = check.verb === 'Add' ? 'ui.duplicate.addAnyway' : 'ui.duplicate.saveAnyway';
+			showWarning(guard, btnRow, t(key, { name: check.name }), check.retry);
 		}
 		return true;
 	}

@@ -6,7 +6,7 @@ source:
   - src/backup.ts
   - src/main.ts
   - src/migration/watchlog/backupImport.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # Backup
@@ -26,7 +26,7 @@ history: all entries
 - `withoutSecrets` strips key-like local settings (`SECRET_KEY` regex: api key, secret, client id,
   steam id, token) and the login part of `jikanBaseUrl` before a copy goes into the vault.
 - `parseBackup(text)` validates shape and arrays first and returns `{ backup }`, a `WatchLogBackup`
-  (any non-version-2 object is tried as a WatchLog export v1 to v3) or `{ error }`.
+  (any non-version-2 object is tried as a WatchLog export v1 to v3) or `{ error: BackupErrorCode }`. The error is a code (`parseJson`, `titlesMissing`, `unsupportedFormat`, …); the settings tab renders it as `settings.backup.restore.errors.<code>` ([i18n](../architecture/i18n.md)).
 - `restoreBackup` adds what is missing and never overwrites existing notes; shared keys found in
   `local` and prototype keys (`__proto__`, `constructor`, `prototype`) are ignored.
 

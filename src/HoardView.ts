@@ -1,4 +1,5 @@
 import { ItemView, Platform, setIcon, WorkspaceLeaf } from 'obsidian';
+import { t, type TranslationKey } from './i18n';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import { DashboardTab } from './DashboardTab';
@@ -37,7 +38,8 @@ interface TabBadge {
 
 interface TabDefinition {
 	name: TabName;
-	label: string;
+	/** Translation key, resolved at render time so the active language applies. */
+	label: TranslationKey;
 	icon: string;
 	/** Class the tab adds to the tab-content element; stripped before another tab renders. */
 	cls?: string;
@@ -49,21 +51,21 @@ interface TabDefinition {
 const TABS: TabDefinition[] = [
 	{
 		name: 'dashboard',
-		label: 'Dashboard',
+		label: 'app.tabs.dashboard',
 		icon: 'layout-dashboard',
 		cls: 'hoard-dashboard',
 		create: (ctx) => new DashboardTab(ctx.containerEl, ctx.plugin, ctx.dataManager, ctx.plugin.readingDataManager),
 	},
 	{
 		name: 'watchlist',
-		label: 'Watchlist',
+		label: 'app.tabs.watchlist',
 		icon: 'tv',
 		cls: 'hoard-list',
 		create: (ctx) => new ListTab(ctx.containerEl, ctx.plugin, ctx.dataManager),
 	},
 	{
 		name: 'upcoming',
-		label: 'Upcoming',
+		label: 'app.tabs.upcoming',
 		icon: 'calendar',
 		cls: 'hoard-airtime',
 		create: (ctx) => new AirtimeTab(ctx.containerEl, ctx.plugin, ctx.dataManager, ctx.setBadge),
@@ -76,28 +78,28 @@ const TABS: TabDefinition[] = [
 	},
 	{
 		name: 'reading',
-		label: 'Reading',
+		label: 'app.tabs.reading',
 		icon: 'book-open',
 		cls: 'hoard-reading-tab',
 		create: (ctx) => new ReadingTab(ctx.containerEl, ctx.plugin, ctx.plugin.readingDataManager),
 	},
 	{
 		name: 'games',
-		label: 'Games',
+		label: 'app.tabs.games',
 		icon: 'gamepad-2',
 		cls: 'hoard-games-tab',
 		create: (ctx) => new GamesTab(ctx.containerEl, ctx.plugin, ctx.plugin.gameDataManager),
 	},
 	{
 		name: 'custom-lists',
-		label: 'Custom lists',
+		label: 'app.tabs.customLists',
 		icon: 'list',
 		cls: 'hoard-custom-lists',
 		create: (ctx) => new CustomListsTab(ctx.containerEl, ctx.plugin, ctx.dataManager),
 	},
 	{
 		name: 'drafts',
-		label: 'Drafts',
+		label: 'app.tabs.drafts',
 		icon: 'square-pen',
 		create: (ctx) => new DraftsTab(ctx.containerEl, ctx.plugin, ctx.dataManager, ctx.setBadge),
 		badge: {
@@ -107,7 +109,7 @@ const TABS: TabDefinition[] = [
 	},
 	{
 		name: 'log',
-		label: 'Log',
+		label: 'app.tabs.log',
 		icon: 'history',
 		cls: 'hoard-log-tab',
 		create: (ctx) => new LogTab(ctx.containerEl, ctx.plugin),
@@ -148,7 +150,7 @@ export class HoardView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'Hoard';
+		return t('app.viewTitle');
 	}
 
 	getIcon(): string {
@@ -363,7 +365,7 @@ export class HoardView extends ItemView {
 		const tabBar = root.createDiv({ cls: 'hoard-tab-bar' });
 		this.tabButtons = {};
 		for (const def of TABS) {
-			const btn = this.makeTabBtn(tabBar, def.name, def.label, def.icon);
+			const btn = this.makeTabBtn(tabBar, def.name, t(def.label), def.icon);
 			this.tabButtons[def.name] = btn;
 			btn.addEventListener('click', () => this.setActiveTab(def.name));
 		}
@@ -441,7 +443,7 @@ export class HoardView extends ItemView {
 			containerEl: this.tabContentEl,
 			plugin: this.plugin,
 			dataManager: this.dataManager,
-			setBadge: (count) => this.setTabBadge(this.tabButtons[def.name] ?? null, def.label, count),
+			setBadge: (count) => this.setTabBadge(this.tabButtons[def.name] ?? null, t(def.label), count),
 		});
 		void this.activeInstance.render();
 		this.guardOverflow();
@@ -495,7 +497,8 @@ export class HoardView extends ItemView {
 	private updateBadges(trigger: TabBadge['refreshOn']): void {
 		for (const def of TABS) {
 			if (def.badge?.refreshOn !== trigger) continue;
-			const { badge, label } = def;
+			const { badge } = def;
+			const label = t(def.label);
 			const btn = this.tabButtons[def.name] ?? null;
 			const count = badge.count(this.plugin, this.dataManager);
 			// a plain number paints in the same frame; only async counts wait

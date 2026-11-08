@@ -15,7 +15,10 @@ source:
   - src/PosterCard.ts
   - src/SearchQuery.ts
   - src/LibraryIndex.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+  - src/ui/problemText.ts
+  - src/ui/detailShared.ts
+  - src/ui/typeBadge.ts
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # UI kit
@@ -23,8 +26,8 @@ source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
 Tabs and modals are thin; shared behaviour lives in `src/ui/` and a few top-level helpers.
 **Boundary**: UI depends on the managers, never on storage. Verified by grepping `src/storage/`
 imports: outside managers, migration and `main.ts`, only `settingsSplit.ts` and `backup.ts`
-(settings persistence), `ApiService.ts` (a type) and two pure helpers (`typeNameError` in the
-settings tab, `safeTypeName` in the CSV modal) touch it. No tab or modal imports a store, codec or
+(settings persistence), `ApiService.ts` (a type) and two pure helpers (`typeNameProblem` behind
+`ui/problemText.ts`, `safeTypeName` in the CSV modal) touch it. No tab or modal imports a store, codec or
 index.
 
 ```mermaid
@@ -76,6 +79,9 @@ inside the tab has focus the height is pinned to the smallest value seen and rel
   over declared fields; bare tokens fuzzy and ANDed, `"quoted"` exact, `field:value` scoped (an
   unknown prefix stays text, so `Re:Zero` works), `field:>n` and friends numeric, `a | b` ORs,
   `-token` excludes. Empty query returns null, meaning "no search".
+- **Text helpers**: all display text goes through `t()` ([i18n](i18n.md)); shared renderers live in
+  `ui/`: `typeBadge`, `choiceGrid` (add choosers), `detailShared` (favourite button, editable title,
+  group header, episode-grid text), `scheduleText` and `dateNames` (localized dates), `problemText`.
 - **Form primitives**: rows and cells in `ui/FormCells.ts`, `DatePicker`, `StarRating`,
   `StatusDropdown`, `ConfirmModal`, `StickyModal` (sticky footer in detail modals).
 

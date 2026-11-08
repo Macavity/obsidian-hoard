@@ -6,7 +6,7 @@ source:
   - src/storage/VaultLayout.ts
   - src/storage/EntryIndex.ts
   - src/DataManager.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # Entry id
@@ -32,7 +32,7 @@ An entry id is **the note path relative to the Hoard root, without `.md`**: `Ani
   follows vault `rename` events and moves the [entry cache](entry-cache.md) key via
   `LocalStore.renameCache`. History lines link `[[<id>]]`, so Obsidian updates them on rename.
 - Moving a note out of the entry folders acts as a delete; moving one in acts as a create.
-- Type names double as folder names, so `safeTypeName` / `typeNameError` reject names that collide
+- Type names double as folder names, so `safeTypeName` / `typeNameProblem` reject names that collide
   with the fixed folders or are not valid folder names.
 - A new title's provisional id from `generateId` is replaced by the real path in `createNote`.
 

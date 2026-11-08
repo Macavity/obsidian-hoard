@@ -119,7 +119,7 @@ describe('WidgetRenderer', () => {
 
 	it('hoard: reports a missing id or title, renders a series row with next-up', () => {
 		const { run } = mountRenderer({ titles: [series()] });
-		expect(run('hoard', '').textContent).toContain('missing id');
+		expect(run('hoard', '').textContent).toContain('Missing id');
 		expect(run('hoard', 'id: nope').textContent).toContain('"nope" not found');
 		const el = run('hoard', 'id: s');
 		expect(el.classList.contains('hoard-widget')).toBe(true);
@@ -150,7 +150,7 @@ describe('WidgetRenderer', () => {
 
 	it('hoard-todo: errors, full and mini rows', () => {
 		const { run } = mountRenderer({ titles: [series(), movie([1])] });
-		expect(run('hoard-todo', 'mini').textContent).toContain('missing title name');
+		expect(run('hoard-todo', 'mini').textContent).toContain('Missing title name');
 		expect(run('hoard-todo', 'Nope').textContent).toContain('"Nope" not found');
 		expect(run('hoard-todo', 'show').classList.contains('hoard-widget')).toBe(true);
 		const mini = run('hoard-todo', 'Film\nmini');
@@ -171,10 +171,10 @@ describe('WidgetRenderer', () => {
 		expect(run('hoard-stat', 'completed').textContent).toContain('4 titles');
 		expect(run('hoard-stat', 'remaining').textContent).toContain('30m');
 		expect(run('hoard-stat', 'time').textContent).toContain('left');
-		expect(run('hoard-stat', 'time full').textContent).toContain('1 days 1h');
+		expect(run('hoard-stat', 'time full').textContent).toContain('1 day 1h');
 		expect(run('hoard-stat', 'completed full').textContent).toContain('titles completed');
 		expect(run('hoard-stat', 'time completed full').classList.contains('hoard-wstat-triple')).toBe(true);
-		expect(run('hoard-stat', 'bogus').textContent).toContain('unknown stat "bogus"');
+		expect(run('hoard-stat', 'bogus').textContent).toContain('Unknown stat "bogus"');
 	});
 
 	it('hoard-upcoming: empty, compact countdowns and the full card', () => {
@@ -182,7 +182,7 @@ describe('WidgetRenderer', () => {
 		vi.setSystemTime(new Date('2030-01-10T12:00:00'));
 		expect(mountRenderer().run('hoard-upcoming', 'next').textContent).toContain('No upcoming titles.');
 		expect(mountRenderer().run('hoard-upcoming', 'next full').textContent).toContain('No upcoming titles.');
-		expect(mountRenderer().run('hoard-upcoming', 'later').textContent).toContain('only "next"');
+		expect(mountRenderer().run('hoard-upcoming', 'later').textContent).toContain('Only "next"');
 		const at = (releaseDate: string) => mountRenderer({ titles: [series()], releases: [{ titleId: 's', releaseDate }] });
 		expect(at('2030-01-10').run('hoard-upcoming', 'next').textContent).toContain('today');
 		expect(at('2030-01-11').run('hoard-upcoming', 'next').textContent).toContain('tomorrow');
