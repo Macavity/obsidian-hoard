@@ -12,7 +12,8 @@ source:
   - src/storage/noteBody.ts
   - src/storage/storageTypes.ts
   - src/storage/titleCodec.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+  - src/storage/noteWrite.ts
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # Storage
@@ -63,9 +64,17 @@ goes through `vault.process` with `replaceNotesSection` ([noteBody.ts](../../src
 which keeps every other section. Creates use `vault.create` with a `---` block plus `## Notes`;
 deletes use `fileManager.trashFile`. Details in [flows/entry-write](../flows/entry-write.md).
 
+## Messages: codes, not text
+
+Stores and managers never build user-facing text. A manager failure (unreadable YAML, rename target
+taken, lost edit, unreadable shared block) is a `ManagerNotice` code passed to the injected `Notify`;
+[noteWrite.ts](../../src/storage/noteWrite.ts) holds the shared `updateFrontMatter` /
+`renameTargetFree` helpers the three managers use. `main.ts` renders the code in the active language
+([i18n](i18n.md)).
+
 ## Config and cache
 
-- `SharedConfigStore` reads/writes only the `hoard:` block ([baseFile.ts](../../src/storage/baseFile.ts)
+- `SharedConfigStore` (takes a `Notify`) reads/writes only the `hoard:` block ([baseFile.ts](../../src/storage/baseFile.ts)
   finds the block by indentation and replaces it line-wise; `ensureFilter` keeps the base's
   `file.inFolder("<root>")` filter pointing at the root). Whitelist and sync rules:
   [shared vs local](../concepts/shared-vs-local.md).

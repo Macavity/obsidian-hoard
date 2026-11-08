@@ -13,7 +13,8 @@ source:
   - src/ReadingScheduleModal.ts
   - src/csv/csvCore.ts
   - src/coverRefresh.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+  - src/csv/CsvModalBase.ts
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # Reading
@@ -25,7 +26,9 @@ maps properties to `Book` / `Manga`. Writes follow [flows/entry-write](../flows/
 [ReadingTab.ts](../../src/ReadingTab.ts) (sub-tabs books/manga, shelves, virtual grid),
 [AddReadingModal.ts](../../src/AddReadingModal.ts) (Google Books for books, MAL via Jikan for manga),
 [ReadingDetailModal.ts](../../src/ReadingDetailModal.ts), [ReadingManageColumnsModal.ts](../../src/ReadingManageColumnsModal.ts)
-and the CSV modals opened from the settings tab.
+and the CSV modals opened from the settings tab. `ReadingCsvModal` and the watchlist's `CsvModal` both extend
+[CsvModalBase.ts](../../src/csv/CsvModalBase.ts), which owns the wizard (export selection, upload, header
+mapping, value mapping, duplicate preview, batch import); subclasses supply fields, labels and `doImport`.
 
 ## Model
 
@@ -71,5 +74,5 @@ and the CSV modals opened from the settings tab.
 | Status list and colours | `READING_STATUSES`, `DEFAULT_READING_STATUS_COLORS` in `types.ts`, `readingColors.ts` |
 | Release and Upcoming rules | `applyReleaseStatus`, `syncUpcoming` in the manager |
 | Auto-complete | `applyAutoComplete` in `ReadingDetailModal.ts` |
-| CSV fields and aliases | `*_EXPORT_COLUMNS`, `*_IMPORT_FIELDS` in `ReadingCsvModal.ts`; dates in `csvCore.ts` |
+| CSV fields and aliases | `*_EXPORT_COLUMNS`, `*_IMPORT_FIELDS` in `ReadingCsvModal.ts`; wizard steps in `csv/CsvModalBase.ts`; dates in `csvCore.ts` |
 | Quotes format | `parseQuotesSection` (modal), `appendQuote` (manager) |

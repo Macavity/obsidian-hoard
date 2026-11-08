@@ -7,7 +7,7 @@ source:
   - src/SettingsTab.ts
   - src/migration/watchlog/backupImport.ts
   - src/main.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # Backup and restore
@@ -30,7 +30,8 @@ around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../
 1. `parseBackup` validates the file's shape (sections present, lists are arrays; entries
    themselves are not checked) before anything is written; anything that is not a
    version-2 Hoard file is handed to `parseWatchLogBackup` (WatchLog exports v1 to v3), which the
-   [import module](../modules/import.md) restores through the schema-1 importer.
+   [import module](../modules/import.md) restores through the schema-1 importer. A rejected file
+   yields an error code, shown by the settings tab as translated text ([i18n](../architecture/i18n.md)).
 2. `restoreBackup` writes in this order: shared settings into the base (`restoreSharedSettings`),
    local settings into `data.json` (shared keys and prototype-polluting keys skipped, so the
    local section can never push a key into the base), titles and Maybe titles that do not exist yet

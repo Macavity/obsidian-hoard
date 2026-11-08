@@ -9,13 +9,13 @@ source:
   - src/storage/VaultLayout.ts
   - src/storage/EntryIndex.ts
   - src/settingsSplit.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 ---
 
 # Startup
 
 Trigger: Obsidian enables the plugin. Two phases in [main.ts](../../src/main.ts): `onload` runs
-with only `data.json`, `startVaultStorage` runs once the workspace layout is ready (vault and
+with only `data.json` (its first call is `setLocale(getLanguage())`, see [i18n](../architecture/i18n.md)), `startVaultStorage` runs once the workspace layout is ready (vault and
 metadata cache usable).
 
 ```mermaid
