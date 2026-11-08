@@ -40,6 +40,13 @@ const sentenceCaseOptions = {
       "^(left|watched|episodes|progress)$",
       '^Nothing to recommend; add titles to "Plan to watch" or "Watching"\\.$',
       '^Reorder the sections or switch them off\\. "By type"',
+      // lists/widget areas: lowercase stat captions and relative-date words, uppercase card headers, prose naming UI terms
+      "^(completed|remaining|titles completed|today|tomorrow)$",
+      "^(NOW WATCHING|UPCOMING NEXT)$",
+      "^Missing id field\\.$",
+      "^These columns are pre-populated when creating a new list\\.",
+      "^TSV pastes into spreadsheets",
+      "^Paste tab-separated values copied from a spreadsheet",
     ],
   };
 
