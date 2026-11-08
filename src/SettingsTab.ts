@@ -5,6 +5,7 @@ import type HoardPlugin from './main';
 import type { TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from './types';
 import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType, isCreditsNone, CREDITS_NONE } from './types';
 import { readingStatusColor } from './readingColors';
+import { gamesKeyChip } from './ui/gamesKeyChip';
 import { SteamSyncModal } from './SteamSyncModal';
 import type { SteamFailureReason } from './ApiService';
 
@@ -228,18 +229,18 @@ export class HoardSettingsTab extends PluginSettingTab {
 	}
 
 	private renderSection(body: HTMLElement): void {
-		body.empty();
-		switch (this.activeSection) {
-			case 'general': this.renderGeneral(body); break;
-			case 'api': this.renderApi(body); break;
-			case 'customize': this.renderCustomize(body); break;
-			case 'watchlist': this.renderWatchlist(body); break;
-			case 'drafts': this.renderDrafts(body); break;
-			case 'custom-lists': this.renderCustomLists(body); break;
-			case 'reading': this.renderReading(body); break;
-			case 'widgets': this.renderWidgets(body); break;
-			case 'quick-info': this.renderQuickInfo(body); break;
-		}
+		const renderers: Record<SettingsSection, (el: HTMLElement) => void> = {
+			'general': (el) => this.renderGeneral(el),
+			'api': (el) => this.renderApi(el),
+			'customize': (el) => this.renderCustomize(el),
+			'watchlist': (el) => this.renderWatchlist(el),
+			'drafts': (el) => this.renderDrafts(el),
+			'custom-lists': (el) => this.renderCustomLists(el),
+			'reading': (el) => this.renderReading(el),
+			'widgets': (el) => this.renderWidgets(el),
+			'quick-info': (el) => this.renderQuickInfo(el),
+		};
+		renderers[this.activeSection](body);
 	}
 
 	// General
@@ -1410,14 +1411,13 @@ export class HoardSettingsTab extends PluginSettingTab {
 			const active = s.gamesApiSource ?? 'rawg';
 			rawg.setActive(active === 'rawg');
 			igdb.setActive(active === 'igdb');
-			const keyed = active === 'rawg'
-				? !!s.rawgApiKey
-				: !!(s.igdbClientId && s.igdbClientSecret);
-			games.setChip(
-				keyed
-					? { text: `${active === 'rawg' ? 'RAWG' : 'IGDB'} · key set`, tone: 'ok' }
-					: { text: `${active === 'rawg' ? 'RAWG' : 'IGDB'} · key needed`, tone: 'warn' },
-			);
+			// the chip reads only the source and the credentials of both providers
+			games.setChip(gamesKeyChip({
+				gamesApiSource: s.gamesApiSource,
+				rawgApiKey: s.rawgApiKey,
+				igdbClientId: s.igdbClientId,
+				igdbClientSecret: s.igdbClientSecret,
+			}));
 		};
 
 		this.apiSegmented(games.body, {
@@ -1760,7 +1760,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			dot.style.backgroundColor = tier.color;
 			const colorPicker = dotWrap.createEl('input', {
 				cls: 'hoard-tag-color-picker',
-				attr: { type: 'color', value: tier.color },
+				attr: { type: 'color', value: tier.color, 'aria-label': `Color for ${tierNumber}-star rating` },
 			});
 
 			// static preview: `tierNumber` filled stars in the tier colour
@@ -1837,7 +1837,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			dot.style.backgroundColor = this.plugin.settings.readingTypeColors[kind];
 			const colorPicker = dotWrap.createEl('input', {
 				cls: 'hoard-tag-color-picker',
-				attr: { type: 'color', value: this.plugin.settings.readingTypeColors[kind] },
+				attr: { type: 'color', value: this.plugin.settings.readingTypeColors[kind], 'aria-label': `Color for ${label}` },
 			});
 			dot.addEventListener('click', () => colorPicker.click());
 			colorPicker.addEventListener('change', () => {
@@ -2183,7 +2183,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		dot.style.backgroundColor = tag.color;
 		const colorPicker = dotWrap.createEl('input', {
 			cls: 'hoard-tag-color-picker',
-			attr: { type: 'color', value: tag.color },
+			attr: { type: 'color', value: tag.color, 'aria-label': `Color for ${tag.name}` },
 		});
 		dot.addEventListener('click', () => colorPicker.click());
 		colorPicker.addEventListener('change', () => {

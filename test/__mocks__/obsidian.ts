@@ -162,6 +162,7 @@ export abstract class ItemView extends Component {
 export class Notice {
 	/** Messages of every string notice shown, for assertions. */
 	static shown: string[] = [];
+	messageEl: HTMLElement = document.createElement("div");
 	constructor(public message?: string | DocumentFragment, public duration?: number) {
 		if (typeof message === "string") Notice.shown.push(message);
 	}
