@@ -1,13 +1,13 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { cwd } from 'node:process';
 import { describe, expect, it } from 'vitest';
 
 // Translated text must never reach note properties: the storage/data layer
 // stays free of i18n imports.
-const root = join(__dirname, '..');
+const root = cwd();
 
-const storageFiles = readdirSync(join(root, 'src/storage'), { recursive: true })
-	.map(String)
+const storageFiles = readdirSync(join(root, 'src/storage'))
 	.filter((f) => f.endsWith('.ts'))
 	.map((f) => `src/storage/${f}`);
 

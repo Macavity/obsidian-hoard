@@ -16,7 +16,7 @@ const sentenceCaseOptions = {
       "Drafts", "Books", "Manga", "Games",
       "Quotes", "Regenerate",
       // External services / acronyms not in the rule defaults
-      "Google", "MAL", "TSV", "URLs", "APIs", "Steam", "Tenrai",
+      "Google", "MAL", "TSV", "URLs", "APIs", "Steam", "Tenrai", "English",
     ],
     ignoreRegex: [
       "^DD/MM/YYYY$",            // date format mask
@@ -29,6 +29,10 @@ const sentenceCaseOptions = {
       '"Last type used"',        // quotes that sentinel option's label
       "^#\\w+$",                 // tag placeholder (#hoard)
       "^\\d+h$",                 // duration placeholder (0h)
+      // Label values that must match stored values letter-for-letter
+      "^TV Show$",
+      "^Korean TV Show$",
+      "^Plan to Read$",
     ],
   };
 

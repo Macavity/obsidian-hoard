@@ -4,7 +4,7 @@ import en from '../src/i18n/en';
 import de from '../src/i18n/de';
 
 function isPlural(v: unknown): boolean {
-	return typeof v === 'object' && v !== null && 'other' in v && typeof (v as { other: unknown }).other === 'string';
+	return typeof v === 'object' && v !== null && 'other' in v && typeof v.other === 'string';
 }
 
 function walk(deNode: object, enNode: object, path: string[] = []): void {
@@ -16,7 +16,7 @@ function walk(deNode: object, enNode: object, path: string[] = []): void {
 			expect(isPlural(enVal), `${p.join('.')} plural shape`).toBe(true);
 		} else if (typeof deVal === 'object' && deVal !== null) {
 			expect(typeof enVal, p.join('.')).toBe('object');
-			walk(deVal, enVal as object, p);
+			walk(deVal as object, enVal as object, p);
 		} else {
 			expect(typeof enVal, p.join('.')).toBe(typeof deVal);
 		}
