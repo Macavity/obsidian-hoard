@@ -170,6 +170,8 @@ export class Notice {
 }
 
 export class Modal {
+	containerEl: HTMLElement = document.createElement("div");
+	scope = { register: (..._args: unknown[]): void => {} };
 	modalEl: HTMLElement;
 	titleEl: HTMLElement;
 	contentEl: HTMLElement;
