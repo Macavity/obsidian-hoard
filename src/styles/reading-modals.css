@@ -5,7 +5,8 @@
   z-index: 5;
 }
 
-.hoard-reading-card:hover .hoard-reading-card-menu-btn {
+.hoard-reading-card:hover .hoard-reading-card-menu-btn,
+button.hoard-reading-card-menu-btn:focus-visible {
   opacity: 1;
 }
 

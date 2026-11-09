@@ -52,7 +52,6 @@
 
 /* Link icon in accordion */
 .hoard-acc-link-icon {
-  font-size: 13px;
   /* kill the inherited 1.5 line-height; min-height below sets the chip height */
   line-height: 1;
   --icon-size: 13px;

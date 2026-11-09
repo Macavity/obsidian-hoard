@@ -102,28 +102,21 @@
   min-width: 0;
 }
 
-.hoard-group-action-btn {
-  flex-shrink: 0;
+button.hoard-group-action-btn {
   width: 20px;
   height: 20px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 3px;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 11px;
-  line-height: 1;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
-.hoard-group-action-btn:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
+button.hoard-group-action-btn:hover {
   border-color: var(--interactive-accent);
+}
+
+button.hoard-group-action-btn .svg-icon {
+  width: 12px;
+  height: 12px;
 }
 
 /* .hoard-group-action-btn-delete — color via .hoard-btn-danger */
