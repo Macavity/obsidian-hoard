@@ -13,7 +13,7 @@ source:
   - src/import/watchlog/widgets.ts
   - src/WatchLogOnboardingModal.ts
   - src/WatchLogReport.ts
-source_commit: 85d9f7bfa44ef53ffed3d7f83b380e4278a7969a
+source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
 ---
 
 # Import
@@ -36,6 +36,9 @@ Other code touches it at three points: `main.ts` (detection, `createImporter`, d
 `backupManagers().storage.importContext()` builds for the importer).
 
 ## Contracts
+
+- **Types** ([registerTypes.ts](../../src/import/watchlog/registerTypes.ts)): both imports append the
+  source's Watchlist types that Hoard's base lacks, by name, without touching Hoard's own.
 
 - **Report** ([report.ts](../../src/import/watchlog/report.ts)): `created`, `filled`, `review`
   (`path`, reason `exists` / `kept-value` / `error`, optional `code` + `params` that the UI translates

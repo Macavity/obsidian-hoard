@@ -5,7 +5,7 @@ description: The JSON backup format, the two export variants, validation and the
 source:
   - src/backup.ts
   - src/main.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
 ---
 
 # Backup
@@ -25,7 +25,7 @@ history: all entries
 - `withoutSecrets` strips key-like local settings (`SECRET_KEY` regex: api key, secret, client id,
   steam id, token) and the login part of `jikanBaseUrl` before a copy goes into the vault.
 - `parseBackup(text)` validates shape and arrays first and returns `{ backup }` or `{ error: BackupErrorCode }`;
-  anything that is not a version-2 Hoard file (WatchLog exports included) is `unsupportedFormat`. The error is a code (`parseJson`, `titlesMissing`, `unsupportedFormat`, …); the settings tab renders it as `settings.backup.restore.errors.<code>` ([i18n](../architecture/i18n.md)).
+  invalid JSON is `parseJson`, a non-object `notObject`, any other file that is not a version-2 Hoard file (WatchLog exports included) `unsupportedFormat`. The error is a code (`parseJson`, `titlesMissing`, `unsupportedFormat`, …); the settings tab renders it as `settings.backup.restore.errors.<code>` ([i18n](../architecture/i18n.md)).
 - `restoreBackup` adds what is missing and never overwrites existing notes; shared keys found in
   `local` and prototype keys (`__proto__`, `constructor`, `prototype`) are ignored.
 

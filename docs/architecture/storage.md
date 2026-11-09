@@ -13,7 +13,7 @@ source:
   - src/storage/storageTypes.ts
   - src/storage/titleCodec.ts
   - src/storage/noteWrite.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
 ---
 
 # Storage
@@ -80,7 +80,8 @@ taken, lost edit, unreadable shared block) is a `ManagerNotice` code passed to t
   [shared vs local](../concepts/shared-vs-local.md).
 - `LocalStore` is `data.json` schema 2 (`schemaVersion`, `settings`, `cache`, `ui`, optional
   `reading`/`games`/`drafts`). It refuses to write, for the whole session, when the file is a
-  WatchLog schema-1 file (Hoard then starts empty) or from a newer plugin version. The per-device WatchLog
+  WatchLog schema-1 file (device settings and cache then start empty; notes in the vault are indexed as
+  usual) or from a newer plugin version; both show a sticky Notice. The per-device WatchLog
   import decision lives in `ui.watchlogImport` ([flows/watchlog-import](../flows/watchlog-import.md)).
 - `HistoryStore` appends and caps `History.md`, ignoring its own writes by content.
 
