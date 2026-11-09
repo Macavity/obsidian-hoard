@@ -1074,6 +1074,9 @@ export class CustomListsTab {
 				label: t('ui.columns.dragToReorder'),
 				cls: 'hoard-cl-row-action hoard-cl-drag-handle',
 			});
+			// mouse-only grip: no tab stop without a keyboard action behind it
+			dragHandle.tabIndex = -1;
+			dragHandle.setAttribute('aria-hidden', 'true');
 
 			// unnamed rows have nothing to send to a library; the click is delegated on the table
 			if (rowName(row)) {

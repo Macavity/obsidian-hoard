@@ -121,6 +121,9 @@ describe('custom list icon buttons', () => {
 		expect(icon('.hoard-cl-sub-tab-del')).toBe('x');
 		expect(icon('.hoard-cl-sub-tab-add')).toBe('plus');
 		expect(q(container, '.hoard-cl-sub-tab-del').getAttribute('aria-label')).toBe('Delete list "Backlog"');
+		// mouse-only grip: no tab stop without a keyboard action behind it
+		expect(q(container, '.hoard-cl-drag-handle').getAttribute('tabindex')).toBe('-1');
+		expect(q(container, '.hoard-cl-drag-handle').getAttribute('aria-hidden')).toBe('true');
 	});
 
 	it('renders the autotime refresh as a small icon button', async () => {
@@ -134,5 +137,21 @@ describe('custom list icon buttons', () => {
 		const btn = q(container, '.hoard-cl-autotime-refresh');
 		expect(btn.classList.contains('hoard-icon-btn--sm')).toBe(true);
 		expect(btn.getAttribute('data-icon')).toBe('refresh-cw');
+	});
+});
+
+describe('custom list tab reordering', () => {
+	it('moves a dragged list tab to the tab it is dropped on and saves the order', async () => {
+		const { container, plugin } = await setupCustomLists([makeList({ name: 'Alpha' }), makeList({ name: 'Beta' })]);
+		const tabNames = (): string[] => qa(container, '.hoard-cl-sub-tab-name').map((s) => s.textContent ?? '');
+		expect(tabNames()).toEqual(['Alpha', 'Beta']);
+		const [alpha, beta] = qa(container, '.hoard-cl-sub-tab') as [HTMLElement, HTMLElement];
+		beta.dispatchEvent(new Event('dragstart'));
+		// dropping a tab on itself is a no-op
+		beta.dispatchEvent(new Event('drop'));
+		expect(plugin.saveSettings).not.toHaveBeenCalled();
+		alpha.dispatchEvent(new Event('drop'));
+		expect(plugin.settings.customListTabOrder).toEqual(['Beta', 'Alpha']);
+		await until(() => tabNames()[0] === 'Beta');
 	});
 });

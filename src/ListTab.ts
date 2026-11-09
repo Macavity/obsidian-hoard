@@ -1,4 +1,4 @@
-import { setIcon } from 'obsidian';
+import { setIcon, setTooltip } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
 import type HoardPlugin from './main';
@@ -2108,7 +2108,8 @@ export class ListTab {
 			const linkIcon = subtitleRow.createEl('a', { cls: 'hoard-acc-link-icon' });
 			setIcon(linkIcon, 'globe');
 			linkIcon.href = title.externalLink;
-			linkIcon.title = t('list.openExternalLink');
+			linkIcon.setAttr('aria-label', t('list.openExternalLink'));
+			setTooltip(linkIcon, t('list.openExternalLink'));
 			linkIcon.target = '_blank';
 			linkIcon.rel = 'noopener noreferrer';
 			linkIcon.addEventListener('click', (e) => e.stopPropagation());

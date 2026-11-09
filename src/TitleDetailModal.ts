@@ -170,7 +170,8 @@ export class TitleDetailModal extends Modal {
 			const linkIcon = badgeRow.createEl('a', { cls: 'hoard-acc-link-icon' });
 			setIcon(linkIcon, 'globe');
 			linkIcon.href = this.title.externalLink;
-			linkIcon.title = t('list.openExternalLink');
+			linkIcon.setAttr('aria-label', t('list.openExternalLink'));
+			setTooltip(linkIcon, t('list.openExternalLink'));
 			linkIcon.target = '_blank';
 			linkIcon.rel = 'noopener noreferrer';
 		}
@@ -720,6 +721,8 @@ export class TitleDetailModal extends Modal {
 	 * repaints; a miss marks it 'none', notifies, and keeps the refresh button.
 	 */
 	private async refreshTrailer(btn: HTMLElement, container: HTMLElement): Promise<void> {
+		// the class blocks pointer clicks only; Enter/Space still reach a focused button
+		if (btn.classList.contains('is-loading')) return;
 		const title = this.dataManager.getTitle(this.title.id);
 		if (!title) return;
 		btn.addClass('is-loading');

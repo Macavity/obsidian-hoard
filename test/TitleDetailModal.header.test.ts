@@ -86,6 +86,9 @@ describe('TitleDetailModal.renderHeaderBody', () => {
 		expect(link.getAttribute('data-icon')).toBe('globe');
 		expect(link.getAttribute('href')).toBe('https://imdb.com/title/tt1');
 		expect(link.rel).toBe('noopener noreferrer');
+		expect(link.getAttribute('aria-label')).toBe(t('list.openExternalLink'));
+		expect(link.getAttribute('data-tooltip')).toBe(t('list.openExternalLink'));
+		expect(link.hasAttribute('title')).toBe(false);
 		expect(h.querySelector('.hoard-detail-stats-box-bar')).not.toBeNull();
 		expect(h.querySelector('.note-link-stub')).not.toBeNull();
 		// desktop: refresh button lives in the credits block, built from the shared icon button
@@ -134,6 +137,14 @@ describe('TitleDetailModal.refreshTrailer', () => {
 		await modal.refreshTrailer(btn, container);
 		expect(apiService.fetchTrailer).not.toHaveBeenCalled();
 		expect(btn.classList.contains('is-loading')).toBe(false);
+	});
+
+	it('ignores a second trigger while a fetch is in flight', async () => {
+		const { modal, apiService } = build(mkTitle(), { trailer: 'https://youtu.be/x' });
+		const { btn, container } = els();
+		btn.classList.add('is-loading');
+		await modal.refreshTrailer(btn, container);
+		expect(apiService.fetchTrailer).not.toHaveBeenCalled();
 	});
 
 	it('stores a found trailer and repaints the control with a play button', async () => {

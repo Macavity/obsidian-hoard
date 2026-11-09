@@ -93,8 +93,9 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.import
   tooltip from the same label, base class `hoard-icon-btn` plus `--framed` (bordered) or `--sm`
   (16px inline). **Every icon-only button goes through it**, no text glyphs (`×`, `+`, `⋮`, `↻`);
   the component class in `cls` only adds position or colour. A spinning refresh toggles
-  `is-loading`. Exceptions kept on purpose: the column-editor drag handle (a `div` with an icon)
-  and the trailer button, which can carry a text label on mobile.
+  `is-loading`. Drag handles are mouse-only and kept out of the tab order (the custom-list row
+  grip is a button with `tabindex=-1`, the column-editor grip a `div`); the trailer button is built
+  by hand because it can carry a text label on mobile.
 
 ## CSS conventions
 
