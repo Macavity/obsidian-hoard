@@ -1,5 +1,6 @@
 import { App, Modal, Notice } from 'obsidian';
 import { t } from './i18n';
+import { createIconButton } from './ui/IconButton';
 import type HoardPlugin from './main';
 import type { ReadingDataManager } from './ReadingDataManager';
 import { ReadingCustomColumn, DEFAULT_FIELD_COLOR } from './types';
@@ -182,11 +183,7 @@ export class ReadingManageColumnsModal extends Modal {
 				void this.updateColumn({ ...col, type });
 			});
 
-			const delBtn = card.createEl('button', {
-				cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-del',
-				text: '✕',
-			});
-			delBtn.title = t('reading.columns.deleteField');
+			const delBtn = createIconButton(card, { icon: 'x', label: t('reading.columns.deleteField'), cls: 'hoard-editcol-card-del' });
 			delBtn.addEventListener('click', () => {
 				new ConfirmModal(
 					this.plugin.app,

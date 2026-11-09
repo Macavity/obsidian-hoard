@@ -1,8 +1,9 @@
-import { App, Notice } from 'obsidian';
+import { App, Notice, setIcon, setTooltip } from 'obsidian';
 import type { CustomListColumn, CustomListRow } from '../types';
 import { DEFAULT_FIELD_COLOR } from '../types';
 import { ConfirmModal } from '../ConfirmModal';
 import { t } from '../i18n';
+import { createIconButton } from './IconButton';
 import { openColorPicker, deriveFillColor, deriveBorderColor } from '../ColorPicker';
 
 /**
@@ -26,13 +27,21 @@ function normalizeOptionColors(col: CustomListColumn): void {
 export interface DragState { from: number }
 
 /** Adds the drag handle and the drag-and-drop listeners to a column card. */
+/** Toggle state for format buttons: the class drives the look, aria-pressed the meaning. */
+function setPressed(btn: HTMLElement, on: boolean): void {
+	btn.toggleClass('is-active', on);
+	btn.setAttr('aria-pressed', String(on));
+}
+
 export function attachCardDrag(
 	card: HTMLElement,
 	idx: number,
 	drag: DragState,
 	onReorder: (from: number, to: number) => void,
 ): void {
-	const handle = card.createDiv({ cls: 'hoard-editcol-card-handle', text: '⠿' });
+	// drag-only grip, deliberately not a focusable button
+	const handle = card.createDiv({ cls: 'hoard-editcol-card-handle' });
+	setIcon(handle, 'grip-vertical');
 	handle.title = t('ui.columns.dragToReorder');
 	handle.addEventListener('mousedown', () => card.setAttribute('draggable', 'true'));
 	card.addEventListener('dragstart', (e) => {
@@ -250,40 +259,40 @@ function renderColumnList(
 		if (col.type === 'text' || col.type === 'number') {
 			const toggles = card.createDiv({ cls: 'hoard-editcol-card-toggles' });
 			const boldBtn = toggles.createEl('button', {
-				cls: `hoard-btn hoard-btn-sm hoard-editcol-card-toggle hoard-editcols-bold-btn${col.bold ? ' is-active' : ''}`,
+				cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-toggle hoard-editcols-bold-btn',
 				text: t('ui.columns.bold'),
 			});
+			setPressed(boldBtn, !!col.bold);
 			boldBtn.addEventListener('click', () => {
 				col.bold = !col.bold;
-				boldBtn.toggleClass('is-active', !!col.bold);
+				setPressed(boldBtn, !!col.bold);
 			});
 			const italicBtn = toggles.createEl('button', {
-				cls: `hoard-btn hoard-btn-sm hoard-editcol-card-toggle hoard-editcols-italic-btn${col.italic ? ' is-active' : ''}`,
+				cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-toggle hoard-editcols-italic-btn',
 				text: t('ui.columns.italic'),
 			});
+			setPressed(italicBtn, !!col.italic);
 			italicBtn.addEventListener('click', () => {
 				col.italic = !col.italic;
-				italicBtn.toggleClass('is-active', !!col.italic);
+				setPressed(italicBtn, !!col.italic);
 			});
 
 			if (col.type === 'number') {
 				const autoTimeBtn = toggles.createEl('button', {
-					cls: `hoard-btn hoard-btn-sm hoard-editcol-card-toggle hoard-editcols-autotime-btn${col.autoTime ? ' is-active' : ''}`,
-					text: '⏱',
-					attr: { title: t('ui.columns.autoTime') },
+					cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-toggle hoard-editcols-autotime-btn',
+					attr: { 'aria-label': t('ui.columns.autoTime') },
 				});
+				setTooltip(autoTimeBtn, t('ui.columns.autoTime'));
+				setIcon(autoTimeBtn, 'timer');
+				setPressed(autoTimeBtn, !!col.autoTime);
 				autoTimeBtn.addEventListener('click', () => {
 					col.autoTime = !col.autoTime;
-					autoTimeBtn.toggleClass('is-active', !!col.autoTime);
+					setPressed(autoTimeBtn, !!col.autoTime);
 				});
 			}
 		}
 
-		const delBtn = card.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-del',
-			text: '×',
-		});
-		delBtn.title = t('ui.columns.deleteColumn');
+		const delBtn = createIconButton(card, { icon: 'x', label: t('ui.columns.deleteColumn'), cls: 'hoard-editcol-card-del' });
 		delBtn.addEventListener('click', () => {
 			const hasData = existingRows.some(r => {
 				const val = (r as Record<string, unknown>)[col.id];
@@ -365,10 +374,11 @@ function renderColumnList(
 						col.options[oi] = nextVal;
 						prevVal = nextVal;
 					});
-					const delOpt = optRow.createEl('button', {
-						cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-opt-del',
-						text: '×',
-						attr: { title: t('ui.columns.removeOption') },
+					const delOpt = createIconButton(optRow, {
+						icon: 'x',
+						label: t('ui.columns.removeOption'),
+						cls: 'hoard-editcol-card-opt-del',
+						variant: 'sm',
 					});
 					delOpt.addEventListener('click', () => {
 						const key = col.options?.[oi];

@@ -1,5 +1,6 @@
 import Fuse from 'fuse.js';
 import type { EventRef } from 'obsidian';
+import { createIconButton } from './ui/IconButton';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { DraftPersistState } from './types';
@@ -388,10 +389,10 @@ export class DraftsTab {
 			addBtn.addEventListener('click', () => this.openAddModal(entry));
 		}
 
-		const dismissBtn = actions.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-drafts-dismiss',
-			text: '✕',
-			attr: { title: t('drafts.dismiss') },
+		const dismissBtn = createIconButton(actions, {
+			icon: 'x',
+			label: t('drafts.dismiss'),
+			cls: 'hoard-drafts-dismiss',
 		});
 		dismissBtn.addEventListener('click', () => this.dismissEntry(entry.titleKey));
 	}

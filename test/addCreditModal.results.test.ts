@@ -85,3 +85,47 @@ describe('AddCreditModal results', () => {
 		expect(modal.contentEl.querySelector('.hoard-credit-staged')!.textContent).toContain('Ann Lee');
 	});
 });
+
+describe('AddCreditModal keyboard and staged chips', () => {
+	const key = (input: HTMLInputElement, k: string): void => {
+		input.dispatchEvent(new KeyboardEvent('keydown', { key: k }));
+	};
+	const chips = (modal: AddCreditModal): string[] =>
+		Array.from(modal.contentEl.querySelectorAll('.hoard-credit-chip-name')).map((c) => c.textContent ?? '');
+
+	it('moves the focus with the arrows and stages the focused row on Enter', () => {
+		const { modal, type, rows } = open('cast', {}, [{ cast: ['Chris Aaa', 'Chris Bbb'] }]);
+		const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credit-search-input')!;
+		type('chris');
+		key(input, 'ArrowDown');
+		key(input, 'ArrowDown');
+		key(input, 'ArrowDown');
+		key(input, 'ArrowUp');
+		expect(rows().map((r) => r.classList.contains('hoard-result-item-focused'))).toEqual([false, true, false]);
+		key(input, 'Enter');
+		expect(chips(modal)).toEqual(['Chris Aaa']);
+	});
+
+	it('stages the top row on Enter without a focused row, and ignores keys without results', () => {
+		const { modal, type } = open('cast', {}, []);
+		const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credit-search-input')!;
+		key(input, 'ArrowDown');
+		key(input, 'Enter');
+		expect(chips(modal)).toEqual([]);
+		type('Newbie');
+		key(input, 'Enter');
+		expect(chips(modal)).toEqual(['Newbie']);
+	});
+
+	it('removes a staged name through its icon button', () => {
+		const { modal, type } = open('cast', {}, []);
+		const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credit-search-input')!;
+		type('Newbie');
+		key(input, 'Enter');
+		const del = modal.contentEl.querySelector<HTMLButtonElement>('button.hoard-credit-chip-del')!;
+		expect(del.classList.contains('hoard-icon-btn--sm')).toBe(true);
+		expect(del.getAttribute('data-icon')).toBe('x');
+		del.click();
+		expect(chips(modal)).toEqual([]);
+	});
+});

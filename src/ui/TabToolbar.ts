@@ -1,4 +1,5 @@
 import { Modal, setIcon, type App } from 'obsidian';
+import { createIconButton } from './IconButton';
 import type { ShelfSelect } from '../RowsView';
 import { toggleSortPopover, type SortState } from '../SortPopover';
 import { t } from '../i18n';
@@ -24,11 +25,11 @@ export function renderSearchBox(parent: HTMLElement, opts: SearchBoxOptions): HT
 	});
 	input.value = opts.value;
 	opts.help?.(searchWrap);
-	const clearBtn = searchWrap.createEl('button', {
+	const clearBtn = createIconButton(searchWrap, {
+		icon: 'x',
+		label: t('ui.toolbar.clearSearch'),
 		cls: 'hoard-search-clear',
-		attr: { type: 'button', 'aria-label': t('ui.toolbar.clearSearch') },
 	});
-	setIcon(clearBtn, 'x');
 	const syncClear = () => clearBtn.toggleClass('is-visible', input.value.length > 0);
 	syncClear();
 	let debounce = 0;

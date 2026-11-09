@@ -1,0 +1,74 @@
+/* ══ ICON BUTTONS ══
+   Base for every icon-only button (src/ui/IconButton.ts). Element-qualified so it outranks
+   core's `button:not(.clickable-icon)`; imported right after base.css so a component's own
+   `button.hoard-x` rule wins by source order. */
+button.hoard-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-s);
+  box-shadow: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+button.hoard-icon-btn .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+button.hoard-icon-btn:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+button.hoard-icon-btn:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+button.hoard-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: none;
+}
+
+/* bordered, e.g. the rating-row refresh */
+button.hoard-icon-btn--framed {
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* 16px inline affordance next to text (credits add / remove) */
+button.hoard-icon-btn--sm {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+button.hoard-icon-btn--sm .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* request in flight; the caller toggles the class */
+/* no element needed below: core sets neither pointer-events nor svg animation */
+.hoard-icon-btn.is-loading {
+  pointer-events: none;
+}
+
+.hoard-icon-btn.is-loading .svg-icon {
+  animation: hoard-spin 0.9s linear infinite;
+}
+
+/* core's `.is-tablet button:not(.clickable-icon)` padding would squeeze the icon out;
+   ties on specificity and wins on source order (plugin styles load after app.css) */
+.is-tablet button.hoard-icon-btn {
+  padding: 0;
+}

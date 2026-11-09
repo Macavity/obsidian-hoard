@@ -133,6 +133,7 @@ const settings = {
 		add: '+ add',
 		exists: '"{name}" already exists.',
 		removed: 'Removed "{name}".',
+		remove: 'Remove {name}',
 		rename: 'Rename {name}',
 		infoStatusLocked: 'Status names are locked. Only the color can be changed.',
 		infoTypes: 'Built-in types are locked. Custom types can be added and removed.',
@@ -179,6 +180,7 @@ const settings = {
 			help: 'Colors cycle through seasons in order (Season 1 = color 1, etc.).',
 			name: 'Season {number}',
 			add: '+ add color',
+			remove: 'Remove color {number}',
 		},
 	},
 	watchlist: {

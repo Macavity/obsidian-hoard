@@ -8,6 +8,7 @@ import type { Book, Game, Manga, ReadingStatus, HoardTitle } from './types';
 import { formatTime, getTitleCredits, getReadingTypeColor, GAME_FINISHED_STATUS, bookPageEquivalents, formatCount } from './types';
 import type { CreditsField } from './types';
 import { renderTypeBadge } from './ui/typeBadge';
+import { createIconButton } from './ui/IconButton';
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 45; // r=45
 
@@ -689,8 +690,11 @@ export class DashboardTab {
 		const randomCard = grid.createDiv({ cls: 'hoard-suggestion-card' });
 		const randomHeader = randomCard.createDiv({ cls: 'hoard-suggestion-random-header' });
 		randomHeader.createDiv({ cls: 'hoard-suggestion-label', text: t('dashboard.suggestions.random') });
-		const shuffleBtn = randomHeader.createEl('button', { cls: 'hoard-suggestion-shuffle', text: '🔀' });
-		shuffleBtn.title = t('dashboard.suggestions.pickAnother');
+		const shuffleBtn = createIconButton(randomHeader, {
+			icon: 'shuffle',
+			label: t('dashboard.suggestions.pickAnother'),
+			cls: 'hoard-suggestion-shuffle',
+		});
 
 		const getRandomTitle = (): string =>
 			planTitles[Math.floor(Math.random() * planTitles.length)]?.title ?? '';

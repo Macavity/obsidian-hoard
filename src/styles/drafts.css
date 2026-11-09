@@ -111,11 +111,7 @@
   white-space: nowrap;
 }
 
-.hoard-drafts-dismiss {
-  color: var(--text-muted);
-}
-
-.hoard-drafts-dismiss:hover {
+button.hoard-drafts-dismiss:hover {
   color: var(--color-red, #e24b4a);
 }
 

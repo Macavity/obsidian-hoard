@@ -34,24 +34,10 @@
   color: var(--text-normal);
 }
 
-.hoard-datepicker-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+button.hoard-datepicker-nav {
   width: 24px;
   height: 24px;
-  padding: 0;
-  border: none;
   border-radius: 4px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  box-shadow: none;
-}
-
-.hoard-datepicker-nav:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
 }
 
 .hoard-datepicker-dow,

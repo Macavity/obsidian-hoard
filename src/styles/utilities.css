@@ -70,20 +70,14 @@
   flex-shrink: 0;
 }
 
-.hoard-inner-tab-btn {
+/* look shared with the main tabs (base.css); only size and bar offset differ */
+button.hoard-inner-tab-btn {
   padding: 4px 12px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: var(--font-ui-small);
-  font-weight: 500;
   margin-bottom: -1px;
 }
 
-.hoard-inner-tab-btn:hover { color: var(--text-normal); }
-.hoard-inner-tab-btn.is-active {
+button.hoard-inner-tab-btn:hover { color: var(--text-normal); }
+button.hoard-inner-tab-btn.is-active {
   color: var(--text-accent);
   border-bottom-color: var(--text-accent);
 }

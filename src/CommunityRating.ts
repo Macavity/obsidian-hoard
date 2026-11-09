@@ -4,6 +4,7 @@ import type { HoardTitle, AnimeSearchResult } from './types';
 import { formatVoteCount, getApiGroupForType, getCommunityRating } from './types';
 import { apiErrorMessage } from './ApiService';
 import { t } from './i18n';
+import { createIconButton } from './ui/IconButton';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -63,10 +64,11 @@ export function renderCommunityRating(
 		badge.createSpan({ cls: 'hoard-community-empty', text: t('detail.community.empty') });
 	}
 
-	const refreshBtn = badge.createEl('button', {
+	const refreshBtn = createIconButton(badge, {
+		icon: 'refresh-cw',
+		label: t('detail.community.refresh'),
+		variant: 'framed',
 		cls: 'hoard-community-refresh',
-		text: '⟳',
-		attr: { title: t('detail.community.refresh'), type: 'button' },
 	});
 	refreshBtn.addEventListener('click', (e) => {
 		e.stopPropagation();

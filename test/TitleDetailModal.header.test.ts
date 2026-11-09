@@ -32,7 +32,7 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Erro
 		calcTimeWatched: () => 10,
 		getEffectiveTotal: () => title.totalEpisodes,
 		getProgress: () => 40,
-		updateTrailerUrl: vi.fn(),
+		updateTrailerUrl: vi.fn((_id: string, url: string) => { if (stored) stored.trailerUrl = url; }),
 		persistCollapsedSeasons: vi.fn(() => Promise.resolve()),
 		updatePosterUrl: vi.fn(),
 	};
@@ -55,6 +55,7 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Erro
 		mobile: boolean;
 		renderHeaderBody: () => void;
 		refreshTrailer: (btn: HTMLElement, container: HTMLElement) => Promise<void>;
+		renderRatingSection: (p: HTMLElement) => void;
 		renderEpisodesSection: (p: HTMLElement) => void;
 		collapsedSeasons: Set<number>;
 	};
@@ -81,13 +82,19 @@ describe('TitleDetailModal.renderHeaderBody', () => {
 		expect(h.querySelector('.hoard-detail-studio')).not.toBeNull();
 		expect(h.querySelectorAll('.hoard-reading-detail-status-wrap')).toHaveLength(3);
 		const link = h.querySelector('a.hoard-acc-link-icon') as HTMLAnchorElement;
-		expect(link.textContent).toBe('🌐');
+		expect(link.textContent).toBe('');
+		expect(link.getAttribute('data-icon')).toBe('globe');
 		expect(link.getAttribute('href')).toBe('https://imdb.com/title/tt1');
 		expect(link.rel).toBe('noopener noreferrer');
+		expect(link.getAttribute('aria-label')).toBe(t('list.openExternalLink'));
+		expect(link.getAttribute('data-tooltip')).toBe(t('list.openExternalLink'));
+		expect(link.hasAttribute('title')).toBe(false);
 		expect(h.querySelector('.hoard-detail-stats-box-bar')).not.toBeNull();
 		expect(h.querySelector('.note-link-stub')).not.toBeNull();
-		// desktop: refresh button lives in the credits block
-		expect(h.querySelector('.hoard-detail-credits .hoard-credits-refresh')).not.toBeNull();
+		// desktop: refresh button lives in the credits block, built from the shared icon button
+		const refresh = h.querySelector('.hoard-detail-credits .hoard-credits-refresh')!;
+		expect(refresh.classList.contains('hoard-icon-btn')).toBe(true);
+		expect(refresh.getAttribute('data-icon')).toBe('refresh-cw');
 	});
 
 	it('omits the link icon without an external link', () => {
@@ -132,12 +139,22 @@ describe('TitleDetailModal.refreshTrailer', () => {
 		expect(btn.classList.contains('is-loading')).toBe(false);
 	});
 
+	it('ignores a second trigger while a fetch is in flight', async () => {
+		const { modal, apiService } = build(mkTitle(), { trailer: 'https://youtu.be/x' });
+		const { btn, container } = els();
+		btn.classList.add('is-loading');
+		await modal.refreshTrailer(btn, container);
+		expect(apiService.fetchTrailer).not.toHaveBeenCalled();
+	});
+
 	it('stores a found trailer and repaints the control with a play button', async () => {
 		const { modal, dataManager } = build(mkTitle(), { trailer: 'https://youtu.be/x' });
 		const { btn, container } = els();
 		await modal.refreshTrailer(btn, container);
 		expect(dataManager.updateTrailerUrl).toHaveBeenCalledWith('t1', 'https://youtu.be/x');
-		expect(container.querySelector('.hoard-trailer-control, .hoard-trailer-btn, .hoard-trailer-refresh')).not.toBeNull();
+		const play = container.querySelector('button.hoard-trailer-btn')!;
+		expect(play.classList.contains('hoard-trailer-btn--fetch')).toBe(false);
+		expect(play.getAttribute('data-icon')).toBe('play');
 		expect(shown).toEqual([]);
 	});
 
@@ -220,5 +237,49 @@ describe('TitleDetailModal seasons', () => {
 	it('shows the mark-as-watched button for a movie', () => {
 		const { parent } = render(mkTitle());
 		expect(parent.querySelector('.hoard-mark-watched-btn')).not.toBeNull();
+	});
+});
+
+describe('TitleDetailModal trailer control', () => {
+	function ratingRow(title: HoardTitle, mobile = false) {
+		const built = build(title, { mobile });
+		built.modal.mobile = mobile;
+		const parent = document.createElement('div');
+		built.modal.renderRatingSection(parent);
+		return { ...built, row: parent };
+	}
+
+	it('shows one muted play button that fetches when no trailer is known', () => {
+		const { row, apiService } = ratingRow(mkTitle({ trailerUrl: 'none' }));
+		const btns = row.querySelectorAll('.hoard-trailer-control button');
+		expect(btns).toHaveLength(1);
+		const btn = btns[0] as HTMLButtonElement;
+		expect(btn.classList.contains('hoard-trailer-btn--fetch')).toBe(true);
+		expect(btn.getAttribute('data-icon')).toBe('play');
+		expect(btn.getAttribute('aria-label')).toBe(t('detail.trailer.fetch'));
+		expect(btn.hasAttribute('title')).toBe(false);
+		expect(row.querySelector('.hoard-trailer-refresh, [data-icon="refresh-cw"]')).toBeNull();
+		btn.click();
+		expect(apiService.fetchTrailer).toHaveBeenCalledTimes(1);
+	});
+
+	it('shows the same play button, unmuted, when a trailer is known', () => {
+		const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+		const { row, apiService } = ratingRow(mkTitle({ trailerUrl: 'https://youtu.be/x' }));
+		const btn = row.querySelector('.hoard-trailer-control button') as HTMLButtonElement;
+		expect(btn.classList.contains('hoard-trailer-btn--fetch')).toBe(false);
+		expect(btn.getAttribute('data-icon')).toBe('play');
+		expect(btn.getAttribute('aria-label')).toBe(t('detail.trailer.watch'));
+		btn.click();
+		expect(open).toHaveBeenCalledWith('https://youtu.be/x', '_blank');
+		expect(apiService.fetchTrailer).not.toHaveBeenCalled();
+		open.mockRestore();
+	});
+
+	it('labels the button on mobile', () => {
+		const { row } = ratingRow(mkTitle({ trailerUrl: 'https://youtu.be/x' }), true);
+		const btn = row.querySelector('.hoard-trailer-control button')!;
+		expect(btn.classList.contains('hoard-trailer-btn--labeled')).toBe(true);
+		expect(btn.querySelector('.hoard-trailer-btn__label')!.textContent).toBe(t('detail.trailer.label'));
 	});
 });

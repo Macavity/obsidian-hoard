@@ -17,7 +17,9 @@ function openInlineInput(onCreate: (name: string) => Promise<void>) {
 	select.value = '__new__';
 	select.fire('change');
 	const input = bar.find('hoard-group-name-input')!;
-	const confirm = bar.children.find((c) => c.text === '✓')!;
+	const confirm = bar.children.find((c) => c.attr['data-icon'] === 'check')!;
+	expect(confirm.has('hoard-icon-btn')).toBe(true);
+	expect(bar.children.find((c) => c.attr['data-icon'] === 'x')!.attr['aria-label']).toBe('Cancel');
 	return { bar, select, input, confirm, onMove, onCancel };
 }
 

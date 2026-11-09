@@ -1,4 +1,4 @@
-import { setIcon } from 'obsidian';
+import { setIcon, setTooltip } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
 import type HoardPlugin from './main';
@@ -16,6 +16,7 @@ import { AddTitleChoiceModal } from './AddTitleChoiceModal';
 import { renderSearchBox, openRenameGroupPrompt, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, renderViewDropdown, type SortFields } from './ui/TabToolbar';
 import { renderTypeBadge } from './ui/typeBadge';
 import { renderEpisodeGrid } from './ui/EpisodeGrid';
+import { createIconButton } from './ui/IconButton';
 import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from './ui/ActionBar';
 import { renderGroupCard } from './ui/GroupCard';
 import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from './ui/TabHelpers';
@@ -350,9 +351,11 @@ export class ListTab {
 		);
 		// customize-shelves gear, far right on the count line
 		countEl.addClass('hoard-results-count-rows');
-		const gearBtn = countEl.createEl('button', { cls: 'hoard-rows-customize-btn' });
-		gearBtn.setAttr('aria-label', t('list.rows.customize'));
-		setIcon(gearBtn, 'settings');
+		const gearBtn = createIconButton(countEl, {
+			icon: 'settings',
+			label: t('list.rows.customize'),
+			cls: 'hoard-rows-customize-btn',
+		});
 		gearBtn.addEventListener('click', () => {
 			new RowsCustomizeModal(this.plugin.app, this.plugin, {
 				shelves: ROWS_SHELVES.map((sh) => ({ id: sh.id, label: t(`list.shelves.${sh.id}` as TranslationKey) })),
@@ -1960,14 +1963,12 @@ export class ListTab {
 				this.cancelGroupRename();
 			}
 		});
-		const saveBtn = renameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✓' });
-		saveBtn.title = t('common.save');
+		const saveBtn = createIconButton(renameRow, { icon: 'check', label: t('common.save'), cls: 'hoard-group-action-btn' });
 		saveBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			void this.commitGroupRename(group, nameInput.value);
 		});
-		const cancelBtn = renameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✕' });
-		cancelBtn.title = t('common.cancel');
+		const cancelBtn = createIconButton(renameRow, { icon: 'x', label: t('common.cancel'), cls: 'hoard-group-action-btn' });
 		cancelBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.cancelGroupRename();
@@ -1992,15 +1993,17 @@ export class ListTab {
 	private renderGroupNameRow(colTitle: HTMLElement, group: HoardGroup): void {
 		const nameRow = colTitle.createDiv({ cls: 'hoard-group-name-row' });
 		nameRow.createSpan({ cls: 'hoard-row-title-text hoard-group-name', text: group.name });
-		const renameBtn = nameRow.createEl('button', { cls: 'hoard-group-action-btn', text: '✏' });
-		renameBtn.title = t('ui.toolbar.renameGroup');
+		const renameBtn = createIconButton(nameRow, { icon: 'pencil', label: t('ui.toolbar.renameGroup'), cls: 'hoard-group-action-btn' });
 		renameBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.renamingGroupId = group.id;
 			this.rerenderTable();
 		});
-		const deleteBtn = nameRow.createEl('button', { cls: 'hoard-group-action-btn hoard-group-action-btn-delete hoard-btn-danger', text: '✕' });
-		deleteBtn.title = t('list.deleteGroupTip');
+		const deleteBtn = createIconButton(nameRow, {
+			icon: 'x',
+			label: t('list.deleteGroupTip'),
+			cls: 'hoard-group-action-btn hoard-group-action-btn-delete hoard-btn-danger',
+		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			new ConfirmModal(this.plugin.app, t('list.deleteGroupConfirm', { name: group.name }), () => {
@@ -2102,9 +2105,11 @@ export class ListTab {
 		const subtitleRow = accLeft.createDiv({ cls: 'hoard-acc-subtitle' });
 		subtitleRow.createSpan({ cls: 'hoard-acc-subtitle-text', text: `${startedStr}${episodeTotal}` });
 		if (title.externalLink) {
-			const linkIcon = subtitleRow.createEl('a', { cls: 'hoard-acc-link-icon', text: '🌐' });
+			const linkIcon = subtitleRow.createEl('a', { cls: 'hoard-acc-link-icon' });
+			setIcon(linkIcon, 'globe');
 			linkIcon.href = title.externalLink;
-			linkIcon.title = t('list.openExternalLink');
+			linkIcon.setAttr('aria-label', t('list.openExternalLink'));
+			setTooltip(linkIcon, t('list.openExternalLink'));
 			linkIcon.target = '_blank';
 			linkIcon.rel = 'noopener noreferrer';
 			linkIcon.addEventListener('click', (e) => e.stopPropagation());

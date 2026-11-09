@@ -1,4 +1,4 @@
-import { Notice, setIcon } from 'obsidian';
+import { Notice } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { readingStatusLabel } from './i18n/labels';
 import { apiErrorMessage } from './ApiService';
@@ -16,6 +16,7 @@ import { coverFallbackColor, readingStatusColor } from './readingColors';
 import { ReadingManageColumnsModal } from './ReadingManageColumnsModal';
 import { ConfirmModal } from './ConfirmModal';
 import { renderToolbarWithMobileToggle } from './MobileToolbar';
+import { createIconButton } from './ui/IconButton';
 import { renderSearchBox, renderSelectionButtons } from './ui/TabToolbar';
 import { createSortSelectRow } from './SortPopover';
 import { renderAllToggleRow } from './FilterPanel';
@@ -348,10 +349,10 @@ export class ReadingTab {
 		});
 
 		const right = parent.createDiv({ cls: 'hoard-reading-toolbar-right' });
-		const manageBtn = right.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-reading-manage-btn',
-			attr: { 'aria-label': t('reading.toolbar.manageColumns'), title: t('reading.toolbar.manageColumns') },
-			text: '⚙',
+		const manageBtn = createIconButton(right, {
+			icon: 'settings',
+			label: t('reading.toolbar.manageColumns'),
+			cls: 'hoard-reading-manage-btn',
 		});
 		manageBtn.addEventListener('click', () => this.openManageColumns());
 	}
@@ -368,11 +369,11 @@ export class ReadingTab {
 	private renderSelectionActionBar(parent: HTMLElement): void {
 		const bar = parent.createDiv({ cls: 'hoard-reading-action-bar' });
 
-		const deleteBtn = bar.createEl('button', {
+		const deleteBtn = createIconButton(bar, {
+			icon: 'x',
+			label: t('reading.toolbar.deleteSelected'),
 			cls: 'hoard-group-action-btn hoard-group-action-btn-delete hoard-btn-danger',
-			text: '✕',
 		});
-		deleteBtn.title = t('reading.toolbar.deleteSelected');
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			const count = this.selectedIds.size;
@@ -1101,9 +1102,11 @@ export class ReadingTab {
 		if (!this.contentEl) return;
 		const countEl = this.contentEl.createDiv({ cls: 'hoard-results-count hoard-results-count-rows' });
 		countEl.textContent = t('ui.group.countTitle', { count: titleCount });
-		const gearBtn = countEl.createEl('button', { cls: 'hoard-rows-customize-btn' });
-		gearBtn.setAttr('aria-label', t('reading.customizeRows'));
-		setIcon(gearBtn, 'settings');
+		const gearBtn = createIconButton(countEl, {
+			icon: 'settings',
+			label: t('reading.customizeRows'),
+			cls: 'hoard-rows-customize-btn',
+		});
 		gearBtn.addEventListener('click', () => {
 			new RowsCustomizeModal(this.plugin.app, this.plugin, {
 				shelves: READING_ROWS_SHELVES.map((sh) => ({ id: sh.id, label: t(`reading.shelves.${sh.id}` as TranslationKey) })),
@@ -1441,11 +1444,11 @@ export class ReadingTab {
 		const statusBadge = cover.createSpan({ cls: 'hoard-reading-card-status-badge', text: readingStatusLabel(item.status) });
 		statusBadge.style.backgroundColor = readingStatusColor(item.status, this.readingData.getSettings().statusColors);
 
-		const menuBtn = card.createEl('button', {
+		const menuBtn = createIconButton(card, {
+			icon: 'more-vertical',
+			label: t('reading.card.moreActions'),
 			cls: 'hoard-reading-card-menu-btn',
-			text: '⋮',
 		});
-		menuBtn.setAttr('aria-label', t('reading.card.moreActions'));
 		menuBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.openCardContextMenu(card, menuBtn, item);

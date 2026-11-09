@@ -131,35 +131,24 @@
   flex-shrink: 0;
   padding-top: 3px;
 }
-.hoard-log-del {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+button.hoard-log-del {
   width: 18px;
   height: 18px;
   min-height: 0;
-  padding: 0;
   margin-top: 1px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  box-shadow: none;
   color: var(--text-faint);
-  cursor: pointer;
   opacity: 0;
 }
-.hoard-log-del svg {
+button.hoard-log-del .svg-icon {
   width: 13px;
   height: 13px;
 }
 .hoard-log-entry:hover .hoard-log-del,
-.hoard-log-del:focus-visible {
+button.hoard-log-del:focus-visible {
   opacity: 1;
 }
-.hoard-log-del:hover {
+button.hoard-log-del:hover {
   color: var(--text-error);
-  background: var(--background-modifier-hover);
 }
 /* mobile has no hover — keep it out permanently */
 .is-mobile .hoard-log-del {

@@ -6,6 +6,7 @@ import type { ReadingDataManager } from '../../src/ReadingDataManager';
 import type { Book, Game, HoardTitle, Manga } from '../../src/types';
 import { DEFAULT_SETTINGS } from '../../src/types';
 import { qsa, textsOf as texts } from '../helpers/dom';
+import { t } from '../../src/i18n';
 
 const title = (over: Partial<HoardTitle>): HoardTitle =>
 	({
@@ -122,7 +123,12 @@ describe('DashboardTab suggestions and stats', () => {
 		expect(picks[0]).toBe('Short');
 		expect(picks[1]).toBe('Runtime');
 		expect(c.querySelectorAll('.hoard-suggestion-empty').length).toBe(1);
-		c.querySelector<HTMLElement>('.hoard-suggestion-shuffle')!.click();
+		const shuffle = c.querySelector<HTMLElement>('.hoard-suggestion-shuffle')!;
+		expect(shuffle.classList.contains('hoard-icon-btn')).toBe(true);
+		expect(shuffle.getAttribute('data-icon')).toBe('shuffle');
+		expect(shuffle.getAttribute('aria-label')).toBe(t('dashboard.suggestions.pickAnother'));
+		expect(shuffle.hasAttribute('title')).toBe(false);
+		shuffle.click();
 		const randomEl = c.querySelectorAll('.hoard-suggestion-title')[3]!;
 		expect(['Long', 'Short', 'Unknown', 'Runtime']).toContain(randomEl.textContent);
 	});

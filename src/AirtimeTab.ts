@@ -3,6 +3,7 @@ import { t } from './i18n';
 import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from './i18n/labels';
 import { monthName } from './ui/dateNames';
 import { scheduleText } from './ui/scheduleText';
+import { createIconButton } from './ui/IconButton';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { ReadingDataManager } from './ReadingDataManager';
@@ -534,15 +535,17 @@ export class AirtimeTab {
 			right.createDiv({ cls: 'hoard-airtime-pill hoard-airtime-pill-aired', text: formatDaysAgo(title.releaseDate) });
 		}
 
-		const globeBtn = right.createEl('button', { cls: 'hoard-airtime-action-btn', text: '🌐' });
-		globeBtn.title = t('airtime.actions.openPage');
+		const globeBtn = createIconButton(right, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime-action-btn' });
 		globeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			openExternalLink(title.externalLink, 'airtime.notices.noLinkTitle');
 		});
 
-		const deleteBtn = right.createEl('button', { cls: 'hoard-airtime-action-btn hoard-airtime-action-btn-delete hoard-btn-danger', text: '✕' });
-		deleteBtn.title = t('airtime.actions.removeFromWatchlist');
+		const deleteBtn = createIconButton(right, {
+			icon: 'x',
+			label: t('airtime.actions.removeFromWatchlist'),
+			cls: 'hoard-airtime-action-btn hoard-airtime-action-btn-delete hoard-btn-danger',
+		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			new ConfirmModal(this.plugin.app, t('airtime.confirm.removeWatchlist', { title: title.title }), () => {
@@ -613,14 +616,16 @@ export class AirtimeTab {
 			: pillClsMap[countdown.kind];
 		const right = card.createDiv({ cls: 'hoard-maybe-card-right' });
 		right.createDiv({ cls: pillCls, text: mt.releaseDate ? countdown.label : '—' });
-		const globeBtn = right.createEl('button', { cls: 'hoard-airtime-action-btn', text: '🌐' });
-		globeBtn.title = t('airtime.actions.openPage');
+		const globeBtn = createIconButton(right, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime-action-btn' });
 		globeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			openExternalLink(mt.externalLink, 'airtime.notices.noLink');
 		});
-		const deleteBtn = right.createEl('button', { cls: 'hoard-airtime-action-btn hoard-airtime-action-btn-delete hoard-btn-danger', text: '✕' });
-		deleteBtn.title = t('airtime.actions.removeFromMaybe');
+		const deleteBtn = createIconButton(right, {
+			icon: 'x',
+			label: t('airtime.actions.removeFromMaybe'),
+			cls: 'hoard-airtime-action-btn hoard-airtime-action-btn-delete hoard-btn-danger',
+		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			new ConfirmModal(this.plugin.app, t('airtime.confirm.removeMaybe', { title: mt.title }), () => {
@@ -1038,8 +1043,7 @@ export class AirtimeTab {
 		r: ResolvedUpcoming,
 		isFinalEpisode: boolean,
 	): void {
-		const tickBtn = parent.createEl('button', { cls, text: '✓' });
-		tickBtn.title = tickTooltip(r, isFinalEpisode);
+		const tickBtn = createIconButton(parent, { icon: 'check', label: tickTooltip(r, isFinalEpisode), cls });
 		tickBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.confirmTick(entry, r);
@@ -1160,15 +1164,13 @@ export class AirtimeTab {
 		// green tick, shown once the airtime/release passes
 		if (showTick) this.renderTickButton(actions, 'hoard-airtime-action-btn hoard-airtime-action-btn-tick', entry, r, isFinalEpisode);
 
-		const globeBtn = actions.createEl('button', { cls: 'hoard-airtime-action-btn', text: '🌐' });
-		globeBtn.title = t('airtime.actions.openPage');
+		const globeBtn = createIconButton(actions, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime-action-btn' });
 		globeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			openExternalLink(r.externalLink, 'airtime.notices.noLinkTitle');
 		});
 
-		const editBtn = actions.createEl('button', { cls: 'hoard-airtime-action-btn', text: '✏' });
-		editBtn.title = t('airtime.actions.editSchedule');
+		const editBtn = createIconButton(actions, { icon: 'pencil', label: t('airtime.actions.editSchedule'), cls: 'hoard-airtime-action-btn' });
 		editBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			if (r.source === 'reading') {
@@ -1180,11 +1182,11 @@ export class AirtimeTab {
 			}
 		});
 
-		const deleteBtn = actions.createEl('button', {
+		const deleteBtn = createIconButton(actions, {
+			icon: 'x',
+			label: t('airtime.actions.removeFromUpcoming'),
 			cls: 'hoard-airtime-action-btn hoard-airtime-action-btn-delete hoard-btn-danger',
-			text: '✕',
 		});
-		deleteBtn.title = t('airtime.actions.removeFromUpcoming');
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.confirmRemove(entry, r);
@@ -1474,16 +1476,22 @@ export class AirtimeTab {
 		if (showTick) this.renderTickButton(card, 'hoard-tracker-tick-btn', entry, r, isFinalEpisode);
 
 		// ⋮ menu (Remove only) — stacked above the globe, bottom-right
-		const menuBtn = card.createEl('button', { cls: 'hoard-card-menu-btn hoard-tracker-menu-btn', text: '⋮' });
-		menuBtn.setAttr('aria-label', t('airtime.actions.moreActions'));
+		const menuBtn = createIconButton(card, {
+			icon: 'more-vertical',
+			label: t('airtime.actions.moreActions'),
+			cls: 'hoard-card-menu-btn hoard-tracker-menu-btn',
+		});
 		menuBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.openTrackerCardMenu(card, menuBtn, data);
 		});
 
 		// globe — bottom-right, opens the external page
-		const globeBtn = card.createEl('button', { cls: 'hoard-card-menu-btn hoard-tracker-globe-btn', text: '🌐' });
-		globeBtn.title = t('airtime.actions.openPage');
+		const globeBtn = createIconButton(card, {
+			icon: 'globe',
+			label: t('airtime.actions.openPage'),
+			cls: 'hoard-card-menu-btn hoard-tracker-globe-btn',
+		});
 		globeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			openExternalLink(r.externalLink, 'airtime.notices.noLinkTitle');
