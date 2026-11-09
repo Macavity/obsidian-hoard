@@ -34,7 +34,7 @@ async function copyFile(file: TFile, target: string, ctx: ImportContext): Promis
 async function importBase(src: ForkSource, ctx: ImportContext, report: ImportReport): Promise<void> {
 	const existing = await detectRoot(ctx.app.vault);
 	if (existing !== null) {
-		report.review.push({ path: existing ? `${existing}/Hoard.base` : 'Hoard.base', reason: 'exists', detail: 'Hoard base kept' });
+		report.review.push({ path: existing ? `${existing}/Hoard.base` : 'Hoard.base', reason: 'exists' });
 		return;
 	}
 	const content = renameTopLevelBlock(await ctx.app.vault.read(src.base), 'watchlog', 'hoard');
@@ -72,13 +72,13 @@ export async function importFork(src: ForkSource, ctx: ImportContext, progress: 
 		const target = forkTarget(file.path, src.root, ctx.layout.root);
 		try {
 			if (ctx.app.vault.getAbstractFileByPath(target)) {
-				report.review.push({ path: target, reason: 'exists', detail: 'not overwritten' });
+				report.review.push({ path: target, reason: 'exists' });
 			} else {
 				await copyFile(file, target, ctx);
 				report.created++;
 			}
 		} catch (e) {
-			report.review.push({ path: target, reason: 'error', detail: errMsg(e) });
+			report.review.push({ path: target, reason: 'error', code: 'failed', params: { message: errMsg(e) } });
 			report.errors.push(`${target}: ${errMsg(e)}`);
 		}
 		progress('notes', ++done, files.length);
@@ -86,7 +86,7 @@ export async function importFork(src: ForkSource, ctx: ImportContext, progress: 
 	try {
 		await importBase(src, ctx, report);
 	} catch (e) {
-		report.review.push({ path: ctx.layout.basePath, reason: 'error', detail: errMsg(e) });
+		report.review.push({ path: ctx.layout.basePath, reason: 'error', code: 'failed', params: { message: errMsg(e) } });
 		report.errors.push(`${ctx.layout.basePath}: ${errMsg(e)}`);
 	}
 	progress('base', 1, 1);

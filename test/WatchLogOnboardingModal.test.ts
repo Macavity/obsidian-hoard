@@ -21,7 +21,7 @@ function fakeImporter(over: Partial<WatchLogImporter> = {}): WatchLogImporter & 
 	return {
 		calls,
 		sources: { original: null, fork, hoardHasData: false },
-		run: () => Promise.resolve({ created: 1, filled: 0, errors: [], review: [{ path: 'Hoard/Movie/Heat.md', reason: 'exists' as const, detail: '' }] }),
+		run: () => Promise.resolve({ created: 1, filled: 0, errors: [], review: [{ path: 'Hoard/Movie/Heat.md', reason: 'exists' as const }] }),
 		plan: () => Promise.resolve([{ id: 'fork-notes' as const, paths: ['WatchLog/Movie/Heat.md'] }]),
 		cleanup: (items) => { calls.push(`cleanup:${items.length}`); return Promise.resolve({ done: items.length, errors: [] }); },
 		writeReport: () => Promise.resolve({ path: 'Hoard/r.md' } as TFile),

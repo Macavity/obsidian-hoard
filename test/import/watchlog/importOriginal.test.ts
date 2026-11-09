@@ -44,7 +44,7 @@ describe('importOriginal', () => {
 		const { f, ctx, src } = await setupOriginal(data, { ...WATCHLOG_NOTES, 'Hoard/TV Show/Dark.md': existing });
 		const r = await importOriginal(src, ctx, () => {});
 		expect(r.review).toContainEqual({
-			path: 'Hoard/TV Show/Dark.md', reason: 'kept-value', detail: 'status: Hoard "Completed", WatchLog "Watching"',
+			path: 'Hoard/TV Show/Dark.md', reason: 'kept-value', code: 'keptValue', params: { key: 'status', hoard: 'Completed', watchlog: 'Watching' },
 		});
 		expect(f.files.get('Hoard/TV Show/Dark.md')).toContain('Mine');
 	});

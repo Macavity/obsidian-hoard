@@ -28,7 +28,7 @@ export function createImporter(deps: ImporterDeps, sources: WatchLogSources): Wa
 			: importOriginal(sources.original!, deps.ctx(), progress),
 		plan: (imported) => planCleanup(app, sources, deps.layout(), imported),
 		cleanup: (items) => runCleanup(app, items, deps.layout()),
-		writeReport: (reports) => writeReportNote(app, deps.layout(), reports),
+		writeReport: (markdown) => writeReportNote(app, deps.layout(), markdown),
 		decide: (kind, d) => setDecision(local, kind, d),
 		openFile: deps.openFile,
 	};

@@ -29,9 +29,9 @@ describe('createImporter', () => {
 
 	it('runs the fork import and writes the report note', async () => {
 		const { s, importer } = await make();
-		const report = await importer.run('fork', () => {});
+		await importer.run('fork', () => {});
 		expect(s.f.app.vault.getAbstractFileByPath('Hoard/Movie/Heat.md')).not.toBeNull();
-		const file = await importer.writeReport({ fork: report });
+		const file = await importer.writeReport('# report');
 		expect(file.path).toMatch(/^Hoard\/WatchLog-Import /);
 	});
 

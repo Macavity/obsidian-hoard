@@ -48,7 +48,13 @@ const onboarding = {
 		reportSaved: 'Bericht gespeichert: {path}',
 		retryHint: 'Einige Daten ließen sich nicht importieren. Versuche es erneut; noch nichts gilt als importiert.',
 		cleanupLocked: 'Aufräumen bleibt für diese Quelle gesperrt, bis sie fehlerfrei importiert ist.',
-		allClean: 'Fehlerfrei importiert.',
+	},
+	details: {
+		maybe: 'Vielleicht-Eintrag „{title}“ ist schon in der Bibliothek',
+		notAFile: 'Ein Ordner trägt diesen Namen',
+		invalidYaml: 'Eigenschaften sind kein gültiges YAML; nichts wurde ergänzt',
+		keptValue: '{key}: Hoard „{hoard}“, WatchLog „{watchlog}“',
+		failed: '{message}',
 	},
 	cleanup: {
 		intro: 'Optional. Nichts ist vorausgewählt; gelöschte Notizen landen im Papierkorb.',

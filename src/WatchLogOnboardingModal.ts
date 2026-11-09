@@ -2,8 +2,9 @@ import { App, Modal, Notice, type TFile } from 'obsidian';
 import { t } from './i18n';
 import type { SourceCounts, WatchLogSourceKind, WatchLogSources } from './import/watchlog/detect';
 import type { ImportDecision } from './import/watchlog/onboardingState';
-import type { ImportPhase, ImportReport, Progress, ReviewItem } from './import/watchlog/report';
+import { generalErrors, type ImportPhase, type ImportReport, type Progress, type ReviewItem } from './import/watchlog/report';
 import type { CleanupItem } from './import/watchlog/cleanup';
+import { PLUGIN_NAME, REASONS, reasonLabel, reportMarkdown, reportStats, reviewDetail } from './WatchLogReport';
 
 /** Everything the wizard needs from the import logic; wired to the real implementation in main.ts. */
 export interface WatchLogImporter {
@@ -11,7 +12,8 @@ export interface WatchLogImporter {
 	run(kind: WatchLogSourceKind, progress: Progress): Promise<ImportReport>;
 	plan(imported: WatchLogSourceKind[]): Promise<CleanupItem[]>;
 	cleanup(items: CleanupItem[]): Promise<{ done: number; errors: string[] }>;
-	writeReport(reports: Partial<Record<WatchLogSourceKind, ImportReport>>): Promise<TFile>;
+	/** Writes the rendered report as a note. */
+	writeReport(markdown: string): Promise<TFile>;
 	decide(kind: WatchLogSourceKind, d: ImportDecision): void;
 	openFile(path: string): void;
 }
@@ -22,16 +24,12 @@ const STEPS: WizardStep[] = ['found', 'import', 'result', 'cleanup', 'done'];
 /** Fork first: it already carries the migrated data of the original. */
 const KIND_ORDER: WatchLogSourceKind[] = ['fork', 'original'];
 const COUNT_KEYS: (keyof SourceCounts)[] = ['titles', 'books', 'manga', 'games', 'lists', 'notes'];
-const REASON_KEY = { exists: 'exists', 'kept-value': 'keptValue', error: 'error' } as const;
 const CLEANUP_LABEL = {
 	'original-notes': 'originalNotes',
 	'fork-notes': 'forkNotes',
 	'fork-base': 'forkBase',
 	widgets: 'widgets',
 } as const;
-
-/** Product names, not translated. */
-const PLUGIN_NAME: Record<WatchLogSourceKind, string> = { original: 'WatchLog', fork: 'WatchLog Sync' };
 
 const isBusy = (step: WizardStep, running: boolean): boolean => step === 'import' || running;
 
@@ -243,14 +241,9 @@ export class WatchLogOnboardingModal extends Modal {
 	private renderSourceResult(el: HTMLElement, kind: WatchLogSourceKind, report: ImportReport, start: number): number {
 		const section = el.createDiv({ cls: 'hoard-onboarding-result' });
 		section.createEl('h3', { text: PLUGIN_NAME[kind] });
-		const stats = [
-			t('onboarding.result.created', { count: report.created }),
-			t('onboarding.result.filled', { count: report.filled }),
-			t('onboarding.result.review', { count: report.review.length }),
-			t('onboarding.result.errors', { count: report.errors.length }),
-		];
-		section.createDiv({ cls: 'hoard-onboarding-stats', text: stats.join(' · ') });
-		for (const err of report.errors) section.createDiv({ cls: 'hoard-onboarding-error', text: err });
+		section.createDiv({ cls: 'hoard-onboarding-stats', text: reportStats(report) });
+		// per-file errors show below as review items
+		for (const err of generalErrors(report)) section.createDiv({ cls: 'hoard-onboarding-error', text: err });
 		if (report.errors.length > 0) {
 			section.createEl('p', { cls: 'hoard-onboarding-hint', text: t('onboarding.result.retryHint') });
 			section.createEl('p', { cls: 'hoard-onboarding-hint', text: t('onboarding.result.cleanupLocked') });
@@ -262,10 +255,10 @@ export class WatchLogOnboardingModal extends Modal {
 		if (items.length === 0) return start;
 		el.createEl('h4', { text: t('onboarding.result.reviewHeading') });
 		let index = start;
-		for (const reason of ['exists', 'kept-value', 'error'] as const) {
+		for (const reason of REASONS) {
 			const group = items.map((item, i) => ({ item, i: start + i })).filter(({ item }) => item.reason === reason);
 			if (group.length === 0) continue;
-			el.createDiv({ cls: 'hoard-onboarding-reason', text: t(`onboarding.result.reasons.${REASON_KEY[reason]}`) });
+			el.createDiv({ cls: 'hoard-onboarding-reason', text: reasonLabel(reason) });
 			for (const { item, i } of group) this.renderReviewLink(el, item, i);
 		}
 		index += items.length;
@@ -277,7 +270,8 @@ export class WatchLogOnboardingModal extends Modal {
 		const link = row.createEl('button', { cls: 'hoard-onboarding-review-link', text: item.path });
 		link.setAttribute('data-action', `review-link-${i}`);
 		link.addEventListener('click', () => this.importer.openFile(item.path));
-		if (item.detail) row.createSpan({ cls: 'hoard-onboarding-review-detail', text: item.detail });
+		const detail = reviewDetail(item);
+		if (detail) row.createSpan({ cls: 'hoard-onboarding-review-detail', text: detail });
 	}
 
 	private renderResultButtons(el: HTMLElement): void {
@@ -295,7 +289,7 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	private async saveReport(): Promise<void> {
-		const file = await this.importer.writeReport(this.reports);
+		const file = await this.importer.writeReport(reportMarkdown(this.reports));
 		this.savedPath = file.path;
 		new Notice(t('onboarding.result.reportSaved', { path: file.path }));
 		this.render();

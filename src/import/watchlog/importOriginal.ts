@@ -19,16 +19,16 @@ async function copyLists(app: App, from: string, to: string, report: ImportRepor
 			const content = await app.vault.read(file);
 			if (!isListNote(content)) continue;
 			if (app.vault.getAbstractFileByPath(target)) {
-				report.review.push({ path: target, reason: 'exists', detail: 'custom list already exists' });
+				report.review.push({ path: target, reason: 'exists' });
 				continue;
 			}
 			await ensureFolder(app, to);
 			await app.vault.create(target, content);
 			report.created++;
 		} catch (e) {
-			const detail = e instanceof Error ? e.message : String(e);
-			report.review.push({ path: target, reason: 'error', detail });
-			report.errors.push(`${target}: ${detail}`);
+			const message = e instanceof Error ? e.message : String(e);
+			report.review.push({ path: target, reason: 'error', code: 'failed', params: { message } });
+			report.errors.push(`${target}: ${message}`);
 		}
 	}
 }

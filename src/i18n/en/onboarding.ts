@@ -45,7 +45,13 @@ export default {
 		reportSaved: 'Report saved: {path}',
 		retryHint: 'Some data could not be imported. Try again; nothing is marked as imported yet.',
 		cleanupLocked: 'Clean up stays locked for this source until it imports without errors.',
-		allClean: 'Imported without errors.',
+	},
+	details: {
+		maybe: 'Maybe entry "{title}" is already in the library',
+		notAFile: 'A folder has this name',
+		invalidYaml: 'Properties are not valid YAML; nothing was filled in',
+		keptValue: '{key}: Hoard "{hoard}", WatchLog "{watchlog}"',
+		failed: '{message}',
 	},
 	cleanup: {
 		intro: 'Optional. Nothing is selected; deleted notes go to the trash.',

@@ -174,7 +174,7 @@ class Schema1Migration {
 		for (const m of data.maybe ?? []) {
 			const path = layout.notePath('title', m.title, m.type);
 			if (this.claimed.has(path.toLowerCase())) {
-				this.report.review.push({ path, reason: 'exists', detail: `maybe "${m.title}": already in the library` });
+				this.report.review.push({ path, reason: 'exists', code: 'maybe', params: { title: m.title } });
 				this.advance();
 				continue;
 			}
@@ -228,7 +228,7 @@ class Schema1Migration {
 			await this.notes.write(path, fm, old ?? body, apiValues);
 		} catch (e) {
 			const message = e instanceof Error ? e.message : String(e);
-			this.report.review.push({ path, reason: 'error', detail: message });
+			this.report.review.push({ path, reason: 'error', code: 'failed', params: { message } });
 			this.report.errors.push(`${path}: ${message}`);
 		}
 		this.advance();

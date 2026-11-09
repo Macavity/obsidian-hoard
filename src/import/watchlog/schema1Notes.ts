@@ -46,16 +46,15 @@ export class NoteWriter {
 			return;
 		}
 		if (!(file instanceof TFile)) {
-			this.report.review.push({ path, reason: 'exists', detail: 'not a file' });
+			this.report.review.push({ path, reason: 'exists', code: 'notAFile' });
 			return;
 		}
 		let current: Fm;
 		try {
 			current = this.frontmatter(await vault.read(file));
 		} catch {
-			const detail = 'frontmatter is not valid YAML';
-			this.report.review.push({ path, reason: 'error', detail });
-			this.report.errors.push(`${path}: ${detail}`);
+			this.report.review.push({ path, reason: 'error', code: 'invalidYaml' });
+			this.report.errors.push(`${path}: invalid YAML`);
 			return;
 		}
 		const written = (k: string): boolean => sameValue(current[k], apiValues[k]) && !(k in fm && sameValue(current[k], fm[k]));
@@ -64,7 +63,7 @@ export class NoteWriter {
 		for (const k of Object.keys(fm)) {
 			if (k in current && !stale.includes(k) && !sameValue(current[k], fm[k])) {
 				this.report.review.push({
-					path, reason: 'kept-value', detail: `${k}: Hoard "${show(current[k])}", WatchLog "${show(fm[k])}"`,
+					path, reason: 'kept-value', code: 'keptValue', params: { key: k, hoard: show(current[k]), watchlog: show(fm[k]) },
 				});
 			}
 		}
