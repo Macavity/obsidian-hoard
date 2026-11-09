@@ -53,4 +53,10 @@ describe('importFork', () => {
 		expect(ctx.local.data.settings).toMatchObject({ tmdbApiKey: 'k', omdbApiKey: 'mine' });
 		expect(ctx.local.data.cache['Movie/Heat']).toEqual({ year: 2 });
 	});
+
+	it('takes no shared or removed settings into data.json', async () => {
+		const { ctx, src } = await setupFork(FORK, { schemaVersion: 2, settings: { tmdbApiKey: 'k', types: [{ name: 'X' }], rootFolder: 'WatchLog' }, cache: {}, ui: {} });
+		await importFork(src, ctx, () => {});
+		expect(ctx.local.data.settings).toEqual({ tmdbApiKey: 'k' });
+	});
 });

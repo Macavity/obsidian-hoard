@@ -4,7 +4,8 @@ import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
 import type { ForkSource } from './detect';
 import { forkTarget, managedFiles } from './paths';
 import { emptyImportReport, type ImportReport, type Progress } from './report';
-import type { ImportContext } from './schema1Types';
+import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
+import { REMOVED_SETTINGS, type ImportContext } from './schema1Types';
 
 const TEXT_EXTENSIONS = new Set(['md', 'base', 'json', 'txt', 'csv', 'canvas']);
 
@@ -49,6 +50,8 @@ function importSettings(src: ForkSource, ctx: ImportContext, report: ImportRepor
 	if (!data) return;
 	const local = ctx.local.data;
 	for (const [k, v] of Object.entries(data.settings ?? {})) {
+		// shared keys live in the base, removed ones nowhere
+		if (SHARED_SETTING_KEYS.includes(k) || REMOVED_SETTINGS.includes(k)) continue;
 		if (isBlank(v) || !isBlank(local.settings[k])) continue;
 		local.settings[k] = v;
 		report.filled++;
