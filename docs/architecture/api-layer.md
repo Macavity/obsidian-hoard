@@ -11,7 +11,8 @@ source:
   - src/jikanBase.ts
   - src/httpsUrl.ts
   - src/DataManager.ts
-source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
+  - src/main.ts
+source_commit: 85d9f7bfa44ef53ffed3d7f83b380e4278a7969a
 ---
 
 # API layer
@@ -46,7 +47,9 @@ grouped by service: anime (`searchAnime` via the Jikan-compatible endpoint, `sea
 `fetchAiring`), movies/TV (`searchOmdb`, `searchTmdb`, details, seasons, collections, `findTmdbMovieIdByImdbId`),
 books (`searchGoogleBooks`), manga (`searchManga`, `getMangaByMalId`), games (`searchRawgGames`,
 `searchIgdbGames`, details), Steam (`resolveSteamId`, `getSteamOwnedGames`). Each service has a
-`check*Connection` for the Settings "Test" button and `has*Key` guards.
+`check*Connection` for the Settings "Test" button and `has*Key` guards. Keys reach it through
+`applyApiKeys` in [main.ts](../../src/main.ts) on every `loadSettings` / `saveSettings`, so a restored
+backup or a WatchLog import takes effect without a restart; the Settings tab also sets them directly.
 
 - Requests go through `requestVia` with Obsidian's `requestUrl`, `throw: false`, a timeout, and a
   classifier that maps status and body to `ApiError { source, reason }` (reasons: `no-key`, `auth`, `not-enabled`,

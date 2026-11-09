@@ -1,14 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createFakeApp } from '../../fakes/fakeApp';
-import { findWatchLogBase, findWatchLogPluginData, WATCHLOG_PLUGIN_IDS } from '../../../src/import/watchlog/detect';
+import { readFileSync } from 'node:fs';
+import { detectWatchLogSources, findWatchLogBase } from '../../../src/import/watchlog/detect';
+import { snapshot } from './helpers';
+import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
 
-const src = (files: Record<string, string>) => ({
-	configDir: '.obsidian',
-	adapter: {
-		exists: (p: string) => Promise.resolve(p in files),
-		read: (p: string) => (p in files ? Promise.resolve(files[p]!) : Promise.reject(new Error('ENOENT'))),
-	},
-});
+const data = JSON.parse(readFileSync('test/fixtures/data-v1.json', 'utf8')) as WatchLogData;
 
 describe('findWatchLogBase', () => {
 	it('finds a WatchLog.base by name, even without its key', async () => {
@@ -31,19 +28,63 @@ describe('findWatchLogBase', () => {
 	});
 });
 
-describe('findWatchLogPluginData', () => {
-	it('checks WatchLog Sync before WatchLog', async () => {
-		expect(WATCHLOG_PLUGIN_IDS).toEqual(['watchlog-sync', 'watchlog']);
-		const both = src({
-			'.obsidian/plugins/watchlog-sync/data.json': '{"schemaVersion":2}',
-			'.obsidian/plugins/watchlog/data.json': '{"titles":[]}',
+describe('detectWatchLogSources', () => {
+	it('finds original and fork without writing', async () => {
+		const f = createFakeApp({
+			'WatchLog/WatchLog.base': 'watchlog:\n  settings: {}\n',
+			'WatchLog/Movie/Heat.md': '---\ntitle: Heat\n---\n',
 		});
-		expect(await findWatchLogPluginData(both)).toEqual({
-			raw: { schemaVersion: 2 }, id: 'watchlog-sync', dir: '.obsidian/plugins/watchlog-sync',
-		});
+		f.adapterFiles.set('.obsidian/plugins/watchlog/data.json', JSON.stringify(data));
+		f.adapterFiles.set('.obsidian/plugins/watchlog-sync/data.json', JSON.stringify({
+			schemaVersion: 2, settings: { tmdbApiKey: 'k' }, cache: {}, ui: {},
+		}));
+		const before = snapshot(f);
+		const s = await detectWatchLogSources(f.app);
+		expect(s.original?.counts.titles).toBe(data.titles.length + (data.maybe?.length ?? 0));
+		expect(s.fork?.root).toBe('WatchLog');
+		expect(s.fork?.counts).toMatchObject({ titles: 1, notes: 1 });
+		expect(s.fork?.data?.settings).toEqual({ tmdbApiKey: 'k' });
+		expect(s.hoardHasData).toBe(false);
+		expect(snapshot(f)).toEqual(before);
 	});
 
-	it('finds nothing when no WatchLog data.json exists', async () => {
-		expect(await findWatchLogPluginData(src({}))).toBeNull();
+	it('counts Maybe titles and custom lists of the original', async () => {
+		const f = createFakeApp({ 'Lists/Shopping.md': '# S\n\n## Data\n```json\n{}\n```\n', 'Lists/Plain.md': 'x' });
+		f.adapterFiles.set('.obsidian/plugins/watchlog/data.json', JSON.stringify(data));
+		const c = (await detectWatchLogSources(f.app)).original!.counts;
+		expect(c.titles).toBe(data.titles.length + (data.maybe?.length ?? 0));
+		expect(c.lists).toBe(1);
+	});
+
+	it('counts a fork nested inside Hoard\'s root', async () => {
+		const f = createFakeApp({
+			'Media/Hoard.base': 'hoard:\n  types: []\n', 'Media/WatchLog/WatchLog.base': 'watchlog:\n  types:\n    - name: Movie\n',
+			'Media/WatchLog/Movie/Heat.md': '',
+		});
+		expect((await detectWatchLogSources(f.app)).fork?.counts.titles).toBe(1);
+	});
+
+	it('treats unreadable data.json as absent', async () => {
+		const f = createFakeApp({});
+		f.adapterFiles.set('.obsidian/plugins/watchlog/data.json', '{nope');
+		expect((await detectWatchLogSources(f.app)).original).toBeNull();
+	});
+
+	it('reports hoardHasData when a hoard: base exists', async () => {
+		const f = createFakeApp({ 'Hoard/Hoard.base': 'hoard:\n  settings: {}\n' });
+		expect((await detectWatchLogSources(f.app)).hoardHasData).toBe(true);
+	});
+
+	it('uses configured type names, counts other folders and skips a nested Hoard root', async () => {
+		const f = createFakeApp({
+			// WatchLog Sync keeps its settings directly under the key, like Hoard's `hoard:` block
+			'WL.base': 'watchlog:\n  types:\n    - name: Film\n',
+			'Film/A.md': '', 'Movie/B.md': '', 'Books/C.md': '', 'Manga/M.md': '', 'CustomLists/D.md': '',
+			'Hoard/Hoard.base': 'hoard:\n', 'Hoard/Film/E.md': '',
+		});
+		const s = await detectWatchLogSources(f.app);
+		expect(s.fork?.root).toBe('');
+		expect(s.fork?.typeNames).toEqual(['Film']);
+		expect(s.fork?.counts).toEqual({ titles: 1, books: 1, manga: 1, games: 0, lists: 1, notes: 4 });
 	});
 });

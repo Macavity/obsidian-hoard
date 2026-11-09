@@ -7,7 +7,7 @@ source:
   - src/settingsSplit.ts
   - src/storage/LocalStore.ts
   - src/storage/storageTypes.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # Shared vs local settings
@@ -36,7 +36,7 @@ the whole object is replaced, so unlisted nested keys do not survive.
   with only those. No difference means no write to the base.
 - `SharedConfigStore.update` patches only the `hoard:` block; the rest of the base file
   (filters, views) stays byte-identical ([baseFile.ts](../../src/storage/baseFile.ts)). An unreadable
-  block is left alone with a Notice.
+  block is left alone and reported through the injected `Notify` (`sharedConfigUnreadable`).
 - The store watches `modify` on the base; an own write echoes back identical content and is ignored
   by comparing canonical JSON, a foreign change reloads and re-composes settings.
 

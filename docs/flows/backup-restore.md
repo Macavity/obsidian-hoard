@@ -6,7 +6,7 @@ source:
   - src/backup.ts
   - src/SettingsTab.ts
   - src/main.ts
-source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
+source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
 ---
 
 # Backup and restore
@@ -27,8 +27,10 @@ around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../
 ## Restore
 
 1. `parseBackup` validates the file's shape (sections present, lists are arrays; entries
-   themselves are not checked) before anything is written; anything that is not a
-   version-2 Hoard file (WatchLog exports included) is rejected as `unsupportedFormat`. A rejected file
+   themselves are not checked) before anything is written. Order: invalid JSON is `parseJson`, a
+   non-object `notObject`, anything else that is not a version-2 Hoard file (WatchLog exports
+   included) `unsupportedFormat` (WatchLog data
+   comes in through the [import wizard](watchlog-import.md)). A rejected file
    yields an error code, shown by the settings tab as translated text ([i18n](../architecture/i18n.md)).
 2. `restoreBackup` writes in this order: shared settings into the base (`restoreSharedSettings`),
    local settings into `data.json` (shared keys and prototype-polluting keys skipped, so the
@@ -36,5 +38,7 @@ around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../
    (`addTitleSilent` / `addMaybeTitle`, one notify), then reading, games and history through their
    managers' `restore`.
 3. Existing notes are kept; a restore adds, it does not overwrite.
+
+The same Backup section also hosts the WatchLog import entry (`addWatchLogImportRows`: import, and cleanup once a source is recorded as imported); that flow is [watchlog-import](watchlog-import.md).
 
 Related: [shared vs local](../concepts/shared-vs-local.md), [modules/backup](../modules/backup.md).

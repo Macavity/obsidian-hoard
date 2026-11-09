@@ -1,0 +1,73 @@
+/* WatchLog onboarding wizard */
+.hoard-onboarding-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+  font-size: var(--font-ui-small);
+  color: var(--text-faint);
+}
+
+.hoard-onboarding-step.is-done {
+  color: var(--text-muted);
+}
+
+.hoard-onboarding-step.is-active {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
+.hoard-onboarding-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.hoard-onboarding-source-counts,
+.hoard-onboarding-hint,
+.hoard-onboarding-review-detail {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.hoard-onboarding-warning,
+.hoard-onboarding-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-small);
+}
+
+.hoard-onboarding-progress {
+  width: 100%;
+}
+
+.hoard-onboarding-reason {
+  margin-top: 6px;
+  font-weight: var(--font-semibold);
+  font-size: var(--font-ui-small);
+}
+
+.hoard-onboarding-review-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.hoard-onboarding-review-link {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  height: auto;
+  text-align: left;
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.hoard-onboarding-cleanup-item {
+  margin-bottom: 8px;
+}
+
+.hoard-onboarding-path {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}

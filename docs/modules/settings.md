@@ -10,7 +10,7 @@ source:
   - src/types.ts
   - src/main.ts
   - src/ui/problemText.ts
-source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
+source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # Settings
@@ -30,7 +30,7 @@ Customize, Watchlist, Drafts, Custom lists, Reading, Widgets, Quick Info; icon-o
 Two helpers build every card: `settingsGroup` (accent header with a live status chip, variant
 classes spelled out in `SETTINGS_GROUP_CLASSES` for the dead-CSS lint) and `sgCard` (sub-card with
 optional help). Text inputs save debounced (500 ms); toggles and selects save at once. General
-holds Backup & Restore ([backup](backup.md)); Watchlist holds CSV import/export and type folders.
+holds Backup & Restore ([backup](backup.md)), which also carries the WatchLog import entry and, once a source is recorded as imported, the cleanup entry ([flows/watchlog-import](../flows/watchlog-import.md)); Watchlist holds CSV import/export and type folders.
 
 ## API cards
 

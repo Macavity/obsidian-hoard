@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from './__mocks__/obsidian';
 import HoardPlugin from '../src/main';
+vi.mock('../src/import/watchlog/detect', () => ({
+	detectWatchLogSources: () => Promise.resolve({ original: null, fork: null, hoardHasData: false }),
+}));
 import type { VaultLayout } from '../src/storage/VaultLayout';
 
 interface Harness {
@@ -26,6 +29,7 @@ function harness(o: Opts = {}): Harness {
 	const plugin = Object.create(HoardPlugin.prototype) as Record<string, unknown>;
 	Object.assign(plugin, {
 		settings: { types: [{ name: 'Movie' }] },
+		local: { data: { ui: {} } },
 		app: { vault: { getFiles: () => files, cachedRead: (f: { path: string }) => Promise.resolve(o.bases?.[f.path] ?? '') } },
 		applySharedSettings: track('applySettings'),
 		adoptSyncedBase: h.adopt,

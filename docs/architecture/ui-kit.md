@@ -18,15 +18,15 @@ source:
   - src/ui/problemText.ts
   - src/ui/detailShared.ts
   - src/ui/typeBadge.ts
-source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
+source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # UI kit
 
 Tabs and modals are thin; shared behaviour lives in `src/ui/` and a few top-level helpers.
 **Boundary**: UI depends on the managers, never on storage. Verified by grepping `src/storage/`
-imports: outside managers, `main.ts` and the WatchLog converters (`src/import/watchlog/`, which use
-codecs and `HistoryStore`), only `settingsSplit.ts` and `backup.ts` (settings persistence), `ApiService.ts` (a type) and two pure helpers (`typeNameProblem` behind
+imports: outside managers, the import module (`src/import/watchlog/`) and `main.ts`, only `settingsSplit.ts` and `backup.ts`
+(settings persistence), `ApiService.ts` (a type) and two pure helpers (`typeNameProblem` behind
 `ui/problemText.ts`, `safeTypeName` in the CSV modal) touch it. No tab or modal imports a store, codec or
 index.
 
@@ -54,6 +54,7 @@ computed without the tab open and refresh on `data-change` (Upcoming) or `metada
 re-applies the colour theme and rebuilds. On mobile a `ResizeObserver` pins an explicit height on
 the tab content because the WebView freezes flex heights when the keyboard opens; while an editor
 inside the tab has focus the height is pinned to the smallest value seen and released on focusout.
+While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.importRunning`) `renderTabContent` renders only an "import running" line instead of the tab, and data changes re-render that placeholder rather than a tab instance.
 
 ## Shared pieces
 

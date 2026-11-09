@@ -1,6 +1,7 @@
 import { TFile, type App } from 'obsidian';
 import type { YamlIO } from '../../storage/storageTypes';
-import { isRecord, type Fm, type Schema1Report } from './schema1Types';
+import type { ImportReport } from './report';
+import { isRecord, type Fm } from './schema1Types';
 
 const FM_RE = /^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(\r?\n|$)/;
 
@@ -10,6 +11,11 @@ export const sameValue = (a: unknown, b: unknown): boolean => {
 	const norm = (v: unknown): string => JSON.stringify(Array.isArray(v) ? v.map(scalar) : scalar(v));
 	return norm(a) === norm(b);
 };
+
+/** Everything after the frontmatter of a note, without the blank lines that follow it. */
+export const bodyOf = (content: string): string => content.slice(FM_RE.exec(content)?.[0].length ?? 0).replace(/^(\r?\n)+/, '');
+
+const show = (v: unknown): string => (typeof v === 'string' ? v : JSON.stringify(v) ?? 'null');
 
 /** Creates a folder unless it exists (or another writer created it meanwhile). */
 export async function ensureFolder(app: App, path: string): Promise<void> {
@@ -23,7 +29,7 @@ export async function ensureFolder(app: App, path: string): Promise<void> {
 
 /** Creates notes or fills the keys they lack; existing values are never overwritten. */
 export class NoteWriter {
-	constructor(private app: App, private yaml: YamlIO, private report: Schema1Report) {}
+	constructor(private app: App, private yaml: YamlIO, private report: ImportReport) {}
 
 	/**
 	 * Creates the note, or adds only the keys it lacks. A key of `apiValues` (API values WatchLog
@@ -36,29 +42,37 @@ export class NoteWriter {
 		if (!file) {
 			await ensureFolder(this.app, path.slice(0, Math.max(0, path.lastIndexOf('/'))));
 			await vault.create(path, `---\n${this.yaml.stringify(fm)}---\n\n${body}`);
-			this.report.notesCreated++;
+			this.report.created++;
 			return;
 		}
 		if (!(file instanceof TFile)) {
-			this.report.skipped.push(`${path}: not a file`);
+			this.report.review.push({ path, reason: 'exists', code: 'notAFile' });
 			return;
 		}
 		let current: Fm;
 		try {
 			current = this.frontmatter(await vault.read(file));
 		} catch {
-			this.report.skipped.push(`${path}: frontmatter is not valid YAML`);
+			this.report.review.push({ path, reason: 'error', code: 'invalidYaml' });
+			this.report.errors.push(`${path}: invalid YAML`);
 			return;
 		}
 		const written = (k: string): boolean => sameValue(current[k], apiValues[k]) && !(k in fm && sameValue(current[k], fm[k]));
 		const stale = Object.keys(apiValues).filter((k) => k in current && written(k));
 		const missing = Object.keys(fm).filter((k) => !(k in current) || stale.includes(k));
+		for (const k of Object.keys(fm)) {
+			if (k in current && !stale.includes(k) && !sameValue(current[k], fm[k])) {
+				this.report.review.push({
+					path, reason: 'kept-value', code: 'keptValue', params: { key: k, hoard: show(current[k]), watchlog: show(fm[k]) },
+				});
+			}
+		}
 		if (missing.length === 0 && stale.length === 0) return;
 		await fileManager.processFrontMatter(file, (raw: Fm) => {
 			for (const k of stale) if (sameValue(raw[k], apiValues[k])) delete raw[k];
 			for (const k of missing) if (!(k in raw)) raw[k] = fm[k];
 		});
-		this.report.notesFilled++;
+		this.report.filled++;
 	}
 
 	private frontmatter(content: string): Fm {

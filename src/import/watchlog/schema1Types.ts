@@ -8,7 +8,8 @@ import type { LocalStore } from '../../storage/LocalStore';
 import type { SharedConfigStore } from '../../storage/SharedConfigStore';
 import type { HistoryStore } from '../../storage/HistoryStore';
 import type { VaultLayout } from '../../storage/VaultLayout';
-import type { YamlIO } from '../../storage/storageTypes';
+import type { EntryKind, YamlIO } from '../../storage/storageTypes';
+import type { Progress } from './report';
 
 /** A title as WatchLog stored it; `manualPosterUrl` wins over `posterUrl`. */
 export type WatchLogTitle = HoardTitle & { manualPosterUrl?: string };
@@ -32,14 +33,12 @@ export interface WatchLogData {
 	games?: GamesData;
 }
 
-export interface Schema1Report {
-	notesCreated: number;
-	notesFilled: number;
-	skipped: string[];
-	errors: string[];
+/** Optional hooks of an import run: progress and the body source of newly created notes. */
+export interface ImportHooks {
+	progress?: Progress;
+	/** Body of the note a source kept for this entry; null when there is none. */
+	oldBody?: (kind: EntryKind, title: string, type?: string) => Promise<string | null>;
 }
-
-export const emptyReport = (): Schema1Report => ({ notesCreated: 0, notesFilled: 0, skipped: [], errors: [] });
 
 export interface ImportContext {
 	app: App;

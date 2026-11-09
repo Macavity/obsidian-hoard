@@ -1,59 +1,80 @@
 ---
 type: Module
 title: Import
-description: The WatchLog schema-1 converter and widget-fence rewriter kept for a future import, and what Hoard does today when it meets WatchLog data.
+description: The import module boundary: what src/import/watchlog owns, the schema-1 converter and shared contracts, and where a new source goes.
 source:
   - src/import/watchlog/detect.ts
+  - src/import/watchlog/importer.ts
+  - src/import/watchlog/report.ts
+  - src/import/watchlog/paths.ts
   - src/import/watchlog/schema1.ts
-  - src/import/watchlog/schema1Types.ts
   - src/import/watchlog/schema1Notes.ts
+  - src/import/watchlog/schema1Types.ts
   - src/import/watchlog/widgets.ts
-  - src/storage/LocalStore.ts
-  - src/backup.ts
-  - src/main.ts
-source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
+  - src/WatchLogOnboardingModal.ts
+  - src/WatchLogReport.ts
+source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
 ---
 
 # Import
 
-`src/import/watchlog/` holds converters for data of WatchLog and WatchLog Sync, the plugins Hoard
-originates from. **Nothing in the plugin calls them yet**: there is no startup migration and no
-restore of WatchLog backups. Only `backup.ts` imports a type (`ImportContext`); the folder's tests
-exercise the code. Only this folder may know WatchLog names (plugin ids, `WatchLog.base`, the
-`watchlog:` key, `wl-*` fences, schema-1 data; `.claude/skills/project/SKILL.md`);
-`test/i18nBoundary.test.ts` keeps it free of `i18n`.
+External data enters Hoard only through a **user-driven copy**: a wizard offers it, the source stays
+untouched, existing Hoard values win. The one source today is WatchLog / WatchLog Sync, the plugins
+Hoard originates from, in `src/import/watchlog/`. The sequence, decisions and cleanup are in
+[flows/watchlog-import](../flows/watchlog-import.md); user-facing text in README "Importing from
+WatchLog". Backups of other plugins are not restored (`parseBackup` rejects them as
+`unsupportedFormat`, see [backup](backup.md)).
 
 ## What exists
 
-- [detect.ts](../../src/import/watchlog/detect.ts): `WATCHLOG_PLUGIN_IDS`, `findWatchLogBase` (first
-  path-sorted `.base` named `WatchLog.base` or with a top-level `watchlog:` block),
-  `findWatchLogPluginData` (first non-empty `data.json` of `watchlog-sync`, then `watchlog`).
-- [schema1.ts](../../src/import/watchlog/schema1.ts): `importWatchLogData(data, ctx)` converts
-  schema-1 data into notes through the normal codecs (`encodeTitle`, `encodeBook`, `encodeManga`,
-  `encodeGame`, `splitCache`), so results match notes the plugin writes. Notes are created or only
-  filled, never overwritten (`NoteWriter` in `schema1Notes.ts`) — except a title field that still
-  equals the value an API delivered (stale API data), which is replaced unless the note sets it as an
-  override; groups, airtime and history are
-  applied, the base is filled when empty, the cache merged, missing device-local settings filled.
-  No folder moves, `schemaVersion` untouched. Returns a `Schema1Report` (created, filled, skipped,
-  errors). `mergeSideFiles` folds in old `reading.json`/`history.json`. Helpers:
-  `schema1Normalize`, `schema1Records`, `schema1Types`.
-- [widgets.ts](../../src/import/watchlog/widgets.ts): `rewriteWidgetFences` / `migrateWidgetFences`
-  rename `watchlog` and `wl-*` code-block languages to the `hoard*` names (see
-  [widgets](widgets.md)).
+Only this folder, [WatchLogOnboardingModal.ts](../../src/WatchLogOnboardingModal.ts) and their tests
+may know WatchLog: plugin ids, `WatchLog.base`, the `watchlog:` key, `wl-*` widget names, schema-1
+data (`.claude/skills/project/SKILL.md`). The folder stays free of translated text: the wizard owns all
+copy (`onboarding.*`, [i18n](../architecture/i18n.md)), and the import logic only returns reports.
+Other code touches it at three points: `main.ts` (detection, `createImporter`, decisions),
+`SettingsTab.ts` (`getDecision`, entry buttons) and `backup.ts` (the `ImportContext` type that
+`backupManagers().storage.importContext()` builds for the importer).
 
-## Behaviour today
+## Contracts
 
-- **Hoard's own `data.json` is a WatchLog schema-1 file** (no `schemaVersion`, has `titles`):
-  `LocalStore.load` starts with empty data and stays read-only for the whole session, so the file
-  is never overwritten. `LoadResult` is `{ schema: 2 }`, `{ schema: 'newer' }` or `{ schema: 'watchlog' }`;
-  `main.ts` shows a sticky Notice for the last two, since device settings typed in that session are
-  lost ([storage](../architecture/storage.md)).
-- **Backup restore**: `parseBackup` accepts only `version: 2` Hoard files; anything else is
-  `unsupportedFormat` ([backup](backup.md)).
-- `main.ts` does no WatchLog detection, adoption or warning at startup ([flows/startup](../flows/startup.md)).
+- **Types** ([registerTypes.ts](../../src/import/watchlog/registerTypes.ts)): both imports append the
+  source's Watchlist types that Hoard's base lacks, by name, without touching Hoard's own.
+
+- **Report** ([report.ts](../../src/import/watchlog/report.ts)): `created`, `filled`, `review`
+  (`path`, reason `exists` / `kept-value` / `error`, optional `code` + `params` that the UI translates
+  in [WatchLogReport.ts](../../src/WatchLogReport.ts)), `errors`, plus a `Progress` callback (`notes`,
+  `history`, `base`, `settings`). A run with any `errors` counts as failed; a per-file error is also a
+  review item, `generalErrors` returns the rest. The report note is rendered on the UI side and only
+  written here (`writeReportNote`).
+- **Importer** ([importer.ts](../../src/import/watchlog/importer.ts)): `createImporter` is the
+  seam between wizard and logic (`run`, `plan`, `cleanup`, `writeReport`, `decide`); the modal
+  depends only on that interface, so it is tested with a fake.
+- **Managed files** ([paths.ts](../../src/import/watchlog/paths.ts)): `managedFiles` = every file in a
+  layout's type, book, manga, game and list folders plus its history file, minus Hoard's own root
+  (Hoard at the vault root `''` excludes nothing). `forkTarget` maps a fork path below Hoard's root.
+  Fork import and cleanup both use them.
+
+## Schema-1 converter
+
+`importWatchLogData` ([schema1.ts](../../src/import/watchlog/schema1.ts)) turns a WatchLog schema-1
+`data.json` into notes with the normal codecs (`encodeTitle`, `encodeBook`, `encodeManga`,
+`encodeGame`, `splitCache`), so converted notes look like ones the plugin wrote. Order: normalize,
+titles, Maybe titles (as `maybe: true`; one already in the library is reported), books, manga, games,
+history, base (last), cache merge, then device-local settings filled only where empty. Secrets never
+go into vault files (shared keys are whitelisted by the base store). `NoteWriter`
+([schema1Notes.ts](../../src/import/watchlog/schema1Notes.ts)) creates a note or adds only missing
+keys (a title field still equal to a stale API value is replaced unless the note sets it as an
+override); a differing existing value becomes a `kept-value` review item. Duplicate title/type pairs in one run
+get " 2", " 3", compared case-insensitively (macOS and Windows treat "Heat" and "heat" as one file). A
+note that fails to write is reported and skipped. The fork's device settings skip shared and removed
+keys like the schema-1 path does. Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
+airtime, history), `originalPaths` (where WatchLog kept its notes, from its settings).
+
+Widget fence renaming ([widgets.ts](../../src/import/watchlog/widgets.ts)) is a cleanup step; see
+[widgets](widgets.md).
 
 ## Where to change what
 
-- WatchLog field mapping: `schema1Normalize.ts`. A new source: its own folder under `src/import/`
-  with detect, convert and report; reuse the codecs and `NoteWriter`.
+- A new source: new folder under `src/import/` with detect / import / report in the same contracts, a
+  wizard (or a step in this one), wiring in `main.ts`; reuse the codecs and `NoteWriter`.
+- WatchLog field mapping: `schema1Normalize.ts`. What cleanup may trash: `cleanup.ts`.

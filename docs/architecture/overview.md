@@ -8,7 +8,7 @@ source:
   - src/DataManager.ts
   - src/storage/EntryIndex.ts
   - src/WidgetRenderer.ts
-source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
+source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # Overview
@@ -54,7 +54,8 @@ flowchart TD
    `PosterService`, `ApiCheckQueue`, cover and title search helpers. Called by managers and modals.
 4. **UI** ([architecture/ui-kit](ui-kit.md)): `HoardView` with the `TABS` registry, one tab per
    domain, modals, shared pieces in `src/ui/`.
-5. **Composition root** `main.ts`: builds everything in field initialisers, loads data, registers view, commands, [widgets](../modules/widgets.md),
+5. **Composition root** `main.ts`: builds everything in field initialisers, loads data, offers the
+   [WatchLog import](../modules/import.md) wizard when needed (before indexing), registers view, commands, [widgets](../modules/widgets.md),
    status bar and the scheduler. See [flows/startup](../flows/startup.md).
 
 ## The change signal

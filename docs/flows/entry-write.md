@@ -9,7 +9,7 @@ source:
   - src/storage/baseline.ts
   - src/storage/noteBody.ts
   - src/storage/LocalStore.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # Entry write

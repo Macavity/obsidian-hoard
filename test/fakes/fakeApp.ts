@@ -149,6 +149,7 @@ export function createFakeApp(initial: Record<string, string> = {}) {
 	}
 
 	const vault = {
+		configDir: '.obsidian',
 		on: (name: string, cb: Cb) => vaultEvents.on(name, cb),
 		off: (name: string, cb: Cb) => vaultEvents.off(name, cb),
 		offref: (ref: Ref) => vaultEvents.offref(ref),
@@ -159,6 +160,8 @@ export function createFakeApp(initial: Record<string, string> = {}) {
 		read: (file: TFile) => settle(() => files.get(file.path) ?? ''),
 		cachedRead: (file: TFile) => settle(() => files.get(file.path) ?? ''),
 		create: (path: string, content: string) => settle(() => createFile(path, content)),
+		readBinary: (file: TFile) => settle(() => new TextEncoder().encode(files.get(file.path) ?? '').buffer),
+		createBinary: (path: string, data: ArrayBuffer) => settle(() => createFile(path, new TextDecoder().decode(data))),
 		createFolder: (path: string) => settle(() => { ensureFolder(path); }),
 		modify: (file: TFile, content: string) => settle(() => writeFile(file, content)),
 		process: (file: TFile, fn: (data: string) => string) => settle(() => {

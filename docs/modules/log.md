@@ -8,7 +8,7 @@ source:
   - src/storage/historyLine.ts
   - src/LogTab.ts
   - src/DataManager.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # Log
