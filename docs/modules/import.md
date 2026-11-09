@@ -12,7 +12,8 @@ source:
   - src/import/watchlog/schema1Types.ts
   - src/import/watchlog/widgets.ts
   - src/WatchLogOnboardingModal.ts
-source_commit: d4cf7e39e4fc24687cf810e7417d26726e840ee6
+  - src/WatchLogReport.ts
+source_commit: 16751535ee0f9fe4322c7585f1b4ec768f0c135c
 ---
 
 # Import
@@ -37,14 +38,18 @@ Other code touches it at three points: `main.ts` (detection, `createImporter`, d
 ## Contracts
 
 - **Report** ([report.ts](../../src/import/watchlog/report.ts)): `created`, `filled`, `review`
-  (`path`, reason `exists` / `kept-value` / `error`, `detail`), `errors`, plus a `Progress`
-  callback (`notes`, `history`, `base`, `settings`). A run with any `errors` counts as failed.
+  (`path`, reason `exists` / `kept-value` / `error`, optional `code` + `params` that the UI translates
+  in [WatchLogReport.ts](../../src/WatchLogReport.ts)), `errors`, plus a `Progress` callback (`notes`,
+  `history`, `base`, `settings`). A run with any `errors` counts as failed; a per-file error is also a
+  review item, `generalErrors` returns the rest. The report note is rendered on the UI side and only
+  written here (`writeReportNote`).
 - **Importer** ([importer.ts](../../src/import/watchlog/importer.ts)): `createImporter` is the
   seam between wizard and logic (`run`, `plan`, `cleanup`, `writeReport`, `decide`); the modal
   depends only on that interface, so it is tested with a fake.
 - **Managed files** ([paths.ts](../../src/import/watchlog/paths.ts)): `managedFiles` = every file in a
-  layout's type, book, manga, game and list folders plus its history file, minus Hoard's own root. Fork
-  import and cleanup both use it.
+  layout's type, book, manga, game and list folders plus its history file, minus Hoard's own root
+  (Hoard at the vault root `''` excludes nothing). `forkTarget` maps a fork path below Hoard's root.
+  Fork import and cleanup both use them.
 
 ## Schema-1 converter
 
@@ -56,7 +61,9 @@ history, base (last), cache merge, then device-local settings filled only where 
 go into vault files (shared keys are whitelisted by the base store). `NoteWriter`
 ([schema1Notes.ts](../../src/import/watchlog/schema1Notes.ts)) creates a note or adds only missing
 keys; a differing existing value becomes a `kept-value` review item. Duplicate title/type pairs in one run
-get " 2", " 3". Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
+get " 2", " 3", compared case-insensitively (macOS and Windows treat "Heat" and "heat" as one file). A
+note that fails to write is reported and skipped. The fork's device settings skip shared and removed
+keys like the schema-1 path does. Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
 airtime, history), `originalPaths` (where WatchLog kept its notes, from its settings).
 
 Widget fence renaming ([widgets.ts](../../src/import/watchlog/widgets.ts)) is a cleanup step; see

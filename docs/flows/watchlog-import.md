@@ -11,8 +11,9 @@ source:
   - src/import/watchlog/importOriginal.ts
   - src/import/watchlog/cleanup.ts
   - src/import/watchlog/reportNote.ts
+  - src/WatchLogReport.ts
   - src/main.ts
-source_commit: d4cf7e39e4fc24687cf810e7417d26726e840ee6
+source_commit: 16751535ee0f9fe4322c7585f1b4ec768f0c135c
 ---
 
 # WatchLog import
@@ -81,11 +82,17 @@ Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts]
      value is kept and listed as `kept-value`), then groups, airtime, history, base and cache. Custom lists
      are copied. The base is written last, so an interrupted run does not look finished on retry.
 3. **result**: counts per kind, review items (`exists`, `kept-value`, `error`) as links that open the
-   file, and **Save report** (`WatchLog-Import YYYY-MM-DD.md` in Hoard's root, numbered when taken).
-   Failed kinds show the errors, a retry button, and block cleanup.
-4. **cleanup** (`planCleanup` / `runCleanup`, optional, nothing preselected): offers only files with a
-   Hoard counterpart. Original notes whose Hoard note exists; fork files whose copy exists below Hoard's
-   root; the fork `WatchLog.base` only when another base with `hoard:` exists; notes with a
+   file, with a translated detail ([WatchLogReport.ts](../../src/WatchLogReport.ts)), and **Save
+   report**: the same content rendered as Markdown in the UI language, with `[path](encoded)` links
+   (paths may contain `[`, `]`, `#`), written as `WatchLog-Import YYYY-MM-DD.md` (local date) in Hoard's
+   root, numbered when taken. Failed kinds show the errors, a retry button, and block cleanup. One
+   failing note is a review item; the rest of the run continues.
+4. **cleanup** (`planCleanup` / `runCleanup`, optional, nothing preselected): offers only sources that
+   Hoard holds as an **identical copy at another path**. Original notes whose Hoard note has the same
+   body (frontmatter lives on in `data.json`); custom lists and fork files whose Hoard copy has the same
+   content. A copy kept on import because Hoard's differed (e.g. `History.md`), or one edited since,
+   is not offered: the source still holds data. A path that is its own counterpart (WatchLog and Hoard
+   share a root) is never offered. Also the fork `WatchLog.base` only when another base with `hoard:` exists; notes with a
    `watchlog` / `wl-*` fence, which are **renamed** to `hoard` / `hoard-*` instead of trashed. Files go
    to the trash (`trashFile`), then now-empty parent folders up to Hoard's root. Errors per file are
    collected, the rest continues. Steps without files are not shown.

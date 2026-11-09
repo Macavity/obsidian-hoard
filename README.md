@@ -78,7 +78,7 @@ Hoard starts as a fresh install in its own `Hoard/` folder and never changes Wat
 
 - **Import** copies the data into `Hoard/`; the source stays untouched. Existing Hoard notes are only filled, never overwritten. WatchLog Sync notes keep their relative paths; API keys and device settings are taken only where Hoard has none.
 - **Result** lists what was created and filled, and every file to review (target already existed, a Hoard value differed and was kept, errors). The list can be saved as a note.
-- **Clean up** is optional and nothing is preselected: old notes and `WatchLog.base` go to the trash, widget code blocks `watchlog` / `wl-*` can be renamed to `hoard` / `hoard-*`. To remove the old plugin data, uninstall the plugin under Community plugins.
+- **Clean up** is optional and nothing is preselected: old notes that Hoard holds as an identical copy and `WatchLog.base` go to the trash (a source whose Hoard copy differs stays), widget code blocks `watchlog` / `wl-*` can be renamed to `hoard` / `hoard-*`. To remove the old plugin data, uninstall the plugin under Community plugins.
 
 "Later" asks again on the next start, "Don't import" stops asking on this device. Import and cleanup stay available in Hoard's settings under "Backup & restore". You can keep using WatchLog alongside Hoard; both keep their data apart.
 
