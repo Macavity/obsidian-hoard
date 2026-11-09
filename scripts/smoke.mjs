@@ -1,24 +1,15 @@
 // Integration smoke against the registered test vault: deploys the current build, runs the e2e steps, resets the vault.
 // Obsidian must be running with hoard-test-vault open (`pnpm vault:open` once). Options: --only <step>, --update-baselines.
 import { execFileSync } from "node:child_process";
-import { ensureVault, evalJs } from "./lib/cli.mjs";
+import { ensureVault } from "./lib/cli.mjs";
+import { closeModals } from "./lib/ui.mjs";
 import { parseArgs, runSteps } from "./e2e/runner.mjs";
 import { dataStep } from "./e2e/steps/data.mjs";
 
 const pnpm = (...a) => execFileSync("pnpm", a, { stdio: "inherit" });
 
-/** Closes modals a step left open: close button if present, otherwise Escape. */
-const CLOSE_MODALS = `(() => {
-	const modals = document.querySelectorAll('.modal-container');
-	modals.forEach((m) => {
-		const close = m.querySelector('.modal-close-button');
-		if (close) close.click();
-		else document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-	});
-	return String(modals.length);
-})()`;
 const cleanup = async () => {
-	evalJs(CLOSE_MODALS);
+	await closeModals();
 };
 
 const opts = parseArgs(process.argv.slice(2));
