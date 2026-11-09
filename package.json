@@ -23,7 +23,7 @@
 		"vault:reset": "node scripts/vault-reset.mjs",
 		"vault:theme": "node scripts/vault-theme.mjs",
 		"reload": "node scripts/reload.mjs",
-		"smoke": "pnpm vault:reset && pnpm vault:link-test && pnpm build && pnpm reload && node scripts/smoke.mjs",
+		"smoke": "node scripts/smoke.mjs",
 		"mobile:smoke": "node scripts/mobile-smoke.mjs"
 	},
 	"author": "Alexander Pape",
