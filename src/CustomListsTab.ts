@@ -9,6 +9,7 @@ import { openStatusDropdown } from './StatusDropdown';
 import { openAddForTitle } from './AddRouter';
 import { cloneColumns, renderCancelSave, renderColumnsEditor } from './ui/ColumnsEditor';
 import { t } from './i18n';
+import { createIconButton } from './ui/IconButton';
 import { statusLabel, typeLabel, readingStatusLabel } from './i18n/labels';
 
 /** Row name, trimmed — the index signature types it loosely. */
@@ -19,12 +20,43 @@ function rowName(row: CustomListRow): string {
 /** Key handling of an inline cell editor: Tab / Shift+Tab / Enter commit and navigate, Escape cancels. */
 function handleEditKey(
 	e: KeyboardEvent,
-	commit: (nav: 'tab' | 'shift-tab' | 'enter') => void,
+	commit: (nav: CellNavDirection) => void,
 	cancel: () => void,
 ): void {
 	if (e.key === 'Tab') { e.preventDefault(); commit(e.shiftKey ? 'shift-tab' : 'tab'); }
 	else if (e.key === 'Enter') { e.preventDefault(); commit('enter'); }
-	else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); cancel(); }
+	else if (e.key === 'Escape') {
+		e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+		if (!e.isComposing) cancel(); // during IME composition Escape only aborts the composition
+	}
+}
+
+export type CellNavDirection = 'tab' | 'shift-tab' | 'enter';
+
+/** Where an inline-edit commit moves next: a cell (`same` row or a row index), a new row with the
+ *  given column focused, or nowhere (Shift+Tab on the very first cell). */
+export type CellNavTarget = { row: 'same' | number; col: number | 'last' } | { addRow: number } | null;
+
+/** Spreadsheet-style navigation: Tab walks right then wraps to the next row, Shift+Tab walks back,
+ *  Enter goes down the same column; leaving the last row appends one. */
+export function cellNavTarget(
+	direction: CellNavDirection,
+	rowIdx: number,
+	colIdx: number,
+	rowCount: number,
+	cellCount: number,
+): CellNavTarget {
+	const hasNextRow = rowIdx >= 0 && rowIdx < rowCount - 1;
+	if (direction === 'shift-tab') {
+		if (colIdx > 0) return { row: 'same', col: colIdx - 1 };
+		return rowIdx > 0 ? { row: rowIdx - 1, col: 'last' } : null;
+	}
+	if (direction === 'tab') {
+		if (colIdx >= 0 && colIdx < cellCount - 1) return { row: 'same', col: colIdx + 1 };
+		return hasNextRow ? { row: rowIdx + 1, col: 0 } : { addRow: 0 };
+	}
+	const col = Math.max(colIdx, 0);
+	return hasNextRow ? { row: rowIdx + 1, col } : { addRow: col };
 }
 
 /** Minimum width (px) a resizable column can be dragged to. */
@@ -661,7 +693,12 @@ export class CustomListsTab {
 				this.startRenameTab(tab, nameSpan, name);
 			});
 
-			const delBtn = tab.createSpan({ cls: 'hoard-cl-sub-tab-del', text: '×' });
+			const delBtn = createIconButton(tab, {
+				icon: 'x',
+				label: t('lists.deleteList', { name }),
+				cls: 'hoard-cl-sub-tab-del',
+				variant: 'sm',
+			});
 			delBtn.addEventListener('click', (e) => { e.stopPropagation(); void this.deleteList(name); });
 
 			tab.addEventListener('click', () => {
@@ -696,7 +733,7 @@ export class CustomListsTab {
 			});
 		}
 
-		const addBtn = tabBar.createEl('button', { cls: 'hoard-cl-sub-tab-add hoard-btn-success', text: '+' });
+		const addBtn = createIconButton(tabBar, { icon: 'plus', label: t('lists.newList'), cls: 'hoard-cl-sub-tab-add hoard-btn-success' });
 		addBtn.addEventListener('click', () => this.promptCreateList());
 	}
 
@@ -995,8 +1032,12 @@ export class CustomListsTab {
 			th.createSpan({ text: col.label });
 			this.addResizeHandle(th, col.id, list, table);
 			if (col.type === 'number' && col.autoTime) {
-				const refreshBtn = th.createSpan({ cls: 'hoard-cl-autotime-refresh', text: '↻' });
-				refreshBtn.title = t('lists.refreshRemaining');
+				const refreshBtn = createIconButton(th, {
+					icon: 'refresh-cw',
+					label: t('lists.refreshRemaining'),
+					cls: 'hoard-cl-autotime-refresh',
+					variant: 'sm',
+				});
 				refreshBtn.addEventListener('click', (e) => {
 					e.stopPropagation();
 					this.autoPopulateTimeColumn(list, col);
@@ -1059,17 +1100,21 @@ export class CustomListsTab {
 
 			const actCell = tr.createDiv({ cls: 'hoard-cl-td hoard-cl-td-actions' });
 
-			const dragHandle = actCell.createDiv({ cls: 'hoard-cl-row-action hoard-cl-drag-handle', text: '⠿' });
-			dragHandle.title = t('ui.columns.dragToReorder');
+			const dragHandle = createIconButton(actCell, {
+				icon: 'grip-vertical',
+				label: t('ui.columns.dragToReorder'),
+				cls: 'hoard-cl-row-action hoard-cl-drag-handle',
+			});
+			// mouse-only grip: no tab stop without a keyboard action behind it
+			dragHandle.tabIndex = -1;
+			dragHandle.setAttribute('aria-hidden', 'true');
 
-			// unnamed rows have nothing to send to a library
+			// unnamed rows have nothing to send to a library; the click is delegated on the table
 			if (rowName(row)) {
-				const addBtn = actCell.createDiv({ cls: 'hoard-cl-row-action hoard-cl-add-btn', text: '+' });
-				addBtn.title = t('lists.addToLibrary');
+				createIconButton(actCell, { icon: 'plus', label: t('lists.addToLibrary'), cls: 'hoard-cl-row-action hoard-cl-add-btn' });
 			}
 
-			const dupBtn = actCell.createDiv({ cls: 'hoard-cl-row-action hoard-cl-dup-btn', text: '⧉' });
-			dupBtn.title = t('lists.duplicateRow');
+			const dupBtn = createIconButton(actCell, { icon: 'copy', label: t('lists.duplicateRow'), cls: 'hoard-cl-row-action hoard-cl-dup-btn' });
 			dupBtn.addEventListener('click', () => {
 				const realIdx = list.rows.findIndex(r => r.id === row.id);
 				if (realIdx < 0) return;
@@ -1082,8 +1127,7 @@ export class CustomListsTab {
 				void this.manager.saveList(list).then(() => { container.empty(); this.buildTable(container, list, countEl); });
 			});
 
-			const rowDelBtn = actCell.createDiv({ cls: 'hoard-cl-row-action hoard-cl-row-del', text: '×' });
-			rowDelBtn.title = t('lists.deleteRow');
+			const rowDelBtn = createIconButton(actCell, { icon: 'x', label: t('lists.deleteRow'), cls: 'hoard-cl-row-action hoard-cl-row-del' });
 			rowDelBtn.addEventListener('click', () => {
 				list.rows = list.rows.filter(r => r.id !== row.id);
 				this.duplicatedRowIds.delete(row.id);
@@ -1357,7 +1401,7 @@ export class CustomListsTab {
 		});
 
 		let saved = false;
-		let navDirection: 'tab' | 'shift-tab' | 'enter' | null = null;
+		let navDirection: CellNavDirection | null = null;
 
 		const doSave = async (cancel: boolean): Promise<void> => {
 			if (saved) return;
@@ -1376,34 +1420,37 @@ export class CustomListsTab {
 			if (!cancel && navDirection) this.navigateCell(cell, navDirection);
 		};
 
+		/** Arrow / Enter / Escape on the open suggestion list; true when the key was consumed. */
+		const handleSuggestionKey = (e: KeyboardEvent, list: HTMLElement): boolean => {
+			const items = Array.from(list.querySelectorAll<HTMLElement>('.hoard-result-item'));
+			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+				e.preventDefault();
+				focusedSuggestionIdx = e.key === 'ArrowDown'
+					? Math.min(focusedSuggestionIdx + 1, items.length - 1)
+					: Math.max(focusedSuggestionIdx - 1, 0);
+				items.forEach((item, i) => item.toggleClass('hoard-result-item-focused', i === focusedSuggestionIdx));
+				return true;
+			}
+			if (e.key === 'Enter' && focusedSuggestionIdx >= 0) {
+				e.preventDefault();
+				const titleText = items[focusedSuggestionIdx]?.querySelector<HTMLElement>('.hoard-result-title')?.textContent ?? '';
+				if (titleText) input.value = titleText;
+				clearDropdown();
+				return true;
+			}
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+				clearDropdown();
+				return true;
+			}
+			return false;
+		};
+
 		input.addEventListener('blur', () => void doSave(false));
 		input.addEventListener('keydown', (e) => {
-			if (dropdown) {
-				const items = Array.from(dropdown.querySelectorAll<HTMLElement>('.hoard-result-item'));
-				if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-					e.preventDefault();
-					focusedSuggestionIdx = e.key === 'ArrowDown'
-						? Math.min(focusedSuggestionIdx + 1, items.length - 1)
-						: Math.max(focusedSuggestionIdx - 1, 0);
-					items.forEach((item, i) => item.toggleClass('hoard-result-item-focused', i === focusedSuggestionIdx));
-					return;
-				}
-				if (e.key === 'Enter' && focusedSuggestionIdx >= 0) {
-					e.preventDefault();
-					const titleText = items[focusedSuggestionIdx]?.querySelector<HTMLElement>('.hoard-result-title')?.textContent ?? '';
-					if (titleText) input.value = titleText;
-					clearDropdown();
-					return;
-				}
-				if (e.key === 'Escape') {
-					e.preventDefault();
-					e.stopPropagation();
-					e.stopImmediatePropagation();
-					clearDropdown();
-					return;
-				}
-			}
-
+			if (dropdown && handleSuggestionKey(e, dropdown)) return;
 			handleEditKey(e, (nav) => { navDirection = nav; void doSave(false); }, () => void doSave(true));
 		});
 	}
@@ -1499,7 +1546,7 @@ export class CustomListsTab {
 
 		let getValue: () => string | number | undefined;
 		let saved = false;
-		let navDirection: 'tab' | 'shift-tab' | 'enter' | null = null;
+		let navDirection: CellNavDirection | null = null;
 
 		const doSave = async (cancel: boolean): Promise<void> => {
 			if (saved) return;
@@ -1558,59 +1605,23 @@ export class CustomListsTab {
 			.filter(c => !c.classList.contains('hoard-cl-td-num') && !c.classList.contains('hoard-cl-td-actions'));
 	}
 
-	private navigateCell(cell: HTMLElement, direction: 'tab' | 'shift-tab' | 'enter'): void {
+	private navigateCell(cell: HTMLElement, direction: CellNavDirection): void {
 		const tr = cell.closest('.hoard-cl-tr-body');
-		if (!tr) return;
-		const tbody = tr.parentElement;
-		if (!tbody) return;
+		const tbody = tr?.parentElement;
+		if (!tr || !tbody) return;
 
 		const rows = Array.from(tbody.querySelectorAll(':scope > .hoard-cl-tr-body'));
 		const rowIdx = rows.indexOf(tr);
 		const editableCells = this.getEditableCells(tr);
-		const colIdx = editableCells.indexOf(cell);
+		const target = cellNavTarget(direction, rowIdx, editableCells.indexOf(cell), rows.length, editableCells.length);
+		if (!target) return;
+		if ('addRow' in target) { this.addRowForNavigation(target.addRow); return; }
 
-		if (direction === 'tab') {
-			if (colIdx >= 0 && colIdx < editableCells.length - 1) {
-				// Next cell in same row
-				window.setTimeout(() => (editableCells[colIdx + 1] as HTMLElement | undefined)?.click(), 10);
-			} else if (rowIdx >= 0 && rowIdx < rows.length - 1) {
-				// First cell of next row
-				const nextRow = rows[rowIdx + 1];
-				if (nextRow) {
-					const nextCells = this.getEditableCells(nextRow);
-					if (nextCells.length) window.setTimeout(() => (nextCells[0] as HTMLElement | undefined)?.click(), 10);
-				}
-			} else {
-				// Last cell of last row → add new row, focus name
-				this.addRowForNavigation(0);
-			}
-		} else if (direction === 'shift-tab') {
-			if (colIdx > 0) {
-				// Previous cell in same row
-				window.setTimeout(() => (editableCells[colIdx - 1] as HTMLElement | undefined)?.click(), 10);
-			} else if (rowIdx > 0) {
-				// Last cell of previous row
-				const prevRow = rows[rowIdx - 1];
-				if (prevRow) {
-					const prevCells = this.getEditableCells(prevRow);
-					if (prevCells.length) window.setTimeout(() => (prevCells[prevCells.length - 1] as HTMLElement | undefined)?.click(), 10);
-				}
-			}
-			// First cell of first row → do nothing
-		} else { // enter
-			if (rowIdx >= 0 && rowIdx < rows.length - 1) {
-				// Same column in next row
-				const nextRow = rows[rowIdx + 1];
-				if (nextRow) {
-					const nextCells = this.getEditableCells(nextRow);
-					const targetIdx = Math.min(colIdx >= 0 ? colIdx : 0, nextCells.length - 1);
-					if (nextCells.length) window.setTimeout(() => (nextCells[targetIdx] as HTMLElement | undefined)?.click(), 10);
-				}
-			} else {
-				// Last row → add new row, focus same column
-				this.addRowForNavigation(colIdx >= 0 ? colIdx : 0);
-			}
-		}
+		const targetRow = target.row === 'same' ? tr : rows[target.row];
+		const cells = targetRow ? this.getEditableCells(targetRow) : [];
+		if (!cells.length) return;
+		const idx = target.col === 'last' ? cells.length - 1 : Math.min(target.col, cells.length - 1);
+		window.setTimeout(() => (cells[idx] as HTMLElement | undefined)?.click(), 10);
 	}
 
 	private addRowForNavigation(colIdx: number): void {

@@ -45,17 +45,14 @@
   margin-bottom: 4px;
 }
 
-.hoard-suggestion-shuffle {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 0 2px;
+/* look comes from the icon button base; only the resting dim is local */
+button.hoard-suggestion-shuffle {
   opacity: 0.7;
   transition: opacity 0.15s;
 }
 
-.hoard-suggestion-shuffle:hover {
+button.hoard-suggestion-shuffle:hover,
+button.hoard-suggestion-shuffle:focus-visible {
   opacity: 1;
 }
 

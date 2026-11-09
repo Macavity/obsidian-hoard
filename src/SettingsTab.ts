@@ -1,5 +1,6 @@
 import { App, Notice, Platform, PluginSettingTab, Setting, SliderComponent, normalizePath, setIcon } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
+import { createIconButton } from './ui/IconButton';
 import { statusLabel, typeLabel, readingStatusLabel } from './i18n/labels';
 import { typeNameProblemText } from './ui/problemText';
 import { cardSizeToMinWidth } from './VirtualGrid';
@@ -2112,7 +2113,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 					})();
 				});
 				pill.createSpan({ cls: 'hoard-season-color-label', text: t('settings.customize.season.name', { number: idx + 1 }) });
-				const del = pill.createSpan({ cls: 'hoard-tag-del', text: '×' });
+				const del = createIconButton(pill, {
+					icon: 'x',
+					label: t('settings.customize.season.remove', { number: idx + 1 }),
+					cls: 'hoard-tag-del',
+					variant: 'sm',
+				});
 				del.addEventListener('click', () => {
 					void (async () => {
 						this.plugin.settings.seasonPalette.splice(idx, 1);
@@ -2259,7 +2265,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 		}
 
 		if (cfg.remove && !locked) {
-			const del = pill.createSpan({ cls: 'hoard-tag-del', text: '×' });
+			const del = createIconButton(pill, {
+				icon: 'x',
+				label: t('settings.tags.remove', { name: tag.name }),
+				cls: 'hoard-tag-del',
+				variant: 'sm',
+			});
 			del.addEventListener('click', () => {
 				void (async () => {
 					await cfg.remove!(tag.name);

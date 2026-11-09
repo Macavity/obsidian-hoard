@@ -1,4 +1,4 @@
-import { Notice, TFile, setIcon } from 'obsidian';
+import { Notice, TFile } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { gameStatusLabel } from './i18n/labels';
 import type HoardPlugin from './main';
@@ -19,6 +19,7 @@ import { renderShelf, renderShelfTitle, type ShelfSelect } from './RowsView';
 import { renderSearchBox, openRenameGroupPrompt, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, type SortFields } from './ui/TabToolbar';
 import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from './ui/ActionBar';
 import { renderGroupCard } from './ui/GroupCard';
+import { createIconButton } from './ui/IconButton';
 import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from './ui/TabHelpers';
 import { renderHeaderToolbar } from './MobileToolbar';
 import { rawgResizedCover } from './ApiService';
@@ -564,9 +565,11 @@ export class GamesTab {
 			cls: 'hoard-results-count hoard-results-count-rows',
 			text: countParts.join(', '),
 		});
-		const gearBtn = countEl.createEl('button', { cls: 'hoard-rows-customize-btn' });
-		gearBtn.setAttr('aria-label', t('games.customizeRows'));
-		setIcon(gearBtn, 'settings');
+		const gearBtn = createIconButton(countEl, {
+			icon: 'settings',
+			label: t('games.customizeRows'),
+			cls: 'hoard-rows-customize-btn',
+		});
 		gearBtn.addEventListener('click', () => {
 			new RowsCustomizeModal(this.plugin.app, this.plugin, {
 				shelves: GAMES_ROWS_SHELVES.map((sh) => ({

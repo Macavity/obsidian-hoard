@@ -31,6 +31,7 @@ class El {
 	}
 	addClass(c: string): void { this.classes.add(c); }
 	setAttr(k: string, v: string): void { this.attrs[k] = v; }
+	setAttribute(k: string, v: string): void { this.attrs[k] = v; }
 	addEventListener(type: string, fn: (e: unknown) => void): void {
 		this.listeners.set(type, [...(this.listeners.get(type) ?? []), fn]);
 	}
@@ -112,7 +113,10 @@ describe('renderGroupCard', () => {
 		renderGroupCard(parent as unknown as HTMLElement, o);
 		const card = parent.children[0]!;
 		const stop = vi.fn();
-		card.find('hoard-card-menu-btn')!.fire('click', { stopPropagation: stop });
+		const menuBtn = card.find('hoard-card-menu-btn')!;
+		expect(menuBtn.classes.has('hoard-icon-btn')).toBe(true);
+		expect(menuBtn.attrs['data-icon']).toBe('more-vertical');
+		menuBtn.fire('click', { stopPropagation: stop });
 		expect(stop).toHaveBeenCalled();
 		const items = vi.mocked(openCardMenu).mock.calls[0]![2];
 		expect(items.map((i) => i.label)).toEqual(['Edit name', 'Delete group']);

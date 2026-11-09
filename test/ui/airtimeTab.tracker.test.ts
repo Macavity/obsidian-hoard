@@ -200,7 +200,9 @@ describe('tick flow', () => {
 		const w = newWorld({ titles: [title({ totalEpisodes: 12 })], entries: [entry({ currentEpisode: 12 })] });
 		const { container, tab, calls } = makeTab(w);
 		tab.render();
-		expect(tickBtn(container).title).toBe(t('airtime.actions.finalEpisode'));
+		expect(tickBtn(container).classList.contains('hoard-icon-btn')).toBe(true);
+		expect(tickBtn(container).getAttribute('data-icon')).toBe('check');
+		expect(tickBtn(container).getAttribute('aria-label')).toBe(t('airtime.actions.finalEpisode'));
 		tickBtn(container).click();
 		expect(cap.confirms[0]!.message).toBe(t('airtime.confirm.episode.final', { title: 'Show', n: 12 }));
 		expect(cap.confirms[0]!.extra).toBeUndefined();
@@ -214,7 +216,7 @@ describe('tick flow', () => {
 		const w = newWorld({ titles: [title()], entries: [entry({ currentEpisode: 3 })] });
 		const { container, tab, calls } = makeTab(w);
 		tab.render();
-		expect(tickBtn(container).title).toBe(t('airtime.actions.markEpisode'));
+		expect(tickBtn(container).getAttribute('aria-label')).toBe(t('airtime.actions.markEpisode'));
 		tickBtn(container).click();
 		expect(cap.confirms[0]!.message).toBe(t('airtime.confirm.episode.next', { title: 'Show', n: 3 }));
 		w.tracked = true;
@@ -232,8 +234,8 @@ describe('tick flow', () => {
 		const { container, tab } = makeTab(w);
 		tab.render();
 		const [final, mid] = qsa<HTMLButtonElement>(container, '.hoard-airtime-action-btn-tick');
-		expect(final!.title).toBe(t('airtime.actions.finalChapter'));
-		expect(mid!.title).toBe(t('airtime.actions.markChapter'));
+		expect(final!.getAttribute('aria-label')).toBe(t('airtime.actions.finalChapter'));
+		expect(mid!.getAttribute('aria-label')).toBe(t('airtime.actions.markChapter'));
 		mid!.click();
 		expect(cap.confirms[0]!.message).toBe(t('airtime.confirm.chapter.next', { title: 'Berserk', n: 2 }));
 		final!.click();
@@ -245,7 +247,7 @@ describe('tick flow', () => {
 		const w = newWorld({ titles: [t1], entries: [entry({ schedule: { recurrence: 'once', releaseDate: isoOffset(-1) } })] });
 		const { container, tab, calls } = makeTab(w);
 		tab.render();
-		expect(tickBtn(container).title).toBe(t('airtime.actions.markReleased'));
+		expect(tickBtn(container).getAttribute('aria-label')).toBe(t('airtime.actions.markReleased'));
 		tickBtn(container).click();
 		const c = cap.confirms[0]!;
 		expect(c.message).toBe(t('airtime.confirm.released', { title: 'Show', status: statusLabel('Plan to watch') }));

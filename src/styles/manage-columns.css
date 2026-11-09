@@ -250,7 +250,7 @@
   box-sizing: border-box;
 }
 
-.hoard-reading-col-card .hoard-editcol-card-del {
+.hoard-reading-col-card button.hoard-editcol-card-del {
   flex: 0 0 26px;
   width: 26px;
   margin-left: 0;

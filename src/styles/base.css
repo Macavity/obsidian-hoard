@@ -37,7 +37,7 @@
   border-bottom: 0.5px solid var(--background-modifier-border);
   flex-shrink: 0;
   /* clip so the view can't be panned sideways */
-  overflow-x: hidden;
+  overflow-x: clip; /* not hidden: that adds a scrollbar for the tabs' -0.5px overhang */
 }
 
 /* Mobile: icon-only tabs — 7 text labels overflow a phone panel */
@@ -46,7 +46,7 @@
   padding: 6px 4px 0;
 }
 
-.hoard-tab-btn-icon {
+button.hoard-tab-btn-icon {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
@@ -56,12 +56,13 @@
   position: relative;
 }
 
-.hoard-tab-btn-icon .svg-icon {
+button.hoard-tab-btn-icon .svg-icon {
   width: 20px;
   height: 20px;
 }
 
 /* icon mode: dot instead of (N) */
+/* not element-qualified: a pseudo-element, core sets nothing here */
 .hoard-tab-btn-icon.hoard-tab-has-badge::after {
   content: '';
   position: absolute;
@@ -73,12 +74,16 @@
   background-color: #7F77DD;
 }
 
-/* underlined tab look, shared by the main tabs, Reading sub-tabs and settings nav */
-.hoard-tab-btn,
-.hoard-settings-nav-btn,
-.hoard-reading-subtab {
+/* underlined tab look, shared by the main tabs, Reading/Upcoming sub-tabs and settings nav */
+button.hoard-tab-btn,
+button.hoard-settings-nav-btn,
+button.hoard-reading-subtab,
+button.hoard-inner-tab-btn {
   background: none;
   border: none;
+  border-radius: 0;
+  box-shadow: none;
+  height: auto;
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -88,15 +93,15 @@
   transition: color 0.15s, border-color 0.15s;
 }
 
-.hoard-tab-btn {
+button.hoard-tab-btn {
   padding: 5px 14px;
 }
 
-.hoard-tab-btn:hover {
+button.hoard-tab-btn:hover {
   color: var(--text-normal);
 }
 
-.hoard-tab-btn.is-active {
+button.hoard-tab-btn.is-active {
   color: var(--text-accent);
   border-bottom-color: var(--text-accent);
 }

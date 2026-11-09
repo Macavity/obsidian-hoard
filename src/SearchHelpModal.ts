@@ -1,4 +1,5 @@
-import { App, Modal, setIcon } from 'obsidian';
+import { App, Modal } from 'obsidian';
+import { createIconButton } from './ui/IconButton';
 import { t, type TranslationKey } from './i18n';
 import type { SearchFieldSpec } from './SearchQuery';
 
@@ -125,11 +126,11 @@ export function renderSearchHelpButton<T>(
 	tabLabel: string,
 	fields: () => SearchFieldSpec<T>[],
 ): HTMLElement {
-	const btn = wrap.createEl('button', {
+	const btn = createIconButton(wrap, {
+		icon: 'help-circle',
+		label: t('misc.searchHelp.title'),
 		cls: 'hoard-search-help-btn',
-		attr: { type: 'button', 'aria-label': t('misc.searchHelp.title') },
 	});
-	setIcon(btn, 'help-circle');
 	btn.addEventListener('click', () => {
 		new SearchHelpModal(app, tabLabel, fields()).open();
 	});

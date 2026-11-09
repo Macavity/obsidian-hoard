@@ -1,7 +1,7 @@
-import { setIcon } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from './i18n/labels';
 import { dayName, monthName } from './ui/dateNames';
+import { createIconButton } from './ui/IconButton';
 import type HoardPlugin from './main';
 import type { HistoryEntry } from './HistoryManager';
 import { inferHistoryAction, inferHistorySource } from './HistoryManager';
@@ -371,9 +371,11 @@ export class LogTab {
 
 		el.createDiv({ cls: 'hoard-log-time', text: formatTime(entry.timestamp) });
 
-		const delBtn = el.createEl('button', { cls: 'hoard-log-del' });
-		delBtn.setAttribute('aria-label', t('dashboard.log.deleteEvent'));
-		setIcon(delBtn, 'x');
+		const delBtn = createIconButton(el, {
+			icon: 'x',
+			label: t('dashboard.log.deleteEvent'),
+			cls: 'hoard-log-del',
+		});
 		delBtn.addEventListener('click', (ev) => {
 			ev.stopPropagation();
 			this.confirmDelete(entry);

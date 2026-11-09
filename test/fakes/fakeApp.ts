@@ -164,6 +164,7 @@ export function createFakeApp(initial: Record<string, string> = {}) {
 		createBinary: (path: string, data: ArrayBuffer) => settle(() => createFile(path, new TextDecoder().decode(data))),
 		createFolder: (path: string) => settle(() => { ensureFolder(path); }),
 		modify: (file: TFile, content: string) => settle(() => writeFile(file, content)),
+		rename: (file: TFile, newPath: string) => settle(() => renameFile(file, newPath)),
 		process: (file: TFile, fn: (data: string) => string) => settle(() => {
 			const next = fn(files.get(file.path) ?? '');
 			writeFile(file, next);

@@ -294,4 +294,17 @@ describe('name cell Escape', () => {
 		expect(document.querySelector('.hoard-cl-autofill-dropdown')).toBeNull();
 		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
 	});
+
+	it('keeps the edit open when Escape aborts an IME composition', async () => {
+		const { container, stored } = await setupCustomLists([nameList()]);
+		nameCell(container).click();
+		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		input.value = 'Changed';
+		const probe = reachedDocument();
+		key(input, 'Escape', { isComposing: true });
+		probe.stop();
+		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
+		expect(probe.seen()).toBe(false);
+		expect(stored('Backlog').rows[0]!['name']).toBe('Alpha');
+	});
 });

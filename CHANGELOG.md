@@ -21,6 +21,9 @@ The release workflow takes the section of the released version from this file as
 ### Changed
 
 - Headings, buttons and labels use sentence case throughout (for example "Recently added", "Time watched", "Backup & restore").
+- Icon-only buttons share one base: Lucide icons instead of text glyphs (×, +, ⋮, ↻, ▲/▼), a fixed square size, tooltips, accessible labels and a visible keyboard focus ring. They no longer lose their icon on tablets.
+- Tab bars are flat and no longer show a horizontal scrollbar.
+- The trailer control in the detail view is a single button: play when a trailer is known, fetch otherwise. It no longer sits as a second refresh icon next to the rating refresh.
 
 ### Known issues
 

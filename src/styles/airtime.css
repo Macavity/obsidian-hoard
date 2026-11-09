@@ -321,32 +321,25 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: none;
   background: #1D9E75;
   background-color: #1D9E75;
   color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
-.hoard-tracker-card .hoard-tracker-tick-btn:hover {
+button.hoard-tracker-tick-btn:hover {
   background-color: #178563;
+  color: #fff;
 }
 
 /* globe in the corner, ⋮ above it; ancestor beats the base card-menu rule */
-.hoard-tracker-card .hoard-tracker-globe-btn {
+.hoard-tracker-card button.hoard-tracker-globe-btn {
   top: auto;
   bottom: 4px;
   right: 4px;
-  font-size: 12px;
 }
 
-.hoard-tracker-card .hoard-tracker-menu-btn {
+.hoard-tracker-card button.hoard-tracker-menu-btn {
   top: auto;
   bottom: 32px;
   right: 4px;
@@ -454,39 +447,27 @@
   gap: 4px;
 }
 
-.hoard-airtime-action-btn {
+button.hoard-airtime-action-btn {
   width: 24px;
   height: 24px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  color: var(--text-muted);
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
-.hoard-airtime-action-btn:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
+button.hoard-airtime-action-btn:hover {
   border-color: var(--interactive-accent);
 }
 
 /* .hoard-airtime-action-btn-delete — color via .hoard-btn-danger */
 
 /* Tick (complete) button */
-.hoard-airtime-action-btn-tick {
+button.hoard-airtime-action-btn-tick {
   color: #1D9E75;
   border-color: #1D9E75;
-  font-size: 14px;
 }
 
-.hoard-airtime-action-btn-tick:hover {
+button.hoard-airtime-action-btn-tick:hover {
   background: #1D9E75;
   color: #ffffff;
   border-color: #1D9E75;

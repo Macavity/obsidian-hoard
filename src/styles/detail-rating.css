@@ -35,28 +35,29 @@
   height: 14px;
 }
 
-.hoard-card-menu-btn,
-.hoard-reading-card-menu-btn {
+/* icon button as a dark round overlay in the poster / cover corner; element-qualified to outrank the base */
+button.hoard-card-menu-btn,
+button.hoard-reading-card-menu-btn {
   position: absolute;
   top: 4px;
   right: 4px;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: #fff;
-  border-radius: 50%;
   width: 24px;
   height: 24px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
   opacity: 0;
   transition: opacity 0.15s;
-  padding: 0;
 }
 
-.hoard-card:hover .hoard-card-menu-btn {
+button.hoard-card-menu-btn:hover,
+button.hoard-reading-card-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+.hoard-card:hover .hoard-card-menu-btn,
+button.hoard-card-menu-btn:focus-visible {
   opacity: 1;
 }
 
@@ -111,40 +112,15 @@
   font-style: italic;
 }
 
-.hoard-community-refresh {
-  background: transparent;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  color: var(--text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hoard-community-refresh:hover {
-  color: var(--text-normal);
-  background-color: var(--background-modifier-hover);
-}
-
-.hoard-community-refresh.is-loading {
-  animation: hoard-spin 0.9s linear infinite;
-  pointer-events: none;
-}
-
-/* Trailer control at the tail of the rating row (rating badge → refresh → YouTube). */
+/* Trailer control at the tail of the rating row (rating badge → refresh → trailer). */
 .hoard-trailer-control {
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
 }
 
-.hoard-trailer-btn {
+/* element-qualified to outrank core's button rule */
+button.hoard-trailer-btn {
   /* wide frame, icon stays its natural size */
   min-width: 40px;
   padding: 1px 3px;
@@ -160,10 +136,10 @@
   vertical-align: middle;
   box-shadow: none;
   height: 23px;
-  width: 40px; 
+  width: 40px;
 }
 
-.hoard-trailer-btn:hover {
+button.hoard-trailer-btn:hover {
   color: #CC0000; /* Discreet darker-red + subtle wash so it still reads as clickable. */
   background: var(--background-modifier-hover);
 }
@@ -173,13 +149,21 @@
   height: 22px;
 }
 
-.hoard-trailer-refresh {
-  margin-left: 8px;
+/* no trailer known yet: same frame, muted, fetches on click */
+button.hoard-trailer-btn--fetch {
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
 }
 
-.hoard-trailer-refresh .svg-icon {
-  width: 14px;
-  height: 14px;
+button.hoard-trailer-btn--fetch:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+button.hoard-trailer-btn.is-loading {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* Store button — the trailer-button frame with a store glyph (Games). */

@@ -251,6 +251,8 @@ describe('ListTab table and accordion', () => {
 		const link = q(acc, 'a.hoard-acc-link-icon') as HTMLAnchorElement;
 		expect(link.getAttribute('href')).toBe('https://example.com/c');
 		expect(link.target).toBe('_blank');
+		expect(link.getAttribute('aria-label')).toBe('Open external link');
+		expect(link.hasAttribute('title')).toBe(false);
 		expect(qa(acc, '.hoard-acc-stat-block')).toHaveLength(3);
 		expect(q(acc, '.hoard-accordion-body')).not.toBeNull();
 	});

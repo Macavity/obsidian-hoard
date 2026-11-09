@@ -2,30 +2,10 @@
 /* Search help ("?") button, at the right end of every search bar */
 /* element-qualified: plain .class loses to core's button:not(.clickable-icon) */
 button.hoard-search-help-btn {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  box-shadow: none;
   color: var(--text-faint);
-  cursor: pointer;
 }
 
-button.hoard-search-help-btn:hover,
-button.hoard-search-help-btn:active,
-button.hoard-search-help-btn:focus {
-  color: var(--text-normal);
-  background: transparent;
-  box-shadow: none;
-}
-
-.hoard-search-help-btn .svg-icon {
+button.hoard-search-help-btn .svg-icon {
   width: 15px;
   height: 15px;
 }

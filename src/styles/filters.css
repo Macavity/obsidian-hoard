@@ -199,30 +199,11 @@
   gap: 6px;
 }
 
-.hoard-rows-customize-move {
-  display: flex;
-  align-items: center;
-  background: none;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s, 4px);
-  box-shadow: none;
-  color: var(--text-normal);
-  cursor: pointer;
-  padding: 3px 5px;
-}
-
-.hoard-rows-customize-move:hover:not(:disabled) {
-  background: var(--background-modifier-hover);
-}
-
-.hoard-rows-customize-move:disabled {
+/* framed icon buttons; the base handles size and hover */
+button.hoard-rows-customize-move:disabled {
   opacity: 0.35;
   cursor: default;
-}
-
-.hoard-rows-customize-move svg {
-  width: 14px;
-  height: 14px;
+  background: none;
 }
 
 .hoard-filter-row {

@@ -64,6 +64,11 @@
   color: var(--text-muted);
 }
 
+.hoard-editcol-card-handle .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
 .hoard-editcol-card-name,
 .hoard-editcol-card-type {
   width: 100%;
@@ -118,19 +123,12 @@
   justify-content: center;
 }
 
+/* icon button in the column card header */
 .hoard-editcol-card-del {
   align-self: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
 }
 
-.hoard-editcol-card-del:hover {
+button.hoard-editcol-card-del:hover {
   color: var(--text-error);
 }
 
@@ -162,19 +160,12 @@
   height: 22px;
 }
 
+/* sm icon button after an option input */
 .hoard-editcol-card-opt-del {
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
 }
 
-.hoard-editcol-card-opt-del:hover {
+button.hoard-editcol-card-opt-del:hover {
   color: var(--text-error);
 }
 

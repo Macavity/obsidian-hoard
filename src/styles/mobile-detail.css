@@ -55,7 +55,7 @@
 }
 
 /* labelled trailer button replaces the icon-only one */
-.hoard-trailer-btn-labeled {
+button.hoard-trailer-btn--labeled {
   width: auto;
   min-width: 0;
   height: auto;
@@ -67,16 +67,16 @@
   color: var(--text-normal);
 }
 
-.hoard-trailer-btn-labeled:hover {
+button.hoard-trailer-btn--labeled:hover {
   color: var(--text-normal);
 }
 
-.hoard-trailer-btn-labeled .svg-icon {
+.hoard-trailer-btn--labeled .svg-icon {
   width: 14px;
   height: 14px;
 }
 
-.hoard-trailer-btn-label {
+.hoard-trailer-btn__label {
   font-size: 13px;
   font-weight: 600;
 }

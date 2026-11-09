@@ -32,18 +32,18 @@
   margin: 8px -2px 0;
 }
 
-.hoard-reading-subtab {
+button.hoard-reading-subtab {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
 }
 
-.hoard-reading-subtab:hover {
+button.hoard-reading-subtab:hover {
   color: var(--text-normal);
 }
 
-.hoard-reading-subtab.is-active {
+button.hoard-reading-subtab.is-active {
   color: #1D9E75;
   border-bottom-color: #1D9E75;
 }
@@ -84,37 +84,19 @@
 }
 
 /* clear (X) inside the search box — shown only when the input has text */
-.hoard-search-clear {
+button.hoard-search-clear {
   position: absolute;
   right: 28px;
   top: 50%;
   transform: translateY(-50%);
   display: none;
-  align-items: center;
-  justify-content: center;
   width: 20px;
   height: 20px;
-  padding: 0;
-  border: none;
   border-radius: 4px;
-  background: transparent;
-  box-shadow: none;
-  color: var(--text-muted);
-  cursor: pointer;
 }
 
-.hoard-search-clear.is-visible {
-  display: flex;
-}
-
-.hoard-search-clear:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-.hoard-search-clear .svg-icon {
-  width: 14px;
-  height: 14px;
+button.hoard-search-clear.is-visible {
+  display: inline-flex;
 }
 
 .hoard-reading-add-btn {
@@ -126,9 +108,9 @@
   font-weight: 500;
 }
 
-.hoard-reading-manage-btn {
-  padding: 4px 8px;
-  font-size: 14px;
+button.hoard-reading-manage-btn {
+  width: 28px;
+  height: 28px;
 }
 
 /* Card grid (placeholder for Phase 2 cards) */

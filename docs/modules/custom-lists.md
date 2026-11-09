@@ -7,7 +7,7 @@ source:
   - src/ui/ColumnsEditor.ts
   - src/storage/VaultLayout.ts
   - src/types.ts
-source_commit: 4f0b9102dcdc7ee8ed3992b3b5626d6b3c62f2f2
+source_commit: deafd8c95d58b0d7bead654b508876b61eb14d7e
 ---
 
 # Custom lists
@@ -65,6 +65,6 @@ rename. Saves are serialised per list so table and notes writes cannot clobber e
 |---|---|
 | File format, corrupt-file guard | `CustomListManager.parse` / `serialize` / `saveList` |
 | Column types | `CustomListColumn` in `types.ts`, `ColumnsEditor.ts`, `renderCustomCell` |
-| Inline editing and key navigation | `startNameEdit`, `navigateCell`, `handleEditKey` |
+| Inline editing and key navigation | `startNameEdit`, `handleEditKey`; where Tab / Shift+Tab / Enter lead is the pure `cellNavTarget`, `navigateCell` only clicks the target |
 | Auto time | `autoPopulateTimeColumn` |
 | Import and export | `ImportListModal`, `gatherExportData`, `buildMarkdown`, `buildTsv` |

@@ -1,7 +1,7 @@
 ---
 type: Architecture
 title: UI kit
-description: How HoardView hosts tabs, which shared building blocks tabs and modals compose, and the UI boundary towards storage.
+description: How HoardView hosts tabs, which shared building blocks tabs and modals compose, the CSS conventions, and the UI boundary towards storage.
 source:
   - src/HoardView.ts
   - src/ui/TabToolbar.ts
@@ -18,7 +18,10 @@ source:
   - src/ui/problemText.ts
   - src/ui/detailShared.ts
   - src/ui/typeBadge.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+  - src/ui/IconButton.ts
+  - src/styles/icon-button.css
+  - src/styles/index.css
+source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
 ---
 
 # UI kit
@@ -85,10 +88,30 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.import
   group header, episode-grid text), `scheduleText` and `dateNames` (localized dates), `problemText`.
 - **Form primitives**: rows and cells in `ui/FormCells.ts`, `DatePicker`, `StarRating`,
   `StatusDropdown`, `ConfirmModal`, `StickyModal` (sticky footer in detail modals).
+- **Icon buttons** ([IconButton.ts](../../src/ui/IconButton.ts)): `createIconButton(parent,
+  { icon, label, cls?, variant? })` builds a `type="button"` with a Lucide icon, `aria-label` and
+  tooltip from the same label, base class `hoard-icon-btn` plus `--framed` (bordered) or `--sm`
+  (16px inline). **Every icon-only button goes through it**, no text glyphs (`×`, `+`, `⋮`, `↻`);
+  the component class in `cls` only adds position or colour. A spinning refresh toggles
+  `is-loading`. Drag handles are mouse-only and kept out of the tab order (the custom-list row
+  grip is a button with `tabindex=-1`, the column-editor grip a `div`); the trailer button is built
+  by hand because it can carry a text label on mobile.
 
-CSS: every class carries the `hoard-` prefix and must appear in full in a source literal, because
-the dead-CSS lint (`pnpm lint`) matches literals; dynamic choices go through a spelled-out lookup
-table. See CONTRIBUTING.
+## CSS conventions
+
+- Every class carries the `hoard-` prefix and must appear in full in a source literal, because the
+  dead-CSS lint (`pnpm lint`) matches literals; variants go through a spelled-out lookup table
+  (see `VARIANT_CLASS` in `IconButton.ts`). See CONTRIBUTING.
+- **Naming**: new or rewritten classes follow BEM, `hoard-<block>__<element>--<modifier>`
+  (`hoard-icon-btn--sm`, `hoard-trailer-btn--fetch`, `hoard-trailer-btn__label`). States stay
+  `is-*` (`is-active`, `is-loading`). Older classes keep their names until a repo-wide rename.
+- **Beating core button styles**: core's `button:not(.clickable-icon)` outranks a bare
+  `.hoard-x`, so button rules are element-qualified (`button.hoard-x`); on tablets
+  `.is-tablet button:not(.clickable-icon)` adds 40px side padding and needs an explicit
+  `.is-tablet button.hoard-x` reset. `icon-button.css` is imported right after `base.css` so a
+  component's own `button.hoard-x` rule wins by source order.
+- Tab bars (`hoard-tab-bar` and the settings, reading and inner tab rows) are flat underlined
+  buttons; the bar clips overflow instead of scrolling.
 
 ## Where to change what
 
