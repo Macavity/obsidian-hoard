@@ -4,6 +4,7 @@ import type { DeepPartial } from '../index';
 const onboarding = {
 	title: 'Aus WatchLog importieren',
 	none: 'Keine WatchLog-Daten gefunden.',
+	adoptFailed: 'Hoard konnte die importierten Einstellungen nicht übernehmen. Starte Obsidian neu, um sie zu laden.',
 	running: 'Import läuft…',
 	steps: { found: 'Gefunden', import: 'Importieren', result: 'Ergebnis', cleanup: 'Aufräumen', done: 'Fertig' },
 	buttons: {
@@ -46,6 +47,7 @@ const onboarding = {
 		reviewHeading: 'Zu prüfen',
 		reasons: { exists: 'Existierte bereits', keptValue: 'Hoard-Wert behalten', error: 'Fehler' },
 		reportSaved: 'Bericht gespeichert: {path}',
+		reportFailed: 'Bericht konnte nicht gespeichert werden: {message}',
 		retryHint: 'Einige Daten ließen sich nicht importieren. Versuche es erneut; noch nichts gilt als importiert.',
 		cleanupLocked: 'Aufräumen bleibt für diese Quelle gesperrt, bis sie fehlerfrei importiert ist.',
 	},
@@ -57,6 +59,7 @@ const onboarding = {
 		failed: '{message}',
 	},
 	cleanup: {
+		planFailed: 'Aufräumen konnte nicht geprüft werden: {message}',
 		intro: 'Optional. Nichts ist vorausgewählt; gelöschte Notizen landen im Papierkorb.',
 		none: 'Nichts aufzuräumen.',
 		items: {

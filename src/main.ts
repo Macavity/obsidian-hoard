@@ -246,7 +246,9 @@ export default class HoardPlugin extends Plugin {
 			await this.shared.load();
 			await this.applySharedSettings();
 			// the WatchLog import may create the base: take over its root before indexing
-			if (await this.runOnboarding({ force: false })) root = (await detectRoot(this.app.vault)) ?? root;
+			await this.runOnboarding({ force: false });
+			// also after a failed run: an import may have written the base before it broke
+			root = (await detectRoot(this.app.vault)) ?? root;
 			this.shared.onChange(() => void this.applySharedSettings());
 			if (root !== null && (await this.shared.ensureFilter()) === 'missing') {
 				const name = this.shared.baseFile()?.name ?? 'Hoard.base';
@@ -309,11 +311,15 @@ export default class HoardPlugin extends Plugin {
 			// views listen on the data manager: show the "import running" placeholder
 			this.dataManager.notifyChange();
 			await modal.finished;
+			// before the views render again, so they see the imported settings
+			await this.adoptImportedData().catch((e: unknown) => {
+				console.error('[Hoard] could not apply the imported data', e);
+				new Notice(t('onboarding.adoptFailed'));
+			});
 		} finally {
 			this.wizardOpen = false;
 			this.dataManager.notifyChange();
 		}
-		await this.adoptImportedData();
 	}
 
 	/** The import may have written the base and device settings: re-detect the root, reload, refresh views. */

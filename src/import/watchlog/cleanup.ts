@@ -1,7 +1,7 @@
 import { TFile, TFolder, type App } from 'obsidian';
 import { VaultLayout } from '../../storage/VaultLayout';
 import type { EntryKind } from '../../storage/storageTypes';
-import { hasHoardKey } from '../../storage/baseFile';
+import { renameTopLevelBlock, replaceInFolderPath } from '../../storage/baseFile';
 import type { WatchLogSourceKind, WatchLogSources } from './detect';
 import { isListNote, originalFolders, originalNotePath } from './originalPaths';
 import { forkTarget, managedFiles, nestedHoardRoot } from './paths';
@@ -76,13 +76,17 @@ async function forkNotes(app: App, sources: WatchLogSources, layout: VaultLayout
 	return sortUnique(paths);
 }
 
-async function forkBase(app: App, sources: WatchLogSources): Promise<string[]> {
+/**
+ * The fork base, only when Hoard's base is its copy (renamed key, folder filter set to Hoard's root):
+ * a Hoard base that already existed keeps its own views and settings, so the fork's would be lost.
+ */
+async function forkBase(app: App, sources: WatchLogSources, layout: VaultLayout): Promise<string[]> {
 	const base = sources.fork?.base;
-	if (!base) return [];
-	for (const f of app.vault.getFiles()) {
-		if (f.extension === 'base' && f.path !== base.path && hasHoardKey(await app.vault.cachedRead(f))) return [base.path];
-	}
-	return [];
+	if (!base || layout.basePath === base.path) return [];
+	const renamed = renameTopLevelBlock(await app.vault.cachedRead(base), 'watchlog', 'hoard');
+	const expected = replaceInFolderPath(renamed, layout.root) ?? renamed;
+	const hoard = await readPath(app, layout.basePath);
+	return hoard !== null && hoard.trim() === expected.trim() ? [base.path] : [];
 }
 
 async function widgetNotes(app: App): Promise<string[]> {
@@ -99,7 +103,7 @@ export async function planCleanup(
 	const items: CleanupItem[] = [
 		{ id: 'original-notes', paths: has('original') ? await originalNotes(app, sources, layout) : [] },
 		{ id: 'fork-notes', paths: has('fork') ? await forkNotes(app, sources, layout) : [] },
-		{ id: 'fork-base', paths: has('fork') ? await forkBase(app, sources) : [] },
+		{ id: 'fork-base', paths: has('fork') ? await forkBase(app, sources, layout) : [] },
 		{ id: 'widgets', paths: imported.length ? await widgetNotes(app) : [] },
 	];
 	return items.filter((i) => i.paths.length > 0);
@@ -116,25 +120,33 @@ async function trashEmptyParents(app: App, path: string, root: string): Promise<
 	}
 }
 
+/** Cleans one planned path; `fail` collects its errors. True when the file itself was handled. */
+async function cleanOne(app: App, id: CleanupItem['id'], path: string, root: string, fail: (p: string, e: unknown) => void): Promise<boolean> {
+	// a folder (replaced by sync meanwhile) is never trashed with its unreviewed contents
+	const file = app.vault.getAbstractFileByPath(path);
+	if (!(file instanceof TFile)) return false;
+	try {
+		if (id === 'widgets') {
+			await app.vault.process(file, rewriteWidgetFences);
+			return true;
+		}
+		await app.fileManager.trashFile(file);
+	} catch (e) {
+		fail(path, e);
+		return false;
+	}
+	// an empty folder left behind is cosmetic: its failure is reported, the note counts as done
+	await trashEmptyParents(app, path, root).catch((e: unknown) => fail(dirOf(path), e));
+	return true;
+}
+
 /** Runs the chosen cleanup steps; per-file errors are collected and the rest continues. */
 export async function runCleanup(app: App, items: CleanupItem[], layout: VaultLayout): Promise<{ done: number; errors: string[] }> {
 	let done = 0;
 	const errors: string[] = [];
 	const fail = (path: string, e: unknown): void => { errors.push(`${path}: ${e instanceof Error ? e.message : String(e)}`); };
 	for (const item of items) {
-		for (const path of item.paths) {
-			const file = app.vault.getAbstractFileByPath(path) as TFile | null;
-			if (!file) continue;
-			try {
-				if (item.id === 'widgets') await app.vault.process(file, rewriteWidgetFences);
-				else {
-					await app.fileManager.trashFile(file);
-					await trashEmptyParents(app, path, layout.root);
-				}
-				done++;
-			} catch (e) { fail(path, e); }
-		}
+		for (const path of item.paths) if (await cleanOne(app, item.id, path, layout.root, fail)) done++;
 	}
 	return { done, errors };
 }
-

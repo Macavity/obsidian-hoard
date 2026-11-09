@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { App, TFile } from 'obsidian';
+import { Notice as RealNotice, type App, type TFile } from 'obsidian';
 import { WatchLogOnboardingModal, type WatchLogImporter } from '../src/WatchLogOnboardingModal';
 import type { ForkSource, OriginalSource } from '../src/import/watchlog/detect';
 
 const app = {} as App;
+const Notice = RealNotice as unknown as { shown: string[] };
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 const find = (m: WatchLogOnboardingModal, action: string): HTMLElement | null =>
 	m.contentEl.querySelector<HTMLElement>(`[data-action="${action}"]`);
@@ -119,6 +120,30 @@ describe('WatchLogOnboardingModal', () => {
 		const empty = new WatchLogOnboardingModal(app, fakeImporter({ plan: () => Promise.resolve([]) }), { startAt: 'cleanup', imported: ['fork'] }); empty.open();
 		await flush();
 		expect(empty.contentEl.textContent).toContain('Nothing to clean up');
+	});
+	it('cleanup runs once on a double click; skip is disabled while it runs', async () => {
+		let release!: () => void;
+		const imp = fakeImporter({
+			cleanup: (items) => { imp.calls.push(`cleanup:${items.length}`); return new Promise((r) => { release = () => r({ done: 1, errors: [] }); }); },
+		});
+		const m = new WatchLogOnboardingModal(app, imp, { startAt: 'cleanup', imported: ['fork'] }); m.open();
+		await flush();
+		click(m, 'cleanup-run'); click(m, 'cleanup-run');
+		expect(imp.calls.filter((c) => c.startsWith('cleanup'))).toHaveLength(1);
+		expect((find(m, 'skip') as HTMLButtonElement).disabled).toBe(true);
+		release(); await flush();
+		expect(m.step).toBe('done');
+	});
+	it('a failing report or cleanup plan shows a notice and stays on the result', async () => {
+		Notice.shown.length = 0;
+		const imp = fakeImporter({ writeReport: () => Promise.reject(new Error('disk')), plan: () => Promise.reject(new Error('read')) });
+		const m = new WatchLogOnboardingModal(app, imp); m.open();
+		click(m, 'import'); await flush();
+		click(m, 'report'); await flush();
+		click(m, 'next'); await flush();
+		expect(Notice.shown.some((s) => s.includes('disk'))).toBe(true);
+		expect(Notice.shown.some((s) => s.includes('read'))).toBe(true);
+		expect(m.step).toBe('result');
 	});
 	it('report button writes the report', async () => {
 		const imp = fakeImporter();

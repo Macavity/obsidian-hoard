@@ -28,6 +28,11 @@ describe('reportMarkdown', () => {
 		expect(md).toContain('[Hoard/Movie/A.md](Hoard/Movie/A.md) – disk full');
 	});
 
+	it('encodes parentheses so a path like "Heat (1995).md" stays one link', () => {
+		const md = reportMarkdown({ fork: { created: 0, filled: 0, errors: [], review: [{ path: 'Movie/Heat (1995.md', reason: 'exists' }] } });
+		expect(md).toContain('(Movie/Heat%20%281995.md)');
+	});
+
 	it('follows the UI language', () => {
 		setLocale('de');
 		expect(reportMarkdown({ original: report })).toContain('### Existierte bereits');

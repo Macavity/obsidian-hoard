@@ -1,6 +1,7 @@
 export default {
 	title: 'Import from WatchLog',
 	none: 'No WatchLog data found.',
+	adoptFailed: 'Hoard could not apply the imported settings. Restart Obsidian to load them.',
 	running: 'Import in progress…',
 	steps: { found: 'Found', import: 'Import', result: 'Result', cleanup: 'Clean up', done: 'Done' },
 	buttons: {
@@ -43,6 +44,7 @@ export default {
 		reviewHeading: 'To review',
 		reasons: { exists: 'Already existed', keptValue: 'Kept Hoard value', error: 'Error' },
 		reportSaved: 'Report saved: {path}',
+		reportFailed: 'Could not save the report: {message}',
 		retryHint: 'Some data could not be imported. Try again; nothing is marked as imported yet.',
 		cleanupLocked: 'Clean up stays locked for this source until it imports without errors.',
 	},
@@ -54,6 +56,7 @@ export default {
 		failed: '{message}',
 	},
 	cleanup: {
+		planFailed: 'Could not check what to clean up: {message}',
 		intro: 'Optional. Nothing is selected; deleted notes go to the trash.',
 		none: 'Nothing to clean up.',
 		items: {

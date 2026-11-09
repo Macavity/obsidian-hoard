@@ -32,6 +32,7 @@ const CLEANUP_LABEL = {
 } as const;
 
 const isBusy = (step: WizardStep, running: boolean): boolean => step === 'import' || running;
+const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 export class WatchLogOnboardingModal extends Modal {
 	readonly finished: Promise<void>;
@@ -289,17 +290,27 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	private async saveReport(): Promise<void> {
-		const file = await this.importer.writeReport(reportMarkdown(this.reports));
-		this.savedPath = file.path;
-		new Notice(t('onboarding.result.reportSaved', { path: file.path }));
+		try {
+			const file = await this.importer.writeReport(reportMarkdown(this.reports));
+			this.savedPath = file.path;
+			new Notice(t('onboarding.result.reportSaved', { path: file.path }));
+		} catch (e) {
+			new Notice(t('onboarding.result.reportFailed', { message: errorText(e) }));
+		}
 		this.render();
 	}
 
 	// ---- step 4: cleanup ----
 
 	private async enterCleanup(): Promise<void> {
+		try {
+			this.plan = await this.importer.plan(KIND_ORDER.filter((k) => this.clean.has(k)));
+		} catch (e) {
+			// stay where the user was; "Next" (or the settings entry) tries again
+			new Notice(t('onboarding.cleanup.planFailed', { message: errorText(e) }));
+			return;
+		}
 		this.current = 'cleanup';
-		this.plan = await this.importer.plan(KIND_ORDER.filter((k) => this.clean.has(k)));
 		this.picked.clear();
 		this.render();
 	}
@@ -315,8 +326,10 @@ export class WatchLogOnboardingModal extends Modal {
 		el.createEl('p', { text: t('onboarding.cleanup.intro') });
 		for (const item of this.plan) this.renderCleanupItem(el, item);
 		el.appendChild(row);
-		this.button(row, 'skip', t('onboarding.buttons.skip')).addEventListener('click', () => this.skipCleanup());
-		this.button(row, 'cleanup-run', t('onboarding.buttons.cleanupRun'), { primary: true }).addEventListener('click', () => { void this.runCleanup(); });
+		const disabled = this.cleanupRunning;
+		this.button(row, 'skip', t('onboarding.buttons.skip'), { disabled }).addEventListener('click', () => this.skipCleanup());
+		this.button(row, 'cleanup-run', t('onboarding.buttons.cleanupRun'), { primary: true, disabled })
+			.addEventListener('click', () => { void this.runCleanup(); });
 	}
 
 	private renderCleanupItem(el: HTMLElement, item: CleanupItem): void {
@@ -346,13 +359,16 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	private skipCleanup(): void {
+		if (this.cleanupRunning) return;
 		this.cleanupResult = null;
 		this.go('done');
 	}
 
 	private async runCleanup(): Promise<void> {
+		if (this.cleanupRunning) return;
 		const items = this.plan.filter((i) => this.picked.has(i.id));
 		this.cleanupRunning = true;
+		this.render();
 		try {
 			this.cleanupResult = await this.importer.cleanup(items);
 		} catch (e) {

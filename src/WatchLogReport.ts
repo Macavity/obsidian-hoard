@@ -22,10 +22,11 @@ export function reportStats(r: ImportReport): string {
 	].join(' · ');
 }
 
-/** A Markdown link that survives `[`, `]`, `#`, `|` and spaces in the path (a wikilink would not). */
+/** A Markdown link that survives `[`, `]`, `(`, `)`, `#`, `|` and spaces in the path (a wikilink would not). */
 function link(path: string): string {
 	const label = path.replace(/[[\]\\]/g, (c) => `\\${c}`);
-	return `[${label}](${path.split('/').map(encodeURIComponent).join('/')})`;
+	const segment = (s: string): string => encodeURIComponent(s).replace(/\(/g, '%28').replace(/\)/g, '%29');
+	return `[${label}](${path.split('/').map(segment).join('/')})`;
 }
 
 function section(kind: WatchLogSourceKind, r: ImportReport): string[] {

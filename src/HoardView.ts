@@ -470,6 +470,8 @@ export class HoardView extends ItemView {
 		this.stripTabClasses();
 		if (!this.activeInstance || this.plugin.importRunning) {
 			this.renderTabContent();
+			// after the import placeholder the counts may have changed (imported notes)
+			if (!this.plugin.importRunning) this.updateBadges('data-change');
 			return;
 		}
 		void this.activeInstance.render();

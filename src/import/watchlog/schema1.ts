@@ -257,7 +257,7 @@ class Schema1Migration {
 			this.fail(path, e);
 			// history must not link to a note that does not exist
 			const id = this.ctx.layout.idFromPath(path);
-			for (const map of Object.values(this.ids)) for (const [k, v] of map) if (v === id) map.delete(k);
+			for (const map of Object.values(this.ids) as Map<string, string>[]) for (const [k, v] of map) if (v === id) map.delete(k);
 		}
 		this.advance();
 	}

@@ -69,6 +69,23 @@ describe('start order', () => {
 		expect(plugin.importRunning).toBe(false);
 		// views listen on the data manager: placeholder on open, real content after close
 		expect(calls.filter((c) => c.startsWith('notify'))).toEqual(['notify:true', 'notify:false']);
+		// imported settings are applied before the views render again
+		expect(calls.indexOf('applySettings', calls.indexOf('wizard:finished'))).toBeLessThan(calls.indexOf('notify:false'));
+	});
+
+	it('a failing adoption still ends the placeholder, warns and re-detects the root', async () => {
+		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { calls, start, plugin } = setup(found);
+		let loads = 0;
+		(plugin as unknown as { shared: { load: () => Promise<void> } }).shared.load = () => (++loads === 2 ? Promise.reject(new Error('read')) : Promise.resolve());
+		const started = start();
+		await flush();
+		hoisted.resolve!();
+		await started;
+		expect(plugin.importRunning).toBe(false);
+		expect(calls).toContain('notify:false');
+		expect(calls).toContain('index:build');
+		expect(err).toHaveBeenCalled();
 	});
 
 	it('opens no wizard without pending sources', async () => {
