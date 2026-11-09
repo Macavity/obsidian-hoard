@@ -8,8 +8,6 @@
    Phones and desktop never load that rule; only tablets break.
    `.is-tablet button.hoard-x` ties it and wins on source order (plugin styles load after
    app.css). Values copied from each button's own rule. */
-.is-tablet button.hoard-editcol-card-del,
-.is-tablet button.hoard-editcol-card-opt-del,
 .is-tablet button.hoard-editcol-card-toggle,
 .is-tablet button.hoard-editcol-opt-color-dot,
 .is-tablet button.hoard-reading-col-color-dot,

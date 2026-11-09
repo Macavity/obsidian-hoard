@@ -698,15 +698,12 @@ button.hoard-api-action-btn {
   color: var(--text-normal);
 }
 
+/* sm icon button at the end of a tag pill */
 .hoard-tag-del {
-  color: var(--text-faint);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
   margin-left: 2px;
 }
 
-.hoard-tag-del:hover {
+button.hoard-tag-del:hover {
   color: var(--text-error);
 }
 
