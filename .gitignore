@@ -17,6 +17,8 @@ dist/
 
 # obsidian
 data.json
+# e2e scenarios ship their own plugin data
+!scripts/e2e/scenarios/**/data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
