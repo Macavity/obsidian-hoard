@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isLocalState, syncVault } from "../scripts/lib/vault-sync.mjs";
+import { copyPluginData, isLocalState, syncVault } from "../scripts/lib/vault-sync.mjs";
 
 function file(root: string, rel: string, content = rel) {
   mkdirSync(join(root, rel, ".."), { recursive: true });
@@ -59,5 +59,33 @@ describe("syncVault", () => {
     const { root, fixtures } = setup();
     expect(() => syncVault(fixtures, join(root, "dst"))).toThrow(/not a hoard-test-vault/);
     expect(() => syncVault(fixtures, join(root, "missing", "hoard-test-vault"))).toThrow(/does not exist/);
+  });
+
+  it("accepts a differently named source only without requireSourceName", () => {
+    const { root, vault } = setup();
+    const src = join(root, "scenario", "vault");
+    file(src, "A.md");
+    expect(() => syncVault(src, vault)).toThrow(/not a hoard-test-vault/);
+    syncVault(src, vault, { requireSourceName: false });
+    expect(existsSync(join(vault, "A.md"))).toBe(true);
+    expect(existsSync(join(vault, "Teams.base"))).toBe(false);
+    expect(existsSync(join(vault, ".obsidian/plugins/hoard/data.json"))).toBe(true);
+    expect(existsSync(join(vault, ".trash/gone.md"))).toBe(true);
+    expect(() => syncVault(src, join(root, "dst"), { requireSourceName: false })).toThrow(/not a hoard-test-vault/);
+  });
+});
+
+describe("copyPluginData", () => {
+  it("replaces the plugin dir and is a no-op without a source", () => {
+    const root = mkdtempSync(join(tmpdir(), "ib-cpd-"));
+    const src = join(root, "s");
+    const vault = join(root, "v");
+    file(vault, ".obsidian/plugins/watchlog/old.json");
+    copyPluginData(src, vault, "watchlog");
+    expect(existsSync(join(vault, ".obsidian/plugins/watchlog/old.json"))).toBe(true);
+    file(src, ".obsidian/plugins/watchlog/data.json", "new");
+    copyPluginData(src, vault, "watchlog");
+    expect(readFileSync(join(vault, ".obsidian/plugins/watchlog/data.json"), "utf8")).toBe("new");
+    expect(existsSync(join(vault, ".obsidian/plugins/watchlog/old.json"))).toBe(false);
   });
 });

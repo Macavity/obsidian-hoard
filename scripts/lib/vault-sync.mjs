@@ -22,12 +22,22 @@ function removeStale(vault) {
 	}
 }
 
-/** Makes `vault` contain exactly the files of `fixtures`, except local state. Both must be a `hoard-test-vault` directory. */
-export function syncVault(fixtures, vault) {
-	for (const dir of [fixtures, vault]) {
-		if (basename(dir) !== "hoard-test-vault") throw new Error(`refusing to sync ${dir}: not a hoard-test-vault directory`);
+/** Makes `vault` contain exactly the files of `source`, except local state. `vault` must be a `hoard-test-vault` directory; so must
+ * `source` unless `requireSourceName` is false (scenario vaults). */
+export function syncVault(source, vault, { requireSourceName = true } = {}) {
+	for (const [dir, named] of [[source, requireSourceName], [vault, true]]) {
+		if (named && basename(dir) !== "hoard-test-vault") throw new Error(`refusing to sync ${dir}: not a hoard-test-vault directory`);
 		if (!existsSync(dir)) throw new Error(`${dir} does not exist`);
 	}
 	removeStale(vault);
-	cpSync(fixtures, vault, { recursive: true, filter: (src) => !isLocalState(relative(fixtures, src)) });
+	cpSync(source, vault, { recursive: true, filter: (src) => !isLocalState(relative(source, src)) });
+}
+
+/** Copies `source/.obsidian/plugins/<pluginId>/` into the vault, replacing it, although plugins are local state. No-op without one. */
+export function copyPluginData(source, vault, pluginId) {
+	const from = join(source, ".obsidian", "plugins", pluginId);
+	if (!existsSync(from)) return;
+	const to = join(vault, ".obsidian", "plugins", pluginId);
+	rmSync(to, { recursive: true, force: true });
+	cpSync(from, to, { recursive: true });
 }
