@@ -6,8 +6,8 @@ source:
   - src/WidgetRenderer.ts
   - src/InsertWidgetModal.ts
   - src/main.ts
-  - src/migration/watchlog/widgets.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+  - src/import/watchlog/widgets.ts
+source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
 ---
 
 # Widgets
@@ -40,10 +40,10 @@ The command `insert-widget` (`openWidgetPalette` in [main.ts](../../src/main.ts)
 `InsertWidgetModal` ([InsertWidgetModal.ts](../../src/InsertWidgetModal.ts)) to pick a title and
 insert the fence at the cursor with `editor.replaceSelection`.
 
-## Migration
+## Old WatchLog fences
 
-WatchLog's `watchlog` and `wl-*` fences are renamed once by the [import module](import.md)
-(`rewriteWidgetFences`); the renderer never knows the old names.
+The renderer only knows the `hoard*` names. `rewriteWidgetFences` in the [import module](import.md)
+can rename WatchLog's `watchlog` and `wl-*` fences, but nothing calls it at startup.
 
 ## Where to change what
 

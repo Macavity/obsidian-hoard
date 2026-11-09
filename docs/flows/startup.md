@@ -1,7 +1,7 @@
 ---
 type: Flow
 title: Startup
-description: What happens from plugin load to a ready library, including fresh install, second device and a pending WatchLog conversion.
+description: What happens from plugin load to a ready library, including fresh install and second device.
 source:
   - src/main.ts
   - src/storage/LocalStore.ts
@@ -9,7 +9,7 @@ source:
   - src/storage/VaultLayout.ts
   - src/storage/EntryIndex.ts
   - src/settingsSplit.ts
-source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
+source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
 ---
 
 # Startup
@@ -23,17 +23,15 @@ sequenceDiagram
   participant P as HoardPlugin.onload
   participant L as LocalStore
   participant S as startVaultStorage
-  participant M as migrateFromWatchLog
   participant Sh as SharedConfigStore
   participant I as EntryIndex
   participant Mg as managers
-  P->>L: load() (own data.json, else a WatchLog one)
+  P->>L: load() (own data.json)
   P->>P: loadSettings() from local + defaults
   P->>P: ApiService, history.load(), scheduler, view, commands, widgets, status bar
   Note over P,S: workspace.onLayoutReady
-  S->>M: base rename, data adoption, schema-1 conversion, widget fences
   S->>S: detectRoot() → VaultLayout
-  alt no base and no pending schema-1
+  alt no base
     S->>Sh: deferBase(create on first write, adopt when synced in)
   end
   S->>Sh: load(), applySharedSettings(), ensureFilter(), start()
@@ -43,18 +41,16 @@ sequenceDiagram
 
 ## Steps
 
-1. **`LocalStore.load`** reads `data.json` through `loadOwnOrWatchLog`: an empty own file falls
-   back to `watchlog-sync` (schema 2, adopted as is) or `watchlog` (schema 1, kept read-only as
-   `pendingSchema1`). A file from a newer plugin version makes the store read-only with a Notice.
+1. **`LocalStore.load`** reads Hoard's own `data.json`. A file from a newer plugin version makes
+   the store read-only with a Notice; a WatchLog schema-1 file makes it start empty and read-only
+   for the session ([import](../modules/import.md)).
 2. **`loadSettings`** composes defaults + local (+ shared, empty for now) and mirrors the date
    format into `types.ts`; the card-size CSS variable is set before any grid renders.
 3. Services and UI are registered: `ApiService` with the keys, managers get the `HistoryManager`,
    `History.md` is loaded, the 60 s airtime scheduler starts, view, commands, `WidgetRenderer`,
-   settings tab and status bar are registered. `warnIfWatchLogEnabled` warns when WatchLog is
-   still active.
-4. **`startVaultStorage`**: [WatchLog import](watchlog-import.md) first, then `detectRoot`. Root
-   priority: a base with `hoard:` → the pending schema-1 root folder → `Hoard`.
-5. **Fresh install** (no base, nothing pending): `deferBase` registers a creator; the base is
+   settings tab and status bar are registered.
+4. **`startVaultStorage`**: `detectRoot`. Root priority: a base with `hoard:` → `Hoard`.
+5. **Fresh install** (no base): `deferBase` registers a creator; the base is
    written on the first user-initiated note write (`EntryIndex.onLocalWrite` → `ensureBase`) or
    the first changed shared setting, or adopted when a synced base appears (`adoptSyncedBase`: new layout, reload settings, rebuild
    index). This is what lets a second device start on a half-synced vault without becoming the
@@ -70,7 +66,6 @@ sequenceDiagram
 - Any error in `startVaultStorage` is caught once: console error plus Notice "could not load its
   notes"; the UI stays up with whatever was loaded before the failure (an already built index is
   not cleared).
-- A failed schema-1 conversion keeps `data.json` as schema 1 and retries next start.
 - Type-name changes after start trigger `syncTypeNames` → `index.rebuild()`.
 
 Shutdown (`onunload`) flushes pending debounced note and cache writes synchronously, stops the

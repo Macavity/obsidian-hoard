@@ -5,8 +5,7 @@ description: The JSON backup format, the two export variants, validation and the
 source:
   - src/backup.ts
   - src/main.ts
-  - src/migration/watchlog/backupImport.ts
-source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
+source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
 ---
 
 # Backup
@@ -21,18 +20,16 @@ history: all entries
 ```
 
 - `buildBackup(managers)` reads through the manager APIs only; `plugin.backupManagers()` in
-  [main.ts](../../src/main.ts) assembles managers, stores and an `importContext` for the
-  WatchLog path.
+  [main.ts](../../src/main.ts) assembles managers, stores and an `importContext`.
 - `withoutSecrets` strips key-like local settings (`SECRET_KEY` regex: api key, secret, client id,
   steam id, token) and the login part of `jikanBaseUrl` before a copy goes into the vault.
-- `parseBackup(text)` validates shape and arrays first and returns `{ backup }`, a `WatchLogBackup`
-  (any non-version-2 object is tried as a WatchLog export v1 to v3) or `{ error: BackupErrorCode }`. The error is a code (`parseJson`, `titlesMissing`, `unsupportedFormat`, …); the settings tab renders it as `settings.backup.restore.errors.<code>` ([i18n](../architecture/i18n.md)).
+- `parseBackup(text)` validates shape and arrays first and returns `{ backup }` or `{ error: BackupErrorCode }`; any non-version-2 object (WatchLog exports included) is `unsupportedFormat`. The error is a code (`parseJson`, `titlesMissing`, `unsupportedFormat`, …); the settings tab renders it as `settings.backup.restore.errors.<code>` ([i18n](../architecture/i18n.md)).
 - `restoreBackup` adds what is missing and never overwrites existing notes; shared keys found in
   `local` and prototype keys (`__proto__`, `constructor`, `prototype`) are ignored.
 
 The UI (export buttons, file picker, confirmation) lives in the settings tab
 ([settings](settings.md)); the sequence is in [flows/backup-restore](../flows/backup-restore.md).
-WatchLog exports go through [import](import.md).
+WatchLog exports are not restorable ([import](import.md)).
 
 ## Where to change what
 

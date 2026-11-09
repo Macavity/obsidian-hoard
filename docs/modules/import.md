@@ -1,61 +1,56 @@
 ---
 type: Module
 title: Import
-description: Bringing data from other trackers into the vault. Today one source exists, WatchLog; the module boundary is built for more.
+description: The WatchLog schema-1 converter and widget-fence rewriter kept for a future import, and what Hoard does today when it meets WatchLog data.
 source:
-  - src/migration/watchlog/index.ts
-  - src/migration/watchlog/detect.ts
-  - src/migration/watchlog/base.ts
-  - src/migration/watchlog/pluginData.ts
-  - src/migration/watchlog/schema1.ts
-  - src/migration/watchlog/schema1Types.ts
-  - src/migration/watchlog/widgets.ts
-  - src/migration/watchlog/backupImport.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+  - src/import/watchlog/detect.ts
+  - src/import/watchlog/schema1.ts
+  - src/import/watchlog/schema1Types.ts
+  - src/import/watchlog/schema1Notes.ts
+  - src/import/watchlog/widgets.ts
+  - src/storage/LocalStore.ts
+  - src/backup.ts
+  - src/main.ts
+source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
 ---
 
 # Import
 
-External data enters Hoard in two ways: a one-time **migration** of a vault that another plugin
-managed, and a **restore** of another plugin's backup file. Both exist today for WatchLog and
-WatchLog Sync, the plugins Hoard originates from, under `src/migration/watchlog/`. Future sources
-(a Trakt export, for example) belong beside it as their own folder with the same contract: detect,
-convert into notes through the storage codecs, never overwrite existing values, report once.
+`src/import/watchlog/` holds converters for data of WatchLog and WatchLog Sync, the plugins Hoard
+originates from. **Nothing in the plugin calls them yet**: there is no startup migration and no
+restore of WatchLog backups. Only `backup.ts` imports a type (`ImportContext`); the folder's tests
+exercise the code. Only this folder may know WatchLog names (plugin ids, `WatchLog.base`, the
+`watchlog:` key, `wl-*` fences, schema-1 data; `.claude/skills/project/SKILL.md`);
+`test/i18nBoundary.test.ts` keeps it free of `i18n`.
 
-## Boundary
+## What exists
 
-Only this folder and its tests may know WatchLog: plugin ids, `WatchLog.base`, the `watchlog:` key,
-`wl-*` widget names, schema-1 data (`.claude/skills/project/SKILL.md`). `main.ts` imports from
-[index.ts](../../src/migration/watchlog/index.ts); `backup.ts` and the settings tab import the
-backup functions from `backupImport.ts` directly, and `backup.ts` and `LocalStore.ts` import
-types from `schema1Types.ts`.
+- [detect.ts](../../src/import/watchlog/detect.ts): `WATCHLOG_PLUGIN_IDS`, `findWatchLogBase` (first
+  path-sorted `.base` named `WatchLog.base` or with a top-level `watchlog:` block),
+  `findWatchLogPluginData` (first non-empty `data.json` of `watchlog-sync`, then `watchlog`).
+- [schema1.ts](../../src/import/watchlog/schema1.ts): `importWatchLogData(data, ctx)` converts
+  schema-1 data into notes through the normal codecs (`encodeTitle`, `encodeBook`, `encodeManga`,
+  `encodeGame`, `splitCache`), so results match notes the plugin writes. Notes are created or only
+  filled, never overwritten (`NoteWriter` in `schema1Notes.ts`); groups, airtime and history are
+  applied, the base is filled when empty, the cache merged, missing device-local settings filled.
+  No folder moves, `schemaVersion` untouched. Returns a `Schema1Report` (created, filled, skipped,
+  errors). `mergeSideFiles` folds in old `reading.json`/`history.json`. Helpers:
+  `schema1Normalize`, `schema1Records`, `schema1Types`.
+- [widgets.ts](../../src/import/watchlog/widgets.ts): `rewriteWidgetFences` / `migrateWidgetFences`
+  rename `watchlog` and `wl-*` code-block languages to the `hoard*` names (see
+  [widgets](widgets.md)).
 
-| Entry point | Called from | Does |
-|---|---|---|
-| `loadOwnOrWatchLog` | `LocalStore.load` in `main.ts` | adopts a WatchLog `data.json` while Hoard's is empty |
-| `migrateFromWatchLog` | `startVaultStorage` | base rename, data adoption, schema-1 conversion, widget fences; a summary Notice when there is completed work to report, plus an error Notice when the conversion failed |
-| `watchLogRoot` | `startVaultStorage` | root folder for a pending schema-1 conversion |
-| `WATCHLOG_PLUGIN_IDS` | `warnIfWatchLogEnabled` | warns while the old plugin is still enabled |
-| `parseWatchLogBackup`, `restoreWatchLogBackup` | [backup](backup.md) | v1 to v3 export files → `importWatchLogData` |
+## Behaviour today
 
-## Schema-1 converter
-
-`Schema1Migration` in [schema1.ts](../../src/migration/watchlog/schema1.ts) is the heart:
-`run()` for the migration (writes `data.v1-backup.json`, may move folders, ends with a schema-2
-`data.json`) and `importOnly()` for backup restores (no backup, no folder moves, schema untouched,
-only missing device-local settings filled). It uses the normal codecs (`encodeTitle`, `encodeBook`,
-`encodeManga`, `encodeGame`, `splitCache`) so converted notes are indistinguishable from ones the
-plugin wrote. Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
-airtime, history, local data), `schema1Notes` (`NoteWriter`: create or fill, never overwrite),
-`schema1Folders`. `Schema1Report` counts created and filled notes, moved folders, skipped items and
-errors; any error leaves `data.json` as schema 1 so the next start retries.
-
-The step order and the second-device rule (`joined`) are in
-[flows/watchlog-import](../flows/watchlog-import.md).
+- **Hoard's own `data.json` is a WatchLog schema-1 file** (no `schemaVersion`, has `titles`):
+  `LocalStore.load` starts with empty data and stays read-only for the whole session, so the file
+  is never overwritten. `LoadResult` is `{ schema: 2 }` or `{ schema: 'newer' }`; `main.ts` shows a
+  Notice only for `newer` ([storage](../architecture/storage.md)).
+- **Backup restore**: `parseBackup` accepts only `version: 2` Hoard files; anything else is
+  `unsupportedFormat` ([backup](backup.md)).
+- `main.ts` does no WatchLog detection, adoption or warning at startup ([flows/startup](../flows/startup.md)).
 
 ## Where to change what
 
-- A new source: new folder under `src/migration/`, its own detect/convert/report, wired in
-  `startVaultStorage` (migration) or `parseBackup` (restore); reuse the codecs and `NoteWriter`.
-- WatchLog field mapping: `schema1Normalize.ts`; which keys a second device must not re-add:
-  `JOINED_KEYS` in `schema1.ts`.
+- WatchLog field mapping: `schema1Normalize.ts`. A new source: its own folder under `src/import/`
+  with detect, convert and report; reuse the codecs and `NoteWriter`.
