@@ -7,7 +7,7 @@ source:
   - src/ui/ColumnsEditor.ts
   - src/storage/VaultLayout.ts
   - src/types.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: 4f0b9102dcdc7ee8ed3992b3b5626d6b3c62f2f2
 ---
 
 # Custom lists
@@ -56,6 +56,7 @@ rename. Saves are serialised per list so table and notes writes cannot clobber e
   exact match of the row name against watchlist titles, then `DataManager.calcTimeRemainingForModal`;
   no match writes the string `Not found`; rows with an empty name are skipped and keep their value. Runs after saving columns and on the header refresh
   button, not on data changes. Books and games are not matched.
+- Name-cell editor: while open, a document-level capture guard swallows Escape so it never closes the view or modal. Escape keydown on the input itself passes the guard: it closes the suggestion dropdown if open, otherwise cancels the edit without saving (`handleEditKey`).
 - Search filters on the name only; sort is a string compare on the chosen column.
 
 ## Where to change what

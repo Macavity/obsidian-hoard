@@ -251,3 +251,47 @@ describe('import from pasted rows', () => {
 		expect(stored('Backlog').rows[2]).toMatchObject({ name: 'Gamma', col_1: 2 });
 	});
 });
+
+describe('name cell Escape', () => {
+	const nameList = (): ReturnType<typeof makeList> => makeList({
+		columns: [{ id: 'name', label: 'Name', type: 'text', locked: true }],
+		rows: [{ id: 'row_1', name: 'Alpha' }],
+	});
+	const nameCell = (container: HTMLElement): HTMLElement => q(container, '.hoard-cl-tr-body .hoard-cl-td-name');
+	const reachedDocument = (): { seen: () => boolean; stop: () => void } => {
+		let hit = false;
+		const fn = (): void => { hit = true; };
+		document.addEventListener('keydown', fn);
+		return { seen: () => hit, stop: () => document.removeEventListener('keydown', fn) };
+	};
+
+	it('cancels the edit without saving and does not leak outward', async () => {
+		const { container, stored } = await setupCustomLists([nameList()]);
+		nameCell(container).click();
+		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		input.value = 'Changed';
+		const probe = reachedDocument();
+		key(input, 'Escape');
+		probe.stop();
+		await until(() => nameCell(container).querySelector('.hoard-cl-cell-input') === null);
+		expect(stored('Backlog').rows[0]!['name']).toBe('Alpha');
+		expect(nameCell(container).textContent).toBe('Alpha');
+		expect(probe.seen()).toBe(false);
+	});
+
+	it('closes only the suggestion dropdown while it is open', async () => {
+		const { container, plugin } = await setupCustomLists([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
+		Object.assign(plugin, {
+			readingDataManager: { getBooks: () => [], getMangaList: () => [] },
+			gameDataManager: { getGames: () => [] },
+		});
+		nameCell(container).click();
+		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		input.value = 'a';
+		input.dispatchEvent(new Event('input'));
+		expect(document.querySelector('.hoard-cl-autofill-dropdown')).not.toBeNull();
+		key(input, 'Escape');
+		expect(document.querySelector('.hoard-cl-autofill-dropdown')).toBeNull();
+		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
+	});
+});
