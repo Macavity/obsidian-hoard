@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SEED_PATH, writeSeed } from "../scripts/lib/seed.mjs";
+import { SEED_PATH, pluginDataDir, writeSeed } from "../scripts/lib/seed.mjs";
 import { pendingSources } from "../src/import/watchlog/onboardingState";
 import { LocalStore } from "../src/storage/LocalStore";
 
@@ -33,5 +33,21 @@ describe("test vault seed", () => {
     writeFileSync(join(dist, "data.json"), '{"stale":true}');
     writeSeed(dist);
     expect(JSON.parse(readFileSync(join(dist, "data.json"), "utf8"))).toEqual(seed);
+  });
+});
+
+describe("pluginDataDir", () => {
+  it("follows the vault's plugin link into another checkout's dist", () => {
+    const root = mkdtempSync(join(tmpdir(), "seed-link-"));
+    const otherDist = join(root, "other", "dist");
+    mkdirSync(otherDist, { recursive: true });
+    const plugins = join(root, "vault", ".obsidian", "plugins");
+    mkdirSync(plugins, { recursive: true });
+    symlinkSync(otherDist, join(plugins, "hoard"));
+    expect(pluginDataDir(join(root, "vault"), "/fallback")).toBe(realpathSync(otherDist));
+  });
+  it("falls back when the vault has no plugin folder", () => {
+    const root = mkdtempSync(join(tmpdir(), "seed-nolink-"));
+    expect(pluginDataDir(root, "/fallback")).toBe("/fallback");
   });
 });
