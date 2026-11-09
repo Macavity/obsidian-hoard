@@ -12,6 +12,10 @@ describe("smoke runner", () => {
 		expect(parseArgs(["--only", "visual", "--update-baselines"])).toEqual({ only: "visual", updateBaselines: true });
 		expect(parseArgs([])).toEqual({ only: null, updateBaselines: false });
 	});
+	it("rejects --only without a step name", () => {
+		expect(() => parseArgs(["--only"])).toThrow(/--only needs a step name/);
+		expect(() => parseArgs(["--only", "--update-baselines"])).toThrow(/--only needs a step name/);
+	});
 	it("collects failures, keeps going and always cleans up", async () => {
 		const cleanup = vi.fn(async () => {});
 		const ran: string[] = [];

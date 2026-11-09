@@ -5,7 +5,9 @@ import { join } from "node:path";
 
 export function parseArgs(argv) {
 	const i = argv.indexOf("--only");
-	return { only: i >= 0 ? (argv[i + 1] ?? null) : null, updateBaselines: argv.includes("--update-baselines") };
+	const only = i >= 0 ? argv[i + 1] : null;
+	if (only === undefined || only?.startsWith("--")) throw new Error("--only needs a step name");
+	return { only, updateBaselines: argv.includes("--update-baselines") };
 }
 
 export async function runSteps(steps, opts) {
