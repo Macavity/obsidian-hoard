@@ -72,17 +72,6 @@ Everything works manually without a key; APIs fill in posters, covers, episode c
 
 Steam needs your profile's **Game details** privacy set to Public. For custom Watchlist types, pick the answering service under **API routing by type**.
 
-## Migrating from WatchLog
-
-On the first start in a vault used with WatchLog or WatchLog Sync, Hoard migrates once and shows a summary:
-
-- **Base file:** `WatchLog.base` (or any `.base` with a `watchlog:` key) is renamed to `Hoard.base` (links follow) and its key to `hoard:`; filters and views stay as they are. If a `Hoard.base` already exists beside it, the old file is left alone and a warning goes to the developer console.
-- **Plugin data:** while Hoard's own store is empty, it adopts the `data.json` of `watchlog-sync` (schema 2, as is) or `watchlog` (schema 1).
-- **Schema 1:** the data is converted into notes, the base and `History.md`; a `data.v1-backup.json` is written beside the old `data.json` first. Existing note values are never overwritten.
-- **Widgets:** code blocks `watchlog` and `wl-*` in your notes are rewritten to `hoard` and `hoard-*`.
-
-Note folders and file names stay as they are. Disable the old plugin afterwards. A second start finds nothing to migrate.
-
 ## Credits
 
 Hoard originates from the [WatchLog](https://github.com/Shynkro/watchlog-obsidian-plugin) plugin by BogdanS (Shynkro) and its vault-synced fork by Macavity.
