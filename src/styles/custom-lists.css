@@ -72,39 +72,27 @@
   flex: 1;
 }
 
+/* sm icon button in the list tab, revealed on hover */
 .hoard-cl-sub-tab-del {
-  font-size: 13px;
-  line-height: 1;
-  color: var(--text-faint);
-  cursor: pointer;
   opacity: 0;
   transition: opacity 0.12s, color 0.12s;
-  flex-shrink: 0;
 }
 
-.hoard-cl-sub-tab:hover .hoard-cl-sub-tab-del {
+.hoard-cl-sub-tab:hover .hoard-cl-sub-tab-del,
+.hoard-cl-sub-tab-del:focus-visible {
   opacity: 1;
 }
 
-.hoard-cl-sub-tab-del:hover {
+button.hoard-cl-sub-tab-del:hover {
   color: var(--text-error);
 }
 
-.hoard-cl-sub-tab-add {
+/* icon button; its colours come from .hoard-btn-success. The tablet selector keeps the
+   padding against the base's tablet reset. */
+button.hoard-cl-sub-tab-add,
+.is-tablet button.hoard-cl-sub-tab-add {
+  width: auto;
   padding: 3px 10px;
-  border-radius: 4px;
-  border: 0.5px dashed var(--background-modifier-border);
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 15px;
-  line-height: 1;
-  transition: color 0.12s, border-color 0.12s;
-}
-
-.hoard-cl-sub-tab-add:hover {
-  color: var(--text-normal);
-  border-color: var(--interactive-accent);
 }
 
 .hoard-cl-sub-tab-rename {
@@ -280,7 +268,8 @@ body.hoard-cl-col-resizing {
   --hoard-cl-row-tint: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover));
 }
 
-.hoard-cl-tr-body:hover .hoard-cl-row-action {
+.hoard-cl-tr-body:hover .hoard-cl-row-action,
+.hoard-cl-row-action:focus-visible {
   opacity: 1;
 }
 
@@ -301,13 +290,14 @@ body.hoard-cl-col-resizing {
   text-overflow: ellipsis;
 }
 
+/* sm icon button next to the column label */
 .hoard-cl-autotime-refresh {
-  cursor: pointer;
   margin-left: 4px;
-  font-size: 13px;
+  vertical-align: -3px;
   opacity: 0.6;
   transition: opacity 0.15s;
 }
+
 .hoard-cl-autotime-refresh:hover {
   opacity: 1;
 }
@@ -355,49 +345,29 @@ body.hoard-cl-col-resizing {
   overflow: visible;
 }
 
-/* Row actions */
-.hoard-cl-row-action {
+/* Row actions: icon buttons revealed on row hover; element-qualified to outrank the base */
+button.hoard-cl-row-action {
   width: 20px;
   height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--text-muted);
   opacity: 0;
   transition: opacity 0.12s, background 0.12s, color 0.12s;
-  flex-shrink: 0;
-  user-select: none;
 }
 
-.hoard-cl-drag-handle {
+button.hoard-cl-drag-handle {
   cursor: grab;
-  font-size: 14px;
 }
 
-.hoard-cl-drag-handle:hover {
-  color: var(--text-normal);
-  background: var(--background-modifier-hover);
-}
-
-.hoard-cl-add-btn {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.hoard-cl-add-btn:hover {
+button.hoard-cl-add-btn:hover {
   color: var(--text-on-accent);
   background: var(--color-green);
 }
 
-.hoard-cl-dup-btn:hover {
+button.hoard-cl-dup-btn:hover {
   color: var(--interactive-accent);
-  background: var(--background-modifier-hover);
 }
 
-.hoard-cl-row-del:hover {
+button.hoard-cl-row-del:hover {
   color: var(--text-on-accent);
   background: #E24B4A;
 }

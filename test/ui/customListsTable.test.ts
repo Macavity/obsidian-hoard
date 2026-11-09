@@ -104,3 +104,35 @@ describe('custom list table', () => {
 		expect(stored('Backlog').nameWidth).toBe(140);
 	});
 });
+
+describe('custom list icon buttons', () => {
+	it('renders row actions, list tabs and the autotime refresh as shared icon buttons', async () => {
+		const { container } = await setupCustomLists([makeList()]);
+		const icon = (sel: string): string | null => {
+			const el = q(container, sel);
+			expect(el.tagName).toBe('BUTTON');
+			expect(el.classList.contains('hoard-icon-btn')).toBe(true);
+			return el.getAttribute('data-icon');
+		};
+		expect(icon('.hoard-cl-drag-handle')).toBe('grip-vertical');
+		expect(icon('.hoard-cl-add-btn')).toBe('plus');
+		expect(icon('.hoard-cl-dup-btn')).toBe('copy');
+		expect(icon('.hoard-cl-row-del')).toBe('x');
+		expect(icon('.hoard-cl-sub-tab-del')).toBe('x');
+		expect(icon('.hoard-cl-sub-tab-add')).toBe('plus');
+		expect(q(container, '.hoard-cl-sub-tab-del').getAttribute('aria-label')).toBe('Delete list "Backlog"');
+	});
+
+	it('renders the autotime refresh as a small icon button', async () => {
+		const list = makeList({
+			columns: [
+				{ id: 'name', label: 'Name', type: 'text', locked: true },
+				{ id: 'col_1', label: 'Left', type: 'number', autoTime: true },
+			],
+		});
+		const { container } = await setupCustomLists([list]);
+		const btn = q(container, '.hoard-cl-autotime-refresh');
+		expect(btn.classList.contains('hoard-icon-btn--sm')).toBe(true);
+		expect(btn.getAttribute('data-icon')).toBe('refresh-cw');
+	});
+});
