@@ -9,7 +9,7 @@ describe('fresh start next to WatchLog data', () => {
 		const f = createFakeApp(WATCHLOG_NOTES);
 		f.plugin.data = structuredClone(data);
 		const local = new LocalStore(f.plugin);
-		expect(await local.load()).toEqual({ schema: 2 });
+		expect(await local.load()).toEqual({ schema: 'watchlog' });
 		expect(local.data.settings).toEqual({});
 		local.queueSave();
 		await local.flush();

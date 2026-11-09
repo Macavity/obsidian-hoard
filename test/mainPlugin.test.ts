@@ -106,5 +106,9 @@ describe('HoardSettingsTab.gamesFilterRefs', () => {
 		const refs = (kind: 'type' | 'platform') => (tab as unknown as { gamesFilterRefs(k: string): string[][] }).gamesFilterRefs(kind);
 		expect(refs('type')).toEqual([['RPG'], ['Indie']]);
 		expect(refs('platform')).toEqual([['PC']]);
+		// the very arrays, so renames and deletions reach the stored exclusions
+		expect(refs('type')[0]).toBe(live.genreExclude);
+		expect(refs('type')[1]).toBe(preset.genreExclude);
+		expect(refs('platform')[0]).toBe(live.platformExclude);
 	});
 });

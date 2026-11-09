@@ -19,7 +19,7 @@ describe('LocalStore', () => {
 	it('treats schema-1 data as empty and never overwrites it', async () => {
 		const data = { titles: [], groups: [], settings: {} };
 		const p = plugin(data); const s = new LocalStore(p);
-		expect(await s.load()).toEqual({ schema: 2 });
+		expect(await s.load()).toEqual({ schema: 'watchlog' });
 		expect(s.isWritable).toBe(false);
 		s.setCache('Movie/A', { posterUrl: 'u' });
 		await s.flush();

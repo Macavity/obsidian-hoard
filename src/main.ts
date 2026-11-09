@@ -95,6 +95,9 @@ export default class HoardPlugin extends Plugin {
 		const loaded = await this.local.load();
 		if (loaded.schema === 'newer') {
 			new Notice(t('app.notices.newerSchema'), 0);
+		} else if (loaded.schema === 'watchlog') {
+			// device settings (API keys) would vanish on restart without a word
+			new Notice(t('app.notices.watchLogData'), 0);
 		}
 		// local + defaults only; shared keys are re-composed once the base is loaded (startVaultStorage)
 		await this.loadSettings();

@@ -4,6 +4,7 @@ import watchLogData from '../../fixtures/data-v1.json';
 import { WATCHLOG_NOTES, setupSchema1 } from './setupSchema1';
 import { mergeSideFiles } from '../../../src/import/watchlog/schema1';
 import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
+import { LocalStore } from '../../../src/storage/LocalStore';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>
 	parse(/^---\n([\s\S]*?)\n?---/.exec(src ?? '')?.[1] ?? '') as Record<string, unknown>;
@@ -52,6 +53,16 @@ describe('importWatchLogData', () => {
 		expect(r.errors).toEqual([]);
 		expect(r.notesCreated + r.notesFilled).toBe(0);
 		expect(f.files).toEqual(snapshot);
+	});
+
+	it('keeps an existing device API key, also after reopening the store', async () => {
+		const { run, f, local } = await setupSchema1(watchLogData, {});
+		f.plugin.data = { schemaVersion: 2, settings: { tmdbApiKey: 'mine' }, cache: {}, ui: {} };
+		await local.load();
+		await run();
+		const reopened = new LocalStore(f.plugin);
+		await reopened.load();
+		expect(reopened.data.settings.tmdbApiKey).toBe('mine');
 	});
 
 	it('keeps secrets and device state local and translates ids', async () => {

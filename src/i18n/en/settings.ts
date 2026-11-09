@@ -362,7 +362,7 @@ const settings = {
 		},
 		restore: {
 			name: 'Restore from backup',
-			desc: 'Restore from a .JSON backup file. Missing notes are created; existing notes are kept. Shared settings, device settings (API keys included) and the activity log are replaced. Backups from older plugin versions are imported too. Keep backup files private.',
+			desc: 'Restore from a .JSON backup file. Missing notes are created; existing notes are kept. Shared settings, device settings (API keys included) and the activity log are replaced. Only Hoard backups (format version 2) can be restored; WatchLog backups are not supported. Keep backup files private.',
 			button: 'Restore from backup',
 			invalid: 'Invalid backup file: {error}',
 			errors: {

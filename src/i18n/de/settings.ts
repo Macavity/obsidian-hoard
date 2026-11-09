@@ -365,7 +365,7 @@ const settings = {
 		},
 		restore: {
 			name: 'Aus Backup wiederherstellen',
-			desc: 'Stellt aus einer .JSON-Backup-Datei wieder her. Fehlende Notizen werden angelegt; vorhandene Notizen bleiben erhalten. Geteilte Einstellungen, Geräteeinstellungen (inklusive API-Schlüssel) und der Verlauf werden ersetzt. Backups älterer Plugin-Versionen werden ebenfalls importiert. Halte Backup-Dateien privat.',
+			desc: 'Stellt aus einer .JSON-Backup-Datei wieder her. Fehlende Notizen werden angelegt; vorhandene Notizen bleiben erhalten. Geteilte Einstellungen, Geräteeinstellungen (inklusive API-Schlüssel) und der Verlauf werden ersetzt. Nur Hoard-Backups (Format-Version 2) lassen sich wiederherstellen; WatchLog-Backups werden nicht unterstützt. Halte Backup-Dateien privat.',
 			button: 'Aus Backup wiederherstellen',
 			invalid: 'Ungültige Backup-Datei: {error}',
 			errors: {

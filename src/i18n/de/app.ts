@@ -39,6 +39,7 @@ const app = {
 	},
 	notices: {
 		newerSchema: 'Hoard: data.json stammt von einer neueren Plugin-Version. Geräteeinstellungen werden erst nach einem Update gespeichert.',
+		watchLogData: 'Hoard: Die data.json enthält WatchLog-Daten, die Hoard nicht verändert. Geräteeinstellungen (inklusive API-Schlüssel) werden erst gespeichert, wenn du die Datei aus Hoards Plugin-Ordner verschiebst.',
 		baseFilterMissing: 'Hoard: Der Ordnerfilter in {file} wurde nicht gefunden; die Base-Ansicht zeigt eventuell andere Notizen.',
 		loadFailed: 'Hoard konnte seine Notizen nicht laden. Details stehen in der Entwicklerkonsole.',
 		noTitles: 'Noch keine Titel in deiner Hoard-Bibliothek.',

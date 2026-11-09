@@ -1,7 +1,8 @@
 import type { EntryCache, LocalData } from './storageTypes';
 
 /** `newer`: data.json from a later plugin version; it is never written by this one. */
-export type LoadResult = { schema: 2 } | { schema: 'newer' };
+/** `watchlog` / `newer`: data.json is kept as is and nothing is saved this session (the caller warns). */
+export type LoadResult = { schema: 2 } | { schema: 'newer' } | { schema: 'watchlog' };
 
 export interface DataPlugin {
 	loadData(): Promise<unknown>;
@@ -35,7 +36,7 @@ export class LocalStore {
 			// a WatchLog data.json: Hoard starts empty beside it and never writes over it
 			this.writable = false;
 			this.data = emptyData();
-			return { schema: 2 };
+			return { schema: 'watchlog' };
 		}
 		if (isRecord(raw) && typeof raw.schemaVersion === 'number' && raw.schemaVersion > 2) {
 			this.writable = false;
