@@ -22,7 +22,8 @@ Obsidian knowledge lives in `.claude/skills/` (`obsidian-dev`, `obsidian-ops`, `
 - **At the end of every plan execution** (before the final commit), refresh the wiki: invoke the `codebase-wiki` skill in refresh mode (it diffs each page's `source_commit` against the working tree), update only affected pages, and commit the wiki together with the change. The freshness anchor is derived from git, so every code change lands with its wiki refresh in the same PR.
 
 ## Core Policies
-- **NEVER speak as the human on GitHub.** `gh` and `git` are authenticated as the repository owner, so anything an agent writes through them carries their name and avatar. An "automated by …" footer does not make it acceptable. Review threads whose finding you fixed and pushed are resolved, without a reply; threads you rejected or did not touch stay open.
+- **NEVER speak as the human on GitHub.** `gh` and `git` are authenticated as the repository owner, so anything an agent writes through them carries their name and avatar. Never post comments, replies or reviews on PRs or issues; an "automated by …" footer does not make it acceptable.
+- **Resolving is not speaking: do it.** When you fixed and pushed a review finding, resolve its thread yourself (GraphQL `resolveReviewThread`), without a reply. Threads you rejected or did not touch stay open for the human.
 - When in doubt about any other outward action through their account, ask first.
 - **No hidden memory — this repo is the only source of truth.** Agent memory outside the repo is not documentation: it is unreviewed, invisible to the human, and drifts against the code. Never cite it as fact or act on it without re-deriving from the repo first. Findings worth keeping get written into the repo.
 - **Never commit on `main`.** Every change, docs included, goes on a branch and lands through a PR. Before the first commit, check the branch; on `main`, create one first.
