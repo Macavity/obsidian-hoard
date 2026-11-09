@@ -73,7 +73,7 @@ function shoot(out) {
 }
 
 /** Two consecutive crops must match exactly before the tab counts as rendered. */
-async function stableShot(out) {
+async function stableShot(out, name) {
 	let prev = shoot(out);
 	for (let i = 0; i < 8; i++) {
 		await sleep(300);
@@ -81,6 +81,7 @@ async function stableShot(out) {
 		if (prev.equals(next)) return next;
 		prev = next;
 	}
+	console.warn(`visual: ${name} did not settle; comparing its last shot`);
 	return prev;
 }
 
@@ -105,10 +106,13 @@ async function teardown() {
 	} catch {
 		// app may be mid-reload
 	}
-	cdp("Emulation.clearDeviceMetricsOverride", {});
-	obs("reload");
-	await sleep(1500);
-	await untilReady();
+	try {
+		cdp("Emulation.clearDeviceMetricsOverride", {});
+	} finally {
+		obs("reload"); // always: it also drops the Date and Math.random stubs
+		await sleep(1500);
+		await untilReady();
+	}
 }
 
 /** Writes the baseline, or compares against it and reports a mismatch through ctx.fail. */
@@ -127,7 +131,7 @@ async function shootTab(ctx, i, name) {
 	await click(`.hoard-tab-btn:nth-child(${i + 1})`);
 	await waitFor(() => evalJs(TAB_STATE(i)) === "true", 5000, 100);
 	await sleep(500);
-	check(ctx, name, await stableShot(ctx.out));
+	check(ctx, name, await stableShot(ctx.out, name));
 }
 
 async function run(ctx) {
