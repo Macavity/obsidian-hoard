@@ -1,9 +1,9 @@
 // Scenario runner: swaps the registered test vault's content and WatchLog plugin data for an isolated scenario, then restores them.
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { REPO, VAULT_PATH } from "../lib/cli.mjs";
+import { evalJs, REPO, VAULT_PATH, waitFor } from "../lib/cli.mjs";
 import { withPluginDisabled } from "../lib/plugin-toggle.mjs";
 import { pluginDataDir, writeSeed } from "../lib/seed.mjs";
 import { copyPluginData, syncVault } from "../lib/vault-sync.mjs";
@@ -19,6 +19,23 @@ export function scenarioDir(name) {
 
 function runVaultReset() {
 	execFileSync("pnpm", ["vault:reset"], { cwd: REPO, stdio: "inherit" });
+}
+
+/** Vault-relative paths of the visible files on disk (Obsidian indexes no dot files or folders). */
+function diskFiles(dir, rel = "") {
+	return readdirSync(join(dir, rel), { withFileTypes: true }).flatMap((e) => {
+		if (e.name.startsWith(".")) return [];
+		const path = rel ? `${rel}/${e.name}` : e.name;
+		return e.isDirectory() ? diskFiles(dir, path) : [path];
+	});
+}
+
+/** Waits until Obsidian's file index matches the disk. Re-enabling the plugin earlier lets it read files the index still lists
+ * but the sync deleted (ENOENT, the plugin fails to load). Only the registered vault is watched by Obsidian. */
+async function waitForVaultIndex(vault) {
+	if (vault !== VAULT_PATH) return;
+	const want = JSON.stringify(diskFiles(vault).sort());
+	await waitFor(() => evalJs("JSON.stringify(app.vault.getFiles().map((f) => f.path).sort())") === want, 15000, 300);
 }
 
 const watchlogDir = (vault) => join(vault, ".obsidian", "plugins", "watchlog");
@@ -43,10 +60,11 @@ export async function prepareScenario(name, { vault = VAULT_PATH, distDir = plug
 	};
 
 	try {
-		await withPluginDisabled(() => {
+		await withPluginDisabled(async () => {
 			rmSync(watchlogDir(vault), { recursive: true, force: true });
 			syncVault(join(dir, "vault"), vault, { requireSourceName: false });
 			copyPluginData(join(dir, "vault"), vault, "watchlog");
+			await waitForVaultIndex(vault);
 			const custom = join(dir, "data.json");
 			if (existsSync(custom)) return writeSeed(distDir, custom);
 			const tmp = join(backupRoot, "empty-data.json");

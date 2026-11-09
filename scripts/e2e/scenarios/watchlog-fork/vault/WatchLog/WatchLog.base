@@ -1,0 +1,7 @@
+watchlog:
+  types:
+    - name: Movie
+      color: "#378ADD"
+    - name: TV Show
+      color: "#1D9E75"
+views: []

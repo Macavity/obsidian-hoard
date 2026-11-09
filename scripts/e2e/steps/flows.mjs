@@ -1,5 +1,5 @@
 // Step "flows": click-through flows (add, status + episode, detail edit) that assert on the notes on disk.
-import { screenshot } from "../../lib/cli.mjs";
+import { failWithScreenshot } from "../failure.mjs";
 import { closeModals } from "../../lib/ui.mjs";
 import { run as addTitleManual } from "../flows/addTitleManual.mjs";
 import { run as statusEpisode } from "../flows/statusEpisode.mjs";
@@ -16,12 +16,7 @@ async function run(ctx) {
 		try {
 			await flow(ctx);
 		} catch (e) {
-			ctx.fail(`${name}: ${e instanceof Error ? e.message : String(e)}`);
-			try {
-				screenshot(`${ctx.out}/flow-${name}.png`);
-			} catch {
-				// the failure above is the useful one
-			}
+			failWithScreenshot(ctx, name, e, `flow-${name}`);
 		}
 		await closeModals();
 	}

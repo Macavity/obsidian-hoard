@@ -1,1 +1,174 @@
-{"titles": []}
+{
+	"settings": {
+		"types": [
+			{
+				"name": "Movie",
+				"color": "#378ADD"
+			},
+			{
+				"name": "TV Show",
+				"color": "#1D9E75"
+			}
+		],
+		"statuses": [
+			{
+				"name": "Watching",
+				"color": "#1D9E75"
+			},
+			{
+				"name": "Completed",
+				"color": "#7F77DD"
+			},
+			{
+				"name": "Plan to watch",
+				"color": "#00A9A5"
+			},
+			{
+				"name": "On Hold",
+				"color": "#E0A030"
+			},
+			{
+				"name": "Dropped",
+				"color": "#C04040"
+			}
+		]
+	},
+	"titles": [
+		{
+			"id": "heat",
+			"title": "Heat",
+			"type": "Movie",
+			"status": "Completed",
+			"priority": "High",
+			"review": "",
+			"rating": 4,
+			"notes": "",
+			"dateStarted": null,
+			"dateFinished": "2025-01-05",
+			"dateAdded": "2025-03-01T08:00:00.000Z",
+			"dateModified": "2025-03-01T08:00:00.000Z",
+			"totalEpisodes": 1,
+			"episodeDuration": 100,
+			"releaseDate": null,
+			"externalLink": "",
+			"seasons": [],
+			"watchedEpisodes": [
+				1
+			],
+			"posterUrl": "none"
+		},
+		{
+			"id": "alien",
+			"title": "Alien",
+			"type": "Movie",
+			"status": "Plan to watch",
+			"priority": "Low",
+			"review": "",
+			"rating": 0,
+			"notes": "",
+			"dateStarted": null,
+			"dateFinished": null,
+			"dateAdded": "2025-03-01T08:00:00.000Z",
+			"dateModified": "2025-03-01T08:00:00.000Z",
+			"totalEpisodes": 1,
+			"episodeDuration": 100,
+			"releaseDate": null,
+			"externalLink": "",
+			"seasons": [],
+			"watchedEpisodes": [],
+			"posterUrl": "none"
+		},
+		{
+			"id": "the-wire",
+			"title": "The Wire",
+			"type": "TV Show",
+			"status": "Watching",
+			"priority": "Medium",
+			"review": "",
+			"rating": 0,
+			"notes": "Slow burn",
+			"dateStarted": "2025-02-01",
+			"dateFinished": null,
+			"dateAdded": "2025-03-01T08:00:00.000Z",
+			"dateModified": "2025-03-01T08:00:00.000Z",
+			"totalEpisodes": 20,
+			"episodeDuration": 60,
+			"releaseDate": null,
+			"externalLink": "",
+			"seasons": [
+				{
+					"name": "Season 1",
+					"episodes": 10,
+					"offset": 0
+				},
+				{
+					"name": "Season 2",
+					"episodes": 10,
+					"offset": 10
+				}
+			],
+			"watchedEpisodes": [
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7
+			],
+			"posterUrl": "none"
+		},
+		{
+			"id": "fargo",
+			"title": "Fargo",
+			"type": "TV Show",
+			"status": "On Hold",
+			"priority": "Medium",
+			"review": "",
+			"rating": 0,
+			"notes": "",
+			"dateStarted": null,
+			"dateFinished": null,
+			"dateAdded": "2025-03-01T08:00:00.000Z",
+			"dateModified": "2025-03-01T08:00:00.000Z",
+			"totalEpisodes": 10,
+			"episodeDuration": 50,
+			"releaseDate": null,
+			"externalLink": "",
+			"seasons": [
+				{
+					"name": "Season 1",
+					"episodes": 10,
+					"offset": 0
+				}
+			],
+			"watchedEpisodes": [
+				1,
+				2
+			],
+			"posterUrl": "none"
+		},
+		{
+			"id": "solaris",
+			"title": "Solaris",
+			"type": "Movie",
+			"status": "Dropped",
+			"priority": "Medium",
+			"review": "",
+			"rating": 2,
+			"notes": "",
+			"dateStarted": null,
+			"dateFinished": null,
+			"dateAdded": "2025-03-01T08:00:00.000Z",
+			"dateModified": "2025-03-01T08:00:00.000Z",
+			"totalEpisodes": 1,
+			"episodeDuration": 100,
+			"releaseDate": null,
+			"externalLink": "",
+			"seasons": [],
+			"watchedEpisodes": [],
+			"posterUrl": "none"
+		}
+	],
+	"groups": []
+}
