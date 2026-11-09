@@ -12,7 +12,7 @@ source:
   - src/httpsUrl.ts
   - src/DataManager.ts
   - src/main.ts
-source_commit: 710b6707ca11bf724503aaca629970393a00d8d8
+source_commit: 85d9f7bfa44ef53ffed3d7f83b380e4278a7969a
 ---
 
 # API layer

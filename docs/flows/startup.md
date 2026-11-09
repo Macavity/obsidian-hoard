@@ -9,7 +9,7 @@ source:
   - src/storage/VaultLayout.ts
   - src/storage/EntryIndex.ts
   - src/settingsSplit.ts
-source_commit: 89be701597836592a0ea6243d561604a1a62bc5f
+source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # Startup
@@ -47,8 +47,8 @@ sequenceDiagram
 
 1. **`LocalStore.load`** reads `data.json`. A file from a newer plugin version, or a WatchLog
    schema-1 file (no `schemaVersion`, has `titles`) in Hoard's own folder, makes the store read-only
-   for the session (such a file is never overwritten; for WatchLog Hoard starts empty); the newer
-   version also shows a Notice.
+   for the session (such a file is never overwritten; for WatchLog Hoard starts empty); both show a
+   sticky Notice, since device settings typed in that session are not saved.
 2. **`loadSettings`** composes defaults + local (+ shared, empty for now) and mirrors the date
    format into `types.ts`; the card-size CSS variable is set before any grid renders.
 3. Services and UI are registered: `ApiService` with the keys, managers get the `HistoryManager`,

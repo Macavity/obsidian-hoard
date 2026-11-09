@@ -13,7 +13,7 @@ source:
   - src/storage/storageTypes.ts
   - src/storage/titleCodec.ts
   - src/storage/noteWrite.ts
-source_commit: 89be701597836592a0ea6243d561604a1a62bc5f
+source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # Storage

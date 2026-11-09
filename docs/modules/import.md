@@ -13,7 +13,7 @@ source:
   - src/import/watchlog/widgets.ts
   - src/WatchLogOnboardingModal.ts
   - src/WatchLogReport.ts
-source_commit: 710b6707ca11bf724503aaca629970393a00d8d8
+source_commit: 85d9f7bfa44ef53ffed3d7f83b380e4278a7969a
 ---
 
 # Import
@@ -60,7 +60,8 @@ titles, Maybe titles (as `maybe: true`; one already in the library is reported),
 history, base (last), cache merge, then device-local settings filled only where empty. Secrets never
 go into vault files (shared keys are whitelisted by the base store). `NoteWriter`
 ([schema1Notes.ts](../../src/import/watchlog/schema1Notes.ts)) creates a note or adds only missing
-keys; a differing existing value becomes a `kept-value` review item. Duplicate title/type pairs in one run
+keys (a title field still equal to a stale API value is replaced unless the note sets it as an
+override); a differing existing value becomes a `kept-value` review item. Duplicate title/type pairs in one run
 get " 2", " 3", compared case-insensitively (macOS and Windows treat "Heat" and "heat" as one file). A
 note that fails to write is reported and skipped. The fork's device settings skip shared and removed
 keys like the schema-1 path does. Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
