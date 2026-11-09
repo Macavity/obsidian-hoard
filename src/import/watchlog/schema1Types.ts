@@ -35,12 +35,11 @@ export interface WatchLogData {
 export interface Schema1Report {
 	notesCreated: number;
 	notesFilled: number;
-	foldersMoved: string[];
 	skipped: string[];
 	errors: string[];
 }
 
-export const emptyReport = (): Schema1Report => ({ notesCreated: 0, notesFilled: 0, foldersMoved: [], skipped: [], errors: [] });
+export const emptyReport = (): Schema1Report => ({ notesCreated: 0, notesFilled: 0, skipped: [], errors: [] });
 
 export interface ImportContext {
 	app: App;
@@ -48,14 +47,8 @@ export interface ImportContext {
 	shared: SharedConfigStore;
 	history: HistoryStore;
 	yaml: YamlIO;
-	/** Root: folder of an existing `hoard:` base, else `watchLogRoot(data)`. */
+	/** Root: folder of an existing `hoard:` base, else Hoard's default root. */
 	layout: VaultLayout;
-}
-
-export interface Schema1Context extends ImportContext {
-	/** Folder of the plugin whose data.json holds `data`; the backup is written there. */
-	pluginDir: string | undefined;
-	data: WatchLogData;
 }
 
 /** WatchLog id -> new id (note path relative to root) per kind, plus group id -> name. */

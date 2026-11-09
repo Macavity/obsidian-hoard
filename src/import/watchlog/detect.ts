@@ -2,7 +2,7 @@ import { normalizePath, type App, type TFile } from 'obsidian';
 import { hasTopLevelKey } from '../../storage/baseFile';
 
 /** Top-level key of the settings block WatchLog Sync wrote into its base. */
-export const WATCHLOG_KEY = 'watchlog';
+const WATCHLOG_KEY = 'watchlog';
 /** Base file name of WatchLog Sync. */
 const WATCHLOG_BASE_FILE = 'WatchLog.base';
 /** Plugin ids whose data.json is adopted: WatchLog Sync (schema 2) first, then WatchLog (schema 1). */
@@ -23,7 +23,7 @@ export interface WatchLogPluginData {
 	dir: string;
 }
 
-export const isEmptyData = (raw: unknown): boolean =>
+const isEmptyData = (raw: unknown): boolean =>
 	raw === null || raw === undefined || (typeof raw === 'object' && Object.keys(raw).length === 0);
 
 /**

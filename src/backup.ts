@@ -5,8 +5,7 @@ import type { HistoryEntry, HistoryManager } from './HistoryManager';
 import type { GamesData, MaybeTitle, ReadingData, HoardTitle } from './types';
 import type { LocalStore } from './storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from './storage/SharedConfigStore';
-import { parseWatchLogBackup, type WatchLogBackup, type WatchLogBackupErrorCode } from './migration/watchlog/backupImport';
-import type { ImportContext } from './migration/watchlog/schema1Types';
+import type { ImportContext } from './import/watchlog/schema1Types';
 import { withoutCredentials } from './jikanBase';
 
 export interface BackupManagers {
@@ -75,14 +74,14 @@ export function withoutSecrets(b: BackupFile): BackupFile {
 /** Why a backup file was rejected; the settings tab renders it (`settings.backup.restore.errors.<code>`). */
 export type BackupErrorCode =
 	| 'parseJson' | 'notObject' | 'titlesMissing' | 'readingMissing' | 'gamesMissing' | 'sharedMissing'
-	| 'historyInvalid' | 'localInvalid' | WatchLogBackupErrorCode;
+	| 'historyInvalid' | 'localInvalid' | 'unsupportedFormat';
 
-/** Validates the whole file before anything is written; a WatchLog export is handed to its importer. */
-export function parseBackup(text: string): { backup: BackupFile } | WatchLogBackup | { error: BackupErrorCode } {
+/** Validates the whole file before anything is written. */
+export function parseBackup(text: string): { backup: BackupFile } | { error: BackupErrorCode } {
 	let parsed: unknown;
 	try { parsed = JSON.parse(text); } catch { return { error: 'parseJson' }; }
 	if (!isRecord(parsed)) return { error: 'notObject' };
-	if (parsed['version'] !== 2 || !isRecord(parsed['entries'])) return parseWatchLogBackup(parsed);
+	if (parsed['version'] !== 2 || !isRecord(parsed['entries'])) return { error: 'unsupportedFormat' };
 	const e = parsed['entries'];
 	const reading = e['reading'];
 	const games = e['games'];

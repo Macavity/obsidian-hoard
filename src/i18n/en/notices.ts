@@ -7,15 +7,6 @@ const notices = {
 		episodesLoading: 'Episodes of "{title}" are still loading.',
 		sharedConfigUnreadable: 'Hoard: the settings block in {file} is unreadable; settings were not saved.',
 	},
-	migration: {
-		failed: 'Hoard could not migrate the WatchLog data to notes. It will retry on the next start; see the developer console.',
-		summary: 'Hoard migrated from WatchLog: {done}.',
-		settingsBlock: 'settings block in {to}',
-		adoptedFrom: 'settings of {from}',
-		data: 'data into notes ({created} created, {filled} filled; backup: {file})',
-		widgets: { one: 'widget code block in {count} note', other: 'widget code blocks in {count} notes' },
-		skipped: { one: '{count} item was skipped, see the developer console.', other: '{count} items were skipped, see the developer console.' },
-	},
 	api: {
 		requestFailed: 'Request failed; check your connection.',
 		unknownService: 'The API',

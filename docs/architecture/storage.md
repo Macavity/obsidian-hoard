@@ -13,7 +13,7 @@ source:
   - src/storage/storageTypes.ts
   - src/storage/titleCodec.ts
   - src/storage/noteWrite.ts
-source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
+source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
 ---
 
 # Storage
@@ -79,8 +79,8 @@ taken, lost edit, unreadable shared block) is a `ManagerNotice` code passed to t
   `file.inFolder("<root>")` filter pointing at the root). Whitelist and sync rules:
   [shared vs local](../concepts/shared-vs-local.md).
 - `LocalStore` is `data.json` schema 2 (`schemaVersion`, `settings`, `cache`, `ui`, optional
-  `reading`/`games`/`drafts`). It refuses to write while the file is schema 1 (pending WatchLog
-  conversion) or from a newer plugin version.
+  `reading`/`games`/`drafts`). It refuses to write while the file is a WatchLog schema-1 file (the store then starts empty,
+  read-only for the session) or from a newer plugin version.
 - `HistoryStore` appends and caps `History.md`, ignoring its own writes by content.
 
 ## Where to change what

@@ -19,11 +19,12 @@ reviews:
         blocking bug: concurrent edits from another device, malformed YAML, files appearing or
         disappearing mid-operation, keys dropped on re-encode. Also report mobile-only breakage
         (no Node or Electron APIs, layout below 600px). Prefer simple, readable fixes.
-    - path: "src/migration/watchlog/**"
+    - path: "src/import/watchlog/**"
       instructions: |
-        One-time migration of vaults that were used with the WatchLog plugin. This is the only
-        module that may know WatchLog names (watchlog: key, WatchLog.base, wl-* code blocks,
-        watchlog-sync data.json). Report any WatchLog knowledge that leaks outside this folder.
+        User-driven import of WatchLog / WatchLog Sync data as a copy; the source must stay
+        untouched. This folder (plus the import wizard UI) is the only place that may know
+        WatchLog names (watchlog: key, WatchLog.base, wl-* code blocks, watchlog-sync data.json).
+        It stays free of i18n imports. Report any WatchLog knowledge that leaks elsewhere.
     - path: "scripts/**"
       instructions: |
         Local dev tooling, run only by the maintainer on own machine.

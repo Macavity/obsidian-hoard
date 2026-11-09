@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import data from './fixtures/data-v1.json';
 import { setupBackup } from './helpers/setupBackup';
 import { inferHistoryAction } from '../src/HistoryManager';
 import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../src/backup';
@@ -6,6 +7,11 @@ import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../src/
 const BASE = 'hoard:\n  version: 1\n  statuses:\n    - name: Rewatch\n      color: "#123456"\n';
 
 describe('backup/restore', () => {
+	it('rejects a WatchLog v1 export', () => {
+		const r = parseBackup(JSON.stringify(data));
+		expect('error' in r).toBe(true);
+	});
+
 	it('round-trips through an empty vault', async () => {
 		const a = await setupBackup({
 			'W/Hoard.base': BASE,

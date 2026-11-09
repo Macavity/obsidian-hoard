@@ -8,13 +8,13 @@ source:
   - src/DataManager.ts
   - src/storage/EntryIndex.ts
   - src/WidgetRenderer.ts
-source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
+source_commit: 3cf70e7d99442c30c753b169d4da73e2ad38a964
 ---
 
 # Overview
 
 Hoard is one Obsidian plugin package (`src/`, flat files plus `storage/`, `ui/`, `csv/`,
-`migration/watchlog/`). Dependencies point downward; storage knows nothing of managers or UI.
+`import/watchlog/`). Dependencies point downward; storage knows nothing of managers or UI.
 `.claude/skills/project/SKILL.md` states the same layering with naming rules; this page adds the
 mechanism.
 
@@ -54,8 +54,7 @@ flowchart TD
    `PosterService`, `ApiCheckQueue`, cover and title search helpers. Called by managers and modals.
 4. **UI** ([architecture/ui-kit](ui-kit.md)): `HoardView` with the `TABS` registry, one tab per
    domain, modals, shared pieces in `src/ui/`.
-5. **Composition root** `main.ts`: builds everything in field initialisers, loads data, runs the
-   [WatchLog import](../modules/import.md), registers view, commands, [widgets](../modules/widgets.md),
+5. **Composition root** `main.ts`: builds everything in field initialisers, loads data, registers view, commands, [widgets](../modules/widgets.md),
    status bar and the scheduler. See [flows/startup](../flows/startup.md).
 
 ## The change signal

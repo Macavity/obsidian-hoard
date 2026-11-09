@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFakeApp } from '../../fakes/fakeApp';
-import { migrateWidgetFences, rewriteWidgetFences } from '../../../src/migration/watchlog/widgets';
+import { migrateWidgetFences, rewriteWidgetFences } from '../../../src/import/watchlog/widgets';
 
 describe('rewriteWidgetFences', () => {
 	it('renames every WatchLog widget language', () => {

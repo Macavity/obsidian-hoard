@@ -14,7 +14,6 @@ The release workflow takes the section of the released version from this file as
 - Custom lists, Drafts (vault tag scan) and Log (activity timeline) tabs.
 - Code-block widgets `hoard`, `hoard-todo`, `hoard-stat`, `hoard-upcoming`, `hoard-nowwatching`, `hoard-now-next`.
 - Settings tab with API, Customize and General pages, JSON backup and restore.
-- One-time migration from WatchLog at first start: `WatchLog.base` renamed to `Hoard.base` with the key rewritten, `watchlog-sync` / `watchlog` plugin data adopted, schema-1 data converted into notes, `watchlog` / `wl-*` widget code blocks rewritten; WatchLog backups (v1–v3) can still be restored.
 - Test vault fixtures and a mobile smoke script.
 - German translation. The plugin UI follows Obsidian's language setting (Settings → General → Language); other languages fall back to English. Stored values in notes and `Hoard.base` (status and type names) stay English.
 

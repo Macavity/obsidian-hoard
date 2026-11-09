@@ -145,7 +145,6 @@ import { refreshAllCovers } from './coverRefresh';
 import { apiErrorMessage, apiErrorShort } from './ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from './jikanBase';
 import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from './backup';
-import { restoreWatchLogBackup } from './migration/watchlog/backupImport';
 
 /** Chip for the MyAnimeList endpoint field: default, custom, or rejected and falling back. */
 function jikanEndpointStatus(raw: string): ChipStatus {
@@ -701,22 +700,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 					return;
 				}
 				// validated as a whole before anything is written
-				const watchLog = 'watchLog' in result ? result.watchLog : null;
-				const prompt = watchLog
-					? t('settings.backup.restore.confirmWatchLog')
-					: t('settings.backup.restore.confirm');
-				new ConfirmModal(this.app, prompt, () => {
+				new ConfirmModal(this.app, t('settings.backup.restore.confirm'), () => {
 					void (async () => {
-						const managers = this.plugin.backupManagers();
-						if (watchLog) {
-							const errors = await restoreWatchLogBackup(managers, watchLog);
-							if (errors.length > 0) {
-								new Notice(t('settings.backup.restore.failed', { errors: errors.join('; ') }));
-								return;
-							}
-						} else if ('backup' in result) {
-							await restoreBackup(managers, result.backup);
-						}
+						await restoreBackup(this.plugin.backupManagers(), result.backup);
 						await this.plugin.loadSettings();
 						activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
 						new Notice(t('settings.backup.restore.done'));

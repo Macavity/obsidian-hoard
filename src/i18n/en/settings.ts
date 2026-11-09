@@ -362,7 +362,7 @@ const settings = {
 		},
 		restore: {
 			name: 'Restore from backup',
-			desc: 'Restore from a .JSON backup file. Missing notes are created; existing notes are kept. Shared settings, device settings (API keys included) and the activity log are replaced. Backups from older plugin versions are imported too. Keep backup files private.',
+			desc: 'Restore from a .JSON backup file. Missing notes are created; existing notes are kept. Shared settings, device settings (API keys included) and the activity log are replaced. Only Hoard backups (format version 2) can be restored; WatchLog backups are not supported. Keep backup files private.',
 			button: 'Restore from backup',
 			invalid: 'Invalid backup file: {error}',
 			errors: {
@@ -375,11 +375,8 @@ const settings = {
 				historyInvalid: 'activity log is not a list.',
 				localInvalid: 'local settings are invalid.',
 				unsupportedFormat: 'unsupported format.',
-				watchMissing: 'watch data is missing titles, groups or settings.',
 			},
-			confirmWatchLog: 'This is a WatchLog backup (v1–v3). Import it? Missing notes are created and missing note properties filled; existing values are kept.',
 			confirm: 'This restores the backup into your vault: missing notes are created, the shared settings, device settings (API keys included) and the activity log are replaced. Existing notes are kept. Continue?',
-			failed: 'Backup import failed: {errors}',
 			done: 'Backup restored successfully.',
 		},
 		regenerate: {

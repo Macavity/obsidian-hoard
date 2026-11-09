@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createFakeApp } from '../../fakes/fakeApp';
-import { findWatchLogBase, findWatchLogPluginData, WATCHLOG_PLUGIN_IDS } from '../../../src/migration/watchlog/detect';
+import { findWatchLogBase, findWatchLogPluginData, WATCHLOG_PLUGIN_IDS } from '../../../src/import/watchlog/detect';
 
 const src = (files: Record<string, string>) => ({
 	configDir: '.obsidian',

@@ -1,13 +1,10 @@
-import type { WatchLogData } from '../migration/watchlog/schema1Types';
 import type { EntryCache, LocalData } from './storageTypes';
 
-/**
- * `1`: WatchLog's schema-1 data.json, kept read-only until it is converted into notes.
- * `newer`: data.json from a later plugin version; it is never written by this one.
- */
-export type LoadResult = { schema: 2 } | { schema: 1; data: WatchLogData } | { schema: 'newer' };
+/** `newer`: data.json from a later plugin version; it is never written by this one. */
+/** `watchlog` / `newer`: data.json is kept as is and nothing is saved this session (the caller warns). */
+export type LoadResult = { schema: 2 } | { schema: 'newer' } | { schema: 'watchlog' };
 
-interface DataPlugin {
+export interface DataPlugin {
 	loadData(): Promise<unknown>;
 	saveData(d: unknown): Promise<void>;
 }
@@ -27,7 +24,8 @@ export class LocalStore {
 	data: LocalData = emptyData();
 	private timer: number | null = null;
 	private dirty = false;
-	// false while data.json holds a schema-1 or newer format that must not be overwritten
+	// false while data.json holds a WatchLog schema-1 or newer format that must not be overwritten;
+	// stays false for the whole session (there is no path back, so a WatchLog file is never lost)
 	private writable = true;
 
 	constructor(private readonly plugin: DataPlugin) {}
@@ -35,9 +33,10 @@ export class LocalStore {
 	async load(): Promise<LoadResult> {
 		const raw = await this.plugin.loadData();
 		if (isRecord(raw) && raw.schemaVersion === undefined && Array.isArray(raw.titles)) {
-			// schema 1 stays in memory only; data stays empty and unsaved until adoptV2
+			// a WatchLog data.json: Hoard starts empty beside it and never writes over it
 			this.writable = false;
-			return { schema: 1, data: raw as unknown as WatchLogData };
+			this.data = emptyData();
+			return { schema: 'watchlog' };
 		}
 		if (isRecord(raw) && typeof raw.schemaVersion === 'number' && raw.schemaVersion > 2) {
 			this.writable = false;
@@ -53,14 +52,7 @@ export class LocalStore {
 		return { schema: 2 };
 	}
 
-	async adoptV2(data: LocalData): Promise<void> {
-		this.data = data;
-		this.writable = true;
-		this.clearTimer();
-		await this.save();
-	}
-
-	/** False while data.json holds a schema-1 or newer format that must not be overwritten. */
+	/** False while data.json holds a WatchLog schema-1 or newer format that must not be overwritten. */
 	get isWritable(): boolean { return this.writable; }
 
 	cacheIds(): string[] {

@@ -22,7 +22,7 @@ source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
 
 Hoard is an Obsidian plugin: a media library for movies, TV, anime, books, manga and games, stored
 as Markdown notes with properties in the user's vault. A sidebar view with eight tabs, code-block
-widgets inside notes, optional API enrichment, and a one-time import from its predecessor WatchLog.
+widgets inside notes, optional API enrichment, and WatchLog converters kept for a later import.
 Read [values](values.md) first; every rule below serves one of them.
 
 - **Entry**: one note = one title, book, manga or game; its id is the note path below the root.
@@ -46,8 +46,7 @@ flowchart TD
   Managers --> Storage[EntryIndex, codecs, stores]
   Storage --> Vault[(notes, Hoard.base, History.md)]
   Storage --> Local[(data.json)]
-  main --> Import[migration/watchlog]
-  Import --> Storage
+  Import[import/watchlog, not wired yet] --> Storage
 ```
 
 # Types
@@ -75,7 +74,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Widgets](modules/widgets.md): how the `hoard-*` code blocks render and stay live.
 - [Settings](modules/settings.md): how the settings tab is laid out, what syncs, and how to add a setting.
 - [Backup](modules/backup.md): the backup file format, the two export variants and the restore contract.
-- [Import](modules/import.md): how data from another tracker (today WatchLog) enters the vault, and where a new source goes.
+- [Import](modules/import.md): the WatchLog converters (not wired in yet), what happens today with WatchLog data, and where a new source goes.
 
 # Flows
 
@@ -84,7 +83,6 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Add title](flows/add-title.md): from the search box to a new note, with API routing and duplicate guard.
 - [Airtime notifications](flows/airtime-notifications.md): how the minute scheduler produces notices, badges and the status bar count.
 - [Backup and restore](flows/backup-restore.md): what a backup holds, which copy loses the keys, and the restore order.
-- [WatchLog import](flows/watchlog-import.md): the one-time migration step by step and why a rerun is a no-op.
 
 # Concepts
 
