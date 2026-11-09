@@ -17,7 +17,7 @@ Root is `Hoard/` (holds `Hoard.base`).
 - `Hoard/TV Show/Minimal Entry.md`: only `title`, everything else defaulted
 - `Hoard/Korean TV Show/Squid Game.md`: Korean TV Show, Dropped, partly watched
 - `Hoard/Korean TV Show/Reply 1988.md`: `maybe: true`, not in the library
-- `Hoard/Anime/Frieren Season 3.md`: Anime, To be released, manual `once` airtime dated 2099
+- `Hoard/Anime/Frieren Season 3.md`: Anime, To be released, manual `once` airtime dated 2099; `poster: none` stops the keyless Jikan poster search, so no smoke run touches the network
 - `Hoard/Animation/Spider-Verse.md`: Animation, user overrides (credits, community rating), local poster `Assets/poster.png`, `## Notes` plus foreign `## Mine` section; detail-modal edit target
 
 ## Reading

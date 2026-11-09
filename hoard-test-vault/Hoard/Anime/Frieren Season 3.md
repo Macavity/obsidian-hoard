@@ -3,6 +3,7 @@ title: Frieren Season 3
 type: Anime
 status: To be released
 priority: High
+poster: none
 releaseDate: 2099-03-01
 airtimeRecurrence: once
 airtimeTime: "20:00"
