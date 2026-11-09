@@ -12,6 +12,12 @@ export function reportNotePath(date = new Date()) {
 	return `Hoard/WatchLog-Import ${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.md`;
 }
 
+/** The report note written today or, for a run across midnight, yesterday; null when neither exists. */
+export function findReportNote(vault, now = new Date()) {
+	const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+	return [reportNotePath(now), reportNotePath(yesterday)].find((p) => existsSync(join(vault, p))) ?? null;
+}
+
 const WIZARD = ".hoard-onboarding-modal";
 const btn = (action) => `${WIZARD} [data-action="${action}"]`;
 const P = "app.plugins.plugins['hoard']";
@@ -47,6 +53,6 @@ export async function assertImported(expect, dataJsonPath) {
 	assert(props.title === sample.title, `title: ${props.title}`);
 	assert(props.type === sample.type, `type: ${props.type}`);
 	assert(props.status === sample.status, `status: ${props.status}`);
-	assert(existsSync(join(VAULT_PATH, expect.reportNote)), `report note ${expect.reportNote} missing`);
+	assert(findReportNote(VAULT_PATH) !== null, `report note ${reportNotePath()} missing`);
 	await waitFor(() => JSON.parse(readFileSync(dataJsonPath, "utf8")).ui?.watchlogImport?.[expect.kind] === "imported", 10000);
 }
