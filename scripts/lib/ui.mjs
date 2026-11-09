@@ -40,14 +40,29 @@ function point(selector) {
 	return p;
 }
 
+/** The click point once it stops moving: scrollIntoView may animate, and a press during the scroll lands elsewhere. */
+async function settledPoint(selector) {
+	let p = point(selector);
+	for (let i = 0; i < 10; i++) {
+		await sleep(150);
+		const next = point(selector);
+		const same = next.x === p.x && next.y === p.y;
+		p = next;
+		if (same) break;
+	}
+	return p;
+}
+
 /** Clicks the centre of the element; throws if it is missing, hidden or covered. Leaves no hover state behind. */
 export async function click(selector) {
-	const { x, y } = point(selector);
+	const { x, y } = await settledPoint(selector);
 	if (INPUT_MODE === "dom") {
 		evalJs(`document.querySelector(${JSON.stringify(selector)}).click()`);
 		return;
 	}
 	cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
+	// hover handlers repaint on mousemove; a press right behind it can hit-test against the pre-hover layout
+	await sleep(80);
 	cdp("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
 	cdp("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
 	cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 0 });

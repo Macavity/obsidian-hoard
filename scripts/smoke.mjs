@@ -5,6 +5,7 @@ import { ensureVault } from "./lib/cli.mjs";
 import { closeModals } from "./lib/ui.mjs";
 import { parseArgs, runSteps } from "./e2e/runner.mjs";
 import { dataStep } from "./e2e/steps/data.mjs";
+import { flowsStep } from "./e2e/steps/flows.mjs";
 
 const pnpm = (...a) => execFileSync("pnpm", a, { stdio: "inherit" });
 
@@ -20,7 +21,7 @@ try {
 	pnpm("vault:reset");
 	pnpm("build");
 	pnpm("reload");
-	failures = await runSteps([dataStep], { ...opts, cleanup });
+	failures = await runSteps([dataStep, flowsStep], { ...opts, cleanup });
 } catch (e) {
 	failures.push(`smoke: ${e instanceof Error ? e.message : String(e)}`);
 } finally {
