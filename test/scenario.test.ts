@@ -3,8 +3,12 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-vi.mock("../scripts/lib/plugin-toggle.mjs", () => ({ withPluginDisabled: (fn: () => unknown) => Promise.resolve(fn()) }));
-const { prepareScenario, scenarioDir } = await import("../scripts/e2e/scenario.mjs");
+const toggle = vi.hoisted(() => ({ fail: false }));
+vi.mock("../scripts/lib/plugin-toggle.mjs", () => ({
+  withPluginDisabled: (fn: () => unknown) => (toggle.fail ? Promise.reject(new Error("cli timed out")) : Promise.resolve(fn())),
+}));
+const { prepareScenario, scenarioDir, RestoreError, EMPTY_DATA } = await import("../scripts/e2e/scenario.mjs");
+const { LocalStore } = await import("../src/storage/LocalStore");
 
 function makeVault() {
   const root = mkdtempSync(join(tmpdir(), "scn-"));
@@ -46,5 +50,40 @@ describe("prepareScenario", () => {
     expect(existsSync(join(vault, ".obsidian/plugins/watchlog/data.json"))).toBe(true);
     await restore();
     expect(existsSync(join(vault, ".obsidian/plugins/watchlog"))).toBe(false);
+  });
+
+  it("keeps the backup and names it when restore fails", async () => {
+    const { vault, dist } = makeVault();
+    toggle.fail = false;
+    const { restore } = await prepareScenario("watchlog-original", { vault, distDir: dist, resetVault: () => Promise.resolve() });
+    toggle.fail = true;
+    try {
+      const err = await restore().then(() => null, (e: unknown) => e);
+      expect(err).toBeInstanceOf(RestoreError);
+      const backup = /(\S*hoard-scenario-\S*?)(?=[\s:,)]|$)/.exec((err as Error).message)?.[1] ?? "";
+      expect(readFileSync(join(backup, "watchlog/data.json"), "utf8")).toBe('{"mine":true}');
+      expect((err as Error).message).toMatch(/cli timed out/);
+    } finally {
+      toggle.fail = false;
+    }
+  });
+
+  it("surfaces the original error when restore fails during prepare", async () => {
+    const { vault, root } = makeVault();
+    const distFile = join(root, "dist-is-a-file");
+    writeFileSync(distFile, "x");
+    const err = await prepareScenario("watchlog-original", { vault, distDir: distFile, resetVault: () => Promise.reject(new Error("reset down")) })
+      .then(() => null, (e: unknown) => e);
+    expect(err).toBeInstanceOf(RestoreError);
+    expect((err as Error).message).toMatch(/EEXIST|ENOTDIR/);
+    expect((err as Error).message).toMatch(/reset down/);
+  });
+});
+
+describe("EMPTY_DATA", () => {
+  it("matches what LocalStore starts with", async () => {
+    const local = new LocalStore({ loadData: () => Promise.resolve(undefined), saveData: () => Promise.resolve() });
+    await local.load();
+    expect(local.data).toEqual(EMPTY_DATA);
   });
 });

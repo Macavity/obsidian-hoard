@@ -1,15 +1,23 @@
 // Scenario runner: swaps the registered test vault's content and WatchLog plugin data for an isolated scenario, then restores them.
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { evalJs, REPO, VAULT_PATH, waitFor } from "../lib/cli.mjs";
+import { REPO, VAULT_PATH } from "../lib/cli.mjs";
 import { withPluginDisabled } from "../lib/plugin-toggle.mjs";
 import { pluginDataDir, writeSeed } from "../lib/seed.mjs";
+import { waitForVaultIndex } from "../lib/vault-index.mjs";
 import { copyPluginData, syncVault } from "../lib/vault-sync.mjs";
 
 const SCENARIOS = join(REPO, "scripts", "e2e", "scenarios");
-const EMPTY_DATA = { schemaVersion: 2, settings: {}, cache: {}, ui: {} };
+/** Hoard's empty local data (`emptyData()` in src/storage/LocalStore.ts; test/scenario.test.ts keeps them equal). */
+export const EMPTY_DATA = { schemaVersion: 2, settings: {}, cache: {}, ui: {} };
+
+/** The WatchLog data could not be put back; the message names the backup folder. Callers must stop running scenarios: the next
+ * one would back up this scenario's data as the user's. */
+export class RestoreError extends Error {}
+
+const message = (e) => (e instanceof Error ? e.message : String(e));
 
 export function scenarioDir(name) {
 	const dir = join(SCENARIOS, name);
@@ -19,23 +27,6 @@ export function scenarioDir(name) {
 
 function runVaultReset() {
 	execFileSync("pnpm", ["vault:reset"], { cwd: REPO, stdio: "inherit" });
-}
-
-/** Vault-relative paths of the visible files on disk (Obsidian indexes no dot files or folders). */
-function diskFiles(dir, rel = "") {
-	return readdirSync(join(dir, rel), { withFileTypes: true }).flatMap((e) => {
-		if (e.name.startsWith(".")) return [];
-		const path = rel ? `${rel}/${e.name}` : e.name;
-		return e.isDirectory() ? diskFiles(dir, path) : [path];
-	});
-}
-
-/** Waits until Obsidian's file index matches the disk. Re-enabling the plugin earlier lets it read files the index still lists
- * but the sync deleted (ENOENT, the plugin fails to load). Only the registered vault is watched by Obsidian. */
-async function waitForVaultIndex(vault) {
-	if (vault !== VAULT_PATH) return;
-	const want = JSON.stringify(diskFiles(vault).sort());
-	await waitFor(() => evalJs("JSON.stringify(app.vault.getFiles().map((f) => f.path).sort())") === want, 15000, 300);
 }
 
 const watchlogDir = (vault) => join(vault, ".obsidian", "plugins", "watchlog");
@@ -51,20 +42,24 @@ export async function prepareScenario(name, { vault = VAULT_PATH, distDir = plug
 	if (hadWatchlog) cpSync(watchlogDir(vault), backup, { recursive: true });
 
 	const restore = async () => {
-		await withPluginDisabled(() => {
-			rmSync(watchlogDir(vault), { recursive: true, force: true });
-			if (hadWatchlog) cpSync(backup, watchlogDir(vault), { recursive: true });
-		});
+		try {
+			await withPluginDisabled(() => {
+				rmSync(watchlogDir(vault), { recursive: true, force: true });
+				if (hadWatchlog) cpSync(backup, watchlogDir(vault), { recursive: true });
+			});
+		} catch (e) {
+			throw new RestoreError(`restoring WatchLog data failed, backup kept in ${backupRoot}: ${message(e)}`);
+		}
 		rmSync(backupRoot, { recursive: true, force: true });
 		await resetVault();
 	};
 
 	try {
-		await withPluginDisabled(async () => {
+		await withPluginDisabled(async (live) => {
 			rmSync(watchlogDir(vault), { recursive: true, force: true });
 			syncVault(join(dir, "vault"), vault, { requireSourceName: false });
 			copyPluginData(join(dir, "vault"), vault, "watchlog");
-			await waitForVaultIndex(vault);
+			if (live) await waitForVaultIndex(vault);
 			const custom = join(dir, "data.json");
 			if (existsSync(custom)) return writeSeed(distDir, custom);
 			const tmp = join(backupRoot, "empty-data.json");
@@ -72,7 +67,11 @@ export async function prepareScenario(name, { vault = VAULT_PATH, distDir = plug
 			writeSeed(distDir, tmp);
 		});
 	} catch (err) {
-		await restore();
+		try {
+			await restore();
+		} catch (e) {
+			throw new RestoreError(`${message(err)}; then ${message(e)}`);
+		}
 		throw err;
 	}
 	return { restore };
