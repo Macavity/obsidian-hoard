@@ -161,10 +161,12 @@ class Schema1Migration {
 	private async importTitles(data: WatchLogData, extras: Extras): Promise<void> {
 		const layout = this.ctx.layout;
 		for (const t of data.titles) {
-			const path = this.claim(layout.notePath('title', t.title, t.type));
-			const title = extras({ ...t, id: layout.idFromPath(path) }, `title:${t.id}`);
-			this.ids.title.set(t.id, title.id);
-			await this.writeTitle(path, title);
+			await this.entry(`title:${t.id}`, async () => {
+				const path = this.claim(layout.notePath('title', t.title, t.type));
+				const title = extras({ ...t, id: layout.idFromPath(path) }, `title:${t.id}`);
+				this.ids.title.set(t.id, title.id);
+				await this.writeTitle(path, title);
+			});
 		}
 	}
 
@@ -200,20 +202,45 @@ class Schema1Migration {
 			return { path, id };
 		};
 		for (const b of reading.books) {
-			const { path, id } = place('book', b.title, b.id);
-			const book = extras({ ...b, id, vaultPage: `${id}.md` }, `book:${b.id}`);
-			await this.put('book', path, b.title, encodeBook(book), '## Notes\n\n\n## Quotes\n');
+			await this.entry(`book:${b.id}`, async () => {
+				const { path, id } = place('book', b.title, b.id);
+				const book = extras({ ...b, id, vaultPage: `${id}.md` }, `book:${b.id}`);
+				await this.put('book', path, b.title, encodeBook(book), '## Notes\n\n\n## Quotes\n');
+			});
 		}
 		for (const m of reading.manga) {
-			const { path, id } = place('manga', m.title, m.id);
-			const manga = extras({ ...m, id, vaultPage: `${id}.md` }, `manga:${m.id}`);
-			await this.put('manga', path, m.title, encodeManga(manga), '## Notes\n\n\n## Quotes\n');
+			await this.entry(`manga:${m.id}`, async () => {
+				const { path, id } = place('manga', m.title, m.id);
+				const manga = extras({ ...m, id, vaultPage: `${id}.md` }, `manga:${m.id}`);
+				await this.put('manga', path, m.title, encodeManga(manga), '## Notes\n\n\n## Quotes\n');
+			});
 		}
 		for (const g of (data.games as GamesData).games) {
-			const { path, id } = place('game', g.title, g.id);
-			const game = extras({ ...g, id, vaultPage: `${id}.md` }, `game:${g.id}`);
-			await this.put('game', path, g.title, encodeGame(game), '## Notes\n');
+			await this.entry(`game:${g.id}`, async () => {
+				const { path, id } = place('game', g.title, g.id);
+				const game = extras({ ...g, id, vaultPage: `${id}.md` }, `game:${g.id}`);
+				await this.put('game', path, g.title, encodeGame(game), '## Notes\n');
+			});
 		}
+	}
+
+	/**
+	 * Runs one entry; data too broken to even name its note (no title, say) is reported under `label`
+	 * and skipped, so it never blocks the entries after it.
+	 */
+	private async entry(label: string, fn: () => Promise<void>): Promise<void> {
+		try {
+			await fn();
+		} catch (e) {
+			this.fail(label, e);
+			this.advance();
+		}
+	}
+
+	private fail(path: string, e: unknown): void {
+		const message = e instanceof Error ? e.message : String(e);
+		this.report.review.push({ path, reason: 'error', code: 'failed', params: { message } });
+		this.report.errors.push(`${path}: ${message}`);
 	}
 
 	/**
@@ -227,9 +254,10 @@ class Schema1Migration {
 			const old = this.ctx.app.vault.getAbstractFileByPath(path) ? null : await this.hooks.oldBody?.(kind, title, type);
 			await this.notes.write(path, fm, old ?? body, apiValues);
 		} catch (e) {
-			const message = e instanceof Error ? e.message : String(e);
-			this.report.review.push({ path, reason: 'error', code: 'failed', params: { message } });
-			this.report.errors.push(`${path}: ${message}`);
+			this.fail(path, e);
+			// history must not link to a note that does not exist
+			const id = this.ctx.layout.idFromPath(path);
+			for (const map of Object.values(this.ids)) for (const [k, v] of map) if (v === id) map.delete(k);
 		}
 		this.advance();
 	}

@@ -8,6 +8,17 @@ import type { ImportPhase } from '../../../src/import/watchlog/report';
 const data = watchLogData;
 
 describe('importOriginal', () => {
+	it('adds WatchLog types an existing Hoard base lacks, keeps its own', async () => {
+		const d = structuredClone(data);
+		d.settings.types = [{ name: 'Movie', color: '#111' }, { name: 'Film', color: '#222' }] as never;
+		d.titles = [{ ...d.titles[0]!, id: 'f1', title: 'Heat', type: 'Film' }];
+		const { f, ctx, src } = await setupOriginal(d, { 'Hoard/Hoard.base': 'hoard:\n  types:\n    - name: Movie\n      color: "#000"\n' });
+		await importOriginal(src, ctx, () => {});
+		expect(f.files.has('Hoard/Film/Heat.md')).toBe(true);
+		const types = (ctx.shared.get().settings.types as { name: string; color: string }[]);
+		expect(types).toEqual([{ name: 'Movie', color: '#000' }, { name: 'Film', color: '#222' }]);
+	});
+
 	it('creates notes below Hoard/, copies old bodies and lists, leaves sources untouched', async () => {
 		const { f, ctx, src } = await setupOriginal(data, WATCHLOG_NOTES);
 		const before = snapshot(f);

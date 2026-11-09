@@ -22,6 +22,11 @@ export function managedFiles(app: App, layout: VaultLayout, typeNames: string[],
 		.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
+/** Hoard's root when it lies strictly inside the fork root (its files must not be copied onto themselves), else ''. */
+export function nestedHoardRoot(forkRoot: string, hoardRoot: string): string {
+	return hoardRoot !== forkRoot && (forkRoot === '' || hoardRoot.startsWith(`${forkRoot}/`)) ? hoardRoot : '';
+}
+
 /** Where a fork file lands below Hoard's root: same path relative to the respective root. */
 export function forkTarget(path: string, forkRoot: string, hoardRoot: string): string {
 	const rel = forkRoot ? path.slice(forkRoot.length + 1) : path;

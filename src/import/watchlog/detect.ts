@@ -4,6 +4,8 @@ import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
 import type { LocalData } from '../../storage/storageTypes';
 import { DEFAULT_SETTINGS } from '../../types';
 import type { WatchLogData } from './schema1Types';
+import { isListNote, originalFolders } from './originalPaths';
+import { nestedHoardRoot } from './paths';
 
 /** Top-level key of the settings block WatchLog Sync wrote into its base. */
 const WATCHLOG_KEY = 'watchlog';
@@ -104,12 +106,18 @@ const isEnabled = (app: App, id: string): boolean =>
 
 const pluginSource = (app: App): PluginDataSource => ({ configDir: app.vault.configDir, adapter: app.vault.adapter });
 
-function originalCounts(data: WatchLogData): SourceCounts {
-	const titles = data.titles.length;
+async function originalCounts(app: App, data: WatchLogData): Promise<SourceCounts> {
+	// Maybe titles become titles, custom lists are copied: both belong in the preview
+	const titles = data.titles.length + (data.maybe?.length ?? 0);
+	const listsFolder = originalFolders(data).lists;
+	let lists = 0;
+	for (const f of app.vault.getMarkdownFiles()) {
+		if (f.parent?.path === listsFolder && isListNote(await app.vault.cachedRead(f))) lists++;
+	}
 	const books = data.reading?.books?.length ?? 0;
 	const manga = data.reading?.manga?.length ?? 0;
 	const games = data.games?.games?.length ?? 0;
-	return { titles, books, manga, games, lists: 0, notes: titles + books + manga + games };
+	return { titles, books, manga, games, lists, notes: titles + books + manga + games + lists };
 }
 
 async function detectOriginal(app: App): Promise<OriginalSource | null> {
@@ -117,16 +125,25 @@ async function detectOriginal(app: App): Promise<OriginalSource | null> {
 	if (!found || !isRecord(found.raw) || !Array.isArray(found.raw.titles)) return null;
 	const data = found.raw as unknown as WatchLogData;
 	return {
-		kind: 'original', dir: found.dir, data, counts: originalCounts(data),
+		kind: 'original', dir: found.dir, data, counts: await originalCounts(app, data),
 		pluginEnabled: isEnabled(app, ORIGINAL_ID),
 	};
+}
+
+/**
+ * The `types` list of a WatchLog Sync base: settings sit directly under `watchlog:` (like Hoard's
+ * `hoard:` block); a `settings:` level in between is tolerated. Throws on invalid YAML.
+ */
+export function forkBaseTypes(content: string): unknown {
+	const block = (parseYaml(content) as Record<string, unknown> | null)?.[WATCHLOG_KEY];
+	if (!isRecord(block)) return undefined;
+	return block.types ?? (isRecord(block.settings) ? block.settings.types : undefined);
 }
 
 /** Type names from the base's `watchlog:` block; Hoard's defaults when it lists none. */
 async function readTypeNames(app: App, base: TFile): Promise<string[]> {
 	try {
-		const block = (parseYaml(await app.vault.cachedRead(base)) as Record<string, unknown> | null)?.[WATCHLOG_KEY];
-		const types = isRecord(block) && isRecord(block.settings) ? block.settings.types : undefined;
+		const types = forkBaseTypes(await app.vault.cachedRead(base));
 		if (Array.isArray(types)) {
 			const names = types.flatMap((t: unknown) => (isRecord(t) && typeof t.name === 'string' ? [t.name] : []));
 			if (names.length) return names;
@@ -145,13 +162,13 @@ async function readForkData(app: App): Promise<LocalData | null> {
 function forkCounts(app: App, root: string, typeNames: string[], hoardRoot: string | null): SourceCounts {
 	const layout = new VaultLayout(root, () => typeNames);
 	const counts: SourceCounts = { titles: 0, books: 0, manga: 0, games: 0, lists: 0, notes: 0 };
-	const hoardInside = hoardRoot !== null && hoardRoot !== root && (root === '' || hoardRoot.startsWith(`${root}/`));
+	const nested = hoardRoot === null ? '' : nestedHoardRoot(root, hoardRoot);
 	for (const f of app.vault.getMarkdownFiles()) {
-		if (hoardInside && (f.path === hoardRoot || f.path.startsWith(`${hoardRoot}/`))) continue;
+		if (nested && (f.path === nested || f.path.startsWith(`${nested}/`))) continue;
 		if (f.parent?.path === layout.customListsFolder) { counts.lists++; counts.notes++; continue; }
 		const hit = layout.classify(f.path);
 		if (!hit) continue;
-		counts[hit.kind === 'title' ? 'titles' : `${hit.kind}s` as 'books' | 'games']++;
+		counts[({ title: 'titles', book: 'books', manga: 'manga', game: 'games' } as const)[hit.kind]]++;
 		counts.notes++;
 	}
 	return counts;

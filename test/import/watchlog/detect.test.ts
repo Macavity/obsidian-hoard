@@ -40,12 +40,28 @@ describe('detectWatchLogSources', () => {
 		}));
 		const before = snapshot(f);
 		const s = await detectWatchLogSources(f.app);
-		expect(s.original?.counts.titles).toBe(data.titles.length);
+		expect(s.original?.counts.titles).toBe(data.titles.length + (data.maybe?.length ?? 0));
 		expect(s.fork?.root).toBe('WatchLog');
 		expect(s.fork?.counts).toMatchObject({ titles: 1, notes: 1 });
 		expect(s.fork?.data?.settings).toEqual({ tmdbApiKey: 'k' });
 		expect(s.hoardHasData).toBe(false);
 		expect(snapshot(f)).toEqual(before);
+	});
+
+	it('counts Maybe titles and custom lists of the original', async () => {
+		const f = createFakeApp({ 'Lists/Shopping.md': '# S\n\n## Data\n```json\n{}\n```\n', 'Lists/Plain.md': 'x' });
+		f.adapterFiles.set('.obsidian/plugins/watchlog/data.json', JSON.stringify(data));
+		const c = (await detectWatchLogSources(f.app)).original!.counts;
+		expect(c.titles).toBe(data.titles.length + (data.maybe?.length ?? 0));
+		expect(c.lists).toBe(1);
+	});
+
+	it('counts a fork nested inside Hoard\'s root', async () => {
+		const f = createFakeApp({
+			'Media/Hoard.base': 'hoard:\n  types: []\n', 'Media/WatchLog/WatchLog.base': 'watchlog:\n  types:\n    - name: Movie\n',
+			'Media/WatchLog/Movie/Heat.md': '',
+		});
+		expect((await detectWatchLogSources(f.app)).fork?.counts.titles).toBe(1);
 	});
 
 	it('treats unreadable data.json as absent', async () => {
@@ -61,13 +77,14 @@ describe('detectWatchLogSources', () => {
 
 	it('uses configured type names, counts other folders and skips a nested Hoard root', async () => {
 		const f = createFakeApp({
-			'WL.base': 'watchlog:\n  settings:\n    types:\n      - name: Film\n',
-			'Film/A.md': '', 'Movie/B.md': '', 'Books/C.md': '', 'CustomLists/D.md': '',
+			// WatchLog Sync keeps its settings directly under the key, like Hoard's `hoard:` block
+			'WL.base': 'watchlog:\n  types:\n    - name: Film\n',
+			'Film/A.md': '', 'Movie/B.md': '', 'Books/C.md': '', 'Manga/M.md': '', 'CustomLists/D.md': '',
 			'Hoard/Hoard.base': 'hoard:\n', 'Hoard/Film/E.md': '',
 		});
 		const s = await detectWatchLogSources(f.app);
 		expect(s.fork?.root).toBe('');
 		expect(s.fork?.typeNames).toEqual(['Film']);
-		expect(s.fork?.counts).toEqual({ titles: 1, books: 1, manga: 0, games: 0, lists: 1, notes: 3 });
+		expect(s.fork?.counts).toEqual({ titles: 1, books: 1, manga: 1, games: 0, lists: 1, notes: 4 });
 	});
 });

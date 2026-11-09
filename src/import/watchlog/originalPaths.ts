@@ -39,3 +39,6 @@ export function originalNotePath(folders: OriginalFolders, kind: EntryKind, titl
 	const name = title.replace(UNSAFE, '-').trim() || kind;
 	return normalizePath(`${folder}/${name}.md`);
 }
+
+/** A WatchLog custom list: a note with a `## Data` json block. */
+export const isListNote = (content: string): boolean => /## Data\s*```json/.test(content);

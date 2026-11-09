@@ -8,7 +8,7 @@ import { setupCleanup } from './setupCleanup';
 import { WATCHLOG_NOTES } from './setupSchema1';
 
 const FORK = {
-	'WatchLog/WatchLog.base': 'watchlog:\n  settings:\n    types:\n      - name: Movie\n',
+	'WatchLog/WatchLog.base': 'watchlog:\n  types:\n    - name: Movie\n',
 	'WatchLog/Movie/Heat.md': 'a', 'WatchLog/Movie/Ronin.md': 'b',
 	'Hoard/Hoard.base': 'hoard:\n  settings: {}\n', 'Hoard/Movie/Heat.md': 'a',
 };

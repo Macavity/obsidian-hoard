@@ -3,8 +3,8 @@ import { VaultLayout } from '../../storage/VaultLayout';
 import type { EntryKind } from '../../storage/storageTypes';
 import { hasHoardKey } from '../../storage/baseFile';
 import type { WatchLogSourceKind, WatchLogSources } from './detect';
-import { originalFolders, originalNotePath } from './originalPaths';
-import { forkTarget, managedFiles } from './paths';
+import { isListNote, originalFolders, originalNotePath } from './originalPaths';
+import { forkTarget, managedFiles, nestedHoardRoot } from './paths';
 import { bodyOf } from './schema1Notes';
 import type { WatchLogData } from './schema1Types';
 import { hasWidgetFence, rewriteWidgetFences } from './widgets';
@@ -15,7 +15,6 @@ export interface CleanupItem {
 	paths: string[];
 }
 
-const LIST_DATA = /## Data\s*```json/;
 const sortUnique = (paths: string[]): string[] => [...new Set(paths)].sort();
 const dirOf = (path: string): string => path.slice(0, Math.max(0, path.lastIndexOf('/')));
 
@@ -51,7 +50,7 @@ function originalPairs(data: WatchLogData, layout: VaultLayout): [string, string
 async function originalLists(app: App, folder: string, layout: VaultLayout): Promise<string[]> {
 	const paths: string[] = [];
 	for (const file of app.vault.getMarkdownFiles()) {
-		if (file.parent?.path !== folder || !LIST_DATA.test(await app.vault.cachedRead(file))) continue;
+		if (file.parent?.path !== folder || !isListNote(await app.vault.cachedRead(file))) continue;
 		if (await copied(app, file.path, `${layout.customListsFolder}/${file.name}`)) paths.push(file.path);
 	}
 	return paths;
@@ -71,7 +70,7 @@ async function forkNotes(app: App, sources: WatchLogSources, layout: VaultLayout
 	if (!fork) return [];
 	const forkLayout = new VaultLayout(fork.root, () => fork.typeNames);
 	const paths: string[] = [];
-	for (const f of managedFiles(app, forkLayout, fork.typeNames, layout.root)) {
+	for (const f of managedFiles(app, forkLayout, fork.typeNames, nestedHoardRoot(fork.root, layout.root))) {
 		if (await copied(app, f.path, forkTarget(f.path, fork.root, layout.root))) paths.push(f.path);
 	}
 	return sortUnique(paths);

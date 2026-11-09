@@ -44,6 +44,25 @@ describe('importWatchLogData', () => {
 		expect(f.files.get('Hoard/Hoard.base')).toContain('hoard:');
 	});
 
+	it('a game without title is reported, later games still import', async () => {
+		const data = structuredClone(watchLogData) as unknown as WatchLogData;
+		const games = data.games!.games;
+		data.games!.games = [{ ...games[0]!, id: 'bad', title: null as never }, ...games];
+		const { run, f } = await setupSchema1(data, {});
+		const r = await run();
+		expect(r.review.some((i) => i.reason === 'error')).toBe(true);
+		expect(f.files.has('Hoard/Games/Hades.md')).toBe(true);
+		expect(f.files.get('Hoard/Hoard.base')).toContain('hoard:');
+	});
+
+	it('history of a note that failed stays plain text, not a dead link', async () => {
+		const { run, f } = await setupSchema1(watchLogData, {});
+		const create = f.app.vault.create.bind(f.app.vault);
+		f.app.vault.create = (path, data) => (path === 'Hoard/TV Show/Dark.md' ? Promise.reject(new Error('nope')) : create(path, data));
+		await run();
+		expect(f.files.get('Hoard/History.md')).not.toContain('[[TV Show/Dark]]');
+	});
+
 	it('titles differing only in case get separate notes (case-insensitive file systems)', async () => {
 		const data = structuredClone(watchLogData) as unknown as WatchLogData;
 		data.titles = [

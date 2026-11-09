@@ -1,8 +1,9 @@
 import type { TFile } from 'obsidian';
 import { renameTopLevelBlock } from '../../storage/baseFile';
 import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
-import type { ForkSource } from './detect';
-import { forkTarget, managedFiles } from './paths';
+import { forkBaseTypes, type ForkSource } from './detect';
+import { registerTypes } from './registerTypes';
+import { forkTarget, managedFiles, nestedHoardRoot } from './paths';
 import { emptyImportReport, type ImportReport, type Progress } from './report';
 import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
 import { REMOVED_SETTINGS, type ImportContext } from './schema1Types';
@@ -58,6 +59,10 @@ function importSettings(src: ForkSource, ctx: ImportContext, report: ImportRepor
 		local.settings[k] = v;
 		report.filled++;
 	}
+	// device-local sections (draft triage, reading and games UI state): only where Hoard has none yet
+	local.drafts ??= data.drafts;
+	local.reading ??= data.reading;
+	local.games ??= data.games;
 	for (const [id, entry] of Object.entries(data.cache ?? {})) {
 		local.cache[id] = { ...entry, ...local.cache[id] };
 	}
@@ -68,7 +73,7 @@ function importSettings(src: ForkSource, ctx: ImportContext, report: ImportRepor
 export async function importFork(src: ForkSource, ctx: ImportContext, progress: Progress): Promise<ImportReport> {
 	const report = emptyImportReport();
 	const forkLayout = new VaultLayout(src.root, () => src.typeNames);
-	const files = managedFiles(ctx.app, forkLayout, src.typeNames, ctx.layout.root);
+	const files = managedFiles(ctx.app, forkLayout, src.typeNames, nestedHoardRoot(src.root, ctx.layout.root));
 	let done = 0;
 	for (const file of files) {
 		const target = forkTarget(file.path, src.root, ctx.layout.root);
@@ -87,6 +92,7 @@ export async function importFork(src: ForkSource, ctx: ImportContext, progress: 
 	}
 	try {
 		await importBase(src, ctx, report);
+		await registerTypes(ctx, forkBaseTypes(await ctx.app.vault.read(src.base)));
 	} catch (e) {
 		report.review.push({ path: ctx.layout.basePath, reason: 'error', code: 'failed', params: { message: errMsg(e) } });
 		report.errors.push(`${ctx.layout.basePath}: ${errMsg(e)}`);

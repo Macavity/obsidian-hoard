@@ -38,6 +38,32 @@ describe('importFork', () => {
 		expect(r.created).toBeGreaterThan(0);
 	});
 
+	it('copies a fork nested inside Hoard\'s root', async () => {
+		const { f, ctx, src } = await setupFork({
+			'Media/Hoard.base': 'hoard:\n  types: []\n', 'Media/WatchLog/WatchLog.base': 'watchlog:\n  types:\n    - name: Movie\n',
+			'Media/WatchLog/Movie/Heat.md': 'h',
+		}, undefined, 'Media');
+		await importFork(src, ctx, () => {});
+		expect(f.files.get('Media/Movie/Heat.md')).toBe('h');
+	});
+
+	it('adds fork types an existing Hoard base lacks, keeps its own', async () => {
+		const { ctx, src } = await setupFork({
+			'WatchLog/WatchLog.base': 'watchlog:\n  types:\n    - name: Film\n      color: "#222"\n',
+			'WatchLog/Film/Heat.md': 'h',
+			'Hoard/Hoard.base': 'hoard:\n  types:\n    - name: Movie\n      color: "#000"\n',
+		});
+		await importFork(src, ctx, () => {});
+		expect(ctx.shared.get().settings.types).toEqual([{ name: 'Movie', color: '#000' }, { name: 'Film', color: '#222' }]);
+	});
+
+	it('takes the fork\'s draft state when Hoard has none', async () => {
+		const drafts = { dismissed: ['x'] };
+		const { ctx, src } = await setupFork(FORK, { schemaVersion: 2, settings: {}, cache: {}, ui: {}, drafts });
+		await importFork(src, ctx, () => {});
+		expect(ctx.local.data.drafts).toEqual(drafts);
+	});
+
 	it('existing target is reported, not overwritten', async () => {
 		const { f, ctx, src } = await setupFork({ ...FORK, 'Hoard/Movie/Heat.md': 'mine' });
 		const r = await importFork(src, ctx, () => {});

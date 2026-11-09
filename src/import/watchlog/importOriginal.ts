@@ -1,12 +1,12 @@
 import { TFile, TFolder, type App } from 'obsidian';
 import type { OriginalSource } from './detect';
-import { originalFolders, originalNotePath } from './originalPaths';
+import { isListNote, originalFolders, originalNotePath } from './originalPaths';
 import { emptyImportReport, type ImportReport, type Progress } from './report';
 import { importWatchLogData, mergeSideFiles } from './schema1';
 import { bodyOf, ensureFolder } from './schema1Notes';
 import type { ImportContext } from './schema1Types';
+import { registerTypes } from './registerTypes';
 
-const isListNote = (content: string): boolean => content.includes('## Data') && /```json/.test(content);
 
 /** Copies WatchLog's custom lists (notes with a `## Data` json block) into Hoard's lists folder. */
 async function copyLists(app: App, from: string, to: string, report: ImportReport): Promise<void> {
@@ -50,6 +50,7 @@ export async function importOriginal(src: OriginalSource, ctx: ImportContext, pr
 			return file instanceof TFile ? bodyOf(await vault.read(file)) : null;
 		};
 		report = await importWatchLogData(data, ctx, { progress, oldBody });
+		await registerTypes(ctx, data.settings.types);
 		await copyLists(ctx.app, folders.lists, ctx.layout.customListsFolder, report);
 	} catch (e) {
 		report.errors.push(e instanceof Error ? e.message : String(e));
