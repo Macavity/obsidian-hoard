@@ -251,3 +251,84 @@ describe('import from pasted rows', () => {
 		expect(stored('Backlog').rows[2]).toMatchObject({ name: 'Gamma', col_1: 2 });
 	});
 });
+
+describe('name cell Escape', () => {
+	// every tab installs a document-level Escape guard; destroy them so tests cannot intercept each other
+	const tabs: { destroy(): void }[] = [];
+	const setup = async (...args: Parameters<typeof setupCustomLists>): ReturnType<typeof setupCustomLists> => {
+		const result = await setupCustomLists(...args);
+		tabs.push(result.tab);
+		return result;
+	};
+	afterEach(() => { tabs.splice(0).forEach((tab) => tab.destroy()); });
+
+	const nameList = (): ReturnType<typeof makeList> => makeList({
+		columns: [{ id: 'name', label: 'Name', type: 'text', locked: true }],
+		rows: [{ id: 'row_1', name: 'Alpha' }],
+	});
+	const nameCell = (container: HTMLElement): HTMLElement => q(container, '.hoard-cl-tr-body .hoard-cl-td-name');
+	const reachedDocument = (): { seen: () => boolean; stop: () => void } => {
+		let hit = false;
+		const fn = (): void => { hit = true; };
+		document.addEventListener('keydown', fn);
+		return { seen: () => hit, stop: () => document.removeEventListener('keydown', fn) };
+	};
+
+	it('cancels the edit without saving and does not leak outward', async () => {
+		const { container, stored } = await setup([nameList()]);
+		nameCell(container).click();
+		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		input.value = 'Changed';
+		const probe = reachedDocument();
+		key(input, 'Escape');
+		probe.stop();
+		await until(() => nameCell(container).querySelector('.hoard-cl-cell-input') === null);
+		expect(stored('Backlog').rows[0]!['name']).toBe('Alpha');
+		expect(nameCell(container).textContent).toBe('Alpha');
+		expect(probe.seen()).toBe(false);
+	});
+
+	it('closes only the suggestion dropdown while it is open', async () => {
+		const { container, plugin } = await setup([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
+		Object.assign(plugin, {
+			readingDataManager: { getBooks: () => [], getMangaList: () => [] },
+			gameDataManager: { getGames: () => [] },
+		});
+		nameCell(container).click();
+		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		input.value = 'a';
+		input.dispatchEvent(new Event('input'));
+		expect(document.querySelector('.hoard-cl-autofill-dropdown')).not.toBeNull();
+		key(input, 'Escape');
+		expect(document.querySelector('.hoard-cl-autofill-dropdown')).toBeNull();
+		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
+	});
+
+	it('keeps the edit open when Escape aborts an IME composition', async () => {
+		const { container, stored } = await setup([nameList()]);
+		nameCell(container).click();
+		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		input.value = 'Changed';
+		const probe = reachedDocument();
+		key(input, 'Escape', { isComposing: true });
+		probe.stop();
+		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
+		expect(probe.seen()).toBe(false);
+		expect(stored('Backlog').rows[0]!['name']).toBe('Alpha');
+	});
+
+	it('keeps the dropdown open when Escape aborts an IME composition', async () => {
+		const { container, plugin } = await setup([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
+		Object.assign(plugin, {
+			readingDataManager: { getBooks: () => [], getMangaList: () => [] },
+			gameDataManager: { getGames: () => [] },
+		});
+		nameCell(container).click();
+		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		input.value = 'a';
+		input.dispatchEvent(new Event('input'));
+		key(input, 'Escape', { isComposing: true });
+		expect(document.querySelector('.hoard-cl-autofill-dropdown')).not.toBeNull();
+		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
+	});
+});

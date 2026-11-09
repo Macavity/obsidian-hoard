@@ -25,7 +25,10 @@ function handleEditKey(
 ): void {
 	if (e.key === 'Tab') { e.preventDefault(); commit(e.shiftKey ? 'shift-tab' : 'tab'); }
 	else if (e.key === 'Enter') { e.preventDefault(); commit('enter'); }
-	else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); cancel(); }
+	else if (e.key === 'Escape') {
+		e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+		if (!e.isComposing) cancel(); // during IME composition Escape only aborts the composition
+	}
 }
 
 export type CellNavDirection = 'tab' | 'shift-tab' | 'enter';
@@ -1295,6 +1298,26 @@ export class CustomListsTab {
 		this._escapeKeyHandler = null;
 	}
 
+	/**
+	 * Swallows Escape at document level so it never reaches Obsidian (view/modal close). Escape keydown
+	 * on the input itself is let through: the input's own handler closes the dropdown or cancels, and stops it there.
+	 */
+	private installEscapeGuard(input: HTMLElement): void {
+		const handler = (e: KeyboardEvent): void => {
+			if (e.key !== 'Escape' || (e.type === 'keydown' && e.target === input)) return;
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			e.preventDefault();
+		};
+		this._escapeKeyHandler = handler;
+		activeDocument.addEventListener('keydown', handler, true);
+		activeDocument.addEventListener('keyup', handler, true);
+		this.addCleanup(() => {
+			activeDocument.removeEventListener('keydown', handler, true);
+			activeDocument.removeEventListener('keyup', handler, true);
+		});
+	}
+
 	private renderNameCell(
 		cell: HTMLElement,
 		row: CustomListRow,
@@ -1332,21 +1355,6 @@ export class CustomListsTab {
 
 		cell.empty();
 		cell.addClass('hoard-cl-editing');
-		this._escapeKeyHandler = (e: KeyboardEvent) => {
-    		if (e.key === 'Escape') {
-        		e.stopPropagation();
-        		e.stopImmediatePropagation();
-        		e.preventDefault();
-    		}
-		};
-		activeDocument.addEventListener('keydown', this._escapeKeyHandler, true);
-		activeDocument.addEventListener('keyup', this._escapeKeyHandler, true);
-		const escHandler = this._escapeKeyHandler;
-		this.addCleanup(() => {
-			activeDocument.removeEventListener('keydown', escHandler, true);
-			activeDocument.removeEventListener('keyup', escHandler, true);
-		});
-
 		const stopKeyboardScroll = this.watchKeyboardScroll(cell);
 
 		const wrap = cell.createDiv({ cls: 'hoard-cl-autofill-wrap' });
@@ -1356,6 +1364,8 @@ export class CustomListsTab {
 		});
 		input.focus();
 		input.select();
+
+		this.installEscapeGuard(input);
 
 		// autofill renders on document.body, position:fixed, to escape the table's overflow:hidden
 		let dropdown: HTMLElement | null = null;
@@ -1432,7 +1442,7 @@ export class CustomListsTab {
 				e.preventDefault();
 				e.stopPropagation();
 				e.stopImmediatePropagation();
-				clearDropdown();
+				if (!e.isComposing) clearDropdown(); // composition Escape only aborts the composition
 				return true;
 			}
 			return false;
