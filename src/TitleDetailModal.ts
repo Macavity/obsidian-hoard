@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Platform, setIcon } from 'obsidian';
+import { App, Modal, Notice, Platform, setIcon, setTooltip } from 'obsidian';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardGroup, Season, TagDefinition, CreditsField } from './types';
@@ -18,6 +18,7 @@ import { pinModalFooter } from './StickyModal';
 import { renderEpisodeGrid } from './ui/EpisodeGrid';
 import type { TmdbCollectionDetail } from './types';
 import { t } from './i18n';
+import { createIconButton } from './ui/IconButton';
 import { paintFavoriteButton, renderGroupDetailHeader, episodeGridText } from './ui/detailShared';
 import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
 
@@ -167,9 +168,7 @@ export class TitleDetailModal extends Modal {
 
 		if (this.title.externalLink) {
 			const linkIcon = badgeRow.createEl('a', { cls: 'hoard-acc-link-icon' });
-			// mobile renders the row as icon buttons — an emoji beside two lucide glyphs reads wrong
-			if (mobile) setIcon(linkIcon, 'globe');
-			else linkIcon.setText('🌐');
+			setIcon(linkIcon, 'globe');
 			linkIcon.href = this.title.externalLink;
 			linkIcon.title = t('list.openExternalLink');
 			linkIcon.target = '_blank';
@@ -680,42 +679,40 @@ export class TitleDetailModal extends Modal {
 	}
 
 	/**
-	 * Paints the trailer control: a trailer → clickable YouTube icon (opens externally); none ('' or
-	 * 'none') → a refresh button that re-fetches from source. Re-read from the store so an override
-	 * saved in the edit modal shows.
+	 * Paints the trailer control: a trailer → red play button (opens externally); none ('' or
+	 * 'none') → the same button muted, which fetches from source on click. Same frame in both
+	 * states so the row does not jump. Re-read from the store so an override saved in the edit
+	 * modal shows.
 	 */
 	private paintTrailerControl(container: HTMLElement): void {
 		container.empty();
 		const title = this.dataManager.getTitle(this.title.id) ?? this.title;
 		const url = getDisplayTrailer(title);
-		if (url) {
-			const btn = container.createEl('button', {
-				cls: 'hoard-trailer-btn',
-				attr: { type: 'button', title: t('detail.trailer.watch'), 'aria-label': t('detail.trailer.watch') },
-			});
-			// mobile has room for a labelled button and needs the bigger tap target
-			if (this.mobile) {
-				btn.addClass('hoard-trailer-btn-labeled');
-				setIcon(btn, 'play');
-				btn.createSpan({ cls: 'hoard-trailer-btn-label', text: t('detail.trailer.label') });
-			} else {
-				setIcon(btn, 'youtube');
-			}
-			btn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				window.open(url, '_blank');
-			});
-			return;
-		}
-		const refreshBtn = container.createEl('button', {
-			cls: 'hoard-community-refresh hoard-trailer-refresh',
-			attr: { type: 'button', title: t('detail.trailer.fetch'), 'aria-label': t('detail.trailer.fetch') },
-		});
-		setIcon(refreshBtn, 'refresh-cw');
-		refreshBtn.addEventListener('click', (e) => {
+		const btn = this.renderTrailerButton(container, url ? t('detail.trailer.watch') : t('detail.trailer.fetch'));
+		if (!url) btn.addClass('hoard-trailer-btn--fetch');
+		btn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			void this.refreshTrailer(refreshBtn, container);
+			if (url) window.open(url, '_blank');
+			else void this.refreshTrailer(btn, container);
 		});
+	}
+
+	/**
+	 * The play-shaped trailer button (Obsidian's Lucide set has no `youtube` icon); mobile has room
+	 * for a label and needs the bigger tap target. Not an icon-only button, so not createIconButton.
+	 */
+	private renderTrailerButton(container: HTMLElement, label: string): HTMLButtonElement {
+		const btn = container.createEl('button', {
+			cls: 'hoard-trailer-btn',
+			attr: { type: 'button', 'aria-label': label },
+		});
+		setTooltip(btn, label);
+		setIcon(btn, 'play');
+		if (this.mobile) {
+			btn.addClass('hoard-trailer-btn--labeled');
+			btn.createSpan({ cls: 'hoard-trailer-btn__label', text: t('detail.trailer.label') });
+		}
+		return btn;
 	}
 
 	/**
@@ -1107,9 +1104,12 @@ export function renderCreditsRefreshButton(
 	title: HoardTitle,
 	onDone: (changed: boolean) => void,
 ): void {
-	const btn = parent.createEl('button', { cls: 'hoard-credits-refresh', text: '⟳' });
-	btn.title = t('detail.credits.refresh');
-	btn.setAttr('aria-label', t('detail.credits.refresh'));
+	const btn = createIconButton(parent, {
+		icon: 'refresh-cw',
+		label: t('detail.credits.refresh'),
+		cls: 'hoard-credits-refresh',
+		variant: 'framed',
+	});
 	if (creditsRefreshInFlight.has(title.id)) btn.addClass('is-loading');
 	btn.addEventListener('click', () => {
 		if (creditsRefreshInFlight.has(title.id)) return;
@@ -1187,10 +1187,12 @@ export function renderCreditsRows(
 
 		// studio has no add path — AddCreditModal's pool and labels are director/cast only
 		if (onAddCredits && field !== 'studio') {
-			const addBtn = labelEl.createEl('button', { cls: 'hoard-credits-add', text: '+' });
-			const addLabel = t(field === 'director' ? 'detail.credits.addDirector' : 'detail.credits.addCast');
-			addBtn.title = addLabel;
-			addBtn.setAttr('aria-label', addLabel);
+			const addBtn = createIconButton(labelEl, {
+				icon: 'plus',
+				label: t(field === 'director' ? 'detail.credits.addDirector' : 'detail.credits.addCast'),
+				cls: 'hoard-credits-add',
+				variant: 'sm',
+			});
 			addBtn.addEventListener('click', (e) => {
 				e.stopPropagation();
 				onAddCredits(field);
@@ -1220,10 +1222,12 @@ export function renderCreditsRows(
 				});
 			}
 			if (isManual && onRemoveManual) {
-				const del = el.createEl('button', { cls: 'hoard-credits-name-del', text: '✕' });
-				const removeLabel = t('detail.credits.removeName', { name });
-				del.title = removeLabel;
-				del.setAttr('aria-label', removeLabel);
+				const del = createIconButton(el, {
+					icon: 'x',
+					label: t('detail.credits.removeName', { name }),
+					cls: 'hoard-credits-name-del',
+					variant: 'sm',
+				});
 				del.addEventListener('click', (e) => {
 					e.stopPropagation();
 					onRemoveManual(field, name);
@@ -1429,8 +1433,7 @@ function buildTitleCardElement(
 		fill.style.width = `${ratio * 100}%`;
 	}
 
-	const menuBtn = card.createEl('button', { cls: 'hoard-card-menu-btn', text: '⋮' });
-	menuBtn.setAttr('aria-label', t('common.edit'));
+	const menuBtn = createIconButton(card, { icon: 'more-vertical', label: t('common.edit'), cls: 'hoard-card-menu-btn' });
 	menuBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
 		handlers.onEdit();

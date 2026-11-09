@@ -9,12 +9,6 @@
    `.is-tablet button.hoard-x` ties it and wins on source order (plugin styles load after
    app.css). Values copied from each button's own rule. */
 .is-tablet button.hoard-airtime-action-btn,
-.is-tablet button.hoard-card-menu-btn,
-.is-tablet button.hoard-community-refresh,
-.is-tablet button.hoard-credit-chip-del,
-.is-tablet button.hoard-credits-add,
-.is-tablet button.hoard-credits-name-del,
-.is-tablet button.hoard-credits-refresh,
 .is-tablet button.hoard-datepicker-nav,
 .is-tablet button.hoard-editcol-card-del,
 .is-tablet button.hoard-editcol-card-opt-del,

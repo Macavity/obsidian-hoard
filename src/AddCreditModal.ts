@@ -1,6 +1,7 @@
 import { App, Modal } from 'obsidian';
 import type HoardPlugin from './main';
 import { t } from './i18n';
+import { createIconButton } from './ui/IconButton';
 import type { HoardTitle, CreditsField } from './types';
 import { getDisplayCredits, getManualCredits, getTitleCredits } from './types';
 
@@ -297,10 +298,12 @@ export class AddCreditModal extends Modal {
 		this.staged.forEach((name, idx) => {
 			const chip = wrap.createDiv({ cls: 'hoard-credit-chip' });
 			chip.createSpan({ cls: 'hoard-credit-chip-name', text: name });
-			const del = chip.createEl('button', { cls: 'hoard-credit-chip-del', text: '✕' });
-			const removeLabel = t('add.credit.removeName', { name });
-			del.title = removeLabel;
-			del.setAttr('aria-label', removeLabel);
+			const del = createIconButton(chip, {
+				icon: 'x',
+				label: t('add.credit.removeName', { name }),
+				cls: 'hoard-credit-chip-del',
+				variant: 'sm',
+			});
 			del.addEventListener('click', () => {
 				this.staged.splice(idx, 1);
 				this.renderResults();
