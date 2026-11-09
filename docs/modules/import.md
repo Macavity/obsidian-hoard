@@ -13,7 +13,7 @@ source:
   - src/import/watchlog/widgets.ts
   - src/WatchLogOnboardingModal.ts
   - src/WatchLogReport.ts
-source_commit: 16751535ee0f9fe4322c7585f1b4ec768f0c135c
+source_commit: 710b6707ca11bf724503aaca629970393a00d8d8
 ---
 
 # Import

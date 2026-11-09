@@ -5,7 +5,7 @@ description: The JSON backup format, the two export variants, validation and the
 source:
   - src/backup.ts
   - src/main.ts
-source_commit: d4cf7e39e4fc24687cf810e7417d26726e840ee6
+source_commit: 89be701597836592a0ea6243d561604a1a62bc5f
 ---
 
 # Backup
