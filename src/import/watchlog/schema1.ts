@@ -129,11 +129,14 @@ class Schema1Migration {
 		}
 	}
 
-	/** A free note path for this run: duplicates (same title and type) get " 2", " 3", … */
+	/**
+	 * A free note path for this run: duplicates (same title and type) get " 2", " 3", … Compared
+	 * case-insensitively, since macOS and Windows treat "Heat" and "heat" as one file.
+	 */
 	private claim(path: string): string {
 		let p = path;
-		for (let n = 2; this.claimed.has(p); n++) p = `${path.slice(0, -3)} ${n}.md`;
-		this.claimed.add(p);
+		for (let n = 2; this.claimed.has(p.toLowerCase()); n++) p = `${path.slice(0, -3)} ${n}.md`;
+		this.claimed.add(p.toLowerCase());
 		return p;
 	}
 
@@ -170,7 +173,7 @@ class Schema1Migration {
 		const layout = this.ctx.layout;
 		for (const m of data.maybe ?? []) {
 			const path = layout.notePath('title', m.title, m.type);
-			if (this.claimed.has(path)) {
+			if (this.claimed.has(path.toLowerCase())) {
 				this.report.review.push({ path, reason: 'exists', detail: `maybe "${m.title}": already in the library` });
 				this.advance();
 				continue;
@@ -213,12 +216,21 @@ class Schema1Migration {
 		}
 	}
 
-	/** Writes one entry's note; a body the source kept for it replaces the default one of a new note. */
+	/**
+	 * Writes one entry's note; a body the source kept for it replaces the default one of a new note.
+	 * A failing note is reported and skipped, so one bad entry never blocks the rest of the import.
+	 */
 	private async put(
 		kind: EntryKind, path: string, title: string, fm: Fm, body: string, apiValues?: Fm, type?: string,
 	): Promise<void> {
-		const old = this.ctx.app.vault.getAbstractFileByPath(path) ? null : await this.hooks.oldBody?.(kind, title, type);
-		await this.notes.write(path, fm, old ?? body, apiValues);
+		try {
+			const old = this.ctx.app.vault.getAbstractFileByPath(path) ? null : await this.hooks.oldBody?.(kind, title, type);
+			await this.notes.write(path, fm, old ?? body, apiValues);
+		} catch (e) {
+			const message = e instanceof Error ? e.message : String(e);
+			this.report.review.push({ path, reason: 'error', detail: message });
+			this.report.errors.push(`${path}: ${message}`);
+		}
 		this.advance();
 	}
 

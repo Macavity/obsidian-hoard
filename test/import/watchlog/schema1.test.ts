@@ -32,6 +32,30 @@ describe('importWatchLogData', () => {
 		expect((f.plugin.data as { schemaVersion: number }).schemaVersion).toBe(2);
 	});
 
+	it('a failing note is reported, the rest still imports', async () => {
+		const { run, f } = await setupSchema1(watchLogData, {});
+		const create = f.app.vault.create.bind(f.app.vault);
+		f.app.vault.create = (path, data) => (path === 'Hoard/Movie/A.md' ? Promise.reject(new Error('disk full')) : create(path, data));
+		const r = await run();
+		expect(r.errors).toEqual(['Hoard/Movie/A.md: disk full']);
+		expect(r.review).toContainEqual(expect.objectContaining({ path: 'Hoard/Movie/A.md', reason: 'error' }));
+		expect(f.files.has('Hoard/TV Show/Dark.md')).toBe(true);
+		expect(f.files.has('Hoard/Books/Dune.md')).toBe(true);
+		expect(f.files.get('Hoard/Hoard.base')).toContain('hoard:');
+	});
+
+	it('titles differing only in case get separate notes (case-insensitive file systems)', async () => {
+		const data = structuredClone(watchLogData) as unknown as WatchLogData;
+		data.titles = [
+			{ ...data.titles[0]!, id: 'x1', title: 'Heat', type: 'Movie' },
+			{ ...data.titles[0]!, id: 'x2', title: 'heat', type: 'Movie' },
+		];
+		const { run, f } = await setupSchema1(data, {});
+		expect((await run()).errors).toEqual([]);
+		expect(f.files.has('Hoard/Movie/Heat.md')).toBe(true);
+		expect(f.files.has('Hoard/Movie/heat 2.md')).toBe(true);
+	});
+
 	it('never overwrites existing note values', async () => {
 		const { run, f } = await setupSchema1(watchLogData, {
 			'Hoard/Movie/A.md': '---\ntitle: A\ntype: Movie\nrating: 5\n---\n',
