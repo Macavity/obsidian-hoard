@@ -492,19 +492,32 @@ export default class HoardPlugin extends Plugin {
 		// mirror into types.ts so the pure formatters render in the chosen order without a settings ref
 		setActiveDateFormat(this.settings.dateFormat);
 		this.syncTypeNames();
-		// a restored backup can bring another endpoint; PosterService reads it per request anyway
-		this.apiService.setJikanEndpoint(resolveJikanEndpoint(this.settings.jikanBaseUrl));
+		// a restored backup or a WatchLog import can bring other keys and endpoints
+		this.applyApiKeys();
 		return Promise.resolve();
+	}
+
+	/** Pushes the composed keys into the API service; a changed key makes "no key" checks worth repeating. */
+	private applyApiKeys(): void {
+		const s = this.settings;
+		const api = this.apiService;
+		api.setJikanEndpoint(resolveJikanEndpoint(s.jikanBaseUrl));
+		api.setOmdbKey(s.omdbApiKey);
+		api.setTmdbKey(s.tmdbApiKey);
+		api.setGoogleBooksKey(s.googleBooksApiKey);
+		api.setRawgKey(s.rawgApiKey);
+		api.setIgdbCredentials(s.igdbClientId, s.igdbClientSecret);
+		api.setSteamCredentials(s.steamApiKey, s.steamId);
+		const keys = [s.tmdbApiKey, s.omdbApiKey].join('\n');
+		if (this.apiKeys !== null && keys !== this.apiKeys) this.dataManager.resetNoKeyChecks();
+		this.apiKeys = keys;
 	}
 
 	async saveSettings(): Promise<void> {
 		// keep the date formatters in step with the setting on every save
 		setActiveDateFormat(this.settings.dateFormat);
 		this.syncTypeNames();
-		// a changed key makes "no key" checks worth repeating
-		const keys = [this.settings.tmdbApiKey, this.settings.omdbApiKey].join('\n');
-		if (this.apiKeys !== null && keys !== this.apiKeys) this.dataManager.resetNoKeyChecks();
-		this.apiKeys = keys;
+		this.applyApiKeys();
 		await persistSettings(this.settings, this.local, this.shared);
 	}
 
