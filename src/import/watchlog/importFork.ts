@@ -13,6 +13,10 @@ const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(
 
 const isBlank = (v: unknown): boolean => v === undefined || v === null || v === '';
 
+/** A fork setting Hoard takes: device-local (shared keys live in the base, removed ones nowhere), set there, unset here. */
+const takesSetting = (k: string, v: unknown, local: Record<string, unknown>): boolean =>
+	!SHARED_SETTING_KEYS.includes(k) && !REMOVED_SETTINGS.includes(k) && !isBlank(v) && isBlank(local[k]);
+
 async function ensureFolder(ctx: ImportContext, path: string): Promise<void> {
 	const i = path.lastIndexOf('/');
 	if (i < 0) return;
@@ -50,9 +54,7 @@ function importSettings(src: ForkSource, ctx: ImportContext, report: ImportRepor
 	if (!data) return;
 	const local = ctx.local.data;
 	for (const [k, v] of Object.entries(data.settings ?? {})) {
-		// shared keys live in the base, removed ones nowhere
-		if (SHARED_SETTING_KEYS.includes(k) || REMOVED_SETTINGS.includes(k)) continue;
-		if (isBlank(v) || !isBlank(local.settings[k])) continue;
+		if (!takesSetting(k, v, local.settings)) continue;
 		local.settings[k] = v;
 		report.filled++;
 	}

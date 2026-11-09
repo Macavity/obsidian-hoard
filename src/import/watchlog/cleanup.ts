@@ -6,6 +6,7 @@ import type { WatchLogSourceKind, WatchLogSources } from './detect';
 import { originalFolders, originalNotePath } from './originalPaths';
 import { forkTarget, managedFiles } from './paths';
 import { bodyOf } from './schema1Notes';
+import type { WatchLogData } from './schema1Types';
 import { hasWidgetFence, rewriteWidgetFences } from './widgets';
 
 /** One optional cleanup step and the files it would touch. */
@@ -33,26 +34,36 @@ async function copied(app: App, source: string, target: string, part: (s: string
 	return a !== null && b !== null && part(a).trim() === part(b).trim();
 }
 
+/** Each WatchLog entry's note path paired with the path of its Hoard note. */
+function originalPairs(data: WatchLogData, layout: VaultLayout): [string, string][] {
+	const f = originalFolders(data);
+	const pairs: [string, string][] = data.titles.map((t) => [originalNotePath(f, 'title', t.title, t.type), layout.notePath('title', t.title, t.type)]);
+	const others: [EntryKind, { title: string }[] | undefined][] = [
+		['book', data.reading?.books], ['manga', data.reading?.manga], ['game', data.games?.games],
+	];
+	for (const [kind, items] of others) {
+		for (const { title } of items ?? []) pairs.push([originalNotePath(f, kind, title), layout.notePath(kind, title)]);
+	}
+	return pairs;
+}
+
+/** WatchLog's custom lists that Hoard holds as identical copies. */
+async function originalLists(app: App, folder: string, layout: VaultLayout): Promise<string[]> {
+	const paths: string[] = [];
+	for (const file of app.vault.getMarkdownFiles()) {
+		if (file.parent?.path !== folder || !LIST_DATA.test(await app.vault.cachedRead(file))) continue;
+		if (await copied(app, file.path, `${layout.customListsFolder}/${file.name}`)) paths.push(file.path);
+	}
+	return paths;
+}
+
 async function originalNotes(app: App, sources: WatchLogSources, layout: VaultLayout): Promise<string[]> {
 	const data = sources.original?.data;
 	if (!data) return [];
-	const f = originalFolders(data);
-	const pairs: [string, string][] = [];
-	for (const t of data.titles) pairs.push([originalNotePath(f, 'title', t.title, t.type), layout.notePath('title', t.title, t.type)]);
-	const others: [EntryKind, string[]][] = [
-		['book', (data.reading?.books ?? []).map((b) => b.title)],
-		['manga', (data.reading?.manga ?? []).map((b) => b.title)],
-		['game', (data.games?.games ?? []).map((g) => g.title)],
-	];
-	for (const [kind, titles] of others) for (const t of titles) pairs.push([originalNotePath(f, kind, t), layout.notePath(kind, t)]);
 	// new notes take WatchLog's body; its frontmatter lives on in data.json
 	const paths: string[] = [];
-	for (const [orig, hoard] of pairs) if (await copied(app, orig, hoard, bodyOf)) paths.push(orig);
-	for (const file of app.vault.getMarkdownFiles()) {
-		if (file.parent?.path !== f.lists || !LIST_DATA.test(await app.vault.cachedRead(file))) continue;
-		if (await copied(app, file.path, `${layout.customListsFolder}/${file.name}`)) paths.push(file.path);
-	}
-	return sortUnique(paths);
+	for (const [orig, hoard] of originalPairs(data, layout)) if (await copied(app, orig, hoard, bodyOf)) paths.push(orig);
+	return sortUnique([...paths, ...await originalLists(app, originalFolders(data).lists, layout)]);
 }
 
 async function forkNotes(app: App, sources: WatchLogSources, layout: VaultLayout): Promise<string[]> {
