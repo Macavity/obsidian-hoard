@@ -13,7 +13,7 @@ source:
   - src/CommunityRating.ts
   - src/MaybeAddModal.ts
   - src/storage/titleCodec.ts
-source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
+source_commit: deafd8c95d58b0d7bead654b508876b61eb14d7e
 ---
 
 # Watchlist
