@@ -14,7 +14,7 @@ source:
   - src/csv/csvCore.ts
   - src/coverRefresh.ts
   - src/csv/CsvModalBase.ts
-source_commit: a6f98d6cb955e5a60c00b4a85ca59ae8e7742ad3
+source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
 ---
 
 # Reading

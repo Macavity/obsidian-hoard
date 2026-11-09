@@ -6,7 +6,7 @@ source:
   - src/backup.ts
   - src/SettingsTab.ts
   - src/main.ts
-source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
+source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
 ---
 
 # Backup and restore

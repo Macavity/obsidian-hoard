@@ -64,7 +64,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Storage](architecture/storage.md): where each piece of state lives (notes, base, History.md, data.json) and how reads and writes propagate.
 - [API layer](architecture/api-layer.md): which services exist, how errors and rate limits are handled, and how fetched data reaches cache and notes.
 - [Internationalisation](architecture/i18n.md): how to add a string, why stored values and storage messages are codes not text, and which tests enforce it.
-- [UI kit](architecture/ui-kit.md): how `HoardView` hosts tabs and which shared building blocks tabs and modals compose.
+- [UI kit](architecture/ui-kit.md): how `HoardView` hosts tabs, which shared building blocks (icon buttons included) tabs and modals compose, and the CSS naming rules.
 
 # Modules
 
