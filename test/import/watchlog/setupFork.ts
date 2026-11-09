@@ -1,4 +1,4 @@
-// FakeApp with a WatchLog Sync fork; the context imports below Hoard root 'Hoard'.
+// FakeApp with a WatchLog Sync fork; the context imports below Hoard root `root` (default 'Hoard').
 import { parse, stringify } from 'yaml';
 import { createFakeApp } from '../../fakes/fakeApp';
 import { VaultLayout } from '../../../src/storage/VaultLayout';
@@ -12,11 +12,11 @@ import type { ImportContext } from '../../../src/import/watchlog/schema1Types';
 const yaml = { parse, stringify };
 const FORK_DATA_PATH = '.obsidian/plugins/watchlog-sync/data.json';
 
-export async function setupFork(files: Record<string, string>, forkData?: unknown) {
+export async function setupFork(files: Record<string, string>, forkData?: unknown, root = 'Hoard') {
 	const f = createFakeApp(files);
 	if (forkData !== undefined) f.adapterFiles.set(FORK_DATA_PATH, JSON.stringify(forkData));
 	const local = new LocalStore(f.plugin);
-	const layout = new VaultLayout('Hoard', () => ['Movie']);
+	const layout = new VaultLayout(root, () => ['Movie']);
 	const shared = new SharedConfigStore(f.app, () => layout, yaml);
 	const history = new HistoryStore(f.app, () => layout);
 	const ctx: ImportContext = { app: f.app, local, shared, history, yaml, layout };

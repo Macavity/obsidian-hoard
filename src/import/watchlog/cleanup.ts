@@ -1,10 +1,11 @@
-import { TFolder, type App, type TFile } from 'obsidian';
+import { TFile, TFolder, type App } from 'obsidian';
 import { VaultLayout } from '../../storage/VaultLayout';
 import type { EntryKind } from '../../storage/storageTypes';
 import { hasHoardKey } from '../../storage/baseFile';
 import type { WatchLogSourceKind, WatchLogSources } from './detect';
 import { originalFolders, originalNotePath } from './originalPaths';
-import { managedFiles } from './paths';
+import { forkTarget, managedFiles } from './paths';
+import { bodyOf } from './schema1Notes';
 import { hasWidgetFence, rewriteWidgetFences } from './widgets';
 
 /** One optional cleanup step and the files it would touch. */
@@ -15,8 +16,22 @@ export interface CleanupItem {
 
 const LIST_DATA = /## Data\s*```json/;
 const sortUnique = (paths: string[]): string[] => [...new Set(paths)].sort();
-const exists = (app: App, path: string): boolean => app.vault.getAbstractFileByPath(path) !== null;
 const dirOf = (path: string): string => path.slice(0, Math.max(0, path.lastIndexOf('/')));
+
+async function readPath(app: App, path: string): Promise<string | null> {
+	const f = app.vault.getAbstractFileByPath(path);
+	return f instanceof TFile ? app.vault.cachedRead(f) : null;
+}
+
+/**
+ * A source is safe to trash only when Hoard holds it as another file with the same content (`part`
+ * picks what counts): a differing copy was kept on import, so the source still holds data.
+ */
+async function copied(app: App, source: string, target: string, part: (s: string) => string = (s) => s): Promise<boolean> {
+	if (source === target) return false;
+	const [a, b] = await Promise.all([readPath(app, source), readPath(app, target)]);
+	return a !== null && b !== null && part(a).trim() === part(b).trim();
+}
 
 async function originalNotes(app: App, sources: WatchLogSources, layout: VaultLayout): Promise<string[]> {
 	const data = sources.original?.data;
@@ -30,25 +45,25 @@ async function originalNotes(app: App, sources: WatchLogSources, layout: VaultLa
 		['game', (data.games?.games ?? []).map((g) => g.title)],
 	];
 	for (const [kind, titles] of others) for (const t of titles) pairs.push([originalNotePath(f, kind, t), layout.notePath(kind, t)]);
-	const paths = pairs.filter(([orig, hoard]) => exists(app, orig) && exists(app, hoard)).map(([orig]) => orig);
+	// new notes take WatchLog's body; its frontmatter lives on in data.json
+	const paths: string[] = [];
+	for (const [orig, hoard] of pairs) if (await copied(app, orig, hoard, bodyOf)) paths.push(orig);
 	for (const file of app.vault.getMarkdownFiles()) {
 		if (file.parent?.path !== f.lists || !LIST_DATA.test(await app.vault.cachedRead(file))) continue;
-		if (exists(app, `${layout.customListsFolder}/${file.name}`)) paths.push(file.path);
+		if (await copied(app, file.path, `${layout.customListsFolder}/${file.name}`)) paths.push(file.path);
 	}
 	return sortUnique(paths);
 }
 
-function forkNotes(app: App, sources: WatchLogSources, layout: VaultLayout): string[] {
+async function forkNotes(app: App, sources: WatchLogSources, layout: VaultLayout): Promise<string[]> {
 	const fork = sources.fork;
 	if (!fork) return [];
 	const forkLayout = new VaultLayout(fork.root, () => fork.typeNames);
-	const prefix = fork.root ? `${fork.root}/` : '';
-	return sortUnique(
-		managedFiles(app, forkLayout, fork.typeNames, layout.root)
-			.filter((f) => f.path.startsWith(prefix))
-			.filter((f) => exists(app, layout.root ? `${layout.root}/${f.path.slice(prefix.length)}` : f.path.slice(prefix.length)))
-			.map((f) => f.path),
-	);
+	const paths: string[] = [];
+	for (const f of managedFiles(app, forkLayout, fork.typeNames, layout.root)) {
+		if (await copied(app, f.path, forkTarget(f.path, fork.root, layout.root))) paths.push(f.path);
+	}
+	return sortUnique(paths);
 }
 
 async function forkBase(app: App, sources: WatchLogSources): Promise<string[]> {
@@ -73,7 +88,7 @@ export async function planCleanup(
 	const has = (k: WatchLogSourceKind): boolean => imported.includes(k);
 	const items: CleanupItem[] = [
 		{ id: 'original-notes', paths: has('original') ? await originalNotes(app, sources, layout) : [] },
-		{ id: 'fork-notes', paths: has('fork') ? forkNotes(app, sources, layout) : [] },
+		{ id: 'fork-notes', paths: has('fork') ? await forkNotes(app, sources, layout) : [] },
 		{ id: 'fork-base', paths: has('fork') ? await forkBase(app, sources) : [] },
 		{ id: 'widgets', paths: imported.length ? await widgetNotes(app) : [] },
 	];

@@ -1,8 +1,8 @@
-import { normalizePath, type TFile } from 'obsidian';
+import type { TFile } from 'obsidian';
 import { renameTopLevelBlock } from '../../storage/baseFile';
 import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
 import type { ForkSource } from './detect';
-import { managedFiles } from './paths';
+import { forkTarget, managedFiles } from './paths';
 import { emptyImportReport, type ImportReport, type Progress } from './report';
 import type { ImportContext } from './schema1Types';
 
@@ -64,10 +64,9 @@ export async function importFork(src: ForkSource, ctx: ImportContext, progress: 
 	const report = emptyImportReport();
 	const forkLayout = new VaultLayout(src.root, () => src.typeNames);
 	const files = managedFiles(ctx.app, forkLayout, src.typeNames, ctx.layout.root);
-	const prefix = src.root ? `${src.root}/` : '';
 	let done = 0;
 	for (const file of files) {
-		const target = normalizePath(ctx.layout.root ? `${ctx.layout.root}/${file.path.slice(prefix.length)}` : file.path.slice(prefix.length));
+		const target = forkTarget(file.path, src.root, ctx.layout.root);
 		try {
 			if (ctx.app.vault.getAbstractFileByPath(target)) {
 				report.review.push({ path: target, reason: 'exists', detail: 'not overwritten' });

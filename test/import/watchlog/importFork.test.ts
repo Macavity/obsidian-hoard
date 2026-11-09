@@ -31,6 +31,13 @@ describe('importFork', () => {
 		expect(f.files.get('Hoard/Movie/Heat.md')).toBeDefined();
 	});
 
+	it('Hoard at the vault root still copies a nested fork', async () => {
+		const { f, ctx, src } = await setupFork({ ...FORK, 'Hoard.base': 'hoard:\n  settings: {}\n' }, undefined, '');
+		const r = await importFork(src, ctx, () => {});
+		expect(f.files.get('Movie/Heat.md')).toBe(FORK['WatchLog/Movie/Heat.md']);
+		expect(r.created).toBeGreaterThan(0);
+	});
+
 	it('existing target is reported, not overwritten', async () => {
 		const { f, ctx, src } = await setupFork({ ...FORK, 'Hoard/Movie/Heat.md': 'mine' });
 		const r = await importFork(src, ctx, () => {});

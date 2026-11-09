@@ -34,14 +34,41 @@ describe('planCleanup', () => {
 		expect(src.original).not.toBeNull();
 		const before = await planCleanup(f.app, src, layout, ['original']);
 		expect(before.find((i) => i.id === 'original-notes')).toBeUndefined();
-		f.externalWrite('Hoard/TV Show/Dark.md', 'x');
-		f.externalWrite('Hoard/Books/Dune.md', 'x');
+		// counterparts carry the WatchLog body (as the import writes it); Shopping differs
+		f.externalWrite('Hoard/TV Show/Dark.md', '---\nstatus: Watching\n---\n\n## Notes\n\nGreat show\n');
+		f.externalWrite('Hoard/Books/Dune.md', WATCHLOG_NOTES['WatchLog/Reading/Books/Dune.md']!);
 		f.externalWrite('Hoard/CustomLists/Shopping.md', 'x');
 		const items = await planCleanup(f.app, src, layout, ['original']);
 		const paths = items.find((i) => i.id === 'original-notes')?.paths ?? [];
 		expect(paths).toContain('WatchLog/TV Show/Dark.md');
 		expect(paths).toContain('WatchLog/Reading/Books/Dune.md');
 		expect(paths).not.toContain('WatchLog/Reading/Manga/Berserk.md');
+		expect(paths).not.toContain('Lists/Shopping.md');
+	});
+
+	it('never offers a Hoard note that is its own counterpart (same root)', async () => {
+		const data = readFileSync('test/fixtures/data-v1.json', 'utf8');
+		const { f } = await setupCleanup(WATCHLOG_NOTES);
+		f.adapterFiles.set('.obsidian/plugins/watchlog/data.json', data);
+		const src = await detectWatchLogSources(f.app);
+		const same = new VaultLayout('WatchLog', () => ['TV Show']);
+		expect(await planCleanup(f.app, src, same, ['original'])).toEqual([]);
+	});
+
+	it('never offers fork files that are Hoard\'s own (both at the vault root)', async () => {
+		const { f, sources } = await setupCleanup({
+			'WL.base': 'watchlog:\n  settings: {}\n', 'Hoard.base': 'hoard:\n  settings: {}\n', 'Movie/Heat.md': 'a',
+		});
+		const root = new VaultLayout('', () => ['Movie']);
+		expect((await planCleanup(f.app, sources, root, ['fork'])).find((i) => i.id === 'fork-notes')).toBeUndefined();
+	});
+
+	it('keeps fork files whose Hoard copy differs (kept on import)', async () => {
+		const { f, sources, layout } = await setupCleanup({
+			...FORK, 'WatchLog/History.md': 'fork log', 'Hoard/History.md': 'hoard log', 'Hoard/Movie/Ronin.md': 'changed',
+		});
+		const paths = (await planCleanup(f.app, sources, layout, ['fork'])).find((i) => i.id === 'fork-notes')?.paths;
+		expect(paths).toEqual(['WatchLog/Movie/Heat.md']);
 	});
 });
 
