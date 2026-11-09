@@ -1442,7 +1442,7 @@ export class CustomListsTab {
 				e.preventDefault();
 				e.stopPropagation();
 				e.stopImmediatePropagation();
-				clearDropdown();
+				if (!e.isComposing) clearDropdown(); // composition Escape only aborts the composition
 				return true;
 			}
 			return false;

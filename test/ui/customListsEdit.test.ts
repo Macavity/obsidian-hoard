@@ -253,6 +253,15 @@ describe('import from pasted rows', () => {
 });
 
 describe('name cell Escape', () => {
+	// every tab installs a document-level Escape guard; destroy them so tests cannot intercept each other
+	const tabs: { destroy(): void }[] = [];
+	const setup = async (...args: Parameters<typeof setupCustomLists>): ReturnType<typeof setupCustomLists> => {
+		const result = await setupCustomLists(...args);
+		tabs.push(result.tab);
+		return result;
+	};
+	afterEach(() => { tabs.splice(0).forEach((tab) => tab.destroy()); });
+
 	const nameList = (): ReturnType<typeof makeList> => makeList({
 		columns: [{ id: 'name', label: 'Name', type: 'text', locked: true }],
 		rows: [{ id: 'row_1', name: 'Alpha' }],
@@ -266,7 +275,7 @@ describe('name cell Escape', () => {
 	};
 
 	it('cancels the edit without saving and does not leak outward', async () => {
-		const { container, stored } = await setupCustomLists([nameList()]);
+		const { container, stored } = await setup([nameList()]);
 		nameCell(container).click();
 		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
 		input.value = 'Changed';
@@ -280,7 +289,7 @@ describe('name cell Escape', () => {
 	});
 
 	it('closes only the suggestion dropdown while it is open', async () => {
-		const { container, plugin } = await setupCustomLists([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
+		const { container, plugin } = await setup([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
 		Object.assign(plugin, {
 			readingDataManager: { getBooks: () => [], getMangaList: () => [] },
 			gameDataManager: { getGames: () => [] },
@@ -296,7 +305,7 @@ describe('name cell Escape', () => {
 	});
 
 	it('keeps the edit open when Escape aborts an IME composition', async () => {
-		const { container, stored } = await setupCustomLists([nameList()]);
+		const { container, stored } = await setup([nameList()]);
 		nameCell(container).click();
 		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
 		input.value = 'Changed';
@@ -306,5 +315,20 @@ describe('name cell Escape', () => {
 		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
 		expect(probe.seen()).toBe(false);
 		expect(stored('Backlog').rows[0]!['name']).toBe('Alpha');
+	});
+
+	it('keeps the dropdown open when Escape aborts an IME composition', async () => {
+		const { container, plugin } = await setup([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
+		Object.assign(plugin, {
+			readingDataManager: { getBooks: () => [], getMangaList: () => [] },
+			gameDataManager: { getGames: () => [] },
+		});
+		nameCell(container).click();
+		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		input.value = 'a';
+		input.dispatchEvent(new Event('input'));
+		key(input, 'Escape', { isComposing: true });
+		expect(document.querySelector('.hoard-cl-autofill-dropdown')).not.toBeNull();
+		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
 	});
 });
