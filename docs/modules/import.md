@@ -31,7 +31,9 @@ exercise the code. Only this folder may know WatchLog names (plugin ids, `WatchL
 - [schema1.ts](../../src/import/watchlog/schema1.ts): `importWatchLogData(data, ctx)` converts
   schema-1 data into notes through the normal codecs (`encodeTitle`, `encodeBook`, `encodeManga`,
   `encodeGame`, `splitCache`), so results match notes the plugin writes. Notes are created or only
-  filled, never overwritten (`NoteWriter` in `schema1Notes.ts`); groups, airtime and history are
+  filled, never overwritten (`NoteWriter` in `schema1Notes.ts`) — except a title field that still
+  equals the value an API delivered (stale API data), which is replaced unless the note sets it as an
+  override; groups, airtime and history are
   applied, the base is filled when empty, the cache merged, missing device-local settings filled.
   No folder moves, `schemaVersion` untouched. Returns a `Schema1Report` (created, filled, skipped,
   errors). `mergeSideFiles` folds in old `reading.json`/`history.json`. Helpers:
@@ -44,8 +46,9 @@ exercise the code. Only this folder may know WatchLog names (plugin ids, `WatchL
 
 - **Hoard's own `data.json` is a WatchLog schema-1 file** (no `schemaVersion`, has `titles`):
   `LocalStore.load` starts with empty data and stays read-only for the whole session, so the file
-  is never overwritten. `LoadResult` is `{ schema: 2 }` or `{ schema: 'newer' }`; `main.ts` shows a
-  Notice only for `newer` ([storage](../architecture/storage.md)).
+  is never overwritten. `LoadResult` is `{ schema: 2 }`, `{ schema: 'newer' }` or `{ schema: 'watchlog' }`;
+  `main.ts` shows a sticky Notice for the last two, since device settings typed in that session are
+  lost ([storage](../architecture/storage.md)).
 - **Backup restore**: `parseBackup` accepts only `version: 2` Hoard files; anything else is
   `unsupportedFormat` ([backup](backup.md)).
 - `main.ts` does no WatchLog detection, adoption or warning at startup ([flows/startup](../flows/startup.md)).

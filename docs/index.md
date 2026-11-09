@@ -46,8 +46,7 @@ flowchart TD
   Managers --> Storage[EntryIndex, codecs, stores]
   Storage --> Vault[(notes, Hoard.base, History.md)]
   Storage --> Local[(data.json)]
-  main --> Import[import/watchlog]
-  Import --> Storage
+  Import[import/watchlog, not wired yet] --> Storage
 ```
 
 # Types

@@ -43,7 +43,7 @@ sequenceDiagram
 
 1. **`LocalStore.load`** reads Hoard's own `data.json`. A file from a newer plugin version makes
    the store read-only with a Notice; a WatchLog schema-1 file makes it start empty and read-only
-   for the session ([import](../modules/import.md)).
+   for the session, also with a Notice ([import](../modules/import.md)).
 2. **`loadSettings`** composes defaults + local (+ shared, empty for now) and mirrors the date
    format into `types.ts`; the card-size CSS variable is set before any grid renders.
 3. Services and UI are registered: `ApiService` with the keys, managers get the `HistoryManager`,
