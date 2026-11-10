@@ -150,6 +150,11 @@ export class ReadingManageColumnsModal extends Modal {
 					return;
 				}
 				if (next === col.name) return;
+				if (this.readingData.isColumnNameTaken(this.kind, next, col.id)) {
+					new Notice(t('reading.columns.nameTaken'));
+					nameInput.value = col.name;
+					return;
+				}
 				void this.updateColumn({ ...col, name: next });
 			});
 
@@ -251,6 +256,10 @@ export class ReadingManageColumnsModal extends Modal {
 				new Notice(t('reading.columns.enterName'));
 				return;
 			}
+			if (this.readingData.isColumnNameTaken(this.kind, name)) {
+				new Notice(t('reading.columns.nameTaken'));
+				return;
+			}
 			const type = typeSelect.value as ReadingCustomColumn['type'];
 			const options =
 				type === 'select'
@@ -282,7 +291,8 @@ export class ReadingManageColumnsModal extends Modal {
 	}
 
 	private async updateColumn(col: ReadingCustomColumn): Promise<void> {
-		await this.readingData.updateColumn(this.kind, col);
+		const moved = await this.readingData.updateColumn(this.kind, col);
+		if (moved > 0) new Notice(t('reading.columns.renamed', { count: moved }));
 		this.renderList();
 		this.onChanged();
 	}

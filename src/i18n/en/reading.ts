@@ -99,11 +99,16 @@ const reading = {
 		chooseColor: 'Choose field color',
 		optionValues: 'Comma-separated values',
 		deleteField: 'Delete this field',
-		deleteConfirmBook: 'Delete field "{name}"? This removes its data from every book entry.',
-		deleteConfirmManga: 'Delete field "{name}"? This removes its data from every manga entry.',
+		deleteConfirmBook: 'Delete field "{name}"? Its values stay in the book notes.',
+		deleteConfirmManga: 'Delete field "{name}"? Its values stay in the manga notes.',
 		addField: 'Add field',
 		optionsPlaceholder: 'Options (comma-separated)',
 		enterName: 'Enter a field name first.',
+		nameTaken: 'Another field already uses this name.',
+		renamed: {
+			one: 'Renamed the field in {count} note.',
+			other: 'Renamed the field in {count} notes.',
+		},
 	},
 } as const;
 

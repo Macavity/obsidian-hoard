@@ -102,11 +102,16 @@ const reading = {
 		chooseColor: 'Feldfarbe wählen',
 		optionValues: 'Werte, durch Komma getrennt',
 		deleteField: 'Dieses Feld löschen',
-		deleteConfirmBook: 'Feld "{name}" löschen? Die Daten werden aus jedem Buch entfernt.',
-		deleteConfirmManga: 'Feld "{name}" löschen? Die Daten werden aus jedem Manga entfernt.',
+		deleteConfirmBook: 'Feld "{name}" löschen? Die Werte bleiben in den Buchnotizen.',
+		deleteConfirmManga: 'Feld "{name}" löschen? Die Werte bleiben in den Manganotizen.',
 		addField: 'Feld hinzufügen',
 		optionsPlaceholder: 'Optionen (durch Komma getrennt)',
 		enterName: 'Gib zuerst einen Feldnamen ein.',
+		nameTaken: 'Ein anderes Feld hat bereits diesen Namen.',
+		renamed: {
+			one: 'Feld in {count} Notiz umbenannt.',
+			other: 'Feld in {count} Notizen umbenannt.',
+		},
 	},
 } satisfies DeepPartial<typeof enReading>;
 
