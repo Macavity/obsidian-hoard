@@ -132,6 +132,7 @@ export default class HoardPlugin extends Plugin {
 		this.posterService = new PosterService(
 			this.dataManager,
 			() => this.settings,
+			() => this.apiService,
 		);
 
 		this.startAirtimeScheduler();

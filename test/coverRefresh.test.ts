@@ -1,6 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import type { ApiService } from '../src/ApiService';
+import type { Game } from '../src/types';
+import { steamLibraryCover } from '../src/steamStoreApi';
 import { parse } from 'yaml';
-import { refreshAllCovers, type CoverRefreshDeps } from '../src/coverRefresh';
+import { refreshAllCovers, resolveGameCover, type CoverRefreshDeps } from '../src/coverRefresh';
 import { ApiCheckQueue } from '../src/apiCheckQueue';
 import { setupGames } from './helpers/setupGameDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
@@ -33,7 +36,32 @@ async function run(files: Record<string, string>, api: Api, poster?: (dm: DataMa
 	return { res, g, r, d };
 }
 
+const OL_BOOK = '---\nName: Dune\nStatus: Reading\nType: book\nCover: https://mine\nExternal ID: openlibrary:OL1W\n---\n';
+const STEAM_GAME = '---\nName: Hades\nStatus: Playing\nType: game\nExternal ID: steam:1145360\nCover: https://mine\n---\n';
+
 describe('refreshAllCovers', () => {
+	it('book with openLibraryId fetches its cover via Open Library', async () => {
+		const getOpenLibraryWork = vi.fn().mockResolvedValue({ coverUrl: 'https://ol/c' });
+		const { res, r } = await run({ 'W/Books/Dune.md': OL_BOOK }, { getOpenLibraryWork, hasGoogleBooksKey: () => false });
+		expect(getOpenLibraryWork).toHaveBeenCalledWith('OL1W');
+		expect(fmOf(r.f.files.get('W/Books/Dune.md')).Cover).toBe('https://ol/c');
+		expect(res.updated).toBe(1);
+	});
+
+	it('steam game gets the library cover without an API call', async () => {
+		const { res, g } = await run({ 'W/Games/Hades.md': STEAM_GAME }, {});
+		expect(fmOf(g.f.files.get('W/Games/Hades.md')).Cover).toBe(steamLibraryCover('1145360'));
+		expect(res.updated).toBe(1);
+	});
+
+	it('keyless title search uses the Steam store', async () => {
+		const searchSteamStore = vi.fn().mockResolvedValue([{ coverUrl: 'https://s/c', source: 'steam', id: 7 }]);
+		const api = { searchSteamStore, hasRawgKey: () => false, hasIgdbCredentials: () => false } as unknown as ApiService;
+		const game = { title: 'Hades', apiSource: '', apiId: '' } as Game;
+		expect(await resolveGameCover(api, 'rawg', game)).toEqual({ url: 'https://s/c', source: 'steam', apiId: '7' });
+		expect(searchSteamStore).toHaveBeenCalledWith('Hades');
+	});
+
 	it('game: hand-entered cover is replaced by the API cover', async () => {
 		const { res, g } = await run({ 'W/Games/Hades.md': GAME('https://mine') }, {
 			getRawgGameDetails: () => Promise.resolve({ coverUrl: 'https://api/x' }),

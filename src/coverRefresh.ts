@@ -5,6 +5,8 @@ import type { ReadingDataManager, ReadingKind } from './ReadingDataManager';
 import type { PosterService } from './PosterService';
 import type { DataManager } from './DataManager';
 import type { Book, Game, Manga } from './types';
+import { effectiveGameSource } from './apiSources';
+import { steamLibraryCover } from './steamStoreApi';
 
 export interface GameCover { url: string; source: '' | 'rawg' | 'igdb' | 'steam'; apiId: string }
 
@@ -22,22 +24,12 @@ export async function resolveGameCover(
 	const none: GameCover = { url: '', source: '', apiId: '' };
 	try {
 		if (game.apiSource && game.apiId) {
-			const details = game.apiSource === 'igdb'
-				? await api.getIgdbGameDetails(Number(game.apiId))
-				: await api.getRawgGameDetails(Number(game.apiId));
-			return details?.coverUrl ? { url: details.coverUrl, source: '', apiId: '' } : none;
+			const url = await gameCoverById(api, game.apiSource, game.apiId);
+			return url ? { url, source: '', apiId: '' } : none;
 		}
 		if (idOnly) return none;
-
 		// no stored id (added manually or before the field existed) — search by title
-		let results: GameSearchResult[] = [];
-		if (searchSource === 'igdb') {
-			if (!api.hasIgdbCredentials()) return none;
-			results = await api.searchIgdbGames(game.title);
-		} else {
-			if (!api.hasRawgKey()) return none;
-			results = await api.searchRawgGames(game.title);
-		}
+		const results = await searchGamesByTitle(api, effectiveGameSource({ gamesApiSource: searchSource }, api), game.title);
 		const first = results[0];
 		if (!first || !first.coverUrl) return none;
 		return { url: first.coverUrl, source: first.source, apiId: String(first.id) };
@@ -46,10 +38,26 @@ export async function resolveGameCover(
 	}
 }
 
+async function gameCoverById(api: ApiService, source: string, apiId: string): Promise<string> {
+	if (source === 'steam') return steamLibraryCover(apiId);
+	const details = source === 'igdb'
+		? await api.getIgdbGameDetails(Number(apiId))
+		: await api.getRawgGameDetails(Number(apiId));
+	return details?.coverUrl ?? '';
+}
+
+function searchGamesByTitle(api: ApiService, source: 'steam' | 'rawg' | 'igdb', title: string): Promise<GameSearchResult[]> {
+	if (source === 'igdb') return api.searchIgdbGames(title);
+	if (source === 'rawg') return api.searchRawgGames(title);
+	return api.searchSteamStore(title);
+}
+
 /** The cover of a book (Google Books id) or manga (MAL id); '' without id or cover. Throws on API errors. */
 export async function fetchReadingCoverById(api: ApiService, kind: ReadingKind, item: Book | Manga): Promise<string> {
 	if (kind === 'book') {
-		const gid = (item as Book).googleBooksId;
+		const book = item as Book;
+		if (book.openLibraryId) return (await api.getOpenLibraryWork(book.openLibraryId))?.coverUrl ?? '';
+		const gid = book.googleBooksId;
 		return gid ? (await api.getGoogleBookById(gid))?.coverUrl ?? '' : '';
 	}
 	const malId = (item as Manga).malId;
@@ -94,7 +102,7 @@ export async function refreshAllCovers(d: CoverRefreshDeps): Promise<CoverRefres
 		})().catch(() => false));
 	}
 	for (const b of books) {
-		if (!b.googleBooksId || !canBooks) { jobs.push(Promise.resolve(false)); continue; }
+		if (!(b.openLibraryId || (b.googleBooksId && canBooks))) { jobs.push(Promise.resolve(false)); continue; }
 		const prev = b.coverUrl;
 		jobs.push(d.queue.enqueue(async () => {
 			const url = await fetchReadingCoverById(d.api, 'book', b);

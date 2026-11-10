@@ -1,9 +1,9 @@
 import type { RequestUrlParam } from 'obsidian';
 import type { DataManager } from './DataManager';
-import type { HoardTitle, HoardPluginSettings } from './types';
+import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from './types';
 import { getApiGroupForType } from './types';
 import { httpsOrEmpty } from './httpsUrl';
-import { jsonPost, requestVia } from './ApiService';
+import { jsonPost, requestVia, type ApiService } from './ApiService';
 import { resolveJikanEndpoint, type JikanEndpoint } from './jikanBase';
 
 const OMDB_BASE = 'https://www.omdbapi.com';
@@ -16,6 +16,7 @@ const JIKAN_DELAY_MS = 400; // ≈2.5 req/sec (Jikan caps at 3/sec)
 const ANILIST_DELAY_MS = 700; // AniList caps at 90/min
 const TMDB_DELAY_MS = 30;   // ≈33 req/sec (TMDB caps at 40/sec)
 const OMDB_DELAY_MS = 100;
+const CINEMETA_DELAY_MS = 200;
 
 interface QueueItem {
 	title: HoardTitle;
@@ -83,13 +84,16 @@ export class PosterService {
 	private queue: QueueItem[] = [];
 	private isProcessing = false;
 	private disposed = false;
+	private getApi?: () => ApiService;
 
 	constructor(
 		dataManager: DataManager,
 		getSettings: () => HoardPluginSettings,
+		getApi?: () => ApiService,
 	) {
 		this.dataManager = dataManager;
 		this.getSettings = getSettings;
+		this.getApi = getApi;
 	}
 
 	/** Read per request so a settings change applies without a reload. */
@@ -163,7 +167,7 @@ export class PosterService {
 		}
 		if (settings.tmdbApiKey) return TMDB_DELAY_MS;
 		if (settings.omdbApiKey) return OMDB_DELAY_MS;
-		return 0;
+		return CINEMETA_DELAY_MS;
 	}
 
 	private async fetchPosterForTitle(title: HoardTitle, overwrite: boolean): Promise<string | null> {
@@ -275,7 +279,34 @@ export class PosterService {
 			}
 		}
 		if (settings.omdbApiKey) return this.fetchOmdbPoster(title, settings);
+		return this.fetchCinemetaPoster(title);
+	}
+
+	/** Keyless fallback: by IMDb id when known, else a title search. Errors propagate (never cached as 'none'). */
+	private async fetchCinemetaPoster(title: HoardTitle): Promise<string | null> {
+		const api = this.getApi?.();
+		if (!api) return null;
+		const kind = this.resolveMediaKind(title);
+		const imdbId = this.extractImdbId(title.externalLink);
+		if (imdbId) {
+			const hit = await api.getCinemetaDetails(imdbId, kind ?? 'movie');
+			if (hit?.posterUrl) return hit.posterUrl;
+		}
+		const kinds: Array<'movie' | 'series'> = kind === null ? ['movie', 'series'] : [kind === 'tv' ? 'series' : 'movie'];
+		const name = this.cleanTitleForSearch(title.title);
+		const year = this.getReleaseYear(title);
+		for (const k of kinds) {
+			const rows = await api.searchCinemeta(name, k, year === null ? undefined : String(year));
+			const poster = this.pickCinemetaPoster(rows, year);
+			if (poster) return poster;
+		}
 		return null;
+	}
+
+	private pickCinemetaPoster(rows: MediaSearchResult[], year: number | null): string | null {
+		const withPoster = rows.filter((r) => r.posterUrl);
+		const matched = year === null ? undefined : withPoster.find((r) => (r.releaseDate ?? '').startsWith(String(year)));
+		return (matched ?? withPoster[0])?.posterUrl || null;
 	}
 
 	private async fetchTmdbPoster(title: HoardTitle, settings: HoardPluginSettings): Promise<string | null> {
