@@ -49,6 +49,35 @@ describe('history actions', () => {
 		expect(inferHistoryAction(e)).toBe('group');
 	});
 
+	it('keeps secrets out of a backup built from stored data', async () => {
+		const a = await setupBackup({}, { 'hoard-tmdb-api-key': 'SECRET' });
+		a.local.data.settings = { dateFormat: 'dmy' };
+		a.local.queueSave();
+		await a.local.flush();
+		const json = JSON.stringify(buildBackup(a));
+		expect(json).not.toContain('SECRET');
+		expect(json).not.toContain('tmdbApiKey');
+	});
+
+	it('restores old backup keys into empty secret storage only, never into data.json', async () => {
+		const src = await setupBackup({});
+		src.local.data.settings = { tmdbApiKey: 'OLD', dateFormat: 'dmy' };
+		const parsed = parseBackup(JSON.stringify(buildBackup(src)));
+		if (!('backup' in parsed)) throw new Error('expected backup');
+
+		const kept = await setupBackup({}, { 'hoard-tmdb-api-key': 'NEW' });
+		await restoreBackup(kept, parsed.backup);
+		await kept.local.flush();
+		expect(JSON.stringify(kept.savedData())).not.toContain('tmdbApiKey');
+		expect(kept.secrets.get('hoard-tmdb-api-key')).toBe('NEW');
+
+		const fresh = await setupBackup({});
+		await restoreBackup(fresh, parsed.backup);
+		await fresh.local.flush();
+		expect(JSON.stringify(fresh.savedData())).not.toContain('tmdbApiKey');
+		expect(fresh.secrets.get('hoard-tmdb-api-key')).toBe('OLD');
+	});
+
 	it('drops secrets for a copy written into the vault and ignores prototype keys on restore', async () => {
 		const a = await setupBackup({});
 		a.local.data.settings = { tmdbApiKey: 'SECRET', igdbClientSecret: 'S2', steamId: '42', jikanBaseUrl: 'https://u:PW@nas.example.org/v4', dateFormat: 'dmy' };

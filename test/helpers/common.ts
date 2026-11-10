@@ -3,6 +3,7 @@ import { parse, stringify } from 'yaml';
 import { createFakeApp } from '../fakes/fakeApp';
 import { VaultLayout } from '../../src/storage/VaultLayout';
 import { LocalStore } from '../../src/storage/LocalStore';
+import { SecretStore } from '../../src/storage/SecretStore';
 import { SharedConfigStore } from '../../src/storage/SharedConfigStore';
 import { EntryIndex } from '../../src/storage/EntryIndex';
 import { DEFAULT_SETTINGS } from '../../src/types';
@@ -33,6 +34,8 @@ export interface StoreOptions {
 	loadShared?: boolean;
 	/** Create Hoard.base first when missing (implies loadShared). */
 	createBase?: boolean;
+	/** Secret storage content by secret id; when given, the LocalStore absorbs API keys into it. */
+	secrets?: Record<string, string>;
 }
 
 /** FakeApp + stores wired like main.ts (root 'W'); managers are built by the caller. */
@@ -49,7 +52,8 @@ export async function createStores(files: Record<string, string>, opts: StoreOpt
 	} as unknown as HoardPlugin;
 	const notices: ManagerNotice[] = [];
 	const notify = (n: ManagerNotice) => { notices.push(n); };
-	const local = new LocalStore(f.plugin);
+	for (const [id, v] of Object.entries(opts.secrets ?? {})) f.secrets.set(id, v);
+	const local = new LocalStore(f.plugin, opts.secrets ? new SecretStore(f.app.secretStorage) : undefined);
 	await local.load();
 	const layout = new VaultLayout('W', () => settings.types.map((t) => t.name));
 	const shared = new SharedConfigStore(f.app, () => layout, { parse, stringify }, undefined, notify);

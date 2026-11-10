@@ -631,11 +631,11 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 		const filename = `hoard-backup-${dateStr}.json`;
 
-		// notes, shared settings, log and the device-local settings including API keys (E7): keep the file private
+		// notes, shared settings, log and the device-local settings; API keys stay in secret storage and are not exported
 		const backup = buildBackup(this.plugin.backupManagers());
 
 		// on mobile a browser download lands in an inaccessible sandbox — write into the vault
-		// instead, without the API keys (the folder syncs); desktop keeps the download path
+		// instead (the folder syncs; withoutSecrets guards stray keys); desktop keeps the download path
 		if (Platform.isMobile) {
 			await this.exportBackupToVault(filename, JSON.stringify(withoutSecrets(backup), null, 2));
 			return;
