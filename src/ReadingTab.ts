@@ -2,7 +2,7 @@ import { Notice } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { readingStatusLabel } from './i18n/labels';
 import { apiErrorMessage } from './ApiService';
-import { fetchReadingCoverById } from './coverRefresh';
+import { fetchReadingCoverById, firstBookCover, searchBooks } from './coverRefresh';
 import type HoardPlugin from './main';
 import type { ReadingDataManager, ReadingKind } from './ReadingDataManager';
 import { Book, Manga, ReadingStatus, ReadingCustomColumn, ReadingSavedFilterPreset, READING_STATUSES, SELECTABLE_READING_STATUSES, normalizeRowsLayout, READING_ROWS_SHELVES, bookUnitProgress, formatCount, sortByFavorited } from './types';
@@ -1285,32 +1285,27 @@ export class ReadingTab {
 	 */
 	private async resolveCover(kind: ReadingKind, item: Book | Manga): Promise<{ url: string; sourceId: string }> {
 		try {
-			if (kind === 'book') {
-				const gid = (item as Book).googleBooksId;
-				if (gid) {
-					const result = await this.plugin.apiService.getGoogleBookById(gid);
-					return { url: result?.coverUrl ?? '', sourceId: '' };
-				}
-				const query = (item as Book).author
-					? `${item.title} ${(item as Book).author}`
-					: item.title;
-				const results = await this.plugin.apiService.searchGoogleBooks(query);
-				const first = results[0];
-				if (!first || !first.coverUrl || !first.googleBooksId) return { url: '', sourceId: '' };
-				return { url: first.coverUrl, sourceId: first.googleBooksId };
-			}
-			const malId = (item as Manga).malId;
-			if (malId) {
-				const result = await this.plugin.apiService.getMangaByMalId(Number(malId));
-				return { url: result?.coverUrl ?? '', sourceId: '' };
-			}
-			const results = await this.plugin.apiService.searchManga(item.title);
-			const first = results[0];
-			if (!first || !first.coverUrl || !first.malId) return { url: '', sourceId: '' };
-			return { url: first.coverUrl, sourceId: String(first.malId) };
+			return kind === 'book' ? await this.resolveBookCover(item as Book) : await this.resolveMangaCover(item as Manga);
 		} catch {
 			return { url: '', sourceId: '' };
 		}
+	}
+
+	private async resolveBookCover(book: Book): Promise<{ url: string; sourceId: string }> {
+		const api = this.plugin.apiService;
+		if (book.googleBooksId || book.openLibraryId) {
+			return { url: await fetchReadingCoverById(api, 'book', book), sourceId: '' };
+		}
+		const results = await searchBooks(api, this.plugin.settings, book.author ? `${book.title} ${book.author}` : book.title);
+		return firstBookCover(results[0]);
+	}
+
+	private async resolveMangaCover(manga: Manga): Promise<{ url: string; sourceId: string }> {
+		const api = this.plugin.apiService;
+		if (manga.malId) return { url: await fetchReadingCoverById(api, 'manga', manga), sourceId: '' };
+		const first = (await api.searchManga(manga.title))[0];
+		if (!first?.coverUrl || !first.malId) return { url: '', sourceId: '' };
+		return { url: first.coverUrl, sourceId: String(first.malId) };
 	}
 
 	private applyCoverToCard(card: HTMLElement, url: string, alt: string): void {
@@ -1489,11 +1484,11 @@ export class ReadingTab {
 
 		if (kind === 'book') {
 			const book = item as Book;
-			if (!book.googleBooksId) {
+			if (!book.googleBooksId && !book.openLibraryId) {
 				new Notice(t('reading.notices.noGoogleBooksId'));
 				return;
 			}
-			if (!this.plugin.apiService.hasGoogleBooksKey()) {
+			if (!book.openLibraryId && !this.plugin.apiService.hasGoogleBooksKey()) {
 				new Notice(t('reading.notices.googleBooksKeyRequired'));
 				return;
 			}

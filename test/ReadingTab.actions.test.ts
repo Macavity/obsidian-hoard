@@ -8,6 +8,9 @@ vi.mock('../src/ReadingManageColumnsModal', () => ({ ReadingManageColumnsModal: 
 interface Api {
 	getGoogleBookById: ReturnType<typeof vi.fn>;
 	searchGoogleBooks: ReturnType<typeof vi.fn>;
+	searchOpenLibrary: ReturnType<typeof vi.fn>;
+	getOpenLibraryWork: ReturnType<typeof vi.fn>;
+	hasGoogleBooksKey: ReturnType<typeof vi.fn>;
 	getMangaByMalId: ReturnType<typeof vi.fn>;
 	searchManga: ReturnType<typeof vi.fn>;
 }
@@ -47,10 +50,13 @@ function build(sub: 'books' | 'manga', savedFilters?: unknown) {
 	const apiService: Api = {
 		getGoogleBookById: vi.fn(),
 		searchGoogleBooks: vi.fn(),
+		searchOpenLibrary: vi.fn(),
+		getOpenLibraryWork: vi.fn(),
+		hasGoogleBooksKey: vi.fn(() => true),
 		getMangaByMalId: vi.fn(),
 		searchManga: vi.fn(),
 	};
-	const plugin = { app: {}, apiService, isCardTextUnder: () => true, settings: {} };
+	const plugin = { app: {}, apiService, isCardTextUnder: () => true, settings: { booksApiSource: 'google' } };
 	const tab = new ReadingTab(document.createElement('div'), plugin as never, readingData as never);
 	const p = tab as unknown as Priv;
 	p.activeSubTab = sub;
@@ -88,6 +94,21 @@ describe('ReadingTab.resolveCover', () => {
 		expect(await p.resolveCover('book', bk())).toEqual({ url: '', sourceId: '' });
 		apiService.searchGoogleBooks.mockResolvedValue([{ coverUrl: '', googleBooksId: 'x' }]);
 		expect(await p.resolveCover('book', bk())).toEqual({ url: '', sourceId: '' });
+	});
+
+	it('searches Open Library without a Google key', async () => {
+		const { p, apiService } = build('books');
+		apiService.hasGoogleBooksKey.mockReturnValue(false);
+		apiService.searchOpenLibrary.mockResolvedValue([{ coverUrl: 'oc', googleBooksId: '', openLibraryId: 'OL1W' }]);
+		expect(await p.resolveCover('book', bk())).toEqual({ url: 'oc', sourceId: 'OL1W' });
+		expect(apiService.searchOpenLibrary).toHaveBeenCalledWith('Dune Herbert');
+		expect(apiService.searchGoogleBooks).not.toHaveBeenCalled();
+	});
+
+	it('uses the Open Library id when there is one', async () => {
+		const { p, apiService } = build('books');
+		apiService.getOpenLibraryWork.mockResolvedValue({ coverUrl: 'oc' });
+		expect(await p.resolveCover('book', { ...bk(), openLibraryId: 'OL1W' })).toEqual({ url: 'oc', sourceId: '' });
 	});
 
 	it('resolves manga by MAL id or title search', async () => {
