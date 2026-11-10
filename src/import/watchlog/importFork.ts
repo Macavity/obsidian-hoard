@@ -1,10 +1,12 @@
-import type { TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 import { renameTopLevelBlock } from '../../storage/baseFile';
 import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
 import { forkBaseTypes, type ForkSource } from './detect';
 import { registerTypes } from './registerTypes';
-import { forkTarget, managedFiles, nestedHoardRoot } from './paths';
+import { entryFolders, forkTarget, managedFiles, nestedHoardRoot } from './paths';
 import { emptyImportReport, type ImportReport, type Progress } from './report';
+import { updateFrontMatter } from '../../storage/noteWrite';
+import { OLD_TO_NEW, translateProperties } from './propertyNames';
 import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
 import { REMOVED_SETTINGS, type ImportContext } from './schema1Types';
 
@@ -34,6 +36,29 @@ async function copyFile(file: TFile, target: string, ctx: ImportContext): Promis
 	} else {
 		await ctx.app.vault.createBinary(target, await ctx.app.vault.readBinary(file));
 	}
+}
+
+const HAS_FRONTMATTER = /^---\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(\r?\n|$)/;
+const show = (v: unknown): string => (typeof v === 'string' ? v : JSON.stringify(v) ?? 'null');
+
+/** Renames the 0.1 property names of a copied entry note; unreadable YAML or a key it could not rename is reported, the copy stays. */
+async function translateNote(path: string, ctx: ImportContext, report: ImportReport): Promise<void> {
+	const note = ctx.app.vault.getAbstractFileByPath(path);
+	if (!(note instanceof TFile) || !HAS_FRONTMATTER.test(await ctx.app.vault.read(note))) return;
+	const items: ImportReport['review'] = [];
+	const ok = await updateFrontMatter(ctx.app, note, () => {}, (fm) => {
+		const { fm: next, kept } = translateProperties(fm);
+		for (const key of kept) {
+			items.push({
+				path, reason: 'kept-value', code: 'keptValue',
+				params: { key: OLD_TO_NEW[key] ?? key, hoard: show(next[OLD_TO_NEW[key] ?? key]), watchlog: show(fm[key]) },
+			});
+		}
+		for (const key of Object.keys(fm)) delete fm[key];
+		Object.assign(fm, next);
+	});
+	if (ok) report.review.push(...items);
+	else report.review.push({ path, reason: 'error', code: 'invalidYaml' });
 }
 
 async function importBase(src: ForkSource, ctx: ImportContext, report: ImportReport): Promise<void> {
@@ -74,6 +99,7 @@ export async function importFork(src: ForkSource, ctx: ImportContext, progress: 
 	const report = emptyImportReport();
 	const forkLayout = new VaultLayout(src.root, () => src.typeNames);
 	const files = managedFiles(ctx.app, forkLayout, src.typeNames, nestedHoardRoot(src.root, ctx.layout.root));
+	const entryDirs = entryFolders(forkLayout, src.typeNames);
 	let done = 0;
 	for (const file of files) {
 		const target = forkTarget(file.path, src.root, ctx.layout.root);
@@ -83,6 +109,9 @@ export async function importFork(src: ForkSource, ctx: ImportContext, progress: 
 			} else {
 				await copyFile(file, target, ctx);
 				report.created++;
+				if (file.extension.toLowerCase() === 'md' && entryDirs.some((d) => file.path.startsWith(`${d}/`))) {
+					await translateNote(target, ctx, report);
+				}
 			}
 		} catch (e) {
 			report.review.push({ path: target, reason: 'error', code: 'failed', params: { message: errMsg(e) } });

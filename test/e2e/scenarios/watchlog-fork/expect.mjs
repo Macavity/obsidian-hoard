@@ -2,5 +2,7 @@
 export const FORK_EXPECT = {
 	kind: "fork",
 	titles: 5,
+	// imported notes carry the current property names
+	sampleProps: ["Name", "Type", "Status"],
 	sample: { path: "Hoard/TV Show/The Wire.md", title: "The Wire", type: "TV Show", status: "Watching" },
 };
