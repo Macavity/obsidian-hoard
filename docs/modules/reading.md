@@ -5,6 +5,8 @@ description: How books and manga differ in model and progress, the release-statu
 source:
   - src/ReadingDataManager.ts
   - src/storage/readingCodec.ts
+  - src/storage/properties.ts
+  - src/storage/EntryIndex.ts
   - src/ReadingTab.ts
   - src/ReadingDetailModal.ts
   - src/AddReadingModal.ts
@@ -14,7 +16,7 @@ source:
   - src/csv/csvCore.ts
   - src/coverRefresh.ts
   - src/csv/CsvModalBase.ts
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+source_commit: bdcc2201df9227e8f0bcbf9685cc0dde9311e628
 ---
 
 # Reading
@@ -33,7 +35,7 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
 ## Model
 
 - Common: `Name`, `Author`, `Status`, `Rating`, favourite, start/finish/release dates,
-  `Cover`, `URL`, `Groups`, airtime properties, `cf_*` custom fields, `Type: book|manga`; names in
+  `Cover`, `URL`, `Groups`, airtime properties, `Custom <name>` custom fields, `Type: book|manga`; names in
   [properties](../concepts/properties.md).
 - Status: `Reading | Completed | Plan to Read | To be released | Dropped`; "To be released" is
   never user-selectable. An unknown stored status decodes to "Plan to Read" and is flagged invalid.
@@ -53,8 +55,11 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
   chapters) or manga chapters reach a non-zero total, status becomes Completed and `dateFinished`
   is stamped.
 - **Custom columns**: definitions (`id`, `name`, `type` text/number/select, options, colour) are
-  shared config (`bookColumns` / `mangaColumns`); values live in each note as `cf_<columnId>`.
-  Removing a column deletes the value from every note. Columns are not part of CSV.
+  shared config (`bookColumns` / `mangaColumns`); values live in each note as `Custom <column name>` and in memory by column id
+  (`customFields`). The codec takes the kind's column list; `EntryIndex.setColumns` re-decodes reading
+  notes when a name changes. Renaming a column moves the key in all notes of the kind
+  (`ReadingDataManager.updateColumn`, notes first, then the setting); names are unique per kind, ignoring
+  case. Removing a column and the full rewrite never delete values. Columns are not part of CSV.
 - **Quotes** are not indexed: the detail modal parses `## Quotes` for `> [!quote] <reference>`
   callouts; `appendQuote` inserts newest first and creates the section when missing.
 - **Covers**: cards without a cover fetch lazily by id, else by title search taking the first

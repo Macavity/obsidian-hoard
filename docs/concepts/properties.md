@@ -5,7 +5,7 @@ description: The fixed Title Case property names of entry notes per medium, the 
 source:
   - src/storage/properties.ts
   - src/import/watchlog/propertyNames.ts
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+source_commit: bdcc2201df9227e8f0bcbf9685cc0dde9311e628
 ---
 
 # Property names
@@ -81,7 +81,12 @@ migrated at startup.
 ## Custom fields
 
 Reading custom columns (book and manga) are user data, not part of the frozen set. Only the key
-pattern is stable: `cf_<columnId>` (e.g. `cf_col_1`), which the reading codec recognises by its prefix.
+pattern is stable: `Custom <column name>` (e.g. `Custom Format`), the name exactly as typed; the codec
+maps it to the column by name (`customFieldKey` in [properties.ts](../../src/storage/properties.ts)).
+Names are unique per kind, ignoring case. Renaming a column moves the key in every note of that kind
+(a note that already has the new key keeps both). Hoard never deletes custom values: deleting a column
+and the full frontmatter rewrite leave them in the notes; only clearing a value on an entry removes that
+entry's own key. `Custom *` keys without a column are ignored by the decoder and stay.
 
 ## Non-goals
 
