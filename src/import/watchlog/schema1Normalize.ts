@@ -3,7 +3,7 @@ import {
 } from '../../types';
 import type {
 	Book, Game, GamesData, GamesSettings, HoardTitle, Manga, ReadingData, ReadingStatus,
-	TagDefinition,
+	ReadingCustomColumn, TagDefinition,
 } from '../../types';
 import { TITLE_PROPS } from '../../storage/properties';
 import { WISHLIST, isRecord, type Fm, type WatchLogTitle } from './schema1Types';
@@ -58,6 +58,37 @@ function readingStatus<T extends { status: ReadingStatus }>(item: T): T {
 	return item;
 }
 
+/**
+ * WatchLog never validated its columns. Every column gets a distinct, non-blank name (`Field 1` for a
+ * blank or non-string one, ` 2`, ` 3` for a case-insensitive duplicate), so no value shares a note
+ * key with another.
+ */
+export function sanitizeColumns(raw: unknown): ReadingCustomColumn[] {
+	const used = new Set<string>();
+	let generated = 0;
+	return (Array.isArray(raw) ? raw : []).filter(isRecord).map((c) => {
+		const given = typeof c.name === 'string' ? c.name.trim() : '';
+		let name = given;
+		let n = 1;
+		while (!name || used.has(name.toLowerCase())) {
+			if (given) name = `${given} ${++n}`;
+			else name = `Field ${++generated}`;
+		}
+		used.add(name.toLowerCase());
+		return { ...c, name } as unknown as ReadingCustomColumn;
+	});
+}
+
+/** Custom values keyed by a column id that no column has; the import cannot place them. */
+export function orphanValues(
+	item: { customFields?: Record<string, unknown> }, columns: ReadingCustomColumn[],
+): { column: string; value: string }[] {
+	const known = new Set(columns.map((c) => c.id));
+	return Object.entries(item.customFields ?? {})
+		.filter(([id, v]) => !known.has(id) && v !== undefined && v !== null && v !== '')
+		.map(([column, v]) => ({ column, value: String(v) }));
+}
+
 export function normalizeReading(raw: ReadingData | undefined): ReadingData {
 	const settings = { ...DEFAULT_READING_SETTINGS, ...(isRecord(raw?.settings) ? raw.settings : {}) };
 	if ((settings.defaultStatus as string) === ON_HOLD) settings.defaultStatus = 'Plan to Read';
@@ -79,8 +110,8 @@ export function normalizeReading(raw: ReadingData | undefined): ReadingData {
 	return {
 		books,
 		manga,
-		bookColumns: Array.isArray(raw?.bookColumns) ? raw.bookColumns : [],
-		mangaColumns: Array.isArray(raw?.mangaColumns) ? raw.mangaColumns : [],
+		bookColumns: sanitizeColumns(raw?.bookColumns),
+		mangaColumns: sanitizeColumns(raw?.mangaColumns),
 		settings,
 	};
 }

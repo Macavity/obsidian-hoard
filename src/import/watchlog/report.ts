@@ -1,5 +1,5 @@
 /** What the UI says about a review item; translated there, since this module stays i18n-free. */
-export type ReviewCode = 'maybe' | 'notAFile' | 'invalidYaml' | 'keptValue' | 'failed';
+export type ReviewCode = 'maybe' | 'notAFile' | 'invalidYaml' | 'keptValue' | 'failed' | 'orphanValue';
 
 /** A file the user should look at after an import. */
 export interface ReviewItem {

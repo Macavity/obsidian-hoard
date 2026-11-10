@@ -1,5 +1,5 @@
 import { normalizePath, type DataAdapter } from 'obsidian';
-import type { EntryAirtime, GamesData, ReadingData } from '../../types';
+import type { Book, EntryAirtime, GamesData, Manga, ReadingCustomColumn, ReadingData } from '../../types';
 import type { HistoryEntry } from '../../HistoryManager';
 import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
 import type { EntryCache, EntryKind } from '../../storage/storageTypes';
@@ -10,7 +10,7 @@ import { externalIdFromLink } from '../../storage/externalId';
 import { NoteWriter, ensureFolder, sameValue } from './schema1Notes';
 import { collectAirtime, collectGroups, importHistory } from './schema1Records';
 import {
-	normalizeGames, normalizeReading, normalizeTitle, progressOf, watchLogApiValues,
+	normalizeGames, normalizeReading, normalizeTitle, orphanValues, progressOf, watchLogApiValues,
 } from './schema1Normalize';
 import {
 	REMOVED_SETTINGS, WISHLIST, isRecord,
@@ -205,6 +205,7 @@ class Schema1Migration {
 			await this.entry(`book:${b.id}`, async () => {
 				const { path, id } = place('book', b.title, b.id);
 				const book = extras({ ...b, id, vaultPage: `${id}.md` }, `book:${b.id}`);
+				this.reportOrphans(path, book, reading.bookColumns);
 				await this.put('book', path, b.title, encodeBook(book, reading.bookColumns), '## Notes\n\n\n## Quotes\n');
 			});
 		}
@@ -212,6 +213,7 @@ class Schema1Migration {
 			await this.entry(`manga:${m.id}`, async () => {
 				const { path, id } = place('manga', m.title, m.id);
 				const manga = extras({ ...m, id, vaultPage: `${id}.md` }, `manga:${m.id}`);
+				this.reportOrphans(path, manga, reading.mangaColumns);
 				await this.put('manga', path, m.title, encodeManga(manga, reading.mangaColumns), '## Notes\n\n\n## Quotes\n');
 			});
 		}
@@ -221,6 +223,13 @@ class Schema1Migration {
 				const game = extras({ ...g, id, vaultPage: `${id}.md` }, `game:${g.id}`);
 				await this.put('game', path, g.title, encodeGame(game), '## Notes\n');
 			});
+		}
+	}
+
+	/** Custom values without a column cannot be written to the note; say so instead of dropping them silently. */
+	private reportOrphans(path: string, item: Book | Manga, columns: ReadingCustomColumn[]): void {
+		for (const params of orphanValues(item, columns)) {
+			this.report.review.push({ path, reason: 'error', code: 'orphanValue', params });
 		}
 	}
 

@@ -54,6 +54,7 @@ export default {
 		invalidYaml: 'Properties are not valid YAML; nothing was filled in',
 		keptValue: '{key}: Hoard "{hoard}", WatchLog "{watchlog}"',
 		failed: '{message}',
+		orphanValue: 'Value "{value}" of the unknown field "{column}" was not imported',
 	},
 	cleanup: {
 		planFailed: 'Could not check what to clean up: {message}',

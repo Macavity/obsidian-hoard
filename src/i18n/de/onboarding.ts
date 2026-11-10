@@ -57,6 +57,7 @@ const onboarding = {
 		invalidYaml: 'Eigenschaften sind kein gültiges YAML; nichts wurde ergänzt',
 		keptValue: '{key}: Hoard „{hoard}“, WatchLog „{watchlog}“',
 		failed: '{message}',
+		orphanValue: 'Wert „{value}“ des unbekannten Felds „{column}“ wurde nicht importiert',
 	},
 	cleanup: {
 		planFailed: 'Aufräumen konnte nicht geprüft werden: {message}',
