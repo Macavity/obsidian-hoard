@@ -191,7 +191,7 @@ export class EditTitleModal extends Modal {
 
 		linkField(content, this.fieldLink, 'HTTPS://...', (v) => { this.fieldLink = v; });
 
-		// poster URL (the note's `poster` field)
+		// poster URL (the note's `Cover` property)
 		const posterRow = makeRow(t('edit.posterUrl'));
 		const posterStack = posterRow.createDiv({ cls: 'hoard-modal-input-stack' });
 		const posterInput = posterStack.createEl('input', {

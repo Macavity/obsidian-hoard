@@ -291,7 +291,7 @@ export class ReadingDataManager {
 	// Silent cover updates
 
 	/**
-	 * Silent cover URL update for the lazy Cards re-fetch: written to the note's `coverUrl` only when
+	 * Silent cover URL update for the lazy Cards re-fetch: written to the note's `Cover` only when
 	 * that is empty (E12), no notify — the card swaps its own <img>, so the grid is not rebuilt and
 	 * scroll survives.
 	 */

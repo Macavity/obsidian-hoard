@@ -177,7 +177,7 @@ export function decodeTitle(id: string, fm: Record<string, unknown>, cache: Entr
 	if (seasonsOverride) title.seasonsOverride = true;
 
 	// cache fields
-	// the note's poster wins (set below); the cache only marks 'none' (the API has no poster)
+	// the note's `Cover` wins (set below); the cache only marks 'none' (the API has no poster)
 	if (c.posterUrl === 'none') title.posterUrl = 'none';
 	if (c.trailerUrl !== undefined) title.trailerUrl = c.trailerUrl;
 	if (c.director) title.director = c.director;
