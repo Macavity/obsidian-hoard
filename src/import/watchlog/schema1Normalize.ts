@@ -63,7 +63,7 @@ function readingStatus<T extends { status: ReadingStatus }>(item: T): T {
  * blank or non-string one, ` 2`, ` 3` for a case-insensitive duplicate), so no value shares a note
  * key with another.
  */
-export function sanitizeColumns(raw: unknown): ReadingCustomColumn[] {
+function sanitizeColumns(raw: unknown): ReadingCustomColumn[] {
 	const used = new Set<string>();
 	let generated = 0;
 	return (Array.isArray(raw) ? raw : []).filter(isRecord).map((c) => {
