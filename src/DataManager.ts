@@ -1080,8 +1080,8 @@ export class DataManager {
 					kind === 'game'
 						? { kind, entry: decodeGame(id, fm).entry }
 						: kind === 'book'
-							? { kind, entry: decodeBook(id, fm).entry }
-							: { kind, entry: decodeManga(id, fm).entry },
+							? { kind, entry: decodeBook(id, fm, this.index.columns('book')).entry }
+							: { kind, entry: decodeManga(id, fm, this.index.columns('manga')).entry },
 				);
 			});
 			return true;

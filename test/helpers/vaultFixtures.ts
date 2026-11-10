@@ -84,8 +84,8 @@ function decodeEntry(c: NonNullable<ReturnType<VaultLayout["classify"]>>, path: 
 	if (COMMON_PROPS.externalId in fm) out.withExternalId.push(path);
 	try {
 		if (c.kind === "title") out.titles.push(decodeTitle(c.id, fm, undefined).entry);
-		else if (c.kind === "book") out.books.push(decodeBook(c.id, fm).entry);
-		else if (c.kind === "manga") out.manga.push(decodeManga(c.id, fm).entry);
+		else if (c.kind === "book") out.books.push(decodeBook(c.id, fm, []).entry);
+		else if (c.kind === "manga") out.manga.push(decodeManga(c.id, fm, []).entry);
 		else out.games.push(decodeGame(c.id, fm).entry);
 	} catch {
 		out.skipped.push(path);

@@ -11,7 +11,7 @@ import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
 import { FOLDERS } from './storage/VaultLayout';
-import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS } from './storage/properties';
+import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from './storage/properties';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from './storage/readingCodec';
 import {
 	Book,
@@ -51,8 +51,8 @@ const KIND_KEYS: Record<ReadingKind, readonly string[]> = {
 	],
 };
 
-const encode = (kind: ReadingKind, item: Item): Fm =>
-	kind === 'book' ? encodeBook(item as Book) : encodeManga(item as Manga);
+const encodeWith = (kind: ReadingKind, item: Item, columns: readonly ReadingCustomColumn[]): Fm =>
+	kind === 'book' ? encodeBook(item as Book, columns) : encodeManga(item as Manga, columns);
 
 /**
  * Books and manga, backed by one note each. Reads come from the EntryIndex (frontmatter); writes go
@@ -149,6 +149,7 @@ export class ReadingDataManager {
 			}));
 		this.bookColumns = clean(bookColumns);
 		this.mangaColumns = clean(mangaColumns);
+		this.index.setColumns(this.bookColumns, this.mangaColumns);
 	}
 
 	/** Synced keys go to the base, the rest (colors, layout, filters) to data.json. */
@@ -189,6 +190,7 @@ export class ReadingDataManager {
 	}
 
 	private async save(): Promise<void> {
+		this.index.setColumns(this.bookColumns, this.mangaColumns);
 		try {
 			await this.saveShared();
 		} catch (e) {
@@ -585,6 +587,15 @@ export class ReadingDataManager {
 		return this.mangaColumns;
 	}
 
+	private encode(kind: ReadingKind, item: Item): Fm {
+		return encodeWith(kind, item, this.columnsFor(kind));
+	}
+
+	/** True when another column of this kind already has `name` (case-insensitive). */
+	isColumnNameTaken(kind: ReadingKind, name: string, exceptId?: string): boolean {
+		return columnNameTaken(this.columnsFor(kind), name, exceptId);
+	}
+
 	private columnsFor(kind: ReadingKind): ReadingCustomColumn[] {
 		return kind === 'book' ? this.bookColumns : this.mangaColumns;
 	}
@@ -594,25 +605,49 @@ export class ReadingDataManager {
 		await this.save();
 	}
 
-	async updateColumn(kind: ReadingKind, updated: ReadingCustomColumn): Promise<void> {
+	/**
+	 * Saves the column. A new name first moves `Custom <old>` to `Custom <new>` in every note of the
+	 * kind (notes before the setting: a crash in between leaves the values in the notes under the new
+	 * name, never lost). Returns how many notes were moved; a note that already has the new key is kept as is.
+	 */
+	async updateColumn(kind: ReadingKind, updated: ReadingCustomColumn): Promise<number> {
 		const cols = this.columnsFor(kind);
 		const idx = cols.findIndex((c) => c.id === updated.id);
-		if (idx >= 0) {
-			cols[idx] = updated;
-			await this.save();
+		if (idx < 0) return 0;
+		const old = cols[idx]!;
+		const moved = old.name === updated.name ? 0 : await this.moveCustomKey(kind, customFieldKey(old.name), customFieldKey(updated.name));
+		cols[idx] = updated;
+		await this.save();
+		return moved;
+	}
+
+	private async moveCustomKey(kind: ReadingKind, from: string, to: string): Promise<number> {
+		const items: Item[] = kind === 'book' ? this.index.books() : this.index.manga();
+		let moved = 0;
+		for (const item of items) {
+			const file = this.fileOf(item.id);
+			if (!file) continue;
+			let hit = false;
+			const ok = await updateFrontMatter(this.app, file, this.notify, (fm: Fm) => {
+				if (!(from in fm) || from === to) return;
+				if (to in fm) {
+					console.warn(`[Hoard] ${file.path} already has "${to}"; "${from}" stays`);
+					return;
+				}
+				const value = fm[from];
+				delete fm[from];
+				fm[to] = value;
+				hit = true;
+			});
+			if (ok && hit) moved++;
 		}
+		return moved;
 	}
 
 	async removeColumn(kind: ReadingKind, id: string): Promise<void> {
+		// the values stay in the notes: they are the user's data
 		if (kind === 'book') this.bookColumns = this.bookColumns.filter((c) => c.id !== id);
 		else this.mangaColumns = this.mangaColumns.filter((c) => c.id !== id);
-		const items: Item[] = kind === 'book' ? this.getBooks() : this.getMangaList();
-		for (const item of items) {
-			if (item.customFields && Object.prototype.hasOwnProperty.call(item.customFields, id)) {
-				delete item.customFields[id];
-				try { await this.writeItem(kind, item); } catch (e) { console.warn('[Hoard] reading note write failed:', e); }
-			}
-		}
 		await this.save();
 	}
 
@@ -710,7 +745,7 @@ export class ReadingDataManager {
 	 */
 	private afterWrite(kind: ReadingKind, item: Item, fm: Fm, background = false): void {
 		const fresh = this.basedOnStored(item);
-		const stored = kind === 'book' ? decodeBook(item.id, fm).entry : decodeManga(item.id, fm).entry;
+		const stored = kind === 'book' ? decodeBook(item.id, fm, this.bookColumns).entry : decodeManga(item.id, fm, this.mangaColumns).entry;
 		this.index.applyLocal(kind === 'book'
 			? { kind: 'book', entry: stored as Book }
 			: { kind: 'manga', entry: stored as Manga }, { background });
@@ -743,7 +778,7 @@ export class ReadingDataManager {
 		const layout = this.layout();
 		const path = this.freePath(layout.notePath(kind, item.title));
 		await this.ensureFolder(this.parentOf(path));
-		const fm = encode(kind, item);
+		const fm = this.encode(kind, item);
 		item.id = layout.idFromPath(path);
 		// index first, so the create event finds nothing new
 		this.afterWrite(kind, item, fm);
@@ -784,8 +819,8 @@ export class ReadingDataManager {
 			}
 		}
 
-		const before = src ? encode(kind, src) : {};
-		const after = encode(kind, item);
+		const before = src ? this.encode(kind, src) : {};
+		const after = this.encode(kind, item);
 		const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
 			.filter((k) => !sameJson(before[k], after[k]));
 		if (changed.length > 0) {
@@ -836,7 +871,7 @@ export class ReadingDataManager {
 	async rewriteFrontmatterIfExists(kind: ReadingKind, item: Item): Promise<boolean> {
 		const file = this.fileOf(item.id);
 		if (!file) return false;
-		const out = encode(kind, item);
+		const out = this.encode(kind, item);
 		const keep = new Set(this.index.invalidFields(item.id));
 		return this.processFrontMatter(file, kind, item, (raw) => {
 			for (const key of KIND_KEYS[kind]) {
@@ -846,8 +881,9 @@ export class ReadingDataManager {
 					delete raw[key];
 				}
 			}
-			for (const key of Object.keys(raw)) {
-				if (key.startsWith('cf_') && !(key in out) && !keep.has(key)) delete raw[key];
+			// custom values are user data: written when the item has one, never deleted
+			for (const key of Object.keys(out)) {
+				if (key.startsWith(CUSTOM_FIELD_PREFIX) && (!keep.has(key) || !(key in raw))) raw[key] = out[key];
 			}
 		});
 	}

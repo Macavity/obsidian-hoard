@@ -1,6 +1,6 @@
 import { TFile } from 'obsidian';
 import type { App, EventRef, TAbstractFile } from 'obsidian';
-import type { Book, Game, Manga, HoardTitle } from '../types';
+import type { Book, Game, Manga, HoardTitle, ReadingCustomColumn } from '../types';
 import type { LocalStore } from './LocalStore';
 import type { VaultLayout } from './VaultLayout';
 import { decodeTitle } from './titleCodec';
@@ -41,6 +41,8 @@ export class EntryIndex {
 	private localWriteCbs: (() => void)[] = [];
 	private pending = new Set<string>();
 	private timer: number | null = null;
+	private bookColumns: readonly ReadingCustomColumn[] = [];
+	private mangaColumns: readonly ReadingCustomColumn[] = [];
 
 	constructor(
 		private readonly app: App,
@@ -76,6 +78,29 @@ export class EntryIndex {
 		if (this.timer !== null) window.clearTimeout(this.timer);
 		this.timer = null;
 		this.pending.clear();
+	}
+
+	/** Custom columns of a reading kind: the note keys the codec reads and writes. */
+	columns(kind: 'book' | 'manga'): readonly ReadingCustomColumn[] {
+		return kind === 'book' ? this.bookColumns : this.mangaColumns;
+	}
+
+	/** New column lists: reading notes are decoded again when a name or id changed. */
+	setColumns(book: readonly ReadingCustomColumn[], manga: readonly ReadingCustomColumn[]): void {
+		const sig = (cols: readonly ReadingCustomColumn[]): string => JSON.stringify(cols.map((c) => [c.id, c.name]));
+		const changed = sig(book) !== sig(this.bookColumns) || sig(manga) !== sig(this.mangaColumns);
+		this.bookColumns = book.map((c) => ({ ...c }));
+		this.mangaColumns = manga.map((c) => ({ ...c }));
+		if (!changed) return;
+		for (const [id, slot] of this.entries) {
+			if (slot.value.kind !== 'book' && slot.value.kind !== 'manga') continue;
+			const file = this.app.vault.getAbstractFileByPath(this.layout().pathFromId(id));
+			const next = file instanceof TFile ? this.decode(file) : null;
+			if (!next) continue;
+			if (sameValue(slot.value, next.value)) { slot.invalid = next.invalid; continue; }
+			this.entries.set(id, next);
+			this.queue(id);
+		}
 	}
 
 	titles(): HoardTitle[] { return this.ofKind('title'); }
@@ -158,11 +183,11 @@ export class EntryIndex {
 					return { value: { kind: 'title', entry: d.entry }, invalid: d.invalidFields };
 				}
 				case 'book': {
-					const d = decodeBook(c.id, fm);
+					const d = decodeBook(c.id, fm, this.bookColumns);
 					return { value: { kind: 'book', entry: d.entry }, invalid: d.invalidFields };
 				}
 				case 'manga': {
-					const d = decodeManga(c.id, fm);
+					const d = decodeManga(c.id, fm, this.mangaColumns);
 					return { value: { kind: 'manga', entry: d.entry }, invalid: d.invalidFields };
 				}
 				case 'game': {

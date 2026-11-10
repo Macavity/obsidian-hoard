@@ -205,14 +205,14 @@ class Schema1Migration {
 			await this.entry(`book:${b.id}`, async () => {
 				const { path, id } = place('book', b.title, b.id);
 				const book = extras({ ...b, id, vaultPage: `${id}.md` }, `book:${b.id}`);
-				await this.put('book', path, b.title, encodeBook(book), '## Notes\n\n\n## Quotes\n');
+				await this.put('book', path, b.title, encodeBook(book, reading.bookColumns), '## Notes\n\n\n## Quotes\n');
 			});
 		}
 		for (const m of reading.manga) {
 			await this.entry(`manga:${m.id}`, async () => {
 				const { path, id } = place('manga', m.title, m.id);
 				const manga = extras({ ...m, id, vaultPage: `${id}.md` }, `manga:${m.id}`);
-				await this.put('manga', path, m.title, encodeManga(manga), '## Notes\n\n\n## Quotes\n');
+				await this.put('manga', path, m.title, encodeManga(manga, reading.mangaColumns), '## Notes\n\n\n## Quotes\n');
 			});
 		}
 		for (const g of (data.games as GamesData).games) {

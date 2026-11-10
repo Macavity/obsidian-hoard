@@ -1,8 +1,10 @@
 import { READING_STATUSES } from '../types';
-import type { Book, Manga, EntryAirtime, AirtimeRecurrence, ReadingStatus } from '../types';
+import type { Book, Manga, EntryAirtime, AirtimeRecurrence, ReadingCustomColumn, ReadingStatus } from '../types';
 import type { Decoded } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
-import { AIRTIME_PROPS as A, COMMON_PROPS as C, READING_PROPS as R } from './properties';
+import { AIRTIME_PROPS as A, COMMON_PROPS as C, READING_PROPS as R, customFieldKey } from './properties';
+
+type Columns = readonly ReadingCustomColumn[];
 
 type Fm = Record<string, unknown>;
 
@@ -89,14 +91,24 @@ export function encodeAirtime(a: EntryAirtime | undefined, out: Fm): void {
 	if (a.acknowledged) out[A.acknowledged] = a.acknowledged;
 }
 
-function decodeCustomFields(r: FmReader): Record<string, string | number> {
+/** Reads `Custom <name>` for each column; keys of unknown columns are ignored and stay in the note. */
+function decodeCustomFields(r: FmReader, columns: Columns): Record<string, string | number> {
 	const cf: Record<string, string | number> = {};
-	for (const [k, v] of Object.entries(r.fm)) {
-		if (!k.startsWith('cf_') || k.length === 3) continue;
-		if (typeof v === 'string' || (typeof v === 'number' && Number.isFinite(v))) cf[k.slice(3)] = v;
-		else if (v !== null && v !== undefined) r.invalidFields.push(k);
+	for (const col of columns) {
+		const key = customFieldKey(col.name);
+		const v = r.fm[key];
+		if (v === null || v === undefined || v === '') continue;
+		if (typeof v === 'string' || (typeof v === 'number' && Number.isFinite(v))) cf[col.id] = v;
+		else r.invalidFields.push(key);
 	}
 	return cf;
+}
+
+function encodeCustomFields(e: Book | Manga, columns: Columns, out: Fm): void {
+	for (const col of columns) {
+		const v = e.customFields?.[col.id];
+		if (v !== undefined && col.name.trim()) out[customFieldKey(col.name)] = v;
+	}
 }
 
 function status(r: FmReader): ReadingStatus {
@@ -116,7 +128,7 @@ function encodeCommon(e: Book | Manga, out: Fm): void {
 	out[C.rating] = e.rating | 0;
 }
 
-function encodeTail(e: Book | Manga, kind: 'book' | 'manga', out: Fm): void {
+function encodeTail(e: Book | Manga, kind: 'book' | 'manga', columns: Columns, out: Fm): void {
 	out[C.dateStarted] = e.dateStarted ?? null;
 	out[C.dateFinished] = e.dateFinished ?? null;
 	out[C.releaseDate] = e.releaseDate ?? null;
@@ -126,7 +138,7 @@ function encodeTail(e: Book | Manga, kind: 'book' | 'manga', out: Fm): void {
 	if (e.externalLink) out[C.url] = e.externalLink;
 	if (e.groups?.length) out[C.groups] = [...e.groups];
 	encodeAirtime(e.airtime, out);
-	for (const [k, v] of Object.entries(e.customFields ?? {})) out[`cf_${k}`] = v;
+	encodeCustomFields(e, columns, out);
 	out[C.type] = kind;
 }
 
@@ -136,7 +148,7 @@ type ReadingCommon = Pick<Book & Manga,
 	| 'dateModified' | 'customFields' | 'groups' | 'airtime'>;
 
 /** Fields decoded identically for Book and Manga. */
-function decodeReadingCommon(id: string, r: FmReader): ReadingCommon {
+function decodeReadingCommon(id: string, r: FmReader, columns: Columns): ReadingCommon {
 	return {
 		id,
 		title: r.str(C.name),
@@ -155,7 +167,7 @@ function decodeReadingCommon(id: string, r: FmReader): ReadingCommon {
 		releaseDate: r.strOrNull(C.releaseDate),
 		dateAdded: r.str(C.dateAdded),
 		dateModified: r.str(C.dateModified),
-		customFields: decodeCustomFields(r),
+		customFields: decodeCustomFields(r, columns),
 		groups: r.list(C.groups),
 		airtime: decodeAirtime(r),
 	};
@@ -170,12 +182,12 @@ function stripEmptyOptional(entry: Book | Manga): void {
 	if (!entry.airtime) delete entry.airtime;
 }
 
-export function decodeBook(id: string, fm: Fm): Decoded<Book> {
+export function decodeBook(id: string, fm: Fm, columns: Columns): Decoded<Book> {
 	const r = new FmReader(fm);
 	const ext = parseExternalId(r.str(C.externalId));
 	const gbooks = ext?.source === 'gbooks' ? ext.id : '';
 	const entry: Book = {
-		...decodeReadingCommon(id, r),
+		...decodeReadingCommon(id, r, columns),
 		progressUnit: r.str(R.progressUnit) === 'words' ? 'words' : 'pages',
 		pagesRead: r.num(R.pagesRead),
 		totalPages: r.num(R.totalPages),
@@ -187,7 +199,7 @@ export function decodeBook(id: string, fm: Fm): Decoded<Book> {
 	return { entry, invalidFields: r.invalidFields };
 }
 
-export function encodeBook(b: Book): Fm {
+export function encodeBook(b: Book, columns: Columns): Fm {
 	const out: Fm = {};
 	encodeCommon(b, out);
 	out[R.pagesRead] = b.pagesRead | 0;
@@ -204,16 +216,16 @@ export function encodeBook(b: Book): Fm {
 		out[R.googleBooksId] = b.googleBooksId;
 		out[C.externalId] = formatExternalId({ source: 'gbooks', id: b.googleBooksId });
 	}
-	encodeTail(b, 'book', out);
+	encodeTail(b, 'book', columns, out);
 	return out;
 }
 
-export function decodeManga(id: string, fm: Fm): Decoded<Manga> {
+export function decodeManga(id: string, fm: Fm, columns: Columns): Decoded<Manga> {
 	const r = new FmReader(fm);
 	const ext = parseExternalId(r.str(C.externalId));
 	const mal = ext?.source === 'mal' && ext.kind === 'manga' ? ext.id : '';
 	const entry: Manga = {
-		...decodeReadingCommon(id, r),
+		...decodeReadingCommon(id, r, columns),
 		volumesRead: r.num(R.volumesRead),
 		totalVolumes: r.num(R.totalVolumes),
 		malId: r.str(R.malId) || mal,
@@ -222,7 +234,7 @@ export function decodeManga(id: string, fm: Fm): Decoded<Manga> {
 	return { entry, invalidFields: r.invalidFields };
 }
 
-export function encodeManga(m: Manga): Fm {
+export function encodeManga(m: Manga, columns: Columns): Fm {
 	const out: Fm = {};
 	encodeCommon(m, out);
 	out[R.chaptersRead] = m.chaptersRead | 0;
@@ -233,6 +245,6 @@ export function encodeManga(m: Manga): Fm {
 		out[R.malId] = Number.isFinite(Number(m.malId)) ? Number(m.malId) : m.malId;
 		out[C.externalId] = formatExternalId({ source: 'mal', kind: 'manga', id: m.malId });
 	}
-	encodeTail(m, 'manga', out);
+	encodeTail(m, 'manga', columns, out);
 	return out;
 }

@@ -100,3 +100,16 @@ export const ALL_PROPERTY_NAMES: readonly string[] = [
 		...Object.values(GAME_PROPS),
 	]),
 ];
+
+/** Custom reading columns are user data, not frozen names: a value lives under `Custom <column name>`. */
+export const CUSTOM_FIELD_PREFIX = 'Custom ';
+
+export function customFieldKey(name: string): string {
+	return `${CUSTOM_FIELD_PREFIX}${name}`;
+}
+
+/** True when another column already uses `name`; property names are case-insensitive in Obsidian. */
+export function columnNameTaken(columns: readonly { id: string; name: string }[], name: string, exceptId?: string): boolean {
+	const wanted = name.trim().toLowerCase();
+	return columns.some((c) => c.id !== exceptId && c.name.trim().toLowerCase() === wanted);
+}

@@ -30,8 +30,8 @@ describe('images are note fields (E12)', () => {
 	});
 
 	it('reading and game codecs: Cover is always encoded', () => {
-		const book = decodeBook('Books/Dune', { Name: 'Dune' }).entry;
-		expect(encodeBook({ ...book, coverUrl: 'https://c' }).Cover).toBe('https://c');
+		const book = decodeBook('Books/Dune', { Name: 'Dune' }, []).entry;
+		expect(encodeBook({ ...book, coverUrl: 'https://c' }, []).Cover).toBe('https://c');
 		const game = decodeGame('Games/Hades', { Name: 'Hades' }).entry;
 		expect(encodeGame({ ...game, coverUrl: 'https://c' }).Cover).toBe('https://c');
 		expect(game).not.toHaveProperty('coverOverride');
@@ -113,7 +113,7 @@ describe('images are note fields (E12)', () => {
 		await dm.addTitle(makeTitle({ title: 'A', type: 'Movie', posterUrl: 'https://p' }));
 		expect(fmOf(f.files.get('W/Movie/A.md')).Cover).toBe('https://p');
 		const r = await setupReadingDataManager({});
-		const book = { ...decodeBook('Books/Dune', { Name: 'Dune' }).entry, id: r.rdm.generateBookId('Dune'), coverUrl: 'https://c' };
+		const book = { ...decodeBook('Books/Dune', { Name: 'Dune' }, []).entry, id: r.rdm.generateBookId('Dune'), coverUrl: 'https://c' };
 		await r.rdm.addBook(book);
 		expect(fmOf(r.f.files.get('W/Books/Dune.md')).Cover).toBe('https://c');
 	});

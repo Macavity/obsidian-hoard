@@ -36,7 +36,7 @@ describe('property name boundary', () => {
 		for (const code of [`raw['title']`, `raw["title"]`, `out["x"] = 1`, `fm['x']`, `fm.x`, `r.str("x")`, `r.num('x')`]) {
 			expect(hit([...NO_LITERALS, ...NO_RAW], code), code).toBe(true);
 		}
-		for (const code of ['raw[COMMON_PROPS.cover]', 'out[TITLE_PROPS.x] = 1', 'out[`cf_${k}`] = v', 'r.str(COMMON_PROPS.name)']) {
+		for (const code of ['raw[COMMON_PROPS.cover]', 'out[TITLE_PROPS.x] = 1', 'out[customFieldKey(c.name)] = v', 'r.str(COMMON_PROPS.name)']) {
 			expect(hit([...NO_LITERALS, ...NO_RAW], code), code).toBe(false);
 		}
 	});
