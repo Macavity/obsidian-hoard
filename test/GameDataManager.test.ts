@@ -141,4 +141,53 @@ describe('GameDataManager on vault storage', () => {
 		expect(c).toContain('Rating: 5');
 		expect(c).toContain('Playtime: 1h');
 	});
+
+	it('flushes a silent edit and notifies once on saveAndNotify', async () => {
+		const { gdm, f } = await setupGames({ 'W/Games/A.md': '---\nName: A\nType: game\nRating: 1\n---\n' });
+		let n = 0;
+		gdm.onChange(() => n++);
+		gdm.updateGameSilent({ ...gdm.getGame('Games/A')!, rating: 4 });
+		await gdm.saveAndNotify();
+		expect(f.files.get('W/Games/A.md')).toContain('Rating: 4');
+		expect(n).toBe(1);
+	});
+
+	it('flushes in-place mutation of a handed-out copy', async () => {
+		const { gdm, f } = await setupGames({ 'W/Games/A.md': '---\nName: A\nType: game\nRating: 1\n---\n' });
+		gdm.getGames()[0]!.rating = 3;
+		await gdm.saveAndNotify();
+		expect(f.files.get('W/Games/A.md')).toContain('Rating: 3');
+	});
+
+	it('batch-removes existing games only, clears airtime and notifies once', async () => {
+		const { gdm, f, airtime } = await setupGames({
+			'W/Games/A.md': '---\nName: A\nType: game\n---\n',
+			'W/Games/B.md': '---\nName: B\nType: game\n---\n',
+		});
+		let n = 0;
+		gdm.onChange(() => n++);
+		await gdm.removeGamesBatch(['Games/A', 'Games/B', 'Games/ghost']);
+		expect(f.files.has('W/Games/A.md')).toBe(false);
+		expect(f.files.has('W/Games/B.md')).toBe(false);
+		expect(gdm.getGames()).toHaveLength(0);
+		expect(airtime.removed).toEqual(['Games/A', 'Games/B', 'Games/ghost']);
+		expect(n).toBe(1);
+	});
+
+	it('renames a group and moves its members', async () => {
+		const { gdm, f } = await setupGames({
+			'W/Games/A.md': '---\nName: A\nType: game\nGroups: [Old]\n---\n',
+			'W/Games/B.md': '---\nName: B\nType: game\n---\n',
+		});
+		await gdm.updateGroup({ id: 'Old', name: 'New', gameIds: ['Games/B'], dateAdded: '' });
+		expect(gdm.getGroups()).toEqual([expect.objectContaining({ id: 'New', gameIds: ['Games/B'] })]);
+		expect(f.files.get('W/Games/B.md')).toContain('New');
+		expect(f.files.get('W/Games/A.md')).not.toContain('Old');
+	});
+
+	it('creates a group through updateGroup when none exists', async () => {
+		const { gdm, f } = await setupGames({ 'W/Games/A.md': '---\nName: A\nType: game\n---\n' });
+		await gdm.updateGroup({ id: 'X', name: 'X', gameIds: ['Games/A'], dateAdded: '' });
+		expect(f.files.get('W/Games/A.md')).toContain('X');
+	});
 });

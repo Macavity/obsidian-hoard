@@ -3,6 +3,7 @@ import { ReadingDataManager } from '../src/ReadingDataManager';
 import { GameDataManager } from '../src/GameDataManager';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
+import type { HoardTitle } from '../src/types';
 
 describe('DataManager on vault storage', () => {
 	it('adds a title as a note and keeps it out of data.json', async () => {
@@ -364,5 +365,83 @@ describe('DataManager on vault storage', () => {
 		const c = f.files.get('W/Movie/A.md')!;
 		expect(c).toContain('Rating: 5');
 		expect(c).toContain('Review: nice');
+	});
+
+	describe('remaining watch time', () => {
+		const show = (status: string, over: Partial<HoardTitle> = {}) =>
+			makeTitle({ type: 'TV Show', status, episodeDuration: 40, totalEpisodes: 10, watchedEpisodes: [1, 2, 3], ...over });
+
+		it('counts unwatched episodes for Plan to watch and Watching, nothing otherwise', async () => {
+			const { dm } = await setupDataManager({});
+			expect(dm.calcTimeRemaining(show('Watching'))).toBe(7 * 40);
+			expect(dm.calcTimeRemaining(show('Plan to watch'))).toBe(7 * 40);
+			expect(dm.calcTimeRemaining(show('Completed'))).toBe(0);
+			expect(dm.calcTimeRemaining(show('Dropped'))).toBe(0);
+			expect(dm.calcTimeRemaining(show('To be released'))).toBe(0);
+			expect(dm.calcTimeRemaining(show('Watching', { episodeDuration: 0 }))).toBe(0);
+		});
+
+		it('treats a movie as remaining until watched', async () => {
+			const { dm } = await setupDataManager({});
+			const movie = (watched: number[]) => makeTitle({ type: 'Movie', status: 'Watching', episodeDuration: 100, watchedEpisodes: watched });
+			expect(dm.calcTimeRemaining(movie([]))).toBe(100);
+			expect(dm.calcTimeRemaining(movie([1]))).toBe(0);
+			expect(dm.calcTimeRemainingForModal(movie([]))).toBe(100);
+			expect(dm.calcTimeRemainingForModal(movie([1]))).toBe(0);
+		});
+
+		it('modal variant also counts Dropped titles', async () => {
+			const { dm } = await setupDataManager({});
+			expect(dm.calcTimeRemainingForModal(show('Dropped'))).toBe(7 * 40);
+			expect(dm.calcTimeRemainingForModal(show('Watching'))).toBe(7 * 40);
+			expect(dm.calcTimeRemainingForModal(show('Plan to watch'))).toBe(7 * 40);
+			expect(dm.calcTimeRemainingForModal(show('Completed'))).toBe(0);
+			expect(dm.calcTimeRemainingForModal(show('To be released'))).toBe(0);
+			expect(dm.calcTimeRemainingForModal(show('Watching', { episodeDuration: 0 }))).toBe(0);
+		});
+	});
+
+	it('updateManualCredits stores cleaned names per field and notifies', async () => {
+		const { dm, f } = await setupDataManager({
+			'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n',
+		});
+		await dm.updateCredits('Movie/A', ['Nolan'], []);
+		let n = 0;
+		dm.onChange(() => n++);
+		await dm.updateManualCredits('Movie/A', 'director', [' Nolan ', 'Villeneuve', 'villeneuve', '']);
+		expect(dm.getTitle('Movie/A')?.manualDirector).toEqual(['Villeneuve']);
+		expect(f.files.get('W/Movie/A.md')).toMatch(/Added Director:\n\s+- Villeneuve/);
+		await dm.updateManualCredits('Movie/A', 'cast', ['Hanks']);
+		expect(dm.getTitle('Movie/A')?.manualCast).toEqual(['Hanks']);
+		await dm.updateManualCredits('Movie/A', 'studio', ['A24']);
+		expect(dm.getTitle('Movie/A')?.manualStudio).toEqual(['A24']);
+		expect(f.files.get('W/Movie/A.md')).toMatch(/Added Studio:\n\s+- A24/);
+		await dm.updateManualCredits('Movie/ghost', 'cast', ['X']);
+		expect(n).toBe(3);
+	});
+
+	it('updateTmdbIdentity caches the id and collection silently', async () => {
+		const { dm, local } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
+		let n = 0;
+		dm.onChange(() => n++);
+		dm.updateTmdbIdentity('Movie/ghost', 1, 2);
+		dm.updateTmdbIdentity('Movie/A', 603, 2344);
+		const t = dm.getTitle('Movie/A')!;
+		expect(t).toMatchObject({ tmdbId: 603, tmdbMediaType: 'movie', collectionId: 2344 });
+		expect(local.getCache('Movie/A')).toMatchObject({ tmdbId: 603, collectionId: 2344 });
+		// null id keeps the verdict only; identical values are a no-op
+		dm.updateTmdbIdentity('Movie/A', null, 0);
+		expect(dm.getTitle('Movie/A')).toMatchObject({ tmdbId: 603, collectionId: 0 });
+		dm.updateTmdbIdentity('Movie/A', 603, 0);
+		expect(n).toBe(0);
+	});
+
+	it('updateTmdbIdentity with no id and no prior id records only the collection', async () => {
+		const { dm } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
+		dm.updateTmdbIdentity('Movie/A', null, 7);
+		const t = dm.getTitle('Movie/A')!;
+		expect(t.collectionId).toBe(7);
+		expect(t.tmdbId).toBeUndefined();
+		expect(t.tmdbMediaType).toBeUndefined();
 	});
 });

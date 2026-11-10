@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { setupReadingDataManager, makeBook, makeManga } from './helpers/setupReadingDataManager';
 import { tick } from './helpers/common';
 
@@ -112,5 +112,83 @@ describe('ReadingDataManager on vault storage', () => {
 		const c = f.files.get('W/Books/A.md')!;
 		expect(c).toContain('Pages Read: 5');
 		expect(c).toContain('Author: X');
+	});
+
+	it('toggles favorite silently and stamps/clears Date Favorited', async () => {
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\n---\n' });
+		const before = rdm.getBook('Books/A')!.dateModified;
+		await rdm.setFavorite('book', 'Books/A', true);
+		expect(rdm.getBook('Books/A')?.favorite).toBe(true);
+		expect(f.files.get('W/Books/A.md')).toMatch(/Favorite: true/);
+		expect(f.files.get('W/Books/A.md')).toMatch(/Date Favorited:/);
+		expect(rdm.getBook('Books/A')?.dateModified).toBe(before);
+		await rdm.setFavorite('book', 'Books/A', false);
+		expect(rdm.getBook('Books/A')?.dateFavorited).toBeUndefined();
+		expect(f.files.get('W/Books/A.md')).not.toMatch(/Date Favorited/);
+		await rdm.setFavorite('book', 'missing', true);
+	});
+
+	it('toggles favorite on manga and survives a failing note write', async () => {
+		const { rdm, f } = await setupReadingDataManager({ 'W/Manga/B.md': '---\nName: B\nType: manga\n---\n' });
+		await rdm.setFavorite('manga', 'Manga/B', true);
+		expect(rdm.getManga('Manga/B')?.favorite).toBe(true);
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		const orig = f.app.fileManager.processFrontMatter.bind(f.app.fileManager);
+		f.app.fileManager.processFrontMatter = () => Promise.reject(new Error('boom'));
+		await rdm.setFavorite('manga', 'Manga/B', false);
+		expect(warn).toHaveBeenCalled();
+		f.app.fileManager.processFrontMatter = orig;
+		warn.mockRestore();
+	});
+
+	it('reorders columns and ignores out-of-range indices', async () => {
+		const { rdm } = await setupReadingDataManager({});
+		for (const id of ['a', 'b', 'c']) await rdm.addColumn('book', { id, name: id, type: 'text', options: [] });
+		await rdm.reorderColumns('book', 0, 2);
+		expect(rdm.getBookColumns().map((c) => c.id)).toEqual(['b', 'c', 'a']);
+		for (const [from, to] of [[-1, 0], [3, 0], [0, -1], [0, 3]] as const) await rdm.reorderColumns('book', from, to);
+		expect(rdm.getBookColumns().map((c) => c.id)).toEqual(['b', 'c', 'a']);
+	});
+
+	it('sets and clears custom fields in the note', async () => {
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\n---\n' });
+		await rdm.addColumn('book', { id: 'c1', name: 'F', type: 'text', options: [] });
+		let n = 0;
+		rdm.onChange(() => n++);
+		await rdm.setCustomField('book', 'Books/A', 'c1', 'hi');
+		expect(rdm.getBook('Books/A')?.customFields).toEqual({ c1: 'hi' });
+		expect(f.files.get('W/Books/A.md')).toContain('cf_c1: hi');
+		await rdm.setCustomField('book', 'Books/A', 'c1', null);
+		expect(rdm.getBook('Books/A')?.customFields).toEqual({});
+		expect(f.files.get('W/Books/A.md')).not.toContain('cf_c1');
+		await rdm.setCustomField('book', 'Books/A', 'c1', '');
+		await rdm.setCustomField('book', 'missing', 'c1', 'x');
+		expect(n).toBe(3);
+	});
+
+	it('survives a failing note write when setting a custom field', async () => {
+		const { rdm, f } = await setupReadingDataManager({ 'W/Manga/B.md': '---\nName: B\nType: manga\n---\n' });
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		f.app.fileManager.processFrontMatter = () => Promise.reject(new Error('boom'));
+		await rdm.setCustomField('manga', 'Manga/B', 'c1', 5);
+		expect(rdm.getManga('Manga/B')?.customFields).toEqual({ c1: 5 });
+		expect(warn).toHaveBeenCalled();
+		warn.mockRestore();
+	});
+
+	it('full rewrite drops omitted keys and stale cf_ keys but keeps unreadable fields', async () => {
+		const { rdm, f } = await setupReadingDataManager({
+			'W/Books/A.md': '---\nName: A\nType: book\nPages Read: 3\nRating: great\nFavorite: true\ncf_old: x\nmyKey: 1\n---\n\nbody\n',
+		});
+		const b = rdm.getBook('Books/A')!;
+		expect(await rdm.rewriteFrontmatterIfExists('book', { ...b, pagesRead: 7, favorite: false, customFields: {} })).toBe(true);
+		const c = f.files.get('W/Books/A.md')!;
+		expect(c).toContain('Pages Read: 7');
+		expect(c).toContain('Rating: great');
+		expect(c).toContain('myKey: 1');
+		expect(c).toContain('body');
+		expect(c).not.toContain('cf_old');
+		expect(c).not.toContain('Favorite');
+		expect(await rdm.rewriteFrontmatterIfExists('book', { ...b, id: 'Books/none' })).toBe(false);
 	});
 });
