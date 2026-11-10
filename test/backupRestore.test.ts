@@ -17,9 +17,8 @@ describe('backup/restore', () => {
 			'W/Hoard.base': BASE,
 			'W/TV Show/Dark.md': '---\ntitle: Dark\ntype: TV Show\nwatched: S01E01-E03\ngroups: [X]\nseasons: ["Season 1: 10"]\n---\n',
 		});
-		a.local.data.settings = { tmdbApiKey: 'SECRET' };
-		const json = JSON.stringify(buildBackup(a));
-		expect((JSON.parse(json) as { local: { tmdbApiKey?: string } }).local.tmdbApiKey).toBe('SECRET');
+		// a backup from an older version still carries the key in its local section
+		const json = JSON.stringify({ ...buildBackup(a), local: { tmdbApiKey: 'SECRET' } });
 
 		const parsed = parseBackup(json);
 		if ('error' in parsed) throw new Error(parsed.error);
@@ -31,8 +30,10 @@ describe('backup/restore', () => {
 		expect(t?.watchedEpisodes).toEqual([1, 2, 3]);
 		expect(b.dataManager.getGroups().map((g) => g.name)).toEqual(['X']);
 		expect(b.shared.get().settings.statuses).toEqual(a.shared.get().settings.statuses);
-		// the key lands in data.json only, never in the vault
-		expect(b.local.data.settings.tmdbApiKey).toBe('SECRET');
+		// the key lands in secret storage only, never in the vault or data.json
+		await b.local.flush();
+		expect(b.secrets.get('hoard-tmdb-api-key')).toBe('SECRET');
+		expect(JSON.stringify(b.savedData())).not.toContain('SECRET');
 		for (const [path, content] of b.f.files) expect(content, path).not.toContain('SECRET');
 	});
 
@@ -61,8 +62,7 @@ describe('history actions', () => {
 
 	it('restores old backup keys into empty secret storage only, never into data.json', async () => {
 		const src = await setupBackup({});
-		src.local.data.settings = { tmdbApiKey: 'OLD', dateFormat: 'dmy' };
-		const parsed = parseBackup(JSON.stringify(buildBackup(src)));
+		const parsed = parseBackup(JSON.stringify({ ...buildBackup(src), local: { tmdbApiKey: 'OLD', dateFormat: 'dmy' } }));
 		if (!('backup' in parsed)) throw new Error('expected backup');
 
 		const kept = await setupBackup({}, { 'hoard-tmdb-api-key': 'NEW' });
@@ -78,15 +78,21 @@ describe('history actions', () => {
 		expect(fresh.secrets.get('hoard-tmdb-api-key')).toBe('OLD');
 	});
 
+	it('leaves out secret keys that are still in memory before a save', async () => {
+		const a = await setupBackup({});
+		a.local.data.settings = { tmdbApiKey: 'SECRET', jikanBaseUrl: 'https://u:PW@nas.example.org/v4', dateFormat: 'dmy' };
+		expect(buildBackup(a).local).toEqual({ dateFormat: 'dmy' });
+	});
+
 	it('drops secrets for a copy written into the vault and ignores prototype keys on restore', async () => {
 		const a = await setupBackup({});
-		a.local.data.settings = { tmdbApiKey: 'SECRET', igdbClientSecret: 'S2', steamId: '42', jikanBaseUrl: 'https://u:PW@nas.example.org/v4', dateFormat: 'dmy' };
-		const copy = withoutSecrets(buildBackup(a));
+		// an old backup file can still carry keys; the vault copy must drop them
+		const local = { tmdbApiKey: 'SECRET', igdbClientSecret: 'S2', steamId: '42', jikanBaseUrl: 'https://u:PW@nas.example.org/v4', dateFormat: 'dmy' };
+		const copy = withoutSecrets({ ...buildBackup(a), local });
 		expect(copy.local).toEqual({ jikanBaseUrl: 'https://nas.example.org/v4', dateFormat: 'dmy' });
 		expect(JSON.stringify(copy)).not.toContain('SECRET');
 		expect(JSON.stringify(copy)).not.toContain('PW');
-		a.local.data.settings = { jikanBaseUrl: 'https://u:HALF@', dateFormat: 'dmy' };
-		expect(withoutSecrets(buildBackup(a)).local).toEqual({ dateFormat: 'dmy' });
+		expect(withoutSecrets({ ...buildBackup(a), local: { jikanBaseUrl: 'https://u:HALF@', dateFormat: 'dmy' } }).local).toEqual({ dateFormat: 'dmy' });
 
 		const b = await setupBackup({});
 		const parsed = parseBackup(JSON.stringify(buildBackup(a)).replace('"dateFormat"', '"__proto__":{"polluted":1},"dateFormat"'));

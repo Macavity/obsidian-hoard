@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parse, stringify } from 'yaml';
 import type { TFile } from 'obsidian';
 import { createFakeApp } from './fakes/fakeApp';
@@ -19,6 +19,18 @@ async function setup(files: Record<string, string>) {
 }
 
 describe('settings split', () => {
+	it('keeps a key in data.json when secret storage cannot hold it', async () => {
+		const { f, local, shared } = await setup({ 'W/Hoard.base': 'hoard:\n  version: 1\n' });
+		const store = new SecretStore({ getSecret: () => null, setSecret: () => { throw new Error('no storage'); } });
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const settings = composeSettings(local.data.settings, shared.get().settings, store.read());
+		settings.tmdbApiKey = 'KEEP';
+		await persistSettings(settings, local, shared, store);
+		await local.flush();
+		expect(f.files.get('W/Hoard.base')).not.toContain('KEEP');
+		expect(local.data.settings.tmdbApiKey).toBe('KEEP');
+	});
+
 	it('keeps secrets out of data.json and the base', async () => {
 		const { f, local, shared } = await setup({ 'W/Hoard.base': 'hoard:\n  version: 1\n' });
 		const store = new SecretStore(f.app.secretStorage);

@@ -51,17 +51,26 @@ export class SecretStore {
 		return out;
 	}
 
-	/** Writes only values that differ from storage; never logs values. */
-	write(values: SecretValues): void {
+	/**
+	 * Writes only values that differ from storage; never logs values. Returns the keys whose
+	 * value is not in storage afterwards, so the caller can keep them instead of losing them.
+	 */
+	write(values: SecretValues): SecretKey[] {
+		const failed: SecretKey[] = [];
 		for (const key of SECRET_KEYS) {
 			const v = values[key];
 			if (v === undefined || v === this.get(key)) continue;
 			try {
 				this.backend.setSecret(SECRET_SETTINGS[key], v);
 			} catch {
+				// reported below through the read-back
+			}
+			if (this.get(key) !== v) {
 				console.warn(`[Hoard] Could not store secret "${key}".`);
+				failed.push(key);
 			}
 		}
+		return failed;
 	}
 
 	/**

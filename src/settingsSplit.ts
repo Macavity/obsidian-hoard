@@ -131,8 +131,10 @@ export async function persistSettings(
 	if (secrets) {
 		const values: SecretValues = {};
 		for (const k of SECRET_KEYS) values[k] = settings[k] ?? '';
-		secrets.write(values);
-		if (SECRET_KEYS.some((k) => values[k])) local.markSecretsInStorage();
+		// a key the storage refused stays in data.json rather than being lost on the next load
+		const failed = secrets.write(values);
+		for (const k of failed) localPart[k] = values[k];
+		if (SECRET_KEYS.some((k) => values[k] && !failed.includes(k))) local.markSecretsInStorage();
 	}
 	local.data.settings = localPart;
 	local.queueSave();

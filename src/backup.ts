@@ -7,6 +7,7 @@ import type { LocalStore } from './storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { ImportContext } from './import/watchlog/schema1Types';
 import { withoutCredentials } from './jikanBase';
+import { SECRET_KEYS } from './storage/SecretStore';
 
 export interface BackupManagers {
 	dataManager: DataManager;
@@ -39,6 +40,13 @@ export interface BackupFile {
 const isRecord = (v: unknown): v is Record<string, unknown> =>
 	typeof v === 'object' && v !== null && !Array.isArray(v);
 
+/** A key restored or imported but not yet moved into secret storage must not reach the file either. */
+function withoutSecretSettings(settings: Record<string, unknown>): Record<string, unknown> {
+	const out = structuredClone(settings);
+	for (const k of SECRET_KEYS) delete out[k];
+	return out;
+}
+
 /** Snapshot of all data; `local` holds device-local settings without secrets (they live in secret storage). */
 export function buildBackup(m: BackupManagers): BackupFile {
 	return {
@@ -51,7 +59,7 @@ export function buildBackup(m: BackupManagers): BackupFile {
 			games: m.gameDataManager.exportSnapshot(),
 		},
 		shared: m.dataManager.getSharedSettings(),
-		local: structuredClone(m.storage.local.data.settings),
+		local: withoutSecretSettings(m.storage.local.data.settings),
 		history: m.historyManager.exportEntries(),
 	};
 }

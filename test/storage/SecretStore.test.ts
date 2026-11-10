@@ -55,6 +55,17 @@ describe('SecretStore', () => {
 		expect(rec).toEqual({ rawgApiKey: 'R' });
 		expect(warn).toHaveBeenCalled();
 	});
+	it('reports the keys it could not store', () => {
+		const b = backend();
+		b.setSecret = (id) => { if (id === 'hoard-rawg-api-key') throw new Error('no storage'); };
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		expect(new SecretStore(b).write({ rawgApiKey: 'R', steamId: '' })).toEqual(['rawgApiKey']);
+	});
+	it('reports a key whose read-back differs as not stored', () => {
+		const b = backend();
+		b.setSecret = () => {};
+		expect(new SecretStore(b).write({ omdbApiKey: 'O' })).toEqual(['omdbApiKey']);
+	});
 	it('reports empty storage', () => {
 		expect(new SecretStore(backend()).isEmpty()).toBe(true);
 		expect(new SecretStore(backend({ 'hoard-steam-id': '1' })).isEmpty()).toBe(false);
