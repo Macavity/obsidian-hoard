@@ -20,7 +20,7 @@ import { decodeBook, decodeManga, encodeAirtime } from './storage/readingCodec';
 import { decodeGame } from './storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
-import { sameJson } from './storage/sharedHelpers';
+import { changedKeys, sameJson } from './storage/sharedHelpers';
 
 export interface DataStores {
 	index: EntryIndex;
@@ -1563,8 +1563,7 @@ export class DataManager {
 		const pending = this.seasonsPending(t);
 		const before = src ? encodeTitle(src, this.getProgress(src), pending) : {};
 		const after = encodeTitle(t, this.getProgress(t), pending);
-		const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
-			.filter((k) => !sameJson(before[k], after[k]));
+		const changed = changedKeys(before, after);
 		if (changed.length > 0) {
 			const ok = await this.processFrontMatter(file, t, (raw) => {
 				for (const key of changed) {

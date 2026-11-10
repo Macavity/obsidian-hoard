@@ -25,7 +25,7 @@ import {
 	READING_STATUSES,
 	DEFAULT_READING_STATUS_COLORS,
 } from './types';
-import { sameJson, slugify } from './storage/sharedHelpers';
+import { changedKeys, slugify } from './storage/sharedHelpers';
 
 export type ReadingKind = 'book' | 'manga';
 
@@ -851,8 +851,7 @@ export class ReadingDataManager {
 
 		const before = src ? this.encode(kind, src) : {};
 		const after = this.encode(kind, item);
-		const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
-			.filter((k) => !sameJson(before[k], after[k]));
+		const changed = changedKeys(before, after);
 		if (changed.length > 0) {
 			const ok = await this.processFrontMatter(file, kind, item, (raw) => {
 				for (const key of changed) {

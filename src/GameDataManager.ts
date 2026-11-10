@@ -25,7 +25,7 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from './types';
-import { sameJson, slugify } from './storage/sharedHelpers';
+import { changedKeys, sameJson, slugify } from './storage/sharedHelpers';
 
 const GAMES_FOLDER_PREFIX = 'Games/';
 
@@ -639,8 +639,7 @@ export class GameDataManager {
 
 		const before = src ? this.encode(src) : {};
 		const after = this.encode(g);
-		const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
-			.filter((k) => !sameJson(before[k], after[k]));
+		const changed = changedKeys(before, after);
 		if (changed.length > 0) {
 			const ok = await this.processFrontMatter(file, g, (raw) => {
 				for (const key of changed) {
