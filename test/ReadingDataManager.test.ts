@@ -219,7 +219,7 @@ describe('ReadingDataManager on vault storage', () => {
 				'W/Manga/M.md': '---\nName: M\nType: manga\nCustom Old: m\n---\n',
 			});
 			await rdm.addColumn('book', col);
-			expect(await rdm.updateColumn('book', { ...col, name: 'New' })).toBe(1);
+			expect(await rdm.updateColumn('book', { ...col, name: 'New' })).toEqual({ moved: 1, skipped: 0 });
 			expect(f.files.get('W/Books/A.md')).toContain('Custom New: a');
 			expect(f.files.get('W/Books/A.md')).not.toContain('Custom Old');
 			expect(f.files.get('W/Books/B.md')).not.toContain('Custom');
@@ -234,7 +234,7 @@ describe('ReadingDataManager on vault storage', () => {
 			});
 			await rdm.addColumn('book', col);
 			const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-			expect(await rdm.updateColumn('book', { ...col, name: 'New' })).toBe(0);
+			expect(await rdm.updateColumn('book', { ...col, name: 'New' })).toEqual({ moved: 0, skipped: 1 });
 			expect(warn).toHaveBeenCalled();
 			warn.mockRestore();
 			const c = f.files.get('W/Books/A.md')!;
@@ -246,7 +246,7 @@ describe('ReadingDataManager on vault storage', () => {
 		it('does not touch notes when only type or color change', async () => {
 			const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\nCustom Old: a\n---\n' });
 			await rdm.addColumn('book', col);
-			expect(await rdm.updateColumn('book', { ...col, color: '#111111' })).toBe(0);
+			expect(await rdm.updateColumn('book', { ...col, color: '#111111' })).toEqual({ moved: 0, skipped: 0 });
 			expect(f.files.get('W/Books/A.md')).toContain('Custom Old: a');
 		});
 
@@ -270,6 +270,17 @@ describe('ReadingDataManager on vault storage', () => {
 			await pending;
 			expect(rdm.getBookColumns()[0]?.name).toBe('New');
 			expect(f.files.get('W/Hoard.base')).toContain('New');
+		});
+
+		it('counts a note whose update fails as skipped', async () => {
+			const { rdm, f } = await setupReadingDataManager({
+				'W/Books/A.md': '---\nName: A\nType: book\nCustom Old: a\n---\n',
+			});
+			await rdm.addColumn('book', col);
+			f.app.fileManager.processFrontMatter = () => Promise.reject(new Error('boom'));
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+			expect(await rdm.updateColumn('book', { ...col, name: 'New' })).toEqual({ moved: 0, skipped: 1 });
+			warn.mockRestore();
 		});
 
 		it('does not resurrect a column deleted while the move is in flight', async () => {

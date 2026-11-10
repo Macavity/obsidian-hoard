@@ -298,8 +298,9 @@ export class ReadingManageColumnsModal extends Modal {
 		this.busy = true;
 		this.setLocked(true);
 		try {
-			const moved = await this.readingData.updateColumn(this.kind, col);
+			const { moved, skipped } = await this.readingData.updateColumn(this.kind, col);
 			if (moved > 0) new Notice(t('reading.columns.renamed', { count: moved }));
+			if (skipped > 0) new Notice(t('reading.columns.renamedSkipped', { count: skipped }));
 		} finally {
 			this.busy = false;
 			this.setLocked(false);

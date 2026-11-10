@@ -90,4 +90,19 @@ describe('manage columns dialog names', () => {
 		expect(controls().some((c) => c.disabled)).toBe(false);
 		expect(nameInputs(el)[0]!.value).toBe('Fmt');
 	});
+
+	it('tells how many notes kept their value when the new name already existed', async () => {
+		const { f, el } = await openModal();
+		await f.app.vault.create('W/Books/B.md', '---\nName: B\nType: book\nCustom Format: b\nCustom Fmt: keep\n---\n');
+		await tick();
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		const input = nameInputs(el)[0]!;
+		input.value = 'Fmt';
+		input.dispatchEvent(new Event('change'));
+		await tick();
+		await tick();
+		warn.mockRestore();
+		expect(shown).toContain(t('reading.columns.renamed', { count: 1 }));
+		expect(shown).toContain(t('reading.columns.renamedSkipped', { count: 1 }));
+	});
 });

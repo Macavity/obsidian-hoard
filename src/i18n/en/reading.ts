@@ -109,6 +109,10 @@ const reading = {
 			one: 'Renamed the field in {count} note.',
 			other: 'Renamed the field in {count} notes.',
 		},
+		renamedSkipped: {
+			one: 'Kept the existing value in {count} note that could not be renamed.',
+			other: 'Kept the existing value in {count} notes that could not be renamed.',
+		},
 	},
 } as const;
 

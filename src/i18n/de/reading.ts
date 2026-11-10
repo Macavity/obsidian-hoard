@@ -112,6 +112,10 @@ const reading = {
 			one: 'Feld in {count} Notiz umbenannt.',
 			other: 'Feld in {count} Notizen umbenannt.',
 		},
+		renamedSkipped: {
+			one: 'Bestehender Wert in {count} Notiz behalten, Umbenennung nicht möglich.',
+			other: 'Bestehender Wert in {count} Notizen behalten, Umbenennung nicht möglich.',
+		},
 	},
 } satisfies DeepPartial<typeof enReading>;
 

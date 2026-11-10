@@ -59,6 +59,12 @@ const encodeWith = (kind: ReadingKind, item: Item, columns: readonly ReadingCust
  * to the note via processFrontMatter and only touch keys whose encoded value changed. Reading
  * settings and table columns live in the shared config (Hoard.base).
  */
+/** Notes a column rename moved, and notes it left alone (their values stay under the old key). */
+export interface ColumnMoveResult {
+	moved: number;
+	skipped: number;
+}
+
 export class ReadingDataManager {
 	private plugin: HoardPlugin;
 	private app: App;
@@ -608,32 +614,39 @@ export class ReadingDataManager {
 	/**
 	 * Saves the column. A new name first moves `Custom <old>` to `Custom <new>` in every note of the
 	 * kind (notes before the setting: a crash in between leaves the values in the notes under the new
-	 * name, never lost). Returns how many notes were moved; a note that already has the new key is kept as is.
+	 * name, never lost). Returns how many notes were moved and how many skipped (they already have the
+	 * new key, or could not be updated; their values stay as they are).
 	 */
-	async updateColumn(kind: ReadingKind, updated: ReadingCustomColumn): Promise<number> {
+	async updateColumn(kind: ReadingKind, updated: ReadingCustomColumn): Promise<ColumnMoveResult> {
 		const old = this.columnsFor(kind).find((c) => c.id === updated.id);
-		if (!old) return 0;
-		const moved = old.name === updated.name ? 0 : await this.moveCustomKey(kind, customFieldKey(old.name), customFieldKey(updated.name));
+		if (!old) return { moved: 0, skipped: 0 };
+		const result =
+			old.name === updated.name
+				? { moved: 0, skipped: 0 }
+				: await this.moveCustomKey(kind, customFieldKey(old.name), customFieldKey(updated.name));
 		// the shared config may have been reloaded meanwhile: resolve the array again, never resurrect a deleted column
 		const cols = this.columnsFor(kind);
 		const idx = cols.findIndex((c) => c.id === updated.id);
-		if (idx < 0) return moved;
+		if (idx < 0) return result;
 		cols[idx] = updated;
 		await this.save();
-		return moved;
+		return result;
 	}
 
-	private async moveCustomKey(kind: ReadingKind, from: string, to: string): Promise<number> {
+	private async moveCustomKey(kind: ReadingKind, from: string, to: string): Promise<ColumnMoveResult> {
 		const items: Item[] = kind === 'book' ? this.index.books() : this.index.manga();
 		let moved = 0;
+		let skipped = 0;
 		for (const item of items) {
 			const file = this.fileOf(item.id);
 			if (!file) continue;
 			let hit = false;
+			let conflict = false;
 			const ok = await updateFrontMatter(this.app, file, this.notify, (fm: Fm) => {
 				if (!(from in fm) || from === to) return;
 				if (to in fm) {
 					console.warn(`[Hoard] ${file.path} already has "${to}"; "${from}" stays`);
+					conflict = true;
 					return;
 				}
 				const value = fm[from];
@@ -642,8 +655,9 @@ export class ReadingDataManager {
 				hit = true;
 			});
 			if (ok && hit) moved++;
+			else if (conflict || !ok) skipped++;
 		}
-		return moved;
+		return { moved, skipped };
 	}
 
 	async removeColumn(kind: ReadingKind, id: string): Promise<void> {
