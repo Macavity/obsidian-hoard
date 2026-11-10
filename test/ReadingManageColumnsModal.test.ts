@@ -62,4 +62,32 @@ describe('manage columns dialog names', () => {
 		await tick();
 		expect(rdm.getBookColumns().map((c) => c.name)).toEqual(['Format', 'Year', 'Series']);
 	});
+
+	it('locks the dialog while a rename runs and re-renders from fresh columns after', async () => {
+		const { rdm, f, el } = await openModal();
+		let release!: () => void;
+		const gate = new Promise<void>((r) => { release = r; });
+		const orig = f.app.fileManager.processFrontMatter.bind(f.app.fileManager);
+		f.app.fileManager.processFrontMatter = async (...args: Parameters<typeof orig>) => {
+			await gate;
+			return orig(...args);
+		};
+		const input = nameInputs(el)[0]!;
+		input.value = 'Fmt';
+		input.dispatchEvent(new Event('change'));
+		await tick(20);
+		const controls = () => Array.from(el.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>('.hoard-reading-manage-cols-list input, .hoard-reading-manage-cols-list select, .hoard-reading-manage-cols-list button'));
+		expect(controls().every((c) => c.disabled)).toBe(true);
+		// a change that slips through anyway must not be applied
+		const select = el.querySelector<HTMLSelectElement>('.hoard-editcol-card-type')!;
+		select.value = 'number';
+		select.dispatchEvent(new Event('change'));
+		await tick(20);
+		release();
+		await tick();
+		await tick();
+		expect(rdm.getBookColumns()[0]).toMatchObject({ name: 'Fmt', type: 'text' });
+		expect(controls().some((c) => c.disabled)).toBe(false);
+		expect(nameInputs(el)[0]!.value).toBe('Fmt');
+	});
 });
