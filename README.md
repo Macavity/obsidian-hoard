@@ -13,7 +13,7 @@ Hoard adds a sidebar panel with eight tabs:
 - **Drafts** — scans your vault for a tag (default `#hoard`) and turns those lines into entries.
 - **Log** — a unified activity timeline of everything you add, finish, rate or delete.
 
-Desktop and mobile.
+Desktop and mobile. The interface follows Obsidian's language setting and is available in English and German; other languages fall back to English.
 
 ## Widgets
 
@@ -100,12 +100,7 @@ pnpm test
 
 ## Release
 
-```bash
-pnpm version patch|minor|major
-git push --follow-tags
-```
-
-The GitHub workflow in `.github/workflows/release.yml` builds and attaches `main.js`, `manifest.json` and `styles.css` to the tagged release.
+Releases go through a `release/<version>` branch and a pull request: `CHANGELOG.md` gets a section for the version, `pnpm version <patch|minor|major> --no-git-tag-version` bumps it, and the tag (the bare version, no `v`) is set on the merge commit on `main`. Pushing the tag starts `.github/workflows/release.yml`, which builds and attaches `main.js`, `manifest.json` and `styles.css` to the release and uses the changelog section as release notes.
 
 ## License
 
