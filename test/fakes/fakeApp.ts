@@ -216,10 +216,17 @@ export function createFakeApp(initial: Record<string, string> = {}) {
 		registerEvent: (r: unknown) => { plugin.registered.push(r); },
 	};
 
+	const secrets = new Map<string, string>();
+	const secretStorage = {
+		getSecret: (id: string) => secrets.get(id) ?? null,
+		setSecret: (id: string, secret: string) => { secrets.set(id, secret); },
+	};
+
 	const app = {
 		vault,
 		metadataCache,
 		fileManager,
+		secretStorage,
 		workspace: { onLayoutReady: (cb: () => void) => cb() },
 	} as unknown as App;
 
@@ -227,6 +234,7 @@ export function createFakeApp(initial: Record<string, string> = {}) {
 		app: app as App & { vault: typeof vault; metadataCache: typeof metadataCache; fileManager: typeof fileManager },
 		files,
 		adapterFiles,
+		secrets,
 		plugin,
 		externalWrite(path: string, content: string): void {
 			const f = nodes.get(path);
