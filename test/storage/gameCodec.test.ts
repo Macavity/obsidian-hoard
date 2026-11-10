@@ -61,4 +61,15 @@ describe('game codec', () => {
 		expect(invalidFields).toContain('Playtime');
 		expect(entry.playtimeMinutes).toBe(0);
 	});
+
+	it('ignores a non-game External ID', () => {
+		const { entry } = decodeGame('Games/X', { Name: 'X', 'External ID': 'imdb:tt1' });
+		expect(entry).toMatchObject({ apiSource: '', apiId: '' });
+	});
+
+	it('flags malformed achievements', () => {
+		const { entry, invalidFields } = decodeGame('Games/A', { Name: 'A', Achievements: 'many' });
+		expect(invalidFields).toContain('Achievements');
+		expect(entry).toMatchObject({ achievementsEarned: 0, achievementsTotal: 0 });
+	});
 });

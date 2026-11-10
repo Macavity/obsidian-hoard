@@ -18,34 +18,41 @@ export function parsePlaytime(s: string): number | null {
 	return h * 60 + (m[2] ? Number(m[2]) : 0);
 }
 
+const GAME_API_SOURCES: readonly string[] = ['rawg', 'igdb', 'steam'];
+
+function decodeApi(r: FmReader): { apiSource: Game['apiSource']; apiId: string } {
+	const ext = parseExternalId(r.str(C.externalId));
+	if (ext && GAME_API_SOURCES.includes(ext.source)) return { apiSource: ext.source as Game['apiSource'], apiId: ext.id };
+	return { apiSource: '', apiId: '' };
+}
+
+function decodePlaytime(r: FmReader): number {
+	const pt = r.str(G.playtime);
+	if (!pt) return 0;
+	const p = parsePlaytime(pt);
+	if (p === null) {
+		r.invalidFields.push(G.playtime);
+		return 0;
+	}
+	return p;
+}
+
+function decodeAchievements(r: FmReader): { earned: number; total: number } {
+	const ach = r.str(G.achievements);
+	if (!ach) return { earned: 0, total: 0 };
+	const m = /^(\d+)\s*\/\s*(\d+)$/.exec(ach.trim());
+	if (!m) {
+		r.invalidFields.push(G.achievements);
+		return { earned: 0, total: 0 };
+	}
+	return { earned: Number(m[1]), total: Number(m[2]) };
+}
+
 export function decodeGame(id: string, fm: Fm): Decoded<Game> {
 	const r = new FmReader(fm);
-	const ext = parseExternalId(r.str(C.externalId));
-	let apiSource: Game['apiSource'] = '';
-	let apiId = '';
-	if (ext && (ext.source === 'rawg' || ext.source === 'igdb' || ext.source === 'steam')) {
-		apiSource = ext.source;
-		apiId = ext.id;
-	}
-
-	let playtimeMinutes = 0;
-	const pt = r.str(G.playtime);
-	if (pt) {
-		const p = parsePlaytime(pt);
-		if (p === null) r.invalidFields.push(G.playtime);
-		else playtimeMinutes = p;
-	}
-
-	let achievementsEarned = 0;
-	let achievementsTotal = 0;
-	const ach = r.str(G.achievements);
-	if (ach) {
-		const m = /^(\d+)\s*\/\s*(\d+)$/.exec(ach.trim());
-		if (m) {
-			achievementsEarned = Number(m[1]);
-			achievementsTotal = Number(m[2]);
-		} else r.invalidFields.push(G.achievements);
-	}
+	const { apiSource, apiId } = decodeApi(r);
+	const playtimeMinutes = decodePlaytime(r);
+	const { earned: achievementsEarned, total: achievementsTotal } = decodeAchievements(r);
 
 	const entry: Game = {
 		id,

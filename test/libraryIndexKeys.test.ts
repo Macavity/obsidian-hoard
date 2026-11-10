@@ -29,3 +29,37 @@ describe('LibraryIndex', () => {
 		expect(idx.lookup(['openlibrary:OL1W'], 'Unrelated')).toBe('Books');
 	});
 });
+
+describe('LibraryIndex stored-entry keys', () => {
+	const title = { title: 'T', malId: '', anilistId: '', tmdbId: '', tmdbMediaType: '', externalLink: '' };
+	const build = (titles: unknown[]) => LibraryIndex.build({ dataManager: { getTitles: () => titles } } as unknown as HoardPlugin, ['watchlist']);
+
+	it('keys a title by mal and anilist ids', () => {
+		const idx = build([{ ...title, malId: '5', anilistId: '6' }]);
+		expect(idx.lookup(['mal:5'], 'x')).toBe('Watchlist');
+		expect(idx.lookup(['anilist:6'], 'x')).toBe('Watchlist');
+	});
+	it('keys a title by tmdb id only with a media type', () => {
+		const idx = build([{ ...title, tmdbId: '1399', tmdbMediaType: 'tv' }, { ...title, title: 'U', tmdbId: '7' }]);
+		expect(idx.lookup(['tmdb:tv:1399'], 'x')).toBe('Watchlist');
+		expect(idx.lookup(['tmdb::7'], 'x')).toBeNull();
+	});
+	it('keys a title by the imdb id in its link', () => {
+		const idx = build([{ ...title, externalLink: 'https://www.imdb.com/title/tt123/' }]);
+		expect(idx.lookup(['imdb:tt123'], 'x')).toBe('Watchlist');
+	});
+	it('keys a book by Google Books id', () => {
+		const plugin = { readingDataManager: { getBooks: () => [{ title: 'B', googleBooksId: 'g1', openLibraryId: '' }] } } as unknown as HoardPlugin;
+		expect(LibraryIndex.build(plugin, ['books']).lookup(['gbooks:g1'], 'x')).toBe('Books');
+	});
+	it('keys a manga by mal id, and skips one without', () => {
+		const plugin = { readingDataManager: { getMangaList: () => [{ title: 'M', malId: '9' }, { title: 'N', malId: '' }] } } as unknown as HoardPlugin;
+		const idx = LibraryIndex.build(plugin, ['manga']);
+		expect(idx.lookup(['mal:9'], 'x')).toBe('Manga');
+		expect(idx.lookup(['mal:'], 'x')).toBeNull();
+	});
+	it('keys a game by api source and id', () => {
+		const plugin = { gameDataManager: { getGames: () => [{ title: 'G', apiSource: 'rawg', apiId: '3', steamAppId: '' }] } } as unknown as HoardPlugin;
+		expect(LibraryIndex.build(plugin, ['games']).lookup(['rawg:3'], 'x')).toBe('Games');
+	});
+});
