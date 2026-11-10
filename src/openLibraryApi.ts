@@ -1,6 +1,6 @@
 import type { BookSearchResult } from './ApiService';
 
-export const OPEN_LIBRARY_BASE = 'https://openlibrary.org';
+const OPEN_LIBRARY_BASE = 'https://openlibrary.org';
 
 const SEARCH_FIELDS = 'key,title,author_name,first_publish_year,number_of_pages_median,cover_i';
 const WORK_KEY_RE = /^\/works\/(OL\d+W)$/;

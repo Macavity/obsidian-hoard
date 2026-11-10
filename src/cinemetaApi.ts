@@ -1,16 +1,16 @@
 import { httpsOrEmpty } from './httpsUrl';
 import type { MediaSearchResult, Season } from './types';
 
-export const CINEMETA_BASE = 'https://v3-cinemeta.strem.io';
+const CINEMETA_BASE = 'https://v3-cinemeta.strem.io';
 
-type Kind = 'movie' | 'series';
+export type CinemetaKind = 'movie' | 'series';
 type Raw = Record<string, unknown>;
 
-export function cinemetaSearchUrl(kind: Kind, query: string): string {
+export function cinemetaSearchUrl(kind: CinemetaKind, query: string): string {
 	return `${CINEMETA_BASE}/catalog/${kind}/top/search=${encodeURIComponent(query)}.json`;
 }
 
-export function cinemetaMetaUrl(kind: Kind, imdbId: string): string {
+export function cinemetaMetaUrl(kind: CinemetaKind, imdbId: string): string {
 	return `${CINEMETA_BASE}/meta/${kind}/${imdbId}.json`;
 }
 
@@ -37,7 +37,7 @@ function parseRuntime(v: unknown): number {
 	return m ? Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0) : 0;
 }
 
-function baseResult(raw: Raw, kind: Kind): MediaSearchResult | null {
+function baseResult(raw: Raw, kind: CinemetaKind): MediaSearchResult | null {
 	const id = str(raw.id);
 	if (!/^tt\d+$/.test(id)) return null;
 	return {
@@ -53,7 +53,7 @@ function baseResult(raw: Raw, kind: Kind): MediaSearchResult | null {
 	};
 }
 
-export function mapCinemetaSearch(json: unknown, kind: Kind, year: string, limit: number): MediaSearchResult[] {
+export function mapCinemetaSearch(json: unknown, kind: CinemetaKind, year: string, limit: number): MediaSearchResult[] {
 	const metas = asObject(json)?.metas;
 	if (!Array.isArray(metas)) return [];
 	const wantYear = /^\d{4}$/.test(year);
@@ -83,7 +83,7 @@ function buildSeasons(videos: unknown): Season[] {
 	});
 }
 
-export function mapCinemetaMeta(json: unknown, kind: Kind): MediaSearchResult | null {
+export function mapCinemetaMeta(json: unknown, kind: CinemetaKind): MediaSearchResult | null {
 	const raw = asObject(asObject(json)?.meta);
 	const base = raw && baseResult(raw, kind);
 	if (!raw || !base) return null;
