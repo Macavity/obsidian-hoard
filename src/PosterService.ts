@@ -292,7 +292,11 @@ export class PosterService {
 			const hit = await api.getCinemetaDetails(imdbId, kind ?? 'movie');
 			if (hit?.posterUrl) return hit.posterUrl;
 		}
-		const kinds: Array<'movie' | 'series'> = kind === null ? ['movie', 'series'] : [kind === 'tv' ? 'series' : 'movie'];
+		return this.searchCinemetaPoster(api, title, kind);
+	}
+
+	private async searchCinemetaPoster(api: ApiService, title: HoardTitle, kind: 'movie' | 'tv' | null): Promise<string | null> {
+		const kinds = cinemetaKinds(kind);
 		const name = this.cleanTitleForSearch(title.title);
 		const year = this.getReleaseYear(title);
 		for (const k of kinds) {
@@ -399,4 +403,9 @@ export class PosterService {
 	private request(params: RequestUrlParam): Promise<unknown> {
 		return requestVia(this.jikan(), params);
 	}
+}
+
+function cinemetaKinds(kind: 'movie' | 'tv' | null): Array<'movie' | 'series'> {
+	if (kind === null) return ['movie', 'series'];
+	return [kind === 'tv' ? 'series' : 'movie'];
 }

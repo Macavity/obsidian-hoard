@@ -4,7 +4,7 @@ import type { ReadingDataManager } from './ReadingDataManager';
 import type { BookSearchResult, MangaSearchResult } from './ApiService';
 import { apiErrorMessage } from './ApiService';
 import { renderSearchResultRow } from './SearchThumbnail';
-import { effectiveBookSource } from './apiSources';
+import { searchBooks } from './coverRefresh';
 import { LibraryIndex, bookResultIdKeys, mangaResultIdKeys } from './LibraryIndex';
 import { renderStarRating } from './StarRating';
 import { createDatePicker } from './DatePicker';
@@ -306,9 +306,7 @@ export class AddReadingModal extends Modal {
 	}
 
 	private async lookupBooks(query: string): Promise<LookupOutcome> {
-		const api = this.plugin.apiService;
-		const google = effectiveBookSource(this.plugin.settings, api) === 'google';
-		return { kind: 'books', results: google ? await api.searchGoogleBooks(query) : await api.searchOpenLibrary(query) };
+		return { kind: 'books', results: await searchBooks(this.plugin.apiService, this.plugin.settings, query) };
 	}
 
 	private async lookupManga(query: string): Promise<LookupOutcome> {
@@ -635,6 +633,29 @@ export class AddReadingModal extends Modal {
 		this.close();
 	}
 
+	private bookFormFields(): Omit<Book, 'id' | 'title' | 'dateAdded' | 'dateModified' | 'customFields'> {
+		const s = this.state;
+		return {
+			author: s.author.trim(),
+			status: s.status,
+			rating: s.rating,
+			progressUnit: s.progressUnit,
+			pagesRead: s.pagesRead,
+			totalPages: s.totalPages,
+			wordsRead: s.wordsRead,
+			totalWords: s.totalWords,
+			chaptersRead: s.chaptersRead,
+			totalChapters: s.totalChapters,
+			coverUrl: s.coverUrl.trim(),
+			googleBooksId: s.googleBooksId.trim(),
+			openLibraryId: s.openLibraryId.trim(),
+			vaultPage: s.vaultPage,
+			dateStarted: s.dateStarted,
+			dateFinished: s.dateFinished,
+			releaseDate: s.releaseDate,
+		};
+	}
+
 	private async saveBook(title: string): Promise<void> {
 		if (this.existingId) {
 			const existing = this.readingData.getBook(this.existingId);
@@ -645,23 +666,7 @@ export class AddReadingModal extends Modal {
 			const updated: Book = {
 				...existing,
 				title,
-				author: this.state.author.trim(),
-				status: this.state.status,
-				rating: this.state.rating,
-				progressUnit: this.state.progressUnit,
-				pagesRead: this.state.pagesRead,
-				totalPages: this.state.totalPages,
-				wordsRead: this.state.wordsRead,
-				totalWords: this.state.totalWords,
-				chaptersRead: this.state.chaptersRead,
-				totalChapters: this.state.totalChapters,
-				coverUrl: this.state.coverUrl.trim(),
-				googleBooksId: this.state.googleBooksId.trim(),
-				openLibraryId: this.state.openLibraryId.trim(),
-				vaultPage: this.state.vaultPage,
-				dateStarted: this.state.dateStarted,
-				dateFinished: this.state.dateFinished,
-				releaseDate: this.state.releaseDate,
+				...this.bookFormFields(),
 			};
 			await this.readingData.updateBook(updated);
 		} else {
@@ -669,23 +674,7 @@ export class AddReadingModal extends Modal {
 			const book: Book = {
 				id: this.readingData.generateBookId(title),
 				title,
-				author: this.state.author.trim(),
-				status: this.state.status,
-				rating: this.state.rating,
-				progressUnit: this.state.progressUnit,
-				pagesRead: this.state.pagesRead,
-				totalPages: this.state.totalPages,
-				wordsRead: this.state.wordsRead,
-				totalWords: this.state.totalWords,
-				chaptersRead: this.state.chaptersRead,
-				totalChapters: this.state.totalChapters,
-				coverUrl: this.state.coverUrl.trim(),
-				googleBooksId: this.state.googleBooksId.trim(),
-				openLibraryId: this.state.openLibraryId.trim(),
-				vaultPage: this.state.vaultPage,
-				dateStarted: this.state.dateStarted,
-				dateFinished: this.state.dateFinished,
-				releaseDate: this.state.releaseDate,
+				...this.bookFormFields(),
 				dateAdded: now,
 				dateModified: now,
 				customFields: {},

@@ -8,7 +8,7 @@ function setup(api: Partial<ApiService>) {
 	const updatePosterUrl = vi.fn().mockResolvedValue(undefined);
 	const svc = new PosterService(
 		{ updatePosterUrl } as unknown as DataManager,
-		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '' }),
+		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', typeApiMapping: { Doc: 'movie' } }),
 		() => api as ApiService,
 	);
 	return { svc, updatePosterUrl };
@@ -40,5 +40,30 @@ describe('PosterService keyless (Cinemeta)', () => {
 		const { svc, updatePosterUrl } = setup({ searchCinemeta: vi.fn().mockRejectedValue(new Error('net')) });
 		expect(await svc.enqueue(title({}))).toBeNull();
 		expect(updatePosterUrl).not.toHaveBeenCalled();
+	});
+
+	it('falls through to a search when the IMDb hit has no poster', async () => {
+		const getCinemetaDetails = vi.fn().mockResolvedValue({ posterUrl: '' });
+		const searchCinemeta = vi.fn().mockResolvedValue([{ posterUrl: 'https://img/s.jpg', releaseDate: '' }]);
+		const { svc } = setup({ getCinemetaDetails, searchCinemeta });
+		const url = await svc.enqueue(title({ externalLink: 'https://www.imdb.com/title/tt0903747/' }));
+		expect(url).toBe('https://img/s.jpg');
+	});
+
+	it('tries movie then series when the kind is unknown', async () => {
+		const searchCinemeta = vi.fn()
+			.mockResolvedValueOnce([])
+			.mockResolvedValueOnce([{ posterUrl: 'https://img/x.jpg', releaseDate: '' }]);
+		const { svc } = setup({ searchCinemeta });
+		const url = await svc.enqueue(title({ type: 'Doc' }));
+		expect(url).toBe('https://img/x.jpg');
+		expect(searchCinemeta.mock.calls.map((c: unknown[]) => c[1] as string)).toEqual(['movie', 'series']);
+	});
+
+	it('searches movies for a movie without year', async () => {
+		const searchCinemeta = vi.fn().mockResolvedValue([]);
+		const { svc } = setup({ searchCinemeta });
+		await svc.enqueue(title({ type: 'Movie' }));
+		expect(searchCinemeta).toHaveBeenCalledWith('Breaking Bad', 'movie', undefined);
 	});
 });

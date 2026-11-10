@@ -3,7 +3,7 @@ import type { ApiService } from '../src/ApiService';
 import type { Game } from '../src/types';
 import { steamLibraryCover } from '../src/steamStoreApi';
 import { parse } from 'yaml';
-import { refreshAllCovers, resolveGameCover, type CoverRefreshDeps } from '../src/coverRefresh';
+import { refreshAllCovers, resolveGameCover, searchBooks, type CoverRefreshDeps } from '../src/coverRefresh';
 import { ApiCheckQueue } from '../src/apiCheckQueue';
 import { setupGames } from './helpers/setupGameDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
@@ -104,5 +104,38 @@ describe('refreshAllCovers', () => {
 		expect(fmOf(bad.r.f.files.get('W/Books/Dune.md')).Cover).toBe('https://mine');
 		expect(fmOf(bad.r.f.files.get('W/Manga/Berserk.md')).Cover).toBe('https://mine');
 		expect(bad.res.updated).toBe(0);
+	});
+});
+
+describe('searchBooks', () => {
+	const api = (key: boolean) => ({
+		hasGoogleBooksKey: () => key,
+		searchGoogleBooks: vi.fn().mockResolvedValue(['g']),
+		searchOpenLibrary: vi.fn().mockResolvedValue(['o']),
+	});
+
+	it('uses Google Books when chosen and keyed', async () => {
+		const a = api(true);
+		expect(await searchBooks(a as unknown as ApiService, { booksApiSource: 'google' }, 'q')).toEqual(['g']);
+		expect(a.searchGoogleBooks).toHaveBeenCalledWith('q');
+	});
+
+	it('uses Open Library without a key or when chosen', async () => {
+		const a = api(false);
+		expect(await searchBooks(a as unknown as ApiService, { booksApiSource: 'google' }, 'q')).toEqual(['o']);
+		const b = api(true);
+		expect(await searchBooks(b as unknown as ApiService, { booksApiSource: 'openlibrary' }, 'q')).toEqual(['o']);
+	});
+});
+
+describe('refreshAllCovers skips', () => {
+	it('skips google-only books without key and manga without id; unchanged cover counts unchanged', async () => {
+		const noMal = '---\nName: Berserk\nStatus: Reading\nType: manga\nCover: https://mine\n---\n';
+		const { res } = await run({ 'W/Books/Dune.md': BOOK, 'W/Manga/Berserk.md': noMal }, { hasGoogleBooksKey: () => false });
+		expect(res).toMatchObject({ total: 2, updated: 0, unchanged: 2 });
+		const same = await run({ 'W/Games/Hades.md': GAME('https://api/x') }, {
+			getRawgGameDetails: () => Promise.resolve({ coverUrl: 'https://api/x' }),
+		} as unknown as Api);
+		expect(same.res.unchanged).toBe(1);
 	});
 });
