@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { findReportNote, reportNotePath } from "../scripts/e2e/scenarios/common.mjs";
+import { findReportNote, reportNotePath } from "./e2e/scenarios/common.mjs";
 
 function vaultWith(date: Date) {
 	const vault = mkdtempSync(join(tmpdir(), "rn-"));

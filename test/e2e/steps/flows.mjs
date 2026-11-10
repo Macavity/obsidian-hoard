@@ -1,9 +1,9 @@
 // Step "flows": click-through flows (add, status + episode, detail edit) that assert on the notes on disk.
 import { failWithScreenshot } from "../failure.mjs";
-import { closeModals } from "../../lib/ui.mjs";
-import { run as addTitleManual } from "../flows/addTitleManual.mjs";
-import { run as statusEpisode } from "../flows/statusEpisode.mjs";
-import { run as detailEdit } from "../flows/detailEdit.mjs";
+import { closeModals } from "../ui.mjs";
+import { addTitleManual } from "../flows/addTitleManual.mjs";
+import { statusEpisode } from "../flows/statusEpisode.mjs";
+import { detailEdit } from "../flows/detailEdit.mjs";
 
 const FLOWS = [
 	["addTitleManual", addTitleManual],

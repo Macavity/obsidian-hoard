@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseArgs, runSteps } from "../scripts/e2e/runner.mjs";
+import { parseArgs, runSteps } from "./e2e/runner.mjs";
 
 type Ctx = { fail(msg: string): void };
 const out = () => mkdtempSync(join(tmpdir(), "hoard-runner-"));

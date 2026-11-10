@@ -3,13 +3,13 @@ import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { REPO, VAULT_PATH } from "../lib/cli.mjs";
-import { withPluginDisabled } from "../lib/plugin-toggle.mjs";
-import { pluginDataDir, writeSeed } from "../lib/seed.mjs";
-import { waitForVaultIndex } from "../lib/vault-index.mjs";
-import { copyPluginData, syncVault } from "../lib/vault-sync.mjs";
+import { REPO, VAULT_PATH } from "../../scripts/lib/cli.mjs";
+import { withPluginDisabled } from "../../scripts/lib/plugin-toggle.mjs";
+import { pluginDataDir, writeSeed } from "../../scripts/lib/seed.mjs";
+import { waitForVaultIndex } from "../../scripts/lib/vault-index.mjs";
+import { copyPluginData, syncVault } from "../../scripts/lib/vault-sync.mjs";
 
-const SCENARIOS = join(REPO, "scripts", "e2e", "scenarios");
+const SCENARIOS = join(REPO, "test", "e2e", "scenarios");
 /** Hoard's empty local data (`emptyData()` in src/storage/LocalStore.ts; test/scenario.test.ts keeps them equal). */
 export const EMPTY_DATA = { schemaVersion: 2, settings: {}, cache: {}, ui: {} };
 

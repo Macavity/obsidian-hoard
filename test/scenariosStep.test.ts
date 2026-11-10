@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 
 const calls = vi.hoisted(() => ({ prepared: [] as string[] }));
-vi.mock("../scripts/e2e/scenario.mjs", async (orig) => {
-	const actual = await orig<typeof import("../scripts/e2e/scenario.mjs")>();
+vi.mock("./e2e/scenario.mjs", async (orig) => {
+	const actual = await orig<typeof import("./e2e/scenario.mjs")>();
 	return {
 		...actual,
 		prepareScenario: (name: string) => {
@@ -11,9 +11,9 @@ vi.mock("../scripts/e2e/scenario.mjs", async (orig) => {
 		},
 	};
 });
-vi.mock("../scripts/e2e/scenarios/watchlog-original/flow.mjs", () => ({ run: () => Promise.resolve() }));
-vi.mock("../scripts/e2e/scenarios/watchlog-fork/flow.mjs", () => ({ run: () => Promise.resolve() }));
-const { scenariosStep } = await import("../scripts/e2e/steps/scenarios.mjs");
+vi.mock("./e2e/scenarios/watchlog-original/flow.mjs", () => ({ runOriginal: () => Promise.resolve() }));
+vi.mock("./e2e/scenarios/watchlog-fork/flow.mjs", () => ({ runFork: () => Promise.resolve() }));
+const { scenariosStep } = await import("./e2e/steps/scenarios.mjs");
 
 describe("scenarios step", () => {
 	it("stops after a failed restore, so the next scenario cannot back up the previous one's data", async () => {

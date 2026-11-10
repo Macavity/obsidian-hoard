@@ -3,8 +3,8 @@
 // foreground write stamps it) and `priority`: the fixture is Completed without a priority key, which decodes as Medium,
 // and updateTitle clears the priority of a Completed title, so the first write persists an explicit `priority: ""`.
 // The foreign `## Mine` section must survive.
-import { assert, evalJs, VAULT_PATH, waitFor } from "../../lib/cli.mjs";
-import { click, press, type } from "../../lib/ui.mjs";
+import { assert, evalJs, VAULT_PATH, waitFor } from "../../../scripts/lib/cli.mjs";
+import { click, press, type } from "../ui.mjs";
 import { FIXTURE_DETAIL_TITLE } from "../expected.mjs";
 import { bodyWithout, changedProps, readNote } from "../note.mjs";
 import { openDetail, waitStable } from "./common.mjs";
@@ -14,7 +14,7 @@ const NOTES = ".hoard-detail-modal .hoard-detail-notes-input";
 const STAR = ".hoard-detail-modal .hoard-detail-stars .hoard-star:nth-child(3)";
 const MARKER = " Smoke note edit.";
 
-export async function run() {
+export async function detailEdit() {
 	const before = readNote(VAULT_PATH, FIXTURE_DETAIL_TITLE);
 	assert(before.props.rating !== 3, "fixture rating already 3");
 	await openDetail(TITLE_ID);

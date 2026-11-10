@@ -7,7 +7,7 @@ const toggle = vi.hoisted(() => ({ fail: false }));
 vi.mock("../scripts/lib/plugin-toggle.mjs", () => ({
   withPluginDisabled: (fn: () => unknown) => (toggle.fail ? Promise.reject(new Error("cli timed out")) : Promise.resolve(fn())),
 }));
-const { prepareScenario, scenarioDir, RestoreError, EMPTY_DATA } = await import("../scripts/e2e/scenario.mjs");
+const { prepareScenario, scenarioDir, RestoreError, EMPTY_DATA } = await import("./e2e/scenario.mjs");
 const { LocalStore } = await import("../src/storage/LocalStore");
 
 function makeVault() {

@@ -1,6 +1,6 @@
 // UI helpers for e2e flows: hit-tested clicks and real input events through the Chrome DevTools Protocol.
 // Coordinates are CSS pixels relative to the viewport, exactly what getBoundingClientRect reports (no devicePixelRatio).
-import { evalJs, obs, waitFor } from "./cli.mjs";
+import { evalJs, obs, waitFor } from "../../scripts/lib/cli.mjs";
 
 /**
  * Spike result (Obsidian 1.14.4, Electron 43 / Chrome 150, devicePixelRatio 2): `dev:cdp` accepts
@@ -10,7 +10,7 @@ import { evalJs, obs, waitFor } from "./cli.mjs";
  * so do not assert on activeElement; assert on the input value.
  * @type {"cdp" | "dom"}
  */
-export const INPUT_MODE = "cdp";
+const INPUT_MODE = "cdp";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const cdp = (method, params) => obs("dev:cdp", { method, params: JSON.stringify(params) });

@@ -1,6 +1,6 @@
-// Shared helpers of the click flows. Everything that performs an action goes through scripts/lib/ui.mjs; evalJs only reads.
-import { assert, evalJs, obs, waitFor } from "../../lib/cli.mjs";
-import { click, waitForSelector } from "../../lib/ui.mjs";
+// Shared helpers of the click flows. Everything that performs an action goes through test/e2e/ui.mjs; evalJs only reads.
+import { assert, evalJs, obs, waitFor } from "../../../scripts/lib/cli.mjs";
+import { click, waitForSelector } from "../ui.mjs";
 
 const cdp = (method, params) => obs("dev:cdp", { method, params: JSON.stringify(params) });
 
@@ -10,7 +10,7 @@ export function runCommand(id) {
 }
 
 /** Clicks the watchlist tab button (2nd tab) after opening the panel. */
-export async function openWatchlist() {
+async function openWatchlist() {
 	runCommand("hoard:open-panel");
 	await waitForSelector(".hoard-tab-btn");
 	await click(".hoard-tab-btn:nth-child(2)");
@@ -41,6 +41,14 @@ export async function openDetail(titleId) {
 	await waitStable(".modal:has(.hoard-detail-modal)");
 }
 
+/** Shortest prefix of `label` that no other label starts with (case-insensitive); the whole label if none is unique. */
+export function typeAheadPrefix(label, others) {
+	const lower = others.map((o) => o.toLowerCase());
+	let n = 1;
+	while (n < label.length && lower.some((o) => o.startsWith(label.slice(0, n).toLowerCase()))) n++;
+	return label.slice(0, n);
+}
+
 /**
  * Picks an option of a native `<select>` by value, by type-ahead: clicking focuses the select (the native popup does not
  * open under CDP), then the shortest unique prefix of the option's label is typed key by key.
@@ -49,11 +57,9 @@ export async function chooseOption(selector, value) {
 	const labels = JSON.parse(evalJs(`JSON.stringify([...document.querySelector(${JSON.stringify(selector)}).options].map((o) => [o.value, o.text]))`));
 	const label = labels.find(([v]) => v === value)?.[1];
 	assert(label !== undefined, `option ${value} missing in ${selector}`);
-	const others = labels.filter(([v]) => v !== value).map(([, t]) => t.toLowerCase());
-	let n = 1;
-	while (n < label.length && others.some((o) => o.startsWith(label.slice(0, n).toLowerCase()))) n++;
+	const prefix = typeAheadPrefix(label, labels.filter(([v]) => v !== value).map(([, t]) => t));
 	await click(selector);
-	for (const ch of label.slice(0, n)) {
+	for (const ch of prefix) {
 		cdp("Input.dispatchKeyEvent", { type: "keyDown", key: ch, text: ch, unmodifiedText: ch });
 		cdp("Input.dispatchKeyEvent", { type: "keyUp", key: ch });
 	}

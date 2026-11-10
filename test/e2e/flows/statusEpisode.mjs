@@ -1,8 +1,8 @@
 // Flow: tick the next episode and change the status in the detail modal of the edit fixture.
 // Allowed changes: `watched` (episode progress), `status`, `progress` (derived percent, rewritten with `watched`) and `dateModified`: every foreground write stamps it
 // (docs/flows/entry-write.md); only background fills skip it. The body must stay byte-identical.
-import { assert, evalJs, VAULT_PATH, waitFor } from "../../lib/cli.mjs";
-import { click, waitForSelector } from "../../lib/ui.mjs";
+import { assert, evalJs, VAULT_PATH, waitFor } from "../../../scripts/lib/cli.mjs";
+import { click, waitForSelector } from "../ui.mjs";
 import { FIXTURE_EDIT_TITLE } from "../expected.mjs";
 import { changedProps, readNote } from "../note.mjs";
 import { openDetail } from "./common.mjs";
@@ -12,7 +12,7 @@ const NEXT_EPISODE = ".hoard-detail-modal .hoard-episode-box:not(.is-watched)";
 const STATUS_PILL = ".hoard-detail-modal .hoard-detail-badge-row .hoard-reading-detail-status-wrap:nth-child(2) .hoard-reading-detail-status";
 const NEW_STATUS = "Dropped";
 
-export async function run() {
+export async function statusEpisode() {
 	const before = readNote(VAULT_PATH, FIXTURE_EDIT_TITLE);
 	await openDetail(TITLE_ID);
 

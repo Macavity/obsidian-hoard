@@ -1,12 +1,12 @@
 // Integration smoke against the registered test vault: deploys the current build, runs the e2e steps, resets the vault.
 // Obsidian must be running with hoard-test-vault open (`pnpm vault:open` once). Option: --only <step>.
 import { execFileSync } from "node:child_process";
-import { ensureVault } from "./lib/cli.mjs";
-import { closeModals } from "./lib/ui.mjs";
-import { parseArgs, runSteps } from "./e2e/runner.mjs";
-import { dataStep } from "./e2e/steps/data.mjs";
-import { flowsStep } from "./e2e/steps/flows.mjs";
-import { scenariosStep } from "./e2e/steps/scenarios.mjs";
+import { ensureVault } from "../../scripts/lib/cli.mjs";
+import { closeModals } from "./ui.mjs";
+import { parseArgs, runSteps } from "./runner.mjs";
+import { dataStep } from "./steps/data.mjs";
+import { flowsStep } from "./steps/flows.mjs";
+import { scenariosStep } from "./steps/scenarios.mjs";
 
 const pnpm = (...a) => execFileSync("pnpm", a, { stdio: "inherit" });
 

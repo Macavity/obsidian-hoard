@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { EXPECTED, FIXTURE_EDIT_TITLE, FIXTURE_DETAIL_TITLE } from "../scripts/e2e/expected.mjs";
+import { EXPECTED, FIXTURE_EDIT_TITLE, FIXTURE_DETAIL_TITLE } from "./e2e/expected.mjs";
 import { decodeVaultFixtures } from "./helpers/vaultFixtures";
 
 describe("hoard-test-vault fixtures", () => {

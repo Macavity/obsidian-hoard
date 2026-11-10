@@ -1,8 +1,8 @@
 // Shared by the WatchLog scenarios: the expected report note path and the wizard click-through.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { assert, evalJs, VAULT_PATH, waitFor } from "../../lib/cli.mjs";
-import { click, waitForSelector } from "../../lib/ui.mjs";
+import { assert, evalJs, VAULT_PATH, waitFor } from "../../../scripts/lib/cli.mjs";
+import { click, waitForSelector } from "../ui.mjs";
 import { readNote } from "../note.mjs";
 
 const pad = (n) => String(n).padStart(2, "0");

@@ -1,5 +1,5 @@
 // Step "data": the plugin loads with the current build and its index holds exactly the fixtures.
-import { assert, evalJs, waitFor } from "../../lib/cli.mjs";
+import { assert, evalJs, waitFor } from "../../../scripts/lib/cli.mjs";
 import { EXPECTED } from "../expected.mjs";
 
 const P = "app.plugins.plugins['hoard']";

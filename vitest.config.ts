@@ -16,8 +16,8 @@ export default defineConfig({
 			provider: "istanbul",
 			reporter: ["json"],
 			reportsDirectory: "coverage",
-			include: ["src/**", "test/domPolyfills.ts", "test/fakes/**"],
-			// vitest excludes `test/**` by default; the setup polyfills and test fakes should count.
+			include: ["src/**", "test/domPolyfills.ts", "test/fakes/**", "test/e2e/**/*.mjs"],
+			// vitest excludes `test/**` by default; the setup polyfills, test fakes and e2e helpers should count.
 			exclude: ["**/*.test.ts", "test/__mocks__/**"],
 		},
 	},

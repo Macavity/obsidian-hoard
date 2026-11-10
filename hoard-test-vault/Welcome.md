@@ -3,7 +3,7 @@ tags: [sample]
 ---
 # Welcome
 
-Fixture catalogue of `hoard-test-vault/`. Hand-written on purpose; counts are asserted by `test/fixtures.test.ts` and `scripts/e2e/expected.mjs`. No note has an `externalId`.
+Fixture catalogue of `hoard-test-vault/`. Hand-written on purpose; counts are asserted by `test/fixtures.test.ts` and `test/e2e/expected.mjs`. No note has an `externalId`.
 
 Root is `Hoard/` (holds `Hoard.base`).
 

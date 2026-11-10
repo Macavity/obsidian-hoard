@@ -6,9 +6,9 @@ import { importContext } from "./import/watchlog/helpers";
 import { LocalStore } from "../src/storage/LocalStore";
 import { detectWatchLogSources, type WatchLogSourceKind } from "../src/import/watchlog/detect";
 import { createImporter } from "../src/import/watchlog/importer";
-import { scenarioDir } from "../scripts/e2e/scenario.mjs";
-import { EXPECT as ORIGINAL } from "../scripts/e2e/scenarios/watchlog-original/expect.mjs";
-import { EXPECT as FORK } from "../scripts/e2e/scenarios/watchlog-fork/expect.mjs";
+import { scenarioDir } from "./e2e/scenario.mjs";
+import { ORIGINAL_EXPECT as ORIGINAL } from "./e2e/scenarios/watchlog-original/expect.mjs";
+import { FORK_EXPECT as FORK } from "./e2e/scenarios/watchlog-fork/expect.mjs";
 
 function walk(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));

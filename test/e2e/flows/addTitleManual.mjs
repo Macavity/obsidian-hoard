@@ -1,6 +1,6 @@
 // Flow: add a title by hand (no API) through the add-title modal; the note on disk must hold what was entered.
-import { assert, evalJs, VAULT_PATH, waitFor } from "../../lib/cli.mjs";
-import { click, type, waitForSelector } from "../../lib/ui.mjs";
+import { assert, evalJs, VAULT_PATH, waitFor } from "../../../scripts/lib/cli.mjs";
+import { click, type, waitForSelector } from "../ui.mjs";
 import { EXPECTED } from "../expected.mjs";
 import { readNote } from "../note.mjs";
 import { chooseOption, runCommand } from "./common.mjs";
@@ -12,7 +12,7 @@ const TITLE_INPUT = ".hoard-modal-form input[type=text]";
 const SAVE = ".hoard-modal-form .hoard-modal-btn-row .hoard-btn-primary";
 const COUNT = "String(app.plugins.plugins['hoard'].dataManager.getTitles().length)";
 
-export async function run() {
+export async function addTitleManual() {
 	runCommand("hoard:add-title");
 	await waitForSelector(TITLE_INPUT);
 	// the type select re-renders the form, so it comes before the title

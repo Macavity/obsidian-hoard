@@ -1,6 +1,6 @@
 import { runInNewContext } from "node:vm";
 import { describe, it, expect } from "vitest";
-import { clickPointScript } from "../scripts/lib/ui.mjs";
+import { clickPointScript } from "./e2e/ui.mjs";
 
 const run = (sel: string): unknown => runInNewContext(clickPointScript(sel), { document }) as unknown;
 const rect = (left: number, top: number, width: number, height: number) =>

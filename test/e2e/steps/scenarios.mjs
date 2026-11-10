@@ -1,8 +1,8 @@
 // Step "scenarios": WatchLog import end to end. Each scenario swaps the test vault's content, the wizard imports it, the vault is restored.
 import { failWithScreenshot } from "../failure.mjs";
 import { prepareScenario, RestoreError } from "../scenario.mjs";
-import { run as runOriginal } from "../scenarios/watchlog-original/flow.mjs";
-import { run as runFork } from "../scenarios/watchlog-fork/flow.mjs";
+import { runOriginal } from "../scenarios/watchlog-original/flow.mjs";
+import { runFork } from "../scenarios/watchlog-fork/flow.mjs";
 
 const SCENARIOS = [
 	["watchlog-original", runOriginal],

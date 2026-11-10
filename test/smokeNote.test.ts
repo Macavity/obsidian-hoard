@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { changedProps, bodyWithout, readNote } from "../scripts/e2e/note.mjs";
+import { changedProps, bodyWithout, readNote } from "./e2e/note.mjs";
 
 describe("note diff helpers", () => {
   it("reports added, removed and changed properties only", () => {
