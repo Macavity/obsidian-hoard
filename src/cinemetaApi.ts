@@ -31,6 +31,10 @@ function fullDate(v: unknown): string {
 	return /^\d{4}-\d{2}-\d{2}$/.test(head) ? head : '';
 }
 
+function startYear(v: unknown): string {
+	return /^(\d{4})/.exec(str(v))?.[1] ?? '';
+}
+
 /** "49 min" -> 49, "2h 5min" -> 125, anything else -> 0. */
 function parseRuntime(v: unknown): number {
 	const m = /^\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*min)?\s*$/i.exec(str(v));
@@ -46,7 +50,8 @@ function baseResult(raw: Raw, kind: CinemetaKind): MediaSearchResult | null {
 		mediaType: kind === 'movie' ? 'movie' : 'tv',
 		episodes: 0,
 		episodeDuration: 0,
-		releaseDate: fullDate(raw.released),
+		// search rows carry only releaseInfo ("1999", "2008–2013"): keep the start year, like OMDb rows
+		releaseDate: fullDate(raw.released) || startYear(raw.releaseInfo),
 		url: `https://www.imdb.com/title/${id}/`,
 		seasons: [],
 		posterUrl: httpsOrEmpty(str(raw.poster)),

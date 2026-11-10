@@ -13,7 +13,7 @@ describe('cinemeta', () => {
 	it('maps search rows to imdb-keyed results', () => {
 		const rows = mapCinemetaSearch(search, 'series', '', 9);
 		expect(rows[0]).toMatchObject({ imdbId: 'tt0903747', title: 'Breaking Bad', mediaType: 'tv',
-			url: 'https://www.imdb.com/title/tt0903747/', episodes: 0, seasons: [] });
+			url: 'https://www.imdb.com/title/tt0903747/', episodes: 0, seasons: [], releaseDate: '2008' });
 		expect(rows[0]!.posterUrl).toMatch(/^https:\/\//);
 	});
 	it('filters by a 4-digit year and respects the limit', () => {
