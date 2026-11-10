@@ -1,3 +1,4 @@
+import type { SecretStore } from './SecretStore';
 import type { EntryCache, LocalData } from './storageTypes';
 
 /** `newer`: data.json from a later plugin version; it is never written by this one. */
@@ -17,8 +18,9 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 	typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /**
- * Device-local store behind data.json (settings, API keys, cache, UI state).
- * Writes only via plugin.saveData (plugin folder), never into the vault: it holds secrets.
+ * Device-local store behind data.json (settings, cache, UI state).
+ * Writes only via plugin.saveData (plugin folder), never into the vault.
+ * API keys do not belong here: every save moves them into secret storage first.
  */
 export class LocalStore {
 	data: LocalData = emptyData();
@@ -28,7 +30,7 @@ export class LocalStore {
 	// stays false for the whole session (there is no path back, so a WatchLog file is never lost)
 	private writable = true;
 
-	constructor(private readonly plugin: DataPlugin) {}
+	constructor(private readonly plugin: DataPlugin, private readonly secrets?: SecretStore) {}
 
 	async load(): Promise<LoadResult> {
 		const raw = await this.plugin.loadData();
@@ -49,7 +51,19 @@ export class LocalStore {
 		} else {
 			this.data = emptyData();
 		}
+		// migrate keys left in data.json by older versions; persist right away so they are gone from disk
+		if (this.secrets?.absorb(this.data.settings)) {
+			this.data.secretsInStorage = true;
+			await this.save();
+		}
 		return { schema: 2 };
+	}
+
+	/** Records that keys live in secret storage (no-op if already recorded). */
+	markSecretsInStorage(): void {
+		if (this.data.secretsInStorage) return;
+		this.data.secretsInStorage = true;
+		this.queueSave();
 	}
 
 	/** False while data.json holds a WatchLog schema-1 or newer format that must not be overwritten. */
@@ -107,6 +121,8 @@ export class LocalStore {
 	private async save(): Promise<void> {
 		if (!this.writable) return;
 		this.dirty = false;
+		// settings can be filled by any path (settings save, restore, import): keys never reach data.json
+		if (this.secrets?.absorb(this.data.settings)) this.data.secretsInStorage = true;
 		await this.plugin.saveData(this.data);
 	}
 }
