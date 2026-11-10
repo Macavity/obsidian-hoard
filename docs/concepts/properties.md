@@ -21,9 +21,10 @@ what Hoard 0.1 / WatchLog Sync wrote; the codecs no longer read it, only
 
 - Title Case with spaces; acronyms upper case (`URL`, `ID`, `MAL`).
 - A name from the Library plugin (`obsidian-library-plugin`) is adopted only when meaning and value
-  form match. Adopted: Name, Cover, URL, Trailer, Runtime, Cast, Director, Author, Genre, Platforms,
-  Achievements. Kept own because the form differs: Date Added, Release Date, External ID, Rating
-  (0-5 in half stars).
+  form match. Adopted: Name, Cover, URL, Trailer, Runtime, Cast, Director, Author, Platforms,
+  Achievements. Same name as Library, different value form: Genre (text here, links there),
+  Progress, Playtime, Seasons. Kept own because the form differs: Date Added, Release Date,
+  External ID, Rating (0-5 in half stars).
 - The same name means the same value type across media.
 
 ## Names
@@ -84,5 +85,5 @@ Whether they become label-based keys before 1.0 is undecided.
 
 ## Non-goals
 
-Library's value vocabulary (`Type` values), date formats, and `Progress` / `Playtime` / `Seasons`
+Library's value vocabulary (`Type` values), date formats, and `Genre` / `Progress` / `Playtime` / `Seasons`
 value forms that differ from Library.
