@@ -53,7 +53,7 @@ flowchart TD
   `index.build`. While it is open the index, managers and `HoardView` content are not running: views
   show the "import running" placeholder (`importRunning`) and Hoard writes no notes. Afterwards
   `adoptImportedData` re-detects the root (an imported base may have created it) and reloads shared
-  settings (API keys reach the `ApiService` there) **before** the placeholder ends, so views render
+  settings (API keys reach the `ApiService` there, via `loadSettings`; keys the import put into `data.json` are moved by `LocalStore` into secret storage on its next save) **before** the placeholder ends, so views render
   with the imported settings; if it fails, a Notice asks for a restart. Startup re-detects the root
   afterwards in any case. A wizard failure is logged and never blocks the start.
 - The settings entry (`openWatchLogImport('found' | 'cleanup')`) ignores earlier decisions, stops the

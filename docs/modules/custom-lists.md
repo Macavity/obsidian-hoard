@@ -37,7 +37,7 @@ The JSON block is the source of truth; there is no Markdown table and no propert
 type-checked); a JSON parse error puts the list into `corruptLists`,
 shows a Notice, and `saveList` refuses to overwrite it. File name = list name, rename = vault
 rename. Saves are serialised per list so table and notes writes cannot clobber each other;
-`saveNotes` rewrites only the `## Notes` section. Tab order is the device-local
+`saveList` writes through `vault.process` (or `vault.create` for a new file), never a separate read and modify; `saveNotes` rewrites only the `## Notes` section. Tab order is the device-local
 `customListTabOrder`; default columns for new lists are the shared `defaultCustomColumns`.
 
 ## Model

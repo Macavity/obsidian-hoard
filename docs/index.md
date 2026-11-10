@@ -29,7 +29,7 @@ Read [values](values.md) first; every rule below serves one of them.
 - **Root**: the folder holding `Hoard.base`; type folders and `Books/`, `Manga/`, `Games/` sit below it.
 - **Properties**: the YAML block at the top of a note; the only place entry fields live.
 - **Base**: `Hoard.base`, whose `hoard:` block carries the shared vocabulary; nothing else syncs settings.
-- **Cache**: `data.json`, device-local; API keys, fetched data, UI state.
+- **Cache**: `data.json`, device-local; fetched data, UI state. API keys live in Obsidian's secret storage, also per device.
 - **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (the import wizard writes notes once, custom lists write their own notes).
 - **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
 - **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
