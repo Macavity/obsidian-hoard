@@ -274,6 +274,8 @@ const settings = {
 		failedCheckIdSecret: 'Failed; check the ID and secret',
 		chipKeySet: '{name} · key set',
 		chipKeyNeeded: '{name} · key needed',
+		chipNoKey: '{name} · no key needed',
+		keylessFallback: 'Uses {source} until a key is set.',
 		getFreeKey: 'Get a free key',
 		getFreeToken: 'Get a free token',
 		movies: {

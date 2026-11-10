@@ -277,6 +277,8 @@ const settings = {
 		failedCheckIdSecret: 'Fehlgeschlagen; prüfe ID und Secret',
 		chipKeySet: '{name} · Schlüssel gesetzt',
 		chipKeyNeeded: '{name} · Schlüssel nötig',
+		chipNoKey: '{name} · kein Schlüssel nötig',
+		keylessFallback: 'Nutzt {source}, bis ein Key gesetzt ist.',
 		getFreeKey: 'Kostenlosen Schlüssel holen',
 		getFreeToken: 'Kostenlosen Token holen',
 		movies: {

@@ -16,6 +16,7 @@ interface Internals {
 	runRegenerate(wrap: HTMLElement, fill: HTMLElement, text: HTMLElement): Promise<void>;
 	gamesFilterRefs(kind: 'type' | 'platform'): string[][];
 	renderThemePicker(el: HTMLElement, onPicked?: (label: string) => void): void;
+	renderApi(el: HTMLElement): void;
 	renderTagSection(parent: HTMLElement, label: string, key: 'types' | 'statuses' | 'priorities', onChanged?: () => void): void;
 }
 
@@ -47,6 +48,15 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 	const settings = {
 		colorTheme: 'default',
 		animeApiSource: 'jikan',
+		activeApi: 'Cinemeta',
+		booksApiSource: 'openlibrary',
+		gamesApiSource: 'steam',
+		omdbApiKey: '',
+		tmdbApiKey: '',
+		googleBooksApiKey: '',
+		rawgApiKey: '',
+		igdbClientId: '',
+		igdbClientSecret: '',
 		typeApiMapping: {},
 		gamesFilters: { genreExclude: ['RPG'], platformExclude: [] as string[] },
 		types: [{ name: 'Movie', color: '#111111' }, { name: 'Docu', color: '#222222' }] as TagDefinition[],
@@ -61,6 +71,14 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 		readingDataManager: reading,
 		gameDataManager: { getSettings: () => ({ savedFilterPreset: { genreExclude: ['RPG', 'FPS'] } }) },
 		apiService: {
+			hasOmdbKey: () => !!settings.omdbApiKey,
+			hasTmdbKey: () => !!settings.tmdbApiKey,
+			hasGoogleBooksKey: () => !!settings.googleBooksApiKey,
+			hasRawgKey: () => !!settings.rawgApiKey,
+			hasIgdbCredentials: () => !!settings.igdbClientId && !!settings.igdbClientSecret,
+			setOmdbKey: vi.fn(),
+			setGoogleBooksKey: vi.fn(),
+			setRawgKey: vi.fn(),
 			fetchStudio: vi.fn((t: HoardTitle) => {
 				if (t.title === 'err') return Promise.reject(new Error('net'));
 				return Promise.resolve(t.title === 'hit' ? { studio: ['Ghibli'], tmdbId: 1, tmdbMediaType: 'movie' } : null);
@@ -285,5 +303,55 @@ describe('HoardSettingsTab runRegenerate', () => {
 		const [w, f, t] = els();
 		await makeTab({ titles: [{ title: 'old' }] }).tab.runRegenerate(w, f, t);
 		expect(t.textContent).toBe('Done: no missing files found');
+	});
+});
+
+describe('HoardSettingsTab keyless source selectors', () => {
+	const render = (over: Record<string, unknown> = {}) => {
+		const made = makeTab();
+		Object.assign(made.settings, over);
+		const el = document.createElement('div');
+		made.tab.renderApi(el);
+		const seg = (label: string) => Array.from(el.querySelectorAll<HTMLElement>('.hoard-sg-seg-btn')).find((b) => b.textContent === label)!;
+		const hints = () => Array.from(el.querySelectorAll('.hoard-sg-fallback'), (n) => n.textContent ?? '').filter(Boolean);
+		return { ...made, el, seg, hints };
+	};
+
+	it('offers Cinemeta and shows no hint by default', () => {
+		const { seg, hints } = render();
+		expect(seg('Cinemeta').classList.contains('is-active')).toBe(true);
+		expect(hints()).toEqual([]);
+	});
+
+	it('hints at Cinemeta when OMDb is chosen without a key, and drops it once a key is set', () => {
+		const { seg, hints, el, settings } = render({ activeApi: 'OMDb' });
+		expect(hints()).toEqual(['Uses Cinemeta until a key is set.']);
+		const input = el.querySelector<HTMLInputElement>('input[placeholder="Paste your OMDb key here"]')!;
+		input.value = 'k';
+		settings.omdbApiKey = 'k';
+		input.dispatchEvent(new Event('input'));
+		expect(hints()).toEqual([]);
+		seg('TMDB').click();
+		expect(settings.activeApi).toBe('TMDB');
+		expect(hints()).toEqual(['Uses Cinemeta until a key is set.']);
+	});
+
+	it('writes booksApiSource and hints for Google Books without a key', () => {
+		const { seg, hints, settings } = render();
+		seg('Google Books').click();
+		expect(settings.booksApiSource).toBe('google');
+		expect(hints()).toEqual(['Uses Open Library until a key is set.']);
+		seg('Open Library').click();
+		expect(settings.booksApiSource).toBe('openlibrary');
+		expect(hints()).toEqual([]);
+	});
+
+	it('hints at Steam Store when RAWG is chosen without a key', () => {
+		const { seg, hints, settings } = render();
+		seg('RAWG').click();
+		expect(settings.gamesApiSource).toBe('rawg');
+		expect(hints()).toEqual(['Uses Steam Store until a key is set.']);
+		seg('Steam Store').click();
+		expect(hints()).toEqual([]);
 	});
 });
