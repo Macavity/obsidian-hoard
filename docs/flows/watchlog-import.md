@@ -14,7 +14,7 @@ source:
   - src/WatchLogReport.ts
   - src/main.ts
   - src/import/watchlog/registerTypes.ts
-source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # WatchLog import
@@ -79,7 +79,9 @@ Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts]
    **copies**: the source is never written and existing Hoard values are never overwritten.
    - *fork* ([importFork.ts](../../src/import/watchlog/importFork.ts)): every file in the managed folders
      plus `History.md` is copied below Hoard's root with its relative path; an existing target is only
-     reported (`exists`). The base is copied with its `watchlog:` block renamed to `hoard:` unless a
+     reported (`exists`). Copied entry notes (type, Books, Manga, Games folders) then get their 0.1
+     property names translated in place (`translateProperties`, [modules/import](../modules/import.md));
+     unreadable YAML is an `invalidYaml` review item, the copy stays. The base is copied with its `watchlog:` block renamed to `hoard:` unless a
      Hoard base exists (reported). Device settings, cache and the draft / reading / games UI state fill
      only what Hoard lacks.
    - *original* ([importOriginal.ts](../../src/import/watchlog/importOriginal.ts)): schema-1 data

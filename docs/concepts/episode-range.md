@@ -6,12 +6,12 @@ source:
   - src/storage/episodeRange.ts
   - src/storage/titleCodec.ts
   - src/types.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # Episode range
 
-Progress is stored in the note as text, not as a number list: `watched: S01E01-E12, S02E05`.
+Progress is stored in the note as text, not as a number list: `Watched Episodes: S01E01-E12, S02E05`.
 In memory a title holds `watchedEpisodes: number[]` as **absolute, 1-based episode numbers across
 all seasons**; the two forms are converted by [episodeRange.ts](../../src/storage/episodeRange.ts).
 
@@ -25,11 +25,11 @@ all seasons**; the two forms are converted by [episodeRange.ts](../../src/storag
 ## Seasons the mapping uses
 
 `mappingSeasons` in [titleCodec.ts](../../src/storage/titleCodec.ts): the title's seasons, else one
-implicit "Season 1" of `totalEpisodes`. Seasons come from the note (`seasons:` lines `Name: N`,
+implicit "Season 1" of `totalEpisodes`. Seasons come from the note (`Seasons` lines `Name: N`,
 optional `(skip spec)`, sets `seasonsOverride`) or from the [entry cache](entry-cache.md) (API).
 
 - A **movie** (one season named "Movie", or no seasons and exactly one episode) carries no
-  `watched` text; `status: Completed` means episode 1 watched.
+  `Watched Episodes` text; `status: Completed` means episode 1 watched.
 - While a season refill is **pending** (API identity, no seasons yet, fetch not ended in
   notfound/nokey) nothing is mapped and the note text is left untouched, so a fresh device cannot
   corrupt progress before the seasons arrive.

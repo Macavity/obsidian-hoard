@@ -8,7 +8,7 @@ source:
   - src/storage/LocalStore.ts
   - src/storage/EntryIndex.ts
   - src/DataManager.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # Entry cache
@@ -21,13 +21,13 @@ community rating/votes/source/last fetch, TMDB collection id, seasons, resolved 
 (`airing`, `seasons`, with result `ok | transient | nokey | notfound`) and the `airing` pointer.
 
 Code comments cite the decisions by number: **E9** = API values live in the cache, only user
-overrides are written to the note; **E12** = the poster URL is a plain note field (`poster`), the cache
+overrides are written to the note; **E12** = the poster URL is a plain note field (`Cover`), the cache
 only keeps the marker `'none'` for "the API has no poster".
 
 ## How note and cache merge
 
 - `decodeTitle(id, properties, cache)` builds the in-memory title: note values win, cache fills
-  the rest. `externalId` in the note wins over cached ids. A `seasons` list in the note sets
+  the rest. `External ID` in the note wins over cached ids. A `Seasons` list in the note sets
   `seasonsOverride` and beats cached seasons.
 - `splitCache(title)` is the inverse for the cache side; `TITLE_CACHE_KEYS` names the keys it owns.
   `DataManager.syncCache` replaces those keys and keeps everything else (`apiCheck`, `airing`,

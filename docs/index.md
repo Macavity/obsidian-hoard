@@ -15,7 +15,7 @@ profile:
     - "*.test.ts"
     - scripts/
     - test/
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # Context
@@ -33,8 +33,8 @@ Read [values](values.md) first; every rule below serves one of them.
 - **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (the import wizard writes notes once, custom lists write their own notes).
 - **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
 - **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
-- **Maybe**: a note with `maybe: true`, considered but not in the library.
-- **Airtime**: a schedule on a note (`airtime*` properties) or a derived "to be released" card.
+- **Maybe**: a note with `Maybe: true`, considered but not in the library.
+- **Airtime**: a schedule on a note (`Airtime …` properties) or a derived "to be released" card.
 
 ```mermaid
 flowchart TD
@@ -93,10 +93,11 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 
 # Concepts
 
+- [Property names](concepts/properties.md): the fixed Title Case note property names per medium, naming rules, older names and the 1.0 stability rule.
 - [Entry id](concepts/entry-id.md): what an id is, how it maps to a path, what a rename does.
 - [Shared vs local](concepts/shared-vs-local.md): which settings sync through the base and which stay in data.json.
 - [Entry cache](concepts/entry-cache.md): what data.json keeps per entry and how note and cache merge.
-- [External id](concepts/external-id.md): the `externalId` grammar and how it is derived from links and API ids.
+- [External id](concepts/external-id.md): the `External ID` grammar and how it is derived from links and API ids.
 - [Episode range](concepts/episode-range.md): the `S01E01-E12` notation and its mapping to absolute episodes.
 - [Maybe title](concepts/maybe-title.md): what a Maybe note is and how it is promoted.
 - [Airtime](concepts/airtime.md): manual schedules versus derived cards and the acknowledgement rule.

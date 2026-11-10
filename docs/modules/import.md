@@ -7,13 +7,15 @@ source:
   - src/import/watchlog/importer.ts
   - src/import/watchlog/report.ts
   - src/import/watchlog/paths.ts
+  - src/import/watchlog/propertyNames.ts
+  - src/import/watchlog/importFork.ts
   - src/import/watchlog/schema1.ts
   - src/import/watchlog/schema1Notes.ts
   - src/import/watchlog/schema1Types.ts
   - src/import/watchlog/widgets.ts
   - src/WatchLogOnboardingModal.ts
   - src/WatchLogReport.ts
-source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # Import
@@ -52,7 +54,17 @@ Other code touches it at three points: `main.ts` (detection, `createImporter`, d
 - **Managed files** ([paths.ts](../../src/import/watchlog/paths.ts)): `managedFiles` = every file in a
   layout's type, book, manga, game and list folders plus its history file, minus Hoard's own root
   (Hoard at the vault root `''` excludes nothing). `forkTarget` maps a fork path below Hoard's root.
-  Fork import and cleanup both use them.
+  Fork import and cleanup both use them; `entryFolders` is the subset of entry folders (types, Books, Manga, Games; no custom lists).
+
+## Property translation
+
+Fork notes carry Hoard 0.1 property names. [propertyNames.ts](../../src/import/watchlog/propertyNames.ts)
+holds `OLD_TO_NEW` and `translateProperties(fm) → { fm, kept }`: renames known old keys by content,
+converts `progress` text to a number and manga `malId` to a number, folds `apiSource` + `apiId`,
+`manualPosterUrl`, `manualTrailerUrl`. Idempotent: when the new key exists the old one stays and is
+returned in `kept` (a `kept-value` review item). `importFork` applies it to copied entry notes only
+(`entryFolders`, not custom lists or history); broken YAML becomes an `invalidYaml` review item and the
+copy stays. Names and rules: [properties](../concepts/properties.md).
 
 ## Schema-1 converter
 

@@ -1,19 +1,19 @@
 ---
 type: Domain
 title: External id
-description: The externalId property, its source:kind:id grammar, and how it is derived from links and API ids.
+description: The External ID property, its source:kind:id grammar, and how it is derived from links and API ids.
 source:
   - src/storage/externalId.ts
   - src/storage/titleCodec.ts
   - src/storage/readingCodec.ts
   - src/storage/gameCodec.ts
   - src/LibraryIndex.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # External id
 
-`externalId` is the **primary API identity of an entry**, stored in the note as one string so it
+`External ID` is the **primary API identity of an entry**, stored in the note as one string so it
 survives sync and hand edits: `source:id` or `source:kind:id`.
 
 | Source | Kind required | Example |
@@ -28,14 +28,14 @@ the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL.
 
 ## Per kind
 
-- **Titles** ([titleCodec](../../src/storage/titleCodec.ts)): on decode, `externalId` wins over cached
+- **Titles** ([titleCodec](../../src/storage/titleCodec.ts)): on decode, `External ID` wins over cached
   ids and sets `tmdbId`+`tmdbMediaType`, `malId` or `anilistId`; an `imdb` id without a link
-  synthesises `externalLink`. On encode, `identityFor` picks the first available in order
+  synthesises `URL`. On encode, `identityFor` picks the first available in order
   MAL → AniList → TMDB for type `Anime`, TMDB → MAL → AniList otherwise, then falls back to the link.
-- **Books**: `gbooks:<volumeId>`, mirrored into `googleBooksId`.
-- **Manga**: `mal:manga:<id>`, mirrored into `malId`.
-- **Games**: `rawg:<id>` / `igdb:<id>`, decoded into `apiSource` + `apiId` (older notes use those two
-  properties directly).
+- **Books**: `gbooks:<volumeId>`, mirrored into `Google Books ID`.
+- **Manga**: `mal:manga:<id>`, mirrored into `MAL ID`.
+- **Games**: `rawg:<id>` / `igdb:<id>`, decoded into `apiSource` + `apiId` model fields (the older note properties of that name are read
+  only by the WatchLog import, [properties](properties.md)).
 
 ## Duplicate detection
 

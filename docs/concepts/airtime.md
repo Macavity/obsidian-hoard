@@ -8,18 +8,18 @@ source:
   - src/storage/readingCodec.ts
   - src/DataManager.ts
   - src/airtimeScheduler.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # Airtime
 
 Two things feed the Upcoming tab:
 
-1. **A manual schedule** stored on the entry's note as `airtimeRecurrence` (`once | daily | weekly |
-   monthly`), `airtimeDay`, `airtimeTime`, `airtimeSeason`, `airtimeEpisode`, `airtimeAcknowledged`.
+1. **A manual schedule** stored on the entry's note as `Airtime Recurrence` (`once | daily | weekly |
+   monthly`), `Airtime Day`, `Airtime Time`, `Airtime Season`, `Airtime Episode`, `Airtime Acknowledged`.
    Decoded into `EntryAirtime` by the codecs (titles in [titleCodec](../../src/storage/titleCodec.ts),
    reading and games via `decodeAirtime` in [readingCodec](../../src/storage/readingCodec.ts)).
-   A `once` schedule keeps its date in the note's `releaseDate`.
+   A `once` schedule keeps its date in the note's `Release Date`.
 2. **A derived card** for any entry whose status is "To be released" with a release date; no
    airtime keys exist for it.
 
