@@ -9,8 +9,9 @@ source:
   - src/storage/VaultLayout.ts
   - src/types.ts
   - src/main.ts
+  - src/apiSources.ts
   - src/ui/problemText.ts
-source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
+source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 ---
 
 # Settings
@@ -39,8 +40,14 @@ fields (`secret: true` becomes a password input with reveal), a status chip reco
 keystroke so a stale "Connected" never outlives its key, a help link, and a Test button that calls
 the service's `check*Connection` and maps failures through `testFailure`. AniList and the manga
 card are keyless and have no Test; Steam's Test also resolves a vanity name to a SteamID64.
-`apiSegmented` picks the active service per group (`activeApi`, `animeApiSource`,
-`gamesApiSource`); `renderTypeApiMapping` routes custom types to the anime or movie API, with
+`apiSegmented` picks the active service per group: `activeApi` (`Cinemeta | OMDb | TMDB`, default
+Cinemeta), `booksApiSource` (`openlibrary | google`), `animeApiSource`, `gamesApiSource`
+(`steam | rawg | igdb`, default Steam). All are device-local. The keyless choice shows a "{name} · no
+key needed" chip; a keyed choice without its key falls back at runtime through
+`effectiveMediaSource` / `effectiveBookSource` / `effectiveGameSource`
+([apiSources.ts](../../src/apiSources.ts)), the chip shows "key needed" and `fallbackHint` adds
+"Uses {source} until a key is set." Stored values are never rewritten by the fallback.
+`renderTypeApiMapping` routes custom types to the anime or movie API, with
 Anime, Movie and TV Show locked.
 
 ## Types as folders
