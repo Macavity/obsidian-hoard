@@ -11,8 +11,8 @@ describe('manager notices', () => {
 
 	it('reports a blocked rename as a code, without text', async () => {
 		const { dm, notices } = await setupDataManager({
-			'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n',
-			'W/Movie/B.md': '---\ntitle: B\ntype: Movie\n---\n',
+			'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n',
+			'W/Movie/B.md': '---\nName: B\nType: Movie\n---\n',
 		});
 		await dm.updateTitle({ ...dm.getTitle('Movie/A')!, title: 'B' });
 		expect(notices).toEqual([{ code: 'renameTargetExists', target: 'W/Movie/B.md' }]);
@@ -21,7 +21,7 @@ describe('manager notices', () => {
 
 	it('reports an unsaved edit of a vanished note as a code', async () => {
 		const { dm, f, notices } = await setupDataManager({
-			'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n',
+			'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n',
 		});
 		dm.applyEpisodeWatchedToggle('Movie/A', 1, true);
 		f.externalDelete('W/Movie/A.md');

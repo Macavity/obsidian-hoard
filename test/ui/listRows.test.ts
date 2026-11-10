@@ -10,7 +10,7 @@ const today = (): string => new Date().toLocaleDateString('sv');
 describe('ListTab title rows', () => {
 	it('renders title, badges, year, priority, rating, status and progress', async () => {
 		const { tab, container } = await setupListTab({
-			'W/Movie/A.md': movieNote('A', 'rating: 4\nstatus: Watching\npriority: High\nreleaseDate: 2020-05-01\ndateStarted: 2021-03-04\n'),
+			'W/Movie/A.md': movieNote('A', 'Rating: 4\nStatus: Watching\nPriority: High\nRelease Date: 2020-05-01\nDate Started: 2021-03-04\n'),
 		});
 		tab.render();
 		const row = q(container, '.hoard-row');
@@ -27,7 +27,7 @@ describe('ListTab title rows', () => {
 
 	it('shows placeholders for missing rating, start date and priority', async () => {
 		const { tab, container } = await setupListTab({
-			'W/Movie/A.md': movieNote('A', 'priority: ""\n'),
+			'W/Movie/A.md': movieNote('A', 'Priority: ""\n'),
 		}, { coloredTypeBadges: false });
 		tab.render();
 		const row = q(container, '.hoard-row');
@@ -40,7 +40,7 @@ describe('ListTab title rows', () => {
 
 	it('flags recently released titles', async () => {
 		const { tab, container } = await setupListTab({
-			'W/Movie/A.md': movieNote('A', `releaseDate: ${today()}\n`),
+			'W/Movie/A.md': movieNote('A', `Release Date: ${today()}\n`),
 		});
 		tab.render();
 		expect(q(container, '.hoard-recently-arrived').textContent).toContain('Recently arrived');
@@ -80,8 +80,8 @@ describe('ListTab title rows', () => {
 
 	it('pins a title and unpins every other pinned one', async () => {
 		const { tab, container, dm } = await setupListTab({
-			'W/Movie/A.md': movieNote('A', 'pinned: true\n'),
-			'W/Movie/B.md': movieNote('B', 'dateAdded: 2000-01-01T00:00:00.000Z\n'),
+			'W/Movie/A.md': movieNote('A', 'Pinned: true\n'),
+			'W/Movie/B.md': movieNote('B', 'Date Added: 2000-01-01T00:00:00.000Z\n'),
 		});
 		tab.render();
 		const rowB = qa(container, '.hoard-row').find((r) => r.dataset.titleId === 'Movie/B')!;
@@ -91,7 +91,7 @@ describe('ListTab title rows', () => {
 	});
 
 	it('unpins the pinned title', async () => {
-		const { tab, container, dm } = await setupListTab({ 'W/Movie/A.md': movieNote('A', 'pinned: true\n') });
+		const { tab, container, dm } = await setupListTab({ 'W/Movie/A.md': movieNote('A', 'Pinned: true\n') });
 		tab.render();
 		const pin = q(container, '.hoard-pin-icon');
 		expect(pin.classList.contains('is-pinned')).toBe(true);
@@ -101,8 +101,8 @@ describe('ListTab title rows', () => {
 });
 
 const groupFiles = (): Record<string, string> => ({
-	'W/Movie/A.md': movieNote('A', 'groups: [Saga]\nstatus: Completed\nrating: 4\npriority: Low\ndateStarted: 2022-01-02\n'),
-	'W/Movie/B.md': movieNote('B', 'groups: [Saga]\nstatus: Plan to watch\nrating: 2\npriority: High\ndateStarted: 2021-01-02\n'),
+	'W/Movie/A.md': movieNote('A', 'Groups: [Saga]\nStatus: Completed\nRating: 4\nPriority: Low\nDate Started: 2022-01-02\n'),
+	'W/Movie/B.md': movieNote('B', 'Groups: [Saga]\nStatus: Plan to watch\nRating: 2\nPriority: High\nDate Started: 2021-01-02\n'),
 });
 
 describe('ListTab group rows', () => {
@@ -125,7 +125,7 @@ describe('ListTab group rows', () => {
 
 	it('shows placeholders for an unrated group without priority or start', async () => {
 		const { tab, container } = await setupListTab({
-			'W/Movie/A.md': movieNote('A', 'groups: [Saga]\npriority: ""\n'),
+			'W/Movie/A.md': movieNote('A', 'Groups: [Saga]\nPriority: ""\n'),
 		}, { coloredTypeBadges: false });
 		tab.render();
 		const row = q(container, '.hoard-group-row');
@@ -199,7 +199,7 @@ describe('ListTab group rows', () => {
 	it('pins and unpins the group', async () => {
 		const { tab, container, dm } = await setupListTab({
 			...groupFiles(),
-			'W/Movie/C.md': movieNote('C', 'pinned: true\n'),
+			'W/Movie/C.md': movieNote('C', 'Pinned: true\n'),
 		});
 		tab.render();
 		q(q(container, '.hoard-group-row'), '.hoard-pin-icon').click();
@@ -242,7 +242,7 @@ describe('ListTab table and accordion', () => {
 
 	it('shows start date, episode total and external link of a series in the accordion', async () => {
 		const { tab, container } = await setupListTab({
-			'W/TV Show/C.md': showNote('C', 'dateStarted: 2022-02-02\nexternalLink: https://example.com/c\ntotalEpisodes: 4\n'),
+			'W/TV Show/C.md': showNote('C', 'Date Started: 2022-02-02\nURL: https://example.com/c\nTotal Episodes: 4\n'),
 		});
 		tab.expandedId = 'TV Show/C';
 		tab.render();

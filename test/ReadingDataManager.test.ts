@@ -8,7 +8,7 @@ describe('ReadingDataManager on vault storage', () => {
 		await rdm.addBook(makeBook({ title: 'Dune', author: 'Frank Herbert', status: 'Reading', pagesRead: 10, totalPages: 600 }));
 		await rdm.addColumn('book', { id: 'c1', name: 'Format', type: 'text', options: [] });
 		await local.flush();
-		expect(f.files.get('W/Books/Dune.md')).toMatch(/pagesRead: 10/);
+		expect(f.files.get('W/Books/Dune.md')).toMatch(/Pages Read: 10/);
 		expect(f.files.get('W/Hoard.base')).toContain('Format');
 		expect(JSON.stringify(f.plugin.data ?? {})).not.toContain('Dune');
 		expect(rdm.getBook('Books/Dune')?.vaultPage).toBe('W/Books/Dune.md');
@@ -17,22 +17,22 @@ describe('ReadingDataManager on vault storage', () => {
 
 	it('writes progress changes to frontmatter and keeps unknown keys and body', async () => {
 		const { rdm, f } = await setupReadingDataManager({
-			'W/Books/Dune.md': '---\ntitle: Dune\ntype: book\npagesRead: 1\nmyKey: 1\nrating: great\n---\n\n## Notes\n\nkeep\n',
+			'W/Books/Dune.md': '---\nName: Dune\nType: book\nPages Read: 1\nmyKey: 1\nRating: great\n---\n\n## Notes\n\nkeep\n',
 		});
 		const b = rdm.getBook('Books/Dune')!;
 		await rdm.updateBook({ ...b, pagesRead: 42 });
 		const c = f.files.get('W/Books/Dune.md')!;
-		expect(c).toMatch(/pagesRead: 42/);
+		expect(c).toMatch(/Pages Read: 42/);
 		expect(c).toContain('myKey: 1');
-		expect(c).toContain('rating: great');
+		expect(c).toContain('Rating: great');
 		expect(c).toContain('keep');
 	});
 
 	it('picks up external changes and notifies', async () => {
-		const { rdm, f } = await setupReadingDataManager({ 'W/Manga/Berserk.md': '---\ntitle: Berserk\ntype: manga\nchaptersRead: 1\n---\n' });
+		const { rdm, f } = await setupReadingDataManager({ 'W/Manga/Berserk.md': '---\nName: Berserk\nType: manga\nChapters Read: 1\n---\n' });
 		let n = 0;
 		rdm.onChange(() => n++);
-		await f.app.vault.modify(f.app.vault.getAbstractFileByPath('W/Manga/Berserk.md') as never, '---\ntitle: Berserk\ntype: manga\nchaptersRead: 9\n---\n');
+		await f.app.vault.modify(f.app.vault.getAbstractFileByPath('W/Manga/Berserk.md') as never, '---\nName: Berserk\nType: manga\nChapters Read: 9\n---\n');
 		await tick();
 		expect(rdm.getManga('Manga/Berserk')?.chaptersRead).toBe(9);
 		expect(n).toBeGreaterThan(0);
@@ -48,7 +48,7 @@ describe('ReadingDataManager on vault storage', () => {
 	});
 
 	it('renames the note on title change and deletes via trash', async () => {
-		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\ntitle: A\ntype: book\n---\n\n## Notes\nx\n' });
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\n---\n\n## Notes\nx\n' });
 		await rdm.updateBook({ ...rdm.getBook('Books/A')!, title: 'B' });
 		expect(f.files.has('W/Books/A.md')).toBe(false);
 		expect(f.files.get('W/Books/B.md')).toContain('x');
@@ -58,7 +58,7 @@ describe('ReadingDataManager on vault storage', () => {
 	});
 
 	it('removing a column clears its custom field in notes', async () => {
-		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\ntitle: A\ntype: book\ncf_c1: hi\n---\n' });
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\ncf_c1: hi\n---\n' });
 		await rdm.addColumn('book', { id: 'c1', name: 'F', type: 'text', options: [] });
 		expect(rdm.getBook('Books/A')?.customFields).toEqual({ c1: 'hi' });
 		await rdm.removeColumn('book', 'c1');
@@ -76,41 +76,41 @@ describe('ReadingDataManager on vault storage', () => {
 	});
 
 	it('appends quotes to the Quotes section', async () => {
-		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\ntitle: A\ntype: book\n---\n\n## Notes\n\n\n## Quotes\n' });
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\n---\n\n## Notes\n\n\n## Quotes\n' });
 		await rdm.appendQuote('book', rdm.getBook('Books/A')!, 'line', 'p. 1');
 		expect(f.files.get('W/Books/A.md')).toContain('> [!quote] p. 1\n> line');
 	});
 
 	it('keeps an external change when a stale copy edits another field', async () => {
-		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\ntitle: A\ntype: book\npagesRead: 1\n---\n' });
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\nPages Read: 1\n---\n' });
 		const b = rdm.getBook('Books/A')!;
-		f.externalWrite('W/Books/A.md', '---\ntitle: A\ntype: book\npagesRead: 5\n---\n');
+		f.externalWrite('W/Books/A.md', '---\nName: A\nType: book\nPages Read: 5\n---\n');
 		await tick();
 		rdm.getBooks();
 		b.author = 'X';
 		await rdm.updateBook(b);
 		const c = f.files.get('W/Books/A.md')!;
-		expect(c).toContain('pagesRead: 5');
-		expect(c).toContain('author: X');
+		expect(c).toContain('Pages Read: 5');
+		expect(c).toContain('Author: X');
 	});
 
 	it('flushes dirty silent edits via flushPending', async () => {
-		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\ntitle: A\ntype: book\n---\n' });
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\n---\n' });
 		const b = rdm.getBook('Books/A')!;
 		rdm.updateBookSilent({ ...b, author: 'Y' });
 		await rdm.flushPending();
-		expect(f.files.get('W/Books/A.md')).toContain('author: Y');
+		expect(f.files.get('W/Books/A.md')).toContain('Author: Y');
 	});
 
 	it('keeps an external change when a spread copy edits another field', async () => {
-		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\ntitle: A\ntype: book\npagesRead: 1\n---\n' });
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\nPages Read: 1\n---\n' });
 		const b = rdm.getBook('Books/A')!;
-		f.externalWrite('W/Books/A.md', '---\ntitle: A\ntype: book\npagesRead: 5\n---\n');
+		f.externalWrite('W/Books/A.md', '---\nName: A\nType: book\nPages Read: 5\n---\n');
 		await tick();
 		rdm.getBooks();
 		await rdm.updateBook({ ...b, author: 'X' });
 		const c = f.files.get('W/Books/A.md')!;
-		expect(c).toContain('pagesRead: 5');
-		expect(c).toContain('author: X');
+		expect(c).toContain('Pages Read: 5');
+		expect(c).toContain('Author: X');
 	});
 });

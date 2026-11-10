@@ -3,7 +3,7 @@
 // them with the live plugin's getters. A note with unreadable properties is skipped by the index and
 // counted nowhere.
 export const EXPECTED = {
-	// dataManager.getTitles().length: library titles; `maybe: true` notes are NOT included.
+	// dataManager.getTitles().length: library titles; `Maybe: true` notes are NOT included.
 	watch: 8,
 	// readingDataManager.getBooks().length
 	books: 1,

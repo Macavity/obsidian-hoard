@@ -1,6 +1,6 @@
 ---
-title: [unclosed
-status: : : Watching
+Name: [unclosed
+Status: : : Watching
   type Movie
 ---
 

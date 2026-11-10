@@ -6,7 +6,7 @@ import type { EntryCache } from '../src/storage/storageTypes';
 
 const SHOW = 'W/TV Show/C.md';
 const showNote = (extra = '') =>
-	`---\ntitle: C\ntype: TV Show\nexternalId: tmdb:tv:1399\nairtimeRecurrence: daily\nairtimeTime: 20:15\nairtimeSeason: 2\nairtimeEpisode: 5\n${extra}---\n`;
+	`---\nName: C\nType: TV Show\nExternal ID: tmdb:tv:1399\nAirtime Recurrence: daily\nAirtime Time: 20:15\nAirtime Season: 2\nAirtime Episode: 5\n${extra}---\n`;
 
 async function setup(files: Record<string, string>, fetchAiring = vi.fn((): Promise<ApiOutcome<NonNullable<EntryCache['airing']>>> => Promise.resolve({ status: 'notfound' }))) {
 	const s = await setupDataManager(files);
@@ -36,16 +36,16 @@ describe('airing pointer from the API cache', () => {
 		const before = f.files.get(SHOW)!;
 		await dm.tickAirtimeEntry(dm.getAirtimeEntries()[0]!, '2026-10-19');
 		const after = f.files.get(SHOW)!;
-		expect(after).toMatch(/airtimeAcknowledged: 2026-10-19/);
-		expect(after.replace(/airtimeAcknowledged: 2026-10-19\n/, '')).toBe(before);
+		expect(after).toMatch(/Airtime Acknowledged: 2026-10-19/);
+		expect(after.replace(/Airtime Acknowledged: 2026-10-19\n/, '')).toBe(before);
 		expect(dm.getAirtimeEntries()[0]).toMatchObject({ currentEpisode: 7, lastAcknowledgedDate: '2026-10-19' });
 	});
 
 	it('tick without API advances airtimeEpisode', async () => {
 		const { dm, f } = await setup({ [SHOW]: showNote() });
 		await dm.tickAirtimeEntry(dm.getAirtimeEntries()[0]!, '2026-10-19');
-		expect(f.files.get(SHOW)).toMatch(/airtimeEpisode: 6/);
-		expect(f.files.get(SHOW)).toMatch(/airtimeAcknowledged: 2026-10-19/);
+		expect(f.files.get(SHOW)).toMatch(/Airtime Episode: 6/);
+		expect(f.files.get(SHOW)).toMatch(/Airtime Acknowledged: 2026-10-19/);
 	});
 
 	it('refreshes at most every 6 h unless forced, writing only the cache', async () => {

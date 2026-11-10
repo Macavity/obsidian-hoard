@@ -1,9 +1,9 @@
 ---
-title: Reply 1988
-type: Korean TV Show
-status: Plan to watch
-maybe: true
-totalEpisodes: 20
-episodeDuration: 90
-dateAdded: 2026-10-10T09:00:00.000Z
+Name: Reply 1988
+Type: Korean TV Show
+Status: Plan to watch
+Maybe: true
+Total Episodes: 20
+Runtime: 90
+Date Added: 2026-10-10T09:00:00.000Z
 ---

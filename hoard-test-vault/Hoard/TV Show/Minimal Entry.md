@@ -1,3 +1,3 @@
 ---
-title: Minimal Entry
+Name: Minimal Entry
 ---

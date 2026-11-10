@@ -29,7 +29,7 @@ CLI calls time out after 30 s; keep the hoard-test-vault window visible while ru
 
 ### Fixtures
 
-The notes in `hoard-test-vault/` are hand-written and cover every domain plus edge cases (broken properties, a minimal note, `maybe`, a 2099 airtime, foreign History lines, drafts). `Welcome.md` catalogues each one and what it covers. No fixture has an external id, and the anime fixture has `poster: none`, so nothing reaches the network. `test/e2e/expected.mjs` holds the counts the smoke expects; change a fixture and its count in the same commit (`test/fixtures.test.ts` checks them against the codecs).
+The notes in `hoard-test-vault/` are hand-written and cover every domain plus edge cases (broken properties, a minimal note, `Maybe`, a 2099 airtime, foreign History lines, drafts). `Welcome.md` catalogues each one and what it covers. No fixture has an external id, and the anime fixture has `Cover: none`, so nothing reaches the network. `test/e2e/expected.mjs` holds the counts the smoke expects; change a fixture and its count in the same commit (`test/fixtures.test.ts` checks them against the codecs).
 
 ### Smoke
 

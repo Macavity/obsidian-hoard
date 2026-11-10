@@ -11,7 +11,7 @@ type Airing = NonNullable<EntryCache['airing']>;
 const HOUR = 3_600_000;
 // later than the real clock, so setup-time queue starts never delay the first faked one
 const START = new Date('2030-10-19T12:00:00Z');
-const show = (n: number) => `---\ntitle: S${n}\ntype: TV Show\nexternalId: tmdb:tv:${n + 1}\nairtimeRecurrence: daily\nseasons:\n  - 'S1: 8'\n---\n`;
+const show = (n: number) => `---\nName: S${n}\nType: TV Show\nExternal ID: tmdb:tv:${n + 1}\nAirtime Recurrence: daily\nSeasons:\n  - 'S1: 8'\n---\n`;
 const okAiring = (): ApiOutcome<Airing> => ({ status: 'ok', value: { nextEpisode: 2, refreshedAt: new Date().toISOString() } });
 
 async function setup(files: Record<string, string>, fetchAiring: () => Promise<ApiOutcome<Airing>>) {
@@ -128,7 +128,7 @@ describe('API checks in DataManager', () => {
 
 	it('season refill: failure is persisted, not retried within the deadline, even after a restart', async () => {
 		const fetchSeasons = vi.fn((): Promise<ApiOutcome<Season[]>> => Promise.resolve({ status: 'transient' }));
-		const note = '---\ntitle: Dark\ntype: TV Show\nexternalId: tmdb:tv:70523\nwatched: S01E01\n---\n';
+		const note = '---\nName: Dark\nType: TV Show\nExternal ID: tmdb:tv:70523\nWatched Episodes: S01E01\n---\n';
 		const { dm, local, plugin, index, shared, layout } = await setupDataManager({ 'W/TV Show/Dark.md': note }, { apiService: { fetchSeasons } });
 		await vi.waitFor(() => expect(local.getCache('TV Show/Dark')?.apiCheck?.seasons?.result).toBe('transient'));
 		expect(fetchSeasons).toHaveBeenCalledTimes(1);

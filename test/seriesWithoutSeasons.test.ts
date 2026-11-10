@@ -6,15 +6,15 @@ import type { ApiOutcome } from '../src/ApiService';
 import type { Season } from '../src/types';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
-const NOTE = '---\ntitle: N\ntype: TV Show\nexternalId: tmdb:tv:1\ntotalEpisodes: 10\n---\n';
+const NOTE = '---\nName: N\nType: TV Show\nExternal ID: tmdb:tv:1\nTotal Episodes: 10\n---\n';
 
 describe('series without a season list', () => {
 	beforeEach(() => { shown.length = 0; });
 
 	it('toggles on a title without seasons persist and survive a reload', async () => {
-		const { dm, f, index } = await setupDataManager({ 'W/TV Show/N.md': '---\ntitle: N\ntype: TV Show\ntotalEpisodes: 10\n---\n' });
+		const { dm, f, index } = await setupDataManager({ 'W/TV Show/N.md': '---\nName: N\nType: TV Show\nTotal Episodes: 10\n---\n' });
 		await dm.markEpisodeWatched('TV Show/N', 3, true);
-		expect(f.files.get('W/TV Show/N.md')).toContain('watched: S01E03');
+		expect(f.files.get('W/TV Show/N.md')).toContain('Watched Episodes: S01E03');
 		f.externalWrite('W/TV Show/N.md', f.files.get('W/TV Show/N.md')! + '\n');
 		await index.rebuild();
 		expect(dm.getTitle('TV Show/N')!.watchedEpisodes).toEqual([3]);
@@ -26,7 +26,7 @@ describe('series without a season list', () => {
 		await tick();
 		expect(fetchSeasons).toHaveBeenCalledTimes(1);
 		await dm.markEpisodeWatched('TV Show/N', 2, true);
-		expect(f.files.get('W/TV Show/N.md')).toContain('watched: S01E02');
+		expect(f.files.get('W/TV Show/N.md')).toContain('Watched Episodes: S01E02');
 		expect(notices).not.toContainEqual({ code: 'episodesLoading', title: 'N' });
 	});
 
@@ -35,7 +35,7 @@ describe('series without a season list', () => {
 		const { dm, f, notices } = await setupDataManager({ 'W/TV Show/N.md': NOTE }, { apiService: { fetchSeasons } });
 		await tick();
 		await dm.markEpisodeWatched('TV Show/N', 2, true);
-		expect(f.files.get('W/TV Show/N.md')).toContain('watched: S01E02');
+		expect(f.files.get('W/TV Show/N.md')).toContain('Watched Episodes: S01E02');
 		expect(notices).toContainEqual({ code: 'apiKeyNeeded' });
 	});
 
@@ -52,7 +52,7 @@ describe('series without a season list', () => {
 	it('edited seasons go to the note', async () => {
 		const { dm, f, local } = await setupDataManager({});
 		local.setCache('TV Show/Dark', { seasons: [{ name: 'Season 1', episodes: 8, offset: 0 }] });
-		f.externalWrite('W/TV Show/Dark.md', '---\ntitle: Dark\ntype: TV Show\nexternalId: tmdb:tv:70523\ntotalEpisodes: 8\n---\n');
+		f.externalWrite('W/TV Show/Dark.md', '---\nName: Dark\nType: TV Show\nExternal ID: tmdb:tv:70523\nTotal Episodes: 8\n---\n');
 		await tick();
 		const t = dm.getTitle('TV Show/Dark')!;
 		await dm.updateTitle({ ...t, totalEpisodes: 18, seasons: [{ name: 'Season 1', episodes: 10, offset: 0 }, { name: 'Season 2', episodes: 8, offset: 10 }] });
