@@ -16,7 +16,7 @@ source:
   - src/csv/csvCore.ts
   - src/coverRefresh.ts
   - src/csv/CsvModalBase.ts
-source_commit: bdcc2201df9227e8f0bcbf9685cc0dde9311e628
+source_commit: 0cb6cc1466eedd353b592751d46e18abf3fc4d68
 ---
 
 # Reading
@@ -60,6 +60,9 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
   notes when a name changes. Renaming a column moves the key in all notes of the kind
   (`ReadingDataManager.updateColumn`, notes first, then the setting); names are unique per kind, ignoring
   case. Removing a column and the full rewrite never delete values. Columns are not part of CSV.
+  The values of a deleted column stay in the notes and reappear when a column with the same name is created
+  again. If one device renames a column while another edits that field before the base has synced, the edit
+  can end up under the old key (`Custom <old>`); nothing is lost.
 - **Quotes** are not indexed: the detail modal parses `## Quotes` for `> [!quote] <reference>`
   callouts; `appendQuote` inserts newest first and creates the section when missing.
 - **Covers**: cards without a cover fetch lazily by id, else by title search taking the first
