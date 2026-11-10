@@ -2792,9 +2792,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 				syntax: '```hoard-upcoming\nnext\n```',
 			},
 			{
-				name: 'hoard-nowwatching',
+				name: 'hoard-now',
 				desc: t('settings.widgets.nowWatching'),
-				syntax: '```hoard-nowwatching\n```',
+				syntax: '```hoard-now\n```',
 			},
 			{
 				name: 'hoard-stat: time completed full',

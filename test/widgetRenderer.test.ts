@@ -94,7 +94,7 @@ function mountRenderer(fx: Fixture = {}) {
 		handlers.get(lang)!(source, el, {});
 		return el;
 	};
-	return { run, dm, titles };
+	return { run, dm, titles, languages: () => [...handlers.keys()] };
 }
 
 const series = (over: Partial<HoardTitle> = {}): HoardTitle =>
@@ -190,15 +190,19 @@ describe('WidgetRenderer', () => {
 		expect(at('2030-01-15').run('hoard-upcoming', 'next full').textContent).toContain('in 5 days');
 	});
 
-	it('hoard-nowwatching: empty, pinned title, pinned group, compact and full', () => {
-		expect(mountRenderer().run('hoard-nowwatching', '').textContent).toContain('Pin a title');
-		expect(mountRenderer().run('hoard-nowwatching', 'full').textContent).toContain('Pin a title');
+	it('registers the frozen widget names', () => {
+		expect(mountRenderer().languages()).toEqual(['hoard', 'hoard-todo', 'hoard-stat', 'hoard-upcoming', 'hoard-now', 'hoard-now-next']);
+	});
+
+	it('hoard-now: empty, pinned title, pinned group, compact and full', () => {
+		expect(mountRenderer().run('hoard-now', '').textContent).toContain('Pin a title');
+		expect(mountRenderer().run('hoard-now', 'full').textContent).toContain('Pin a title');
 		const pinned = mountRenderer({ titles: [series({ pinned: true }), movie()] });
-		expect(pinned.run('hoard-nowwatching', '').textContent).toContain('Ep 3');
-		expect(pinned.run('hoard-nowwatching', 'full').textContent).toContain('20%');
+		expect(pinned.run('hoard-now', '').textContent).toContain('Ep 3');
+		expect(pinned.run('hoard-now', 'full').textContent).toContain('20%');
 		const group = mountRenderer({ titles: [series()], pinnedGroupId: 'g' });
-		expect(group.run('hoard-nowwatching', '').textContent).toContain('1 title');
-		expect(group.run('hoard-nowwatching', 'full').textContent).toContain('Group G');
+		expect(group.run('hoard-now', '').textContent).toContain('1 title');
+		expect(group.run('hoard-now', 'full').textContent).toContain('Group G');
 	});
 
 	it('hoard-now-next: both columns for nothing, a title, a group', () => {

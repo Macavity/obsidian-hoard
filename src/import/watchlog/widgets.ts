@@ -4,7 +4,7 @@ const LANGUAGES: Readonly<Record<string, string>> = {
 	'wl-todo': 'hoard-todo',
 	'wl-stat': 'hoard-stat',
 	'wl-upcoming': 'hoard-upcoming',
-	'wl-nowwatching': 'hoard-nowwatching',
+	'wl-nowwatching': 'hoard-now',
 	'wl-now-next': 'hoard-now-next',
 };
 

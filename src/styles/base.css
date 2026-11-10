@@ -19,7 +19,7 @@
 .hoard-wstat,
 .hoard-wstat-triple,
 .hoard-wupcoming,
-.hoard-wnowwatching,
+.hoard-wnow,
 .hoard-wnownext {
   /* default theme follows Obsidian's own colours, so it reads on light and dark backgrounds */
   --hoard-accent: var(--interactive-accent);

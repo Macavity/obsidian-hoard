@@ -5,7 +5,7 @@ describe('rewriteWidgetFences', () => {
 	it('renames every WatchLog widget language', () => {
 		const pairs: [string, string][] = [
 			['watchlog', 'hoard'], ['wl-todo', 'hoard-todo'], ['wl-stat', 'hoard-stat'], ['wl-upcoming', 'hoard-upcoming'],
-			['wl-nowwatching', 'hoard-nowwatching'], ['wl-now-next', 'hoard-now-next'],
+			['wl-nowwatching', 'hoard-now'], ['wl-now-next', 'hoard-now-next'],
 		];
 		for (const [from, to] of pairs) {
 			expect(rewriteWidgetFences(`\`\`\`${from}\nx\n\`\`\`\n`)).toBe(`\`\`\`${to}\nx\n\`\`\`\n`);
