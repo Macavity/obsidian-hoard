@@ -1398,6 +1398,10 @@ export class ApiService {
 		return { status: 'ok', value: airing };
 	}
 
+	hasOmdbKey(): boolean {
+		return this.omdbApiKey.trim().length > 0;
+	}
+
 	hasTmdbKey(): boolean {
 		return this.tmdbApiKey.trim().length > 0;
 	}
@@ -1769,7 +1773,7 @@ export class ApiService {
 	 */
 	async fetchCredits(
 		title: HoardTitle,
-		activeApi: 'OMDb' | 'TMDB' = 'OMDb',
+		activeApi: 'Cinemeta' | 'OMDb' | 'TMDB' = 'OMDb',
 	): Promise<{ director: string[]; cast: string[] } | null> {
 		const imdbId = this.extractImdbId(title.externalLink ?? '');
 		if (!imdbId) return null;

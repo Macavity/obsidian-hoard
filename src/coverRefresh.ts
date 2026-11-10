@@ -15,7 +15,7 @@ export interface GameCover { url: string; source: '' | 'rawg' | 'igdb' | 'steam'
  */
 export async function resolveGameCover(
 	api: ApiService,
-	searchSource: 'rawg' | 'igdb',
+	searchSource: 'steam' | 'rawg' | 'igdb',
 	game: Game,
 	idOnly = false,
 ): Promise<GameCover> {
@@ -58,7 +58,7 @@ export async function fetchReadingCoverById(api: ApiService, kind: ReadingKind, 
 
 export interface CoverRefreshDeps {
 	api: ApiService;
-	gamesApiSource: 'rawg' | 'igdb';
+	gamesApiSource: 'steam' | 'rawg' | 'igdb';
 	dataManager: Pick<DataManager, 'getTitles'>;
 	posterService: Pick<PosterService, 'enqueue'>;
 	readingData: Pick<ReadingDataManager, 'getBooks' | 'getMangaList' | 'getBook' | 'getManga' | 'updateBook' | 'updateManga'>;

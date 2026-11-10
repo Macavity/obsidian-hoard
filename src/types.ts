@@ -419,12 +419,14 @@ export interface HoardPluginSettings {
 	omdbApiKey: string;
 	tmdbApiKey: string;
 	googleBooksApiKey: string;
-	activeApi: 'OMDb' | 'TMDB';
+	/** Which API books are searched on; falls back to Open Library without a Google key. Device-local. */
+	booksApiSource: 'openlibrary' | 'google';
+	activeApi: 'Cinemeta' | 'OMDb' | 'TMDB';
 	animeApiSource: 'jikan' | 'anilist';
 	/** Jikan-v4-compatible endpoint for anime and manga; '' = Tenrai. Device-local. */
 	jikanBaseUrl: string;
 	/** Which API new games are searched on (existing games keep their data). */
-	gamesApiSource: 'rawg' | 'igdb';
+	gamesApiSource: 'steam' | 'rawg' | 'igdb';
 	rawgApiKey: string;
 	/** IGDB authenticates through Twitch — a registered app's Client ID + Secret. */
 	igdbClientId: string;
@@ -1011,10 +1013,11 @@ export const DEFAULT_SETTINGS: HoardPluginSettings = {
 	omdbApiKey: '',
 	tmdbApiKey: '',
 	googleBooksApiKey: '',
-	activeApi: 'OMDb',
+	booksApiSource: 'openlibrary',
+	activeApi: 'Cinemeta',
 	animeApiSource: 'jikan',
 	jikanBaseUrl: '',
-	gamesApiSource: 'rawg',
+	gamesApiSource: 'steam',
 	rawgApiKey: '',
 	igdbClientId: '',
 	igdbClientSecret: '',
