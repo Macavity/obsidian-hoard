@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { setupDataManager } from './helpers/setupDataManager';
 
-const NOTE = '---\ntitle: S\ntype: TV Show\ntotalEpisodes: 2\nstatus: Watching\npriority: High\n---\n';
-const DONE = '---\ntitle: S\ntype: TV Show\ntotalEpisodes: 2\nstatus: Completed\ndateFinished: 2026-01-01\nwatched: S01E01-E02\n---\n';
+const NOTE = '---\nName: S\nType: TV Show\nTotal Episodes: 2\nStatus: Watching\nPriority: High\n---\n';
+const DONE = '---\nName: S\nType: TV Show\nTotal Episodes: 2\nStatus: Completed\nDate Finished: 2026-01-01\nWatched Episodes: S01E01-E02\n---\n';
 const ID = 'TV Show/S';
 
 async function setup(note: string, auto = true, finishDate = true) {
@@ -90,7 +90,7 @@ describe('episode completion rules', () => {
 			await dm.markEpisodeWatched(ID, 1, true);
 			await dm.markEpisodeWatched(ID, 2, true);
 			expect(actions(log)).toEqual(['watched', 'watched', 'completed']);
-			expect(f.files.get('W/TV Show/S.md')).toMatch(/priority: ""/);
+			expect(f.files.get('W/TV Show/S.md')).toMatch(/Priority: ""/);
 			expect(dm.getTitle(ID)!.priority).toBe('');
 		});
 
@@ -102,7 +102,7 @@ describe('episode completion rules', () => {
 			dm.applyEpisodeWatchedToggle(ID, 2, true);
 			await dm.flushPendingSave();
 			expect(actions(log)).toEqual(['watched', 'watched', 'completed']);
-			expect(f.files.get('W/TV Show/S.md')).toMatch(/priority: ""/);
+			expect(f.files.get('W/TV Show/S.md')).toMatch(/Priority: ""/);
 		});
 
 		it('markSeasonWatched logs a completed line', async () => {

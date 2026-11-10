@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
 import watchLogData from '../../fixtures/data-v1.json';
-import { WATCHLOG_NOTES, setupSchema1 } from './setupSchema1';
+import { setupSchema1 } from './setupSchema1';
 import { mergeSideFiles } from '../../../src/import/watchlog/schema1';
 import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
 import { LocalStore } from '../../../src/storage/LocalStore';
@@ -18,13 +18,13 @@ interface BaseBlock {
 
 describe('importWatchLogData', () => {
 	it('imports titles, series progress, groups, maybe, airtime and history', async () => {
-		const { run, f } = await setupSchema1(watchLogData, { 'Hoard/Movie/Das doppelte Lottchen.md': '---\ntitle: "Das doppelte Lottchen"\ntype: "Movie"\nstatus: "Completed"\n---\n\n## Notes\n' });
+		const { run, f } = await setupSchema1(watchLogData, { 'Hoard/Movie/Das doppelte Lottchen.md': '---\nName: "Das doppelte Lottchen"\nType: "Movie"\nStatus: "Completed"\n---\n\n## Notes\n' });
 		const r = await run();
 		expect(r.errors).toEqual([]);
-		expect(f.files.get('Hoard/TV Show/Dark.md')).toMatch(/watched: S01E01-E10, S02E01-E02/);
-		expect(f.files.get('Hoard/Movie/A.md')).toMatch(/groups:\n\s+- Marvel/);
-		expect(f.files.get('Hoard/Movie/Maybe Film.md')).toMatch(/maybe: true/);
-		expect(f.files.get('Hoard/TV Show/Dark.md')).toMatch(/airtimeRecurrence: weekly/);
+		expect(f.files.get('Hoard/TV Show/Dark.md')).toMatch(/Watched Episodes: S01E01-E10, S02E01-E02/);
+		expect(f.files.get('Hoard/Movie/A.md')).toMatch(/Groups:\n\s+- Marvel/);
+		expect(f.files.get('Hoard/Movie/Maybe Film.md')).toMatch(/Maybe: true/);
+		expect(f.files.get('Hoard/TV Show/Dark.md')).toMatch(/Airtime Recurrence: weekly/);
 		expect(f.files.get('Hoard/History.md')).toContain('group-created · Marvel');
 		expect(f.files.get('Hoard/Hoard.base')).toContain('hoard:');
 		expect(f.files.get('Hoard/Hoard.base')).not.toMatch(/ApiKey|Secret/);
@@ -77,15 +77,15 @@ describe('importWatchLogData', () => {
 
 	it('never overwrites existing note values', async () => {
 		const { run, f } = await setupSchema1(watchLogData, {
-			'Hoard/Movie/A.md': '---\ntitle: A\ntype: Movie\nrating: 5\n---\n',
-			'Hoard/TV Show/Dark.md': WATCHLOG_NOTES['WatchLog/TV Show/Dark.md']!,
-			'Hoard/Manga/Berserk.md': WATCHLOG_NOTES['WatchLog/Reading/Manga/Berserk.md']!,
+			'Hoard/Movie/A.md': '---\nName: A\nType: Movie\nRating: 5\n---\n',
+			'Hoard/TV Show/Dark.md': '---\nName: "Dark"\nType: "TV Show"\nStatus: "Watching"\nPriority: "High"\nRating: 0\nProgress: 67\nTotal Episodes: 18\n---\n\n## Notes\n\nGreat show\n',
+			'Hoard/Manga/Berserk.md': '---\nName: "Berserk"\nAuthor: "Kentaro Miura"\nStatus: "On Hold"\nType: manga\n---\n\n## Notes\n\n\n## Quotes\n',
 		});
 		await run(); // the data has rating 2 for A
-		expect(f.files.get('Hoard/Movie/A.md')).toMatch(/rating: 5/);
+		expect(f.files.get('Hoard/Movie/A.md')).toMatch(/Rating: 5/);
 		// the body and the existing note body stay untouched
 		expect(f.files.get('Hoard/TV Show/Dark.md')).toMatch(/## Notes\n\nGreat show\n$/);
-		expect(fmOf(f.files.get('Hoard/Manga/Berserk.md')).status).toBe('On Hold');
+		expect(fmOf(f.files.get('Hoard/Manga/Berserk.md')).Status).toBe('On Hold');
 	});
 
 	it('is idempotent', async () => {
@@ -129,11 +129,11 @@ describe('importWatchLogData', () => {
 		expect(base.games.statuses.map((s) => s.name)).toEqual(['Playing', 'Not started', 'TBA']);
 
 		const hades = fmOf(f.files.get('Hoard/Games/Hades.md'));
-		expect(hades).toMatchObject({ developer: 'Supergiant', wishlist: true, status: 'Not started', playtime: '12h 30m', groups: ['Roguelikes'] });
-		expect(fmOf(f.files.get('Hoard/Books/Dune.md'))).toMatchObject({ pagesRead: 120, totalPages: 600, externalId: 'gbooks:B1' });
+		expect(hades).toMatchObject({ Developer: 'Supergiant', Wishlist: true, Status: 'Not started', Playtime: '12h 30m', Groups: ['Roguelikes'] });
+		expect(fmOf(f.files.get('Hoard/Books/Dune.md'))).toMatchObject({ 'Pages Read': 120, 'Total Pages': 600, 'External ID': 'gbooks:B1' });
 		// the 'once' schedule is dropped (E1)
-		expect(f.files.get('Hoard/Movie/A.md')).not.toMatch(/airtime/);
-		expect(fmOf(f.files.get('Hoard/TV Show/Dark.md'))).toMatchObject({ airtimeDay: 4, airtimeTime: '20:00', airtimeSeason: 2, airtimeEpisode: 3 });
+		expect(f.files.get('Hoard/Movie/A.md')).not.toMatch(/Airtime/);
+		expect(fmOf(f.files.get('Hoard/TV Show/Dark.md'))).toMatchObject({ 'Airtime Day': 4, 'Airtime Time': '20:00', 'Airtime Season': 2, 'Airtime Episode': 3 });
 		expect(f.files.get('Hoard/History.md')).toContain('[[TV Show/Dark]]');
 	});
 

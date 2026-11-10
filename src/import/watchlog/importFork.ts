@@ -1,10 +1,12 @@
-import type { TFile } from 'obsidian';
+import { TFile, parseYaml } from 'obsidian';
 import { renameTopLevelBlock } from '../../storage/baseFile';
 import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
 import { forkBaseTypes, type ForkSource } from './detect';
 import { registerTypes } from './registerTypes';
-import { forkTarget, managedFiles, nestedHoardRoot } from './paths';
+import { entryFolders, forkTarget, managedFiles, nestedHoardRoot } from './paths';
 import { emptyImportReport, type ImportReport, type Progress } from './report';
+import { updateFrontMatter } from '../../storage/noteWrite';
+import { newName, translateProperties } from './propertyNames';
 import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
 import { REMOVED_SETTINGS, type ImportContext } from './schema1Types';
 
@@ -34,6 +36,53 @@ async function copyFile(file: TFile, target: string, ctx: ImportContext): Promis
 	} else {
 		await ctx.app.vault.createBinary(target, await ctx.app.vault.readBinary(file));
 	}
+}
+
+const FRONTMATTER = /^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n|$)/;
+const show = (v: unknown): string => (typeof v === 'string' ? v : JSON.stringify(v) ?? 'null');
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** True when `next` has the same keys in the same order with identical values. */
+function sameProperties(fm: Record<string, unknown>, next: Record<string, unknown>): boolean {
+	const keys = Object.keys(fm);
+	const nextKeys = Object.keys(next);
+	return keys.length === nextKeys.length && keys.every((k, i) => k === nextKeys[i] && fm[k] === next[k]);
+}
+
+/** Renames the 0.1 property names of a copied entry note; unreadable YAML or a key it could not rename is reported, the copy stays. */
+async function translateNote(path: string, ctx: ImportContext, report: ImportReport): Promise<void> {
+	const note = ctx.app.vault.getAbstractFileByPath(path);
+	if (!(note instanceof TFile)) return;
+	const match = FRONTMATTER.exec(await ctx.app.vault.read(note));
+	if (!match) return;
+	let current: unknown;
+	try {
+		current = parseYaml(match[1] ?? '');
+	} catch {
+		report.review.push({ path, reason: 'error', code: 'invalidYaml' });
+		return;
+	}
+	if (!isPlainObject(current)) return;
+	const { fm: next, kept } = translateProperties(current);
+	const items: ImportReport['review'] = [];
+	for (const key of kept) {
+		const target = newName(key) ?? key;
+		items.push({
+			path, reason: 'kept-value', code: 'keptValue',
+			params: { key: target, hoard: show(next[target]), watchlog: show(current[key]) },
+		});
+	}
+	if (sameProperties(current, next)) {
+		report.review.push(...items);
+		return;
+	}
+	const ok = await updateFrontMatter(ctx.app, note, () => {}, (fm) => {
+		for (const key of Object.keys(fm)) delete fm[key];
+		for (const [k, v] of Object.entries(next)) Object.defineProperty(fm, k, { value: v, writable: true, enumerable: true, configurable: true });
+	});
+	if (ok) report.review.push(...items);
+	else report.review.push({ path, reason: 'error', code: 'invalidYaml' });
 }
 
 async function importBase(src: ForkSource, ctx: ImportContext, report: ImportReport): Promise<void> {
@@ -74,6 +123,7 @@ export async function importFork(src: ForkSource, ctx: ImportContext, progress: 
 	const report = emptyImportReport();
 	const forkLayout = new VaultLayout(src.root, () => src.typeNames);
 	const files = managedFiles(ctx.app, forkLayout, src.typeNames, nestedHoardRoot(src.root, ctx.layout.root));
+	const entryDirs = entryFolders(forkLayout, src.typeNames);
 	let done = 0;
 	for (const file of files) {
 		const target = forkTarget(file.path, src.root, ctx.layout.root);
@@ -83,6 +133,9 @@ export async function importFork(src: ForkSource, ctx: ImportContext, progress: 
 			} else {
 				await copyFile(file, target, ctx);
 				report.created++;
+				if (file.extension.toLowerCase() === 'md' && entryDirs.some((d) => file.path.startsWith(`${d}/`))) {
+					await translateNote(target, ctx, report);
+				}
 			}
 		} catch (e) {
 			report.review.push({ path: target, reason: 'error', code: 'failed', params: { message: errMsg(e) } });

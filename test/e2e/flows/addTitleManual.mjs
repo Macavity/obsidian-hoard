@@ -27,9 +27,9 @@ export async function addTitleManual() {
 	const path = `Hoard/Movie/${TITLE}.md`;
 	await waitFor(() => evalJs(`String(!!app.vault.getFileByPath(${JSON.stringify(path)}))`) === "true", 10000);
 	// the note is written by processFrontMatter after the file exists
-	await waitFor(() => readNote(VAULT_PATH, path).props.status === "Watching", 10000);
+	await waitFor(() => readNote(VAULT_PATH, path).props.Status === "Watching", 10000);
 	const { props } = readNote(VAULT_PATH, path);
-	assert(props.title === TITLE, `title: ${props.title}`);
-	assert(props.type === "Movie", `type: ${props.type}`);
-	assert(props.status === "Watching", `status: ${props.status}`);
+	assert(props.Name === TITLE, `title: ${props.Name}`);
+	assert(props.Type === "Movie", `type: ${props.Type}`);
+	assert(props.Status === "Watching", `status: ${props.Status}`);
 }

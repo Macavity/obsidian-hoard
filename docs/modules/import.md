@@ -7,13 +7,15 @@ source:
   - src/import/watchlog/importer.ts
   - src/import/watchlog/report.ts
   - src/import/watchlog/paths.ts
+  - src/import/watchlog/propertyNames.ts
+  - src/import/watchlog/importFork.ts
   - src/import/watchlog/schema1.ts
   - src/import/watchlog/schema1Notes.ts
   - src/import/watchlog/schema1Types.ts
   - src/import/watchlog/widgets.ts
   - src/WatchLogOnboardingModal.ts
   - src/WatchLogReport.ts
-source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
+source_commit: 43b1380df12642609c05bbf18f366063f3184d48
 ---
 
 # Import
@@ -52,7 +54,19 @@ Other code touches it at three points: `main.ts` (detection, `createImporter`, d
 - **Managed files** ([paths.ts](../../src/import/watchlog/paths.ts)): `managedFiles` = every file in a
   layout's type, book, manga, game and list folders plus its history file, minus Hoard's own root
   (Hoard at the vault root `''` excludes nothing). `forkTarget` maps a fork path below Hoard's root.
-  Fork import and cleanup both use them.
+  Fork import and cleanup both use them; `entryFolders` is the subset of entry folders (types, Books, Manga, Games; no custom lists).
+
+## Property translation
+
+Fork notes carry Hoard 0.1 property names. [propertyNames.ts](../../src/import/watchlog/propertyNames.ts)
+holds `OLD_TO_NEW` and `translateProperties(fm) → { fm, kept }`: renames known old keys by content,
+converts `progress` text to a number and manga `malId` to a number, folds `apiSource` + `apiId`,
+`manualPosterUrl`, `manualTrailerUrl`. Idempotent: when the new key exists the old one stays and is
+returned in `kept` (a `kept-value` review item). `importFork` applies it to copied entry notes only
+(`entryFolders`, not custom lists or history) and writes only when something changes, so a note
+without old keys stays byte-identical; broken YAML becomes an `invalidYaml` review item and the copy
+stays. Lookups are own-property only (`newName`), so keys like `constructor` or `__proto__` pass through
+unchanged. Names and rules: [properties](../concepts/properties.md).
 
 ## Schema-1 converter
 
@@ -67,7 +81,10 @@ keys (a title field still equal to a stale API value is replaced unless the note
 override); a differing existing value becomes a `kept-value` review item. Duplicate title/type pairs in one run
 get " 2", " 3", compared case-insensitively (macOS and Windows treat "Heat" and "heat" as one file). A
 note that fails to write is reported and skipped. The fork's device settings skip shared and removed
-keys like the schema-1 path does. Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
+keys like the schema-1 path does. WatchLog's custom reading columns are sanitized once in the normalize
+step (blank or non-string names become `Field N`, case-insensitive duplicates get " 2", " 3"), so every
+value gets its own `Custom <name>` key; a value whose column no longer exists becomes an `orphanValue`
+review item. Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
 airtime, history), `originalPaths` (where WatchLog kept its notes, from its settings).
 
 Widget fence renaming ([widgets.ts](../../src/import/watchlog/widgets.ts)) is a cleanup step; see

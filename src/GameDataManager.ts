@@ -9,6 +9,7 @@ import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
 import { decodeGame, encodeGame } from './storage/gameCodec';
+import { COMMON_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
 import {
 	Game,
@@ -24,17 +25,9 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from './types';
+import { changedKeys, sameJson, slugify } from './storage/sharedHelpers';
 
 const GAMES_FOLDER_PREFIX = 'Games/';
-
-const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
-
-function slugify(input: string): string {
-	return input
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-|-$/g, '');
-}
 
 /**
  * Games, backed by one note per game under `<Root>/Games`. Reads come from the EntryIndex; writes go
@@ -404,7 +397,7 @@ export class GameDataManager {
 	// Cover updates
 
 	/**
-	 * Silent cover URL update for the lazy Cards re-fetch: written to the note's `coverUrl` only when
+	 * Silent cover URL update for the lazy Cards re-fetch: written to the note's `Cover` property only when
 	 * that is empty (E12), no notify — the card that triggered the fetch swaps its own <img>, so the
 	 * grid is not rebuilt and the scroll position survives.
 	 */
@@ -419,12 +412,13 @@ export class GameDataManager {
 		const file = this.fileOf(id);
 		if (!file) return;
 		await this.processFrontMatter(file, game, (raw) => {
-			const own = typeof raw.coverUrl === 'string' ? raw.coverUrl.trim() : '';
+			const current = raw[COMMON_PROPS.cover];
+			const own = typeof current === 'string' ? current.trim() : '';
 			if (own) {
 				game.coverUrl = own;
 				return;
 			}
-			raw.coverUrl = url;
+			raw[COMMON_PROPS.cover] = url;
 			game.coverUrl = url;
 		}, true);
 	}
@@ -645,8 +639,7 @@ export class GameDataManager {
 
 		const before = src ? this.encode(src) : {};
 		const after = this.encode(g);
-		const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
-			.filter((k) => !sameJson(before[k], after[k]));
+		const changed = changedKeys(before, after);
 		if (changed.length > 0) {
 			const ok = await this.processFrontMatter(file, g, (raw) => {
 				for (const key of changed) {

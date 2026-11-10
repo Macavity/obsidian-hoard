@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { importFork } from '../../../src/import/watchlog/importFork';
 import { setupFork } from './setupFork';
 import { snapshot } from './helpers';
+import { decodeTitle } from '../../../src/storage/titleCodec';
+import { parse } from 'yaml';
+
+const fmOf = (content: string | undefined): Record<string, unknown> =>
+	(parse(/^---\r?\n([\s\S]*?)\r?\n---/.exec(content ?? '')?.[1] ?? '') ?? {}) as Record<string, unknown>;
 
 const FORK = {
 	'WatchLog/WatchLog.base': 'watchlog:\n  settings: {}\nviews: []\n',
@@ -16,7 +21,8 @@ describe('importFork', () => {
 		const before = snapshot(f);
 		const r = await importFork(src, ctx, () => {});
 		expect(r.errors).toEqual([]);
-		expect(f.files.get('Hoard/Movie/Heat.md')).toBe(FORK['WatchLog/Movie/Heat.md']);
+		expect(fmOf(f.files.get('Hoard/Movie/Heat.md'))).toEqual({ Name: 'Heat', Status: 'Completed' });
+		expect(f.files.get('WatchLog/Movie/Heat.md')).toBe(FORK['WatchLog/Movie/Heat.md']);
 		expect(f.files.get('Hoard/History.md')).toBe(FORK['WatchLog/History.md']);
 		expect(f.files.get('Hoard/Hoard.base')).toMatch(/^hoard:/);
 		expect(f.files.has('Hoard/Private.md')).toBe(false);
@@ -34,7 +40,7 @@ describe('importFork', () => {
 	it('Hoard at the vault root still copies a nested fork', async () => {
 		const { f, ctx, src } = await setupFork({ ...FORK, 'Hoard.base': 'hoard:\n  settings: {}\n' }, undefined, '');
 		const r = await importFork(src, ctx, () => {});
-		expect(f.files.get('Movie/Heat.md')).toBe(FORK['WatchLog/Movie/Heat.md']);
+		expect(fmOf(f.files.get('Movie/Heat.md'))).toMatchObject({ Name: 'Heat' });
 		expect(r.created).toBeGreaterThan(0);
 	});
 
@@ -84,5 +90,59 @@ describe('importFork', () => {
 		const { ctx, src } = await setupFork(FORK, { schemaVersion: 2, settings: { tmdbApiKey: 'k', types: [{ name: 'X' }], rootFolder: 'WatchLog' }, cache: {}, ui: {} });
 		await importFork(src, ctx, () => {});
 		expect(ctx.local.data.settings).toEqual({ tmdbApiKey: 'k' });
+	});
+
+	describe('property names', () => {
+		const base = 'WatchLog/WatchLog.base';
+		const baseBody = 'watchlog:\n  settings: {}\nviews: []\n';
+
+		it('translates the frontmatter of copied entry notes', async () => {
+			const src0 = '---\ntitle: Heat\ndateAdded: 2024-01-01\nposter: https://p\nprogress: 100%\n---\nbody';
+			const { f, ctx, src } = await setupFork({ [base]: baseBody, 'WatchLog/Movie/Heat.md': src0 });
+			const report = await importFork(src, ctx, () => {});
+			const content = f.files.get('Hoard/Movie/Heat.md');
+			const fm = fmOf(content);
+			expect(fm).toMatchObject({ Name: 'Heat', 'Date Added': '2024-01-01', Cover: 'https://p', Progress: 100 });
+			expect(fm).not.toHaveProperty('title');
+			expect(report.review).toEqual([]);
+			expect(f.files.get('WatchLog/Movie/Heat.md')).toBe(src0);
+			expect(content).toMatch(/---\nbody$/);
+			expect(decodeTitle('x', fm, undefined).entry.title).toBe('Heat');
+		});
+
+		it('reports a key it could not rename', async () => {
+			const { ctx, src } = await setupFork({ [base]: baseBody, 'WatchLog/Movie/Heat.md': '---\ntitle: Heat\nName: Other\n---\n' });
+			const report = await importFork(src, ctx, () => {});
+			expect(report.review).toContainEqual(expect.objectContaining({ path: 'Hoard/Movie/Heat.md', code: 'keptValue' }));
+		});
+
+		it('leaves custom lists and notes without frontmatter untouched', async () => {
+			const { f, ctx, src } = await setupFork({
+				[base]: baseBody, 'WatchLog/CustomLists/x.md': '---\ntitle: x\n---\n', 'WatchLog/Movie/Plain.md': 'just text',
+			});
+			await importFork(src, ctx, () => {});
+			expect(fmOf(f.files.get('Hoard/CustomLists/x.md'))).toEqual({ title: 'x' });
+			expect(f.files.get('Hoard/Movie/Plain.md')).toBe('just text');
+		});
+
+		it('copies notes that need no renaming byte for byte', async () => {
+			const unknown = '---\n# my own comment\nmine: "quoted"\nother:   [1,   2]\n---\nbody\n';
+			const current = '---\nName: "Heat"   # kept\nCover: \'https://p\'\n---\n';
+			const { f, ctx, src } = await setupFork({
+				[base]: baseBody, 'WatchLog/Movie/Unknown.md': unknown, 'WatchLog/Movie/Current.md': current,
+			});
+			const report = await importFork(src, ctx, () => {});
+			expect(f.files.get('Hoard/Movie/Unknown.md')).toBe(unknown);
+			expect(f.files.get('Hoard/Movie/Current.md')).toBe(current);
+			expect(report.review).toEqual([]);
+		});
+
+		it('reports broken YAML and keeps the copy', async () => {
+			const broken = '---\ntitle: [unclosed\n---\n';
+			const { f, ctx, src } = await setupFork({ [base]: baseBody, 'WatchLog/Movie/Bad.md': broken });
+			const report = await importFork(src, ctx, () => {});
+			expect(f.files.get('Hoard/Movie/Bad.md')).toBe(broken);
+			expect(report.review).toContainEqual({ path: 'Hoard/Movie/Bad.md', reason: 'error', code: 'invalidYaml' });
+		});
 	});
 });

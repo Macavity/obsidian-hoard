@@ -1,16 +1,16 @@
 ---
-title: Dune
-author: Frank Herbert
-status: Reading
-rating: 0
-pagesRead: 120
-totalPages: 600
-chaptersRead: 0
-totalChapters: 0
-dateStarted: 2026-10-20
-dateFinished:
-releaseDate:
-dateAdded: 2026-10-20T09:00:00.000Z
-dateModified: 2026-10-25T09:00:00.000Z
-type: book
+Name: Dune
+Author: Frank Herbert
+Status: Reading
+Rating: 0
+Pages Read: 120
+Total Pages: 600
+Chapters Read: 0
+Total Chapters: 0
+Date Started: 2026-10-20
+Date Finished:
+Release Date:
+Date Added: 2026-10-20T09:00:00.000Z
+Date Modified: 2026-10-25T09:00:00.000Z
+Type: book
 ---

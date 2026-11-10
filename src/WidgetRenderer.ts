@@ -45,7 +45,7 @@ export function findNextRelease(
 	return best;
 }
 
-type WidgetLanguage = 'hoard' | 'hoard-todo' | 'hoard-stat' | 'hoard-upcoming' | 'hoard-nowwatching' | 'hoard-now-next';
+type WidgetLanguage = 'hoard' | 'hoard-todo' | 'hoard-stat' | 'hoard-upcoming' | 'hoard-now' | 'hoard-now-next';
 
 export class WidgetRenderer {
 	private plugin: HoardPlugin;
@@ -68,7 +68,7 @@ export class WidgetRenderer {
 			'hoard-todo': (source, el) => this.processWlTodo(source, el),
 			'hoard-stat': (source, el) => this.processWlStat(source, el),
 			'hoard-upcoming': (source, el) => this.processWlUpcoming(source, el),
-			'hoard-nowwatching': (source, el) => this.processWlNowWatching(source, el),
+			'hoard-now': (source, el) => this.processNow(source, el),
 			'hoard-now-next': (source, el) => this.processWlNowNext(source, el),
 		};
 		for (const [language, handler] of Object.entries(handlers) as [WidgetLanguage, typeof handlers[WidgetLanguage]][]) {
@@ -595,60 +595,60 @@ export class WidgetRenderer {
 		meta.createSpan({ cls: 'hoard-full-card-sub', text: formatDateDisplay(bestEntry.releaseDate) });
 	}
 
-	// hoard-nowwatching
+	// hoard-now
 
-	private processWlNowWatching(source: string, el: HTMLElement): void {
-		this.widgetRerender.set(el, () => this.renderWlNowWatching(source, el));
-		this.renderWlNowWatching(source, el);
+	private processNow(source: string, el: HTMLElement): void {
+		this.widgetRerender.set(el, () => this.renderNow(source, el));
+		this.renderNow(source, el);
 	}
 
-	private renderWlNowWatching(source: string, el: HTMLElement): void {
+	private renderNow(source: string, el: HTMLElement): void {
 		el.empty();
 		const isFull = source.trim().toLowerCase() === 'full';
-		el.addClass('hoard-wnowwatching');
+		el.addClass('hoard-wnow');
 
 		const { pinnedTitle, pinnedGroup } = this.getPinned();
 
 		if (isFull) {
-			this.renderNowWatchingFull(el, pinnedTitle, pinnedGroup);
+			this.renderNowFull(el, pinnedTitle, pinnedGroup);
 			return;
 		}
 
 		if (!pinnedTitle && !pinnedGroup) {
-			el.createDiv({ cls: 'hoard-nowwatching-card hoard-nowwatching-empty', text: t('widget.pinToWatch') });
+			el.createDiv({ cls: 'hoard-now-card hoard-now-empty', text: t('widget.pinToWatch') });
 			return;
 		}
 
-		const card = el.createDiv({ cls: 'hoard-nowwatching-card' });
+		const card = el.createDiv({ cls: 'hoard-now-card' });
 
 		if (pinnedGroup) {
-			card.createSpan({ cls: 'hoard-nowwatching-title', text: pinnedGroup.name });
+			card.createSpan({ cls: 'hoard-now-title', text: pinnedGroup.name });
 			const { count, progress } = this.pinnedGroupStats(pinnedGroup);
-			card.createSpan({ cls: 'hoard-nowwatching-ep', text: t('widget.titlesCount', { count }) });
-			const barWrap = card.createDiv({ cls: 'hoard-nowwatching-bar-wrap' });
-			barWrap.createDiv({ cls: 'hoard-nowwatching-bar' }).style.width = `${progress}%`;
-			card.createSpan({ cls: 'hoard-nowwatching-pct', text: `${progress}%` });
+			card.createSpan({ cls: 'hoard-now-ep', text: t('widget.titlesCount', { count }) });
+			const barWrap = card.createDiv({ cls: 'hoard-now-bar-wrap' });
+			barWrap.createDiv({ cls: 'hoard-now-bar' }).style.width = `${progress}%`;
+			card.createSpan({ cls: 'hoard-now-pct', text: `${progress}%` });
 			return;
 		}
 
 		const pinned = pinnedTitle!;
-		card.createSpan({ cls: 'hoard-nowwatching-title', text: pinned.title });
+		card.createSpan({ cls: 'hoard-now-title', text: pinned.title });
 
 		this.renderBadge(card, pinned.type, this.plugin.settings.types, typeLabel(pinned.type));
 
 		if (pinned.type !== 'Movie') {
 			const nextEp = this.dataManager.getNextUnwatchedEpisode(pinned);
-			card.createSpan({ cls: 'hoard-nowwatching-ep', text: nextEp !== null ? t('widget.episodeShort', { episode: nextEp }) : `✓ ${t('widget.completed')}` });
+			card.createSpan({ cls: 'hoard-now-ep', text: nextEp !== null ? t('widget.episodeShort', { episode: nextEp }) : `✓ ${t('widget.completed')}` });
 		}
 
 		const progress = this.dataManager.getProgress(pinned);
-		const barWrap = card.createDiv({ cls: 'hoard-nowwatching-bar-wrap' });
-		const bar = barWrap.createDiv({ cls: 'hoard-nowwatching-bar' });
+		const barWrap = card.createDiv({ cls: 'hoard-now-bar-wrap' });
+		const bar = barWrap.createDiv({ cls: 'hoard-now-bar' });
 		bar.style.width = `${progress}%`;
-		card.createSpan({ cls: 'hoard-nowwatching-pct', text: `${progress}%` });
+		card.createSpan({ cls: 'hoard-now-pct', text: `${progress}%` });
 	}
 
-	private renderNowWatchingFull(
+	private renderNowFull(
 		el: HTMLElement,
 		pinnedTitle: HoardTitle | null,
 		pinnedGroup: HoardGroup | null,

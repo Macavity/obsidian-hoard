@@ -7,7 +7,7 @@ source:
   - src/InsertWidgetModal.ts
   - src/main.ts
   - src/import/watchlog/widgets.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # Widgets
@@ -20,7 +20,7 @@ are listed in the README; the mechanism is here.
 `WidgetRenderer` ([WidgetRenderer.ts](../../src/WidgetRenderer.ts)) is built in `onload` and calls
 `registerMarkdownCodeBlockProcessor` once per language: `hoard` (block body `id: <entry id>`),
 `hoard-todo` (title name, optional `mini`), `hoard-stat` (`watched`, `completed`, `remaining`,
-`time`, `time completed full`), `hoard-upcoming` (`next`), `hoard-nowwatching`, `hoard-now-next`.
+`time`, `time completed full`), `hoard-upcoming` (`next`), `hoard-now`, `hoard-now-next`.
 Each handler first marks its container with `data-theme` when a non-default Hoard colour theme
 is picked, so `theme.css` themes `.hoard-widget` outside the view; it applies on the next render.
 

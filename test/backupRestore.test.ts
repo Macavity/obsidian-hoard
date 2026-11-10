@@ -15,7 +15,7 @@ describe('backup/restore', () => {
 	it('round-trips through an empty vault', async () => {
 		const a = await setupBackup({
 			'W/Hoard.base': BASE,
-			'W/TV Show/Dark.md': '---\ntitle: Dark\ntype: TV Show\nwatched: S01E01-E03\ngroups: [X]\nseasons: ["Season 1: 10"]\n---\n',
+			'W/TV Show/Dark.md': '---\nName: Dark\nType: TV Show\nWatched Episodes: S01E01-E03\nGroups: [X]\nSeasons: ["Season 1: 10"]\n---\n',
 		});
 		a.local.data.settings = { tmdbApiKey: 'SECRET' };
 		const json = JSON.stringify(buildBackup(a));

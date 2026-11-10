@@ -25,7 +25,7 @@ Inline code blocks render live progress anywhere in your notes:
 | `hoard-todo` | track a title (full or mini) |
 | `hoard-stat` | single stats (time watched, remaining, completed, ...) |
 | `hoard-upcoming` | next upcoming release |
-| `hoard-nowwatching` | titles in progress |
+| `hoard-now` | titles in progress |
 | `hoard-now-next` | now watching + up next card |
 
 Use the command palette to insert a widget.

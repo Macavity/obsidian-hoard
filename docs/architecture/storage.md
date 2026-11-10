@@ -12,8 +12,9 @@ source:
   - src/storage/noteBody.ts
   - src/storage/storageTypes.ts
   - src/storage/titleCodec.ts
+  - src/storage/properties.ts
   - src/storage/noteWrite.ts
-source_commit: f3d78f8aae44aa4446d6c4f042c5c803ca8ae3a5
+source_commit: 64cb1297ad64e33ac1573090568cdec0eafceea1
 ---
 
 # Storage
@@ -53,7 +54,10 @@ or type-name change. Changes are batched 150 ms and emitted as a set of ids.
 
 Codecs are pure: `decodeTitle(id, properties, cache)` / `encodeTitle`, `decodeBook`/`encodeBook`,
 `decodeManga`/`encodeManga`, `decodeGame`/`encodeGame`. Each returns `invalidFields` for values of the
-wrong type instead of failing; those properties are left untouched on write.
+wrong type instead of failing; those properties are left untouched on write. Property names come
+only from [properties.ts](../../src/storage/properties.ts) ([property names](../concepts/properties.md)).
+The book and manga codecs also take that kind's custom columns, because a custom value's key is
+`Custom <column name>`; `EntryIndex.setColumns` re-decodes reading notes when a column name changes.
 
 ## Writing: the managers
 

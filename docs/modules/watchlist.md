@@ -13,7 +13,7 @@ source:
   - src/CommunityRating.ts
   - src/MaybeAddModal.ts
   - src/storage/titleCodec.ts
-source_commit: deafd8c95d58b0d7bead654b508876b61eb14d7e
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # Watchlist
@@ -46,7 +46,7 @@ here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API client
   completion); `updateTitleSilent` + `save()` for batches; `scheduleEpisodeSave` (debounced, no
   notify, caller updates its own DOM); backfills `updateCommunityRating`, `updateTrailerUrl`,
   `updateCredits`, `updateStudio`, `updateTmdbIdentity` write the cache only, no `dateModified`;
-  `updatePosterUrl` writes the note's `poster` when it is empty (or on explicit refresh);
+  `updatePosterUrl` writes the note's `Cover` when it is empty (or on explicit refresh);
   `updateManualCredits`, `setFavorite` and group changes write the note without a
   `dateModified` stamp.
 - **Note vs cache.** API fields are device-local cache ([entry cache](../concepts/entry-cache.md)).

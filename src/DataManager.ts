@@ -18,7 +18,9 @@ import { TITLE_CACHE_KEYS, decodeTitle, encodeTitle, isMovie, seasonsPending, sp
 import { externalIdFromLink } from './storage/externalId';
 import { decodeBook, decodeManga, encodeAirtime } from './storage/readingCodec';
 import { decodeGame } from './storage/gameCodec';
+import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
+import { changedKeys, sameJson } from './storage/sharedHelpers';
 
 export interface DataStores {
 	index: EntryIndex;
@@ -28,17 +30,12 @@ export interface DataStores {
 	notify: Notify;
 }
 
-const AIRTIME_KEYS: readonly string[] = [
-	'airtimeRecurrence', 'airtimeDay', 'airtimeTime', 'airtimeSeason', 'airtimeEpisode', 'airtimeAcknowledged',
-];
+const AIRTIME_KEYS: readonly string[] = Object.values(AIRTIME_PROPS);
 
-/** Every frontmatter key encodeTitle can emit (plus the older manual*Url names); the full rewrite deletes the ones it omits. */
+/** Every property encodeTitle can emit; the full rewrite deletes the ones it omits. */
 const TITLE_KEYS: readonly string[] = [
-	'title', 'type', 'status', 'priority', 'review', 'rating', 'progress', 'totalEpisodes', 'episodeDuration',
-	'dateStarted', 'dateFinished', 'dateAdded', 'dateModified', 'releaseDate', 'malId', 'anilistId',
-	'communityRating', 'communityVotes', 'communitySource', 'director', 'cast', 'studio', 'poster', 'trailer',
-	'externalLink', 'pinned', 'favorite', 'dateFavorited', 'externalId', 'groups', 'maybe', 'watched', 'skipped',
-	'seasons', 'manualPosterUrl', 'manualTrailerUrl', 'manualDirector', 'manualCast', 'manualStudio',
+	...Object.values(COMMON_PROPS),
+	...Object.values(TITLE_PROPS),
 	...AIRTIME_KEYS,
 ];
 
@@ -68,8 +65,6 @@ function scheduleOf(a: EntryAirtime, releaseDate: string | null): AirtimeSchedul
 /** Retry deadline per outcome of a background API check; a missing key waits until a key changes. */
 const API_CHECK_TTL_MS = { ok: 6 * 3_600_000, transient: 3_600_000, notfound: 7 * 24 * 3_600_000 };
 type ApiCheckKind = 'airing' | 'seasons';
-
-const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 /**
  * Watchlist titles, backed by one note per title. Reads come from the EntryIndex (frontmatter) plus
@@ -287,7 +282,7 @@ export class DataManager {
 
 	/**
 	 * Silent poster update, no notify — the card that triggered the fetch updates its own <img>.
-	 * A URL goes into the note's `poster` field, but only when it is empty (E12), unless `overwrite`
+	 * A URL goes into the note's `Cover` property, but only when it is empty (E12), unless `overwrite`
 	 * (the explicit refresh). 'none' (nothing found) is a cache marker for a title without a poster.
 	 */
 	async updatePosterUrl(titleId: string, url: string, overwrite = false): Promise<void> {
@@ -310,13 +305,13 @@ export class DataManager {
 		const file = this.fileOf(titleId);
 		if (!file) return;
 		await this.processFrontMatter(file, title, (raw) => {
-			const own = [raw.poster, raw.manualPosterUrl].find((v): v is string => typeof v === 'string' && v.trim() !== '');
+			const current = raw[COMMON_PROPS.cover];
+			const own = typeof current === 'string' && current.trim() !== '' ? current : undefined;
 			if (own && !overwrite) {
 				title.posterUrl = own;
 				return;
 			}
-			raw.poster = url;
-			delete raw.manualPosterUrl;
+			raw[COMMON_PROPS.cover] = url;
 			title.posterUrl = url;
 		}, !overwrite);
 	}
@@ -1079,14 +1074,14 @@ export class DataManager {
 			await this.app.fileManager.processFrontMatter(file, (raw: Record<string, unknown>) => {
 				for (const key of AIRTIME_KEYS) delete raw[key];
 				encodeAirtime(airtime, raw);
-				if (releaseDate) raw.releaseDate = releaseDate;
+				if (releaseDate) raw[COMMON_PROPS.releaseDate] = releaseDate;
 				const fm = { ...raw };
 				this.index.applyLocal(
 					kind === 'game'
 						? { kind, entry: decodeGame(id, fm).entry }
 						: kind === 'book'
-							? { kind, entry: decodeBook(id, fm).entry }
-							: { kind, entry: decodeManga(id, fm).entry },
+							? { kind, entry: decodeBook(id, fm, this.index.columns('book')).entry }
+							: { kind, entry: decodeManga(id, fm, this.index.columns('manga')).entry },
 				);
 			});
 			return true;
@@ -1458,11 +1453,11 @@ export class DataManager {
 		if (!file) return false;
 		const out = encodeTitle(title, this.getProgress(title), this.seasonsPending(title));
 		const keep = new Set(this.index.invalidFields(title.id));
-		if (!('watched' in out)) {
-			keep.add('watched');
-			keep.add('skipped');
+		if (!(TITLE_PROPS.watchedEpisodes in out)) {
+			keep.add(TITLE_PROPS.watchedEpisodes);
+			keep.add(TITLE_PROPS.skippedEpisodes);
 			// derived from the unreadable watched text: 0% would be wrong
-			if (!isMovie(title.seasons, title.totalEpisodes)) keep.add('progress');
+			if (!isMovie(title.seasons, title.totalEpisodes)) keep.add(TITLE_PROPS.progress);
 		}
 		return this.processFrontMatter(file, title, (raw) => {
 			for (const key of TITLE_KEYS) {
@@ -1568,8 +1563,7 @@ export class DataManager {
 		const pending = this.seasonsPending(t);
 		const before = src ? encodeTitle(src, this.getProgress(src), pending) : {};
 		const after = encodeTitle(t, this.getProgress(t), pending);
-		const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
-			.filter((k) => !sameJson(before[k], after[k]));
+		const changed = changedKeys(before, after);
 		if (changed.length > 0) {
 			const ok = await this.processFrontMatter(file, t, (raw) => {
 				for (const key of changed) {

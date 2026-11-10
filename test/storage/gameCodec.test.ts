@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { decodeGame, encodeGame, parsePlaytime } from '../../src/storage/gameCodec';
 import { formatTime } from '../../src/types';
+import type { Game } from '../../src/types';
+import { ALL_PROPERTY_NAMES } from '../../src/storage/properties';
+
+const fullGame = (): Game => ({
+	id: 'Games/Hades', title: 'Hades', developer: 'Supergiant', publisher: 'Supergiant', type: 'Roguelike', status: 'Playing',
+	priority: 'High', favorite: true, dateFavorited: '2026-02-01T00:00:00Z', wishlist: true, rating: 5, progress: 40,
+	playtimeMinutes: 750, achievementsEarned: 10, achievementsTotal: 49, platforms: ['PC'], singleplayer: true, coop: true,
+	multiplayer: true, coverUrl: 'https://img.example/h.jpg', apiSource: 'rawg', apiId: '274755', steamAppId: '1145360',
+	lastPlayed: '2026-10-01T20:00:00Z', storeUrl: 'https://store.example/h', externalLink: 'https://example.com/h',
+	vaultPage: 'Games/Hades.md', releaseDate: '2020-09-17', dateStarted: '2026-01-02', dateFinished: null,
+	dateAdded: '2026-01-01T00:00:00Z', dateModified: '2026-01-03T00:00:00Z', groups: ['Indie'],
+	airtime: { recurrence: 'once', acknowledged: '2026-10-01' },
+});
 
 describe('game codec', () => {
 	it('parses playtime losslessly', () => {
@@ -9,29 +22,37 @@ describe('game codec', () => {
 		expect(parsePlaytime('')).toBeNull();
 	});
 
+	it('writes only frozen property names and reads them back', () => {
+		const game = fullGame();
+		const fm = encodeGame(game);
+		for (const key of Object.keys(fm)) expect(ALL_PROPERTY_NAMES).toContain(key);
+		expect(fm).toMatchObject({ Name: 'Hades', Cover: game.coverUrl, 'Co-op': true, 'Steam App ID': '1145360', Genre: 'Roguelike', Type: 'game' });
+		expect(decodeGame(game.id, fm).entry).toEqual(game);
+	});
+
 	it('round-trips a game', () => {
-		const fm = { title: 'Hades', status: 'Playing', progress: 40, playtime: '12h 30m', achievements: '10/49',
-			platforms: ['PC'], externalId: 'rawg:274755', steamAppId: '1145360', lastPlayed: '2026-10-01T20:00:00Z',
-			dateAdded: '2026-01-01T00:00:00Z', dateModified: '2026-01-01T00:00:00Z', type: 'game' };
+		const fm = { Name: 'Hades', Status: 'Playing', Progress: 40, Playtime: '12h 30m', Achievements: '10/49',
+			Platforms: ['PC'], 'External ID': 'rawg:274755', 'Steam App ID': '1145360', 'Last Played': '2026-10-01T20:00:00Z',
+			'Date Added': '2026-01-01T00:00:00Z', 'Date Modified': '2026-01-01T00:00:00Z', Type: 'game' };
 		const { entry, invalidFields } = decodeGame('Games/Hades', fm);
 		expect(invalidFields).toEqual([]);
 		expect(entry).toMatchObject({ playtimeMinutes: 750, achievementsEarned: 10, achievementsTotal: 49, apiSource: 'rawg', apiId: '274755', lastPlayed: '2026-10-01T20:00:00Z' });
-		expect(encodeGame(entry)).toMatchObject({ playtime: '12h 30m', achievements: '10/49', externalId: 'rawg:274755', steamAppId: '1145360', lastPlayed: '2026-10-01T20:00:00Z' });
+		expect(encodeGame(entry)).toMatchObject({ Playtime: '12h 30m', Achievements: '10/49', 'External ID': 'rawg:274755', 'Steam App ID': '1145360', 'Last Played': '2026-10-01T20:00:00Z' });
 	});
 
-	it('keeps older keys, groups, airtime and igdb ids', () => {
-		const fm = { title: 'G', developer: 'D', publisher: 'P', genre: 'RPG', status: 'Playing', priority: 'High', wishlist: true,
-			externalId: 'igdb:1942', groups: ['A'], airtimeRecurrence: 'once', airtimeAcknowledged: '2026-10-01',
-			coverUrl: 'c', storeUrl: 's', dateAdded: 'x', dateModified: 'y' };
+	it('keeps groups, airtime and igdb ids', () => {
+		const fm = { Name: 'G', Developer: 'D', Publisher: 'P', Genre: 'RPG', Status: 'Playing', Priority: 'High', Wishlist: true,
+			'External ID': 'igdb:1942', Groups: ['A'], 'Airtime Recurrence': 'once', 'Airtime Acknowledged': '2026-10-01',
+			Cover: 'c', 'Store URL': 's', 'Date Added': 'x', 'Date Modified': 'y' };
 		const { entry } = decodeGame('Games/G', fm);
 		expect(entry).toMatchObject({ type: 'RPG', apiSource: 'igdb', apiId: '1942', wishlist: true, groups: ['A'] });
 		expect(entry.airtime).toEqual({ recurrence: 'once', acknowledged: '2026-10-01' });
-		expect(encodeGame(entry)).toMatchObject({ genre: 'RPG', developer: 'D', externalId: 'igdb:1942', storeUrl: 's', coverUrl: 'c', priority: 'High', wishlist: true, type: 'game' });
+		expect(encodeGame(entry)).toMatchObject({ Genre: 'RPG', Developer: 'D', 'External ID': 'igdb:1942', 'Store URL': 's', Cover: 'c', Priority: 'High', Wishlist: true, Type: 'game' });
 	});
 
 	it('flags a bad playtime', () => {
-		const { entry, invalidFields } = decodeGame('Games/B', { title: 'B', status: 'Playing', playtime: 'lots', dateAdded: 'x', dateModified: 'y' });
-		expect(invalidFields).toContain('playtime');
+		const { entry, invalidFields } = decodeGame('Games/B', { Name: 'B', Status: 'Playing', Playtime: 'lots', 'Date Added': 'x', 'Date Modified': 'y' });
+		expect(invalidFields).toContain('Playtime');
 		expect(entry.playtimeMinutes).toBe(0);
 	});
 });

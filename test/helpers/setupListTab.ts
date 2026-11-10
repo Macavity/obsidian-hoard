@@ -8,10 +8,10 @@ import type { HoardPluginSettings, HoardTitle } from '../../src/types';
 (globalThis as { activeDocument?: Document }).activeDocument = document;
 
 export const movieNote = (title: string, extra = ''): string =>
-	`---\ntitle: ${title}\ntype: Movie\n${extra}---\n`;
+	`---\nName: ${title}\nType: Movie\n${extra}---\n`;
 
 export const showNote = (title: string, extra = ''): string =>
-	`---\ntitle: ${title}\ntype: TV Show\nseasons: ["Season 1: 4"]\n${extra}---\n`;
+	`---\nName: ${title}\nType: TV Show\nSeasons: ["Season 1: 4"]\n${extra}---\n`;
 
 export type PosterEnqueue = (title: HoardTitle) => Promise<string | null>;
 

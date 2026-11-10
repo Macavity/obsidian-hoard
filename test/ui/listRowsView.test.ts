@@ -9,9 +9,9 @@ const qa = (root: ParentNode, sel: string): HTMLElement[] => Array.from(root.que
 const only = (id: string) => ROWS_SHELVES.map((sh) => ({ id: sh.id, enabled: sh.id === id }));
 
 const files = (): Record<string, string> => ({
-	'W/Movie/A.md': movieNote('A', 'groups: [Saga]\nstatus: Watching\n'),
-	'W/Movie/B.md': movieNote('B', 'groups: [Saga]\n'),
-	'W/TV Show/C.md': showNote('C', 'status: Completed\n'),
+	'W/Movie/A.md': movieNote('A', 'Groups: [Saga]\nStatus: Watching\n'),
+	'W/Movie/B.md': movieNote('B', 'Groups: [Saga]\n'),
+	'W/TV Show/C.md': showNote('C', 'Status: Completed\n'),
 });
 
 describe('ListTab rows view', () => {

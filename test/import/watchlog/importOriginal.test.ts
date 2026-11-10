@@ -51,11 +51,11 @@ describe('importOriginal', () => {
 	});
 
 	it('reports differing existing values as kept-value and keeps the body', async () => {
-		const existing = '---\nstatus: Completed\n---\n\nMine\n';
+		const existing = '---\nStatus: Completed\n---\n\nMine\n';
 		const { f, ctx, src } = await setupOriginal(data, { ...WATCHLOG_NOTES, 'Hoard/TV Show/Dark.md': existing });
 		const r = await importOriginal(src, ctx, () => {});
 		expect(r.review).toContainEqual({
-			path: 'Hoard/TV Show/Dark.md', reason: 'kept-value', code: 'keptValue', params: { key: 'status', hoard: 'Completed', watchlog: 'Watching' },
+			path: 'Hoard/TV Show/Dark.md', reason: 'kept-value', code: 'keptValue', params: { key: 'Status', hoard: 'Completed', watchlog: 'Watching' },
 		});
 		expect(f.files.get('Hoard/TV Show/Dark.md')).toContain('Mine');
 	});

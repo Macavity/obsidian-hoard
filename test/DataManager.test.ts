@@ -3,34 +3,35 @@ import { ReadingDataManager } from '../src/ReadingDataManager';
 import { GameDataManager } from '../src/GameDataManager';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
+import type { HoardTitle } from '../src/types';
 
 describe('DataManager on vault storage', () => {
 	it('adds a title as a note and keeps it out of data.json', async () => {
 		const { dm, f, local } = await setupDataManager({});
 		await dm.addTitle(makeTitle({ title: 'Dark', type: 'TV Show', status: 'Watching', seasons: [{ name: 'Season 1', episodes: 10, offset: 0 }] }));
 		await local.flush();
-		expect(f.files.get('W/TV Show/Dark.md')).toContain('title: Dark');
+		expect(f.files.get('W/TV Show/Dark.md')).toContain('Name: Dark');
 		expect(JSON.stringify(f.plugin.data ?? {})).not.toContain('"titles"');
 		expect(dm.getTitle('TV Show/Dark')).toBeDefined();
 	});
 
 	it('writes watched episodes in S/E notation', async () => {
-		const { dm, f } = await setupDataManager({ 'W/TV Show/Dark.md': '---\ntitle: Dark\ntype: TV Show\nseasons: ["Season 1: 10"]\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/TV Show/Dark.md': '---\nName: Dark\nType: TV Show\nSeasons: ["Season 1: 10"]\n---\n' });
 		await dm.markEpisodeWatched('TV Show/Dark', 3, true); await dm.flushPendingSave();
-		expect(f.files.get('W/TV Show/Dark.md')).toMatch(/watched: S01E03/);
+		expect(f.files.get('W/TV Show/Dark.md')).toMatch(/Watched Episodes: S01E03/);
 	});
 
 	it('debounces episode toggles into one note write', async () => {
-		const { dm, f } = await setupDataManager({ 'W/TV Show/Dark.md': '---\ntitle: Dark\ntype: TV Show\nseasons: ["Season 1: 10"]\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/TV Show/Dark.md': '---\nName: Dark\nType: TV Show\nSeasons: ["Season 1: 10"]\n---\n' });
 		dm.applyEpisodeWatchedToggle('TV Show/Dark', 1, true);
 		dm.applyEpisodeWatchedToggle('TV Show/Dark', 2, true);
-		expect(f.files.get('W/TV Show/Dark.md')).not.toContain('watched');
+		expect(f.files.get('W/TV Show/Dark.md')).not.toContain('Watched Episodes');
 		await dm.flushPendingSave();
-		expect(f.files.get('W/TV Show/Dark.md')).toMatch(/watched: S01E01-E02/);
+		expect(f.files.get('W/TV Show/Dark.md')).toMatch(/Watched Episodes: S01E01-E02/);
 	});
 
 	it('renames the note when the title changes', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n\n## Notes\nkeep\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n\n## Notes\nkeep\n' });
 		const t = dm.getTitle('Movie/A')!;
 		await dm.updateTitle({ ...t, title: 'A2' });
 		expect(f.files.has('W/Movie/A.md')).toBe(false);
@@ -40,14 +41,14 @@ describe('DataManager on vault storage', () => {
 	});
 
 	it('does not overwrite an invalid field it did not change', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\nrating: great\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\nRating: great\n---\n' });
 		await dm.setFavorite('Movie/A', true);
-		expect(f.files.get('W/Movie/A.md')).toContain('rating: great');
-		expect(f.files.get('W/Movie/A.md')).toContain('favorite: true');
+		expect(f.files.get('W/Movie/A.md')).toContain('Rating: great');
+		expect(f.files.get('W/Movie/A.md')).toContain('Favorite: true');
 	});
 
 	it('reads notes from the body and writes only the Notes section', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n\n## Notes\n\nold\n\n## Quotes\nq\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n\n## Notes\n\nold\n\n## Quotes\nq\n' });
 		const t = dm.getTitle('Movie/A')!;
 		expect(t.notes).toBe('old');
 		t.notes = 'new';
@@ -59,18 +60,18 @@ describe('DataManager on vault storage', () => {
 	});
 
 	it('leaves unknown keys and the body alone on edits', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\nmyKey: 1\n---\nbody text\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\nmyKey: 1\n---\nbody text\n' });
 		const t = dm.getTitle('Movie/A')!;
 		t.rating = 4;
 		await dm.updateTitle(t);
 		const content = f.files.get('W/Movie/A.md')!;
 		expect(content).toContain('myKey: 1');
-		expect(content).toContain('rating: 4');
+		expect(content).toContain('Rating: 4');
 		expect(content).toContain('body text');
 	});
 
 	it('removes the note and its cache entry', async () => {
-		const { dm, f, local } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n' });
+		const { dm, f, local } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
 		await dm.updatePosterUrl('Movie/A', 'https://p');
 		await dm.removeTitle('Movie/A');
 		expect(f.files.has('W/Movie/A.md')).toBe(false);
@@ -79,29 +80,29 @@ describe('DataManager on vault storage', () => {
 	});
 
 	it('picks up external edits and notifies listeners', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\nrating: 1\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\nRating: 1\n---\n' });
 		let calls = 0;
 		dm.onChange(() => calls++);
-		f.externalWrite('W/Movie/A.md', '---\ntitle: A\ntype: Movie\nrating: 5\n---\n');
+		f.externalWrite('W/Movie/A.md', '---\nName: A\nType: Movie\nRating: 5\n---\n');
 		await tick();
 		expect(dm.getTitle('Movie/A')?.rating).toBe(5);
 		expect(calls).toBeGreaterThan(0);
 	});
 
 	it('flushes silent batch updates on save()', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n', 'W/Movie/B.md': '---\ntitle: B\ntype: Movie\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n', 'W/Movie/B.md': '---\nName: B\nType: Movie\n---\n' });
 		for (const id of ['Movie/A', 'Movie/B']) {
 			const t = dm.getTitle(id)!;
 			t.status = 'Watching';
 			dm.updateTitleSilent(t);
 		}
 		await dm.save();
-		expect(f.files.get('W/Movie/A.md')).toContain('status: Watching');
-		expect(f.files.get('W/Movie/B.md')).toContain('status: Watching');
+		expect(f.files.get('W/Movie/A.md')).toContain('Status: Watching');
+		expect(f.files.get('W/Movie/B.md')).toContain('Status: Watching');
 	});
 
 	it('keeps the UI copy and ignores the echo of its own write', async () => {
-		const { dm } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n' });
+		const { dm } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
 		const t = dm.getTitle('Movie/A')!;
 		t.rating = 3;
 		await dm.updateTitle(t);
@@ -113,22 +114,22 @@ describe('DataManager on vault storage', () => {
 	});
 
 	it('full rewrite drops stale keys but keeps progress text without seasons', async () => {
-		const { dm, f } = await setupDataManager({ 'W/TV Show/X.md': '---\ntitle: X\ntype: TV Show\nwatched: S01E01-E03\nmaybe: true\nfoo: bar\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/TV Show/X.md': '---\nName: X\nType: TV Show\nWatched Episodes: S01E01-E03\nMaybe: true\nfoo: bar\n---\n' });
 		const t = dm.getTitle('TV Show/X')!;
 		delete t.maybe;
 		expect(await dm.rewriteFrontmatterIfExists(t)).toBe(true);
 		const content = f.files.get('W/TV Show/X.md')!;
-		expect(content).toContain('watched: S01E01-E03');
+		expect(content).toContain('Watched Episodes: S01E01-E03');
 		expect(content).toContain('foo: bar');
-		expect(content).not.toContain('maybe');
-		expect(content).toContain('status: Plan to watch');
+		expect(content).not.toContain('Maybe');
+		expect(content).toContain('Status: Plan to watch');
 	});
 
 	it('derives maybe, groups and airtime', async () => {
 		const { dm } = await setupDataManager({
-			'W/Movie/A.md': '---\ntitle: A\ntype: Movie\ngroups: [Marvel]\n---\n',
-			'W/Movie/B.md': '---\ntitle: B\ntype: Movie\nmaybe: true\nreleaseDate: 2099-01-01\n---\n',
-			'W/TV Show/C.md': '---\ntitle: C\ntype: TV Show\nairtimeRecurrence: weekly\nairtimeDay: 3\n---\n' });
+			'W/Movie/A.md': '---\nName: A\nType: Movie\nGroups: [Marvel]\n---\n',
+			'W/Movie/B.md': '---\nName: B\nType: Movie\nMaybe: true\nRelease Date: 2099-01-01\n---\n',
+			'W/TV Show/C.md': '---\nName: C\nType: TV Show\nAirtime Recurrence: weekly\nAirtime Day: 3\n---\n' });
 		expect(dm.getTitles().map(t => t.id).sort()).toEqual(['Movie/A', 'TV Show/C']);
 		expect(dm.getMaybeTitles().map(m => m.title)).toEqual(['B']);
 		expect(dm.getGroups()).toEqual([expect.objectContaining({ id: 'Marvel', name: 'Marvel', titleIds: ['Movie/A'] })]);
@@ -137,14 +138,14 @@ describe('DataManager on vault storage', () => {
 
 	it('derives a once entry from "To be released" + releaseDate; removing it clears the date and sets the plan status', async () => {
 		const { dm, f } = await setupDataManager({
-			'W/Movie/A.md': '---\ntitle: A\ntype: Movie\nstatus: To be released\nreleaseDate: 2099-01-01\n---\n',
-			'W/Movie/B.md': '---\ntitle: B\ntype: Movie\nstatus: Plan to watch\nreleaseDate: 2099-01-01\n---\n',
+			'W/Movie/A.md': '---\nName: A\nType: Movie\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',
+			'W/Movie/B.md': '---\nName: B\nType: Movie\nStatus: Plan to watch\nRelease Date: 2099-01-01\n---\n',
 		});
 		const entries = dm.getAirtimeEntries();
 		expect(entries).toHaveLength(1);
 		expect(entries[0]).toMatchObject({ titleId: 'Movie/A', schedule: { recurrence: 'once', releaseDate: '2099-01-01' } });
 		await dm.removeAirtimeEntry(entries[0]!.id);
-		expect(f.files.get('W/Movie/A.md')).toContain('status: Plan to watch');
+		expect(f.files.get('W/Movie/A.md')).toContain('Status: Plan to watch');
 		expect(f.files.get('W/Movie/A.md')).not.toContain('releaseDate');
 		expect(f.files.get('W/Movie/A.md')).not.toContain('airtime');
 		expect(dm.getAirtimeEntries()).toEqual([]);
@@ -152,8 +153,8 @@ describe('DataManager on vault storage', () => {
 
 	it('removing a derived book or game entry clears its release date', async () => {
 		const { dm, f, plugin, index, shared, local, layout } = await setupDataManager({
-			'W/Books/Dune.md': '---\ntitle: Dune\ntype: book\nstatus: To be released\nreleaseDate: 2099-01-01\n---\n',
-			'W/Games/Halo.md': '---\ntitle: Halo\ntype: game\nstatus: To be released\nreleaseDate: 2099-01-01\n---\n',
+			'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',
+			'W/Games/Halo.md': '---\nName: Halo\nType: game\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',
 		});
 		const deps = { index, local, shared, layout: () => layout, notify: () => {} };
 		const p = plugin as unknown as Record<string, unknown>;
@@ -170,7 +171,7 @@ describe('DataManager on vault storage', () => {
 		const book = f.files.get('W/Books/Dune.md')!;
 		const game = f.files.get('W/Games/Halo.md')!;
 		expect(book).not.toContain('2099');
-		expect(book).toContain('status: Plan to Read');
+		expect(book).toContain('Status: Plan to Read');
 		expect(game).not.toContain('2099');
 		expect(game).not.toContain('To be released');
 		expect(dm.getAirtimeEntries()).toEqual([]);
@@ -178,18 +179,18 @@ describe('DataManager on vault storage', () => {
 
 	it('removing a manual weekly entry keeps the release date', async () => {
 		const { dm, f } = await setupDataManager({
-			'W/TV Show/C.md': '---\ntitle: C\ntype: TV Show\nstatus: Watching\nreleaseDate: 2020-01-01\nairtimeRecurrence: weekly\nairtimeDay: 2\n---\n',
+			'W/TV Show/C.md': '---\nName: C\nType: TV Show\nStatus: Watching\nRelease Date: 2020-01-01\nAirtime Recurrence: weekly\nAirtime Day: 2\n---\n',
 		});
 		const [entry] = dm.getAirtimeEntries();
 		expect(dm.removeClearsReleaseDate(entry!)).toBe(false);
 		await dm.removeAirtimeEntry(entry!.id);
-		expect(f.files.get('W/TV Show/C.md')).toContain('releaseDate: 2020-01-01');
+		expect(f.files.get('W/TV Show/C.md')).toContain('Release Date: 2020-01-01');
 		expect(f.files.get('W/TV Show/C.md')).not.toContain('airtime');
 	});
 
 	it('removing a manual weekly card of a "To be released" title keeps the date and shows the premiere card', async () => {
 		const { dm, f } = await setupDataManager({
-			'W/TV Show/C.md': '---\ntitle: C\ntype: TV Show\nstatus: To be released\nreleaseDate: 2099-01-01\nairtimeRecurrence: weekly\nairtimeDay: 2\n---\n',
+			'W/TV Show/C.md': '---\nName: C\nType: TV Show\nStatus: To be released\nRelease Date: 2099-01-01\nAirtime Recurrence: weekly\nAirtime Day: 2\n---\n',
 		});
 		const [entry] = dm.getAirtimeEntries();
 		expect(entry!.schedule.recurrence).toBe('weekly');
@@ -197,8 +198,8 @@ describe('DataManager on vault storage', () => {
 		await dm.removeAirtimeEntry(entry!.id);
 		const note = f.files.get('W/TV Show/C.md')!;
 		expect(note).not.toContain('airtime');
-		expect(note).toContain('releaseDate: 2099-01-01');
-		expect(note).toContain('status: To be released');
+		expect(note).toContain('Release Date: 2099-01-01');
+		expect(note).toContain('Status: To be released');
 		expect(dm.getAirtimeEntries()).toEqual([expect.objectContaining({ titleId: 'TV Show/C', schedule: { recurrence: 'once', releaseDate: '2099-01-01' } })]);
 		// the derived card is what clears the date
 		expect(dm.removeClearsReleaseDate(dm.getAirtimeEntries()[0]!)).toBe(true);
@@ -206,7 +207,7 @@ describe('DataManager on vault storage', () => {
 
 	it('removing a manual card of a future book keeps its release date', async () => {
 		const { dm, f, plugin, index, shared, local, layout } = await setupDataManager({
-			'W/Books/Dune.md': '---\ntitle: Dune\ntype: book\nstatus: To be released\nreleaseDate: 2099-01-01\nairtimeRecurrence: monthly\nairtimeDay: 5\n---\n',
+			'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: To be released\nRelease Date: 2099-01-01\nAirtime Recurrence: monthly\nAirtime Day: 5\n---\n',
 		});
 		const deps = { index, local, shared, layout: () => layout, notify: () => {} };
 		const p = plugin as unknown as Record<string, unknown>;
@@ -218,40 +219,40 @@ describe('DataManager on vault storage', () => {
 		await dm.removeAirtimeEntry(entry!.id);
 		const note = f.files.get('W/Books/Dune.md')!;
 		expect(note).not.toContain('airtime');
-		expect(note).toContain('releaseDate: 2099-01-01');
+		expect(note).toContain('Release Date: 2099-01-01');
 		expect(dm.getAirtimeEntries()).toEqual([expect.objectContaining({ schedule: { recurrence: 'once', releaseDate: '2099-01-01' } })]);
 	});
 
 	it('writes manual schedules as airtime keys and removes them again', async () => {
-		const { dm, f } = await setupDataManager({ 'W/TV Show/C.md': '---\ntitle: C\ntype: TV Show\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/TV Show/C.md': '---\nName: C\nType: TV Show\n---\n' });
 		await dm.addAirtimeEntry({
 			id: dm.generateAirtimeId('TV Show/C'), titleId: 'TV Show/C',
 			schedule: { recurrence: 'weekly', dayOfWeek: 2, releaseTime: '20:15' },
 			currentSeason: 1, currentEpisode: 4, dateAdded: '2026-01-01',
 		});
-		expect(f.files.get('W/TV Show/C.md')).toMatch(/airtimeRecurrence: weekly[\s\S]*airtimeDay: 2/);
+		expect(f.files.get('W/TV Show/C.md')).toMatch(/Airtime Recurrence: weekly[\s\S]*Airtime Day: 2/);
 		const [entry] = dm.getAirtimeEntries();
 		expect(entry).toMatchObject({ titleId: 'TV Show/C', currentSeason: 1, currentEpisode: 4, schedule: { releaseTime: '20:15' } });
 		entry!.currentEpisode = 5;
 		entry!.lastAcknowledgedDate = '2026-10-19';
 		await dm.updateAirtimeEntry(entry!);
-		expect(f.files.get('W/TV Show/C.md')).toMatch(/airtimeEpisode: 5/);
-		expect(f.files.get('W/TV Show/C.md')).toMatch(/airtimeAcknowledged: 2026-10-19/);
+		expect(f.files.get('W/TV Show/C.md')).toMatch(/Airtime Episode: 5/);
+		expect(f.files.get('W/TV Show/C.md')).toMatch(/Airtime Acknowledged: 2026-10-19/);
 		await dm.removeAirtimeEntry(entry!.id);
 		expect(f.files.get('W/TV Show/C.md')).not.toContain('airtime');
 		expect(dm.getAirtimeEntries()).toEqual([]);
 	});
 
 	it('stores a reading schedule in the book note', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Books/Dune.md': '---\ntitle: Dune\ntype: book\nstatus: Reading\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: Reading\n---\n' });
 		await dm.addAirtimeEntry({
 			id: dm.generateReadingAirtimeId('Books/Dune'), titleId: 'Books/Dune', source: 'reading', readingKind: 'book',
 			schedule: { recurrence: 'monthly', dayOfMonth: 15 }, currentEpisode: 7, dateAdded: '2026-01-01',
 		});
 		const content = f.files.get('W/Books/Dune.md')!;
-		expect(content).toMatch(/airtimeRecurrence: monthly/);
-		expect(content).toMatch(/airtimeDay: 15/);
-		expect(content).toMatch(/airtimeEpisode: 7/);
+		expect(content).toMatch(/Airtime Recurrence: monthly/);
+		expect(content).toMatch(/Airtime Day: 15/);
+		expect(content).toMatch(/Airtime Episode: 7/);
 		expect(dm.getAirtimeEntries()).toEqual([expect.objectContaining({
 			titleId: 'Books/Dune', source: 'reading', readingKind: 'book', currentEpisode: 7,
 			schedule: expect.objectContaining({ recurrence: 'monthly', dayOfMonth: 15 }) as unknown,
@@ -261,8 +262,8 @@ describe('DataManager on vault storage', () => {
 
 	it('derives reading and game entries from their release status', async () => {
 		const { dm } = await setupDataManager({
-			'W/Books/Dune.md': '---\ntitle: Dune\ntype: book\nstatus: To be released\nreleaseDate: 2099-01-01\n---\n',
-			'W/Games/Hades.md': '---\ntitle: Hades\nstatus: To be released\nreleaseDate: 2099-02-01\n---\n',
+			'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',
+			'W/Games/Hades.md': '---\nName: Hades\nStatus: To be released\nRelease Date: 2099-02-01\n---\n',
 		});
 		const entries = dm.getAirtimeEntries();
 		expect(entries.find((e) => e.titleId === 'Books/Dune')).toMatchObject({ source: 'reading', readingKind: 'book', schedule: { recurrence: 'once', releaseDate: '2099-01-01' } });
@@ -272,20 +273,20 @@ describe('DataManager on vault storage', () => {
 	it('adds a maybe title as a note and adopts it without a second note', async () => {
 		const { dm, f } = await setupDataManager({});
 		await dm.addMaybeTitle({ id: dm.generateMaybeId('B'), title: 'B', type: 'Movie', releaseDate: '2099-01-01', externalLink: '', totalEpisodes: 1, episodeDuration: 120, dateAdded: '2026-01-01' });
-		expect(f.files.get('W/Movie/B.md')).toContain('maybe: true');
+		expect(f.files.get('W/Movie/B.md')).toContain('Maybe: true');
 		expect(dm.getMaybeTitles().map((m) => m.id)).toEqual(['Movie/B']);
 		expect(dm.getTitles()).toEqual([]);
 		await dm.addTitle(makeTitle({ title: 'B', type: 'Movie', status: 'Watching', rating: 4 }));
 		expect(f.files.has('W/Movie/B 2.md')).toBe(false);
 		const content = f.files.get('W/Movie/B.md')!;
-		expect(content).not.toContain('maybe');
-		expect(content).toContain('rating: 4');
+		expect(content).not.toContain('Maybe');
+		expect(content).toContain('Rating: 4');
 		expect(dm.getMaybeTitles()).toEqual([]);
 		expect(dm.getTitles().map((t) => t.id)).toEqual(['Movie/B']);
 	});
 
 	it('removes a maybe title by trashing its note', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/B.md': '---\ntitle: B\ntype: Movie\nmaybe: true\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/B.md': '---\nName: B\nType: Movie\nMaybe: true\n---\n' });
 		await dm.removeMaybeTitle('Movie/B');
 		expect(f.files.has('W/Movie/B.md')).toBe(false);
 		expect(dm.getMaybeTitles()).toEqual([]);
@@ -293,13 +294,13 @@ describe('DataManager on vault storage', () => {
 
 	it('writes group membership to the groups property', async () => {
 		const { dm, f } = await setupDataManager({
-			'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n',
-			'W/Movie/B.md': '---\ntitle: B\ntype: Movie\n---\n',
+			'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n',
+			'W/Movie/B.md': '---\nName: B\nType: Movie\n---\n',
 		});
 		const log = vi.fn(() => Promise.resolve());
 		dm.setHistoryManager({ log } as never);
 		await dm.addGroup({ id: dm.generateGroupId('Marvel'), name: 'Marvel', titleIds: ['Movie/A'], dateAdded: '' });
-		expect(f.files.get('W/Movie/A.md')).toMatch(/groups:\n\s+- Marvel/);
+		expect(f.files.get('W/Movie/A.md')).toMatch(/Groups:\n\s+- Marvel/);
 		await dm.addTitleToGroup('Marvel', 'Movie/B');
 		expect(dm.getGroup('Marvel')?.titleIds.sort()).toEqual(['Movie/A', 'Movie/B']);
 		await dm.updateGroup({ ...dm.getGroup('Marvel')!, name: 'MCU', titleIds: ['Movie/B'] });
@@ -322,47 +323,125 @@ describe('DataManager on vault storage', () => {
 
 	it('queues poster fetches for identified titles without a cached poster', async () => {
 		const { dm, f, posterQueue } = await setupDataManager({
-			'W/Movie/A.md': '---\ntitle: A\ntype: Movie\nexternalId: tmdb:movie:603\n---\n',
-			'W/Movie/B.md': '---\ntitle: B\ntype: Movie\n---\n',
+			'W/Movie/A.md': '---\nName: A\nType: Movie\nExternal ID: tmdb:movie:603\n---\n',
+			'W/Movie/B.md': '---\nName: B\nType: Movie\n---\n',
 		});
 		expect(posterQueue).toEqual(['Movie/A']);
 		expect(dm.getTitle('Movie/A')?.posterUrl).toBe('');
-		f.externalWrite('W/Movie/C.md', '---\ntitle: C\ntype: Movie\nexternalId: tmdb:movie:604\n---\n');
+		f.externalWrite('W/Movie/C.md', '---\nName: C\nType: Movie\nExternal ID: tmdb:movie:604\n---\n');
 		await tick();
 		expect(posterQueue).toEqual(['Movie/A', 'Movie/C']);
 	});
 
 	it('keeps an external change when a stale copy edits another field', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\nrating: 1\n---\n\n## Notes\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\nRating: 1\n---\n\n## Notes\n' });
 		const t = dm.getTitle('Movie/A')!;
-		f.externalWrite('W/Movie/A.md', '---\ntitle: A\ntype: Movie\nrating: 5\n---\n\n## Notes\n');
+		f.externalWrite('W/Movie/A.md', '---\nName: A\nType: Movie\nRating: 5\n---\n\n## Notes\n');
 		await tick();
 		dm.getTitles();
 		t.review = 'nice';
 		await dm.updateTitle(t);
 		const c = f.files.get('W/Movie/A.md')!;
-		expect(c).toContain('rating: 5');
-		expect(c).toContain('review: nice');
+		expect(c).toContain('Rating: 5');
+		expect(c).toContain('Review: nice');
 	});
 
 	it('flushes pending silent edits on flushPendingSave', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
 		const t = dm.getTitle('Movie/A')!;
 		t.status = 'Watching';
 		dm.updateTitleSilent(t);
 		await dm.flushPendingSave();
-		expect(f.files.get('W/Movie/A.md')).toContain('status: Watching');
+		expect(f.files.get('W/Movie/A.md')).toContain('Status: Watching');
 	});
 
 	it('keeps an external change when a spread copy edits another field', async () => {
-		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\nrating: 1\n---\n\n## Notes\n' });
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\nRating: 1\n---\n\n## Notes\n' });
 		const t = dm.getTitle('Movie/A')!;
-		f.externalWrite('W/Movie/A.md', '---\ntitle: A\ntype: Movie\nrating: 5\n---\n\n## Notes\n');
+		f.externalWrite('W/Movie/A.md', '---\nName: A\nType: Movie\nRating: 5\n---\n\n## Notes\n');
 		await tick();
 		dm.getTitles();
 		await dm.updateTitle({ ...t, review: 'nice' });
 		const c = f.files.get('W/Movie/A.md')!;
-		expect(c).toContain('rating: 5');
-		expect(c).toContain('review: nice');
+		expect(c).toContain('Rating: 5');
+		expect(c).toContain('Review: nice');
+	});
+
+	describe('remaining watch time', () => {
+		const show = (status: string, over: Partial<HoardTitle> = {}) =>
+			makeTitle({ type: 'TV Show', status, episodeDuration: 40, totalEpisodes: 10, watchedEpisodes: [1, 2, 3], ...over });
+
+		it('counts unwatched episodes for Plan to watch and Watching, nothing otherwise', async () => {
+			const { dm } = await setupDataManager({});
+			expect(dm.calcTimeRemaining(show('Watching'))).toBe(7 * 40);
+			expect(dm.calcTimeRemaining(show('Plan to watch'))).toBe(7 * 40);
+			expect(dm.calcTimeRemaining(show('Completed'))).toBe(0);
+			expect(dm.calcTimeRemaining(show('Dropped'))).toBe(0);
+			expect(dm.calcTimeRemaining(show('To be released'))).toBe(0);
+			expect(dm.calcTimeRemaining(show('Watching', { episodeDuration: 0 }))).toBe(0);
+		});
+
+		it('treats a movie as remaining until watched', async () => {
+			const { dm } = await setupDataManager({});
+			const movie = (watched: number[]) => makeTitle({ type: 'Movie', status: 'Watching', episodeDuration: 100, watchedEpisodes: watched });
+			expect(dm.calcTimeRemaining(movie([]))).toBe(100);
+			expect(dm.calcTimeRemaining(movie([1]))).toBe(0);
+			expect(dm.calcTimeRemainingForModal(movie([]))).toBe(100);
+			expect(dm.calcTimeRemainingForModal(movie([1]))).toBe(0);
+		});
+
+		it('modal variant also counts Dropped titles', async () => {
+			const { dm } = await setupDataManager({});
+			expect(dm.calcTimeRemainingForModal(show('Dropped'))).toBe(7 * 40);
+			expect(dm.calcTimeRemainingForModal(show('Watching'))).toBe(7 * 40);
+			expect(dm.calcTimeRemainingForModal(show('Plan to watch'))).toBe(7 * 40);
+			expect(dm.calcTimeRemainingForModal(show('Completed'))).toBe(0);
+			expect(dm.calcTimeRemainingForModal(show('To be released'))).toBe(0);
+			expect(dm.calcTimeRemainingForModal(show('Watching', { episodeDuration: 0 }))).toBe(0);
+		});
+	});
+
+	it('updateManualCredits stores cleaned names per field and notifies', async () => {
+		const { dm, f } = await setupDataManager({
+			'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n',
+		});
+		await dm.updateCredits('Movie/A', ['Nolan'], []);
+		let n = 0;
+		dm.onChange(() => n++);
+		await dm.updateManualCredits('Movie/A', 'director', [' Nolan ', 'Villeneuve', 'villeneuve', '']);
+		expect(dm.getTitle('Movie/A')?.manualDirector).toEqual(['Villeneuve']);
+		expect(f.files.get('W/Movie/A.md')).toMatch(/Added Director:\n\s+- Villeneuve/);
+		await dm.updateManualCredits('Movie/A', 'cast', ['Hanks']);
+		expect(dm.getTitle('Movie/A')?.manualCast).toEqual(['Hanks']);
+		await dm.updateManualCredits('Movie/A', 'studio', ['A24']);
+		expect(dm.getTitle('Movie/A')?.manualStudio).toEqual(['A24']);
+		expect(f.files.get('W/Movie/A.md')).toMatch(/Added Studio:\n\s+- A24/);
+		await dm.updateManualCredits('Movie/ghost', 'cast', ['X']);
+		expect(n).toBe(3);
+	});
+
+	it('updateTmdbIdentity caches the id and collection silently', async () => {
+		const { dm, local } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
+		let n = 0;
+		dm.onChange(() => n++);
+		dm.updateTmdbIdentity('Movie/ghost', 1, 2);
+		dm.updateTmdbIdentity('Movie/A', 603, 2344);
+		const t = dm.getTitle('Movie/A')!;
+		expect(t).toMatchObject({ tmdbId: 603, tmdbMediaType: 'movie', collectionId: 2344 });
+		expect(local.getCache('Movie/A')).toMatchObject({ tmdbId: 603, collectionId: 2344 });
+		// null id keeps the verdict only; identical values are a no-op
+		dm.updateTmdbIdentity('Movie/A', null, 0);
+		expect(dm.getTitle('Movie/A')).toMatchObject({ tmdbId: 603, collectionId: 0 });
+		dm.updateTmdbIdentity('Movie/A', 603, 0);
+		expect(n).toBe(0);
+	});
+
+	it('updateTmdbIdentity with no id and no prior id records only the collection', async () => {
+		const { dm } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
+		dm.updateTmdbIdentity('Movie/A', null, 7);
+		const t = dm.getTitle('Movie/A')!;
+		expect(t.collectionId).toBe(7);
+		expect(t.tmdbId).toBeUndefined();
+		expect(t.tmdbMediaType).toBeUndefined();
 	});
 });

@@ -7,11 +7,11 @@ import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 const fmOf = (src: string | undefined): Record<string, unknown> =>
 	parse(/^---\n([\s\S]*?)\n?---/.exec(src ?? '')?.[1] ?? '') as Record<string, unknown>;
 
-const API_KEYS = ['director', 'cast', 'studio', 'trailer', 'communityRating', 'communityVotes', 'communitySource'];
+const API_KEYS = ['Director', 'Cast', 'Studio', 'Trailer', 'Community Rating', 'Community Votes', 'Community Source'];
 
 describe('API values live in the cache, note values override (E9)', () => {
 	it('title codec: cache values are never encoded', () => {
-		const { entry } = decodeTitle('Movie/A', { title: 'A', type: 'Movie' }, {
+		const { entry } = decodeTitle('Movie/A', { Name: 'A', Type: 'Movie' }, {
 			director: ['D'], cast: ['C'], studio: ['S'], trailerUrl: 'https://t',
 			communityRating: 7, communityVotes: 10, communitySource: 'tmdb',
 		});
@@ -22,8 +22,8 @@ describe('API values live in the cache, note values override (E9)', () => {
 
 	it('title codec: note fields are overrides that win and round-trip', () => {
 		const fm = {
-			title: 'A', type: 'Movie', director: ['Mine'], cast: ['X', 'Y'], studio: 'Studio',
-			trailer: 'https://mytrailer', communityRating: 9, communityVotes: 1, communitySource: 'imdb',
+			Name: 'A', Type: 'Movie', Director: ['Mine'], Cast: ['X', 'Y'], Studio: 'Studio',
+			Trailer: 'https://mytrailer', 'Community Rating': 9, 'Community Votes': 1, 'Community Source': 'imdb',
 		};
 		const { entry, invalidFields } = decodeTitle('Movie/A', fm, {
 			director: ['D'], trailerUrl: 'https://t', communityRating: 7, communityVotes: 10, communitySource: 'tmdb',
@@ -36,11 +36,11 @@ describe('API values live in the cache, note values override (E9)', () => {
 		// the API values stay where they were
 		expect(entry.director).toEqual(['D']);
 		const out = encodeTitle(entry, 0);
-		expect(out).toMatchObject({ director: ['Mine'], cast: ['X', 'Y'], studio: ['Studio'], trailer: 'https://mytrailer', communityRating: 9, communityVotes: 1, communitySource: 'imdb' });
+		expect(out).toMatchObject({ Director: ['Mine'], Cast: ['X', 'Y'], Studio: ['Studio'], Trailer: 'https://mytrailer', 'Community Rating': 9, 'Community Votes': 1, 'Community Source': 'imdb' });
 	});
 
 	it('credits backfill writes only the cache', async () => {
-		const note = '---\ntitle: A\ntype: Movie\nexternalLink: https://www.imdb.com/title/tt1\n---\n';
+		const note = '---\nName: A\nType: Movie\nURL: https://www.imdb.com/title/tt1\n---\n';
 		const { dm, f, local } = await setupDataManager({ 'W/Movie/A.md': note });
 		await dm.updateCredits('Movie/A', ['Dir'], ['Act']);
 		await dm.updateStudio('Movie/A', ['Std']);
@@ -50,7 +50,7 @@ describe('API values live in the cache, note values override (E9)', () => {
 	});
 
 	it('a note override wins over the cache and survives edits', async () => {
-		const { dm, f, local } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\ndirector: [Mine]\n---\n' });
+		const { dm, f, local } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\nDirector: [Mine]\n---\n' });
 		await dm.updateCredits('Movie/A', ['Dir'], ['Act']);
 		expect(getTitleCredits(dm.getTitle('Movie/A')!, 'director')).toEqual(['Mine']);
 		expect(local.getCache('Movie/A')?.director).toEqual(['Dir']);
@@ -58,8 +58,8 @@ describe('API values live in the cache, note values override (E9)', () => {
 		t.rating = 3;
 		await dm.updateTitle(t);
 		const fm = fmOf(f.files.get('W/Movie/A.md'));
-		expect(fm.director).toEqual(['Mine']);
-		expect(fm).not.toHaveProperty('cast');
+		expect(fm.Director).toEqual(['Mine']);
+		expect(fm).not.toHaveProperty('Cast');
 	});
 
 	it('adding a title keeps fetched values out of the note', async () => {

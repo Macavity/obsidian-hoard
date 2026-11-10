@@ -146,7 +146,7 @@
 }
 
 .hoard-upcoming-card,
-.hoard-nowwatching-card {
+.hoard-now-card {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -180,29 +180,29 @@
   color: var(--interactive-accent);
 }
 
-/* hoard-nowwatching widget */
-.hoard-wnowwatching {
+/* hoard-now widget */
+.hoard-wnow {
   display: inline-block;
   margin: 2px 0;
 }
 
-.hoard-nowwatching-empty {
+.hoard-now-empty {
   color: var(--text-muted);
   font-style: italic;
   font-size: var(--font-ui-small);
 }
 
-.hoard-nowwatching-title {
+.hoard-now-title {
   font-weight: 600;
   font-size: var(--font-ui-small);
 }
 
-.hoard-nowwatching-ep {
+.hoard-now-ep {
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.hoard-nowwatching-bar-wrap {
+.hoard-now-bar-wrap {
   width: 60px;
   height: 4px;
   background: var(--background-modifier-border);
@@ -210,20 +210,20 @@
   overflow: hidden;
 }
 
-.hoard-nowwatching-bar {
+.hoard-now-bar {
   height: 100%;
   background: var(--interactive-accent);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
 
-.hoard-nowwatching-pct {
+.hoard-now-pct {
   font-size: 11px;
   color: var(--text-muted);
   font-weight: 600;
 }
 
-/* hoard-nowwatching full layout */
+/* hoard-now full layout */
 .hoard-full-card-nw {
   height: auto;
   width: 200px;

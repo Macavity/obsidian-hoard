@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, relative, resolve, sep } from "node:path";
 import { parse } from "yaml";
+import { COMMON_PROPS } from "../../src/storage/properties";
 import { VaultLayout } from "../../src/storage/VaultLayout";
 import { decodeTitle } from "../../src/storage/titleCodec";
 import { decodeBook, decodeManga } from "../../src/storage/readingCodec";
@@ -27,7 +28,7 @@ export interface VaultFixtures {
 	customLists: string[];
 	/** Entry notes the index skips: unreadable properties or a decoder error. */
 	skipped: string[];
-	/** Vault-relative paths of notes whose properties carry `externalId`. */
+	/** Vault-relative paths of notes whose properties carry `External ID`. */
 	withExternalId: string[];
 	/** Vault-relative paths of every Markdown note. */
 	paths: string[];
@@ -80,11 +81,11 @@ function decodeEntry(c: NonNullable<ReturnType<VaultLayout["classify"]>>, path: 
 		out.skipped.push(path);
 		return;
 	}
-	if ("externalId" in fm) out.withExternalId.push(path);
+	if (COMMON_PROPS.externalId in fm) out.withExternalId.push(path);
 	try {
 		if (c.kind === "title") out.titles.push(decodeTitle(c.id, fm, undefined).entry);
-		else if (c.kind === "book") out.books.push(decodeBook(c.id, fm).entry);
-		else if (c.kind === "manga") out.manga.push(decodeManga(c.id, fm).entry);
+		else if (c.kind === "book") out.books.push(decodeBook(c.id, fm, []).entry);
+		else if (c.kind === "manga") out.manga.push(decodeManga(c.id, fm, []).entry);
 		else out.games.push(decodeGame(c.id, fm).entry);
 	} catch {
 		out.skipped.push(path);

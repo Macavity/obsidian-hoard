@@ -42,7 +42,7 @@ export interface HoardTitle {
 	favorite?: boolean;
 	/** ISO stamp of the last favorite toggle-on; absent on pre-field favorites */
 	dateFavorited?: string;
-	/** note field `poster`. '' = unfetched, 'none' = nothing found (cache only), else a URL */
+	/** note property `Cover`. '' = unfetched, 'none' = nothing found (cache only), else a URL */
 	posterUrl?: string;
 	/** '' = unfetched, 'none' = source has no trailer (e.g. OMDb), else a YouTube URL */
 	trailerUrl?: string;
@@ -99,7 +99,7 @@ export function getCollectionId(title: HoardTitle): number | null {
 	return id !== undefined && id !== COLLECTION_NONE ? id : null;
 }
 
-/** `tt…` out of a stored externalLink; both OMDb and TMDB adds write an imdb.com URL */
+/** `tt…` out of a stored `URL` property; both OMDb and TMDB adds write an imdb.com URL */
 export function imdbIdFromLink(link: string | undefined): string {
 	if (!link) return '';
 	return link.match(/\/(tt\d+)/)?.[1] ?? '';
@@ -1329,7 +1329,7 @@ export function getCommunityRating(title: HoardTitle): {
 	};
 }
 
-/** Poster URL to render (the note's `poster`, else the fetched one). */
+/** Poster URL to render (the note's `Cover`, else the fetched one). */
 export function getDisplayPoster(title: HoardTitle): string {
 	return title.posterUrl ?? '';
 }

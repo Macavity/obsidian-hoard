@@ -1,7 +1,7 @@
 // Flow: change the rating and the Notes text in the detail modal of the detail fixture.
 // The detail modal has no review control, so the rating stands in. Allowed changes: `rating`, `dateModified` (every
 // foreground write stamps it) and `priority`: the fixture is Completed without a priority key, which decodes as Medium,
-// and updateTitle clears the priority of a Completed title, so the first write persists an explicit `priority: ""`.
+// and updateTitle clears the priority of a Completed title, so the first write persists an explicit `Priority: ""`.
 // The foreign `## Mine` section must survive.
 import { assert, evalJs, VAULT_PATH, waitFor } from "../../../scripts/lib/cli.mjs";
 import { click, press, type } from "../ui.mjs";
@@ -16,7 +16,7 @@ const MARKER = " Smoke note edit.";
 
 export async function detailEdit() {
 	const before = readNote(VAULT_PATH, FIXTURE_DETAIL_TITLE);
-	assert(before.props.rating !== 3, "fixture rating already 3");
+	assert(before.props.Rating !== 3, "fixture rating already 3");
 	await openDetail(TITLE_ID);
 
 	await click(NOTES);
@@ -27,17 +27,17 @@ export async function detailEdit() {
 	await waitStable(STAR);
 	await click(STAR);
 	try {
-		await waitFor(() => readNote(VAULT_PATH, FIXTURE_DETAIL_TITLE).props.rating === 3, 10000);
+		await waitFor(() => readNote(VAULT_PATH, FIXTURE_DETAIL_TITLE).props.Rating === 3, 10000);
 	} catch (e) {
 		const now = readNote(VAULT_PATH, FIXTURE_DETAIL_TITLE);
 		const ui = evalJs(`JSON.stringify([document.querySelector(".hoard-detail-notes-input")?.value, document.querySelector(".hoard-detail-stars")?.textContent, document.querySelectorAll(".modal-container").length])`);
-		throw new Error(`${e.message}; note rating=${now.props.rating} body=${JSON.stringify(now.body)} ui=${ui}`);
+		throw new Error(`${e.message}; note rating=${now.props.Rating} body=${JSON.stringify(now.body)} ui=${ui}`);
 	}
 
 	const after = readNote(VAULT_PATH, FIXTURE_DETAIL_TITLE);
 	const changed = changedProps(before.props, after.props).sort();
-	assert(JSON.stringify(changed) === JSON.stringify(["dateModified", "priority", "rating"]), `changed properties: ${changed.join(", ")}`);
-	assert(after.props.priority === "", `priority: ${JSON.stringify(after.props.priority)}`);
+	assert(JSON.stringify(changed) === JSON.stringify(["Date Modified", "Priority", "Rating"]), `changed properties: ${changed.join(", ")}`);
+	assert(after.props.Priority === "", `priority: ${JSON.stringify(after.props.Priority)}`);
 	assert(bodyWithout(after.body, "Notes") === bodyWithout(before.body, "Notes"), "body outside ## Notes changed");
 	assert(after.body.includes("## Mine") && after.body.includes("Foreign section"), "foreign section lost");
 }

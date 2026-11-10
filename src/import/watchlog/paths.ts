@@ -4,10 +4,17 @@ import { FOLDERS, type VaultLayout } from '../../storage/VaultLayout';
 // '' (Hoard at the vault root) excludes nothing: a nested fork is never below it in the managed sense
 const inside = (path: string, folder: string): boolean => folder !== '' && (path === folder || path.startsWith(`${folder}/`));
 
-/** Folders a layout manages below its root: one per type plus the book, manga, game and list folders. */
+const below = (layout: VaultLayout, rel: string[]): string[] =>
+	[...new Set(rel.map((r) => normalizePath(layout.root ? `${layout.root}/${r}` : r)))];
+
+/** Folders that hold entry notes (one per type plus the book, manga and game folders); no custom lists. */
+export function entryFolders(layout: VaultLayout, typeNames: string[]): string[] {
+	return below(layout, [...typeNames, FOLDERS.book, FOLDERS.manga, FOLDERS.game]);
+}
+
+/** Folders a layout manages below its root: the entry folders plus the custom list folder. */
 export function managedFolders(layout: VaultLayout, typeNames: string[]): string[] {
-	const rel = [...typeNames, FOLDERS.book, FOLDERS.manga, FOLDERS.game, FOLDERS.customLists];
-	return [...new Set(rel.map((r) => normalizePath(layout.root ? `${layout.root}/${r}` : r)))];
+	return below(layout, [...typeNames, FOLDERS.book, FOLDERS.manga, FOLDERS.game, FOLDERS.customLists]);
 }
 
 /**

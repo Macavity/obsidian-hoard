@@ -5,6 +5,8 @@ description: How books and manga differ in model and progress, the release-statu
 source:
   - src/ReadingDataManager.ts
   - src/storage/readingCodec.ts
+  - src/storage/properties.ts
+  - src/storage/EntryIndex.ts
   - src/ReadingTab.ts
   - src/ReadingDetailModal.ts
   - src/AddReadingModal.ts
@@ -14,7 +16,7 @@ source:
   - src/csv/csvCore.ts
   - src/coverRefresh.ts
   - src/csv/CsvModalBase.ts
-source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
+source_commit: 0cb6cc1466eedd353b592751d46e18abf3fc4d68
 ---
 
 # Reading
@@ -32,15 +34,16 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
 
 ## Model
 
-- Common: `title`, `author`, `status`, `rating`, favourite, start/finish/release dates,
-  `coverUrl`, `externalLink`, `groups`, airtime properties, `cf_*` custom fields, `type: book|manga`.
+- Common: `Name`, `Author`, `Status`, `Rating`, favourite, start/finish/release dates,
+  `Cover`, `URL`, `Groups`, airtime properties, `Custom <name>` custom fields, `Type: book|manga`; names in
+  [properties](../concepts/properties.md).
 - Status: `Reading | Completed | Plan to Read | To be released | Dropped`; "To be released" is
   never user-selectable. An unknown stored status decodes to "Plan to Read" and is flagged invalid.
-- **Book** progress unit is `pages` (default) or `words` (`progressUnit`); both counter pairs are
+- **Book** progress unit is `pages` (default) or `words` (`Progress Unit`); both counter pairs are
   stored, `bookUnitProgress` picks the active one, and word properties are written only when the
-  unit is words or a word count is non-zero. Also chapters and `googleBooksId`.
-- **Manga**: chapters and volumes, `malId`. Card progress uses chapters only.
-- Ids: `gbooks:` / `mal:manga:` in `externalId` ([external id](../concepts/external-id.md)).
+  unit is words or a word count is non-zero. Also chapters and `Google Books ID`.
+- **Manga**: chapters and volumes, `MAL ID` (a number). Card progress uses chapters only.
+- Ids: `gbooks:` / `mal:manga:` in `External ID` ([external id](../concepts/external-id.md)).
 
 ## Rules worth knowing
 
@@ -52,8 +55,14 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
   chapters) or manga chapters reach a non-zero total, status becomes Completed and `dateFinished`
   is stamped.
 - **Custom columns**: definitions (`id`, `name`, `type` text/number/select, options, colour) are
-  shared config (`bookColumns` / `mangaColumns`); values live in each note as `cf_<columnId>`.
-  Removing a column deletes the value from every note. Columns are not part of CSV.
+  shared config (`bookColumns` / `mangaColumns`); values live in each note as `Custom <column name>` and in memory by column id
+  (`customFields`). The codec takes the kind's column list; `EntryIndex.setColumns` re-decodes reading
+  notes when a name changes. Renaming a column moves the key in all notes of the kind
+  (`ReadingDataManager.updateColumn`, notes first, then the setting); names are unique per kind, ignoring
+  case. Removing a column and the full rewrite never delete values. Columns are not part of CSV.
+  The values of a deleted column stay in the notes and reappear when a column with the same name is created
+  again. If one device renames a column while another edits that field before the base has synced, the edit
+  can end up under the old key (`Custom <old>`); nothing is lost.
 - **Quotes** are not indexed: the detail modal parses `## Quotes` for `> [!quote] <reference>`
   callouts; `appendQuote` inserts newest first and creates the section when missing.
 - **Covers**: cards without a cover fetch lazily by id, else by title search taking the first

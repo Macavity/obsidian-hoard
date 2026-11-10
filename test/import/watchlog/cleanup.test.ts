@@ -41,7 +41,7 @@ describe('planCleanup', () => {
 		const before = await planCleanup(f.app, src, layout, ['original']);
 		expect(before.find((i) => i.id === 'original-notes')).toBeUndefined();
 		// counterparts carry the WatchLog body (as the import writes it); Shopping differs
-		f.externalWrite('Hoard/TV Show/Dark.md', '---\nstatus: Watching\n---\n\n## Notes\n\nGreat show\n');
+		f.externalWrite('Hoard/TV Show/Dark.md', '---\nStatus: Watching\n---\n\n## Notes\n\nGreat show\n');
 		f.externalWrite('Hoard/Books/Dune.md', WATCHLOG_NOTES['WatchLog/Reading/Books/Dune.md']!);
 		f.externalWrite('Hoard/CustomLists/Shopping.md', 'x');
 		const items = await planCleanup(f.app, src, layout, ['original']);

@@ -10,9 +10,9 @@ import { setupDataManager } from './helpers/setupDataManager';
 const fmOf = (src: string | undefined): Record<string, unknown> =>
 	parse(/^---\n([\s\S]*?)\n?---/.exec(src ?? '')?.[1] ?? '') as Record<string, unknown>;
 
-const GAME = (cover: string) => `---\ntitle: Hades\nstatus: Playing\ntype: game\nexternalId: rawg:1\ncoverUrl: ${cover}\n---\n`;
-const BOOK = '---\ntitle: Dune\nstatus: Reading\ntype: book\ncoverUrl: https://mine\nexternalId: gbooks:abc\n---\n';
-const MANGA = '---\ntitle: Berserk\nstatus: Reading\ntype: manga\ncoverUrl: https://mine\nexternalId: mal:manga:2\n---\n';
+const GAME = (cover: string) => `---\nName: Hades\nStatus: Playing\nType: game\nExternal ID: rawg:1\nCover: ${cover}\n---\n`;
+const BOOK = '---\nName: Dune\nStatus: Reading\nType: book\nCover: https://mine\nExternal ID: gbooks:abc\n---\n';
+const MANGA = '---\nName: Berserk\nStatus: Reading\nType: manga\nCover: https://mine\nExternal ID: mal:manga:2\n---\n';
 
 type Api = Partial<CoverRefreshDeps['api']>;
 
@@ -38,25 +38,25 @@ describe('refreshAllCovers', () => {
 		const { res, g } = await run({ 'W/Games/Hades.md': GAME('https://mine') }, {
 			getRawgGameDetails: () => Promise.resolve({ coverUrl: 'https://api/x' }),
 		} as unknown as Api);
-		expect(fmOf(g.f.files.get('W/Games/Hades.md')).coverUrl).toBe('https://api/x');
+		expect(fmOf(g.f.files.get('W/Games/Hades.md')).Cover).toBe('https://api/x');
 		expect(res.updated).toBe(1);
 	});
 
 	it('game: empty or failing API keeps the cover', async () => {
 		for (const getRawgGameDetails of [() => Promise.resolve(null), () => Promise.reject(new Error('x'))]) {
 			const { res, g } = await run({ 'W/Games/Hades.md': GAME('https://mine') }, { getRawgGameDetails });
-			expect(fmOf(g.f.files.get('W/Games/Hades.md')).coverUrl).toBe('https://mine');
+			expect(fmOf(g.f.files.get('W/Games/Hades.md')).Cover).toBe('https://mine');
 			expect(res.updated).toBe(0);
 			expect(res.unchanged).toBe(1);
 		}
 	});
 
 	it('title: "no poster" never replaces an existing poster; a found one does', async () => {
-		const note = '---\ntitle: A\ntype: Movie\nposter: https://mine\n---\n';
+		const note = '---\nName: A\nType: Movie\nCover: https://mine\n---\n';
 		// PosterService on a clean "nothing found" writes 'none' with overwrite
 		const { d } = await run({ 'W/Movie/A.md': note }, {}, async (dm, id) => { await dm.updatePosterUrl(id, 'none', true); return null; });
 		expect(d.dm.getTitle('Movie/A')?.posterUrl).toBe('https://mine');
-		expect(fmOf(d.f.files.get('W/Movie/A.md')).poster).toBe('https://mine');
+		expect(fmOf(d.f.files.get('W/Movie/A.md')).Cover).toBe('https://mine');
 	});
 
 	it('book and manga: cover is overwritten on success, kept on failure', async () => {
@@ -65,16 +65,16 @@ describe('refreshAllCovers', () => {
 			getGoogleBookById: () => Promise.resolve({ coverUrl: 'https://api/b' }),
 			getMangaByMalId: () => Promise.resolve({ coverUrl: 'https://api/m' }),
 		} as unknown as Api);
-		expect(fmOf(ok.r.f.files.get('W/Books/Dune.md')).coverUrl).toBe('https://api/b');
-		expect(fmOf(ok.r.f.files.get('W/Manga/Berserk.md')).coverUrl).toBe('https://api/m');
+		expect(fmOf(ok.r.f.files.get('W/Books/Dune.md')).Cover).toBe('https://api/b');
+		expect(fmOf(ok.r.f.files.get('W/Manga/Berserk.md')).Cover).toBe('https://api/m');
 		expect(ok.res.updated).toBe(2);
 
 		const bad = await run(files, {
 			getGoogleBookById: () => Promise.reject(new Error('x')),
 			getMangaByMalId: () => Promise.resolve(null),
 		});
-		expect(fmOf(bad.r.f.files.get('W/Books/Dune.md')).coverUrl).toBe('https://mine');
-		expect(fmOf(bad.r.f.files.get('W/Manga/Berserk.md')).coverUrl).toBe('https://mine');
+		expect(fmOf(bad.r.f.files.get('W/Books/Dune.md')).Cover).toBe('https://mine');
+		expect(fmOf(bad.r.f.files.get('W/Manga/Berserk.md')).Cover).toBe('https://mine');
 		expect(bad.res.updated).toBe(0);
 	});
 });

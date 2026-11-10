@@ -2,9 +2,14 @@ import type { AirtimeRecurrence, EntryAirtime, Season, TitleOverrides, HoardTitl
 import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId } from './storageTypes';
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
 import { externalIdFromLink, formatExternalId, parseExternalId } from './externalId';
+import { AIRTIME_PROPS as A, COMMON_PROPS as C, TITLE_PROPS as T } from './properties';
 
 const RECURRENCES: readonly AirtimeRecurrence[] = ['once', 'daily', 'weekly', 'monthly'];
-const CREDIT_FIELDS = ['director', 'cast', 'studio'] as const;
+const CREDIT_FIELDS = [
+	{ field: 'director', prop: T.director },
+	{ field: 'cast', prop: T.cast },
+	{ field: 'studio', prop: T.studio },
+] as const;
 
 /** Movie = a single "Movie" season, or no seasons and exactly one episode. */
 export function isMovie(seasons: Season[], totalEpisodes: number): boolean {
@@ -118,11 +123,12 @@ class Reader {
 const nonEmpty = <T>(v: T[] | undefined): T[] | undefined => (v && v.length > 0 ? v : undefined);
 
 function identityOf(r: Reader, fm: Record<string, unknown>, link: string): ExternalId | null {
-	const raw = typeof fm.externalId === 'string' ? fm.externalId : undefined;
-	if (raw !== undefined) {
-		const parsed = parseExternalId(raw.trim());
+	const rawId = fm[C.externalId];
+	const idText = typeof rawId === 'string' ? rawId : undefined;
+	if (idText !== undefined) {
+		const parsed = parseExternalId(idText.trim());
 		if (parsed) return parsed;
-		r.invalid.push('externalId');
+		r.invalid.push(C.externalId);
 	}
 	return link ? externalIdFromLink(link) : null;
 }
@@ -130,40 +136,40 @@ function identityOf(r: Reader, fm: Record<string, unknown>, link: string): Exter
 export function decodeTitle(id: string, fm: Record<string, unknown>, cache: EntryCache | undefined): Decoded<HoardTitle> {
 	const r = new Reader(fm);
 	const c = cache ?? {};
-	const status = r.str('status') ?? 'Plan to watch';
-	const externalLink = r.str('externalLink') ?? '';
+	const status = r.str(C.status) ?? 'Plan to watch';
+	const externalLink = r.str(C.url) ?? '';
 
 	// seasons: note override wins over cache
 	let seasons: Season[] = [];
 	let seasonsOverride = false;
-	const seasonLines = r.list('seasons');
+	const seasonLines = r.list(T.seasons);
 	if (seasonLines && seasonLines.length > 0) {
 		seasons = parseSeasonLines(seasonLines) ?? [];
 		seasonsOverride = seasons.length > 0;
-		if (!seasonsOverride) r.invalid.push('seasons');
+		if (!seasonsOverride) r.invalid.push(T.seasons);
 	}
 	if (!seasonsOverride) seasons = (c.seasons ?? []).map((s) => ({ ...s, skippedEpisodes: [] }));
 
-	const total = r.num('totalEpisodes') ?? seasons.reduce((n, s) => n + s.episodes, 0);
+	const total = r.num(T.totalEpisodes) ?? seasons.reduce((n, s) => n + s.episodes, 0);
 	const movie = isMovie(seasons, total);
 
 	const title: HoardTitle = {
 		id,
-		title: r.str('title') ?? id.split('/').pop() ?? id,
-		type: r.str('type') ?? 'TV Show',
+		title: r.str(C.name) ?? id.split('/').pop() ?? id,
+		type: r.str(C.type) ?? 'TV Show',
 		status,
 		// absent key = Medium; an explicit empty value means no priority
-		priority: r.str('priority') ?? 'Medium',
-		review: r.str('review') ?? '',
-		rating: r.num('rating') ?? 0,
+		priority: r.str(T.priority) ?? 'Medium',
+		review: r.str(T.review) ?? '',
+		rating: r.num(C.rating) ?? 0,
 		notes: '',
-		dateStarted: r.date('dateStarted'),
-		dateFinished: r.date('dateFinished'),
-		dateAdded: r.str('dateAdded') ?? '',
-		dateModified: r.str('dateModified') ?? '',
+		dateStarted: r.date(C.dateStarted),
+		dateFinished: r.date(C.dateFinished),
+		dateAdded: r.str(C.dateAdded) ?? '',
+		dateModified: r.str(C.dateModified) ?? '',
 		totalEpisodes: total,
-		episodeDuration: r.num('episodeDuration') ?? 0,
-		releaseDate: r.date('releaseDate'),
+		episodeDuration: r.num(T.runtime) ?? 0,
+		releaseDate: r.date(C.releaseDate),
 		externalLink,
 		seasons,
 		watchedEpisodes: [],
@@ -171,7 +177,7 @@ export function decodeTitle(id: string, fm: Record<string, unknown>, cache: Entr
 	if (seasonsOverride) title.seasonsOverride = true;
 
 	// cache fields
-	// the note's poster wins (set below); the cache only marks 'none' (the API has no poster)
+	// the note's `Cover` wins (set below); the cache only marks 'none' (the API has no poster)
 	if (c.posterUrl === 'none') title.posterUrl = 'none';
 	if (c.trailerUrl !== undefined) title.trailerUrl = c.trailerUrl;
 	if (c.director) title.director = c.director;
@@ -206,19 +212,19 @@ export function decodeTitle(id: string, fm: Record<string, unknown>, cache: Entr
 		// a pending refill maps nothing: every ref stays unmapped and the note's text untouched
 		const mapping = seasonsPending(title, c.apiCheck?.seasons?.result) ? seasons : mappingSeasons(title);
 		const implicit = mapping !== seasons;
-		const watchedText = r.str('watched');
+		const watchedText = r.str(T.watchedEpisodes);
 		if (watchedText?.trim()) {
 			const refs = parseEpisodeRange(watchedText, mapping);
 			if (refs) {
 				title.watchedEpisodes = toAbsolute(refs, mapping);
 				const unmapped = outsideSeasons(refs, mapping);
 				if (unmapped.length > 0) title.unmappedWatched = unmapped;
-			} else r.invalid.push('watched');
+			} else r.invalid.push(T.watchedEpisodes);
 		}
-		const skippedText = r.str('skipped');
+		const skippedText = r.str(T.skippedEpisodes);
 		if (skippedText?.trim()) {
 			const refs = parseEpisodeRange(skippedText, mapping);
-			if (!refs) r.invalid.push('skipped');
+			if (!refs) r.invalid.push(T.skippedEpisodes);
 			else {
 				// the implicit season is not stored on the title: its skips ride along unmapped
 				const unmapped = implicit ? refs : outsideSeasons(refs, seasons);
@@ -233,59 +239,58 @@ export function decodeTitle(id: string, fm: Record<string, unknown>, cache: Entr
 		}
 	}
 
-	if (r.bool('pinned')) title.pinned = true;
-	const favorite = r.bool('favorite');
+	if (r.bool(T.pinned)) title.pinned = true;
+	const favorite = r.bool(C.favorite);
 	if (favorite !== undefined) title.favorite = favorite;
-	const dateFavorited = r.str('dateFavorited');
+	const dateFavorited = r.str(C.dateFavorited);
 	if (dateFavorited) title.dateFavorited = dateFavorited;
-	if (r.bool('maybe')) title.maybe = true;
-	const groups = nonEmpty(r.list('groups'));
+	if (r.bool(T.maybe)) title.maybe = true;
+	const groups = nonEmpty(r.list(C.groups));
 	if (groups) title.groups = groups;
 
-	// the poster is a plain note field (E12; `manualPosterUrl` is the older name); other API fields in the
-	// note are user overrides (E9; `manualTrailerUrl` is an older name)
-	const poster = r.str('poster') || r.str('manualPosterUrl');
+	// the poster is a plain note field (E12); other API fields in the note are user overrides (E9)
+	const poster = r.str(C.cover);
 	if (poster) title.posterUrl = poster;
-	const manualTrailer = r.str('trailer') || r.str('manualTrailerUrl');
+	const manualTrailer = r.str(T.trailer);
 	if (manualTrailer) title.manualTrailerUrl = manualTrailer;
 	const overrides: TitleOverrides = {};
-	for (const field of CREDIT_FIELDS) {
-		const names = nonEmpty(r.list(field));
+	for (const { field, prop } of CREDIT_FIELDS) {
+		const names = nonEmpty(r.list(prop));
 		if (names) overrides[field] = names;
 	}
-	const communityRating = r.num('communityRating');
+	const communityRating = r.num(T.communityRating);
 	if (communityRating !== undefined) overrides.communityRating = communityRating;
-	const communityVotes = r.num('communityVotes');
+	const communityVotes = r.num(T.communityVotes);
 	if (communityVotes !== undefined) overrides.communityVotes = communityVotes;
-	const communitySource = r.str('communitySource');
+	const communitySource = r.str(T.communitySource);
 	if (communitySource) overrides.communitySource = communitySource as TitleOverrides['communitySource'];
 	if (Object.keys(overrides).length > 0) title.overrides = overrides;
 
 	// user-added credits
-	const manualDirector = nonEmpty(r.list('manualDirector'));
+	const manualDirector = nonEmpty(r.list(T.addedDirector));
 	if (manualDirector) title.manualDirector = manualDirector;
-	const manualCast = nonEmpty(r.list('manualCast'));
+	const manualCast = nonEmpty(r.list(T.addedCast));
 	if (manualCast) title.manualCast = manualCast;
-	const manualStudio = nonEmpty(r.list('manualStudio'));
+	const manualStudio = nonEmpty(r.list(T.addedStudio));
 	if (manualStudio) title.manualStudio = manualStudio;
 
 	// airtime
-	const rec = r.str('airtimeRecurrence');
+	const rec = r.str(A.recurrence);
 	if (rec !== undefined) {
 		if ((RECURRENCES as string[]).includes(rec)) {
 			const airtime: EntryAirtime = { recurrence: rec as AirtimeRecurrence };
-			const day = r.num('airtimeDay');
+			const day = r.num(A.day);
 			if (day !== undefined) airtime.day = day;
-			const time = r.str('airtimeTime');
+			const time = r.str(A.time);
 			if (time !== undefined) airtime.time = time;
-			const season = r.num('airtimeSeason');
+			const season = r.num(A.season);
 			if (season !== undefined) airtime.season = season;
-			const episode = r.num('airtimeEpisode');
+			const episode = r.num(A.episode);
 			if (episode !== undefined) airtime.episode = episode;
-			const ack = r.str('airtimeAcknowledged');
+			const ack = r.str(A.acknowledged);
 			if (ack !== undefined) airtime.acknowledged = ack;
 			title.airtime = airtime;
-		} else r.invalid.push('airtimeRecurrence');
+		} else r.invalid.push(A.recurrence);
 	}
 
 	return { entry: title, invalidFields: [...new Set(r.invalid)] };
@@ -305,70 +310,70 @@ function identityFor(t: HoardTitle): ExternalId | null {
 	return t.externalLink ? externalIdFromLink(t.externalLink) : null;
 }
 
-/** Frontmatter fields for a title; keys keep the original plugin's names. `notes` is not included. */
+/** Frontmatter fields for a title; keys are the frozen property names. `notes` is not included. */
 export function encodeTitle(t: HoardTitle, progress: number, seasonsPending = false): Record<string, unknown> {
 	const out: Record<string, unknown> = {};
-	out.title = t.title;
-	out.type = t.type;
-	out.status = t.status;
-	out.priority = t.priority;
-	if (t.review) out.review = t.review;
-	out.rating = t.rating;
-	out.progress = `${progress}%`;
-	out.totalEpisodes = t.totalEpisodes;
-	out.episodeDuration = t.episodeDuration;
-	out.dateStarted = t.dateStarted;
-	out.dateFinished = t.dateFinished;
-	out.dateAdded = t.dateAdded;
-	out.dateModified = t.dateModified;
-	if (t.releaseDate) out.releaseDate = t.releaseDate;
-	if (t.malId !== undefined) out.malId = t.malId;
-	if (t.anilistId !== undefined) out.anilistId = t.anilistId;
+	out[C.name] = t.title;
+	out[C.type] = t.type;
+	out[C.status] = t.status;
+	out[T.priority] = t.priority;
+	if (t.review) out[T.review] = t.review;
+	out[C.rating] = t.rating;
+	out[T.progress] = progress;
+	out[T.totalEpisodes] = t.totalEpisodes;
+	out[T.runtime] = t.episodeDuration;
+	out[C.dateStarted] = t.dateStarted;
+	out[C.dateFinished] = t.dateFinished;
+	out[C.dateAdded] = t.dateAdded;
+	out[C.dateModified] = t.dateModified;
+	if (t.releaseDate) out[C.releaseDate] = t.releaseDate;
+	if (t.malId !== undefined) out[T.malId] = t.malId;
+	if (t.anilistId !== undefined) out[T.anilistId] = t.anilistId;
 	// API values live in the cache; only the user's overrides are written (E9)
 	const o = t.overrides;
-	if (o?.communityRating !== undefined) out.communityRating = o.communityRating;
-	if (o?.communityVotes !== undefined) out.communityVotes = o.communityVotes;
-	if (o?.communitySource) out.communitySource = o.communitySource;
-	for (const field of CREDIT_FIELDS) {
+	if (o?.communityRating !== undefined) out[T.communityRating] = o.communityRating;
+	if (o?.communityVotes !== undefined) out[T.communityVotes] = o.communityVotes;
+	if (o?.communitySource) out[T.communitySource] = o.communitySource;
+	for (const { field, prop } of CREDIT_FIELDS) {
 		const names = o?.[field];
-		if (names && names.length > 0) out[field] = names;
+		if (names && names.length > 0) out[prop] = names;
 	}
-	if (t.posterUrl && t.posterUrl !== 'none') out.poster = t.posterUrl;
-	if (t.manualTrailerUrl?.trim()) out.trailer = t.manualTrailerUrl;
-	if (t.externalLink) out.externalLink = t.externalLink;
-	if (t.pinned) out.pinned = true;
-	if (t.favorite) out.favorite = true;
-	if (t.dateFavorited) out.dateFavorited = t.dateFavorited;
+	if (t.posterUrl && t.posterUrl !== 'none') out[C.cover] = t.posterUrl;
+	if (t.manualTrailerUrl?.trim()) out[T.trailer] = t.manualTrailerUrl;
+	if (t.externalLink) out[C.url] = t.externalLink;
+	if (t.pinned) out[T.pinned] = true;
+	if (t.favorite) out[C.favorite] = true;
+	if (t.dateFavorited) out[C.dateFavorited] = t.dateFavorited;
 
 	const ext = identityFor(t);
-	if (ext) out.externalId = formatExternalId(ext);
-	if (t.groups && t.groups.length > 0) out.groups = t.groups;
-	if (t.maybe) out.maybe = true;
+	if (ext) out[C.externalId] = formatExternalId(ext);
+	if (t.groups && t.groups.length > 0) out[C.groups] = t.groups;
+	if (t.maybe) out[T.maybe] = true;
 
 	// progress: movies are carried by status; while a season refill is pending the note's text is left alone
 	const mapping = mappingSeasons(t);
 	if (!isMovie(t.seasons, t.totalEpisodes) && !seasonsPending && mapping.length > 0) {
-		out.watched = formatEpisodeRange([...fromAbsolute(t.watchedEpisodes, mapping), ...(t.unmappedWatched ?? [])]);
+		out[T.watchedEpisodes] = formatEpisodeRange([...fromAbsolute(t.watchedEpisodes, mapping), ...(t.unmappedWatched ?? [])]);
 		const skipped: EpisodeRef[] = [...(t.unmappedSkipped ?? [])];
 		t.seasons.forEach((s, i) => {
 			for (const episode of s.skippedEpisodes ?? []) skipped.push({ season: i + 1, episode });
 		});
-		if (skipped.length > 0) out.skipped = formatEpisodeRange(skipped);
+		if (skipped.length > 0) out[T.skippedEpisodes] = formatEpisodeRange(skipped);
 	}
-	if (t.seasonsOverride) out.seasons = t.seasons.map((s) => `${s.name}: ${s.episodes}`);
+	if (t.seasonsOverride) out[T.seasons] = t.seasons.map((s) => `${s.name}: ${s.episodes}`);
 
-	if (t.manualDirector?.length) out.manualDirector = t.manualDirector;
-	if (t.manualCast?.length) out.manualCast = t.manualCast;
-	if (t.manualStudio?.length) out.manualStudio = t.manualStudio;
+	if (t.manualDirector?.length) out[T.addedDirector] = t.manualDirector;
+	if (t.manualCast?.length) out[T.addedCast] = t.manualCast;
+	if (t.manualStudio?.length) out[T.addedStudio] = t.manualStudio;
 
 	const a = t.airtime;
 	if (a) {
-		out.airtimeRecurrence = a.recurrence;
-		if (a.day !== undefined) out.airtimeDay = a.day;
-		if (a.time !== undefined) out.airtimeTime = a.time;
-		if (a.season !== undefined) out.airtimeSeason = a.season;
-		if (a.episode !== undefined) out.airtimeEpisode = a.episode;
-		if (a.acknowledged !== undefined) out.airtimeAcknowledged = a.acknowledged;
+		out[A.recurrence] = a.recurrence;
+		if (a.day !== undefined) out[A.day] = a.day;
+		if (a.time !== undefined) out[A.time] = a.time;
+		if (a.season !== undefined) out[A.season] = a.season;
+		if (a.episode !== undefined) out[A.episode] = a.episode;
+		if (a.acknowledged !== undefined) out[A.acknowledged] = a.acknowledged;
 	}
 	return out;
 }

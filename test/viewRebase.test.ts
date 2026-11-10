@@ -6,7 +6,7 @@ import { setupReadingDataManager } from './helpers/setupReadingDataManager';
 import type { ApiOutcome } from '../src/ApiService';
 import type { Season } from '../src/types';
 
-const DARK = '---\ntitle: Dark\ntype: TV Show\nseasons: ["Season 1: 10"]\nwatched: S01E01-E04\n---\n';
+const DARK = '---\nName: Dark\nType: TV Show\nSeasons: ["Season 1: 10"]\nWatched Episodes: S01E01-E04\n---\n';
 
 describe('views follow the stored state', () => {
 	it('a stale copy saved after a toggle does not become the view', async () => {
@@ -17,12 +17,12 @@ describe('views follow the stored state', () => {
 		await tick();
 		await dm.updateTitle({ ...modal, review: 'nice' });
 		await tick();
-		expect(f.files.get('W/TV Show/Dark.md')).toMatch(/watched: S01E01-E05/);
+		expect(f.files.get('W/TV Show/Dark.md')).toMatch(/Watched Episodes: S01E01-E05/);
 		await dm.markEpisodeWatched('TV Show/Dark', 6, true);
 		await tick();
 		const note = f.files.get('W/TV Show/Dark.md')!;
-		expect(note).toMatch(/watched: S01E01-E06/);
-		expect(note).toContain('review: nice');
+		expect(note).toMatch(/Watched Episodes: S01E01-E06/);
+		expect(note).toContain('Review: nice');
 	});
 
 	it('a copy saved after an external change does not become the view', async () => {
@@ -35,11 +35,11 @@ describe('views follow the stored state', () => {
 		expect(dm.getTitle('TV Show/Dark')!.watchedEpisodes).toEqual([1, 2, 3, 4, 5]);
 		await dm.markEpisodeWatched('TV Show/Dark', 6, true);
 		await tick();
-		expect(f.files.get('W/TV Show/Dark.md')).toMatch(/watched: S01E01-E06/);
+		expect(f.files.get('W/TV Show/Dark.md')).toMatch(/Watched Episodes: S01E01-E06/);
 	});
 
 	it('a stale game copy does not become the view', async () => {
-		const { gdm, f } = await setupGames({ 'W/Games/Hades.md': '---\ntitle: Hades\ntype: game\nrating: 1\n---\n' });
+		const { gdm, f } = await setupGames({ 'W/Games/Hades.md': '---\nName: Hades\nType: game\nRating: 1\n---\n' });
 		const copy = { ...gdm.getGame('Games/Hades')! };
 		await gdm.updateGame({ ...gdm.getGame('Games/Hades')!, rating: 3 });
 		await tick();
@@ -49,12 +49,12 @@ describe('views follow the stored state', () => {
 		await gdm.updateGame({ ...gdm.getGame('Games/Hades')!, priority: 'High' });
 		await tick();
 		const note = f.files.get('W/Games/Hades.md')!;
-		expect(note).toMatch(/rating: 3/);
-		expect(note).toMatch(/progress: 50/);
+		expect(note).toMatch(/Rating: 3/);
+		expect(note).toMatch(/Progress: 50/);
 	});
 
 	it('a stale reading copy does not become the view', async () => {
-		const { rdm, f } = await setupReadingDataManager({ 'W/Books/Dune.md': '---\ntitle: Dune\ntype: book\npagesRead: 1\n---\n' });
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/Dune.md': '---\nName: Dune\nType: book\nPages Read: 1\n---\n' });
 		const copy = { ...rdm.getBook('Books/Dune')! };
 		await rdm.updateBook({ ...rdm.getBook('Books/Dune')!, pagesRead: 5 });
 		await tick();
@@ -64,13 +64,13 @@ describe('views follow the stored state', () => {
 		await rdm.updateBook({ ...rdm.getBook('Books/Dune')!, totalPages: 100 });
 		await tick();
 		const note = f.files.get('W/Books/Dune.md')!;
-		expect(note).toMatch(/pagesRead: 5/);
-		expect(note).toMatch(/rating: 4/);
+		expect(note).toMatch(/Pages Read: 5/);
+		expect(note).toMatch(/Rating: 4/);
 	});
 });
 
 describe('cache writes merge', () => {
-	const NOTE = '---\ntitle: Dark\ntype: TV Show\nexternalId: tmdb:tv:1\n---\n';
+	const NOTE = '---\nName: Dark\nType: TV Show\nExternal ID: tmdb:tv:1\n---\n';
 	const check = () => ({ seasons: { at: new Date().toISOString(), result: 'notfound' as const } });
 
 	it('a user edit keeps apiCheck and airing', async () => {
@@ -91,7 +91,7 @@ describe('cache writes merge', () => {
 	});
 
 	it('save() with a view from before the refill keeps the refilled seasons', async () => {
-		const { dm, local, index } = await setupDataManager({ 'W/TV Show/Dark.md': NOTE.replace('tmdb:tv:1\n', 'tmdb:tv:1\nwatched: S01E01-E03\n') });
+		const { dm, local, index } = await setupDataManager({ 'W/TV Show/Dark.md': NOTE.replace('tmdb:tv:1\n', 'tmdb:tv:1\nWatched Episodes: S01E01-E03\n') });
 		dm.getTitles();
 		local.setCache('TV Show/Dark', { seasons: [{ name: 'Season 1', episodes: 10, offset: 0 }] });
 		await index.rebuild();
@@ -103,13 +103,13 @@ describe('cache writes merge', () => {
 		it(`two toggles after a ${status} refill both persist`, async () => {
 			const fetchSeasons = vi.fn(() => Promise.resolve<ApiOutcome<Season[]>>({ status }));
 			const { dm, f } = await setupDataManager(
-				{ 'W/TV Show/N.md': '---\ntitle: N\ntype: TV Show\nexternalId: tmdb:tv:1\ntotalEpisodes: 10\n---\n' },
+				{ 'W/TV Show/N.md': '---\nName: N\nType: TV Show\nExternal ID: tmdb:tv:1\nTotal Episodes: 10\n---\n' },
 				{ apiService: { fetchSeasons } },
 			);
 			await tick();
 			await dm.markEpisodeWatched('TV Show/N', 1, true);
 			await dm.markEpisodeWatched('TV Show/N', 2, true);
-			expect(f.files.get('W/TV Show/N.md')).toContain('watched: S01E01-E02');
+			expect(f.files.get('W/TV Show/N.md')).toContain('Watched Episodes: S01E01-E02');
 			expect(fetchSeasons).toHaveBeenCalledTimes(1);
 		});
 	}
@@ -117,7 +117,7 @@ describe('cache writes merge', () => {
 
 describe('background fills are no user writes', () => {
 	it('a poster fill does not count as a user write; the refresh does', async () => {
-		const { dm, index } = await setupDataManager({ 'W/Movie/A.md': '---\ntitle: A\ntype: Movie\n---\n' });
+		const { dm, index } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
 		const cb = vi.fn();
 		index.onLocalWrite(cb);
 		await dm.updatePosterUrl('Movie/A', 'https://img/p.jpg');
@@ -127,17 +127,17 @@ describe('background fills are no user writes', () => {
 	});
 
 	it('cover fills of games and books do not count as user writes', async () => {
-		const games = await setupGames({ 'W/Games/Hades.md': '---\ntitle: Hades\ntype: game\n---\n' });
+		const games = await setupGames({ 'W/Games/Hades.md': '---\nName: Hades\nType: game\n---\n' });
 		const gcb = vi.fn();
 		games.index.onLocalWrite(gcb);
 		await games.gdm.updateCoverUrl('Games/Hades', 'https://img/c.jpg');
-		expect(games.f.files.get('W/Games/Hades.md')).toContain('coverUrl: https://img/c.jpg');
+		expect(games.f.files.get('W/Games/Hades.md')).toContain('Cover: https://img/c.jpg');
 		expect(gcb).not.toHaveBeenCalled();
-		const reading = await setupReadingDataManager({ 'W/Books/Dune.md': '---\ntitle: Dune\ntype: book\n---\n' });
+		const reading = await setupReadingDataManager({ 'W/Books/Dune.md': '---\nName: Dune\nType: book\n---\n' });
 		const rcb = vi.fn();
 		reading.index.onLocalWrite(rcb);
 		await reading.rdm.updateCoverUrl('book', 'Books/Dune', 'https://img/c.jpg');
-		expect(reading.f.files.get('W/Books/Dune.md')).toContain('coverUrl: https://img/c.jpg');
+		expect(reading.f.files.get('W/Books/Dune.md')).toContain('Cover: https://img/c.jpg');
 		expect(rcb).not.toHaveBeenCalled();
 	});
 

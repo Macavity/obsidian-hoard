@@ -48,11 +48,11 @@ export async function assertImported(expect, dataJsonPath) {
 	assert(existsSync(join(VAULT_PATH, "Hoard", "Hoard.base")), "Hoard/Hoard.base missing");
 	await waitFor(() => evalJs(`String(${P}.dataManager.getTitles().length)`) === String(expect.titles), 15000);
 	const { sample } = expect;
-	await waitFor(() => readNote(VAULT_PATH, sample.path).props.status === sample.status, 10000);
+	await waitFor(() => readNote(VAULT_PATH, sample.path).props.Status === sample.status, 10000);
 	const { props } = readNote(VAULT_PATH, sample.path);
-	assert(props.title === sample.title, `title: ${props.title}`);
-	assert(props.type === sample.type, `type: ${props.type}`);
-	assert(props.status === sample.status, `status: ${props.status}`);
+	assert(props.Name === sample.title, `title: ${props.Name}`);
+	assert(props.Type === sample.type, `type: ${props.Type}`);
+	assert(props.Status === sample.status, `status: ${props.Status}`);
 	assert(findReportNote(VAULT_PATH) !== null, `report note ${reportNotePath()} missing`);
 	await waitFor(() => JSON.parse(readFileSync(dataJsonPath, "utf8")).ui?.watchlogImport?.[expect.kind] === "imported", 10000);
 }

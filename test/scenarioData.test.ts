@@ -47,5 +47,6 @@ describe.each([
 		expect(titles).toHaveLength(EXPECT.titles);
 		const note = f.files.get(EXPECT.sample.path) ?? "";
 		for (const v of [EXPECT.sample.title, EXPECT.sample.type, EXPECT.sample.status]) expect(note).toContain(v);
+		for (const k of ("sampleProps" in EXPECT ? EXPECT.sampleProps : [])) expect(note).toContain(`${k}:`);
 	});
 });

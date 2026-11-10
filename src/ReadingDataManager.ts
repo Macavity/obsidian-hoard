@@ -1,4 +1,4 @@
-import { TFile, normalizePath, stringifyYaml } from 'obsidian';
+import { TFile, getFrontMatterInfo, normalizePath, parseYaml, stringifyYaml } from 'obsidian';
 import type { App } from 'obsidian';
 import type HoardPlugin from './main';
 import type { HistoryManager } from './HistoryManager';
@@ -11,6 +11,7 @@ import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
 import { FOLDERS } from './storage/VaultLayout';
+import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from './storage/properties';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from './storage/readingCodec';
 import {
 	Book,
@@ -24,6 +25,7 @@ import {
 	READING_STATUSES,
 	DEFAULT_READING_STATUS_COLORS,
 } from './types';
+import { changedKeys, slugify } from './storage/sharedHelpers';
 
 export type ReadingKind = 'book' | 'manga';
 
@@ -31,33 +33,38 @@ type Item = Book | Manga;
 type Fm = Record<string, unknown>;
 
 /** Keys both kinds can emit; the full rewrite deletes the ones the encoder omits. */
-const COMMON_KEYS = [
-	'title', 'author', 'status', 'favorite', 'dateFavorited', 'rating', 'dateStarted', 'dateFinished',
-	'releaseDate', 'dateAdded', 'dateModified', 'coverUrl', 'externalLink', 'groups', 'externalId', 'type',
-	'airtimeRecurrence', 'airtimeDay', 'airtimeTime', 'airtimeSeason', 'airtimeEpisode', 'airtimeAcknowledged',
+const COMMON_KEYS: readonly string[] = [
+	...Object.values(COMMON_PROPS),
+	...Object.values(AIRTIME_PROPS),
+	READING_PROPS.author,
 ];
-const KIND_KEYS: Record<ReadingKind, string[]> = {
-	book: [...COMMON_KEYS, 'pagesRead', 'totalPages', 'progressUnit', 'wordsRead', 'totalWords', 'chaptersRead', 'totalChapters', 'googleBooksId'],
-	manga: [...COMMON_KEYS, 'chaptersRead', 'totalChapters', 'volumesRead', 'totalVolumes', 'malId'],
+const KIND_KEYS: Record<ReadingKind, readonly string[]> = {
+	book: [
+		...COMMON_KEYS,
+		READING_PROPS.pagesRead, READING_PROPS.totalPages, READING_PROPS.progressUnit, READING_PROPS.wordsRead,
+		READING_PROPS.totalWords, READING_PROPS.chaptersRead, READING_PROPS.totalChapters, READING_PROPS.googleBooksId,
+	],
+	manga: [
+		...COMMON_KEYS,
+		READING_PROPS.chaptersRead, READING_PROPS.totalChapters, READING_PROPS.volumesRead, READING_PROPS.totalVolumes,
+		READING_PROPS.malId,
+	],
 };
 
-const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
-
-function slugify(input: string): string {
-	return input
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-|-$/g, '');
-}
-
-const encode = (kind: ReadingKind, item: Item): Fm =>
-	kind === 'book' ? encodeBook(item as Book) : encodeManga(item as Manga);
+const encodeWith = (kind: ReadingKind, item: Item, columns: readonly ReadingCustomColumn[]): Fm =>
+	kind === 'book' ? encodeBook(item as Book, columns) : encodeManga(item as Manga, columns);
 
 /**
  * Books and manga, backed by one note each. Reads come from the EntryIndex (frontmatter); writes go
  * to the note via processFrontMatter and only touch keys whose encoded value changed. Reading
  * settings and table columns live in the shared config (Hoard.base).
  */
+/** Notes a column rename moved, and notes it left alone (their values stay under the old key). */
+export interface ColumnMoveResult {
+	moved: number;
+	skipped: number;
+}
+
 export class ReadingDataManager {
 	private plugin: HoardPlugin;
 	private app: App;
@@ -148,6 +155,7 @@ export class ReadingDataManager {
 			}));
 		this.bookColumns = clean(bookColumns);
 		this.mangaColumns = clean(mangaColumns);
+		this.index.setColumns(this.bookColumns, this.mangaColumns);
 	}
 
 	/** Synced keys go to the base, the rest (colors, layout, filters) to data.json. */
@@ -188,6 +196,7 @@ export class ReadingDataManager {
 	}
 
 	private async save(): Promise<void> {
+		this.index.setColumns(this.bookColumns, this.mangaColumns);
 		try {
 			await this.saveShared();
 		} catch (e) {
@@ -282,7 +291,7 @@ export class ReadingDataManager {
 	// Silent cover updates
 
 	/**
-	 * Silent cover URL update for the lazy Cards re-fetch: written to the note's `coverUrl` only when
+	 * Silent cover URL update for the lazy Cards re-fetch: written to the note's `Cover` only when
 	 * that is empty (E12), no notify — the card swaps its own <img>, so the grid is not rebuilt and
 	 * scroll survives.
 	 */
@@ -297,12 +306,13 @@ export class ReadingDataManager {
 		const file = this.fileOf(id);
 		if (!file) return;
 		await this.processFrontMatter(file, kind, item, (raw) => {
-			const own = typeof raw.coverUrl === 'string' ? raw.coverUrl.trim() : '';
+			const current = raw[COMMON_PROPS.cover];
+			const own = typeof current === 'string' ? current.trim() : '';
 			if (own) {
 				item.coverUrl = own;
 				return;
 			}
-			raw.coverUrl = url;
+			raw[COMMON_PROPS.cover] = url;
 			item.coverUrl = url;
 		}, true);
 	}
@@ -583,6 +593,15 @@ export class ReadingDataManager {
 		return this.mangaColumns;
 	}
 
+	private encode(kind: ReadingKind, item: Item): Fm {
+		return encodeWith(kind, item, this.columnsFor(kind));
+	}
+
+	/** True when another column of this kind already has `name` (case-insensitive). */
+	isColumnNameTaken(kind: ReadingKind, name: string, exceptId?: string): boolean {
+		return columnNameTaken(this.columnsFor(kind), name, exceptId);
+	}
+
 	private columnsFor(kind: ReadingKind): ReadingCustomColumn[] {
 		return kind === 'book' ? this.bookColumns : this.mangaColumns;
 	}
@@ -592,25 +611,73 @@ export class ReadingDataManager {
 		await this.save();
 	}
 
-	async updateColumn(kind: ReadingKind, updated: ReadingCustomColumn): Promise<void> {
+	/**
+	 * Saves the column. A new name first moves `Custom <old>` to `Custom <new>` in every note of the
+	 * kind (notes before the setting: a crash in between leaves the values in the notes under the new
+	 * name, never lost). Returns how many notes were moved and how many skipped (they already have the
+	 * new key, or could not be updated; their values stay as they are).
+	 */
+	async updateColumn(kind: ReadingKind, updated: ReadingCustomColumn): Promise<ColumnMoveResult> {
+		const old = this.columnsFor(kind).find((c) => c.id === updated.id);
+		if (!old) return { moved: 0, skipped: 0 };
+		const result =
+			old.name === updated.name
+				? { moved: 0, skipped: 0 }
+				: await this.moveCustomKey(kind, customFieldKey(old.name), customFieldKey(updated.name));
+		// the shared config may have been reloaded meanwhile: resolve the array again, never resurrect a deleted column
 		const cols = this.columnsFor(kind);
 		const idx = cols.findIndex((c) => c.id === updated.id);
-		if (idx >= 0) {
-			cols[idx] = updated;
-			await this.save();
+		if (idx < 0) return result;
+		cols[idx] = updated;
+		await this.save();
+		return result;
+	}
+
+	private async moveCustomKey(kind: ReadingKind, from: string, to: string): Promise<ColumnMoveResult> {
+		const items: Item[] = kind === 'book' ? this.index.books() : this.index.manga();
+		let moved = 0;
+		let skipped = 0;
+		for (const item of items) {
+			const file = this.fileOf(item.id);
+			// the file decides, not the metadata cache, which may lag behind a sync
+			if (!file || from === to || !(await this.fileHasKey(file, from))) continue;
+			let hit = false;
+			let conflict = false;
+			const ok = await updateFrontMatter(this.app, file, this.notify, (fm: Fm) => {
+				if (!(from in fm)) return;
+				if (to in fm) {
+					console.warn(`[Hoard] ${file.path} already has "${to}"; "${from}" stays`);
+					conflict = true;
+					return;
+				}
+				// rename in place: the key keeps its position among its neighbours
+				const entries = Object.entries(fm).map(([k, v]): [string, unknown] => [k === from ? to : k, v]);
+				for (const k of Object.keys(fm)) delete fm[k];
+				for (const [k, v] of entries) fm[k] = v;
+				hit = true;
+			});
+			if (ok && hit) moved++;
+			else if (conflict || !ok) skipped++;
+		}
+		return { moved, skipped };
+	}
+
+	/** True when the note's properties, read from the file, contain `key`; unreadable YAML counts when it names the key. */
+	private async fileHasKey(file: TFile, key: string): Promise<boolean> {
+		const info = getFrontMatterInfo(await this.app.vault.read(file));
+		if (!info.exists) return false;
+		try {
+			const fm: unknown = parseYaml(info.frontmatter);
+			return typeof fm === 'object' && fm !== null && key in fm;
+		} catch {
+			return info.frontmatter.includes(key);
 		}
 	}
 
 	async removeColumn(kind: ReadingKind, id: string): Promise<void> {
+		// the values stay in the notes: they are the user's data
 		if (kind === 'book') this.bookColumns = this.bookColumns.filter((c) => c.id !== id);
 		else this.mangaColumns = this.mangaColumns.filter((c) => c.id !== id);
-		const items: Item[] = kind === 'book' ? this.getBooks() : this.getMangaList();
-		for (const item of items) {
-			if (item.customFields && Object.prototype.hasOwnProperty.call(item.customFields, id)) {
-				delete item.customFields[id];
-				try { await this.writeItem(kind, item); } catch (e) { console.warn('[Hoard] reading note write failed:', e); }
-			}
-		}
 		await this.save();
 	}
 
@@ -708,7 +775,7 @@ export class ReadingDataManager {
 	 */
 	private afterWrite(kind: ReadingKind, item: Item, fm: Fm, background = false): void {
 		const fresh = this.basedOnStored(item);
-		const stored = kind === 'book' ? decodeBook(item.id, fm).entry : decodeManga(item.id, fm).entry;
+		const stored = kind === 'book' ? decodeBook(item.id, fm, this.bookColumns).entry : decodeManga(item.id, fm, this.mangaColumns).entry;
 		this.index.applyLocal(kind === 'book'
 			? { kind: 'book', entry: stored as Book }
 			: { kind: 'manga', entry: stored as Manga }, { background });
@@ -741,7 +808,7 @@ export class ReadingDataManager {
 		const layout = this.layout();
 		const path = this.freePath(layout.notePath(kind, item.title));
 		await this.ensureFolder(this.parentOf(path));
-		const fm = encode(kind, item);
+		const fm = this.encode(kind, item);
 		item.id = layout.idFromPath(path);
 		// index first, so the create event finds nothing new
 		this.afterWrite(kind, item, fm);
@@ -782,10 +849,9 @@ export class ReadingDataManager {
 			}
 		}
 
-		const before = src ? encode(kind, src) : {};
-		const after = encode(kind, item);
-		const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
-			.filter((k) => !sameJson(before[k], after[k]));
+		const before = src ? this.encode(kind, src) : {};
+		const after = this.encode(kind, item);
+		const changed = changedKeys(before, after);
 		if (changed.length > 0) {
 			const ok = await this.processFrontMatter(file, kind, item, (raw) => {
 				for (const key of changed) {
@@ -834,7 +900,7 @@ export class ReadingDataManager {
 	async rewriteFrontmatterIfExists(kind: ReadingKind, item: Item): Promise<boolean> {
 		const file = this.fileOf(item.id);
 		if (!file) return false;
-		const out = encode(kind, item);
+		const out = this.encode(kind, item);
 		const keep = new Set(this.index.invalidFields(item.id));
 		return this.processFrontMatter(file, kind, item, (raw) => {
 			for (const key of KIND_KEYS[kind]) {
@@ -844,8 +910,9 @@ export class ReadingDataManager {
 					delete raw[key];
 				}
 			}
-			for (const key of Object.keys(raw)) {
-				if (key.startsWith('cf_') && !(key in out) && !keep.has(key)) delete raw[key];
+			// custom values are user data: written when the item has one, never deleted
+			for (const key of Object.keys(out)) {
+				if (key.startsWith(CUSTOM_FIELD_PREFIX) && (!keep.has(key) || !(key in raw))) raw[key] = out[key];
 			}
 		});
 	}

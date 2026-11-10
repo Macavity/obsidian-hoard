@@ -23,7 +23,7 @@ Entries, groups, progress, ratings live in note properties (frontmatter). `<root
 
 ## Naming rules
 
-- CSS prefix `hoard-`; view type `HOARD_VIEW_TYPE = 'hoard-view'`; event `hoard-data-changed`; base key `hoard:`; widget blocks `hoard`, `hoard-todo`, `hoard-stat`, `hoard-upcoming`, `hoard-nowwatching`, `hoard-now-next`.
+- CSS prefix `hoard-`; view type `HOARD_VIEW_TYPE = 'hoard-view'`; event `hoard-data-changed`; base key `hoard:`; widget blocks `hoard`, `hoard-todo`, `hoard-stat`, `hoard-upcoming`, `hoard-now`, `hoard-now-next`.
 - Only `src/migration/watchlog/` (and `test/migration/watchlog/`) may know WatchLog: plugin ids, `WatchLog.base`, the `watchlog:` key, `watchlog`/`wl-*` widget names, schema-1 data. Elsewhere only imports from that module and the `priorityEmptyOnly` field docs. The word "legacy" is not used in `src/` or `test/`.
 - Obsidian UI text: sentence case, "properties" for YAML metadata.
 

@@ -12,7 +12,7 @@ source:
   - src/SteamSyncModal.ts
   - src/ApiService.ts
   - src/coverRefresh.ts
-source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
+source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
 # Games
@@ -33,14 +33,14 @@ in-place mutation without a `*Silent` call is still written. UI: [GamesTab.ts](.
   To be released, TBA). "To be released" is automatic: a future `releaseDate` forces it, a past or
   cleared one reverts to `defaultStatus`. "TBA" is manual and never touched. "Finished" logs as
   completed and stamps `dateFinished` when `setFinishDateAutomatically` is on.
-- `progress` is a completion percent; the modal offers ±5 steps and a value derived from achievements.
-- **Text-encoded fields**: `playtime` as `12h 30m` / `1,234h` / `45m` (written only when > 0;
+- `Progress` is a completion percent; the modal offers ±5 steps and a value derived from achievements.
+- **Text-encoded fields**: `Playtime` as `12h 30m` / `1,234h` / `45m` (written only when > 0;
   the decoder is strict and flags garbage as invalid; the modal input also accepts `1.5h`, `2:30`,
-  bare hours), `achievements` as `earned/total` (written only when total > 0).
-- `genre` holds `Game.type`; `type: game` is the kind marker. `externalId` carries RAWG or IGDB
-  source and id; `steamAppId`, `lastPlayed`, `storeUrl` (Steam, then GOG, then Epic when
-  API-filled) are separate. `wishlist` is a flag independent of status.
-- **Groups are derived** from the `groups` property; id = name; an empty group does not exist.
+  bare hours), `Achievements` as `earned/total` (written only when total > 0).
+- `Genre` holds `Game.type`; `Type: game` is the kind marker. `External ID` carries RAWG or IGDB
+  source and id; `Steam App ID`, `Last Played`, `Store URL` (Steam, then GOG, then Epic when
+  API-filled) are separate. `Wishlist` is a flag independent of status.
+- **Groups are derived** from the `Groups` property; id = name; an empty group does not exist.
 - **Settings split**: `defaultStatus`, `statuses`, `types`, `platforms` sync; `rowsLayout`, saved
   filter and daily picks stay local; Steam key and id are device-local plugin settings
   ([shared vs local](../concepts/shared-vs-local.md)).

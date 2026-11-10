@@ -18,6 +18,8 @@ export class ReadingManageColumnsModal extends Modal {
 	private listEl: HTMLElement | null = null;
 	private styleGroupEl: HTMLElement | null = null;
 	private drag: DragState = { from: -1 };
+	/** A rename moves keys across notes; until it settles, no other edit may start from stale cards. */
+	private busy = false;
 
 	constructor(
 		app: App,
@@ -150,6 +152,11 @@ export class ReadingManageColumnsModal extends Modal {
 					return;
 				}
 				if (next === col.name) return;
+				if (this.readingData.isColumnNameTaken(this.kind, next, col.id)) {
+					new Notice(t('reading.columns.nameTaken'));
+					nameInput.value = col.name;
+					return;
+				}
 				void this.updateColumn({ ...col, name: next });
 			});
 
@@ -251,6 +258,10 @@ export class ReadingManageColumnsModal extends Modal {
 				new Notice(t('reading.columns.enterName'));
 				return;
 			}
+			if (this.readingData.isColumnNameTaken(this.kind, name)) {
+				new Notice(t('reading.columns.nameTaken'));
+				return;
+			}
 			const type = typeSelect.value as ReadingCustomColumn['type'];
 			const options =
 				type === 'select'
@@ -276,24 +287,45 @@ export class ReadingManageColumnsModal extends Modal {
 	}
 
 	private async addColumn(col: ReadingCustomColumn): Promise<void> {
+		if (this.busy) return;
 		await this.readingData.addColumn(this.kind, col);
 		this.renderList();
 		this.onChanged();
 	}
 
 	private async updateColumn(col: ReadingCustomColumn): Promise<void> {
-		await this.readingData.updateColumn(this.kind, col);
+		if (this.busy) return;
+		this.busy = true;
+		this.setLocked(true);
+		try {
+			const { moved, skipped } = await this.readingData.updateColumn(this.kind, col);
+			if (moved > 0) new Notice(t('reading.columns.renamed', { count: moved }));
+			if (skipped > 0) new Notice(t('reading.columns.renamedSkipped', { count: skipped }));
+		} finally {
+			this.busy = false;
+			this.setLocked(false);
+		}
 		this.renderList();
 		this.onChanged();
 	}
 
+	private setLocked(locked: boolean): void {
+		this.contentEl
+			.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>('input, select, button')
+			.forEach((el) => {
+				if (!el.closest('.hoard-reading-modal-footer')) el.disabled = locked;
+			});
+	}
+
 	private async deleteColumn(id: string): Promise<void> {
+		if (this.busy) return;
 		await this.readingData.removeColumn(this.kind, id);
 		this.renderList();
 		this.onChanged();
 	}
 
 	private async reorder(from: number, to: number): Promise<void> {
+		if (this.busy) return;
 		await this.readingData.reorderColumns(this.kind, from, to);
 		this.renderList();
 		this.onChanged();
