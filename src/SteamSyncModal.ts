@@ -3,7 +3,8 @@ import type HoardPlugin from './main';
 import type { GameDataManager } from './GameDataManager';
 import { Game, SteamSyncUpdate, GAME_AUTO_STATUS, formatTime } from './types';
 import { t } from './i18n';
-import { steamAppIdFromUrl, steamLibraryCover, type SteamOwnedGame, type SteamFailureReason } from './ApiService';
+import { steamAppIdFromUrl, type SteamOwnedGame, type SteamFailureReason } from './ApiService';
+import { steamLibraryCover } from './steamStoreApi';
 
 /**
  * Steam library sync.

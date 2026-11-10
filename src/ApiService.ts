@@ -28,6 +28,9 @@ import type {
 	AniListSearchResponse,
 	AniListMediaResponse,
 } from './types';
+import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, mapCinemetaSearch, type CinemetaKind } from './cinemetaApi';
+import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLibraryWorkUrl } from './openLibraryApi';
+import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { isCreditsNone, normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
 
@@ -42,6 +45,10 @@ const RAWG_BASE = 'https://api.rawg.io/api';
 const IGDB_BASE = 'https://api.igdb.com/v4';
 const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const JIKAN_RATE_LIMIT_MS = 400;
+const CINEMETA_HOST = 'https://v3-cinemeta.strem.io';
+const OPEN_LIBRARY_HOST = 'https://openlibrary.org';
+const OPEN_LIBRARY_COVERS_HOST = 'https://covers.openlibrary.org';
+const STEAM_STORE_SEARCH = 'https://store.steampowered.com/api/storesearch';
 const API_TIMEOUT_MS = 8000;
 
 /** Add-flow search: 9 results per modal page, 3 pages. */
@@ -378,7 +385,7 @@ interface JikanMangaItem {
 }
 
 /** Which service a failed request went to. */
-export type ApiSource = 'tmdb' | 'omdb' | 'jikan' | 'anilist' | 'googleBooks' | 'rawg' | 'igdb' | 'twitch' | 'unknown';
+export type ApiSource = 'tmdb' | 'omdb' | 'jikan' | 'anilist' | 'googleBooks' | 'rawg' | 'igdb' | 'twitch' | 'cinemeta' | 'openLibrary' | 'steamStore' | 'unknown';
 
 /** Why it failed. 'no-key' = none set; 'auth' = the credential was rejected. */
 type ApiErrorReason =
@@ -411,7 +418,7 @@ class ApiError extends Error {
 }
 
 /** Sources that take no credential, so "rejected your credentials" can never be the cause. */
-const KEYLESS_SOURCES: ReadonlySet<ApiSource> = new Set<ApiSource>(['jikan', 'anilist']);
+const KEYLESS_SOURCES: ReadonlySet<ApiSource> = new Set<ApiSource>(['jikan', 'anilist', 'cinemeta', 'openLibrary', 'steamStore']);
 
 const API_LABELS: Record<ApiSource, string> = {
 	tmdb: 'TMDB',
@@ -422,6 +429,9 @@ const API_LABELS: Record<ApiSource, string> = {
 	rawg: 'RAWG',
 	igdb: 'IGDB',
 	twitch: 'Twitch',
+	cinemeta: 'Cinemeta',
+	openLibrary: 'Open Library',
+	steamStore: 'Steam Store',
 	unknown: 'The API', // dev-facing Error messages only; user text goes through serviceName()
 };
 
@@ -439,15 +449,21 @@ function serviceName(source: ApiSource): string {
  * Jikan base is user-configurable, so callers pass the one they request against.
  */
 export function apiSourceFromUrl(url: string, jikanBase: string): ApiSource {
-	if (url.startsWith(TMDB_BASE)) return 'tmdb';
-	if (url.startsWith(OMDB_BASE)) return 'omdb';
-	if (url.startsWith(jikanBase)) return 'jikan';
-	if (url.startsWith(ANILIST_ENDPOINT)) return 'anilist';
-	if (url.startsWith(GOOGLE_BOOKS_BASE)) return 'googleBooks';
-	if (url.startsWith(RAWG_BASE)) return 'rawg';
-	if (url.startsWith(IGDB_BASE)) return 'igdb';
-	if (url.startsWith(TWITCH_TOKEN_URL)) return 'twitch';
-	return 'unknown';
+	const prefixes: Array<[string, ApiSource]> = [
+		[TMDB_BASE, 'tmdb'],
+		[OMDB_BASE, 'omdb'],
+		[jikanBase, 'jikan'],
+		[ANILIST_ENDPOINT, 'anilist'],
+		[GOOGLE_BOOKS_BASE, 'googleBooks'],
+		[RAWG_BASE, 'rawg'],
+		[IGDB_BASE, 'igdb'],
+		[TWITCH_TOKEN_URL, 'twitch'],
+		[CINEMETA_HOST, 'cinemeta'],
+		[OPEN_LIBRARY_HOST, 'openLibrary'],
+		[OPEN_LIBRARY_COVERS_HOST, 'openLibrary'],
+		[STEAM_STORE_SEARCH, 'steamStore'],
+	];
+	return prefixes.find(([prefix]) => url.startsWith(prefix))?.[1] ?? 'unknown';
 }
 
 /**
@@ -2384,6 +2400,36 @@ export class ApiService {
 		}
 	}
 
+	// Keyless sources (Cinemeta, Open Library, Steam Store)
+
+	async searchCinemeta(query: string, kind: CinemetaKind, year?: string): Promise<MediaSearchResult[]> {
+		const json = await this.request({ url: cinemetaSearchUrl(kind, query) });
+		return mapCinemetaSearch(json, kind, year ?? '', SEARCH_RESULT_LIMIT);
+	}
+
+	async getCinemetaDetails(imdbId: string, kind: 'movie' | 'tv'): Promise<MediaSearchResult | null> {
+		const cinemetaKind: CinemetaKind = kind === 'tv' ? 'series' : 'movie';
+		return mapCinemetaMeta(await this.request({ url: cinemetaMetaUrl(cinemetaKind, imdbId) }), cinemetaKind);
+	}
+
+	async searchOpenLibrary(query: string): Promise<BookSearchResult[]> {
+		return mapOpenLibrarySearch(await this.request({ url: openLibrarySearchUrl(query) }));
+	}
+
+	async getOpenLibraryWork(id: string): Promise<BookSearchResult | null> {
+		if (id === '') return null;
+		return mapOpenLibraryWork(await this.request({ url: openLibraryWorkUrl(id) }));
+	}
+
+	async searchSteamStore(query: string): Promise<GameSearchResult[]> {
+		return mapSteamStoreSearch(await this.request({ url: steamStoreSearchUrl(query) }));
+	}
+
+	async getSteamStoreDetails(row: GameSearchResult): Promise<GameDetailsResult | null> {
+		const details = await this.getSteamAppDetails(String(row.id));
+		return details ? steamDetailsToGameDetails(row, details) : null;
+	}
+
 	/** Test-connection probe: one GetOwnedGames call, reported by reason. */
 	async checkSteamConnection(): Promise<SteamLibraryResult> {
 		return this.getSteamOwnedGames();
@@ -2391,15 +2437,6 @@ export class ApiService {
 }
 
 // Steam helpers
-
-/**
- * The portrait library capsule. Steam's `header_image` is a 460×215 landscape banner that
- * letterboxes badly in portrait poster cards; the 600×900 capsule is the shape the grid
- * expects. Not every app publishes one — the card's onerror falls back to the placeholder.
- */
-export function steamLibraryCover(appId: string): string {
-	return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900.jpg`;
-}
 
 /** Steam appid out of a store URL, '' when the URL isn't a Steam store page. */
 export function steamAppIdFromUrl(url: string): string {

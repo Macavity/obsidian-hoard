@@ -1,4 +1,13 @@
-import { steamLibraryCover, type GameDetailsResult, type GameSearchResult, type SteamAppDetails } from './ApiService';
+import type { GameDetailsResult, GameSearchResult, SteamAppDetails } from './ApiService';
+
+/**
+ * The portrait library capsule. Steam's `header_image` is a 460×215 landscape banner that
+ * letterboxes badly in portrait poster cards; the 600×900 capsule is the shape the grid
+ * expects. Not every app publishes one — the card's onerror falls back to the placeholder.
+ */
+export function steamLibraryCover(appId: string): string {
+	return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900.jpg`;
+}
 
 const PLATFORM_NAMES: Array<[string, string]> = [
 	['windows', 'Windows'],

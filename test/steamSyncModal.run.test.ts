@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SteamSyncModal } from '../src/SteamSyncModal';
-import { steamLibraryCover, type SteamOwnedGame } from '../src/ApiService';
+import type { SteamOwnedGame } from '../src/ApiService';
+import { steamLibraryCover } from '../src/steamStoreApi';
 import { GAME_AUTO_STATUS, type Game, type SteamSyncUpdate } from '../src/types';
 import { clickByText, shownNotices } from './helpers/csvWizard';
 
