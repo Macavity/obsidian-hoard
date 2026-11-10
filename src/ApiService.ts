@@ -1,6 +1,7 @@
 import { requestUrl } from 'obsidian';
 import type { RequestUrlParam } from 'obsidian';
 import { httpsOrEmpty } from './httpsUrl';
+import type { MediaSource } from './apiSources';
 import { t, type TranslationKey } from './i18n';
 import { TENRAI_BASE, type JikanEndpoint } from './jikanBase';
 import type {
@@ -1789,7 +1790,7 @@ export class ApiService {
 	 */
 	async fetchCredits(
 		title: HoardTitle,
-		activeApi: 'Cinemeta' | 'OMDb' | 'TMDB' = 'OMDb',
+		source: MediaSource = 'omdb',
 	): Promise<{ director: string[]; cast: string[] } | null> {
 		const imdbId = this.extractImdbId(title.externalLink ?? '');
 		if (!imdbId) return null;
@@ -1843,7 +1844,7 @@ export class ApiService {
 			}
 		};
 
-		const order = activeApi === 'TMDB' ? [tryTmdb, tryOmdb] : [tryOmdb, tryTmdb];
+		const order = source === 'tmdb' ? [tryTmdb, tryOmdb] : [tryOmdb, tryTmdb];
 		for (const attempt of order) {
 			const result = await attempt();
 			if (result) return result;

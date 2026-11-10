@@ -1,3 +1,4 @@
+import type { MediaSource } from './apiSources';
 import type HoardPlugin from './main';
 import type { AnimeSearchResult, MediaSearchResult, HoardTitle, Book, Manga, Game } from './types';
 import type { GameSearchResult, BookSearchResult, MangaSearchResult } from './ApiService';
@@ -34,12 +35,12 @@ export function animeResultIdKeys(r: AnimeSearchResult): string[] {
 }
 
 /**
- * `MediaSearchResult.imdbId` holds whatever the active API indexes by — a real imdb id under OMDb,
- * a TMDB numeric id under TMDB — so the key depends on which one produced the row.
+ * `MediaSearchResult.imdbId` holds whatever the effective source indexes by — a real imdb id under
+ * Cinemeta/OMDb, a TMDB numeric id under TMDB — so the key depends on which one produced the row.
  */
-export function mediaResultIdKeys(r: MediaSearchResult, activeApi: string): string[] {
+export function mediaResultIdKeys(r: MediaSearchResult, source: MediaSource): string[] {
 	if (!r.imdbId) return [];
-	return activeApi === 'TMDB'
+	return source === 'tmdb'
 		? [`tmdb:${r.mediaType}:${r.imdbId}`]
 		: [`imdb:${r.imdbId}`];
 }

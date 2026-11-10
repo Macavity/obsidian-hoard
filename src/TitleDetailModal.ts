@@ -18,6 +18,7 @@ import { pinModalFooter } from './StickyModal';
 import { renderEpisodeGrid } from './ui/EpisodeGrid';
 import type { TmdbCollectionDetail } from './types';
 import { t } from './i18n';
+import { effectiveMediaSource } from './apiSources';
 import { createIconButton } from './ui/IconButton';
 import { paintFavoriteButton, renderGroupDetailHeader, episodeGridText } from './ui/detailShared';
 import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
@@ -345,7 +346,7 @@ export class TitleDetailModal extends Modal {
 			try {
 				const fetched = await this.plugin.apiService.fetchCredits(
 					t,
-					this.plugin.settings.activeApi ?? 'OMDb',
+					effectiveMediaSource(this.plugin.settings, this.plugin.apiService),
 				);
 				// only absent fields are filled; data or a 'none' marker is kept as-is
 				const director = isCreditsUnfetched(t.director) ? (fetched?.director ?? [CREDITS_NONE]) : t.director!;
@@ -1124,7 +1125,7 @@ export function renderCreditsRefreshButton(
 				const t = plugin.dataManager.getTitle(title.id) ?? title;
 				const fetched = await plugin.apiService.fetchCredits(
 					t,
-					plugin.settings.activeApi ?? 'OMDb',
+					effectiveMediaSource(plugin.settings, plugin.apiService),
 				);
 				await plugin.dataManager.updateCredits(
 					t.id,

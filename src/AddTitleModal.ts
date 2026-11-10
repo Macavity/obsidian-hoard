@@ -18,6 +18,7 @@ import {
 } from './titleSearch';
 import { SearchFormModal, type SearchPickerOptions } from './ui/SearchFormModal';
 import { LibraryIndex } from './LibraryIndex';
+import { effectiveMediaSource } from './apiSources';
 import { createDatePicker } from './DatePicker';
 import { renderStarRating } from './StarRating';
 import { blockDuplicate, createDuplicateGuard } from './ui/DuplicateGuard';
@@ -55,6 +56,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 	private fieldDirector: string[] = [];
 	private fieldCast: string[] = [];
 	private fieldStudio: string[] = [];
+	private fieldPosterUrl = '';
 	private duplicates = createDuplicateGuard();
 	// built on first search, reused for the modal's life
 	private libIndex: LibraryIndex | null = null;
@@ -125,7 +127,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 
 	protected renderResult(host: HTMLElement, result: TitleSearchResult, select: (itemEl: HTMLElement) => void): HTMLElement {
 		if (!this.libIndex) this.libIndex = LibraryIndex.build(this.plugin, ['watchlist']);
-		const idKeys = resultIdKeys(result, this.plugin.settings.activeApi ?? 'OMDb');
+		const idKeys = resultIdKeys(result, effectiveMediaSource(this.plugin.settings, this.plugin.apiService));
 		return renderSearchResultRow(host, {
 			thumbUrl: result.posterUrl,
 			fallbackIcon: '🎬',
@@ -147,6 +149,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		this.fieldDirector = pick.director;
 		this.fieldCast = pick.cast;
 		this.fieldStudio = pick.studio;
+		this.fieldPosterUrl = pick.posterUrl ?? '';
 		if (pick.animeIds) {
 			this.fieldMalId = pick.animeIds.malId;
 			this.fieldAnilistId = pick.animeIds.anilistId;
@@ -243,7 +246,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 			seasons: this.fieldSeasons,
 			watchedEpisodes: [],
 			favorite: false,
-			posterUrl: '',
+			posterUrl: this.fieldPosterUrl,
 			trailerUrl: this.fieldTrailerUrl,
 			manualTrailerUrl: '',
 			// empty stays absent (= unfetched) so the detail modal's lazy backfill runs

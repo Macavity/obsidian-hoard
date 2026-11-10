@@ -5,6 +5,7 @@ import type { MediaFields } from './ui/FormCells';
 import type { AnimeSearchResult, MediaSearchResult, Season } from './types';
 import { getApiGroupForType } from './types';
 import { animeResultIdKeys, mediaResultIdKeys } from './LibraryIndex';
+import { effectiveMediaSource, type MediaSource } from './apiSources';
 import { SEARCH_PAGE_SIZE, SEARCH_RESULT_LIMIT } from './ApiService';
 
 export type TitleSearchResult = AnimeSearchResult | MediaSearchResult;
@@ -30,9 +31,10 @@ export async function searchTitles(
 			: await api.searchAnime(query, year, SEARCH_RESULT_LIMIT);
 	}
 	const kind = type === 'Movie' ? 'movie' : 'series';
-	return (plugin.settings.activeApi ?? 'OMDb') === 'TMDB'
-		? await api.searchTmdb(query, kind, year)
-		: await api.searchOmdb(query, kind, year);
+	const source = effectiveMediaSource(plugin.settings, api);
+	if (source === 'tmdb') return await api.searchTmdb(query, kind, year);
+	if (source === 'omdb') return await api.searchOmdb(query, kind, year);
+	return await api.searchCinemeta(query, kind, year);
 }
 
 /** Full movie/TV record for a search row from the active media API. */
@@ -41,11 +43,11 @@ export function fetchMediaDetails(
 	result: MediaSearchResult,
 ): Promise<MediaSearchResult | null> {
 	const api = plugin.apiService;
-	const tmdb = (plugin.settings.activeApi ?? 'OMDb') === 'TMDB';
-	if (result.mediaType === 'tv') {
-		return tmdb ? api.getTmdbTvDetails(result.imdbId) : api.getOmdbTvDetails(result.imdbId);
-	}
-	return tmdb ? api.getTmdbMovieDetails(result.imdbId) : api.getOmdbMovieDetails(result.imdbId);
+	const source = effectiveMediaSource(plugin.settings, api);
+	const tv = result.mediaType === 'tv';
+	if (source === 'cinemeta') return api.getCinemetaDetails(result.imdbId, result.mediaType);
+	if (source === 'tmdb') return tv ? api.getTmdbTvDetails(result.imdbId) : api.getTmdbMovieDetails(result.imdbId);
+	return tv ? api.getOmdbTvDetails(result.imdbId) : api.getOmdbMovieDetails(result.imdbId);
 }
 
 /** "12 eps", or the media type for movies and rows without an episode count. */
@@ -55,8 +57,8 @@ export function episodesLabel(result: TitleSearchResult): string {
 }
 
 /** Library identity keys of a search row. */
-export function resultIdKeys(result: TitleSearchResult, activeApi: string): string[] {
-	return isAnimeResult(result) ? animeResultIdKeys(result) : mediaResultIdKeys(result, activeApi);
+export function resultIdKeys(result: TitleSearchResult, source: MediaSource): string[] {
+	return isAnimeResult(result) ? animeResultIdKeys(result) : mediaResultIdKeys(result, source);
 }
 
 /** Form values taken from a search row or its detail record. */
@@ -71,6 +73,8 @@ export interface TitlePick {
 	director: string[];
 	cast: string[];
 	studio: string[];
+	/** Cinemeta picks only: its rows carry a poster, so the form keeps it instead of leaving it empty. */
+	posterUrl?: string;
 	/** Anime picks only: exactly one id is set. */
 	animeIds?: { malId: number | null; anilistId: number | null };
 }
@@ -137,13 +141,16 @@ export async function resolvePick(
 		apply(pickFromAnime(result));
 		return true;
 	}
+	const keepPoster = effectiveMediaSource(plugin.settings, plugin.apiService) === 'cinemeta';
+	const withPoster = (pick: TitlePick, ...rows: TitleSearchResult[]): TitlePick =>
+		keepPoster ? { ...pick, posterUrl: rows.map((r) => r.posterUrl).find(Boolean) ?? '' } : pick;
 	try {
 		const full = await fetchMediaDetails(plugin, result);
 		if (!isCurrent()) return false;
-		if (full) apply(pickFromMedia(full));
+		if (full) apply(withPoster(pickFromMedia(full), full, result));
 	} catch {
 		if (!isCurrent()) return false;
-		apply(pickFromRow(result));
+		apply(withPoster(pickFromRow(result), result));
 	}
 	return true;
 }

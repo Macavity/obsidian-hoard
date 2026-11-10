@@ -5,6 +5,7 @@ import type { MediaSearchResult } from './types';
 import { apiErrorMessage } from './ApiService';
 import { AddTitleModal } from './AddTitleModal';
 import { t } from './i18n';
+import { effectiveMediaSource } from './apiSources';
 
 /** themoviedb.org/movie/27205-inception, /tv/1396, with or without slug and query */
 const TMDB_URL_RE = /themoviedb\.org\/(movie|tv)\/(\d+)/i;
@@ -83,9 +84,12 @@ export class AddFromUrlModal extends Modal {
 	private async lookupImdb(): Promise<MediaSearchResult | null | 'invalid'> {
 		const match = (this.imdbInput?.value.trim() ?? '').match(/tt\d+/);
 		if (!match) return 'invalid';
-		return this.plugin.settings.activeApi === 'TMDB'
-			? this.plugin.apiService.getTmdbByImdbId(match[0])
-			: this.plugin.apiService.getOmdbByImdbId(match[0]);
+		const api = this.plugin.apiService;
+		const source = effectiveMediaSource(this.plugin.settings, api);
+		if (source === 'tmdb') return api.getTmdbByImdbId(match[0]);
+		if (source === 'omdb') return api.getOmdbByImdbId(match[0]);
+		// Cinemeta is keyed by kind, and an IMDb link doesn't say which: movie first, then series
+		return (await api.getCinemetaDetails(match[0], 'movie')) ?? (await api.getCinemetaDetails(match[0], 'tv'));
 	}
 
 	/** TMDB links carry the id + media type outright, so the detail call is direct — but it needs a key */
