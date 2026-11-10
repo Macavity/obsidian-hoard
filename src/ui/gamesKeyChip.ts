@@ -5,6 +5,8 @@ import type { HoardPluginSettings } from '../types';
 export function gamesKeyChip(
 	s: Pick<HoardPluginSettings, 'gamesApiSource' | 'rawgApiKey' | 'igdbClientId' | 'igdbClientSecret'>,
 ): { text: string; tone: 'ok' | 'warn' } {
+	// the keyless source has no key that could be missing
+	if (s.gamesApiSource === 'steam') return { text: t('settings.api.chipNoKey', { name: 'Steam' }), tone: 'ok' };
 	const rawg = (s.gamesApiSource ?? 'rawg') === 'rawg';
 	const name = rawg ? 'RAWG' : 'IGDB';
 	const keyed = rawg ? !!s.rawgApiKey : !!(s.igdbClientId && s.igdbClientSecret);

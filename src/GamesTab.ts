@@ -24,6 +24,7 @@ import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, com
 import { renderHeaderToolbar } from './MobileToolbar';
 import { rawgResizedCover } from './ApiService';
 import { resolveGameCover, type GameCover } from './coverRefresh';
+import { effectiveGameSource } from './apiSources';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from './ui/TabFilters';
 import { ConfirmModal } from './ConfirmModal';
 import { GameDetailModal, GameGroupDetailModal, gameGroupProgress } from './GameDetailModal';
@@ -1263,7 +1264,8 @@ export class GamesTab {
 	}
 
 	private resolveCover(game: Game): Promise<GameCover> {
-		return resolveGameCover(this.plugin.apiService, this.plugin.settings.gamesApiSource ?? 'rawg', game);
+		const api = this.plugin.apiService;
+		return resolveGameCover(api, effectiveGameSource(this.plugin.settings, api), game);
 	}
 
 	private applyCoverToCard(card: HTMLElement, url: string): void {

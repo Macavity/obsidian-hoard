@@ -1,7 +1,8 @@
 import { App, Notice, setIcon } from 'obsidian';
 import type HoardPlugin from './main';
 import type { GameDataManager } from './GameDataManager';
-import { rawgResizedCover, steamAppIdFromUrl, type GameSearchResult } from './ApiService';
+import { rawgResizedCover, steamAppIdFromUrl, type GameDetailsResult, type GameSearchResult } from './ApiService';
+import { effectiveGameSource } from './apiSources';
 import { Game, GameGroup, GAME_AUTO_STATUS } from './types';
 import { renderSearchResultRow } from './SearchThumbnail';
 import { t } from './i18n';
@@ -58,9 +59,9 @@ function gameResultMeta(result: GameSearchResult): string {
 }
 
 /**
- * Add-game modal (the AddTitleModal pattern): API search (RAWG or IGDB per gamesApiSource) with
+ * Add-game modal (the AddTitleModal pattern): search (Steam, or RAWG/IGDB once keyed) with
  * thumbnailed results, an editable form below, platform chips, the mode pill and a store-link
- * button. Works as a plain manual form when no API is configured.
+ * button. Steam needs no key, so search always works.
  */
 export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	private plugin: HoardPlugin;
@@ -85,6 +86,8 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	// by id instead of by title
 	private apiSource: '' | 'rawg' | 'igdb' | 'steam' = '';
 	private apiId = '';
+	// set for Steam picks, so a later Steam sync matches this game by id instead of by title
+	private steamAppId = '';
 	private fieldSingleplayer = false;
 	private fieldCoop = false;
 	private fieldMultiplayer = false;
@@ -116,19 +119,38 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		return { placeholder: t('add.game.searchPlaceholder'), grid: true, initialQuery: this.initialQuery };
 	}
 
+	/** The keyless Steam source is always available, so there is never a "no API" panel. */
 	protected noApiMessage(): string | null {
-		const api = this.plugin.apiService;
-		if (this.plugin.settings.gamesApiSource === 'igdb') {
-			return api.hasIgdbCredentials()
-				? null
-				: t('add.game.noIgdb');
-		}
-		return api.hasRawgKey() ? null : t('add.game.noRawg');
+		return null;
 	}
 
 	protected search(query: string): Promise<GameSearchResult[]> {
 		const api = this.plugin.apiService;
-		return this.plugin.settings.gamesApiSource === 'igdb' ? api.searchIgdbGames(query) : api.searchRawgGames(query);
+		const source = effectiveGameSource(this.plugin.settings, api);
+		if (source === 'igdb') return api.searchIgdbGames(query);
+		if (source === 'rawg') return api.searchRawgGames(query);
+		return api.searchSteamStore(query);
+	}
+
+	private fetchDetails(result: GameSearchResult): Promise<GameDetailsResult | null> {
+		const api = this.plugin.apiService;
+		if (result.source === 'igdb') return api.getIgdbGameDetails(result.id);
+		if (result.source === 'steam') return api.getSteamStoreDetails(result);
+		return api.getRawgGameDetails(result.id);
+	}
+
+	private applyDetails(full: GameDetailsResult): void {
+		this.fieldTitle = full.title;
+		this.fieldDeveloper = full.developer;
+		this.fieldPublisher = full.publisher;
+		this.fieldReleaseDate = full.releaseDate;
+		this.fieldCoverUrl = full.coverUrl;
+		this.fieldLink = full.url;
+		this.fieldStoreUrl = full.storeUrl;
+		this.fieldSingleplayer = full.singleplayer;
+		this.fieldCoop = full.coop;
+		this.fieldMultiplayer = full.multiplayer;
+		this.fieldPlatforms = this.matchOwnPlatforms(full.platforms);
 	}
 
 	protected renderResult(host: HTMLElement, result: GameSearchResult, select: (itemEl: HTMLElement) => void): HTMLElement {
@@ -145,29 +167,15 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	}
 
 	protected async selectResult(result: GameSearchResult, isCurrent: () => boolean): Promise<void> {
-		const api = this.plugin.apiService;
 		// remember the origin even if the detail fetch fails — the search row identifies the game well
 		// enough to re-fetch its cover later
 		this.apiSource = result.source;
 		this.apiId = String(result.id);
+		this.steamAppId = result.source === 'steam' ? this.apiId : '';
 		try {
-			const full = result.source === 'igdb'
-				? await api.getIgdbGameDetails(result.id)
-				: await api.getRawgGameDetails(result.id);
+			const full = await this.fetchDetails(result);
 			if (!isCurrent()) return;
-			if (full) {
-				this.fieldTitle = full.title;
-				this.fieldDeveloper = full.developer;
-				this.fieldPublisher = full.publisher;
-				this.fieldReleaseDate = full.releaseDate;
-				this.fieldCoverUrl = full.coverUrl;
-				this.fieldLink = full.url;
-				this.fieldStoreUrl = full.storeUrl;
-				this.fieldSingleplayer = full.singleplayer;
-				this.fieldCoop = full.coop;
-				this.fieldMultiplayer = full.multiplayer;
-				this.fieldPlatforms = this.matchOwnPlatforms(full.platforms);
-			}
+			if (full) this.applyDetails(full);
 		} catch {
 			// detail fetch failed — fall back to what the search row carried
 			this.fieldTitle = result.title;
@@ -339,7 +347,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 			apiId: this.apiId,
 			// seeded from the store link when it's a Steam page, so a later Steam sync matches exactly instead
 			// of guessing by title
-			steamAppId: steamAppIdFromUrl(this.fieldStoreUrl.trim()),
+			steamAppId: this.steamAppId || steamAppIdFromUrl(this.fieldStoreUrl.trim()),
 			lastPlayed: null,
 			storeUrl: this.fieldStoreUrl.trim(),
 			externalLink: this.fieldLink.trim(),

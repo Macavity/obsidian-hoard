@@ -4,6 +4,7 @@ import type { ReadingDataManager } from './ReadingDataManager';
 import type { BookSearchResult, MangaSearchResult } from './ApiService';
 import { apiErrorMessage } from './ApiService';
 import { renderSearchResultRow } from './SearchThumbnail';
+import { effectiveBookSource } from './apiSources';
 import { LibraryIndex, bookResultIdKeys, mangaResultIdKeys } from './LibraryIndex';
 import { renderStarRating } from './StarRating';
 import { createDatePicker } from './DatePicker';
@@ -21,7 +22,6 @@ import {
 export type ReadingMode = 'book' | 'manga';
 
 type LookupOutcome =
-	| { kind: 'message'; text: string }
 	| { kind: 'books'; results: BookSearchResult[] }
 	| { kind: 'manga'; results: MangaSearchResult[] };
 
@@ -41,6 +41,7 @@ interface ReadingFormState {
 	totalVolumes: number;
 	coverUrl: string;
 	googleBooksId: string;
+	openLibraryId: string;
 	malId: string;
 	vaultPage: string;
 	dateStarted: string | null;
@@ -65,6 +66,7 @@ function emptyFormState(): ReadingFormState {
 		totalVolumes: 0,
 		coverUrl: '',
 		googleBooksId: '',
+		openLibraryId: '',
 		malId: '',
 		vaultPage: '',
 		dateStarted: null,
@@ -290,9 +292,7 @@ export class AddReadingModal extends Modal {
 	}
 
 	private renderLookupOutcome(outcome: LookupOutcome): void {
-		if (outcome.kind === 'message') {
-			this.showLookupMessage('hoard-modal-loading', outcome.text);
-		} else if (outcome.kind === 'books') {
+		if (outcome.kind === 'books') {
 			this.renderLookupResults(outcome.results, '📖', (r) => this.applyBookResult(r), bookResultIdKeys);
 		} else {
 			this.renderLookupResults(outcome.results, '📓', (r) => this.applyMangaResult(r), mangaResultIdKeys);
@@ -306,10 +306,9 @@ export class AddReadingModal extends Modal {
 	}
 
 	private async lookupBooks(query: string): Promise<LookupOutcome> {
-		if (!this.plugin.apiService.hasGoogleBooksKey()) {
-			return { kind: 'message', text: t('add.reading.needGoogleKey') };
-		}
-		return { kind: 'books', results: await this.plugin.apiService.searchGoogleBooks(query) };
+		const api = this.plugin.apiService;
+		const google = effectiveBookSource(this.plugin.settings, api) === 'google';
+		return { kind: 'books', results: google ? await api.searchGoogleBooks(query) : await api.searchOpenLibrary(query) };
 	}
 
 	private async lookupManga(query: string): Promise<LookupOutcome> {
@@ -363,26 +362,39 @@ export class AddReadingModal extends Modal {
 		this.state.totalPages = r.totalPages;
 		this.state.coverUrl = r.coverUrl;
 		this.state.googleBooksId = r.googleBooksId;
+		this.state.openLibraryId = r.openLibraryId;
 		this.state.releaseDate = r.releaseDate ?? '';
 		this.refreshForm();
 		// keep the results list open so another result can be picked.
-		// search results sometimes omit page counts and only return thumbnails — fetch the full volume for
+		// search results sometimes omit page counts and only return thumbnails — fetch the full record for
 		// the selected book to upgrade both.
-		if (r.googleBooksId) {
-			void (async () => {
-				try {
-					const detail = await this.plugin.apiService.getGoogleBookById(r.googleBooksId);
-					if (gen !== this.selectGen || !detail) return; // a newer selection superseded this one
-					if (detail.totalPages > 0) this.state.totalPages = detail.totalPages;
-					if (detail.coverUrl) {
-						this.state.coverUrl = detail.coverUrl;
-					}
-					this.refreshForm();
-				} catch {
-					// best-effort enrichment; the book is already applied from the search results
-				}
-			})();
+		if (r.googleBooksId || r.openLibraryId) void this.enrichBook(r, gen);
+	}
+
+	private async enrichBook(r: BookSearchResult, gen: number): Promise<void> {
+		try {
+			const api = this.plugin.apiService;
+			const detail = r.googleBooksId ? await api.getGoogleBookById(r.googleBooksId) : await api.getOpenLibraryWork(r.openLibraryId);
+			if (gen !== this.selectGen || !detail) return; // a newer selection superseded this one
+			if (r.googleBooksId) this.applyGoogleDetail(detail);
+			else this.applyOpenLibraryDetail(r, detail);
+			this.refreshForm();
+		} catch {
+			// best-effort enrichment; the book is already applied from the search results
 		}
+	}
+
+	private applyGoogleDetail(detail: BookSearchResult): void {
+		if (detail.totalPages > 0) this.state.totalPages = detail.totalPages;
+		if (detail.coverUrl) this.state.coverUrl = detail.coverUrl;
+	}
+
+	/** The search row wins for author, pages and date when it has them; the work record fills the gaps. */
+	private applyOpenLibraryDetail(row: BookSearchResult, detail: BookSearchResult): void {
+		if (!row.author) this.state.author = detail.author;
+		if (!(row.totalPages > 0)) this.state.totalPages = detail.totalPages;
+		if (!row.releaseDate) this.state.releaseDate = detail.releaseDate;
+		if (!row.coverUrl) this.state.coverUrl = detail.coverUrl;
 	}
 
 	private applyMangaResult(r: MangaSearchResult): void {
@@ -645,6 +657,7 @@ export class AddReadingModal extends Modal {
 				totalChapters: this.state.totalChapters,
 				coverUrl: this.state.coverUrl.trim(),
 				googleBooksId: this.state.googleBooksId.trim(),
+				openLibraryId: this.state.openLibraryId.trim(),
 				vaultPage: this.state.vaultPage,
 				dateStarted: this.state.dateStarted,
 				dateFinished: this.state.dateFinished,
@@ -668,7 +681,7 @@ export class AddReadingModal extends Modal {
 				totalChapters: this.state.totalChapters,
 				coverUrl: this.state.coverUrl.trim(),
 				googleBooksId: this.state.googleBooksId.trim(),
-				openLibraryId: '',
+				openLibraryId: this.state.openLibraryId.trim(),
 				vaultPage: this.state.vaultPage,
 				dateStarted: this.state.dateStarted,
 				dateFinished: this.state.dateFinished,
