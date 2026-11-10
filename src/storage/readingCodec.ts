@@ -182,7 +182,7 @@ function stripEmptyOptional(entry: Book | Manga): void {
 	if (!entry.airtime) delete entry.airtime;
 }
 
-export function decodeBook(id: string, fm: Fm, columns: Columns): Decoded<Book> {
+export function decodeBook(id: string, fm: Record<string, unknown>, columns: readonly ReadingCustomColumn[]): Decoded<Book> {
 	const r = new FmReader(fm);
 	const ext = parseExternalId(r.str(C.externalId));
 	const gbooks = ext?.source === 'gbooks' ? ext.id : '';
@@ -199,7 +199,7 @@ export function decodeBook(id: string, fm: Fm, columns: Columns): Decoded<Book> 
 	return { entry, invalidFields: r.invalidFields };
 }
 
-export function encodeBook(b: Book, columns: Columns): Fm {
+export function encodeBook(b: Book, columns: readonly ReadingCustomColumn[]): Record<string, unknown> {
 	const out: Fm = {};
 	encodeCommon(b, out);
 	out[R.pagesRead] = b.pagesRead | 0;
@@ -220,7 +220,7 @@ export function encodeBook(b: Book, columns: Columns): Fm {
 	return out;
 }
 
-export function decodeManga(id: string, fm: Fm, columns: Columns): Decoded<Manga> {
+export function decodeManga(id: string, fm: Record<string, unknown>, columns: readonly ReadingCustomColumn[]): Decoded<Manga> {
 	const r = new FmReader(fm);
 	const ext = parseExternalId(r.str(C.externalId));
 	const mal = ext?.source === 'mal' && ext.kind === 'manga' ? ext.id : '';
@@ -234,7 +234,7 @@ export function decodeManga(id: string, fm: Fm, columns: Columns): Decoded<Manga
 	return { entry, invalidFields: r.invalidFields };
 }
 
-export function encodeManga(m: Manga, columns: Columns): Fm {
+export function encodeManga(m: Manga, columns: readonly ReadingCustomColumn[]): Record<string, unknown> {
 	const out: Fm = {};
 	encodeCommon(m, out);
 	out[R.chaptersRead] = m.chaptersRead | 0;
