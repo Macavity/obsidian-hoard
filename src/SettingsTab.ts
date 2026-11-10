@@ -656,11 +656,11 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 	/** Mobile path: write the backup into <root>/backups/, disambiguating on collision. */
 	private async exportBackupToVault(filename: string, json: string): Promise<void> {
-		const adapter = this.app.vault.adapter;
+		const vault = this.app.vault;
 		const folder = normalizePath(`${this.plugin.getLayout().root}/backups`);
-		if (!(await adapter.exists(folder))) {
+		if (!vault.getFolderByPath(folder)) {
 			try {
-				await adapter.mkdir(folder);
+				await vault.createFolder(folder);
 			} catch {
 				// folder may already exist
 			}
@@ -671,13 +671,13 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const base = dotIndex === -1 ? filename : filename.slice(0, dotIndex);
 		const ext = dotIndex === -1 ? '' : filename.slice(dotIndex);
 		let path = normalizePath(`${folder}/${filename}`);
-		if (await adapter.exists(path)) {
+		if (vault.getAbstractFileByPath(path)) {
 			let counter = 2;
-			while (await adapter.exists(normalizePath(`${folder}/${base}-${counter}${ext}`))) counter++;
+			while (vault.getAbstractFileByPath(normalizePath(`${folder}/${base}-${counter}${ext}`))) counter++;
 			path = normalizePath(`${folder}/${base}-${counter}${ext}`);
 		}
 
-		await adapter.write(path, json);
+		await vault.create(path, json);
 		new Notice(t('settings.backup.export.savedToVault', { path }));
 	}
 
