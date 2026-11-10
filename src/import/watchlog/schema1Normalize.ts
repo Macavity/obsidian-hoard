@@ -5,6 +5,7 @@ import type {
 	Book, Game, GamesData, GamesSettings, HoardTitle, Manga, ReadingData, ReadingStatus,
 	TagDefinition,
 } from '../../types';
+import { TITLE_PROPS } from '../../storage/properties';
 import { WISHLIST, isRecord, type Fm, type WatchLogTitle } from './schema1Types';
 
 // WatchLog's load-time corrections, applied once while converting its data.
@@ -20,15 +21,15 @@ export function isoOf(v: unknown): string | null {
 /** API-derived keys WatchLog wrote into a title note, with the values it wrote. */
 export function watchLogApiValues(t: HoardTitle): Fm {
 	const out: Fm = {};
-	if (t.communityRating !== undefined) out.communityRating = t.communityRating;
-	if (t.communityVotes !== undefined) out.communityVotes = t.communityVotes;
-	if (t.communitySource) out.communitySource = t.communitySource;
+	if (t.communityRating !== undefined) out[TITLE_PROPS.communityRating] = t.communityRating;
+	if (t.communityVotes !== undefined) out[TITLE_PROPS.communityVotes] = t.communityVotes;
+	if (t.communitySource) out[TITLE_PROPS.communitySource] = t.communitySource;
 	for (const field of ['director', 'cast', 'studio'] as const) {
 		const names = getTitleCredits(t, field);
-		if (names.length > 0) out[field] = names;
+		if (names.length > 0) out[TITLE_PROPS[field]] = names;
 	}
 	// the fetched trailer only: a manual one in the note is the user's
-	if (t.trailerUrl && t.trailerUrl !== 'none') out.trailer = t.trailerUrl;
+	if (t.trailerUrl && t.trailerUrl !== 'none') out[TITLE_PROPS.trailer] = t.trailerUrl;
 	return out;
 }
 

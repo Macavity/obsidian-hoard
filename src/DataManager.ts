@@ -1454,11 +1454,11 @@ export class DataManager {
 		if (!file) return false;
 		const out = encodeTitle(title, this.getProgress(title), this.seasonsPending(title));
 		const keep = new Set(this.index.invalidFields(title.id));
-		if (!('watched' in out)) {
-			keep.add('watched');
-			keep.add('skipped');
+		if (!(TITLE_PROPS.watchedEpisodes in out)) {
+			keep.add(TITLE_PROPS.watchedEpisodes);
+			keep.add(TITLE_PROPS.skippedEpisodes);
 			// derived from the unreadable watched text: 0% would be wrong
-			if (!isMovie(title.seasons, title.totalEpisodes)) keep.add('progress');
+			if (!isMovie(title.seasons, title.totalEpisodes)) keep.add(TITLE_PROPS.progress);
 		}
 		return this.processFrontMatter(file, title, (raw) => {
 			for (const key of TITLE_KEYS) {
