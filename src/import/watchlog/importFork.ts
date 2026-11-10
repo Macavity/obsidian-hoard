@@ -6,7 +6,7 @@ import { registerTypes } from './registerTypes';
 import { entryFolders, forkTarget, managedFiles, nestedHoardRoot } from './paths';
 import { emptyImportReport, type ImportReport, type Progress } from './report';
 import { updateFrontMatter } from '../../storage/noteWrite';
-import { OLD_TO_NEW, translateProperties } from './propertyNames';
+import { newName, translateProperties } from './propertyNames';
 import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
 import { REMOVED_SETTINGS, type ImportContext } from './schema1Types';
 
@@ -51,7 +51,7 @@ async function translateNote(path: string, ctx: ImportContext, report: ImportRep
 		for (const key of kept) {
 			items.push({
 				path, reason: 'kept-value', code: 'keptValue',
-				params: { key: OLD_TO_NEW[key] ?? key, hoard: show(next[OLD_TO_NEW[key] ?? key]), watchlog: show(fm[key]) },
+				params: { key: (newName(key) ?? key), hoard: show(next[(newName(key) ?? key)]), watchlog: show(fm[key]) },
 			});
 		}
 		for (const key of Object.keys(fm)) delete fm[key];

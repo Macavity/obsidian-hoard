@@ -87,6 +87,16 @@ export const OLD_TO_NEW: Readonly<Record<string, string>> = {
 	lastPlayed: G.lastPlayed,
 };
 
+/** Current name of a 0.1 key; own-property lookup, so `constructor` and friends are not renamed. */
+export function newName(key: string): string | undefined {
+	return Object.hasOwn(OLD_TO_NEW, key) ? OLD_TO_NEW[key] : undefined;
+}
+
+/** Own data property even for `__proto__`, which plain assignment would turn into a prototype change. */
+function setOwn(out: Record<string, unknown>, key: string, value: unknown): void {
+	Object.defineProperty(out, key, { value, writable: true, enumerable: true, configurable: true });
+}
+
 const PERCENT_RE = /^\s*(\d+(?:\.\d+)?)\s*%?\s*$/;
 const INT_RE = /^\s*\d+\s*$/;
 
@@ -104,7 +114,7 @@ function convertValue(oldKey: string, value: unknown): unknown {
 /** `External ID` from the older `apiSource` + `apiId` pair; undefined when absent or an identity already exists. */
 function foldApiIdentity(fm: Record<string, unknown>): string | undefined {
 	const { apiSource, apiId } = fm;
-	if ('externalId' in fm || COMMON_PROPS.externalId in fm) return undefined;
+	if (Object.hasOwn(fm, 'externalId') || Object.hasOwn(fm, COMMON_PROPS.externalId)) return undefined;
 	if (typeof apiSource !== 'string') return undefined;
 	if (typeof apiId !== 'string' && typeof apiId !== 'number') return undefined;
 	return formatExternalId({ source: apiSource as ExternalSource, id: String(apiId) });
@@ -112,14 +122,14 @@ function foldApiIdentity(fm: Record<string, unknown>): string | undefined {
 
 /** Writes `key` under its new name; on collision the old key stays and is recorded in `kept`. */
 function place(fm: Record<string, unknown>, out: Record<string, unknown>, kept: string[], key: string, value: unknown): void {
-	const target = OLD_TO_NEW[key];
+	const target = newName(key);
 	if (!target) {
-		out[key] = value;
-	} else if (target in fm || target in out) {
-		out[key] = value;
+		setOwn(out, key, value);
+	} else if (Object.hasOwn(fm, target) || Object.hasOwn(out, target)) {
+		setOwn(out, key, value);
 		kept.push(key);
 	} else {
-		out[target] = convertValue(key, value);
+		setOwn(out, target, convertValue(key, value));
 	}
 }
 
@@ -132,7 +142,7 @@ export function translateProperties(fm: Record<string, unknown>): { fm: Record<s
 	const kept: string[] = [];
 	const apiValue = foldApiIdentity(fm);
 	for (const [key, value] of Object.entries(fm)) {
-		if (apiValue !== undefined && key === 'apiSource') out[COMMON_PROPS.externalId] = apiValue;
+		if (apiValue !== undefined && key === 'apiSource') setOwn(out, COMMON_PROPS.externalId, apiValue);
 		else if (apiValue === undefined || key !== 'apiId') place(fm, out, kept, key, value);
 	}
 	return { fm: out, kept };

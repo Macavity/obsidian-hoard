@@ -44,6 +44,17 @@ describe('translateProperties', () => {
 		expect(fm).toEqual({ title: 'a', Name: 'b', Cover: 'p', coverUrl: 'c' });
 		expect(kept).toEqual(['title', 'coverUrl']);
 	});
+	it('leaves keys named like Object.prototype members alone', () => {
+		const { fm, kept } = translateProperties({ constructor: 'a', toString: 'b', valueOf: 1, title: 'T' });
+		expect(fm).toEqual({ constructor: 'a', toString: 'b', valueOf: 1, Name: 'T' });
+		expect(Object.keys(fm)).toEqual(['constructor', 'toString', 'valueOf', 'Name']);
+		expect(kept).toEqual([]);
+	});
+	it('carries a __proto__ key over as an own data property', () => {
+		const { fm } = translateProperties(JSON.parse('{"__proto__":"x","title":"T"}') as Record<string, unknown>);
+		expect(Object.keys(fm)).toEqual(['__proto__', 'Name']);
+		expect(Object.getPrototypeOf(fm)).toBe(Object.prototype);
+	});
 	it('is idempotent', () => {
 		const once = translateProperties({ title: 'Heat', progress: '10%', watched: 'S01E01' }).fm;
 		expect(translateProperties(once)).toEqual({ fm: once, kept: [] });
