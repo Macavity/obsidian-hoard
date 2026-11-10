@@ -25,6 +25,7 @@ import {
 	READING_STATUSES,
 	DEFAULT_READING_STATUS_COLORS,
 } from './types';
+import { sameJson, slugify } from './storage/sharedHelpers';
 
 export type ReadingKind = 'book' | 'manga';
 
@@ -49,15 +50,6 @@ const KIND_KEYS: Record<ReadingKind, readonly string[]> = {
 		READING_PROPS.malId,
 	],
 };
-
-const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
-
-function slugify(input: string): string {
-	return input
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-|-$/g, '');
-}
 
 const encode = (kind: ReadingKind, item: Item): Fm =>
 	kind === 'book' ? encodeBook(item as Book) : encodeManga(item as Manga);

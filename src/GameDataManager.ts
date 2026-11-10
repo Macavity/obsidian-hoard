@@ -25,17 +25,9 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from './types';
+import { sameJson, slugify } from './storage/sharedHelpers';
 
 const GAMES_FOLDER_PREFIX = 'Games/';
-
-const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
-
-function slugify(input: string): string {
-	return input
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-|-$/g, '');
-}
 
 /**
  * Games, backed by one note per game under `<Root>/Games`. Reads come from the EntryIndex; writes go

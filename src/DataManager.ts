@@ -20,6 +20,7 @@ import { decodeBook, decodeManga, encodeAirtime } from './storage/readingCodec';
 import { decodeGame } from './storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
+import { sameJson } from './storage/sharedHelpers';
 
 export interface DataStores {
 	index: EntryIndex;
@@ -64,8 +65,6 @@ function scheduleOf(a: EntryAirtime, releaseDate: string | null): AirtimeSchedul
 /** Retry deadline per outcome of a background API check; a missing key waits until a key changes. */
 const API_CHECK_TTL_MS = { ok: 6 * 3_600_000, transient: 3_600_000, notfound: 7 * 24 * 3_600_000 };
 type ApiCheckKind = 'airing' | 'seasons';
-
-const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 /**
  * Watchlist titles, backed by one note per title. Reads come from the EntryIndex (frontmatter) plus
