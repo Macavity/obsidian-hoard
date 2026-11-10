@@ -15,7 +15,7 @@ source:
   - src/import/watchlog/widgets.ts
   - src/WatchLogOnboardingModal.ts
   - src/WatchLogReport.ts
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+source_commit: adb460eda328223f7b19ac7eeb0f1d3bc18a1fd4
 ---
 
 # Import
@@ -63,8 +63,10 @@ holds `OLD_TO_NEW` and `translateProperties(fm) → { fm, kept }`: renames known
 converts `progress` text to a number and manga `malId` to a number, folds `apiSource` + `apiId`,
 `manualPosterUrl`, `manualTrailerUrl`. Idempotent: when the new key exists the old one stays and is
 returned in `kept` (a `kept-value` review item). `importFork` applies it to copied entry notes only
-(`entryFolders`, not custom lists or history); broken YAML becomes an `invalidYaml` review item and the
-copy stays. Names and rules: [properties](../concepts/properties.md).
+(`entryFolders`, not custom lists or history) and writes only when something changes, so a note
+without old keys stays byte-identical; broken YAML becomes an `invalidYaml` review item and the copy
+stays. Lookups are own-property only (`newName`), so keys like `constructor` or `__proto__` pass through
+unchanged. Names and rules: [properties](../concepts/properties.md).
 
 ## Schema-1 converter
 
