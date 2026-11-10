@@ -11,6 +11,7 @@ import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
 import { FOLDERS } from './storage/VaultLayout';
+import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS } from './storage/properties';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from './storage/readingCodec';
 import {
 	Book,
@@ -31,14 +32,22 @@ type Item = Book | Manga;
 type Fm = Record<string, unknown>;
 
 /** Keys both kinds can emit; the full rewrite deletes the ones the encoder omits. */
-const COMMON_KEYS = [
-	'title', 'author', 'status', 'favorite', 'dateFavorited', 'rating', 'dateStarted', 'dateFinished',
-	'releaseDate', 'dateAdded', 'dateModified', 'coverUrl', 'externalLink', 'groups', 'externalId', 'type',
-	'airtimeRecurrence', 'airtimeDay', 'airtimeTime', 'airtimeSeason', 'airtimeEpisode', 'airtimeAcknowledged',
+const COMMON_KEYS: readonly string[] = [
+	...Object.values(COMMON_PROPS),
+	...Object.values(AIRTIME_PROPS),
+	READING_PROPS.author,
 ];
-const KIND_KEYS: Record<ReadingKind, string[]> = {
-	book: [...COMMON_KEYS, 'pagesRead', 'totalPages', 'progressUnit', 'wordsRead', 'totalWords', 'chaptersRead', 'totalChapters', 'googleBooksId'],
-	manga: [...COMMON_KEYS, 'chaptersRead', 'totalChapters', 'volumesRead', 'totalVolumes', 'malId'],
+const KIND_KEYS: Record<ReadingKind, readonly string[]> = {
+	book: [
+		...COMMON_KEYS,
+		READING_PROPS.pagesRead, READING_PROPS.totalPages, READING_PROPS.progressUnit, READING_PROPS.wordsRead,
+		READING_PROPS.totalWords, READING_PROPS.chaptersRead, READING_PROPS.totalChapters, READING_PROPS.googleBooksId,
+	],
+	manga: [
+		...COMMON_KEYS,
+		READING_PROPS.chaptersRead, READING_PROPS.totalChapters, READING_PROPS.volumesRead, READING_PROPS.totalVolumes,
+		READING_PROPS.malId,
+	],
 };
 
 const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
@@ -297,12 +306,13 @@ export class ReadingDataManager {
 		const file = this.fileOf(id);
 		if (!file) return;
 		await this.processFrontMatter(file, kind, item, (raw) => {
-			const own = typeof raw.coverUrl === 'string' ? raw.coverUrl.trim() : '';
+			const current = raw[COMMON_PROPS.cover];
+			const own = typeof current === 'string' ? current.trim() : '';
 			if (own) {
 				item.coverUrl = own;
 				return;
 			}
-			raw.coverUrl = url;
+			raw[COMMON_PROPS.cover] = url;
 			item.coverUrl = url;
 		}, true);
 	}

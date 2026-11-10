@@ -18,6 +18,7 @@ import { TITLE_CACHE_KEYS, decodeTitle, encodeTitle, isMovie, seasonsPending, sp
 import { externalIdFromLink } from './storage/externalId';
 import { decodeBook, decodeManga, encodeAirtime } from './storage/readingCodec';
 import { decodeGame } from './storage/gameCodec';
+import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
 
 export interface DataStores {
@@ -28,17 +29,12 @@ export interface DataStores {
 	notify: Notify;
 }
 
-const AIRTIME_KEYS: readonly string[] = [
-	'airtimeRecurrence', 'airtimeDay', 'airtimeTime', 'airtimeSeason', 'airtimeEpisode', 'airtimeAcknowledged',
-];
+const AIRTIME_KEYS: readonly string[] = Object.values(AIRTIME_PROPS);
 
-/** Every frontmatter key encodeTitle can emit (plus the older manual*Url names); the full rewrite deletes the ones it omits. */
+/** Every property encodeTitle can emit; the full rewrite deletes the ones it omits. */
 const TITLE_KEYS: readonly string[] = [
-	'title', 'type', 'status', 'priority', 'review', 'rating', 'progress', 'totalEpisodes', 'episodeDuration',
-	'dateStarted', 'dateFinished', 'dateAdded', 'dateModified', 'releaseDate', 'malId', 'anilistId',
-	'communityRating', 'communityVotes', 'communitySource', 'director', 'cast', 'studio', 'poster', 'trailer',
-	'externalLink', 'pinned', 'favorite', 'dateFavorited', 'externalId', 'groups', 'maybe', 'watched', 'skipped',
-	'seasons', 'manualPosterUrl', 'manualTrailerUrl', 'manualDirector', 'manualCast', 'manualStudio',
+	...Object.values(COMMON_PROPS),
+	...Object.values(TITLE_PROPS),
 	...AIRTIME_KEYS,
 ];
 
@@ -310,13 +306,13 @@ export class DataManager {
 		const file = this.fileOf(titleId);
 		if (!file) return;
 		await this.processFrontMatter(file, title, (raw) => {
-			const own = [raw.poster, raw.manualPosterUrl].find((v): v is string => typeof v === 'string' && v.trim() !== '');
+			const current = raw[COMMON_PROPS.cover];
+			const own = typeof current === 'string' && current.trim() !== '' ? current : undefined;
 			if (own && !overwrite) {
 				title.posterUrl = own;
 				return;
 			}
-			raw.poster = url;
-			delete raw.manualPosterUrl;
+			raw[COMMON_PROPS.cover] = url;
 			title.posterUrl = url;
 		}, !overwrite);
 	}
@@ -1079,7 +1075,7 @@ export class DataManager {
 			await this.app.fileManager.processFrontMatter(file, (raw: Record<string, unknown>) => {
 				for (const key of AIRTIME_KEYS) delete raw[key];
 				encodeAirtime(airtime, raw);
-				if (releaseDate) raw.releaseDate = releaseDate;
+				if (releaseDate) raw[COMMON_PROPS.releaseDate] = releaseDate;
 				const fm = { ...raw };
 				this.index.applyLocal(
 					kind === 'game'

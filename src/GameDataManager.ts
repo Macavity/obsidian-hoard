@@ -9,6 +9,7 @@ import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
 import { decodeGame, encodeGame } from './storage/gameCodec';
+import { COMMON_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
 import {
 	Game,
@@ -419,12 +420,13 @@ export class GameDataManager {
 		const file = this.fileOf(id);
 		if (!file) return;
 		await this.processFrontMatter(file, game, (raw) => {
-			const own = typeof raw.coverUrl === 'string' ? raw.coverUrl.trim() : '';
+			const current = raw[COMMON_PROPS.cover];
+			const own = typeof current === 'string' ? current.trim() : '';
 			if (own) {
 				game.coverUrl = own;
 				return;
 			}
-			raw.coverUrl = url;
+			raw[COMMON_PROPS.cover] = url;
 			game.coverUrl = url;
 		}, true);
 	}

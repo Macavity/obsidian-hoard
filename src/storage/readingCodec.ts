@@ -2,6 +2,7 @@ import { READING_STATUSES } from '../types';
 import type { Book, Manga, EntryAirtime, AirtimeRecurrence, ReadingStatus } from '../types';
 import type { Decoded } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
+import { AIRTIME_PROPS as A, COMMON_PROPS as C, READING_PROPS as R } from './properties';
 
 type Fm = Record<string, unknown>;
 
@@ -61,31 +62,31 @@ export class FmReader {
 const RECURRENCES: readonly AirtimeRecurrence[] = ['once', 'daily', 'weekly', 'monthly'];
 
 export function decodeAirtime(r: FmReader): EntryAirtime | undefined {
-	const rec = r.str('airtimeRecurrence');
+	const rec = r.str(A.recurrence);
 	if (!rec) return undefined;
 	if (!(RECURRENCES as readonly string[]).includes(rec)) {
-		r.invalidFields.push('airtimeRecurrence');
+		r.invalidFields.push(A.recurrence);
 		return undefined;
 	}
 	const a: EntryAirtime = { recurrence: rec as AirtimeRecurrence };
-	if (r.fm.airtimeDay != null && r.fm.airtimeDay !== '') a.day = r.num('airtimeDay');
-	const time = r.str('airtimeTime');
+	if (r.fm[A.day] != null && r.fm[A.day] !== '') a.day = r.num(A.day);
+	const time = r.str(A.time);
 	if (time) a.time = time;
-	if (r.fm.airtimeSeason != null && r.fm.airtimeSeason !== '') a.season = r.num('airtimeSeason');
-	if (r.fm.airtimeEpisode != null && r.fm.airtimeEpisode !== '') a.episode = r.num('airtimeEpisode');
-	const ack = r.str('airtimeAcknowledged');
+	if (r.fm[A.season] != null && r.fm[A.season] !== '') a.season = r.num(A.season);
+	if (r.fm[A.episode] != null && r.fm[A.episode] !== '') a.episode = r.num(A.episode);
+	const ack = r.str(A.acknowledged);
 	if (ack) a.acknowledged = ack;
 	return a;
 }
 
 export function encodeAirtime(a: EntryAirtime | undefined, out: Fm): void {
 	if (!a) return;
-	out.airtimeRecurrence = a.recurrence;
-	if (a.day !== undefined) out.airtimeDay = a.day;
-	if (a.time) out.airtimeTime = a.time;
-	if (a.season !== undefined) out.airtimeSeason = a.season;
-	if (a.episode !== undefined) out.airtimeEpisode = a.episode;
-	if (a.acknowledged) out.airtimeAcknowledged = a.acknowledged;
+	out[A.recurrence] = a.recurrence;
+	if (a.day !== undefined) out[A.day] = a.day;
+	if (a.time) out[A.time] = a.time;
+	if (a.season !== undefined) out[A.season] = a.season;
+	if (a.episode !== undefined) out[A.episode] = a.episode;
+	if (a.acknowledged) out[A.acknowledged] = a.acknowledged;
 }
 
 function decodeCustomFields(r: FmReader): Record<string, string | number> {
@@ -99,34 +100,34 @@ function decodeCustomFields(r: FmReader): Record<string, string | number> {
 }
 
 function status(r: FmReader): ReadingStatus {
-	const s = r.str('status');
+	const s = r.str(C.status);
 	if ((READING_STATUSES as string[]).includes(s)) return s as ReadingStatus;
-	if (s) r.invalidFields.push('status');
+	if (s) r.invalidFields.push(C.status);
 	return 'Plan to Read';
 }
 
 /** Keys shared by Book and Manga, in the order the first writer emitted them. */
 function encodeCommon(e: Book | Manga, out: Fm): void {
-	out.title = e.title;
-	out.author = e.author ?? '';
-	out.status = e.status;
-	if (e.favorite) out.favorite = true;
-	if (e.dateFavorited) out.dateFavorited = e.dateFavorited;
-	out.rating = e.rating | 0;
+	out[C.name] = e.title;
+	out[R.author] = e.author ?? '';
+	out[C.status] = e.status;
+	if (e.favorite) out[C.favorite] = true;
+	if (e.dateFavorited) out[C.dateFavorited] = e.dateFavorited;
+	out[C.rating] = e.rating | 0;
 }
 
 function encodeTail(e: Book | Manga, kind: 'book' | 'manga', out: Fm): void {
-	out.dateStarted = e.dateStarted ?? null;
-	out.dateFinished = e.dateFinished ?? null;
-	out.releaseDate = e.releaseDate ?? null;
-	out.dateAdded = e.dateAdded;
-	out.dateModified = e.dateModified;
-	if (e.coverUrl) out.coverUrl = e.coverUrl;
-	if (e.externalLink) out.externalLink = e.externalLink;
-	if (e.groups?.length) out.groups = [...e.groups];
+	out[C.dateStarted] = e.dateStarted ?? null;
+	out[C.dateFinished] = e.dateFinished ?? null;
+	out[C.releaseDate] = e.releaseDate ?? null;
+	out[C.dateAdded] = e.dateAdded;
+	out[C.dateModified] = e.dateModified;
+	if (e.coverUrl) out[C.cover] = e.coverUrl;
+	if (e.externalLink) out[C.url] = e.externalLink;
+	if (e.groups?.length) out[C.groups] = [...e.groups];
 	encodeAirtime(e.airtime, out);
 	for (const [k, v] of Object.entries(e.customFields ?? {})) out[`cf_${k}`] = v;
-	out.type = kind;
+	out[C.type] = kind;
 }
 
 type ReadingCommon = Pick<Book & Manga,
@@ -138,24 +139,24 @@ type ReadingCommon = Pick<Book & Manga,
 function decodeReadingCommon(id: string, r: FmReader): ReadingCommon {
 	return {
 		id,
-		title: r.str('title'),
-		author: r.str('author'),
+		title: r.str(C.name),
+		author: r.str(R.author),
 		status: status(r),
-		favorite: r.bool('favorite') || undefined,
-		dateFavorited: r.strOrNull('dateFavorited') ?? undefined,
-		rating: r.num('rating'),
-		chaptersRead: r.num('chaptersRead'),
-		totalChapters: r.num('totalChapters'),
-		coverUrl: r.str('coverUrl'),
-		externalLink: r.strOrNull('externalLink') ?? undefined,
+		favorite: r.bool(C.favorite) || undefined,
+		dateFavorited: r.strOrNull(C.dateFavorited) ?? undefined,
+		rating: r.num(C.rating),
+		chaptersRead: r.num(R.chaptersRead),
+		totalChapters: r.num(R.totalChapters),
+		coverUrl: r.str(C.cover),
+		externalLink: r.strOrNull(C.url) ?? undefined,
 		vaultPage: `${id}.md`,
-		dateStarted: r.strOrNull('dateStarted'),
-		dateFinished: r.strOrNull('dateFinished'),
-		releaseDate: r.strOrNull('releaseDate'),
-		dateAdded: r.str('dateAdded'),
-		dateModified: r.str('dateModified'),
+		dateStarted: r.strOrNull(C.dateStarted),
+		dateFinished: r.strOrNull(C.dateFinished),
+		releaseDate: r.strOrNull(C.releaseDate),
+		dateAdded: r.str(C.dateAdded),
+		dateModified: r.str(C.dateModified),
 		customFields: decodeCustomFields(r),
-		groups: r.list('groups'),
+		groups: r.list(C.groups),
 		airtime: decodeAirtime(r),
 	};
 }
@@ -171,16 +172,16 @@ function stripEmptyOptional(entry: Book | Manga): void {
 
 export function decodeBook(id: string, fm: Fm): Decoded<Book> {
 	const r = new FmReader(fm);
-	const ext = parseExternalId(r.str('externalId'));
+	const ext = parseExternalId(r.str(C.externalId));
 	const gbooks = ext?.source === 'gbooks' ? ext.id : '';
 	const entry: Book = {
 		...decodeReadingCommon(id, r),
-		progressUnit: r.str('progressUnit') === 'words' ? 'words' : 'pages',
-		pagesRead: r.num('pagesRead'),
-		totalPages: r.num('totalPages'),
-		wordsRead: r.num('wordsRead'),
-		totalWords: r.num('totalWords'),
-		googleBooksId: r.str('googleBooksId') || gbooks,
+		progressUnit: r.str(R.progressUnit) === 'words' ? 'words' : 'pages',
+		pagesRead: r.num(R.pagesRead),
+		totalPages: r.num(R.totalPages),
+		wordsRead: r.num(R.wordsRead),
+		totalWords: r.num(R.totalWords),
+		googleBooksId: r.str(R.googleBooksId) || gbooks,
 	};
 	stripEmptyOptional(entry);
 	return { entry, invalidFields: r.invalidFields };
@@ -189,19 +190,19 @@ export function decodeBook(id: string, fm: Fm): Decoded<Book> {
 export function encodeBook(b: Book): Fm {
 	const out: Fm = {};
 	encodeCommon(b, out);
-	out.pagesRead = b.pagesRead | 0;
-	out.totalPages = b.totalPages | 0;
+	out[R.pagesRead] = b.pagesRead | 0;
+	out[R.totalPages] = b.totalPages | 0;
 	// words are opt-in: emitted only when they carry meaning
 	if (b.progressUnit === 'words' || (b.wordsRead | 0) > 0 || (b.totalWords | 0) > 0) {
-		out.progressUnit = b.progressUnit === 'words' ? 'words' : 'pages';
-		out.wordsRead = b.wordsRead | 0;
-		out.totalWords = b.totalWords | 0;
+		out[R.progressUnit] = b.progressUnit === 'words' ? 'words' : 'pages';
+		out[R.wordsRead] = b.wordsRead | 0;
+		out[R.totalWords] = b.totalWords | 0;
 	}
-	out.chaptersRead = b.chaptersRead | 0;
-	out.totalChapters = b.totalChapters | 0;
+	out[R.chaptersRead] = b.chaptersRead | 0;
+	out[R.totalChapters] = b.totalChapters | 0;
 	if (b.googleBooksId) {
-		out.googleBooksId = b.googleBooksId;
-		out.externalId = formatExternalId({ source: 'gbooks', id: b.googleBooksId });
+		out[R.googleBooksId] = b.googleBooksId;
+		out[C.externalId] = formatExternalId({ source: 'gbooks', id: b.googleBooksId });
 	}
 	encodeTail(b, 'book', out);
 	return out;
@@ -209,13 +210,13 @@ export function encodeBook(b: Book): Fm {
 
 export function decodeManga(id: string, fm: Fm): Decoded<Manga> {
 	const r = new FmReader(fm);
-	const ext = parseExternalId(r.str('externalId'));
+	const ext = parseExternalId(r.str(C.externalId));
 	const mal = ext?.source === 'mal' && ext.kind === 'manga' ? ext.id : '';
 	const entry: Manga = {
 		...decodeReadingCommon(id, r),
-		volumesRead: r.num('volumesRead'),
-		totalVolumes: r.num('totalVolumes'),
-		malId: r.str('malId') || mal,
+		volumesRead: r.num(R.volumesRead),
+		totalVolumes: r.num(R.totalVolumes),
+		malId: r.str(R.malId) || mal,
 	};
 	stripEmptyOptional(entry);
 	return { entry, invalidFields: r.invalidFields };
@@ -224,13 +225,13 @@ export function decodeManga(id: string, fm: Fm): Decoded<Manga> {
 export function encodeManga(m: Manga): Fm {
 	const out: Fm = {};
 	encodeCommon(m, out);
-	out.chaptersRead = m.chaptersRead | 0;
-	out.totalChapters = m.totalChapters | 0;
-	out.volumesRead = m.volumesRead | 0;
-	out.totalVolumes = m.totalVolumes | 0;
+	out[R.chaptersRead] = m.chaptersRead | 0;
+	out[R.totalChapters] = m.totalChapters | 0;
+	out[R.volumesRead] = m.volumesRead | 0;
+	out[R.totalVolumes] = m.totalVolumes | 0;
 	if (m.malId) {
-		out.malId = m.malId;
-		out.externalId = formatExternalId({ source: 'mal', kind: 'manga', id: m.malId });
+		out[R.malId] = Number.isFinite(Number(m.malId)) ? Number(m.malId) : m.malId;
+		out[C.externalId] = formatExternalId({ source: 'mal', kind: 'manga', id: m.malId });
 	}
 	encodeTail(m, 'manga', out);
 	return out;
