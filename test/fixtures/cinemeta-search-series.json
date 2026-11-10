@@ -1,0 +1,25 @@
+{
+ "metas": [
+  {
+   "id": "tt0903747",
+   "type": "series",
+   "name": "Breaking Bad",
+   "poster": "https://images.metahub.space/poster/small/tt0903747/img",
+   "releaseInfo": "2008"
+  },
+  {
+   "id": "tt2387761",
+   "type": "series",
+   "name": "Breaking Bad: Original Minisodes",
+   "poster": "https://images.metahub.space/poster/small/tt2387761/img",
+   "releaseInfo": "2009"
+  },
+  {
+   "id": "tt31392119",
+   "type": "series",
+   "name": "The Bad Guys: Breaking In",
+   "poster": "https://images.metahub.space/poster/small/tt31392119/img",
+   "releaseInfo": "2025"
+  }
+ ]
+}
