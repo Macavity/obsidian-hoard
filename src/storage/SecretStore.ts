@@ -32,7 +32,7 @@ export interface SecretBackend {
 	setSecret(id: string, secret: string): void;
 }
 
-type SecretValues = Partial<Record<SecretKey, string>>;
+export type SecretValues = Partial<Record<SecretKey, string>>;
 
 export class SecretStore {
 	constructor(private readonly backend: SecretBackend) {}
