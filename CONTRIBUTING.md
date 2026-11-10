@@ -25,7 +25,25 @@ Test vault setup (once):
 
 CLI calls time out after 30 s; keep the hoard-test-vault window visible while running `pnpm smoke`, otherwise Chromium throttling causes timeouts. If Obsidian hangs, run `obsidian vault="hoard-test-vault" reload` and `pnpm vault:reset`.
 
-`pnpm vault:reset` restores `hoard-test-vault/` to `HEAD`, removes untracked files and, from a worktree, mirrors the result into the registered vault (the plugin symlink, themes, `workspace*.json`, cache and `.trash` stay). Change fixtures only in a commit.
+`pnpm vault:reset` disables `hoard` and removes any modal left open. It then restores `hoard-test-vault/` to `HEAD`, removes untracked files and, from a worktree, mirrors the result into the registered vault (the plugin symlink, themes, `workspace*.json`, cache and `.trash` stay). It writes the seed `scripts/fixtures/hoard-data.json` as `data.json` into the folder the plugin symlink points to (possibly another worktree's `dist/`), waits until Obsidian's index matches the disk and enables `hoard` again. The seed declines both WatchLog imports, so the onboarding wizard stays closed. To try the wizard by hand, remove `ui.watchlogImport` from that `data.json` and run `pnpm reload`.
+
+### Fixtures
+
+The notes in `hoard-test-vault/` are hand-written and cover every domain plus edge cases (broken properties, a minimal note, `maybe`, a 2099 airtime, foreign History lines, drafts). `Welcome.md` catalogues each one and what it covers. No fixture has an external id, and the anime fixture has `poster: none`, so nothing reaches the network. `test/e2e/expected.mjs` holds the counts the smoke expects; change a fixture and its count in the same commit (`test/fixtures.test.ts` checks them against the codecs).
+
+### Smoke
+
+`pnpm smoke [--only <step>]` runs `vault:link-test`, `vault:reset`, `build` and `reload`, then these steps, and resets the vault at the end. It needs a running Obsidian with the test vault window visible; it does not run in CI.
+
+| Step | Checks |
+|---|---|
+| `data` | the managers load exactly the counts in `expected.mjs`; no wizard open |
+| `flows` | real clicks (`test/e2e/ui.mjs`, CDP with hit-testing) add a title, tick an episode and change a status, edit the detail modal; the note on disk may change only in the expected properties |
+| `scenarios` | the WatchLog wizard imports `test/e2e/scenarios/watchlog-{original,fork}` into an empty vault; your own WatchLog data in the vault is restored afterwards |
+
+Failures collect per step; a screenshot of each failed flow or scenario goes to `$SMOKE_OUT` (default `<os tmpdir>/hoard-smoke`).
+
+A new scenario is a folder `test/e2e/scenarios/<name>/` with a complete `vault/`, an optional `data.json` (Hoard's local data; without it no import decision is stored) and a flow; register it in `test/e2e/steps/scenarios.mjs`.
 
 Themes: `pnpm vault:theme <label|default>` switches the test vault to a theme from `scripts/themes.json` (downloaded on first use into `hoard-test-vault/.obsidian/themes/`, not versioned). Check any change to `src/styles/` against a few of them, light and dark.
 

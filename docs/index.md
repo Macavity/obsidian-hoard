@@ -57,6 +57,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 # Start here
 
 - [Values](values.md): the hand-written principles every rule in this wiki serves; read before changing behaviour.
+- [Testing](../CONTRIBUTING.md#testing) (outside this wiki): which tests exist, the test vault fixtures, and how `pnpm smoke` checks the plugin in a running Obsidian.
 
 # Architecture
 
