@@ -7,7 +7,7 @@ export function parseArgs(argv) {
 	const i = argv.indexOf("--only");
 	const only = i >= 0 ? argv[i + 1] : null;
 	if (only === undefined || only?.startsWith("--")) throw new Error("--only needs a step name");
-	return { only, updateBaselines: argv.includes("--update-baselines") };
+	return { only };
 }
 
 export async function runSteps(steps, opts) {
@@ -17,7 +17,7 @@ export async function runSteps(steps, opts) {
 	const out = opts.out ?? process.env.SMOKE_OUT ?? join(tmpdir(), "hoard-smoke");
 	mkdirSync(out, { recursive: true });
 	for (const step of selected) {
-		const ctx = { out, updateBaselines: opts.updateBaselines, fail: (msg) => failures.push(`${step.name}: ${msg}`) };
+		const ctx = { out, fail: (msg) => failures.push(`${step.name}: ${msg}`) };
 		try {
 			await step.run(ctx);
 		} catch (e) {

@@ -33,18 +33,15 @@ The notes in `hoard-test-vault/` are hand-written and cover every domain plus ed
 
 ### Smoke
 
-`pnpm smoke [--only <step>] [--update-baselines]` runs `vault:link-test`, `vault:reset`, `build` and `reload`, then these steps, and resets the vault at the end. It needs a running Obsidian with the test vault window visible; it does not run in CI.
+`pnpm smoke [--only <step>]` runs `vault:link-test`, `vault:reset`, `build` and `reload`, then these steps, and resets the vault at the end. It needs a running Obsidian with the test vault window visible; it does not run in CI.
 
 | Step | Checks |
 |---|---|
 | `data` | the managers load exactly the counts in `expected.mjs`; no wizard open |
-| `visual` | each of the 8 tabs matches its PNG in `scripts/e2e/baselines/` (1280×800 viewport, frozen clock and `Math.random`, animations off) |
 | `flows` | real clicks (`scripts/lib/ui.mjs`, CDP with hit-testing) add a title, tick an episode and change a status, edit the detail modal; the note on disk may change only in the expected properties |
 | `scenarios` | the WatchLog wizard imports `scripts/e2e/scenarios/watchlog-{original,fork}` into an empty vault; your own WatchLog data in the vault is restored afterwards |
 
-Failures collect per step; screenshots and `<tab>.actual.png` / `<tab>.diff.png` go to `$SMOKE_OUT` (default `<os tmpdir>/hoard-smoke`).
-
-Baselines are tied to macOS and the current Obsidian version. After an intended UI change, or an Obsidian update that changes rendering, run `pnpm smoke --only visual --update-baselines`, review the PNG diff and commit the baselines with the change.
+Failures collect per step; a screenshot of each failed flow or scenario goes to `$SMOKE_OUT` (default `<os tmpdir>/hoard-smoke`).
 
 A new scenario is a folder `scripts/e2e/scenarios/<name>/` with a complete `vault/`, an optional `data.json` (Hoard's local data; without it no import decision is stored) and a flow; register it in `scripts/e2e/steps/scenarios.mjs`.
 
