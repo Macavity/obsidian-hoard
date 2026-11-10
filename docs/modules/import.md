@@ -15,7 +15,7 @@ source:
   - src/import/watchlog/widgets.ts
   - src/WatchLogOnboardingModal.ts
   - src/WatchLogReport.ts
-source_commit: adb460eda328223f7b19ac7eeb0f1d3bc18a1fd4
+source_commit: 43b1380df12642609c05bbf18f366063f3184d48
 ---
 
 # Import
@@ -81,7 +81,10 @@ keys (a title field still equal to a stale API value is replaced unless the note
 override); a differing existing value becomes a `kept-value` review item. Duplicate title/type pairs in one run
 get " 2", " 3", compared case-insensitively (macOS and Windows treat "Heat" and "heat" as one file). A
 note that fails to write is reported and skipped. The fork's device settings skip shared and removed
-keys like the schema-1 path does. Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
+keys like the schema-1 path does. WatchLog's custom reading columns are sanitized once in the normalize
+step (blank or non-string names become `Field N`, case-insensitive duplicates get " 2", " 3"), so every
+value gets its own `Custom <name>` key; a value whose column no longer exists becomes an `orphanValue`
+review item. Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
 airtime, history), `originalPaths` (where WatchLog kept its notes, from its settings).
 
 Widget fence renaming ([widgets.ts](../../src/import/watchlog/widgets.ts)) is a cleanup step; see
