@@ -14,7 +14,7 @@ source:
   - src/storage/titleCodec.ts
   - src/storage/properties.ts
   - src/storage/noteWrite.ts
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+source_commit: 64cb1297ad64e33ac1573090568cdec0eafceea1
 ---
 
 # Storage
@@ -56,6 +56,8 @@ Codecs are pure: `decodeTitle(id, properties, cache)` / `encodeTitle`, `decodeBo
 `decodeManga`/`encodeManga`, `decodeGame`/`encodeGame`. Each returns `invalidFields` for values of the
 wrong type instead of failing; those properties are left untouched on write. Property names come
 only from [properties.ts](../../src/storage/properties.ts) ([property names](../concepts/properties.md)).
+The book and manga codecs also take that kind's custom columns, because a custom value's key is
+`Custom <column name>`; `EntryIndex.setColumns` re-decodes reading notes when a column name changes.
 
 ## Writing: the managers
 
