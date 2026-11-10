@@ -893,8 +893,8 @@ export class ReadingDetailModal extends Modal {
 
 	/**
 	 * DETAILS ID row (Google Books ID / MAL ID). The ID links to the title's web page — the editable
-	 * `externalLink` when set, else a URL derived from the ID. The edit button to the right sets the
-	 * source ID itself (`googleBooksId` / `malId`), which re-fetches the cover.
+	 * `URL` property when set, else a URL derived from the ID. The edit button to the right sets the
+	 * source ID itself (`Google Books ID` / `MAL ID`), which re-fetches the cover.
 	 */
 	private renderIdCell(grid: HTMLElement, item: Book | Manga): void {
 		const label = this.mode === 'book' ? 'Google Books ID' : 'MAL ID';

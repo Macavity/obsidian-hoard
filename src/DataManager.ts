@@ -282,7 +282,7 @@ export class DataManager {
 
 	/**
 	 * Silent poster update, no notify — the card that triggered the fetch updates its own <img>.
-	 * A URL goes into the note's `poster` field, but only when it is empty (E12), unless `overwrite`
+	 * A URL goes into the note's `Cover` property, but only when it is empty (E12), unless `overwrite`
 	 * (the explicit refresh). 'none' (nothing found) is a cache marker for a title without a poster.
 	 */
 	async updatePosterUrl(titleId: string, url: string, overwrite = false): Promise<void> {

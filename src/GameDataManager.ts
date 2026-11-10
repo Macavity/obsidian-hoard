@@ -397,7 +397,7 @@ export class GameDataManager {
 	// Cover updates
 
 	/**
-	 * Silent cover URL update for the lazy Cards re-fetch: written to the note's `coverUrl` only when
+	 * Silent cover URL update for the lazy Cards re-fetch: written to the note's `Cover` property only when
 	 * that is empty (E12), no notify — the card that triggered the fetch swaps its own <img>, so the
 	 * grid is not rebuilt and the scroll position survives.
 	 */
