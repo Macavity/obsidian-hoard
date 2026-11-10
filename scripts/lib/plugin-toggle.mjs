@@ -15,11 +15,12 @@ function hoardEnabled() {
 
 export async function withPluginDisabled(fn) {
 	if (!hoardEnabled()) return fn(false);
-	evalJs("app.plugins.disablePlugin('hoard')");
-	// modals of the unloaded instance (e.g. the onboarding wizard, which has no close button) outlive the unload. Removing them
-	// from the DOM instead of pressing a button keeps the dead instance from acting on a click; a reset leaves none open.
-	evalJs("document.querySelectorAll('.modal-container').forEach((m) => m.remove())");
+	// Everything after the first evalJs sits in the try: a later reset sees a disabled plugin as "not live" and never re-enables it.
 	try {
+		evalJs("app.plugins.disablePlugin('hoard')");
+		// modals of the unloaded instance (e.g. the onboarding wizard, which has no close button) outlive the unload. Removing them
+		// from the DOM instead of pressing a button keeps the dead instance from acting on a click; a reset leaves none open.
+		evalJs("document.querySelectorAll('.modal-container').forEach((m) => m.remove())");
 		await fn(true);
 	} finally {
 		evalJs("app.plugins.enablePlugin('hoard')");
