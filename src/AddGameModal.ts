@@ -83,7 +83,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	private fieldPlatforms: string[] = [];
 	// which API row the form was filled from — persisted on the game so covers can later be re-fetched
 	// by id instead of by title
-	private apiSource: '' | 'rawg' | 'igdb' = '';
+	private apiSource: '' | 'rawg' | 'igdb' | 'steam' = '';
 	private apiId = '';
 	private fieldSingleplayer = false;
 	private fieldCoop = false;

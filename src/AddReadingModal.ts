@@ -668,6 +668,7 @@ export class AddReadingModal extends Modal {
 				totalChapters: this.state.totalChapters,
 				coverUrl: this.state.coverUrl.trim(),
 				googleBooksId: this.state.googleBooksId.trim(),
+				openLibraryId: '',
 				vaultPage: this.state.vaultPage,
 				dateStarted: this.state.dateStarted,
 				dateFinished: this.state.dateFinished,

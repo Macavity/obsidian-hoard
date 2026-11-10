@@ -576,6 +576,8 @@ export interface Book {
 	totalChapters: number;
 	coverUrl: string;
 	googleBooksId: string;
+	/** Open Library work id (`OL…W`); stored only in External ID. */
+	openLibraryId: string;
 	externalLink?: string;
 	vaultPage: string;
 	dateStarted: string | null;
@@ -757,7 +759,7 @@ export interface Game {
 	 * Which games API resolved this entry ('' = manual or pre-field) and its id there,
 	 * stored as a string. Lets a cover be re-fetched by id instead of by title.
 	 */
-	apiSource: '' | 'rawg' | 'igdb';
+	apiSource: '' | 'rawg' | 'igdb' | 'steam';
 	apiId: string;
 	/**
 	 * Steam appid, as a string ('' when unlinked). Independent of apiSource — a RAWG

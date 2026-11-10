@@ -194,6 +194,7 @@ export function decodeBook(id: string, fm: Record<string, unknown>, columns: rea
 		wordsRead: r.num(R.wordsRead),
 		totalWords: r.num(R.totalWords),
 		googleBooksId: r.str(R.googleBooksId) || gbooks,
+		openLibraryId: ext?.source === 'openlibrary' ? ext.id : '',
 	};
 	stripEmptyOptional(entry);
 	return { entry, invalidFields: r.invalidFields };
@@ -215,6 +216,8 @@ export function encodeBook(b: Book, columns: readonly ReadingCustomColumn[]): Re
 	if (b.googleBooksId) {
 		out[R.googleBooksId] = b.googleBooksId;
 		out[C.externalId] = formatExternalId({ source: 'gbooks', id: b.googleBooksId });
+	} else if (b.openLibraryId) {
+		out[C.externalId] = formatExternalId({ source: 'openlibrary', id: b.openLibraryId });
 	}
 	encodeTail(b, 'book', columns, out);
 	return out;

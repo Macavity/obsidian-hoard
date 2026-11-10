@@ -11,6 +11,8 @@ const KINDS: Record<ExternalSource, readonly Kind[] | null> = {
 	gbooks: null,
 	rawg: null,
 	igdb: null,
+	openlibrary: null,
+	steam: null,
 };
 
 const ID_RE = /^[\w-]+$/;
@@ -38,7 +40,7 @@ export function formatExternalId(e: ExternalId): string {
 	return e.kind ? `${e.source}:${e.kind}:${e.id}` : `${e.source}:${e.id}`;
 }
 
-/** Derives the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL. */
+/** Derives the identity from a pasted IMDb, TMDB, MyAnimeList AniList, Open Library or Steam URL. */
 export function externalIdFromLink(url: string): ExternalId | null {
 	let u: URL;
 	try {
@@ -49,6 +51,8 @@ export function externalIdFromLink(url: string): ExternalId | null {
 	const host = u.hostname.replace(/^www\./, '');
 	const [a, b] = u.pathname.split('/').filter(Boolean);
 	if (!a || !b) return null;
+	if (host === 'openlibrary.org' && a === 'works' && /^OL\d+W$/.test(b)) return { source: 'openlibrary', id: b };
+	if (host === 'store.steampowered.com' && a === 'app' && /^\d+$/.test(b)) return { source: 'steam', id: b };
 	if (host === 'imdb.com' && a === 'title' && /^tt\d+$/.test(b)) return { source: 'imdb', id: b };
 	if (host === 'themoviedb.org' && (a === 'movie' || a === 'tv')) {
 		const id = /^(\d+)/.exec(b)?.[1];

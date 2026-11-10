@@ -23,7 +23,7 @@ export function decodeGame(id: string, fm: Fm): Decoded<Game> {
 	const ext = parseExternalId(r.str(C.externalId));
 	let apiSource: Game['apiSource'] = '';
 	let apiId = '';
-	if (ext && (ext.source === 'rawg' || ext.source === 'igdb')) {
+	if (ext && (ext.source === 'rawg' || ext.source === 'igdb' || ext.source === 'steam')) {
 		apiSource = ext.source;
 		apiId = ext.id;
 	}

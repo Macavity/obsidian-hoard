@@ -13,7 +13,7 @@ const base = { 'Date Added': '2026-01-01T00:00:00Z', 'Date Modified': '2026-01-0
 const fullBook = (): Book => ({
 	id: 'Books/Dune', title: 'Dune', author: 'Frank Herbert', status: 'Reading', favorite: true, dateFavorited: '2026-02-01T00:00:00Z',
 	rating: 4, chaptersRead: 3, totalChapters: 40, progressUnit: 'words', pagesRead: 120, totalPages: 600, wordsRead: 5000,
-	totalWords: 90000, googleBooksId: 'abc', coverUrl: 'https://img.example/c.jpg', externalLink: 'https://books.example/dune',
+	totalWords: 90000, googleBooksId: 'abc', openLibraryId: '', coverUrl: 'https://img.example/c.jpg', externalLink: 'https://books.example/dune',
 	vaultPage: 'Books/Dune.md', dateStarted: '2026-01-02', dateFinished: null, releaseDate: '1965-08-01',
 	dateAdded: '2026-01-01T00:00:00Z', dateModified: '2026-01-03T00:00:00Z', customFields: { 'col-1': 'Hardcover', 'col-2': 1965 },
 	groups: ['SciFi'], airtime: { recurrence: 'weekly', day: 3, time: '09:00', season: 2, episode: 11, acknowledged: '2026-10-01' },
@@ -65,6 +65,16 @@ describe('reading codec', () => {
 	it('maps External ID to the Google Books ID', () => {
 		const { entry } = decodeBook('Books/X', { Name: 'X', Status: 'Reading', 'External ID': 'gbooks:zz', ...base }, []);
 		expect(entry.googleBooksId).toBe('zz');
+	});
+
+	it('stores an Open Library id only as External ID', () => {
+		const { entry } = decodeBook('Books/X', { Name: 'X', Status: 'Reading', 'External ID': 'openlibrary:OL1W', ...base }, []);
+		expect(entry.openLibraryId).toBe('OL1W');
+		expect(entry.googleBooksId).toBe('');
+		const fm = encodeBook(entry, []);
+		expect(fm['External ID']).toBe('openlibrary:OL1W');
+		expect(fm).not.toHaveProperty('Google Books ID');
+		expect(encodeBook({ ...entry, googleBooksId: 'g' }, [])['External ID']).toBe('gbooks:g');
 	});
 
 	it('round-trips manga with groups, airtime and favorite', () => {

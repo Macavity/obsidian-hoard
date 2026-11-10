@@ -49,7 +49,10 @@ export function gameResultIdKeys(r: GameSearchResult): string[] {
 }
 
 export function bookResultIdKeys(r: BookSearchResult): string[] {
-	return r.googleBooksId ? [`gbooks:${r.googleBooksId}`] : [];
+	const keys: string[] = [];
+	if (r.googleBooksId) keys.push(`gbooks:${r.googleBooksId}`);
+	if (r.openLibraryId) keys.push(`openlibrary:${r.openLibraryId}`);
+	return keys;
 }
 
 export function mangaResultIdKeys(r: MangaSearchResult): string[] {
@@ -84,7 +87,10 @@ export class LibraryIndex {
 				}
 			} else if (scope === 'books') {
 				for (const b of plugin.readingDataManager.getBooks()) {
-					idx.add('Books', b.title, b.googleBooksId ? [`gbooks:${b.googleBooksId}`] : []);
+					const keys: string[] = [];
+					if (b.googleBooksId) keys.push(`gbooks:${b.googleBooksId}`);
+					if (b.openLibraryId) keys.push(`openlibrary:${b.openLibraryId}`);
+					idx.add('Books', b.title, keys);
 				}
 			} else if (scope === 'manga') {
 				for (const m of plugin.readingDataManager.getMangaList()) {

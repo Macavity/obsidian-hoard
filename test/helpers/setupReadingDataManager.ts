@@ -15,7 +15,7 @@ export function makeBook(over: Partial<Book>): Book {
 	return {
 		id: 'tmp', title: 'Untitled', author: '', status: 'Plan to Read', rating: 0, progressUnit: 'pages',
 		pagesRead: 0, totalPages: 0, wordsRead: 0, totalWords: 0, chaptersRead: 0, totalChapters: 0,
-		coverUrl: '', googleBooksId: '', vaultPage: '', dateStarted: null, dateFinished: null,
+		coverUrl: '', googleBooksId: '', openLibraryId: '', vaultPage: '', dateStarted: null, dateFinished: null,
 		releaseDate: null, dateAdded: now, dateModified: now, customFields: {}, ...over,
 	};
 }

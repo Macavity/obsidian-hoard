@@ -14,4 +14,17 @@ describe('externalId', () => {
     expect(externalIdFromLink('https://anilist.co/anime/21')).toEqual({ source: 'anilist', kind: 'anime', id: '21' });
     expect(externalIdFromLink('https://example.com')).toBeNull();
   });
+  it('parses openlibrary and steam without kind', () => {
+    expect(parseExternalId('openlibrary:OL27448W')).toEqual({ source: 'openlibrary', id: 'OL27448W' });
+    expect(parseExternalId('steam:1145360')).toEqual({ source: 'steam', id: '1145360' });
+    expect(parseExternalId('steam:app:1')).toBeNull();
+  });
+  it('derives openlibrary and steam from links', () => {
+    expect(externalIdFromLink('https://openlibrary.org/works/OL27448W/The_Hobbit')).toEqual({ source: 'openlibrary', id: 'OL27448W' });
+    expect(externalIdFromLink('https://openlibrary.org/works/OL27448W')).toEqual({ source: 'openlibrary', id: 'OL27448W' });
+    expect(externalIdFromLink('https://openlibrary.org/works/OL27448M')).toBeNull();
+    expect(externalIdFromLink('https://store.steampowered.com/app/1145360/Hades/')).toEqual({ source: 'steam', id: '1145360' });
+    expect(externalIdFromLink('https://store.steampowered.com/app/abc/')).toBeNull();
+  });
+  it.each(['openlibrary:OL27448W', 'steam:1145360'])('round-trips %s', (s) => expect(formatExternalId(parseExternalId(s)!)).toBe(s));
 });

@@ -6,7 +6,7 @@ import type { PosterService } from './PosterService';
 import type { DataManager } from './DataManager';
 import type { Book, Game, Manga } from './types';
 
-export interface GameCover { url: string; source: '' | 'rawg' | 'igdb'; apiId: string }
+export interface GameCover { url: string; source: '' | 'rawg' | 'igdb' | 'steam'; apiId: string }
 
 /**
  * Resolves a game cover through the games APIs: by stored id when the game has one, otherwise (unless

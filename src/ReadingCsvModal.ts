@@ -218,6 +218,7 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 			wordsRead: entry.wordsRead ?? 0,
 			totalWords: entry.totalWords ?? 0,
 			googleBooksId: entry.googleBooksId ?? '',
+			openLibraryId: entry.openLibraryId ?? '',
 		};
 	}
 

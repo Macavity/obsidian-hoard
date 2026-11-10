@@ -140,8 +140,8 @@ function tmdbCompanyNames(list: TmdbCompany[] | undefined): string[] {
 
 /** One row in the Add-game search results (both RAWG and IGDB map to this). */
 export interface GameSearchResult {
-	source: 'rawg' | 'igdb';
-	/** RAWG or IGDB numeric id — meaningful only with `source`. */
+	source: 'rawg' | 'igdb' | 'steam';
+	/** RAWG, IGDB or Steam numeric id — meaningful only with `source`. */
 	id: number;
 	title: string;
 	/** YYYY-MM-DD, or '' when the API has no date. */
@@ -321,6 +321,7 @@ export interface BookSearchResult {
 	totalPages: number;
 	coverUrl: string;
 	googleBooksId: string;
+	openLibraryId: string;
 	releaseDate: string;
 	url: string;
 }
@@ -1881,6 +1882,7 @@ export class ApiService {
 			totalPages: info.pageCount ?? 0,
 			coverUrl: this.googleCoverUrl(info),
 			googleBooksId: item.id ?? '',
+			openLibraryId: '',
 			releaseDate: this.googleReleaseDate(published),
 			url: httpsOrEmpty(info.infoLink ?? info.canonicalVolumeLink),
 		};
