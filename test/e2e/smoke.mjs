@@ -7,6 +7,7 @@ import { parseArgs, runSteps } from "./runner.mjs";
 import { dataStep } from "./steps/data.mjs";
 import { flowsStep } from "./steps/flows.mjs";
 import { scenariosStep } from "./steps/scenarios.mjs";
+import { keylessStep } from "./steps/keyless.mjs";
 
 const pnpm = (...a) => execFileSync("pnpm", a, { stdio: "inherit" });
 
@@ -22,7 +23,7 @@ try {
 	pnpm("vault:reset");
 	pnpm("build");
 	pnpm("reload");
-	failures = await runSteps([dataStep, flowsStep, scenariosStep], { ...opts, cleanup });
+	failures = await runSteps([dataStep, flowsStep, scenariosStep, keylessStep], { ...opts, cleanup });
 } catch (e) {
 	failures.push(`smoke: ${e instanceof Error ? e.message : String(e)}`);
 } finally {

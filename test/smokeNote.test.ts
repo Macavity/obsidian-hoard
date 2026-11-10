@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { changedProps, bodyWithout, readNote } from "./e2e/note.mjs";
+import { changedProps, bodyWithout, findNoteByExternalId, readNote } from "./e2e/note.mjs";
 
 describe("note diff helpers", () => {
   it("reports added, removed and changed properties only", () => {
@@ -25,5 +25,17 @@ describe("note diff helpers", () => {
     const n = readNote(dir, "A/n.md");
     expect(n.props).toEqual({ title: "X", seasons: ["S1: 9"] });
     expect(n.body).toBe("# X\n\n## Notes\nhi\n");
+  });
+  it("finds a note by External ID, skipping broken and foreign ones", () => {
+    const dir = mkdtempSync(join(tmpdir(), "note-"));
+    mkdirSync(join(dir, "M"));
+    writeFileSync(join(dir, "M", "broken.md"), "---\nName: [unclosed\nStatus: : : x\n---\n");
+    writeFileSync(join(dir, "M", "other.md"), "---\nExternal ID: imdb:tt1\n---\n");
+    writeFileSync(join(dir, "M", "hit.md"), "---\nExternal ID: openlibrary:OL5W\n---\n");
+    writeFileSync(join(dir, "M", "skip.txt"), "x");
+    expect(findNoteByExternalId(dir, "M", "imdb:tt1")?.path).toBe("M/other.md");
+    expect(findNoteByExternalId(dir, "M", /^openlibrary:OL\d+W$/)?.path).toBe("M/hit.md");
+    expect(findNoteByExternalId(dir, "M", "imdb:tt2")).toBeNull();
+    expect(findNoteByExternalId(dir, "Missing", "imdb:tt1")).toBeNull();
   });
 });
