@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parse, stringify } from 'yaml';
 import type { TFile } from 'obsidian';
 import { createFakeApp } from './fakes/fakeApp';
+import { SecretStore } from '../src/storage/SecretStore';
 import { LocalStore } from '../src/storage/LocalStore';
 import { SharedConfigStore } from '../src/storage/SharedConfigStore';
 import { VaultLayout } from '../src/storage/VaultLayout';
@@ -18,22 +19,30 @@ async function setup(files: Record<string, string>) {
 }
 
 describe('settings split', () => {
-	it('keeps secrets local and shared settings in the base', async () => {
+	it('keeps secrets out of data.json and the base', async () => {
 		const { f, local, shared } = await setup({ 'W/Hoard.base': 'hoard:\n  version: 1\n' });
-		const settings = composeSettings(local.data.settings, shared.get().settings);
+		const store = new SecretStore(f.app.secretStorage);
+		const settings = composeSettings(local.data.settings, shared.get().settings, store.read());
 		settings.tmdbApiKey = 'SECRET';
 		settings.jikanBaseUrl = 'https://u:NASPW@jikan.example.org/v4';
 		settings.statuses = [{ name: 'Rewatch', color: '#123456' }];
-		await persistSettings(settings, local, shared);
+		await persistSettings(settings, local, shared, store);
 		await local.flush();
 		expect(f.files.get('W/Hoard.base')).toContain('Rewatch');
 		expect(f.files.get('W/Hoard.base')).not.toContain('SECRET');
-		expect(JSON.stringify(f.plugin.data)).toContain('SECRET');
 		expect(f.files.get('W/Hoard.base')).not.toContain('jikan.example.org');
-		expect(JSON.stringify(f.plugin.data)).toContain('jikan.example.org');
-		expect(f.files.get('W/Hoard.base')).not.toContain('NASPW');
-		expect(JSON.stringify(f.plugin.data)).toContain('NASPW');
+		expect(JSON.stringify(local.data)).not.toMatch(/SECRET|NASPW/);
+		expect(JSON.stringify(f.plugin.data)).not.toMatch(/SECRET|NASPW/);
 		expect(JSON.stringify(f.plugin.data)).not.toContain('Rewatch');
+		expect(f.secrets.get('hoard-tmdb-api-key')).toBe('SECRET');
+		expect(local.data.secretsInStorage).toBe(true);
+		expect(composeSettings(local.data.settings, shared.get().settings, store.read()).tmdbApiKey).toBe('SECRET');
+	});
+
+	it('never takes secret keys from the base', () => {
+		const settings = composeSettings({}, { tmdbApiKey: 'FROM-BASE' }, { omdbApiKey: 'O' });
+		expect(settings.tmdbApiKey).toBe('');
+		expect(settings.omdbApiKey).toBe('O');
 	});
 
 	it('keeps colors and palettes local', async () => {

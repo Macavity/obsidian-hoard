@@ -35,6 +35,7 @@ const app = {
 		nowNext: 'Now watching + up next card',
 	},
 	notices: {
+		secretsPerDevice: "Hoard now keeps API keys in Obsidian's keychain on each device. Enter them again in Hoard's settings on this device.",
 		newerSchema: 'Hoard: data.json was written by a newer plugin version. Device settings are not saved until you update.',
 		watchLogData: "Hoard: its data.json holds WatchLog data, which Hoard leaves untouched. Device settings (API keys included) are not saved until you move that file out of Hoard's plugin folder.",
 		baseFilterMissing: 'Hoard: the folder filter in {file} was not found; the base view may list other notes.',

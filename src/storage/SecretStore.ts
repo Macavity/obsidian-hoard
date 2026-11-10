@@ -99,3 +99,8 @@ export class SecretStore {
 		return SECRET_KEYS.every((key) => this.get(key) === '');
 	}
 }
+
+/** Migrated vault (marker) whose keychain on this device is still empty; shown once per device. */
+export function shouldShowSecretsNotice(marker: boolean, storageEmpty: boolean, alreadyShown: boolean): boolean {
+	return marker && storageEmpty && !alreadyShown;
+}
