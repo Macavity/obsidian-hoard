@@ -1,4 +1,4 @@
-import { TFile } from 'obsidian';
+import { TFile, parseYaml } from 'obsidian';
 import { renameTopLevelBlock } from '../../storage/baseFile';
 import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
 import { forkBaseTypes, type ForkSource } from './detect';
@@ -38,24 +38,48 @@ async function copyFile(file: TFile, target: string, ctx: ImportContext): Promis
 	}
 }
 
-const HAS_FRONTMATTER = /^---\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(\r?\n|$)/;
+const FRONTMATTER = /^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n|$)/;
 const show = (v: unknown): string => (typeof v === 'string' ? v : JSON.stringify(v) ?? 'null');
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** True when `next` has the same keys in the same order with identical values. */
+function sameProperties(fm: Record<string, unknown>, next: Record<string, unknown>): boolean {
+	const keys = Object.keys(fm);
+	const nextKeys = Object.keys(next);
+	return keys.length === nextKeys.length && keys.every((k, i) => k === nextKeys[i] && fm[k] === next[k]);
+}
 
 /** Renames the 0.1 property names of a copied entry note; unreadable YAML or a key it could not rename is reported, the copy stays. */
 async function translateNote(path: string, ctx: ImportContext, report: ImportReport): Promise<void> {
 	const note = ctx.app.vault.getAbstractFileByPath(path);
-	if (!(note instanceof TFile) || !HAS_FRONTMATTER.test(await ctx.app.vault.read(note))) return;
+	if (!(note instanceof TFile)) return;
+	const match = FRONTMATTER.exec(await ctx.app.vault.read(note));
+	if (!match) return;
+	let current: unknown;
+	try {
+		current = parseYaml(match[1] ?? '');
+	} catch {
+		report.review.push({ path, reason: 'error', code: 'invalidYaml' });
+		return;
+	}
+	if (!isPlainObject(current)) return;
+	const { fm: next, kept } = translateProperties(current);
 	const items: ImportReport['review'] = [];
+	for (const key of kept) {
+		const target = newName(key) ?? key;
+		items.push({
+			path, reason: 'kept-value', code: 'keptValue',
+			params: { key: target, hoard: show(next[target]), watchlog: show(current[key]) },
+		});
+	}
+	if (sameProperties(current, next)) {
+		report.review.push(...items);
+		return;
+	}
 	const ok = await updateFrontMatter(ctx.app, note, () => {}, (fm) => {
-		const { fm: next, kept } = translateProperties(fm);
-		for (const key of kept) {
-			items.push({
-				path, reason: 'kept-value', code: 'keptValue',
-				params: { key: (newName(key) ?? key), hoard: show(next[(newName(key) ?? key)]), watchlog: show(fm[key]) },
-			});
-		}
 		for (const key of Object.keys(fm)) delete fm[key];
-		Object.assign(fm, next);
+		for (const [k, v] of Object.entries(next)) Object.defineProperty(fm, k, { value: v, writable: true, enumerable: true, configurable: true });
 	});
 	if (ok) report.review.push(...items);
 	else report.review.push({ path, reason: 'error', code: 'invalidYaml' });

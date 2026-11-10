@@ -125,6 +125,18 @@ describe('importFork', () => {
 			expect(f.files.get('Hoard/Movie/Plain.md')).toBe('just text');
 		});
 
+		it('copies notes that need no renaming byte for byte', async () => {
+			const unknown = '---\n# my own comment\nmine: "quoted"\nother:   [1,   2]\n---\nbody\n';
+			const current = '---\nName: "Heat"   # kept\nCover: \'https://p\'\n---\n';
+			const { f, ctx, src } = await setupFork({
+				[base]: baseBody, 'WatchLog/Movie/Unknown.md': unknown, 'WatchLog/Movie/Current.md': current,
+			});
+			const report = await importFork(src, ctx, () => {});
+			expect(f.files.get('Hoard/Movie/Unknown.md')).toBe(unknown);
+			expect(f.files.get('Hoard/Movie/Current.md')).toBe(current);
+			expect(report.review).toEqual([]);
+		});
+
 		it('reports broken YAML and keeps the copy', async () => {
 			const broken = '---\ntitle: [unclosed\n---\n';
 			const { f, ctx, src } = await setupFork({ [base]: baseBody, 'WatchLog/Movie/Bad.md': broken });
