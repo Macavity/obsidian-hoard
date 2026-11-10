@@ -1,4 +1,4 @@
-import { TFile, normalizePath, stringifyYaml } from 'obsidian';
+import { TFile, getFrontMatterInfo, normalizePath, parseYaml, stringifyYaml } from 'obsidian';
 import type { App } from 'obsidian';
 import type HoardPlugin from './main';
 import type { HistoryManager } from './HistoryManager';
@@ -639,25 +639,39 @@ export class ReadingDataManager {
 		let skipped = 0;
 		for (const item of items) {
 			const file = this.fileOf(item.id);
-			if (!file) continue;
+			// the file decides, not the metadata cache, which may lag behind a sync
+			if (!file || from === to || !(await this.fileHasKey(file, from))) continue;
 			let hit = false;
 			let conflict = false;
 			const ok = await updateFrontMatter(this.app, file, this.notify, (fm: Fm) => {
-				if (!(from in fm) || from === to) return;
+				if (!(from in fm)) return;
 				if (to in fm) {
 					console.warn(`[Hoard] ${file.path} already has "${to}"; "${from}" stays`);
 					conflict = true;
 					return;
 				}
-				const value = fm[from];
-				delete fm[from];
-				fm[to] = value;
+				// rename in place: the key keeps its position among its neighbours
+				const entries = Object.entries(fm).map(([k, v]): [string, unknown] => [k === from ? to : k, v]);
+				for (const k of Object.keys(fm)) delete fm[k];
+				for (const [k, v] of entries) fm[k] = v;
 				hit = true;
 			});
 			if (ok && hit) moved++;
 			else if (conflict || !ok) skipped++;
 		}
 		return { moved, skipped };
+	}
+
+	/** True when the note's properties, read from the file, contain `key`; unreadable YAML counts when it names the key. */
+	private async fileHasKey(file: TFile, key: string): Promise<boolean> {
+		const info = getFrontMatterInfo(await this.app.vault.read(file));
+		if (!info.exists) return false;
+		try {
+			const fm: unknown = parseYaml(info.frontmatter);
+			return typeof fm === 'object' && fm !== null && key in fm;
+		} catch {
+			return info.frontmatter.includes(key);
+		}
 	}
 
 	async removeColumn(kind: ReadingKind, id: string): Promise<void> {

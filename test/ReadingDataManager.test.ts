@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { setupReadingDataManager, makeBook, makeManga } from './helpers/setupReadingDataManager';
+import { parse } from 'yaml';
 import { tick } from './helpers/common';
 
 describe('ReadingDataManager on vault storage', () => {
@@ -301,6 +302,30 @@ describe('ReadingDataManager on vault storage', () => {
 			release();
 			await pending;
 			expect(rdm.getBookColumns()).toEqual([]);
+		});
+
+		it('leaves notes without the key byte-identical and keeps the renamed key in place', async () => {
+			const plain = '---\nName:   B\nType: book\nnote: [1,   2]\n---\n\nbody\n';
+			const { rdm, f } = await setupReadingDataManager({
+				'W/Books/A.md': '---\nName: A\nCustom Old: a\nZ: 1\nType: book\n---\n',
+				'W/Books/B.md': plain,
+			});
+			await rdm.addColumn('book', col);
+			expect(await rdm.updateColumn('book', { ...col, name: 'New' })).toEqual({ moved: 1, skipped: 0 });
+			expect(f.files.get('W/Books/B.md')).toBe(plain);
+			const keys = Object.keys(parse(/^---\n([\s\S]*?)\n---/.exec(f.files.get('W/Books/A.md')!)![1]!) as object);
+			expect(keys).toEqual(['Name', 'Custom New', 'Z', 'Type']);
+		});
+
+		it('reads the file, not the metadata cache, to find notes with the key', async () => {
+			const { rdm, f } = await setupReadingDataManager({
+				'W/Books/A.md': '---\nName: A\nType: book\n---\n',
+			});
+			await rdm.addColumn('book', col);
+			// the cache is stale: the file gained the key without the index noticing yet
+			f.files.set('W/Books/A.md', '---\nName: A\nType: book\nCustom Old: late\n---\n');
+			expect(await rdm.updateColumn('book', { ...col, name: 'New' })).toEqual({ moved: 1, skipped: 0 });
+			expect(f.files.get('W/Books/A.md')).toContain('Custom New: late');
 		});
 
 		it('detects duplicate names ignoring case, per kind', async () => {
