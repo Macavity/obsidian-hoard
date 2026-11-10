@@ -250,6 +250,48 @@ describe('ReadingDataManager on vault storage', () => {
 			expect(f.files.get('W/Books/A.md')).toContain('Custom Old: a');
 		});
 
+		it('keeps the rename when the shared config reloads while the move is in flight', async () => {
+			const { rdm, f } = await setupReadingDataManager({
+				'W/Books/A.md': '---\nName: A\nType: book\nCustom Old: a\n---\n',
+			});
+			await rdm.addColumn('book', col);
+			let release!: () => void;
+			const gate = new Promise<void>((r) => { release = r; });
+			const orig = f.app.fileManager.processFrontMatter.bind(f.app.fileManager);
+			f.app.fileManager.processFrontMatter = async (...args: Parameters<typeof orig>) => {
+				await gate;
+				return orig(...args);
+			};
+			const pending = rdm.updateColumn('book', { ...col, name: 'New' });
+			await tick(20);
+			// what a shared-config change does: replaces the column arrays
+			(rdm as unknown as { readShared: () => void }).readShared();
+			release();
+			await pending;
+			expect(rdm.getBookColumns()[0]?.name).toBe('New');
+			expect(f.files.get('W/Hoard.base')).toContain('New');
+		});
+
+		it('does not resurrect a column deleted while the move is in flight', async () => {
+			const { rdm, f } = await setupReadingDataManager({
+				'W/Books/A.md': '---\nName: A\nType: book\nCustom Old: a\n---\n',
+			});
+			await rdm.addColumn('book', col);
+			let release!: () => void;
+			const gate = new Promise<void>((r) => { release = r; });
+			const orig = f.app.fileManager.processFrontMatter.bind(f.app.fileManager);
+			f.app.fileManager.processFrontMatter = async (...args: Parameters<typeof orig>) => {
+				await gate;
+				return orig(...args);
+			};
+			const pending = rdm.updateColumn('book', { ...col, name: 'New' });
+			await tick(20);
+			await rdm.removeColumn('book', 'c1');
+			release();
+			await pending;
+			expect(rdm.getBookColumns()).toEqual([]);
+		});
+
 		it('detects duplicate names ignoring case, per kind', async () => {
 			const { rdm } = await setupReadingDataManager({});
 			await rdm.addColumn('book', col);

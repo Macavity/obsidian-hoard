@@ -611,11 +611,13 @@ export class ReadingDataManager {
 	 * name, never lost). Returns how many notes were moved; a note that already has the new key is kept as is.
 	 */
 	async updateColumn(kind: ReadingKind, updated: ReadingCustomColumn): Promise<number> {
+		const old = this.columnsFor(kind).find((c) => c.id === updated.id);
+		if (!old) return 0;
+		const moved = old.name === updated.name ? 0 : await this.moveCustomKey(kind, customFieldKey(old.name), customFieldKey(updated.name));
+		// the shared config may have been reloaded meanwhile: resolve the array again, never resurrect a deleted column
 		const cols = this.columnsFor(kind);
 		const idx = cols.findIndex((c) => c.id === updated.id);
-		if (idx < 0) return 0;
-		const old = cols[idx]!;
-		const moved = old.name === updated.name ? 0 : await this.moveCustomKey(kind, customFieldKey(old.name), customFieldKey(updated.name));
+		if (idx < 0) return moved;
 		cols[idx] = updated;
 		await this.save();
 		return moved;
