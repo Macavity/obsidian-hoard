@@ -78,10 +78,10 @@ migration. `translateProperties` is the pattern: renames known old keys, keeps v
 exists and reports it as `kept-value`, so a second run changes nothing. Hoard 0.1 vaults are not
 migrated at startup.
 
-## Open point
+## Custom fields
 
-Reading custom fields are stored as `cf_<columnId>` (e.g. `cf_col_1`) and are not readable names.
-Whether they become label-based keys before 1.0 is undecided.
+Reading custom columns (book and manga) are user data, not part of the frozen set. Only the key
+pattern is stable: `cf_<columnId>` (e.g. `cf_col_1`), which the reading codec recognises by its prefix.
 
 ## Non-goals
 
