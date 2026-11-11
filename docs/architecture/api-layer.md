@@ -93,12 +93,14 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
   reading covers by Open Library, Google Books or MAL id. Bulk refresh needs an id (Google-only
   books also need a key).
 - Add modals call the resolver directly for book and game search; `AddFromUrlModal` resolves an
-  IMDb link through the effective source (Cinemeta: movie first, then series).
+  IMDb link through the effective source (Cinemeta: series first, then movie — the movie endpoint
+  returns an unrelated film for many series ids, the series endpoint returns `{}` for movie ids).
 
 ## Background work
 
 - [PosterService](../../src/PosterService.ts): a serial queue with per-service delays; movie/TV
-  order is TMDB key → OMDb key → Cinemeta (by IMDb id, else title search with year), regardless of
+  order is TMDB key → OMDb key → Cinemeta (by IMDb id, else title search with year; with no kind signal
+  series before movie), regardless of
   `activeApi`; the `ApiService` for Cinemeta arrives through the injected `getApi` from `main.ts`.
   The result is written by `DataManager.updatePosterUrl` writes it into the note only when the note has none
   (or always on explicit refresh). A failure is not cached as `'none'`, so a bad key does not burn
@@ -107,8 +109,10 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
   `DataManager.refillSeasons` and `refreshAiring`; the result (`ok | transient | nokey | notfound`)
   is stamped into `cache.apiCheck` with a per-outcome retry deadline (`apiCheckDue`), and
   `resetNoKeyChecks` re-arms `nokey` checks when a key changes. Community rating, airing, season
-  refill, collections and credits stay keyed (OMDb/TMDB/AniList/MAL); `fetchCredits` takes the
-  effective `MediaSource` only to order TMDB and OMDb.
+  refill and collections stay keyed (OMDb/TMDB/AniList/MAL). `fetchCredits` tries Cinemeta first
+  when it is the effective source, else after TMDB/OMDb; Cinemeta errors propagate so the detail
+  modal leaves credits unfetched and retries. The studio backfill is skipped for movies/TV without
+  a TMDB key instead of storing `none`.
 
 ## Where to change what
 

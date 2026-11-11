@@ -70,8 +70,8 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
   Google Books when `booksApiSource` is `google` and a key is set, else Open Library
   ([api layer](../architecture/api-layer.md)); there is no "key required" panel. A pick sets
   `googleBooksId` or `openLibraryId`, then a background `enrichBook` fetches the full record: Google
-  upgrades pages and cover, Open Library fills only what the search row lacked (author, pages, date,
-  cover). Search rows from Open Library often have no page count.
+  upgrades pages and cover, Open Library fills only an empty cover (the work record carries no author, pages or date, and a
+  value typed meanwhile must win). Search rows from Open Library often have no page count.
 - **Covers**: cards without a cover fetch lazily by id (Open Library work or Google volume), else by
   title (+ author) search through `searchBooks`, taking the first hit that has a cover and an id
   (`firstBookCover`); only the cover is persisted and only when empty. Bulk refresh needs an id; a

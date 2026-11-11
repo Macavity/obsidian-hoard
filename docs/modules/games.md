@@ -65,7 +65,7 @@ in-place mutation without a `*Silent` call is still written. UI: [GamesTab.ts](.
 `AddGameModal.search` follows `effectiveGameSource` ([apiSources.ts](../../src/apiSources.ts)): the
 chosen source if keyed, else the keyless **Steam Store** search (`searchSteamStore`, apps only, rows
 with the portrait capsule). A pick fetches details by the row's own source (Steam: `appdetails`
-mapped through `getSteamStoreDetails`) and stores `apiSource` + `apiId`; a Steam pick also sets
+mapped through `getSteamStoreDetails`; missing details fall back to the search row) and stores `apiSource` + `apiId`; a Steam pick also sets
 `steamAppId`, so a later Steam sync matches by id. Non-Steam picks still derive `steamAppId` from a
 Steam store link. See [api layer](../architecture/api-layer.md).
 
