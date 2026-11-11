@@ -10,7 +10,7 @@ export function steamLibraryCover(appId: string): string {
 }
 
 const PLATFORM_NAMES: Array<[string, string]> = [
-	['windows', 'Windows'],
+	['windows', 'PC'],
 	['mac', 'macOS'],
 	['linux', 'Linux'],
 ];

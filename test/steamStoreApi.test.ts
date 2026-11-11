@@ -8,7 +8,7 @@ describe('steam store', () => {
 	});
 	it('maps Hades', () => {
 		expect(mapSteamStoreSearch(search).find((r) => r.id === 1145360)).toMatchObject({
-			source: 'steam', title: 'Hades', platforms: ['Windows', 'macOS'],
+			source: 'steam', title: 'Hades', platforms: ['PC', 'macOS'],
 			url: 'https://store.steampowered.com/app/1145360/', releaseDate: '',
 		});
 	});
