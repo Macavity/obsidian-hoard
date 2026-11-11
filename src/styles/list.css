@@ -119,14 +119,25 @@ button.hoard-rows-customize__btn .svg-icon {
   overflow: hidden;
 }
 
+/* off-screen clone of a row, rendered only to measure its height */
+.hoard-list__measure-probe {
+  position: absolute;
+  top: 0;
+  left: -9999px;
+  width: var(--hoard-list-measure-probe-width, auto);
+  visibility: hidden;
+}
+
 /* virtual scroll: fixed height, children absolute */
 .hoard-list__virtual-container {
   position: relative;
+  height: var(--hoard-list-virtual-height, auto);
 }
 
-/* virtual scroll: top set inline from the offset table */
+/* virtual scroll: top comes from the offset table */
 .hoard-list__virtual-item {
   position: absolute;
+  top: var(--hoard-list-virtual-item-top, auto);
   left: 0;
   right: 0;
 }
@@ -278,6 +289,7 @@ button.hoard-rows-customize__btn .svg-icon {
   border-radius: 2px;
   transition: width 0.3s ease;
   min-width: 0;
+  width: var(--hoard-progress-width, auto);
 }
 
 /* Badges */

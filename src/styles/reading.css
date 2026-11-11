@@ -254,6 +254,7 @@ button.hoard-reading__manage-btn {
 
 .hoard-reading-card__progress-fill {
   height: 100%;
+  width: var(--hoard-reading-card-progress-width, auto);
   border-radius: 2px;
   transition: width 0.2s ease;
   background-color: var(--hoard-reading-card-progress-color, transparent);
@@ -314,8 +315,9 @@ button.hoard-reading__manage-btn {
   align-content: start;
   gap: 12px;
 
-  /* inline padding-top, NOT translateY (Chromium CLS pitfall — see VirtualGrid.update) */
+  /* padding-top (from VirtualGrid), NOT translateY (Chromium CLS pitfall — see VirtualGrid.update) */
   padding: 0;
+  padding-top: var(--hoard-reading-offset, 0);
   box-sizing: border-box;
 }
 

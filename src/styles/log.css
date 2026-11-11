@@ -60,26 +60,30 @@
 
 .hoard-log__spacer {
   width: 100%;
+  height: var(--hoard-log-spacer-height, auto);
   position: relative;
 }
 
 .hoard-log__viewport {
   width: 100%;
+  height: var(--hoard-log-viewport-height, auto);
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
 }
 
-/* rows are absolutely positioned; top is set by LogTab */
+/* rows are absolutely positioned; top comes from LogTab */
 .hoard-log__viewport .hoard-log__day-header,
 .hoard-log__viewport .hoard-log__entry {
   position: absolute;
+  top: var(--hoard-log-row-top, auto);
   left: 0;
   right: 0;
 }
 
 .hoard-log__day-header {
+  height: var(--hoard-log-day-header-height, auto);
   font-size: 12px;
   font-weight: 600;
   color: var(--text-normal);
@@ -89,6 +93,7 @@
 }
 
 .hoard-log__entry {
+  height: var(--hoard-log-entry-height, auto);
   display: flex;
   align-items: flex-start;
   gap: 8px;

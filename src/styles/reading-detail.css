@@ -322,6 +322,8 @@
 
 .hoard-status-dropdown {
   position: fixed;
+  top: var(--hoard-status-dropdown-top, auto);
+  left: var(--hoard-status-dropdown-left, auto);
   background: var(--background-primary);
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 6px;

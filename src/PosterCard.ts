@@ -24,6 +24,16 @@ export interface CardMenuContext {
 }
 
 /**
+ * Pin the height of a card, or of its cell in text-under mode. The modifier class (not the variable alone)
+ * selects the element, so the poster inside a pinned cell does not inherit the height.
+ */
+export function pinCardHeight(cell: HTMLElement | null, card: HTMLElement, height: number): void {
+	const pinned = cell ?? card;
+	pinned.addClass(cell ? 'hoard-card__cell--pinned' : 'hoard-card--pinned');
+	pinned.setCssProps({ '--hoard-card-pinned-height': `${height}px` });
+}
+
+/**
  * Open a card's ⋮ menu: closes any other open menu, right-aligns near the container's right edge,
  * and dismisses on any outside click (registered on the card's own document, so popouts work).
  */
@@ -132,9 +142,7 @@ export function buildPosterCard(
 	if (spec.selected) card.addClass('hoard-card--selected');
 	// width is distributed by the parent CSS grid (1fr columns) — do NOT set an explicit width here.
 	// Fractional pixel widths per card made flex-wrap overflow and shift the grid a slot per scroll.
-	if (spec.cardHeight !== undefined) {
-		(cell ?? card).style.height = `${spec.cardHeight}px`;
-	}
+	if (spec.cardHeight !== undefined) pinCardHeight(cell, card, spec.cardHeight);
 
 	const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
 	placeholder.setCssProps({ '--hoard-card-placeholder-color': spec.placeholderColor });
@@ -213,7 +221,7 @@ export function buildPosterCard(
 	if (spec.progressRatio !== undefined) {
 		const bar = textHost.createDiv({ cls: 'hoard-card__progress-bar' });
 		const fill = bar.createDiv({ cls: 'hoard-card__progress-fill' });
-		fill.style.width = `${Math.max(0, Math.min(1, spec.progressRatio)) * 100}%`;
+		fill.setCssProps({ '--hoard-card-progress-width': `${Math.max(0, Math.min(1, spec.progressRatio)) * 100}%` });
 	}
 
 	const menuItems = spec.menuItems;

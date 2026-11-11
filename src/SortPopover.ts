@@ -59,7 +59,7 @@ export function toggleSortPopover(cfg: SortPopoverConfig): void {
 	if (window.innerWidth <= 600) {
 		const rect = cfg.anchor.getBoundingClientRect();
 		panel.addClass('hoard-sort-panel--mobile');
-		panel.style.top = `${rect.bottom + 4}px`;
+		panel.setCssProps({ '--hoard-sort-panel-top': `${rect.bottom + 4}px` });
 	}
 
 	// working copy — committed through onChange on every interaction

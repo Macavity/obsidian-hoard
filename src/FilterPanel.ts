@@ -93,8 +93,7 @@ export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 
 	const panel = activeDocument.body.createDiv({ cls: 'hoard-popover hoard-filter-panel hoard-filter-panel--popup' });
 	const rect = cfg.anchor.getBoundingClientRect();
-	panel.style.top = `${rect.bottom + 4}px`;
-	panel.style.left = `${rect.left}px`;
+	panel.setCssProps({ '--hoard-filter-panel-top': `${rect.bottom + 4}px`, '--hoard-filter-panel-left': `${rect.left}px` });
 
 	// single teardown for every close path (Apply, outside click, preset save/delete, tab teardown);
 	// `closed` makes it idempotent and guards the deferred listener attach at the end

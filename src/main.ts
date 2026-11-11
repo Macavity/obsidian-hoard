@@ -112,7 +112,7 @@ export default class HoardPlugin extends Plugin {
 		this.maybeShowSecretsNotice();
 		// the card-size CSS var must be live before any view or modal renders a grid
 		this.applyCardSizeCssVar();
-		this.register(() => activeDocument.body.style.removeProperty('--hoard-card-minimum-width'));
+		this.register(() => activeDocument.body.setCssProps({ '--hoard-card-minimum-width': '' }));
 
 		this.apiService = new ApiService(
 			this.settings.omdbApiKey,
@@ -493,7 +493,7 @@ export default class HoardPlugin extends Plugin {
 	 * member grids, non-virtual fallbacks) track the setting too. Called on load and on every change.
 	 */
 	applyCardSizeCssVar(): void {
-		activeDocument.body.style.setProperty('--hoard-card-minimum-width', `${this.getCardMinWidth()}px`);
+		activeDocument.body.setCssProps({ '--hoard-card-minimum-width': `${this.getCardMinWidth()}px` });
 	}
 
 	/** Keys do not sync between devices: tell a migrated device once that its keychain is empty. */

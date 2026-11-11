@@ -206,6 +206,11 @@
   border: 1px solid rgb(255 255 255 / 5%);
 }
 
+/* height pinned by the virtual grid; the modifier keeps a poster inside a pinned cell out of it */
+.hoard-card.hoard-card--pinned {
+  height: var(--hoard-card-pinned-height, auto);
+}
+
 .hoard-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
@@ -277,6 +282,7 @@
 
 .hoard-card__progress-fill {
   height: 100%;
+  width: var(--hoard-card-progress-width, auto);
   border-radius: 2px;
   background: rgb(255 255 255 / 80%);
   transition: width 0.2s ease;

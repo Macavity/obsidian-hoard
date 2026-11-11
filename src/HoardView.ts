@@ -324,7 +324,7 @@ export class HoardView extends ItemView {
 		const tabContent = this.contentEl.querySelector<HTMLElement>('.hoard-view__tab-content');
 		if (tabContent) {
 			tabContent.removeClass('hoard-view__tab-content--pinned');
-			tabContent.style.removeProperty('--hoard-view-pinned-tab-height');
+			tabContent.setCssProps({ '--hoard-view-pinned-tab-height': '' });
 		}
 		this.destroyActiveTab();
 	}
@@ -493,7 +493,7 @@ export class HoardView extends ItemView {
 			const computed = window.getComputedStyle(el).overflow;
 			if (computed === 'hidden') {
 				// strip any inline override so the class rule below wins without !important
-				el.style.removeProperty('overflow');
+				el.setCssProps({ overflow: '' });
 				el.addClass('hoard-force-overflow-auto');
 			}
 		});

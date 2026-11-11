@@ -64,7 +64,7 @@ describe('sort popover', () => {
 		toggleSortPopover(cfg);
 		const panel = wrap.querySelector<HTMLElement>('.hoard-sort-panel')!;
 		expect(panel.classList.contains('hoard-sort-panel--mobile')).toBe(true);
-		expect(panel.style.top).toBe('44px');
+		expect(panel.style.getPropertyValue('--hoard-sort-panel-top')).toBe('44px');
 	});
 
 	it('changing the primary key applies that key default direction and closes', () => {

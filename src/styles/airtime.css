@@ -178,6 +178,7 @@
 /* spacer reserving the month's scroll extent */
 .hoard-tracker__month-spacer {
   position: relative;
+  height: var(--hoard-card-grid-spacer-height, auto);
   width: 100%;
 }
 
@@ -196,6 +197,10 @@
   flex-direction: column;
   min-width: 0;
   cursor: pointer;
+}
+
+.hoard-card__cell.hoard-card__cell--pinned {
+  height: var(--hoard-card-pinned-height, auto);
 }
 
 /* the poster keeps its 2:3 ratio; the virtual-grid full-height rule only hits bare cards */

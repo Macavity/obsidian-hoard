@@ -459,8 +459,8 @@ export class ReadingTab {
 		const rect = anchor.getBoundingClientRect();
 		const parentRect = this.container.getBoundingClientRect();
 		pop.setCssProps({
-			top: `${rect.bottom - parentRect.top + 4}px`,
-			left: `${rect.left - parentRect.left}px`,
+			'--hoard-popover-top': `${rect.bottom - parentRect.top + 4}px`,
+			'--hoard-popover-left': `${rect.left - parentRect.left}px`,
 		});
 		build(pop);
 		this.openPopover = pop;
@@ -1192,7 +1192,7 @@ export class ReadingTab {
 				removeItem: (el) => this.coverObserver?.unobserveAndRemove(el),
 			},
 			// The Reading grid's stylesheet reads its own CSS variables.
-			{ colsVar: '--hoard-reading-columns', cardHeightVar: '--hoard-reading-card-height' },
+			{ colsVar: '--hoard-reading-columns', cardHeightVar: '--hoard-reading-card-height', offsetVar: '--hoard-reading-offset' },
 		);
 		this.vsScroller?.addSection(vgrid, spacer);
 	}
@@ -1536,8 +1536,8 @@ export class ReadingTab {
 	private renderProgressBar(card: HTMLElement, percent: number, status: ReadingStatus): void {
 		const bar = card.createDiv({ cls: 'hoard-reading-card__progress-bar' });
 		const fill = bar.createDiv({ cls: 'hoard-reading-card__progress-fill' });
-		fill.style.width = `${percent}%`;
 		fill.setCssProps({
+			'--hoard-reading-card-progress-width': `${percent}%`,
 			'--hoard-reading-card-progress-color': readingStatusColor(status, this.readingData.getSettings().statusColors),
 		});
 	}

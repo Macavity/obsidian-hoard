@@ -90,7 +90,7 @@ describe('ReadingTab book card', () => {
 		expect(progressText(grid)).toContain('50');
 		expect(progressText(grid)).toContain('200');
 		expect(progressText(grid)).toContain(t('reading.card.units.pages'));
-		expect((grid.querySelector('.hoard-reading-card__progress-fill') as HTMLElement).style.width).toBe('25%');
+		expect((grid.querySelector('.hoard-reading-card__progress-fill') as HTMLElement).style.getPropertyValue('--hoard-reading-card-progress-width')).toBe('25%');
 	});
 
 	it('uses the words unit for a words-mode book', () => {
@@ -146,7 +146,7 @@ describe('ReadingTab manga card', () => {
 			t('reading.card.chapters', { read: 5, total: 10 }),
 			t('reading.card.volumes', { read: 1, total: 4 }),
 		]);
-		expect((grid.querySelector('.hoard-reading-card__progress-fill') as HTMLElement).style.width).toBe('50%');
+		expect((grid.querySelector('.hoard-reading-card__progress-fill') as HTMLElement).style.getPropertyValue('--hoard-reading-card-progress-width')).toBe('50%');
 	});
 
 	it('shows the read-only pieces when totals are unknown', () => {

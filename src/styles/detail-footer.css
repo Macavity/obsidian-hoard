@@ -17,6 +17,7 @@
 
 .hoard-detail__notes-input {
   width: 100%;
+  height: var(--hoard-detail-notes-height, auto);
   min-height: 60px;
   resize: vertical;
   font-family: inherit;

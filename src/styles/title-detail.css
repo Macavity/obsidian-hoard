@@ -14,9 +14,10 @@
   border-top: 1px solid var(--background-modifier-border);
 }
 
-/* fixed-height wrapper; the inline height reserves the grid's full extent up-front */
+/* fixed-height wrapper; the height variable reserves the grid's full extent up-front */
 .hoard-rows-view__grouped-spacer {
   position: relative;
+  height: var(--hoard-card-grid-spacer-height, auto);
 
   /* tops the trailing gap up to the 20px the non-virtual grid had */
   margin: 4px 0 8px;

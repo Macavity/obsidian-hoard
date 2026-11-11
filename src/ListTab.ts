@@ -938,7 +938,7 @@ export class ListTab {
 			const progWrap = header.createDiv({ cls: 'hoard-import__header-progress' });
 			const track = progWrap.createDiv({ cls: 'hoard-import__header-track' });
 			const fill = track.createDiv({ cls: 'hoard-import__header-fill' });
-			fill.style.width = `${total > 0 ? Math.round((current / total) * 100) : 0}%`;
+			fill.setCssProps({ '--hoard-import-header-fill-width': `${total > 0 ? Math.round((current / total) * 100) : 0}%` });
 			progWrap.createSpan({ cls: 'hoard-import__header-text', text: `${current} / ${total}` });
 			const cancelBtn = progWrap.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('list.cancelImport') });
 			cancelBtn.addEventListener('click', () => cancel());
@@ -1472,8 +1472,8 @@ export class ListTab {
 			if (expandedIdx !== -1) {
 				const item = items[expandedIdx];
 				if (item?.kind === 'title') {
-					const probe = activeDocument.body.createDiv();
-					probe.style.cssText = `position:absolute;left:-9999px;top:0;width:${table.clientWidth}px;visibility:hidden;`;
+					const probe = activeDocument.body.createDiv({ cls: 'hoard-list__measure-probe' });
+					probe.setCssProps({ '--hoard-list-measure-probe-width': `${table.clientWidth}px` });
 					this.renderRow(probe, item.data);
 					const measured = probe.offsetHeight;
 					probe.remove();
@@ -1487,8 +1487,8 @@ export class ListTab {
 			const item = items[i];
 			if (item?.kind !== 'group') continue;
 			if (!this.expandedGroups.has(item.data.id)) continue;
-			const probe = activeDocument.body.createDiv();
-			probe.style.cssText = `position:absolute;left:-9999px;top:0;width:${table.clientWidth}px;visibility:hidden;`;
+			const probe = activeDocument.body.createDiv({ cls: 'hoard-list__measure-probe' });
+			probe.setCssProps({ '--hoard-list-measure-probe-width': `${table.clientWidth}px` });
 			this.renderGroupRow(probe, item.data, item.members);
 			const measured = probe.offsetHeight;
 			probe.remove();
@@ -1506,7 +1506,7 @@ export class ListTab {
 
 		// phase 3: fixed-height container, set once — keeps the scroll area stable
 		const virt = table.createDiv({ cls: 'hoard-list__virtual-container' });
-		virt.style.height = `${totalHeight}px`;
+		virt.setCssProps({ '--hoard-list-virtual-height': `${totalHeight}px` });
 
 		// content-top → virt top, computed once outside the scroll handler
 		const scrollEl = this.container;
@@ -1566,7 +1566,7 @@ export class ListTab {
 				const item = items[i];
 				if (!item) continue;  // guard: items array may be stale on concurrent re-render
 				const rowEl = virt.createDiv({ cls: 'hoard-list__virtual-item' });
-				rowEl.style.top = `${offsets[i] ?? 0}px`;
+				rowEl.setCssProps({ '--hoard-list-virtual-item-top': `${offsets[i] ?? 0}px` });
 				if (item.kind === 'title') {
 					this.renderRow(rowEl, item.data);
 				} else {
@@ -1789,7 +1789,7 @@ export class ListTab {
 		}
 		const barWrap = colTitle.createDiv({ cls: 'hoard-progress__wrap' });
 		const bar = barWrap.createDiv({ cls: 'hoard-progress__bar' });
-		bar.style.width = `${this.dataManager.getProgress(title)}%`;
+		bar.setCssProps({ '--hoard-progress-width': `${this.dataManager.getProgress(title)}%` });
 	}
 
 	private renderPriorityCell(row: HTMLElement, priority: string | null): void {
@@ -1943,8 +1943,9 @@ export class ListTab {
 		statsEl.createSpan({ text: `  ·  ${t('list.stats.left', { time: formatTime(timeLeft) })}` });
 
 		const barWrap = colTitle.createDiv({ cls: 'hoard-progress__wrap' });
-		barWrap.createDiv({ cls: 'hoard-progress__bar' }).style.width =
-			`${this.getGroupProgress(members)}%`;
+		barWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({
+			'--hoard-progress-width': `${this.getGroupProgress(members)}%`,
+		});
 	}
 
 	/** Name input with save/cancel buttons. */
@@ -2157,7 +2158,7 @@ export class ListTab {
 		accRight.createDiv({ cls: 'hoard-accordion__percent', text: `${progress}%` });
 		accRight.createDiv({ cls: 'hoard-accordion__progress-label', text: t('list.stat.progress') });
 		const accBarWrap = accRight.createDiv({ cls: 'hoard-accordion__progress-wrap' });
-		accBarWrap.createDiv({ cls: 'hoard-progress__bar' }).style.width = `${progress}%`;
+		accBarWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({ '--hoard-progress-width': `${progress}%` });
 
 		const accBody = accordion.createDiv({ cls: 'hoard-accordion__body' });
 		if (isSingleEpisodeTitle(title)) {
@@ -2276,7 +2277,7 @@ export class ListTab {
 		const progressText = accordion.querySelector<HTMLElement>('.hoard-accordion__header-right .hoard-accordion__percent');
 		if (progressText) progressText.textContent = `${progress}%`;
 		const progressBar = accordion.querySelector<HTMLElement>('.hoard-accordion__header-right .hoard-progress__bar');
-		if (progressBar) progressBar.style.width = `${progress}%`;
+		if (progressBar) progressBar.setCssProps({ '--hoard-progress-width': `${progress}%` });
 
 		// only changes on skip-toggle, but cheap to refresh either way
 		if (season) {

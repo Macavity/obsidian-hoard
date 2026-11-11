@@ -53,9 +53,9 @@ export function computeGridMetrics(containerWidth: number, minCardWidth = MIN_CA
 export function setRowsCardWidth(scroll: HTMLElement, cardWidth: number): void {
 	if (!(cardWidth > 0)) return;
 	const px = `${Math.round(cardWidth)}px`;
-	if (scroll.style.getPropertyValue('--hoard-rows-view-card-width') !== px) {
-		scroll.style.setProperty('--hoard-rows-view-card-width', px);
-	}
+	if (appliedRowsCardWidth.get(scroll) === px) return;
+	appliedRowsCardWidth.set(scroll, px);
+	scroll.setCssProps({ '--hoard-rows-view-card-width': px });
 }
 
 export interface VirtualGridCallbacks {
@@ -66,12 +66,10 @@ export interface VirtualGridCallbacks {
 }
 
 export interface VirtualGridOptions {
-	/**
-	 * CSS custom properties the grid's stylesheet reads for column count and card height. Defaults are
-	 * the Cards-view names; the Reading grid passes its own.
-	 */
+	/** CSS custom properties the stylesheet reads (Cards-view names by default; Reading passes its own). */
 	colsVar?: string;
 	cardHeightVar?: string;
+	offsetVar?: string;
 }
 
 export class VirtualGrid {
@@ -80,6 +78,7 @@ export class VirtualGrid {
 	private cb: VirtualGridCallbacks;
 	private colsVar: string;
 	private cardHeightVar: string;
+	private offsetVar: string;
 	readonly itemCount: number;
 
 	// materialised item window (inclusive). (-1, -1) = never rendered; an empty window (grid fully
@@ -106,6 +105,7 @@ export class VirtualGrid {
 		this.cb = cb;
 		this.colsVar = options?.colsVar ?? '--hoard-card-grid-columns';
 		this.cardHeightVar = options?.cardHeightVar ?? '--hoard-card-height';
+		this.offsetVar = options?.offsetVar ?? '--hoard-card-grid-offset';
 	}
 
 	/**
@@ -115,7 +115,7 @@ export class VirtualGrid {
 	 */
 	reserveHeight(metrics: GridMetrics): void {
 		const totalRows = Math.ceil(this.itemCount / metrics.cols);
-		this.spacer.style.height = `${totalRows * metrics.rowHeight}px`;
+		this.spacer.setCssProps({ '--hoard-card-grid-spacer-height': `${totalRows * metrics.rowHeight}px` });
 	}
 
 	/**
@@ -163,17 +163,19 @@ export class VirtualGrid {
 		if (windowUnchanged && layoutUnchanged) return false;
 
 		if (!layoutUnchanged) {
-			this.spacer.style.height = `${totalRows * rowHeight}px`;
-			// Offset the grid with padding-top, NOT transform: translateY. With a transform, every row advance
+			this.spacer.setCssProps({ '--hoard-card-grid-spacer-height': `${totalRows * rowHeight}px` });
+			// Offset the grid with padding-top (through a custom property), NOT transform: translateY. With a transform, every row advance
 			// (remove top row + append bottom row + transform bump in one frame) makes Chromium's layout-shift
 			// tracker report a full row of stationary cards as shifted (previousRect 0×0 → poster rect) — the
 			// CLS that climbed on every scroll. Padding replaces the removed row in layout, so each surviving
 			// card's rect is literally unchanged. (Verified in a headless-Chromium harness: transform ≈ 0.14
 			// CLS per row advance; padding-top = 0. ReadingTab avoids it differently, by rebuilding the whole
 			// window — inserted-only content is never counted as a shift.)
-			this.grid.style.paddingTop = `${firstVisibleRow * rowHeight}px`;
-			this.grid.style.setProperty(this.colsVar, String(cols));
-			this.grid.style.setProperty(this.cardHeightVar, `${cardHeight}px`);
+			this.grid.setCssProps({
+				[this.offsetVar]: `${firstVisibleRow * rowHeight}px`,
+				[this.colsVar]: String(cols),
+				[this.cardHeightVar]: `${cardHeight}px`,
+			});
 			this.lastFirstRow = firstVisibleRow;
 			this.lastCols = cols;
 			this.lastCardHeight = cardHeight;
@@ -250,3 +252,6 @@ export class VirtualGrid {
 		}
 	}
 }
+
+// last width written per scroll container, so the per-scroll-tick call never reads the DOM back
+const appliedRowsCardWidth = new WeakMap<HTMLElement, string>();

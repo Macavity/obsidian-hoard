@@ -124,7 +124,7 @@ describe('WidgetRenderer', () => {
 		const el = run('hoard', 'id: s');
 		expect(el.classList.contains('hoard-widget')).toBe(true);
 		expect(el.textContent).toContain('Next up: Ep 3');
-		expect(el.querySelector<HTMLElement>('.hoard-progress__bar')!.style.width).toBe('20%');
+		expect(el.querySelector<HTMLElement>('.hoard-progress__bar')!.style.getPropertyValue('--hoard-progress-width')).toBe('20%');
 	});
 
 	it('hoard: task marker strikes the title; a fully watched series says so', () => {

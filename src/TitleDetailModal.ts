@@ -500,7 +500,7 @@ export class TitleDetailModal extends Modal {
 			stat(`${watchedEps}/${effectiveTotal}`, t('detail.epsShort'));
 
 			const bar = this.statsBoxEl.createDiv({ cls: 'hoard-accordion__progress-wrap' });
-			bar.createDiv({ cls: 'hoard-progress__bar' }).style.width = `${progress}%`;
+			bar.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({ '--hoard-progress-width': `${progress}%` });
 			this.statsBoxEl.createDiv({
 				cls: 'hoard-detail__progress-label',
 				text: t('detail.progressPercent', { percent: progress }),
@@ -528,7 +528,7 @@ export class TitleDetailModal extends Modal {
 		const barWrap = this.statsBoxEl.createDiv({
 			cls: 'hoard-accordion__progress-wrap hoard-detail__stats-bar',
 		});
-		barWrap.createDiv({ cls: 'hoard-progress__bar' }).style.width = `${progress}%`;
+		barWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({ '--hoard-progress-width': `${progress}%` });
 	}
 
 	// repaint the header pill / date-watched so a Mark-as-Watched press shows without reopening
@@ -778,8 +778,8 @@ export class TitleDetailModal extends Modal {
 		textarea.value = this.title.notes;
 		const autoResize = (): void => {
 			// reset to intrinsic height so scrollHeight reflects the content
-			textarea.style.removeProperty('height');
-			textarea.setCssProps({ height: `${textarea.scrollHeight}px` });
+			textarea.setCssProps({ '--hoard-detail-notes-height': '' });
+			textarea.setCssProps({ '--hoard-detail-notes-height': `${textarea.scrollHeight}px` });
 		};
 		textarea.addEventListener('input', () => {
 			this.notesEditedByUser = true;
@@ -1434,7 +1434,7 @@ function buildTitleCardElement(
 			: Math.max(0, Math.min(1, title.watchedEpisodes.length / total));
 		const bar = overlay.createDiv({ cls: 'hoard-card__progress-bar' });
 		const fill = bar.createDiv({ cls: 'hoard-card__progress-fill' });
-		fill.style.width = `${ratio * 100}%`;
+		fill.setCssProps({ '--hoard-card-progress-width': `${ratio * 100}%` });
 	}
 
 	const menuBtn = createIconButton(card, { icon: 'more-vertical', label: t('common.edit'), cls: 'hoard-card__menu-btn' });

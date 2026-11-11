@@ -907,7 +907,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			progressText.textContent = t('settings.backup.regenerate.none');
 			return;
 		}
-		progressBarFill.style.width = `0%`;
+		progressBarFill.setCssProps({ '--hoard-csv-progress-width': '0%' });
 		progressText.textContent = `0 / ${total}`;
 		let created = 0;
 		let skipped = 0;
@@ -916,7 +916,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			if (wasCreated) created++; else skipped++;
 			done++;
 			const pct = Math.round((done / total) * 100);
-			progressBarFill.style.width = `${pct}%`;
+			progressBarFill.setCssProps({ '--hoard-csv-progress-width': `${pct}%` });
 			progressText.textContent = `${done} / ${total}`;
 		};
 		for (const title of titles) {

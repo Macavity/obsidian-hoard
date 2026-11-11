@@ -639,7 +639,7 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 		if (this.cancelBtn) this.cancelBtn.textContent = t('csv.cancelImport');
 		if (this.progressWrap) this.progressWrap.show();
 		if (this.progressText) this.progressText.textContent = `0 / ${total}`;
-		if (this.progressBarFill) this.progressBarFill.style.width = `0%`;
+		if (this.progressBarFill) this.progressBarFill.setCssProps({ '--hoard-csv-progress-width': '0%' });
 	}
 
 	/**
@@ -686,7 +686,7 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 	private showImportProgress(added: number, total: number, onProgress?: (added: number) => void): void {
 		onProgress?.(added);
 		const pct = Math.round((added / total) * 100);
-		if (this.progressBarFill) this.progressBarFill.style.width = `${pct}%`;
+		if (this.progressBarFill) this.progressBarFill.setCssProps({ '--hoard-csv-progress-width': `${pct}%` });
 		if (this.progressText) this.progressText.textContent = `${added} / ${total}`;
 	}
 

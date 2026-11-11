@@ -371,8 +371,7 @@ export class DashboardTab {
 		item.createDiv({ cls: 'hoard-stat-rect__value', text: `${percent}%` });
 		const barWrap = item.createDiv({ cls: 'hoard-stat-rect__bar-wrap' });
 		const bar = barWrap.createDiv({ cls: 'hoard-stat-rect__bar' });
-		bar.style.width = `${percent}%`;
-		bar.setCssProps({ '--hoard-stat-rect-bar-color': color });
+		bar.setCssProps({ '--hoard-stat-rect-bar-width': `${percent}%`, '--hoard-stat-rect-bar-color': color });
 	}
 
 	// More statistics

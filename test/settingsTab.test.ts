@@ -318,7 +318,7 @@ describe('HoardSettingsTab runRegenerate', () => {
 		const [w, f, t] = els();
 		await makeTab({ titles: [{ title: 'new' }, { title: 'old' }], books: [{}], manga: [{}] }).tab.runRegenerate(w, f, t);
 		expect(t.textContent).toBe('Done: 1 file created, 3 already existed');
-		expect(f.style.width).toBe('100%');
+		expect(f.style.getPropertyValue('--hoard-csv-progress-width')).toBe('100%');
 	});
 	it('reports nothing missing when every note exists', async () => {
 		const [w, f, t] = els();

@@ -39,7 +39,7 @@ describe('LogTab render', () => {
 		expect(c.querySelector('.hoard-log__empty')).toBeNull();
 		const spacer = c.querySelector<HTMLElement>('.hoard-log__spacer')!;
 		// two day headers (40) + three rows (32)
-		expect(spacer.style.height).toBe(`${2 * 40 + 3 * 32}px`);
+		expect(spacer.style.getPropertyValue('--hoard-log-spacer-height')).toBe(`${2 * 40 + 3 * 32}px`);
 	});
 
 	it('colours the dot and the action word through variables', () => {

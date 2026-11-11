@@ -269,8 +269,8 @@ export class LogTab {
 		this.lastFirst = -1;
 		this.lastLast = -1;
 
-		spacer.setCssProps({ height: `${this.totalHeight}px` });
-		viewport.setCssProps({ height: `${this.totalHeight}px` });
+		spacer.setCssProps({ '--hoard-log-spacer-height': `${this.totalHeight}px` });
+		viewport.setCssProps({ '--hoard-log-viewport-height': `${this.totalHeight}px` });
 
 		this.scrollHandler = () => {
 			if (this.scrollRAF !== null) return;
@@ -333,13 +333,13 @@ export class LogTab {
 			let el: HTMLElement;
 			if (row.type === 'header') {
 				el = createDiv({ cls: 'hoard-log__day-header', text: formatDayHeader(row.date!) });
-				el.setCssProps({ height: `${HEADER_HEIGHT}px` });
+				el.setCssProps({ '--hoard-log-day-header-height': `${HEADER_HEIGHT}px` });
 			} else {
 				el = this.buildEntryRow(row);
 			}
 
 			const offset = this.rowOffsets[i] ?? 0;
-			el.setCssProps({ top: `${offset}px` });
+			el.setCssProps({ '--hoard-log-row-top': `${offset}px` });
 
 			viewport.appendChild(el);
 			this.renderedNodes.set(i, el);
@@ -354,7 +354,7 @@ export class LogTab {
 		const dotColor = SOURCE_COLORS[source] ?? '#888780';
 
 		const el = createDiv({ cls: 'hoard-log__entry' });
-		el.setCssProps({ height: `${ROW_HEIGHT}px` });
+		el.setCssProps({ '--hoard-log-entry-height': `${ROW_HEIGHT}px` });
 
 		const dotCol = el.createDiv({ cls: 'hoard-log__dot-column' });
 		const dot = dotCol.createDiv({ cls: 'hoard-log__dot' });

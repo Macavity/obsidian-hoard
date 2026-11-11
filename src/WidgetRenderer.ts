@@ -205,7 +205,7 @@ export class WidgetRenderer {
 
 		const progress = this.dataManager.getProgress(title);
 		const barWrap = mainRow.createDiv({ cls: 'hoard-widget__bar-wrap' });
-		barWrap.createDiv({ cls: 'hoard-progress__bar' }).style.width = `${progress}%`;
+		barWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({ '--hoard-progress-width': `${progress}%` });
 
 		this.sep(mainRow);
 
@@ -374,7 +374,7 @@ export class WidgetRenderer {
 	private renderNwBarCol(bottomRow: HTMLElement, progress: number): void {
 		const barCol = bottomRow.createDiv({ cls: 'hoard-widget-now__full-bar-column' });
 		barCol.createDiv({ cls: 'hoard-widget-now__full-percent', text: `${progress}%` });
-		barCol.createDiv({ cls: 'hoard-widget__full-card-bar-wrap' }).createDiv({ cls: 'hoard-widget__full-card-bar' }).style.width = `${progress}%`;
+		barCol.createDiv({ cls: 'hoard-widget__full-card-bar-wrap' }).createDiv({ cls: 'hoard-widget__full-card-bar' }).setCssProps({ '--hoard-widget-full-card-bar-width': `${progress}%` });
 	}
 
 	private sep(parent: HTMLElement): void {
@@ -626,7 +626,7 @@ export class WidgetRenderer {
 			const { count, progress } = this.pinnedGroupStats(pinnedGroup);
 			card.createSpan({ cls: 'hoard-widget-now__episode', text: t('widget.titlesCount', { count }) });
 			const barWrap = card.createDiv({ cls: 'hoard-widget-now__bar-wrap' });
-			barWrap.createDiv({ cls: 'hoard-widget-now__bar' }).style.width = `${progress}%`;
+			barWrap.createDiv({ cls: 'hoard-widget-now__bar' }).setCssProps({ '--hoard-widget-now-bar-width': `${progress}%` });
 			card.createSpan({ cls: 'hoard-widget-now__percent', text: `${progress}%` });
 			return;
 		}
@@ -644,7 +644,7 @@ export class WidgetRenderer {
 		const progress = this.dataManager.getProgress(pinned);
 		const barWrap = card.createDiv({ cls: 'hoard-widget-now__bar-wrap' });
 		const bar = barWrap.createDiv({ cls: 'hoard-widget-now__bar' });
-		bar.style.width = `${progress}%`;
+		bar.setCssProps({ '--hoard-widget-now-bar-width': `${progress}%` });
 		card.createSpan({ cls: 'hoard-widget-now__percent', text: `${progress}%` });
 	}
 

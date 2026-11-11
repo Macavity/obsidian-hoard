@@ -94,6 +94,8 @@
 
 .hoard-color-picker__palette {
   position: fixed;
+  top: var(--hoard-color-picker-top, auto);
+  left: var(--hoard-color-picker-left, auto);
   display: grid;
   grid-template-columns: repeat(4, 24px);
   gap: 5px;

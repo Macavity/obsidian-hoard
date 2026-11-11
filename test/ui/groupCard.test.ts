@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../src/CollageUtil', () => ({ renderGroupCollage: vi.fn() }));
 vi.mock('../../src/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
-vi.mock('../../src/PosterCard', () => ({ openCardMenu: vi.fn() }));
+vi.mock('../../src/PosterCard', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../src/PosterCard')>()),
+	openCardMenu: vi.fn(),
+}));
 
 import { groupCountLabel, groupLetter, renderGroupCard, type GroupCardOptions } from '../../src/ui/GroupCard';
 import { renderGroupCollage } from '../../src/CollageUtil';
@@ -108,7 +111,8 @@ describe('renderGroupCard', () => {
 		renderGroupCard(parent as unknown as HTMLElement, o);
 		const cell = parent.children[0]!;
 		expect(cell.classes.has('hoard-card__cell')).toBe(true);
-		expect(cell.style.height).toBe('200px');
+		expect(cell.style['--hoard-card-pinned-height']).toBe('200px');
+		expect(cell.classes.has('hoard-card__cell--pinned')).toBe(true);
 		expect(cell.find('hoard-card__under-title')!.text).toBe('zelda');
 		cell.fire('click');
 		expect(o.onActivate).toHaveBeenCalledWith(cell.children[0]);

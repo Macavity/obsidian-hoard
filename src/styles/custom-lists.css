@@ -444,7 +444,10 @@ button.hoard-custom-list-table__row-action--delete:hover {
 }
 
 .hoard-custom-list-table__autofill-dropdown {
-  /* position/top/left/width are set inline via JS (fixed, body-level) */
+  /* position is fixed (body-level); top/left/width come from the anchoring input via JS */
+  top: var(--hoard-custom-list-table-autofill-top, auto);
+  left: var(--hoard-custom-list-table-autofill-left, auto);
+  width: var(--hoard-custom-list-table-autofill-width, auto);
   max-height: 180px;
   overflow-y: auto;
   background: var(--background-primary);

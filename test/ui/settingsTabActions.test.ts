@@ -419,7 +419,7 @@ describe('regenerate notes', () => {
 			[true, false, true, true],
 		);
 		await priv.runRegenerate(wrap, fill, text);
-		expect(fill.style.width).toBe('100%');
+		expect(fill.style.getPropertyValue('--hoard-csv-progress-width')).toBe('100%');
 		expect(text.textContent).toContain('3');
 		expect(plugin.dataManager).toBeDefined();
 		expect((plugin as unknown as { readingDataManager: { createReadingNoteIfMissing: ReturnType<typeof vi.fn> } })

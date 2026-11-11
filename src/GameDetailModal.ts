@@ -406,7 +406,7 @@ export class GameDetailModal extends Modal {
 
 		const sync = (): void => {
 			const p = this.draft.progress;
-			fill.style.width = `${p}%`;
+			fill.setCssProps({ '--hoard-game-detail-progress-width': `${p}%` });
 			bar.setAttr('aria-valuenow', String(p));
 			bar.setAttr('aria-valuetext', `${p}%`);
 			pctWrap.toggleClass('is-complete', p >= 100);

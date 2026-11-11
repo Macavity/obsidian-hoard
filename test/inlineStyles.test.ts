@@ -11,3 +11,17 @@ describe("inline styles", () => {
 		expect(hits).toEqual([]);
 	});
 });
+
+describe("inline geometry", () => {
+	it("sets no geometry through element.style", () => {
+		const GEO = /\.style\.(width|height|top|left|paddingTop|cssText|setProperty|removeProperty|getPropertyValue)\b/;
+		const hits = files().filter((p) => !p.endsWith(".test.ts") && GEO.test(readFileSync(p, "utf8")));
+		expect(hits).toEqual([]);
+	});
+
+	it("passes only custom properties to setCssProps", () => {
+		const PLAIN = /setCssProps\(\{[^}]*?(?<![-\w'"])(height|width|top|left)\s*:/;
+		const hits = files().filter((p) => !p.endsWith(".test.ts") && PLAIN.test(readFileSync(p, "utf8")));
+		expect(hits).toEqual([]);
+	});
+});

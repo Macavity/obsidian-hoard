@@ -44,6 +44,7 @@
 
 .hoard-stat-rect__bar {
   height: 100%;
+  width: var(--hoard-stat-rect-bar-width, auto);
   border-radius: 2px;
   transition: width 0.3s ease;
   background-color: var(--hoard-stat-rect-bar-color, transparent);

@@ -145,7 +145,7 @@ describe('CsvModal import wizard', () => {
 		expect(wrap.style.display).toBe('');
 		expect(cancelBtn.textContent).toBe('Cancel import');
 		expect(modal.contentEl.querySelector('.hoard-csv__progress-text')!.textContent).toBe('0 / 5');
-		expect(modal.contentEl.querySelector<HTMLElement>('.hoard-csv__progress-fill')!.style.width).toBe('0%');
+		expect(modal.contentEl.querySelector<HTMLElement>('.hoard-csv__progress-fill')!.style.getPropertyValue('--hoard-csv-progress-width')).toBe('0%');
 		cancelBtn.click();
 		expect(cancelBtn.disabled).toBe(true);
 		expect(cancelBtn.textContent).toBe('Cancelling…');

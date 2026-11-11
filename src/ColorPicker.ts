@@ -86,8 +86,7 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 
 	const rect = anchor.getBoundingClientRect();
 	const palette = container.createDiv({ cls: 'hoard-color-picker__palette' });
-	palette.style.top = `${rect.bottom + 4}px`;
-	palette.style.left = `${rect.left}px`;
+	palette.setCssProps({ '--hoard-color-picker-top': `${rect.bottom + 4}px`, '--hoard-color-picker-left': `${rect.left}px` });
 	// capture the owning document once so add/remove can't desync across popout windows
 	const doc = container.ownerDocument;
 	const normCurrent = normalizeHex(current);

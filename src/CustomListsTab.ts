@@ -1512,9 +1512,11 @@ export class CustomListsTab {
 			if (!suggestions.length) return;
 			const rect = input.getBoundingClientRect();
 			dropdown = activeDocument.body.createDiv({ cls: 'hoard-custom-list-table__autofill-dropdown hoard-popover--fixed' });
-			dropdown.style.top = `${rect.bottom}px`;
-			dropdown.style.left = `${rect.left}px`;
-			dropdown.style.width = `${rect.width}px`;
+			dropdown.setCssProps({
+				'--hoard-custom-list-table-autofill-top': `${rect.bottom}px`,
+				'--hoard-custom-list-table-autofill-left': `${rect.left}px`,
+				'--hoard-custom-list-table-autofill-width': `${rect.width}px`,
+			});
 			for (const sug of suggestions) {
 				const item = dropdown.createDiv({ cls: 'hoard-search-picker__result-item' });
 				item.createDiv({ cls: 'hoard-search-picker__result-title', text: sug.title });

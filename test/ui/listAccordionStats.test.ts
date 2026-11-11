@@ -57,7 +57,7 @@ describe('ListTab.updateAccordionStats', () => {
 		expect(d.stats[1]!.textContent).toBe(formatTime(dm.calcTimeWatched(title)));
 		expect(d.stats[2]!.textContent).toBe(`2 / ${dm.getEffectiveTotal(title)}`);
 		expect(d.progress.textContent).toBe(`${dm.getProgress(title)}%`);
-		expect(d.bar.style.width).toBe(`${dm.getProgress(title)}%`);
+		expect(d.bar.style.getPropertyValue('--hoard-progress-width')).toBe(`${dm.getProgress(title)}%`);
 		expect(d.countEl.textContent).toBe('');
 	});
 

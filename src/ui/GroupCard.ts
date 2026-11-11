@@ -3,7 +3,7 @@ import { t } from '../i18n';
 import { createIconButton } from './IconButton';
 import { renderGroupCollage } from '../CollageUtil';
 import { ConfirmModal } from '../ConfirmModal';
-import { openCardMenu } from '../PosterCard';
+import { openCardMenu, pinCardHeight } from '../PosterCard';
 
 export interface GroupCardOptions<M> {
 	app: App;
@@ -71,7 +71,7 @@ export function renderGroupCard<M>(parent: HTMLElement, opts: GroupCardOptions<M
 	const card = outer.createDiv({ cls: 'hoard-card hoard-card--group' });
 	card.dataset.groupId = group.id;
 	if (opts.selected) card.addClass('hoard-card--selected');
-	if (opts.cardHeight !== undefined) (cell ?? card).style.height = `${opts.cardHeight}px`;
+	if (opts.cardHeight !== undefined) pinCardHeight(cell, card, opts.cardHeight);
 
 	renderGroupCollage(card, members, opts.getCover, { letter: groupLetter(group.name), color: typeColor });
 	const textHost = cell

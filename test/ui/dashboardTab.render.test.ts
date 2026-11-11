@@ -86,7 +86,7 @@ describe('DashboardTab cards', () => {
 		const c = render({ titles, books, manga, cardStyle: 'rectangles' });
 		expect(c.querySelector('.hoard-dashboard__unified--bordered')).not.toBeNull();
 		expect(c.querySelectorAll('.hoard-stat-rect__item').length).toBe(2 + 2);
-		const bars = qsa(c, '.hoard-stat-rect__bar').map((b) => b.style.width);
+		const bars = qsa(c, '.hoard-stat-rect__bar').map((b) => b.style.getPropertyValue('--hoard-stat-rect-bar-width'));
 		expect(bars).toContain('50%');
 		expect(qsa(c, '.hoard-stat-rect__bar').every((b) => b.style.getPropertyValue('--hoard-stat-rect-bar-color') !== '')).toBe(true);
 	});

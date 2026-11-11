@@ -34,7 +34,7 @@ export function renderGroupDetailHeader(
 	progBlock.createDiv({ cls: 'hoard-accordion__percent', text: `${opts.progress}%` });
 	progBlock.createDiv({ cls: 'hoard-accordion__progress-label', text: t('list.stat.progress') });
 	const barWrap = progBlock.createDiv({ cls: 'hoard-accordion__progress-wrap' });
-	barWrap.createDiv({ cls: 'hoard-progress__bar' }).style.width = `${opts.progress}%`;
+	barWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({ '--hoard-progress-width': `${opts.progress}%` });
 }
 
 /** Localized fill-button labels and episode tooltip of the shared episode grid. */

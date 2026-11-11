@@ -109,6 +109,7 @@
 
 .hoard-widget__full-card-bar {
   height: 100%;
+  width: var(--hoard-widget-full-card-bar-width, auto);
   background: var(--interactive-accent);
   border-radius: 2px;
 }
@@ -215,6 +216,7 @@
 
 .hoard-widget-now__bar {
   height: 100%;
+  width: var(--hoard-widget-now-bar-width, auto);
   background: var(--interactive-accent);
   border-radius: 2px;
   transition: width 0.3s ease;

@@ -44,8 +44,7 @@ export function openStatusDropdown(opts: StatusDropdownOptions): void {
 
 	const rect = anchor.getBoundingClientRect();
 	const dropdown = container.createDiv({ cls: 'hoard-status-dropdown' });
-	dropdown.style.top = `${rect.bottom + 4}px`;
-	dropdown.style.left = `${rect.left}px`;
+	dropdown.setCssProps({ '--hoard-status-dropdown-top': `${rect.bottom + 4}px`, '--hoard-status-dropdown-left': `${rect.left}px` });
 	// capture the owning document once so add/remove can't desync across popout windows
 	const doc = container.ownerDocument;
 

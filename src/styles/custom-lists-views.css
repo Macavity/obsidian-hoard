@@ -74,8 +74,9 @@
   align-content: start;
   gap: 12px;
 
-  /* inline padding-top, NOT translateY — translateY made Chromium report phantom CLS */
+  /* padding-top (from VirtualGrid), NOT translateY — translateY made Chromium report phantom CLS */
   padding: 0;
+  padding-top: var(--hoard-card-grid-offset, 0);
   box-sizing: border-box;
 }
 
