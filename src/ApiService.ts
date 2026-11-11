@@ -29,7 +29,7 @@ import type {
 	AniListSearchResponse,
 	AniListMediaResponse,
 } from './types';
-import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, mapCinemetaSearch, titleMediaKind, type CinemetaKind } from './cinemetaApi';
+import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, explicitMediaKind, mapCinemetaSearch, type CinemetaKind } from './cinemetaApi';
 import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLibraryWorkUrl } from './openLibraryApi';
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { isCreditsNone, normalizeCreditsForStore, imdbIdFromLink } from './types';
@@ -1863,7 +1863,7 @@ export class ApiService {
 		imdbId: string,
 		title: HoardTitle,
 	): Promise<{ director: string[]; cast: string[] } | null> {
-		const kind = titleMediaKind(title);
+		const kind = explicitMediaKind(title);
 		for (const k of kind ? [kind] : (['tv', 'movie'] as const)) {
 			const meta = await this.getCinemetaDetails(imdbId, k);
 			if (!meta) continue;

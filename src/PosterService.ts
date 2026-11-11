@@ -1,5 +1,5 @@
 import type { RequestUrlParam } from 'obsidian';
-import { titleMediaKind } from './cinemetaApi';
+import { explicitMediaKind, titleMediaKind } from './cinemetaApi';
 import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from './types';
 import { getApiGroupForType } from './types';
@@ -282,7 +282,7 @@ export class PosterService {
 	private async fetchCinemetaPoster(title: HoardTitle): Promise<string | null> {
 		const api = this.getApi?.();
 		if (!api) return null;
-		const kind = this.resolveMediaKind(title);
+		const kind = explicitMediaKind(title);
 		const imdbId = this.extractImdbId(title.externalLink);
 		if (imdbId) {
 			// unknown kind: series first, the movie endpoint answers series ids with a foreign film

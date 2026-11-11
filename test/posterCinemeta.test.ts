@@ -34,6 +34,13 @@ describe('PosterService keyless (Cinemeta)', () => {
 		expect(getCinemetaDetails.mock.calls[0]).toEqual(['tt0903747', 'tv']);
 	});
 
+	it('tries series then movie for a custom type with one episode', async () => {
+		const getCinemetaDetails = vi.fn().mockResolvedValue(null);
+		const { svc } = setup({ getCinemetaDetails, searchCinemeta: vi.fn().mockResolvedValue([]) });
+		await svc.enqueue(title({ type: 'Doc', totalEpisodes: 1, externalLink: 'https://www.imdb.com/title/tt0903747/' }));
+		expect(getCinemetaDetails.mock.calls.map((c) => c[1])).toEqual(['tv', 'movie']);
+	});
+
 	it('searches by title (matching year) without a link', async () => {
 		const searchCinemeta = vi.fn().mockResolvedValue([
 			{ posterUrl: 'https://img/old.jpg', releaseDate: '1999-01-01' },

@@ -52,6 +52,15 @@ describe('cinemeta credits', () => {
 		expect(credits).toEqual({ director: ['none'], cast: ['Bryan Cranston', 'Aaron Paul', 'Anna Gunn'] });
 	});
 
+	it('tries series before movie for a custom type with one episode', async () => {
+		const oneEpisode = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'Doc', totalEpisodes: 1 } as never;
+		sent.mockResolvedValueOnce({ status: 200, text: '{}', json: {} } as never);
+		sent.mockResolvedValueOnce({ status: 200, text: JSON.stringify(cinemetaMeta), json: cinemetaMeta } as never);
+		await api().fetchCredits(oneEpisode, 'cinemeta');
+		expect(urlOf(0)).toContain('/meta/series/');
+		expect(urlOf(1)).toContain('/meta/movie/');
+	});
+
 	it('tries series before movie for an unknown kind', async () => {
 		sent.mockResolvedValueOnce({ status: 200, text: '{}', json: {} } as never);
 		sent.mockResolvedValueOnce({ status: 200, text: JSON.stringify(cinemetaMeta), json: cinemetaMeta } as never);
