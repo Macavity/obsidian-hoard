@@ -102,9 +102,10 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.import
 - Every class carries the `hoard-` prefix and must appear in full in a source literal, because the
   dead-CSS lint (`pnpm lint`) matches literals; variants go through a spelled-out lookup table
   (see `VARIANT_CLASS` in `IconButton.ts`). See CONTRIBUTING.
-- **Naming**: new or rewritten classes follow BEM, `hoard-<block>__<element>--<modifier>`
-  (`hoard-icon-btn--sm`, `hoard-trailer-btn--fetch`, `hoard-trailer-btn__label`). States stay
-  `is-*` (`is-active`, `is-loading`). Older classes keep their names until a repo-wide rename.
+- **Naming**: every class follows BEM, `hoard-<block>__<element>--<modifier>`, with abbreviations
+  spelled out; states stay `is-*` (`is-active`, `is-loading`). `pnpm lint` enforces it. Blocks, the
+  full rules and the ban on inline styles (computed values go through `--hoard-*` custom properties):
+  [CSS blocks](css-blocks.md).
 - **Beating core button styles**: core's `button:not(.clickable-icon)` outranks a bare
   `.hoard-x`, so button rules are element-qualified (`button.hoard-x`); on tablets
   `.is-tablet button:not(.clickable-icon)` adds 40px side padding and needs an explicit

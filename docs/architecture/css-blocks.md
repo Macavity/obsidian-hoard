@@ -6,7 +6,10 @@ source:
   - src/styles/*.css
   - scripts/lib/css-classes.mjs
   - scripts/check-css-classes.mjs
-source_commit: 4d38f406cb79eed247dfa2b7d658d361b91f5f41
+  - eslint.config.mjs
+  - .stylelintrc.json
+  - test/inlineStyles.test.ts
+source_commit: 3b7732ed494809373939844a8840d9f69a697287
 ---
 
 # CSS blocks
@@ -24,7 +27,15 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
   (`hoard-btn hoard-btn--sm`); otherwise the class is an element. State-like names (`hidden`, `selected`,
   `dragging`, `editing`, `checked`) are modifiers, not `is-*`.
 - **States**: `is-*` and `has-*` stay as they are; Obsidian's own classes (`modal-content`, `setting-item`)
-  are never renamed.
+  are never renamed. Toggles set from code use `is-hidden` (`display: none`), `is-invisible`
+  (`visibility: hidden`, keeps its space) and `is-done`; each has a rule scoped to its element
+  (`.hoard-reading-columns__add-options.is-hidden`), never a global one.
+- **No inline styles**: `src/` has no `element.style` access (ESLint `no-restricted-syntax`,
+  `test/inlineStyles.test.ts`). A computed value is set with `el.setCssProps({ '--hoard-<block>-<property>': v })`
+  and read by the element's rule as `property: var(--hoard-…, <fallback>)`; the fallback is what the
+  element showed before the variable existed. A rule that reads a variable must not catch elements that
+  never set it and relied on Obsidian's default (the clear swatch of the colour picker is excluded for
+  that reason). An empty value removes the variable.
 - **Abbreviations are spelled out** (`custom-list`, not `cl`; `column`, not `col`). Allowed short parts
   (`ALLOWED_SHORT`): established abbreviations (`btn`, `img`, `nav`, `csv`, `api`, `id`, `url`, `th`, `td`, `tr`,
   `sm`, `md`, `lg`), proper names and formats (`svg`, `mal`, `jst`) and plain words (`row`, `tab`, `bar`, `add`, `log`, …).
@@ -105,6 +116,8 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
 | `hoard-game-detail` | games, steam-sync, controls, mobile-detail | The game detail modal. |
 | `hoard-modal` | modals, controls, airtime, drafts, edit-columns, utilities | Shared modal frame, add modal, duplicate warning and URL rows. |
 | `hoard-search-picker` | modals, credits, mobile-detail | Search form and result grid of the add modals. |
+| `hoard-add-modal` | modals, reading-modals | Class on the content of add and schedule modals; layout shared by their forms. |
+| `hoard-reading-modal` | reading-modals, reading | Shared frame of the reading modals: header, footer, section labels. |
 | `hoard-reading-form` | reading-modals | The add and edit form for books and manga. |
 | `hoard-import` | modals, csv-modal | Import dialogs and their header mapping. |
 | `hoard-draft-choice` | manage-columns | The dialog that decides what to do with a draft. |
@@ -139,6 +152,7 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
 |---|---|---|
 | `hoard-widget` | base, inline-widget, add-button, widgets | The shared frame of every code-block widget. |
 | `hoard-widget-stat` | base, widgets | The stat widget and its cards. |
+| `hoard-widget-minimal` | add-button, base | The minimal widget variant; its element never carries `hoard-widget`. |
 | `hoard-widget-now` | base, widgets | The now-watching widget. |
 | `hoard-widget-now-next` | base, widgets | The now and next widget. |
 | `hoard-widget-upcoming` | base, widgets | The upcoming widget. |
