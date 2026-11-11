@@ -65,7 +65,7 @@ describe('custom lists and drafts i18n', () => {
 	it('renders the custom lists empty state in German', () => {
 		setLocale('de');
 		const root = new El('div');
-		const tab = new CustomListsTab(asEl(root), { app: {}, settings: {} } as never, {} as never);
+		const tab = new CustomListsTab(asEl(root), { app: { vault: { on: () => ({}) } }, settings: {} } as never, {} as never);
 		(tab as unknown as { buildEmptyState: () => void }).buildEmptyState();
 		expect(texts(root)).toContain(de.lists.emptyText);
 		expect(texts(root)).toContain(de.lists.createFirst);

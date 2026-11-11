@@ -1,4 +1,5 @@
 const lists = {
+	changedElsewhere: 'Custom list "{name}" changed elsewhere and was reloaded. Your last change was not saved.',
 	corrupt: 'Custom list "{name}" has corrupt data and cannot be loaded.',
 	tableSettings: 'Table settings',
 	tableSettingsTitle: 'Table settings: {name}',

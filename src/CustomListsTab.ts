@@ -1,4 +1,4 @@
-import { App, Component, MarkdownRenderer, Modal, Notice, Platform, TFile, normalizePath, Setting } from 'obsidian';
+import { App, Component, MarkdownRenderer, Modal, Notice, Platform, TFile, normalizePath, Setting, type EventRef, type TAbstractFile } from 'obsidian';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { CustomListColumn, CustomListRow, CustomList } from './types';
@@ -66,6 +66,27 @@ const DEFAULT_COL_WIDTH = 140;
 
 // CustomListManager — vault I/O
 
+const DATA_BLOCK = /## Data\n```json\n[\s\S]*?\n```/;
+
+/** Replaces the `## Data` JSON block, or appends one; everything else in the note is kept. */
+function replaceDataBlock(content: string, json: string): string {
+	const block = `## Data\n\`\`\`json\n${json}\n\`\`\``;
+	if (DATA_BLOCK.test(content)) return content.replace(DATA_BLOCK, () => block);
+	return `${content.replace(/\n*$/, '')}\n\n${block}\n`;
+}
+
+/** Replaces the body of `## Notes` up to `## Data`; a note without `## Notes` is returned as is. */
+function replaceNotes(content: string, notes: string): string {
+	const notesMarker = '## Notes\n';
+	const notesIdx = content.indexOf(notesMarker);
+	if (notesIdx === -1) return content;
+	const afterNotes = notesIdx + notesMarker.length;
+	const dataIdx = content.indexOf('\n## Data\n', afterNotes);
+	return dataIdx !== -1
+		? content.slice(0, afterNotes) + notes + content.slice(dataIdx)
+		: content.slice(0, afterNotes) + notes + '\n';
+}
+
 export class CustomListManager {
 	/** Names of lists whose ## Data JSON is corrupt — never overwrite these. */
 	corruptLists: Set<string> = new Set();
@@ -74,18 +95,73 @@ export class CustomListManager {
 	 * Per-list save queue: serializes writes to the same file so table and notes saves can't race
 	 * and clobber each other.
 	 */
-	private saveQueues: Map<string, Promise<void>> = new Map();
+	private saveQueues: Map<string, Promise<boolean>> = new Map();
+
+	/**
+	 * Stored state (data JSON + notes) each in-memory list was loaded from or last written as.
+	 * A write goes through only while the note still holds that state; anything else is a foreign
+	 * change (sync, hand edit, delete) that a stale copy must not overwrite.
+	 */
+	private baselines = new WeakMap<CustomList, string>();
 
 	constructor(
 		private readonly app: App,
 		private readonly plugin: HoardPlugin,
+		/** Called when a write was refused because the note changed elsewhere. */
+		private readonly onConflict: (list: CustomList) => void = () => {},
 	) {}
 
-	private async saveSerialized(listName: string, saveFn: () => Promise<void>): Promise<void> {
-		const prev = this.saveQueues.get(listName) ?? Promise.resolve();
-		const next = prev.then(saveFn).catch(e => console.error('[Hoard] Save error for list:', listName, e));
+	private async saveSerialized(listName: string, saveFn: () => Promise<boolean>): Promise<boolean> {
+		const prev = this.saveQueues.get(listName) ?? Promise.resolve(true);
+		const next = prev.then(saveFn).catch((e: unknown) => {
+			console.error('[Hoard] Save error for list:', listName, e);
+			return false;
+		});
 		this.saveQueues.set(listName, next);
-		await next;
+		return next;
+	}
+
+	private pathOf(name: string): string {
+		return normalizePath(`${this.folderPath}/${name}.md`);
+	}
+
+	private stateKey(list: CustomList): string {
+		return `${this.dataJson(list)}\n${list.notes}`;
+	}
+
+	private dataJson(list: CustomList): string {
+		return JSON.stringify(
+			{ columns: list.columns, rows: list.rows, tabColor: list.tabColor, nameWidth: list.nameWidth },
+			null,
+			2,
+		);
+	}
+
+	/** True when the note no longer holds the state `list` was made from. */
+	async isStale(list: CustomList): Promise<boolean> {
+		const file = this.app.vault.getAbstractFileByPath(this.pathOf(list.name));
+		if (!(file instanceof TFile)) return this.baselines.has(list);
+		const disk = this.parse(list.name, await this.app.vault.read(file));
+		return !disk || this.stateKey(disk) !== this.baselines.get(list);
+	}
+
+	/**
+	 * Rewrites the note through `transform` only if it still holds the baseline of `list`;
+	 * returns false (note untouched) on a foreign change.
+	 */
+	private async writeChecked(list: CustomList, file: TFile, transform: (data: string) => string): Promise<boolean> {
+		let written = false;
+		await this.app.vault.process(file, (data) => {
+			const disk = this.parse(list.name, data);
+			if (!disk || this.stateKey(disk) !== this.baselines.get(list)) return data;
+			const next = transform(data);
+			const after = this.parse(list.name, next);
+			if (after) this.baselines.set(list, this.stateKey(after));
+			written = true;
+			return next;
+		});
+		if (!written) this.onConflict(list);
+		return written;
 	}
 
 	get folderPath(): string {
@@ -115,8 +191,9 @@ export class CustomListManager {
 		const file = this.app.vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) return null;
 		try {
-			const content = await this.app.vault.read(file);
-			return this.parse(name, content);
+			const list = this.parse(name, await this.app.vault.read(file));
+			if (list) this.baselines.set(list, this.stateKey(list));
+			return list;
 		} catch (e) {
 			console.warn('[Hoard] Failed to read custom list', name, e);
 			return null;
@@ -173,58 +250,49 @@ export class CustomListManager {
 		return { name, columns, rows, notes, tabColor, nameWidth };
 	}
 
-	async saveList(list: CustomList): Promise<void> {
-		await this.saveSerialized(list.name, async () => {
+	/**
+	 * Writes the table (the `## Data` block) of `list`; the rest of the note stays as it is on disk.
+	 * Returns false when nothing was written: corrupt list, or the note changed (or vanished)
+	 * since `list` was loaded.
+	 */
+	async saveList(list: CustomList): Promise<boolean> {
+		return this.saveSerialized(list.name, async () => {
 			if (this.corruptLists.has(list.name)) {
 				console.warn('[Hoard] Refusing to save corrupt custom list', list.name);
-				return;
+				return false;
 			}
 			await this.ensureFolder();
-			const path = normalizePath(`${this.folderPath}/${list.name}.md`);
-			const content = this.serialize(list);
+			const path = this.pathOf(list.name);
 			const existing = this.app.vault.getAbstractFileByPath(path);
-			try {
-				if (existing instanceof TFile) {
-					await this.app.vault.modify(existing, content);
-				} else {
-					await this.app.vault.create(path, content);
-				}
-			} catch (e) {
-				console.error('Hoard: failed to save custom list', e);
+			if (existing instanceof TFile) {
+				return this.writeChecked(list, existing, (data) => replaceDataBlock(data, this.dataJson(list)));
 			}
+			if (this.baselines.has(list)) {
+				// deleted or renamed elsewhere: recreating it would undo that
+				this.onConflict(list);
+				return false;
+			}
+			const content = this.serialize(list);
+			await this.app.vault.create(path, content);
+			const created = this.parse(list.name, content);
+			if (created) this.baselines.set(list, this.stateKey(created));
+			return true;
 		});
 	}
 
 	/** Saves only the ## Notes section, without touching ## Data JSON. */
-	async saveNotes(name: string, notes: string): Promise<void> {
-		await this.saveSerialized(name, async () => {
-			const path = normalizePath(`${this.folderPath}/${name}.md`);
-			const file = this.app.vault.getAbstractFileByPath(path);
-			if (!(file instanceof TFile)) return;
-			try {
-				const content = await this.app.vault.read(file);
-				const notesMarker = '## Notes\n';
-				const dataMarker = '\n## Data\n';
-				const notesIdx = content.indexOf(notesMarker);
-				if (notesIdx === -1) return;
-				const afterNotes = notesIdx + notesMarker.length;
-				const dataIdx = content.indexOf(dataMarker, afterNotes);
-				const updated = dataIdx !== -1
-					? content.slice(0, afterNotes) + notes + content.slice(dataIdx)
-					: content.slice(0, afterNotes) + notes + '\n';
-				await this.app.vault.modify(file, updated);
-			} catch (e) {
-				console.error('Hoard: failed to save notes', e);
-			}
+	async saveNotes(list: CustomList, notes: string): Promise<boolean> {
+		return this.saveSerialized(list.name, async () => {
+			const file = this.app.vault.getAbstractFileByPath(this.pathOf(list.name));
+			if (!(file instanceof TFile)) return false;
+			const written = await this.writeChecked(list, file, (data) => replaceNotes(data, notes));
+			if (written) list.notes = notes;
+			return written;
 		});
 	}
 
 	private serialize(list: CustomList): string {
-		const json = JSON.stringify(
-			{ columns: list.columns, rows: list.rows, tabColor: list.tabColor, nameWidth: list.nameWidth },
-			null,
-			2,
-		);
+		const json = this.dataJson(list);
 		return `# ${list.name}\n\n## Notes\n${list.notes}\n\n## Data\n\`\`\`json\n${json}\n\`\`\`\n`;
 	}
 
@@ -593,7 +661,29 @@ export class CustomListsTab {
 		this.container = container;
 		this.plugin = plugin;
 		this.dataManager = dataManager;
-		this.manager = new CustomListManager(plugin.app, plugin);
+		this.manager = new CustomListManager(plugin.app, plugin, (list) => this.onSaveConflict(list));
+		this.modifyRef = plugin.app.vault.on('modify', (file) => void this.onVaultModify(file));
+	}
+
+	private modifyRef: EventRef | null;
+
+	/** A save was refused because the note changed elsewhere: show the note as it is now. */
+	private onSaveConflict(list: CustomList): void {
+		new Notice(t('lists.changedElsewhere', { name: list.name }));
+		if (list === this.currentList) void this.render();
+	}
+
+	/**
+	 * Reloads the open list when its note changed elsewhere (sync, hand edit). Own writes move the
+	 * baseline first, so they are not stale. An open cell editor is left alone; its save then
+	 * meets the changed baseline and reloads via `onSaveConflict`.
+	 */
+	private async onVaultModify(file: TAbstractFile): Promise<void> {
+		const list = this.currentList;
+		if (!list || file.path !== normalizePath(`${this.manager.folderPath}/${list.name}.md`)) return;
+		if (!(await this.manager.isStale(list))) return;
+		if (list !== this.currentList || this.container.querySelector('.hoard-cl-editing')) return;
+		await this.render();
 	}
 
 	/** listNames merged with the persisted tab order (new lists appended at the end). */
@@ -604,8 +694,15 @@ export class CustomListsTab {
 		return [...ordered, ...unordered];
 	}
 
-	/** Tear down active inline-editor listeners (on rerender / view close). */
+	/** View close: stop listening to the vault and tear down the inline editor. */
 	destroy(): void {
+		if (this.modifyRef) this.plugin.app.vault.offref(this.modifyRef);
+		this.modifyRef = null;
+		this.teardownEditor();
+	}
+
+	/** Tear down active inline-editor listeners (on rerender / view close). */
+	private teardownEditor(): void {
 		for (const fn of this.activeCleanups) {
 			try { fn(); } catch { /* ignore */ }
 		}
@@ -637,7 +734,7 @@ export class CustomListsTab {
 
 	async render(): Promise<void> {
 		const gen = ++this.renderGeneration;
-		this.destroy();
+		this.teardownEditor();
 		this.container.empty();
 		this.container.addClass('hoard-custom-lists');
 
@@ -821,10 +918,7 @@ export class CustomListsTab {
 				this.plugin.app,
 				list.name,
 				list.notes,
-				async (notes) => {
-					await this.manager.saveNotes(list.name, notes);
-					list.notes = notes;
-				},
+				async (notes) => { await this.manager.saveNotes(list, notes); },
 			).open();
 		});
 

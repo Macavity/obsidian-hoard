@@ -2,6 +2,7 @@ import type enLists from '../en/lists';
 import type { DeepPartial } from '../index';
 
 const lists = {
+	changedElsewhere: 'Die eigene Liste "{name}" wurde anderswo geändert und neu geladen. Die letzte Änderung wurde nicht gespeichert.',
 	corrupt: 'Die eigene Liste "{name}" enthält beschädigte Daten und kann nicht geladen werden.',
 	tableSettings: 'Tabelleneinstellungen',
 	tableSettingsTitle: 'Tabelleneinstellungen: {name}',
