@@ -17,8 +17,9 @@ source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 
 # API layer
 
-Everything works without a key, and search and autofill do too: Cinemeta (movies/TV), Open Library
-(books) and the Steam Store (games) are keyless defaults. APIs fill in posters, covers, episode
+Search, autofill, posters and covers work without a key: Cinemeta (movies/TV), Open Library
+(books) and the Steam Store (games) are keyless defaults. Community ratings, airing, season refill,
+collections and movie/TV studios need keys. APIs fill in posters, covers, episode
 counts, release dates, ratings and airing pointers. All of it is **regenerable** and lands in the
 [entry cache](../concepts/entry-cache.md), never in a note, except the poster URL (E12) and
 user-chosen values.
@@ -61,7 +62,9 @@ backup or a WatchLog import takes effect without a restart; the Settings tab als
 - **Keyless sources** need no credential and are never reported as `auth`. Their request URLs and
   response mappers are pure modules, so the service methods are one `request` plus a map:
   [cinemetaApi.ts](../../src/cinemetaApi.ts) (`searchCinemeta`, `getCinemetaDetails`; rows carry
-  an IMDb id, a poster and the start year; details add seasons from `videos`, runtime and credits),
+  an IMDb id, a poster and the start year; details add seasons from `videos`, runtime and credits;
+  a meta record without a top-level `year` is foreign (Cinemeta answers a wrong-kind id with an
+  unrelated title) and maps to `null`),
   [openLibraryApi.ts](../../src/openLibraryApi.ts) (`searchOpenLibrary`, `getOpenLibraryWork`; a
   work id `OL…W`, cover by `cover_i`) and [steamStoreApi.ts](../../src/steamStoreApi.ts)
   (`searchSteamStore`, `getSteamStoreDetails` = the existing `getSteamAppDetails` mapped to a game;

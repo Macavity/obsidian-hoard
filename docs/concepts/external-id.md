@@ -35,12 +35,13 @@ since only titles call it and books and games carry their id in their own fields
   synthesises `URL`. On encode, `identityFor` picks the first available in order
   MAL → AniList → TMDB for type `Anime`, TMDB → MAL → AniList otherwise, then falls back to the link.
 - **Books**: `gbooks:<volumeId>`, mirrored into `Google Books ID`, or `openlibrary:OL…W` (model field
-  `openLibraryId`, stored only here, no property of its own). A set Google id wins on encode, so an
-  Open Library book given a Google id by hand switches to `gbooks:`.
+  `openLibraryId`, stored only here, no property of its own). An Open Library id wins the `External ID` on encode; a Google id is
+  still written to `Google Books ID`, so both survive a rewrite.
 - **Manga**: `mal:manga:<id>`, mirrored into `MAL ID`.
 - **Games**: `rawg:<id>` / `igdb:<id>` / `steam:<appid>`, decoded into `apiSource` + `apiId` model fields (the older note properties of that name are read
   only by the WatchLog import, [properties](properties.md)). A Steam search pick also sets
-  `Steam App ID`; that property stays separate and is what Steam sync matches on.
+  `Steam App ID`; that property stays separate and is what Steam sync matches on; on decode a `steam:` External ID
+  fills `steamAppId` when the property is absent.
 
 ## Duplicate detection
 

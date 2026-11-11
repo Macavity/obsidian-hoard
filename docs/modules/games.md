@@ -72,8 +72,8 @@ Steam store link. See [api layer](../architecture/api-layer.md).
 ## Covers
 
 `resolveGameCover` ([coverRefresh.ts](../../src/coverRefresh.ts)): a game with stored source and
-id uses that source's cover regardless of the setting (Steam: `steamLibraryCover`, no request, now
-in `steamStoreApi.ts`); otherwise a title search in the effective source, first result with a cover
+id uses that source's cover regardless of the setting (Steam: `steamLibraryCover`, stored only after
+`steamCoverExists` confirms the capsule with a HEAD request; a missing one leaves the cover unchanged); otherwise a title search in the effective source, first result with a cover
 wins. Only the cover is persisted, only when empty; the found id is
 not written. "Refresh all" is id-only. IGDB uses a cached Twitch token; RAWG images are rewritten
 to a smaller size for display.
