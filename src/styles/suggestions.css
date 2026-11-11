@@ -31,7 +31,7 @@
   font-size: 13px;
   color: var(--text-normal);
   font-weight: 500;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .hoard-suggestion-empty {

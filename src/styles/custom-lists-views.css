@@ -167,6 +167,13 @@
 
   /* room for the card's hover translateY(-2px) */
   padding: 4px 2px 8px;
+
+  /* strip scrollbars hidden until hover, same size in both states so nothing shifts; webkit path
+     is for iOS */
+  --hoard-strip-thumb: transparent;
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--hoard-strip-thumb) transparent;
 }
 
 .hoard-rows-strip > .hoard-card,
@@ -174,15 +181,6 @@
   /* fixed-width cards so the strip scrolls; direct children only (text-under wraps the card) */
   flex: 0 0 var(--hoard-rows-card-width, 160px);
   width: var(--hoard-rows-card-width, 160px);
-}
-
-/* strip scrollbars hidden until hover, same size in both states so nothing shifts; webkit path
-   is for iOS */
-.hoard-rows-strip {
-  --hoard-strip-thumb: transparent;
-
-  scrollbar-width: thin;
-  scrollbar-color: var(--hoard-strip-thumb) transparent;
 }
 
 /* one rule drives both scrollbar paths; focus shows it for keyboard users too */

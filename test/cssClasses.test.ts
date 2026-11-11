@@ -1,3 +1,4 @@
+import process from "process";
 import { describe, it, expect } from "vitest";
 import { checkCssClasses, classesInCss, wordsInStrings } from "../scripts/lib/css-classes.mjs";
 import { runCheck, unimportedPartials } from "../scripts/check-css-classes.mjs";
@@ -39,5 +40,14 @@ describe("css class check", () => {
 		const order = [...readFileSync(join(dir, "index.css"), "utf8").matchAll(/^@import "(.+?)";/gm)].map((m) => m[1]!);
 		const expected = order.map((rel) => readFileSync(join(dir, rel), "utf8")).join("");
 		expect(bundleStyles(join(dir, "index.css"))).toBe(expected);
+	});
+});
+
+describe("stylelint config", () => {
+	it("keeps the import notation the bundler parses", () => {
+		const cfg = JSON.parse(readFileSync(join(process.cwd(), ".stylelintrc.json"), "utf8")) as { rules: Record<string, unknown> };
+		expect(cfg.rules["import-notation"]).toBe("string");
+		expect(cfg.rules["no-descending-specificity"]).toBeNull();
+		expect(bundleStyles(join(process.cwd(), "src", "styles", "index.css"))).not.toMatch(/^@import/m);
 	});
 });
