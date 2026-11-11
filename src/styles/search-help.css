@@ -1,5 +1,7 @@
 /* Search help button and tips modal */
+
 /* Search help ("?") button, at the right end of every search bar */
+
 /* element-qualified: plain .class loses to core's button:not(.clickable-icon) */
 button.hoard-search-help-btn {
   color: var(--text-faint);

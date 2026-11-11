@@ -1,4 +1,5 @@
 /* List tab */
+
 /* ══ LIST TAB ══ */
 
 .hoard-list {
@@ -49,6 +50,7 @@
   padding: 4px 6px;
   border-radius: 4px;
   border: 0.5px solid var(--background-modifier-border);
+
   /* background-color, never the shorthand — shorthand resets background-repeat to
      `repeat` and any theme arrow then tiles across the whole select */
   background-color: var(--background-secondary);
@@ -105,6 +107,7 @@ button.hoard-rows-customize-btn .svg-icon {
   display: flex;
   flex-direction: column;
   gap: 4px;
+
   /* the compact column layout follows the pane width, not the window (responsive.css) */
   container-type: inline-size;
   container-name: hoard-table;
@@ -130,13 +133,14 @@ button.hoard-rows-customize-btn .svg-icon {
 
 .hoard-table-header-row {
   display: grid;
+
   /* Title | Priority | Started | Rating | Status | Pin */
   grid-template-columns: 1fr 56px 72px 56px 90px 20px;
   padding: 5px 8px;
   background: #626262;
   font-size: 12px;
   font-weight: 600;
-  color: #ffffff;
+  color: #fff;
   border-bottom: 0.5px solid var(--background-modifier-border);
 }
 
@@ -190,6 +194,7 @@ button.hoard-rows-customize-btn .svg-icon {
   display: flex;
   flex-direction: column;
   gap: 3px;
+
   /* keep the badge from stretching the column */
   align-items: flex-start;
 }
@@ -232,6 +237,7 @@ button.hoard-rows-customize-btn .svg-icon {
   display: flex;
   align-items: center;
   justify-content: center;
+
   /* lets the track cap the badge instead of the badge widening the track */
   min-width: 0;
 }
@@ -281,7 +287,7 @@ button.hoard-rows-customize-btn .svg-icon {
   border-radius: 20px;
   font-size: 11px;
   font-weight: 500;
-  color: #ffffff;
+  color: #fff;
   white-space: nowrap;
   line-height: 1.4;
 }

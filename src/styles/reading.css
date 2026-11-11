@@ -1,4 +1,5 @@
 /* Reading tab */
+
 /* ══ READING TAB ══ */
 
 .hoard-reading-tab {
@@ -278,15 +279,15 @@ button.hoard-reading-manage-btn {
 }
 
 .hoard-reading-card-overlay .hoard-reading-card-author {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgb(255 255 255 / 75%);
 }
 
 .hoard-reading-card-overlay .hoard-reading-card-progress-bar {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgb(255 255 255 / 25%);
 }
 
 .hoard-reading-card-overlay .hoard-reading-card-progress-text {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgb(255 255 255 / 80%);
 }
 
 /* Reading virtual scroll */
@@ -305,10 +306,12 @@ button.hoard-reading-manage-btn {
   right: 0;
   display: grid;
   grid-template-columns: repeat(var(--hoard-reading-cols, 1), 1fr);
+
   /* pin rows to the virtual-scroll height, same as the Cards grid */
   grid-auto-rows: var(--hoard-reading-card-height, auto);
   align-content: start;
   gap: 12px;
+
   /* inline padding-top, NOT translateY (Chromium CLS pitfall — see VirtualGrid.update) */
   padding: 0;
   box-sizing: border-box;

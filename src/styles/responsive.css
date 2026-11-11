@@ -1,4 +1,5 @@
 /* Mobile responsive base rules */
+
 /* ══ MOBILE RESPONSIVE ══ */
 
 /* table columns follow the pane (hoard-table container), so a narrow split or sidebar compacts too.
@@ -39,7 +40,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   /* smaller toolbar buttons */
   .hoard-header-controls .hoard-btn,
   .hoard-header-controls .hoard-add-btn {
@@ -48,7 +49,7 @@
   }
 }
 
-@media (max-width: 400px) {
+@media (width <= 400px) {
   /* tighter rings gap on very small screens */
   .hoard-rings-grid {
     gap: 8px;
@@ -65,14 +66,16 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
     .hoard-accordion-header {
         flex-wrap: wrap;
     }
+
     .hoard-acc-header-left {
         width: 100%;
         margin-bottom: 6px;
     }
+
     .hoard-acc-right-group {
         width: 100%;
     }

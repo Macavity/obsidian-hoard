@@ -1,4 +1,5 @@
 /* Shared modals */
+
 /* ══ MODALS ══ */
 
 .hoard-add-modal {
@@ -151,6 +152,7 @@
 /* add-flow search: 3 posters per row, text beneath */
 .hoard-modal-results.hoard-results-grid {
   display: grid;
+
   /* minmax(0,1fr) so long meta can't widen the column */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;

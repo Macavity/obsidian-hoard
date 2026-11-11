@@ -1,4 +1,5 @@
 /* Edit columns modal */
+
 /* ══ EDIT COLUMNS MODAL (v0.8.0) ══ */
 
 .hoard-editcol-modal {
@@ -14,16 +15,14 @@
 .hoard-editcols-list {
   margin-bottom: 10px;
   max-height: 460px;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
 }
 
 /* Horizontal card layout for Edit Columns */
 
 .hoard-editcol-card-grid {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-flow: row wrap;
   align-items: flex-start;
   gap: 8px;
   padding: 4px;
@@ -272,7 +271,7 @@ button.hoard-editcol-card-opt-del:hover {
 
 /* Edit Columns modal — mobile responsive */
 
-@media (max-width: 720px) {
+@media (width <= 720px) {
   .hoard-editcols-modal {
     min-width: unset;
     width: calc(100% - 16px);

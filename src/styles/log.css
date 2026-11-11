@@ -1,4 +1,5 @@
 /* Log tab (timeline) */
+
 /* Log Tab (timeline) */
 .hoard-log-tab {
   padding: 12px 0 0;
@@ -6,6 +7,7 @@
   flex-direction: column;
   overflow: hidden;
 }
+
 .hoard-log-filter-bar {
   display: flex;
   gap: 6px;
@@ -13,6 +15,7 @@
   border-bottom: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
 }
+
 .hoard-log-filter-btn {
   font-size: 12px;
   font-weight: 500;
@@ -24,15 +27,18 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
+
 .hoard-log-filter-btn:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
 }
+
 .hoard-log-filter-btn.is-active {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   border-color: var(--interactive-accent);
 }
+
 .hoard-log-empty {
   padding: 24px 16px;
   font-size: 13px;
@@ -40,19 +46,23 @@
   font-style: italic;
   text-align: center;
 }
+
 .hoard-log-timeline {
   padding: 8px 12px 16px;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
 }
+
 .hoard-log-virtual-scroll {
   overflow-y: auto;
 }
+
 .hoard-log-spacer {
   width: 100%;
   position: relative;
 }
+
 .hoard-log-viewport {
   width: 100%;
   position: absolute;
@@ -60,6 +70,7 @@
   left: 0;
   right: 0;
 }
+
 /* rows are absolutely positioned; top is set by LogTab */
 .hoard-log-viewport .hoard-log-day-header,
 .hoard-log-viewport .hoard-log-entry {
@@ -67,6 +78,7 @@
   left: 0;
   right: 0;
 }
+
 .hoard-log-day-header {
   font-size: 12px;
   font-weight: 600;
@@ -75,6 +87,7 @@
   border-bottom: 1px solid var(--background-modifier-border);
   margin-bottom: 4px;
 }
+
 .hoard-log-entry {
   display: flex;
   align-items: flex-start;
@@ -82,6 +95,7 @@
   padding: 4px 0;
   min-height: 24px;
 }
+
 .hoard-log-dot-col {
   display: flex;
   flex-direction: column;
@@ -90,47 +104,56 @@
   flex-shrink: 0;
   padding-top: 6px;
 }
+
 .hoard-log-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
 }
+
 .hoard-log-connector {
   width: 2px;
   flex: 1;
   min-height: 12px;
   background: var(--background-modifier-border);
 }
+
 .hoard-log-content {
   flex: 1;
   min-width: 0;
   line-height: 1.4;
   padding-top: 2px;
 }
+
 .hoard-log-source {
   font-size: 12px;
   color: var(--text-muted);
 }
+
 .hoard-log-sep {
   font-size: 12px;
   color: var(--text-faint);
 }
+
 .hoard-log-title {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-normal);
 }
+
 .hoard-log-action {
   font-size: 13px;
   font-weight: 500;
 }
+
 .hoard-log-time {
   font-size: 12px;
   color: var(--text-faint);
   flex-shrink: 0;
   padding-top: 3px;
 }
+
 button.hoard-log-del {
   width: 18px;
   height: 18px;
@@ -139,17 +162,21 @@ button.hoard-log-del {
   color: var(--text-faint);
   opacity: 0;
 }
+
 button.hoard-log-del .svg-icon {
   width: 13px;
   height: 13px;
 }
+
 .hoard-log-entry:hover .hoard-log-del,
 button.hoard-log-del:focus-visible {
   opacity: 1;
 }
+
 button.hoard-log-del:hover {
   color: var(--text-error);
 }
+
 /* mobile has no hover — keep it out permanently */
 .is-mobile .hoard-log-del {
   opacity: 1;

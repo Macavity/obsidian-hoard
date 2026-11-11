@@ -1,4 +1,5 @@
 /* Custom lists tick button, cards and rows views */
+
 /* Feature 4: Sort direction toggle */
 .hoard-sort-dir-btn {
   min-width: 28px;
@@ -39,6 +40,7 @@
 .hoard-cl-tr-body.hoard-cl-tr-checked:hover {
   border-left: 3px solid var(--color-green);
   background: color-mix(in srgb, var(--color-green) 5%, transparent);
+
   --hoard-cl-row-tint: linear-gradient(
     color-mix(in srgb, var(--color-green) 5%, transparent),
     color-mix(in srgb, var(--color-green) 5%, transparent)
@@ -52,6 +54,7 @@
 
 .hoard-cards-grid {
   display: grid;
+
   /* --hoard-card-min-width is the card-size setting; the JS grid math uses the same value */
   grid-template-columns: repeat(auto-fill, minmax(var(--hoard-card-min-width, 160px), 1fr));
   gap: 12px;
@@ -65,10 +68,12 @@
   right: 0;
   display: grid;
   grid-template-columns: repeat(var(--hoard-cards-cols, 1), 1fr);
+
   /* pin rows to the virtual-scroll height or content stretches them (CLS) */
   grid-auto-rows: var(--hoard-card-height, auto);
   align-content: start;
   gap: 12px;
+
   /* inline padding-top, NOT translateY — translateY made Chromium report phantom CLS */
   padding: 0;
   box-sizing: border-box;
@@ -78,6 +83,7 @@
 .hoard-cards-grid.hoard-cards-grid-virtual > .hoard-card {
   width: 100%;
   height: var(--hoard-card-height, auto);
+
   /* --hoard-card-height rules; cancel the 2:3 aspect-ratio or the card overflows its row (CLS) */
   aspect-ratio: auto;
 }
@@ -88,6 +94,7 @@
   width: 100%;
   overflow-y: auto;
   scrollbar-gutter: stable;
+
   /* fill remaining height */
   flex: 1 1 auto;
   min-height: 0;
@@ -156,8 +163,8 @@
   display: flex;
   flex-wrap: nowrap;
   gap: 12px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto hidden;
+
   /* room for the card's hover translateY(-2px) */
   padding: 4px 2px 8px;
 }
@@ -173,6 +180,7 @@
    is for iOS */
 .hoard-rows-strip {
   --hoard-strip-thumb: transparent;
+
   scrollbar-width: thin;
   scrollbar-color: var(--hoard-strip-thumb) transparent;
 }

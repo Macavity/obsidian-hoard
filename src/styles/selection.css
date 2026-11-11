@@ -1,4 +1,5 @@
 /* Selection mode */
+
 /* ══ SELECTION MODE ══ */
 
 /* Header controls area (right side of header) */
@@ -114,7 +115,7 @@
 
 /* Saved filter preset button — active state (green tint) */
 .hoard-btn.hoard-btn-preset-active {
-  background: rgba(29, 158, 117, 0.15);
+  background: rgb(29 158 117 / 15%);
   border-color: #1D9E75;
   color: #1D9E75;
 }

@@ -1,4 +1,5 @@
 /* Status bar counter, Customize cards settings */
+
 /* Status bar: Upcoming "due" counter */
 .hoard-statusbar-upcoming {
   cursor: pointer;
@@ -20,6 +21,7 @@
   align-items: center;
   gap: 6px;
   padding: 12px 10px 10px;
+
   /* Obsidian pins button height to --input-height; let the content size the tile */
   height: auto;
   border-radius: 8px;
@@ -75,7 +77,7 @@
   right: 6px;
   bottom: 6px;
   padding-top: 14px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  background: linear-gradient(transparent, rgb(0 0 0 / 75%));
 }
 
 .hoard-card-style-thumb-line {
@@ -163,7 +165,7 @@
 
 /* Active option tinted in the group's green accent (inherited from .hoard-sg--cards). */
 .hoard-card-style-tab-btn.is-active {
-  background: rgba(var(--hoard-sg-accent), 0.16);
+  background: rgb(var(--hoard-sg-accent), 0.16);
   border-color: rgb(var(--hoard-sg-accent));
   color: var(--text-normal);
 }

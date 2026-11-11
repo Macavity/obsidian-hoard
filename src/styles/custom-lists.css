@@ -1,4 +1,5 @@
 /* Custom lists tab */
+
 /* ══ CUSTOM LISTS TAB (v0.8.0) ══ */
 
 .hoard-custom-lists {
@@ -150,8 +151,7 @@ button.hoard-cl-sub-tab-add,
 /* Table */
 .hoard-cl-table-wrap {
   flex: 1;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
   min-height: 0;
 }
 
@@ -168,10 +168,12 @@ button.hoard-cl-sub-tab-add,
 }
 
 /* Column resize (Excel-style) */
+
 /* resizable: explicit widths, no flex, horizontal scroll */
 .hoard-cl-table-resizable {
   width: max-content;
   min-width: 100%;
+
   /* the wrap owns the h-scroll so the sticky cell clamps to the viewport edge */
   overflow: visible;
 }
@@ -186,6 +188,7 @@ button.hoard-cl-sub-tab-add,
 }
 
 /* Sticky row actions (resizable mode only) */
+
 /* pin actions to the visible right edge; opaque bg matches the row */
 .hoard-cl-table-resizable .hoard-cl-td-actions {
   /* margin-left:auto pins right when the table fits, resolves to 0 when it overflows */
@@ -194,6 +197,7 @@ button.hoard-cl-sub-tab-add,
   right: 0;
   z-index: 1;
   background-color: var(--background-primary);
+
   /* the row's hover / checked tint, layered over the opaque bg (set on .hoard-cl-tr-body) */
   background-image: var(--hoard-cl-row-tint, none);
 }
@@ -265,6 +269,7 @@ body.hoard-cl-col-resizing {
 
 .hoard-cl-tr-body:hover {
   background: var(--background-modifier-hover);
+
   --hoard-cl-row-tint: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover));
 }
 
@@ -444,7 +449,7 @@ button.hoard-cl-row-del:hover {
   background: var(--background-primary);
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 5px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
   z-index: 9999;
 }
 

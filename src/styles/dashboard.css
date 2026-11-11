@@ -1,4 +1,5 @@
 /* Dashboard tab */
+
 /* ══ DASHBOARD TAB ══ */
 
 /* Dashboard container */
@@ -19,12 +20,14 @@
 /* reflow on panel width, not viewport; min() caps the track so it can't overflow */
 .hoard-view.hoard-mobile .hoard-rings-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(110px, 100%), 1fr));
+
   /* container for the card below; mobile-only, so desktop is untouched */
   container-type: inline-size;
   container-name: hoard-dash;
 }
 
 /* Unified Total / Time card */
+
 /* dividers = 1px grid gaps revealing the card bg (a 1px border didn't paint reliably) */
 .hoard-dash-unified {
   grid-column: 1 / -1;
@@ -43,11 +46,13 @@
 }
 
 /* Unified card on mobile */
+
 /* stacks to ONE column: the only arrangement where every value shares a right edge.
    The hoard-dash container exists on .hoard-mobile only, so these queries are mobile-only. */
 @container hoard-dash (max-width: 559px) {
   .hoard-mobile .hoard-dash-unified-4 {
     grid-template-columns: 1fr;
+
     /* stacked: dividers run horizontally */
     gap: 1px;
   }
@@ -146,11 +151,13 @@
 .hoard-ring-item {
   /* single source of truth for gauge size; SVG + ring derive from it */
   --hoard-ring-size: 110px;
+
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   position: relative;
+
   /* let the track shrink below content width */
   min-width: 0;
 }
@@ -171,6 +178,7 @@
 
 .hoard-ring-svg {
   width: var(--hoard-ring-size);
+
   /* scale down if the cell is narrower than the gauge */
   max-width: 100%;
   height: auto;
@@ -338,7 +346,7 @@
 .hoard-stats-filter-btn.is-active {
   background: #8B5CF6;
   border-color: #8B5CF6;
-  color: #FFFFFF;
+  color: #FFF;
 }
 
 /* ~3 per row desktop, 2 then 1; rows stretch so cards equalize */

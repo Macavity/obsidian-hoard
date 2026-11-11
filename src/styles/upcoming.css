@@ -1,8 +1,10 @@
 /* Upcoming history and maybe cards */
+
 /* Feature 2: Upcoming History sub-tab */
 .hoard-airtime-history-card {
   opacity: 0.92;
 }
+
 .hoard-airtime-history-right {
   flex-direction: row;
   align-items: center;

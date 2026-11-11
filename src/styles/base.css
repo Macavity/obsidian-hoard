@@ -1,4 +1,5 @@
 /* View shell, accent defaults, tab bar */
+
 /* ══ Hoard plugin styles — Obsidian CSS vars throughout ══ */
 
 /* View shell */
@@ -36,6 +37,7 @@
   padding: 8px 10px 0;
   border-bottom: 0.5px solid var(--background-modifier-border);
   flex-shrink: 0;
+
   /* clip so the view can't be panned sideways */
   overflow-x: clip; /* not hidden: that adds a scrollbar for the tabs' -0.5px overhang */
 }
@@ -62,6 +64,7 @@ button.hoard-tab-btn-icon .svg-icon {
 }
 
 /* icon mode: dot instead of (N) */
+
 /* not element-qualified: a pseudo-element, core sets nothing here */
 .hoard-tab-btn-icon.hoard-tab-has-badge::after {
   content: '';
@@ -110,9 +113,9 @@ button.hoard-tab-btn.is-active {
 .hoard-tab-content {
   flex: 1 1 0%;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden auto;
+
   /* overflow-y:auto forces overflow-x:auto per spec; clip it or mobile pans sideways */
-  overflow-x: hidden;
   padding: 12px 10px;
 }
 

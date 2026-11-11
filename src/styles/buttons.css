@@ -1,8 +1,9 @@
 /* Shared button color utilities */
+
 /* ══ SHARED BUTTON COLOR UTILITIES — color only, border at rest, fill on hover ══ */
 button.hoard-btn-danger, .hoard-btn-danger {
   background: transparent;
-  border: 0.5px solid rgba(var(--color-red-rgb), 0.65);
+  border: 0.5px solid rgb(var(--color-red-rgb), 0.65);
   color: var(--text-error);
 }
 
@@ -14,7 +15,7 @@ button.hoard-btn-danger:hover, .hoard-btn-danger:hover {
 
 button.hoard-btn-success, .hoard-btn-success {
   background: transparent;
-  border: 0.5px solid rgba(var(--color-green-rgb), 0.65);
+  border: 0.5px solid rgb(var(--color-green-rgb), 0.65);
   color: var(--color-green);
 }
 

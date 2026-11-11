@@ -1,4 +1,5 @@
 /* Utility classes, inner sub-tab bar */
+
 /* ══ utility classes replacing inline style= ══ */
 
 .hoard-modal-row-mt {
@@ -77,6 +78,7 @@ button.hoard-inner-tab-btn {
 }
 
 button.hoard-inner-tab-btn:hover { color: var(--text-normal); }
+
 button.hoard-inner-tab-btn.is-active {
   color: var(--text-accent);
   border-bottom-color: var(--text-accent);

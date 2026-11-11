@@ -1,4 +1,5 @@
 /* Steam sync modal */
+
 /* Steam sync modal */
 .hoard-steam-sync .hoard-steam-summary {
   margin: 4px 0 10px;
@@ -155,12 +156,12 @@
 }
 
 .hoard-game-modal-delete {
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border: 1px solid rgb(239 68 68 / 40%);
   color: #f87171;
   background: transparent;
 }
 
 .hoard-game-modal-delete:hover {
-  background: rgba(239, 68, 68, 0.12);
+  background: rgb(239 68 68 / 12%);
 }
 

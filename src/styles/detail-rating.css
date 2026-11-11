@@ -1,4 +1,5 @@
 /* Detail rating, trailer, store and wishlist controls */
+
 /* release year in the List expanded row */
 .hoard-row-year {
   font-size: 0.7rem;
@@ -23,7 +24,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 50%);
   color: #EAB308;
   display: flex;
   align-items: center;
@@ -44,7 +45,7 @@ button.hoard-reading-card-menu-btn {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 50%);
   color: #fff;
   opacity: 0;
   transition: opacity 0.15s;
@@ -52,7 +53,7 @@ button.hoard-reading-card-menu-btn {
 
 button.hoard-card-menu-btn:hover,
 button.hoard-reading-card-menu-btn:hover {
-  background: rgba(0, 0, 0, 0.7);
+  background: rgb(0 0 0 / 70%);
   color: #fff;
 }
 
@@ -89,10 +90,10 @@ button.hoard-card-menu-btn:focus-visible {
   line-height: 1.2;
 }
 
-.hoard-community-source--imdb    { background-color: #F5C518; color: #000000; }
-.hoard-community-source--mal     { background-color: #2E51A2; color: #FFFFFF; }
-.hoard-community-source--anilist { background-color: #3DB4F2; color: #FFFFFF; }
-.hoard-community-source--tmdb    { background-color: #01B4E4; color: #FFFFFF; }
+.hoard-community-source--imdb    { background-color: #F5C518; color: #000; }
+.hoard-community-source--mal     { background-color: #2E51A2; color: #FFF; }
+.hoard-community-source--anilist { background-color: #3DB4F2; color: #FFF; }
+.hoard-community-source--tmdb    { background-color: #01B4E4; color: #FFF; }
 
 .hoard-community-score {
   font-size: 15px;
@@ -129,7 +130,7 @@ button.hoard-trailer-btn {
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  color: #FF0000; /* Permanent red, not hover-only. */
+  color: #F00; /* Permanent red, not hover-only. */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -140,7 +141,7 @@ button.hoard-trailer-btn {
 }
 
 button.hoard-trailer-btn:hover {
-  color: #CC0000; /* Discreet darker-red + subtle wash so it still reads as clickable. */
+  color: #C00; /* Discreet darker-red + subtle wash so it still reads as clickable. */
   background: var(--background-modifier-hover);
 }
 
@@ -183,6 +184,7 @@ button.hoard-trailer-btn.is-loading {
   box-shadow: none;
   height: 22px;
   width: 28px;
+
   --icon-size: 20px;
 }
 

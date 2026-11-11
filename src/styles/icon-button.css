@@ -58,6 +58,7 @@ button.hoard-icon-btn--sm .svg-icon {
 }
 
 /* request in flight; the caller toggles the class */
+
 /* no element needed below: core sets neither pointer-events nor svg animation */
 .hoard-icon-btn.is-loading {
   pointer-events: none;

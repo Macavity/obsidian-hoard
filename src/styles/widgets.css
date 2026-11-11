@@ -1,7 +1,9 @@
 /* Code-block widgets (stat, upcoming, now watching) */
+
 /* hoard-stat widget */
 .hoard-wstat {
   display: inline-block;
+
   /* caps the shrink-to-fit box so a full card's max-width can take effect */
   max-width: 100%;
   margin: 2px 0;
@@ -49,6 +51,7 @@
   background: var(--background-secondary);
   border: 0.5px solid var(--background-modifier-border);
   box-sizing: border-box;
+
   /* fixed widths shrink to a narrow note pane */
   max-width: 100%;
   overflow: hidden;

@@ -1,5 +1,7 @@
 /* Reading context menu, add modals */
+
 /* Reading card context menu */
+
 /* base look shared with .hoard-card-menu-btn in detail-rating.css */
 .hoard-reading-card-menu-btn {
   z-index: 5;
@@ -96,9 +98,8 @@ button.hoard-reading-card-menu-btn:focus-visible {
 
 .hoard-reading-status-rating-row {
   display: flex;
-  flex-direction: row;
+  flex-flow: row wrap;
   align-items: center;
-  flex-wrap: wrap;
   gap: 16px;
 }
 

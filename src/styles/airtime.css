@@ -1,4 +1,5 @@
 /* Airtime tab */
+
 /* ══ AIRTIME TAB ══ */
 
 .hoard-airtime {
@@ -75,7 +76,7 @@
 
 .hoard-airtime-pill-tomorrow {
   background: #1D9E75;
-  color: #ffffff;
+  color: #fff;
 }
 
 .hoard-airtime-pill-days {
@@ -139,6 +140,7 @@
   position: relative;
   width: 100%;
   overflow-y: auto;
+
   /* scrollbar-gutter: the virtual-scroll math reads clientWidth */
   scrollbar-gutter: stable;
   flex: 1 1 auto;
@@ -256,7 +258,7 @@
 }
 
 .hoard-tracker-type-badge.is-plain {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgb(0 0 0 / 55%);
 }
 
 /* countdown badge, top-right */
@@ -271,7 +273,7 @@
   min-width: 34px;
   padding: 4px 6px;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgb(0 0 0 / 65%);
   color: #fff;
   line-height: 1;
   pointer-events: none;
@@ -322,9 +324,8 @@
   height: 26px;
   border-radius: 50%;
   background: #1D9E75;
-  background-color: #1D9E75;
   color: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
 }
 
 button.hoard-tracker-tick-btn:hover {
@@ -374,7 +375,7 @@ button.hoard-tracker-tick-btn:hover {
 }
 
 .hoard-tracker-card-overlay .hoard-tracker-card-sub {
-  color: rgba(255, 255, 255, 0.78);
+  color: rgb(255 255 255 / 78%);
 }
 
 /* season · episode · airing next */
@@ -469,7 +470,7 @@ button.hoard-airtime-action-btn-tick {
 
 button.hoard-airtime-action-btn-tick:hover {
   background: #1D9E75;
-  color: #ffffff;
+  color: #fff;
   border-color: #1D9E75;
 }
 

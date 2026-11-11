@@ -1,4 +1,5 @@
 /* Shared date picker */
+
 /* Shared date picker (src/DatePicker.ts) — the field keeps its call-site classes; the calendar
    is a fixed layer in body, placed via --hoard-dp-top/left */
 
@@ -17,7 +18,7 @@
   background: var(--background-primary);
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 24%);
   font-size: var(--font-ui-small);
 }
 
@@ -96,7 +97,7 @@ button.hoard-datepicker-nav {
 }
 
 /* Phones: a touch-sized grid, still anchored to the field. */
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .hoard-datepicker-panel {
     width: 280px;
   }

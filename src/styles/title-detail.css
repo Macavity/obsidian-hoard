@@ -1,4 +1,5 @@
 /* By-type grids, poster slots, title detail stats */
+
 /* "By type" — wrapping Cards-style grids among the shelves (any position). */
 .hoard-rows-bytype {
   margin-top: 4px;
@@ -16,6 +17,7 @@
 /* fixed-height wrapper; the inline height reserves the grid's full extent up-front */
 .hoard-rows-bytype-spacer {
   position: relative;
+
   /* tops the trailing gap up to the 20px the non-virtual grid had */
   margin: 4px 0 8px;
 }
@@ -36,10 +38,9 @@
 
 .hoard-detail-header {
   display: flex;
-  flex-direction: row;
+  flex-flow: row wrap;
   align-items: flex-start;
   gap: 16px;
-  flex-wrap: wrap;
 }
 
 .hoard-detail-header-left {
@@ -48,6 +49,7 @@
   gap: 6px;
   flex: 1;
   min-width: 0;
+
   /* container so the stats reflow on the modal, not the viewport */
   container-type: inline-size;
   container-name: hoard-detail-left;
@@ -73,7 +75,7 @@
   justify-content: center;
   font-size: 2.6rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgb(255 255 255 / 85%);
 }
 
 .hoard-detail-cover-placeholder.is-loading {
@@ -81,7 +83,7 @@
 }
 
 .hoard-detail-cover-placeholder span {
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
 }
 
 .hoard-detail-cover-img,
@@ -91,6 +93,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+
   /* block from first paint so the box is reserved; hidden by opacity, fades in on load */
   display: block;
   opacity: 0;
@@ -189,7 +192,7 @@
   align-items: center;
   gap: 16px;
   padding: 8px 12px;
-  border: 1px solid var(--background-modifier-border, rgba(255,255,255,0.1));
+  border: 1px solid var(--background-modifier-border, rgb(255 255 255 / 10%));
   border-radius: 6px;
 }
 
@@ -199,6 +202,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
+
   /* shrink to the stats instead of stretching */
   align-self: flex-start;
   max-width: 100%;
@@ -226,7 +230,7 @@
 }
 
 /* narrow: tighter gap + padding so the 4 blocks fit */
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .hoard-detail-stats-box {
     gap: 7px;
     padding: 8px 7px;
@@ -237,7 +241,7 @@
 @container hoard-detail-left (max-width: 310px) {
   .hoard-detail-stats-box-bar {
     gap: 6px;
-    padding: 8px 8px;
+    padding: 8px;
   }
 
   .hoard-detail-stats-row {

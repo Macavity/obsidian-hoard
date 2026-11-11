@@ -1,4 +1,5 @@
 /* Games tab and game detail modal */
+
 /* Games tab */
 .hoard-games-tab {
   display: flex;
@@ -18,6 +19,7 @@
 }
 
 /* Game detail modal */
+
 /* no width override on purpose: matches the Watchlist / Reading modals */
 
 /* .hoard-view's height:100% + overflow:hidden would block scrolling */
