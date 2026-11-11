@@ -4,6 +4,14 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 The release workflow takes the section of the released version from this file as the GitHub release notes. Without a section the release only carries the compare link.
 
+## [Unreleased]
+
+### Changed
+
+- All CSS classes and custom properties of the plugin have new names (`hoard-<block>__<element>--<modifier>`, abbreviations spelled out). CSS snippets and themes that target Hoard's classes need the new names; `docs/architecture/css-blocks.md` lists the blocks.
+- Colours, sizes and positions the plugin computes are set through CSS custom properties (`--hoard-…`) instead of inline styles, so snippets and themes can override them.
+- Standalone labels are written in sentence case in English and German ("Show less", "Never played"); help texts name tabs, statuses and buttons the way the interface shows them.
+
 ## [0.2.0] - 2026-11-11
 
 ### Added
