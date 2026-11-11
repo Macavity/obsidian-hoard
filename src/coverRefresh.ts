@@ -39,7 +39,7 @@ export async function resolveGameCover(
 }
 
 async function gameCoverById(api: ApiService, source: string, apiId: string): Promise<string> {
-	if (source === 'steam') return steamLibraryCover(apiId);
+	if (source === 'steam') return (await api.steamCoverExists(apiId)) ? steamLibraryCover(apiId) : '';
 	const details = source === 'igdb'
 		? await api.getIgdbGameDetails(Number(apiId))
 		: await api.getRawgGameDetails(Number(apiId));

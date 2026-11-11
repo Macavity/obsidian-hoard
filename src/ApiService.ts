@@ -2425,6 +2425,12 @@ export class ApiService {
 
 	// Keyless sources (Cinemeta, Open Library, Steam Store)
 
+	/** Whether Steam publishes the library capsule for this app. A network error rejects, so callers keep the old cover. */
+	async steamCoverExists(appId: string): Promise<boolean> {
+		const { status } = await requestUrl({ url: steamLibraryCover(appId), method: 'HEAD', throw: false });
+		return status === 200;
+	}
+
 	async searchCinemeta(query: string, kind: CinemetaKind, year?: string): Promise<MediaSearchResult[]> {
 		const json = await this.request({ url: cinemetaSearchUrl(kind, query) });
 		return mapCinemetaSearch(json, kind, year ?? '', SEARCH_RESULT_LIMIT);

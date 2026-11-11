@@ -48,10 +48,21 @@ describe('refreshAllCovers', () => {
 		expect(res.updated).toBe(1);
 	});
 
-	it('steam game gets the library cover without an API call', async () => {
-		const { res, g } = await run({ 'W/Games/Hades.md': STEAM_GAME }, {});
+	it('steam game gets the library cover once the capsule exists', async () => {
+		const steamCoverExists = vi.fn().mockResolvedValue(true);
+		const { res, g } = await run({ 'W/Games/Hades.md': STEAM_GAME }, { steamCoverExists });
+		expect(steamCoverExists).toHaveBeenCalledWith('1145360');
 		expect(fmOf(g.f.files.get('W/Games/Hades.md')).Cover).toBe(steamLibraryCover('1145360'));
 		expect(res.updated).toBe(1);
+	});
+
+	it.each([
+		['is missing', () => Promise.resolve(false)],
+		['cannot be checked', () => Promise.reject(new Error('net'))],
+	])('keeps the stored cover when the steam capsule %s', async (_n, steamCoverExists) => {
+		const { res, g } = await run({ 'W/Games/Hades.md': STEAM_GAME }, { steamCoverExists });
+		expect(fmOf(g.f.files.get('W/Games/Hades.md')).Cover).toBe('https://mine');
+		expect(res.updated).toBe(0);
 	});
 
 	it('keyless title search uses the Steam store', async () => {

@@ -41,6 +41,23 @@ describe('cinemeta', () => {
 	});
 });
 
+describe('steam cover check', () => {
+	it('sends a HEAD request and maps 200 to true, 404 to false', async () => {
+		fail(200);
+		expect(await api().steamCoverExists('1145360')).toBe(true);
+		expect(sent.mock.calls[0]![0]).toMatchObject({ url: expect.stringContaining('/1145360/library_600x900.jpg'), method: 'HEAD', throw: false });
+		fail(404);
+		expect(await api().steamCoverExists('1145360')).toBe(false);
+	});
+
+	it('throws on a network error so callers keep the old cover', async () => {
+		sent.mockImplementationOnce(() => { throw new Error('net'); });
+		let err: unknown = null;
+		try { await api().steamCoverExists('1'); } catch (e) { err = e; }
+		expect(err).toMatchObject({ message: 'net' });
+	});
+});
+
 describe('cinemeta credits', () => {
 	const bb = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'TV Show', totalEpisodes: 0 } as never;
 	const unknownKind = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'Doc', totalEpisodes: 0 } as never;
