@@ -2,8 +2,6 @@
 import tsparser from "@typescript-eslint/parser";
 import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
-// the plugin does not re-export its brand list; extend it instead of replacing it
-import { DEFAULT_BRANDS } from "eslint-plugin-obsidianmd/dist/lib/rules/ui/brands.js";
 import globals from "globals";
 
 // Cosmetic-only: keep UI sentence-case visible without failing the lint.
@@ -12,8 +10,8 @@ import globals from "globals";
 // sentence-case violations are still reported. Shared by the UI rule and the
 // English locale-module rule.
 const sentenceCaseOptions = {
-    // multi-word proper nouns, matched in any sentence and any position
-    brands: [...DEFAULT_BRANDS, "Open Library"],
+    // proper nouns in canonical casing, matched in any sentence; own list, not the plugin defaults
+    brands: ["Obsidian", "Markdown", "Open Library"],
     ignoreWords: [
       // Plugin / feature names
       "Hoard", "Watchlist", "Upcoming", "Reading", "Cards",
