@@ -2,6 +2,8 @@
 import tsparser from "@typescript-eslint/parser";
 import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
+// the plugin does not re-export its brand list; extend it instead of replacing it
+import { DEFAULT_BRANDS } from "eslint-plugin-obsidianmd/dist/lib/rules/ui/brands.js";
 import globals from "globals";
 
 // Cosmetic-only: keep UI sentence-case visible without failing the lint.
@@ -10,6 +12,8 @@ import globals from "globals";
 // sentence-case violations are still reported. Shared by the UI rule and the
 // English locale-module rule.
 const sentenceCaseOptions = {
+    // multi-word proper nouns, matched in any sentence and any position
+    brands: [...DEFAULT_BRANDS, "Open Library"],
     ignoreWords: [
       // Plugin / feature names
       "Hoard", "Watchlist", "Upcoming", "Reading", "Cards",
@@ -32,7 +36,6 @@ const sentenceCaseOptions = {
       "^(Get a Web API key|Paste your Steam Web API key here|Movies & TV shows|Not a Jikan-compatible API|Register a Twitch app|— Not set —|Keep as Added)$",
       "^(Steam has no search endpoint|Missing a name\\? Use the|TMDB is used through|Anime and manga data from MyAnimeList|Create a project in the Google Cloud|RAWG also carries|IGDB authenticates through|Choose which API group|Anime API \\(|Movie / TV API \\()",
       "^(Full-width (triple|double) card: |Statuses To be released or Dropped|Calculated as: |Groups let you combine|Pinning a title moves|Open the title and click Edit|Hoard uses a different API|Reading entries use five statuses|Books track pages read|Covers are fetched automatically|Any title with a release date|Reading has two independent sub-tabs|Each entry generates a Markdown note file)",
-      "Open Library",            // book provider name
       "^p\\. 123",               // quote-location example placeholder
       "^APIs & Services",        // Google Cloud console path
       '"N due"',                 // N is a number placeholder
