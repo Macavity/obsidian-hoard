@@ -26,7 +26,8 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
 - **States**: `is-*` and `has-*` stay as they are; Obsidian's own classes (`modal-content`, `setting-item`)
   are never renamed.
 - **Abbreviations are spelled out** (`custom-list`, not `cl`; `column`, not `col`). Allowed short parts
-  (`ALLOWED_SHORT`): `btn`, `img`, `nav`, `csv`, `api`, `id`, `url`, `th`, `td`, `tr`, `sm`, `md`, `lg`.
+  (`ALLOWED_SHORT`): established abbreviations (`btn`, `img`, `nav`, `csv`, `api`, `id`, `url`, `th`, `td`, `tr`,
+  `sm`, `md`, `lg`), proper names and formats (`svg`, `mal`, `jst`) and plain words (`row`, `tab`, `bar`, `add`, `log`, …).
   `shortTokens` reports every other part of three letters or fewer. Custom properties
   (`--hoard-<block>-<name>`) follow the same rules.
 - **Check**: `scripts/check-css-classes.mjs` reports `shortTokens` and `notBem` counts; it fails on them

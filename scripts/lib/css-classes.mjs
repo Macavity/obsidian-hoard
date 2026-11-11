@@ -42,7 +42,14 @@ export function checkCssClasses({ css, sources, allowlist }) {
 }
 
 /** Short name parts that stay allowed: widely known abbreviations. */
-export const ALLOWED_SHORT = ["btn", "img", "nav", "csv", "api", "id", "url", "th", "td", "tr", "sm", "md", "lg"];
+export const ALLOWED_SHORT = [
+	// established abbreviations
+	"btn", "img", "nav", "csv", "api", "id", "url", "th", "td", "tr", "sm", "md", "lg",
+	// proper names and formats
+	"svg", "mal", "jst",
+	// plain words
+	"row", "tab", "bar", "add", "log", "dot", "arc", "now", "tag", "map", "new", "day", "top", "box", "pin", "all", "due", "has",
+];
 
 /** `hoard-<block>[__<element>][--<modifier>]`: lowercase letters and digits, single hyphens inside each part. */
 export const BEM_PATTERN = /^hoard-[a-z0-9]+(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
