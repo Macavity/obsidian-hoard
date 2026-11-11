@@ -35,7 +35,16 @@ export interface SecretBackend {
 export type SecretValues = Partial<Record<SecretKey, string>>;
 
 export class SecretStore {
+	// a device without secure storage refuses every write; say so once per key, not on every save
+	private readonly warned = new Set<SecretKey>();
+
 	constructor(private readonly backend: SecretBackend) {}
+
+	private warnOnce(key: SecretKey): void {
+		if (this.warned.has(key)) return;
+		this.warned.add(key);
+		console.warn(`[Hoard] Could not store secret "${key}" in secret storage; keeping it in data.json.`);
+	}
 
 	private get(key: SecretKey): string {
 		return this.backend.getSecret(SECRET_SETTINGS[key]) ?? '';
@@ -66,7 +75,7 @@ export class SecretStore {
 				// reported below through the read-back
 			}
 			if (this.get(key) !== v) {
-				console.warn(`[Hoard] Could not store secret "${key}".`);
+				this.warnOnce(key);
 				failed.push(key);
 			}
 		}
@@ -91,11 +100,10 @@ export class SecretStore {
 			try {
 				this.backend.setSecret(SECRET_SETTINGS[key], v);
 			} catch {
-				console.warn(`[Hoard] Could not migrate secret "${key}" to secret storage.`);
-				continue;
+				// reported below through the read-back
 			}
 			if (this.get(key) === '') {
-				console.warn(`[Hoard] Secret "${key}" was not stored; keeping it in settings.`);
+				this.warnOnce(key);
 				continue;
 			}
 			delete record[key];

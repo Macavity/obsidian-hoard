@@ -46,6 +46,17 @@ describe('SecretStore', () => {
 		expect(rec).toEqual({ rawgApiKey: 'R' });
 		expect(warn).toHaveBeenCalled();
 	});
+	it('warns once per key while the storage keeps refusing', () => {
+		const b = backend();
+		b.setSecret = () => { throw new Error('Secure storage is not available.'); };
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const s = new SecretStore(b);
+		for (let i = 0; i < 3; i++) {
+			s.absorb({ rawgApiKey: 'R' });
+			s.write({ rawgApiKey: 'R' });
+		}
+		expect(warn).toHaveBeenCalledTimes(1);
+	});
 	it('keeps the key when the read-back is empty', () => {
 		const b = backend();
 		b.setSecret = () => {};

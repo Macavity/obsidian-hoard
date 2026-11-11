@@ -52,10 +52,7 @@ export class LocalStore {
 			this.data = emptyData();
 		}
 		// migrate keys left in data.json by older versions; persist right away so they are gone from disk
-		if (this.secrets?.absorb(this.data.settings)) {
-			this.data.secretsInStorage = true;
-			await this.save();
-		}
+		if (this.absorbSecrets()) await this.save();
 		return { schema: 2 };
 	}
 
@@ -122,7 +119,17 @@ export class LocalStore {
 		if (!this.writable) return;
 		this.dirty = false;
 		// settings can be filled by any path (settings save, restore, import): keys never reach data.json
-		if (this.secrets?.absorb(this.data.settings)) this.data.secretsInStorage = true;
+		this.absorbSecrets();
 		await this.plugin.saveData(this.data);
+	}
+
+	/**
+	 * Moves keys out of settings. The marker tells other devices that keys exist; older versions
+	 * wrote every key, empty ones included, so it is set only when storage really holds one.
+	 */
+	private absorbSecrets(): boolean {
+		if (!this.secrets?.absorb(this.data.settings)) return false;
+		if (!this.secrets.isEmpty()) this.data.secretsInStorage = true;
+		return true;
 	}
 }

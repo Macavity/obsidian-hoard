@@ -35,6 +35,12 @@ describe('LocalStore', () => {
 		await s.flush();
 		expect(p.data).toBe(newer);
 	});
+	it('drops empty keys of older versions without setting the marker', async () => {
+		const p = plugin({ schemaVersion: 2, settings: { omdbApiKey: '', tmdbApiKey: '', steamId: '', dateFormat: 'dmy' }, cache: {}, ui: {} });
+		const { store } = secrets();
+		await new LocalStore(p, store).load();
+		expect(p.data).toEqual({ schemaVersion: 2, settings: { dateFormat: 'dmy' }, cache: {}, ui: {} });
+	});
 	it('migrates keys out of data.json on load', async () => {
 		const p = plugin({ schemaVersion: 2, settings: { tmdbApiKey: 'T', dateFormat: 'dmy' }, cache: {}, ui: {} });
 		const { m, store } = secrets();
