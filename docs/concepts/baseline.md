@@ -29,4 +29,4 @@ The symbol property is enumerable so it survives object spread, but `Object.keys
   does not invalidate it; an id the index does not know yet (a note being created) counts as
   fresh. A stale copy keeps nothing; the next read builds a fresh one.
 
-Reading and game managers apply the same rules (`basedOnStored`, `afterWrite`).
+Reading and game managers apply the same rules (`basedOnStored`, `afterWrite`). Custom lists use the same idea on the whole note: a save is refused when the note no longer holds the state the list was loaded from ([custom-lists](../modules/custom-lists.md#foreign-edits)).

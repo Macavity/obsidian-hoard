@@ -73,7 +73,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Reading](modules/reading.md): how books and manga are modelled, written, imported and exported.
 - [Games](modules/games.md): how games are modelled, how Steam sync and cover resolution work.
 - [Upcoming](modules/upcoming.md): how the airtime tab derives its entries, counts what is due and writes schedules back.
-- [Custom lists](modules/custom-lists.md): how user-defined tables are stored as notes and edited inline.
+- [Custom lists](modules/custom-lists.md): how user-defined tables are stored as notes and edited inline, and why a foreign edit is never overwritten.
 - [Drafts](modules/drafts.md): how tagged lines in vault notes become add candidates and how the badge is counted.
 - [Dashboard](modules/dashboard.md): what the dashboard computes and from which managers.
 - [Log](modules/log.md): what the activity log records and how the Log tab reads it.
