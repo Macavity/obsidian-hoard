@@ -69,23 +69,17 @@ Run `pnpm check` before you push: typecheck, lint, unit tests and the fallow qua
 
 `pnpm lint` mirrors the Obsidian review bot: every `eslint-disable` needs a `-- reason`, some rules can never be disabled (`scripts/lib/eslint-disables.mjs`), and every class in `src/styles/*.css` must be referenced from `src/` (`scripts/check-css-classes.mjs`).
 
-## Review bot warnings
+## Community plugin scanner
 
-Obsidian's review bot lints the plugin with `eslint-plugin-obsidianmd` and its default options. Our `eslint.config.mjs` passes a local exception list (`sentenceCaseOptions`) to the sentence-case rules that the bot does not see, so `pnpm lint` stays green while the bot may still report warnings.
+Obsidian's plugin directory lints every submitted plugin with `eslint-plugin-obsidianmd`. Its adjustments to the recommended config are documented in the plugin's [configuration page](https://github.com/obsidianmd/eslint-plugin/blob/master/docs/configuration.md#community-plugin-scanner-configuration). What matters here:
 
-`pnpm lint:bot` runs the unmodified `recommendedWithLocalesEn` config over `src/` and prints the warning count per rule (information only, exit code 0; `--list` adds every flagged text). `test/eslintConfig.test.ts` fails when an `ignoreRegex` entry no longer covers any bot warning. Rule of thumb: rewrite a text so it is sentence case; add an exception only for the classes below.
+- It skips `**/i18n/**`, `**/scripts/**`, `**/test/**`, `**/docs/**` and all `.mjs` files, so locale texts and tooling are never linted.
+- It switches the three sentence-case rules off. Sentence case is our own convention, enforced by `pnpm lint` with the exceptions in `eslint.config.mjs` (`sentenceCaseOptions`); `test/eslintConfig.test.ts` fails when an `ignoreRegex` entry no longer covers any text.
+- For newly submitted plugins `no-static-styles-assignment`, `settings-tab/no-manual-html-headings`, `platform`, `no-unsupported-api` and a few more are errors.
 
-Remaining after the rewrite: 146 warnings (140 `sentence-case-locale-module`, 6 `sentence-case`), down from 174.
+`pnpm lint:bot` applies that documented configuration to the tracked sources and prints the findings per rule and level (information only, exit code 0; `--list` adds file and line). It is a reading of the documentation with the plugin version installed here, not the scanner itself, so it can lag behind. Current result: no error, one warning (`settings-tab/prefer-setting-definitions`, the declarative settings API, tracked separately).
 
-| Group | Warnings | Why it stays |
-|---|---|---|
-| Proper names, services, acronyms (Hoard, Steam, TMDB, RAWG, IGDB, Twitch, Jikan, Tenrai, MAL, Google Books, TV, TSV, ISBN, UTC, JST) and Steam's and Google's own UI wording | 67 | The rule only knows its default brands. Listed in `brands` / `ignoreWords`. |
-| Names of things in the interface, written as they are shown there: tabs (Watchlist, Upcoming, Reading, Games, …), statuses, types, buttons, fields, settings paths (`Settings → API → Games`), quoted labels | 45 | A help text that names a tab or a button must match what the user looks for on screen. |
-| Format placeholders and examples (URL, `0h`, `#hoard`, season mask `Season Name: N`) | 11 | The text a user types must match letter for letter. |
-| Label values equal to stored values (`TV Show`, `Korean TV Show`, `Plan to Read`) | 3 | `labels.ts` keys are the stored values; the display text of these three is kept identical. |
-| Lowercase captions under a value, units after a number, link fragment, literal field name (`eps`, `pages`, `chapters`, `left`, `watched`, `of`, `today`, `add your first book`, `Missing id field.`) | 20 | The text is composed in code around a number, another element or a sentence, so it cannot start with a capital letter without changing the layout. |
-
-Upper case used as design is written in sentence case and uppercased in CSS (`text-transform: uppercase`), for example the widget headers and the airtime countdown label.
+Sentence-case exceptions that stay, by reason: proper names, services and acronyms; names of things in the interface written as they are shown there (tabs, statuses, types, buttons, fields, settings paths, quoted labels); format placeholders and examples; label values equal to stored values; lowercase captions and units composed in code around a number. Upper case used as design is written in sentence case and uppercased in CSS (`text-transform: uppercase`).
 
 ## Pull requests
 
