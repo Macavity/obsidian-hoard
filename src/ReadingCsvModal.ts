@@ -16,7 +16,7 @@ const BOOK_EXPORT_COLUMNS = [
 	'progressUnit', 'pagesRead', 'totalPages', 'wordsRead', 'totalWords',
 	'chaptersRead', 'totalChapters',
 	'dateStarted', 'dateFinished', 'releaseDate', 'dateAdded',
-	'externalLink', 'googleBooksId',
+	'externalLink', 'googleBooksId', 'openLibraryId',
 ] as const;
 
 const MANGA_EXPORT_COLUMNS = [
@@ -52,6 +52,7 @@ const BOOK_IMPORT_FIELDS: CsvFieldDef[] = [
 	{ key: 'totalChapters', labelKey: 'csv.fields.totalChapters', coercion: 'int', autoDetect: ['totalchapters', 'total chapters', 'chapters', 'chapter count'] },
 	...COMMON_TAIL,
 	{ key: 'googleBooksId', labelKey: 'csv.fields.googleBooksId', coercion: 'string', autoDetect: ['googlebooksid', 'google books id', 'gbid', 'volumeid'] },
+	{ key: 'openLibraryId', labelKey: 'csv.fields.openLibraryId', coercion: 'string', autoDetect: ['openlibraryid', 'open library id', 'olid'] },
 ];
 
 const MANGA_IMPORT_FIELDS: CsvFieldDef[] = [
