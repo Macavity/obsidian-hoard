@@ -77,7 +77,8 @@ export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Gam
 		coverUrl: r.str(C.cover),
 		apiSource,
 		apiId,
-		steamAppId: r.str(G.steamAppId),
+		// a steam External ID identifies the app too, so sync matching works without the property
+		steamAppId: r.str(G.steamAppId) || (apiSource === 'steam' ? apiId : ''),
 		lastPlayed: r.strOrNull(G.lastPlayed),
 		storeUrl: r.str(G.storeUrl),
 		externalLink: r.str(C.url),
