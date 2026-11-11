@@ -104,7 +104,7 @@ pnpm test
 
 ## Release
 
-Releases go through a `release/<version>` branch and a pull request: `CHANGELOG.md` gets a section for the version, `pnpm version <patch|minor|major> --no-git-tag-version` bumps it, and the tag (the bare version, no `v`) is set on the merge commit on `main`. Pushing the tag starts `.github/workflows/release.yml`, which builds and attaches `main.js`, `manifest.json` and `styles.css` to the release and uses the changelog section as release notes.
+Releases go through a `release/<version>` branch and a pull request: `CHANGELOG.md` gets a section for the version, `pnpm version <patch|minor|major> --no-git-tag-version` bumps it, and merging the PR publishes: `.github/workflows/release.yml` sees the new version in `manifest.json`, runs typecheck, lint, test and build, tags the merge commit with the bare version (no `v`), and attaches `main.js`, `manifest.json` and `styles.css` to the release and uses the changelog section as release notes.
 
 ## License
 

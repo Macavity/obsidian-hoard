@@ -34,9 +34,9 @@ One-page cheat sheet for this plugin.
 ## Release
 
 1. `pnpm build && pnpm lint` pass, [release-readiness.md](release-readiness.md) checked
-2. `pnpm version <patch|minor|major> --no-git-tag-version`, commit, `git tag <version>`
-3. Push commits, then push the tag separately (tag = `manifest.json` version, no `v`)
-4. `.github/workflows/release.yml` builds, attests and attaches the assets
+2. `pnpm version <patch|minor|major> --no-git-tag-version` on a `release/<version>` branch, commit, PR
+3. Merge the PR once its checks are green; the merge publishes
+4. `.github/workflows/release.yml` reruns the gate, tags the merge commit (= `manifest.json` version, no `v`), builds, attests and attaches the assets
 
 Details: [versioning-releases.md](versioning-releases.md).
 

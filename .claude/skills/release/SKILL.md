@@ -1,17 +1,17 @@
 ---
 name: release
-description: Use when cutting a new release of this plugin — picking the next version, checking the code is release-ready, bumping, tagging and publishing through GitHub. Triggers on "release", "cut a release", "publish a new version", "bump the version", "tag 4.x.y", "what version should the next release be", "is this ready to release". Löst auch auf Deutsch aus - "Release machen", "neue Version veröffentlichen", "Version hochziehen", "welche Version", "können wir releasen".
+description: Use when cutting a new release of this plugin — picking the next version, checking the code is release-ready, bumping and publishing through a merged release PR. Triggers on "release", "cut a release", "publish a new version", "bump the version", "tag 4.x.y", "what version should the next release be", "is this ready to release". Löst auch auf Deutsch aus - "Release machen", "neue Version veröffentlichen", "Version hochziehen", "welche Version", "können wir releasen".
 ---
 
 # Release
 
-The GitHub workflow `.github/workflows/release.yml` builds, attests and publishes on a tag push. This skill covers everything before that push and the check afterwards. Background on the mechanism: `.claude/skills/obsidian-ops/references/versioning-releases.md`.
+Merging the release PR is the release. The GitHub workflow `.github/workflows/release.yml` runs on every push to `main` that changes `manifest.json`: when its `version` has no tag yet, it reruns the gate (typecheck, lint, test, build), creates the tag on that commit, attests and publishes. This skill covers everything before the merge and the check afterwards. Background on the mechanism: `.claude/skills/obsidian-ops/references/versioning-releases.md`.
 
 Three facts drive every step. Never work around them.
 
 1. **The release notes are the `## [<version>]` section of `CHANGELOG.md`.** The workflow extracts that section; when it is missing it warns and falls back to GitHub-generated notes. Commit messages play no role. A release without a section is the user's explicit choice (a quick hotfix), never a default.
-2. **The tag equals `manifest.json`'s `version`, no `v` prefix.** The workflow fails otherwise. `.npmrc` sets `tag-version-prefix=""`, so `pnpm version` tags correctly.
-3. **Nothing is committed on `main`.** CHANGELOG, README and the version bump go on a `release/<version>` branch and reach `main` through a PR. The tag is set afterwards on `main`'s merge result. So `pnpm version` always runs with `--no-git-tag-version`; without it, it commits and tags on its own.
+2. **The tag equals `manifest.json`'s `version`, no `v` prefix.** The workflow creates it from the manifest; a hand-pushed tag that differs fails the run.
+3. **Nothing is committed on `main`.** CHANGELOG, README and the version bump go on a `release/<version>` branch and reach `main` through a PR. Nobody tags by hand; the workflow tags the merge commit. So `pnpm version` always runs with `--no-git-tag-version`; without it, it commits and tags on its own.
 
 ## 1. Preconditions
 
@@ -65,13 +65,13 @@ Then the automated section of `.claude/skills/obsidian-ops/references/release-re
 
 Local checks on this machine, run by you, not asked: `pnpm mobile:smoke` (mobile layout via desktop emulation) and, if Obsidian is running with `hoard-test-vault`, `pnpm smoke`. Report the result; a failure is a gate failure.
 
-Never ask before the tag whether other platforms or a real phone or tablet were tested. Other devices install the plugin only from a published release (BRAT or the directory), so that test cannot happen before it. It is part of the check after the release (step 6).
+Never ask before the merge whether other platforms or a real phone or tablet were tested. Other devices install the plugin only from a published release (BRAT or the directory), so that test cannot happen before it. It is part of the check after the release (step 6).
 
 A gate failure is fixed in its own `fix:` branch and PR before the release, or the release is called off.
 
 ## 4. CHANGELOG and README
 
-**CHANGELOG.md** (Keep a Changelog style as used in this file: `## [<version>] - <YYYY-MM-DD>`, subsections `##### Added`, `##### Changed`, `##### Fixed`, `##### Removed`, `*` bullets, only subsections with content). If an `## [Unreleased]` section exists, compare it against the diff from step 2 and rename it; otherwise write the section. Every user-visible change since the last tag must be listed, nothing else (no refactors, tooling, fallow cleanups). Written for a plugin user, present tense, no commit hashes.
+**CHANGELOG.md** (Keep a Changelog style as used in this file: `## [<version>] - <YYYY-MM-DD>`, subsections `### Added`, `### Changed`, `### Fixed`, `### Removed`, `-` bullets, only subsections with content). If an `## [Unreleased]` section exists, compare it against the diff from step 2 and rename it; otherwise write the section. Every user-visible change since the last tag must be listed, nothing else (no refactors, tooling, fallow cleanups). Written for a plugin user, present tense, no commit hashes.
 
 **README.md**. For each item in the new section, check that the README still describes the behaviour correctly ("Where your data lives", "Set up the APIs", "Worth knowing", screenshots). Fix what is stale. "The README was updated in the feature PR" is a claim to verify by reading.
 
@@ -92,9 +92,9 @@ git commit -m "chore(release): <version>"
 
 Check: `git show --stat HEAD` lists only `package.json`, `manifest.json`, `versions.json`, and `git tag --list <version>` is empty.
 
-## 6. PR, merge, tag
+## 6. PR, merge = release
 
-Each outward step needs the user's explicit go-ahead (`CLAUDE.md`): push the branch, open the PR, merge it. Ask for each, naming the version.
+Each outward step needs the user's explicit go-ahead (`CLAUDE.md`): push the branch, open the PR, merge it. Ask for each, naming the version. The merge publishes; there is no later step to ask about.
 
 ```bash
 git push -u origin release/<version>
@@ -104,38 +104,30 @@ git push -u origin release/<version>
 gh pr create --base main --title "chore(release): <version>" --body "<the CHANGELOG section>"
 ```
 
-Merge the release PR as a **merge commit** (`gh pr merge --merge`, or "Create a merge commit" in the UI), like every other PR in this repo. Never a rebase merge: it puts each release commit on `main` separately, `mergeCommit` is then the last of them and `$MERGE^1` is the previous release commit, not the old `main`, so the check below fails.
-
-After the user merged the PR (or told you to merge it), tag the PR's merge commit, not whatever `main` points at now. Another PR may have merged in between; its changes are not in the approved notes or the gate. Tagging is not a commit on `main`:
+Before merging, check that nothing reached `main` after the gate. Those commits would be inside the release but neither gated nor described:
 
 ```bash
-git switch main && git pull --ff-only
-MERGE=$(gh pr view release/<version> --json mergeCommit -q .mergeCommit.oid)
-git rev-parse HEAD                      # compare with $MERGE
-git log --oneline <GATED>.."$MERGE"^1   # merged between the gate and the release PR: must be empty
-git log --oneline "$MERGE"..HEAD        # merged after the release PR: not part of this release
-git log --oneline "$MERGE"^1.."$MERGE"  # the release commits only; $MERGE^1 is main before the PR
-git show "$MERGE":manifest.json | jq -r .version   # must equal <version>
-git tag <version> "$MERGE"
+git fetch origin
+git log --oneline <GATED>..origin/main   # must be empty
 ```
 
-`$MERGE^1` is `main` just before the release PR landed, so the first list holds commits that reached `main` after the gate and are inside `$MERGE`, but were neither gated nor described. If it is not empty, stop: tell the user, update the CHANGELOG and rerun the gate on a new release branch. Commits in the second list came after `$MERGE`; tag `$MERGE` anyway and tell the user they are not part of this release.
+Not empty: stop, tell the user, update the CHANGELOG and rerun the gate on the release branch (rebased on `origin/main`).
 
-Pushing the tag publishes the release; ask once more, then push it on its own:
-
-```bash
-git push origin <version>
-```
+Merge only after the PR checks are green; `main` has no required checks, so GitHub merges a PR whose CI is still running. Merge as a **merge commit** (`gh pr merge --merge`, or "Create a merge commit" in the UI), like every other PR in this repo. Never a rebase merge: each release commit then lands on `main` separately.
 
 Then verify, do not assume:
 
 ```bash
-gh run list --workflow=release.yml -L 1
-gh run watch                   # until the run completes
-gh release view <version>      # title = version, assets main.js, manifest.json, styles.css, body = CHANGELOG section
+gh run list --workflow=release.yml -L 1   # the run for the merge commit
+gh run watch <run-id>                     # until it completes
+gh release view <version>                 # title = version, assets main.js, manifest.json, styles.css, body = CHANGELOG section
+git fetch --tags && git rev-parse <version>^{commit}   # equals the PR's merge commit
 ```
 
-Workflow did not fire: follow "Pushing tags so the workflow actually fires" in `versioning-releases.md` (run the workflow from the Actions tab with the **tag** as ref; branch refs are rejected). Never create the release by hand as a first resort; that skips the build attestation.
+- **Run skipped the release job** ("Tag <version> already exists"): the version was released before; the bump was wrong.
+- **Run failed** on a transient error: `gh run rerun <run-id> --failed`; a rerun builds the same commit.
+- **Gate failed in the run**: nothing was published. Fix it in a `fix:` PR that also adds the fix to the version's CHANGELOG section, merge, then start the workflow from the Actions tab (`workflow_dispatch`, ref `main`); it tags `main`'s head.
+- **Workflow did not fire**: see "Release workflow did not fire" in `versioning-releases.md`. Never create the release by hand; that skips the build attestation.
 
 Report the release URL and the asset list to the user. Then hand over the cross-device test: install the release on the other desktop platforms and a real phone or tablet (BRAT or the directory) and try it with a large vault. A regression found there gets a patch release through this skill, not a fix to the published tag.
 
@@ -143,11 +135,12 @@ Report the release URL and the asset list to the user. Then hand over the cross-
 
 - "Tiny change, skip the gate." The gate runs on every release. Skip only on the user's instruction, and say so.
 - "I'll write the notes into the tag or commit message instead." The workflow reads only `CHANGELOG.md`.
-- "It's a hotfix, skip the changelog." Only when the user says so; one `##### Fixed` line takes a minute.
+- "It's a hotfix, skip the changelog." Only when the user says so; one `### Fixed` line takes a minute.
 - "The README was touched in the PR, it's current." Read the sections named in step 4 against the change.
 - "It's only the version bump, I'll commit it on `main`." Never; release branch and PR.
-- "I'll tag the release branch, it has everything." Tags go on the release PR's merge commit on `main`.
-- "The user said release, that covers the push." Version, CHANGELOG and README are confirmed first; the push is confirmed separately.
+- "I'll tag it myself, it's faster." The workflow tags the merge commit; a hand tag can point at a commit the PR never covered.
+- "The user said release, that covers the merge." Version, CHANGELOG and README are confirmed first; push, PR and merge each separately.
+- "CI is still running, the merge button works." The merge publishes; wait for green checks.
 - "CI was green on the PR." The merge commit is a different tree; run the gate on `main`.
 
 Red-flag phrases: "should be fine", "I'll just", "basically the same as the PR", "no need to wait for the run".
