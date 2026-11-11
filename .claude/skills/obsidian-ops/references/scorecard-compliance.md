@@ -138,7 +138,7 @@ jobs:
             main.js styles.css manifest.json
 ```
 
-Then cut releases by pushing a tag (e.g. `git tag 0.1.0 && git push origin 0.1.0`) instead of uploading files manually. The workflow attaches the assets and registers the attestation, which the scorecard checks against the source repo for byte-for-byte reproducibility.
+Then cut releases through the workflow (this repo: merging a release PR that bumps `manifest.json`; the snippet above: pushing a tag) instead of uploading files manually. The workflow attaches the assets and registers the attestation, which the scorecard checks against the source repo for byte-for-byte reproducibility.
 
 ### Build verification failed (non-reproducible build)
 

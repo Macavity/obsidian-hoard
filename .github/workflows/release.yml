@@ -1,14 +1,19 @@
 name: Release
 
+# Merging a release PR is the release approval: a push to main that changes
+# manifest.json to a version without a tag runs the gate, creates the tag on
+# that commit and publishes. Pushing a tag by hand still works; workflow_dispatch
+# is the recovery path (it builds whatever ref you select from the Actions tab).
 on:
   push:
-    tags:
-      - "*"
-  # Manual trigger as a recovery path. Useful if a tag push fails to fire the
-  # workflow (e.g. when commits and tags are pushed together and GitHub
-  # processes the tag webhook before indexing the workflow file). The job will
-  # build whatever ref you select from the Actions tab.
+    branches: [main]
+    paths: [manifest.json]
+    tags: ["*"]
   workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -16,7 +21,38 @@ permissions:
   attestations: write
 
 jobs:
+  check:
+    name: Decide whether to release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.decide.outputs.version }}
+      release: ${{ steps.decide.outputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+      # manifest.json is the source of truth for the version, so the tag and
+      # the release title always match what Obsidian's plugin loader sees.
+      - name: Compare manifest version with tags
+        id: decide
+        run: |
+          VERSION=$(jq -r .version manifest.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          RELEASE=true
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match manifest.json version $VERSION"
+            exit 1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = branch ] \
+            && git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null; then
+            echo "Tag $VERSION already exists; nothing to release"
+            RELEASE=false
+          fi
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+
   release:
+    needs: check
+    if: needs.check.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,18 +74,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Gate: main has no required checks, so a release PR can be merged
+      # before its CI finished. Nothing is published unless this passes.
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
       - name: Build
         run: pnpm build
 
-      # manifest.json is the source of truth for the plugin's version, so the
-      # release tag/title always matches what Obsidian's plugin loader sees.
-      # This makes the workflow behave identically whether triggered by a tag
-      # push (github.ref_name == the tag) or workflow_dispatch from a branch
-      # (github.ref_name == the branch, which would otherwise title the
-      # release after the branch name).
-      - name: Read version from manifest
+      - name: Read version
         id: version
-        run: echo "version=$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=${{ needs.check.outputs.version }}" >> "$GITHUB_OUTPUT"
 
       # Collect the release assets from dist/ that actually exist. main.js and manifest.json
       # are always present; styles.css is optional, so a plugin that needs no
@@ -106,7 +147,8 @@ jobs:
             echo "Release $VERSION already exists; re-uploading assets"
             gh release upload "$VERSION" $ASSETS --clobber
           else
-            # Release notes are the CHANGELOG.md section for this version,
+            # Without an existing tag, --target creates it on the commit this
+            # run built. Release notes are the CHANGELOG.md section for this version,
             # followed by a Full Changelog compare link against the previous
             # tag (when one exists).
             PREV_TAG=$(git tag --sort=-creatordate --merged HEAD | grep -v "^${VERSION}$" | head -n 1 || true)
@@ -122,6 +164,7 @@ jobs:
             fi
             gh release create "$VERSION" \
               --title="$VERSION" \
+              --target "$GITHUB_SHA" \
               --notes "$NOTES" \
               $ASSETS
           fi
