@@ -28,7 +28,7 @@ describe('PosterService keyless (Cinemeta)', () => {
 	it('prefers the series record over a foreign movie record when the kind is unknown', async () => {
 		const getCinemetaDetails = vi.fn((_id: string, kind: string) =>
 			Promise.resolve({ posterUrl: kind === 'movie' ? 'https://img/foreign.jpg' : 'https://img/series.jpg' }));
-		const { svc } = setup({ getCinemetaDetails });
+		const { svc } = setup({ getCinemetaDetails: getCinemetaDetails as never });
 		const url = await svc.enqueue(title({ type: 'Doc', externalLink: 'https://www.imdb.com/title/tt0903747/' }));
 		expect(url).toBe('https://img/series.jpg');
 		expect(getCinemetaDetails.mock.calls[0]).toEqual(['tt0903747', 'tv']);
