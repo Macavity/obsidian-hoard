@@ -25,10 +25,13 @@ const until = async (done: () => boolean) => { for (let i = 0; i < 100 && !done(
 function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; manga?: unknown[]; files?: string[]; root?: string } = {}) {
 	const files = new Set(over.files ?? []);
 	const written: Record<string, string> = {};
-	const adapter = {
-		exists: vi.fn((p: string) => Promise.resolve(files.has(p))),
-		mkdir: vi.fn((p: string) => (p === 'boom/backups' ? Promise.reject(new Error('exists')) : Promise.resolve(void files.add(p)))),
-		write: vi.fn((p: string, d: string) => { written[p] = d; return Promise.resolve(); }),
+	const adapter = { write: vi.fn(() => Promise.resolve()) };
+	const vault = {
+		adapter,
+		getFolderByPath: vi.fn((p: string) => (files.has(p) ? { path: p } : null)),
+		createFolder: vi.fn((p: string) => (p === 'boom/backups' ? Promise.reject(new Error('exists')) : Promise.resolve(void files.add(p)))),
+		getAbstractFileByPath: vi.fn((p: string) => (files.has(p) ? { path: p } : null)),
+		create: vi.fn((p: string, d: string) => { written[p] = d; files.add(p); return Promise.resolve({ path: p }); }),
 	};
 	const titles = (over.titles ?? []) as HoardTitle[];
 	const dm = {
@@ -69,9 +72,9 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 		importProgress: null as unknown,
 		app: { workspace: { getLeavesOfType: () => [{ view: {} }] } },
 	};
-	const app = { vault: { adapter } };
+	const app = { vault };
 	const tab = new HoardSettingsTab(app as never, plugin as never);
-	return { tab: tab as unknown as Internals, plugin, dm, reading, adapter, written, settings };
+	return { tab: tab as unknown as Internals, plugin, dm, reading, app, adapter, written, settings };
 }
 
 beforeEach(() => { Notice.shown.length = 0; vi.stubGlobal('activeDocument', document); });
@@ -208,6 +211,13 @@ describe('HoardSettingsTab exportBackupToVault', () => {
 		const { tab, written } = makeTab({ root: 'boom', files: ['boom/backups/b.json', 'boom/backups/b-2.json'] });
 		await tab.exportBackupToVault('b.json', '{}');
 		expect(Object.keys(written)).toEqual(['boom/backups/b-3.json']);
+	});
+	it('writes through the vault API, not the adapter', async () => {
+		const { tab, app } = makeTab();
+		const adapterWrite = vi.spyOn(app.vault.adapter, 'write');
+		await tab.exportBackupToVault('b.json', '{}');
+		expect(adapterWrite).not.toHaveBeenCalled();
+		expect(app.vault.getAbstractFileByPath('Hoard/backups/b.json')).not.toBeNull();
 	});
 	it('handles names without an extension', async () => {
 		const { tab, written } = makeTab({ files: ['Hoard/backups', 'Hoard/backups/b'] });

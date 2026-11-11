@@ -7,6 +7,7 @@ import type { LocalStore } from './storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { ImportContext } from './import/watchlog/schema1Types';
 import { withoutCredentials } from './jikanBase';
+import { SECRET_KEYS } from './storage/SecretStore';
 
 export interface BackupManagers {
 	dataManager: DataManager;
@@ -20,7 +21,7 @@ export interface BackupManagers {
 	};
 }
 
-/** JSON backup. `shared` is the base config, `local` the device-local settings including API keys. */
+/** JSON backup. `shared` is the base config, `local` the device-local settings without secrets (API keys live in Obsidian's secret storage). */
 export interface BackupFile {
 	version: 2;
 	exportedAt: string;
@@ -31,7 +32,7 @@ export interface BackupFile {
 		games: GamesData;
 	};
 	shared: Record<string, unknown>;
-	/** Device-local settings, API keys included; restored into data.json only. */
+	/** Device-local settings without secrets; keys of an old backup only fill empty secret storage on restore. */
 	local: Record<string, unknown>;
 	history: HistoryEntry[];
 }
@@ -39,6 +40,14 @@ export interface BackupFile {
 const isRecord = (v: unknown): v is Record<string, unknown> =>
 	typeof v === 'object' && v !== null && !Array.isArray(v);
 
+/** A key restored or imported but not yet moved into secret storage must not reach the file either. */
+function withoutSecretSettings(settings: Record<string, unknown>): Record<string, unknown> {
+	const out = structuredClone(settings);
+	for (const k of SECRET_KEYS) delete out[k];
+	return out;
+}
+
+/** Snapshot of all data; `local` holds device-local settings without secrets (they live in secret storage). */
 export function buildBackup(m: BackupManagers): BackupFile {
 	return {
 		version: 2,
@@ -50,7 +59,7 @@ export function buildBackup(m: BackupManagers): BackupFile {
 			games: m.gameDataManager.exportSnapshot(),
 		},
 		shared: m.dataManager.getSharedSettings(),
-		local: structuredClone(m.storage.local.data.settings),
+		local: withoutSecretSettings(m.storage.local.data.settings),
 		history: m.historyManager.exportEntries(),
 	};
 }
@@ -102,7 +111,7 @@ export function parseBackup(text: string): { backup: BackupFile } | { error: Bac
 export async function restoreBackup(m: BackupManagers, b: BackupFile): Promise<void> {
 	const dm = m.dataManager;
 	await dm.restoreSharedSettings(b.shared);
-	// secrets go to data.json only, never through the base; shared keys in `local` are ignored
+	// keys of an old backup land via LocalStore.save in secret storage (fill-only), never in data.json; shared keys are ignored
 	const { local } = m.storage;
 	for (const [k, v] of Object.entries(b.local)) {
 		if (SHARED_SETTING_KEYS.includes(k) || UNSAFE_KEYS.has(k)) continue;

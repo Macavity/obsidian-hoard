@@ -45,12 +45,15 @@ sequenceDiagram
 
 ## Steps
 
-1. **`LocalStore.load`** reads `data.json`. A file from a newer plugin version, or a WatchLog
+1. **`LocalStore.load`** reads `data.json` and, when it still holds API keys from an older version, moves them into secret storage and saves right away (migration, see [shared vs local](../concepts/shared-vs-local.md)). A file from a newer plugin version, or a WatchLog
    schema-1 file (no `schemaVersion`, has `titles`) in Hoard's own folder, makes the store read-only
    for the session (such a file is never overwritten; for WatchLog Hoard starts empty); both show a
    sticky Notice, since device settings typed in that session are not saved.
-2. **`loadSettings`** composes defaults + local (+ shared, empty for now) and mirrors the date
-   format into `types.ts`; the card-size CSS variable is set before any grid renders.
+2. **`loadSettings`** composes defaults + local + secret storage (+ shared, empty for now) and mirrors the date
+   format into `types.ts`; the card-size CSS variable is set before any grid renders. Then
+   `maybeShowSecretsNotice` shows a sticky one-time Notice (flag `hoard-secrets-notice` in
+   `app.saveLocalStorage`) when `data.json` carries the `secretsInStorage` marker but this device's
+   secret storage is empty: keys do not sync.
 3. Services and UI are registered: `ApiService` with the keys, managers get the `HistoryManager`,
    `History.md` is loaded, the 60 s airtime scheduler starts, view, commands, `WidgetRenderer`,
    settings tab and status bar are registered.

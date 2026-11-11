@@ -38,7 +38,7 @@ type-checked); a JSON parse error puts the list into `corruptLists`,
 shows a Notice, and `saveList` refuses to overwrite it. File name = list name, rename = vault
 rename. Saves are serialised per list so table and notes writes cannot clobber each other.
 `saveList` replaces only the `## Data` block (appends one if missing) and `saveNotes` only the
-`## Notes` body; title, notes and any hand-written sections stay as they are on disk. A new list
+`## Notes` body, both through `vault.process`, never a separate read and modify; title, notes and any hand-written sections stay as they are on disk. A new list
 is created with the full format. Tab order is the device-local `customListTabOrder`; default
 columns for new lists are the shared `defaultCustomColumns`.
 

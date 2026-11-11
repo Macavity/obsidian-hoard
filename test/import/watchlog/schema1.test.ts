@@ -108,6 +108,14 @@ describe('importWatchLogData', () => {
 		expect(reopened.data.settings.tmdbApiKey).toBe('mine');
 	});
 
+	it('moves imported API keys into secret storage, never into data.json', async () => {
+		const { run, f, local } = await setupSchema1(watchLogData, {}, true);
+		await run();
+		expect(f.secrets.get('hoard-tmdb-api-key')).toBe('tmdb-SecretValue');
+		expect(JSON.stringify(f.plugin.data)).not.toMatch(/SecretValue|tmdbApiKey/);
+		expect(local.data.settings.tmdbApiKey).toBeUndefined();
+	});
+
 	it('keeps secrets and device state local and translates ids', async () => {
 		const { run, f, local } = await setupSchema1(watchLogData, {});
 		await run();

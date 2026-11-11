@@ -10,6 +10,7 @@ source:
   - src/types.ts
   - src/main.ts
   - src/ui/problemText.ts
+  - src/storage/SecretStore.ts
 source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
 ---
 
@@ -18,6 +19,9 @@ source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
 One `HoardPluginSettings` object (`plugin.settings`), composed from defaults, `data.json` and the
 base and persisted back by the whitelist; that split, the backfills in `composeSettings` and the
 diff-only write in `persistSettings` are in [shared vs local](../concepts/shared-vs-local.md).
+API keys, Steam id, IGDB credentials and `jikanBaseUrl` are not in `data.json` but in Obsidian's secret
+storage: `loadSettings` merges them in, `saveSettings` writes them through `SecretStore`
+([shared vs local](../concepts/shared-vs-local.md)).
 Reading and games keep their own settings objects in their managers, split the same way
 (`splitNested`). `main.ts` wraps the two in `loadSettings` / `saveSettings`; a changed TMDB or
 OMDb key also re-arms "no key" API checks; a synced base change re-composes and dispatches
@@ -58,5 +62,6 @@ are colour-only.
 2. A backfill in `composeSettings` only if old or hand-edited data can be invalid.
 3. A `Setting` or card in the matching `render*` of the tab, saving through `plugin.saveSettings()`.
 4. Synced across devices? Add the key to `SHARED_SETTING_KEYS` (or `NESTED_SHARED_KEYS` for
-   reading/games). Never a secret. Default is device-local.
+   reading/games). Never a secret. Default is device-local. A new key or credential goes into
+   `SECRET_SETTINGS` ([SecretStore.ts](../../src/storage/SecretStore.ts)) instead.
 5. Needs a live effect? Dispatch `hoard-data-changed` as neighbouring settings do.

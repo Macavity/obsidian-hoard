@@ -1,6 +1,7 @@
 // FakeApp plus WatchLog data; `run` imports it through importWatchLogData below the Hoard root.
 import { createFakeApp } from '../../fakes/fakeApp';
 import { detectRoot } from '../../../src/storage/VaultLayout';
+import { SecretStore } from '../../../src/storage/SecretStore';
 import { LocalStore } from '../../../src/storage/LocalStore';
 import { importContext, typeNames } from './helpers';
 import type { OriginalSource } from '../../../src/import/watchlog/detect';
@@ -16,9 +17,10 @@ export const WATCHLOG_NOTES: Record<string, string> = {
 	'Lists/Shopping.md': '# Shopping\n\n## Notes\n\n\n## Data\n```json\n{}\n```\n',
 };
 
-export function setupSchema1(data: unknown, files: Record<string, string>) {
+/** `withSecrets`: the LocalStore absorbs API keys into the fake secret storage (`f.secrets`). */
+export function setupSchema1(data: unknown, files: Record<string, string>, withSecrets = false) {
 	const f = createFakeApp(files);
-	const local = new LocalStore(f.plugin);
+	const local = new LocalStore(f.plugin, withSecrets ? new SecretStore(f.app.secretStorage) : undefined);
 
 	async function run() {
 		const ctx = importContext(f, local, (await detectRoot(f.app.vault)) ?? 'Hoard', typeNames(data as WatchLogData));
