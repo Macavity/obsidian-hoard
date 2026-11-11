@@ -180,6 +180,16 @@ export default defineConfig([
     }
   },
   {
+    // Obsidian guideline: no inline styles from code.
+    files: ["src/**/*.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", {
+        selector: "MemberExpression[property.name='style']",
+        message: "Use CSS classes or setCssProps with custom properties.",
+      }],
+    },
+  },
+  {
     // Tests run in Node/happy-dom, not in the plugin sandbox: obsidianmd rules off.
     files: ["test/**/*.ts"],
     rules: Object.fromEntries(

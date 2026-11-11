@@ -338,3 +338,7 @@ button.hoard-reading__manage-btn {
   width: var(--hoard-rows-view-card-width, 160px);
 }
 
+
+.hoard-btn.hoard-reading__reset-btn.is-hidden {
+  display: none;
+}

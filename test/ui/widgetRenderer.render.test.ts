@@ -94,10 +94,10 @@ describe('hoard-todo widget', () => {
 		const cb = el.querySelector<HTMLInputElement>('.hoard-widget__checkbox')!;
 		cb.checked = true;
 		cb.dispatchEvent(new Event('change'));
-		expect(el.querySelector<HTMLElement>('.hoard-widget__title')!.style.textDecoration).toBe('line-through');
+		expect(el.querySelector<HTMLElement>('.hoard-widget__title')!.classList.contains('is-done')).toBe(true);
 		cb.checked = false;
 		cb.dispatchEvent(new Event('change'));
-		expect(el.querySelector<HTMLElement>('.hoard-widget__title')!.style.textDecoration).toBe('');
+		expect(el.querySelector<HTMLElement>('.hoard-widget__title')!.classList.contains('is-done')).toBe(false);
 	});
 
 	it('full widget: all watched shows the check label and no episode checkbox', () => {

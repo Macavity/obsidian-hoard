@@ -20,8 +20,14 @@ describe("inline geometry", () => {
 	});
 
 	it("passes only custom properties to setCssProps", () => {
-		const PLAIN = /setCssProps\(\{[^}]*?(?<![-\w'"])(height|width|top|left)\s*:/;
-		const hits = files().filter((p) => !p.endsWith(".test.ts") && PLAIN.test(readFileSync(p, "utf8")));
+		const hits = files().filter((p) => !p.endsWith(".test.ts") && /setCssProps\(\{\s*(?!\s|['"]--|\[)[^}]/.test(readFileSync(p, "utf8")));
+		expect(hits).toEqual([]);
+	});
+});
+
+describe("element.style", () => {
+	it("has no element.style access left", () => {
+		const hits = files().filter((p) => !p.endsWith(".test.ts") && /\.style\b(?!\w)/.test(readFileSync(p, "utf8").replace(/\/\/.*|\/\*[\s\S]*?\*\//g, "")));
 		expect(hits).toEqual([]);
 	});
 });

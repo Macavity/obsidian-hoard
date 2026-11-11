@@ -175,7 +175,7 @@ export class ReadingManageColumnsModal extends Modal {
 				attr: { type: 'text', placeholder: t('reading.columns.optionValues') },
 			});
 			optsInput.value = col.options.join(', ');
-			optsInput.style.visibility = col.type === 'select' ? '' : 'hidden';
+			optsInput.toggleClass('is-invisible', col.type !== 'select');
 			optsInput.addEventListener('change', () => {
 				const parsed = optsInput.value
 					.split(',')
@@ -186,7 +186,7 @@ export class ReadingManageColumnsModal extends Modal {
 
 			typeSelect.addEventListener('change', () => {
 				const type = typeSelect.value as ReadingCustomColumn['type'];
-				optsInput.style.visibility = type === 'select' ? '' : 'hidden';
+				optsInput.toggleClass('is-invisible', type !== 'select');
 				void this.updateColumn({ ...col, type });
 			});
 
@@ -243,7 +243,7 @@ export class ReadingManageColumnsModal extends Modal {
 			},
 		});
 		const refreshOpts = (): void => {
-			optsInput.style.display = typeSelect.value === 'select' ? '' : 'none';
+			optsInput.toggleClass('is-hidden', typeSelect.value !== 'select');
 		};
 		typeSelect.addEventListener('change', refreshOpts);
 		refreshOpts();

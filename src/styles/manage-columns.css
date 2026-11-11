@@ -340,3 +340,11 @@ button.hoard-color-picker__dot {
   text-align: center;
 }
 
+
+.hoard-reading-columns__options-input.is-invisible {
+  visibility: hidden;
+}
+
+.hoard-reading-columns__add-options.is-hidden {
+  display: none;
+}

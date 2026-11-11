@@ -134,7 +134,11 @@ describe('WidgetRenderer', () => {
 		const cb = el.querySelector<HTMLInputElement>('.hoard-widget__checkbox')!;
 		cb.checked = true;
 		cb.dispatchEvent(new Event('change'));
-		expect(el.querySelector<HTMLElement>('.hoard-widget__title')!.style.textDecoration).toBe('line-through');
+		const title = el.querySelector<HTMLElement>('.hoard-widget__title')!;
+		expect(title.classList.contains(('is-done'))).toBe(true);
+		cb.checked = false;
+		cb.dispatchEvent(new Event('change'));
+		expect(title.classList.contains(('is-done'))).toBe(false);
 	});
 
 	it('hoard: a movie checkbox writes the watched state and re-renders', async () => {

@@ -185,8 +185,7 @@ export class WidgetRenderer {
 		taskCb.addEventListener('change', () => {
 			const titleSpan = mainRow.querySelector<HTMLElement>('.hoard-widget__title');
 			if (titleSpan) {
-				titleSpan.style.textDecoration = taskCb.checked ? 'line-through' : '';
-				titleSpan.style.opacity = taskCb.checked ? '0.5' : '';
+				titleSpan.toggleClass('is-done', taskCb.checked);
 			}
 		});
 
@@ -262,8 +261,7 @@ export class WidgetRenderer {
 		taskCb.addEventListener('change', () => {
 			const titleSpan = row.querySelector<HTMLElement>('.hoard-widget__title');
 			if (titleSpan) {
-				titleSpan.style.textDecoration = taskCb.checked ? 'line-through' : '';
-				titleSpan.style.opacity = taskCb.checked ? '0.5' : '';
+				titleSpan.toggleClass('is-done', taskCb.checked);
 			}
 		});
 

@@ -79,3 +79,8 @@
   padding: 4px 8px;
 }
 
+
+.hoard-widget__title.is-done {
+  text-decoration: line-through;
+  opacity: 0.5;
+}

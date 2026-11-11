@@ -437,7 +437,7 @@ export class ReadingTab {
 			this.filterBtn.createSpan({ cls: 'hoard-reading__filter-badge', text: String(count) });
 		}
 		if (this.resetBtn) {
-			this.resetBtn.style.display = count > 0 ? '' : 'none';
+			this.resetBtn.toggleClass('is-hidden', count === 0);
 		}
 	}
 

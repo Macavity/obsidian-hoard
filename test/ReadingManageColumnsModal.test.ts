@@ -106,3 +106,22 @@ describe('manage columns dialog names', () => {
 		expect(shown).toContain(t('reading.columns.renamedSkipped', { count: 1 }));
 	});
 });
+
+describe('manage columns option inputs', () => {
+	it('hides the options input of a non-select column without taking its space, and follows the type', async () => {
+		const { el } = await openModal();
+		const [text] = Array.from(el.querySelectorAll<HTMLInputElement>('.hoard-reading-columns__options-input'));
+		expect(text!.classList.contains('is-invisible')).toBe(true);
+		expect(text!.classList.contains('is-hidden')).toBe(false);
+	});
+
+	it('shows the add-row options input only for the select type', async () => {
+		const { el } = await openModal();
+		const opts = el.querySelector<HTMLElement>('.hoard-reading-columns__add-options')!;
+		const type = el.querySelector<HTMLSelectElement>('.hoard-reading-columns__add-type')!;
+		expect(opts.classList.contains('is-hidden')).toBe(true);
+		type.value = 'select';
+		type.dispatchEvent(new Event('change'));
+		expect(opts.classList.contains('is-hidden')).toBe(false);
+	});
+});

@@ -492,8 +492,6 @@ export class HoardView extends ItemView {
 			if (Date.now() - renderTime > 300) return;
 			const computed = window.getComputedStyle(el).overflow;
 			if (computed === 'hidden') {
-				// strip any inline override so the class rule below wins without !important
-				el.setCssProps({ overflow: '' });
 				el.addClass('hoard-force-overflow-auto');
 			}
 		});
