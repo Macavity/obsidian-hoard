@@ -180,12 +180,15 @@ describe('resolvePick', () => {
 		expect(apply.mock.calls[0]![0].animeIds).toBeUndefined();
 	});
 
-	it('applies nothing when the detail record is missing', async () => {
+	it('falls back to the search row when the detail record is missing', async () => {
 		const { plugin, api } = makePlugin({});
 		api.getOmdbTvDetails.mockResolvedValue(null);
-		const apply = vi.fn();
-		expect(await resolvePick(plugin, media('tv'), () => true, apply)).toBe(true);
-		expect(apply).not.toHaveBeenCalled();
+		const apply = vi.fn<(p: TitlePick) => void>();
+		const row = { ...media('tv'), title: 'Row' };
+		expect(await resolvePick(plugin, row, () => true, apply)).toBe(true);
+		expect(apply.mock.calls[0]![0]).toMatchObject({ title: 'Row' });
+		expect(await resolvePick(plugin, row, () => false, apply)).toBe(false);
+		expect(apply).toHaveBeenCalledTimes(1);
 	});
 
 	it('reports a stale selection and applies nothing', async () => {

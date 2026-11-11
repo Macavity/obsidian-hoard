@@ -129,7 +129,7 @@ function pickFromRow(result: TitleSearchResult): TitlePick {
 
 /**
  * Fetches the details for a selected row and hands the resulting pick to apply. Returns false when
- * the selection went stale and the form must not be touched. A missing detail record applies nothing.
+ * the selection went stale and the form must not be touched. A missing detail record or a failed fetch applies the search row.
  */
 export async function resolvePick(
 	plugin: HoardPlugin,
@@ -147,7 +147,7 @@ export async function resolvePick(
 	try {
 		const full = await fetchMediaDetails(plugin, result);
 		if (!isCurrent()) return false;
-		if (full) apply(withPoster(pickFromMedia(full), full, result));
+		apply(full ? withPoster(pickFromMedia(full), full, result) : withPoster(pickFromRow(result), result));
 	} catch {
 		if (!isCurrent()) return false;
 		apply(withPoster(pickFromRow(result), result));
