@@ -19,12 +19,9 @@ describe('externalId', () => {
     expect(parseExternalId('steam:1145360')).toEqual({ source: 'steam', id: '1145360' });
     expect(parseExternalId('steam:app:1')).toBeNull();
   });
-  it('derives openlibrary and steam from links', () => {
-    expect(externalIdFromLink('https://openlibrary.org/works/OL27448W/The_Hobbit')).toEqual({ source: 'openlibrary', id: 'OL27448W' });
-    expect(externalIdFromLink('https://openlibrary.org/works/OL27448W')).toEqual({ source: 'openlibrary', id: 'OL27448W' });
-    expect(externalIdFromLink('https://openlibrary.org/works/OL27448M')).toBeNull();
-    expect(externalIdFromLink('https://store.steampowered.com/app/1145360/Hades/')).toEqual({ source: 'steam', id: '1145360' });
-    expect(externalIdFromLink('https://store.steampowered.com/app/abc/')).toBeNull();
+  it('does not derive openlibrary or steam from links (title sources only)', () => {
+    expect(externalIdFromLink('https://openlibrary.org/works/OL27448W/The_Hobbit')).toBeNull();
+    expect(externalIdFromLink('https://store.steampowered.com/app/1145360/Hades/')).toBeNull();
   });
   it.each(['openlibrary:OL27448W', 'steam:1145360'])('round-trips %s', (s) => expect(formatExternalId(parseExternalId(s)!)).toBe(s));
 });

@@ -24,8 +24,9 @@ survives sync and hand edits: `source:id` or `source:kind:id`.
 
 [externalId.ts](../../src/storage/externalId.ts): `parseExternalId` (null on unknown source,
 missing kind, or an id outside `[\w-]+`), `formatExternalId`, and `externalIdFromLink` which derives
-the identity from a pasted IMDb, TMDB, MyAnimeList, AniList, Open Library (`/works/OL…W`) or Steam
-store (`/app/<id>`) URL, one small matcher per host (`LINK_MATCHERS`).
+the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL, one small matcher per host
+(`LINK_MATCHERS`). Only title sources derive from links: Open Library and Steam URLs are not matched,
+since only titles call it and books and games carry their id in their own fields.
 
 ## Per kind
 

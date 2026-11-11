@@ -42,12 +42,6 @@ export function formatExternalId(e: ExternalId): string {
 
 type LinkMatcher = (host: string, a: string, b: string) => ExternalId | null;
 
-const openLibraryLink: LinkMatcher = (host, a, b) =>
-	host === 'openlibrary.org' && a === 'works' && /^OL\d+W$/.test(b) ? { source: 'openlibrary', id: b } : null;
-
-const steamLink: LinkMatcher = (host, a, b) =>
-	host === 'store.steampowered.com' && a === 'app' && /^\d+$/.test(b) ? { source: 'steam', id: b } : null;
-
 const imdbLink: LinkMatcher = (host, a, b) =>
 	host === 'imdb.com' && a === 'title' && /^tt\d+$/.test(b) ? { source: 'imdb', id: b } : null;
 
@@ -65,9 +59,9 @@ const animeListLink: LinkMatcher = (host, a, b) => {
 	return { source, kind: a, id: b };
 };
 
-const LINK_MATCHERS: readonly LinkMatcher[] = [openLibraryLink, steamLink, imdbLink, tmdbLink, animeListLink];
+const LINK_MATCHERS: readonly LinkMatcher[] = [imdbLink, tmdbLink, animeListLink];
 
-/** Derives the identity from a pasted IMDb, TMDB, MyAnimeList AniList, Open Library or Steam URL. */
+/** Derives the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL (title sources only). */
 export function externalIdFromLink(url: string): ExternalId | null {
 	let u: URL;
 	try {

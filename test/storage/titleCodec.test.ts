@@ -40,6 +40,13 @@ describe('titleCodec', () => {
     expect(encodeTitle(entry, 100)).not.toHaveProperty('Watched Episodes');
     expect(encodeTitle(entry, 100)['External ID']).toBe('imdb:tt5843312');
   });
+  it('writes no External ID for a title whose URL is a Steam store link', () => {
+    const { entry } = decodeTitle('Movie/Hades', {
+      Name: 'Hades', Type: 'Movie', Status: 'Completed', 'Date Added': '2026-01-01T00:00:00Z', 'Date Modified': '2026-01-01T00:00:00Z',
+      URL: 'https://store.steampowered.com/app/1145360/Hades/',
+    }, undefined);
+    expect(encodeTitle(entry, 100)).not.toHaveProperty('External ID');
+  });
   it('round-trips series progress via cache seasons', () => {
     const fm = { Name: 'Dark', Type: 'TV Show', Status: 'Watching', 'External ID': 'tmdb:tv:70523',
       'Watched Episodes': 'S01E01-E08, S02E01-E02', 'Skipped Episodes': 'S02E05', 'Date Added': '2026-01-01T00:00:00Z', 'Date Modified': '2026-01-01T00:00:00Z' };
