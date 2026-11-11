@@ -239,7 +239,7 @@ const settings = {
 		note: 'Syncs playtime and achievements from your own library',
 		badge: 'Companion',
 		link: 'Get a Web API key',
-		help: 'Steam has no search endpoint, so it never replaces the API above; it runs alongside it. Your Steam profile\'s "Game details" privacy must be set to Public, or Steam returns an empty library even to your own key.',
+		help: 'Account sync needs a Steam API key and runs alongside the games API above; game search through Steam needs no key. Set your Steam profile\'s game details privacy to public, or Steam returns an empty library even to your own key.',
 		apiKey: 'Web API key',
 		apiKeyPlaceholder: 'Paste your Steam Web API key here',
 		idField: 'Steam ID or profile URL',
@@ -319,9 +319,9 @@ const settings = {
 			sub: 'Reading tab search, authors and cover art',
 			google: {
 				note: 'Book search, authors, page counts and covers',
-				help: 'Create a project in the Google Cloud Console, enable the Books API, then create an API key under APIs & Services → Credentials. Book search does not work without it.',
+				help: 'Create a project in the Google Cloud Console, enable the Books API, then create an API key under APIs & Services → Credentials. Without a key, book search uses Open Library.',
 				placeholder: 'Paste your Google Books key here',
-				noKey: 'No key; book search is off',
+				noKey: 'No key; the keyless source is used',
 			},
 			manga: {
 				note: 'Manga search, chapters, volumes and covers',
@@ -509,7 +509,7 @@ const settings = {
 			title: 'API & search',
 			which: {
 				heading: 'Which API is used for what',
-				body: 'Hoard uses a different API per content type:\n• Anime: Jikan (MyAnimeList data) or AniList, whichever you set under Settings → API → Anime. No key is needed for either.\n• Movies & TV Shows: OMDb or TMDB, whichever is set as active under Settings → API. Both need a free key/token.\n• Books (Reading): Google Books. A free API key is required; add it under Settings → API → Books.\n• Games: RAWG or IGDB, whichever you set under Settings → API → Games. RAWG needs a free key; IGDB needs a Twitch Client ID and Secret.\n• Manga (Reading): Jikan (MyAnimeList data). No key needed.\n\nThe anime API choice only affects new titles; existing titles keep the source they were added with.\n\nMake sure the correct type is selected before searching. If Anime is selected and you search for a movie or TV show (or vice versa), it most likely won\'t be found, because each type queries its own API. APIs are a convenience, not a requirement; you can always add a title manually. The "Add from URL" button also relies on an API.',
+				body: 'Hoard uses a different API per content type:\n• Anime: Jikan (MyAnimeList data) or AniList, whichever you set under Settings → API → Anime. No key is needed for either.\n• Movies & TV Shows: Cinemeta by default, no key needed. OMDb or TMDB, whichever is set as active under Settings → API, take over once their free key/token is set; keys also add community ratings, airing info, season refill, collections and studios.\n• Books (Reading): Open Library by default, no key needed. Google Books is an alternative once a free API key is set under Settings → API → Books.\n• Games: Steam Store by default, no key needed. RAWG or IGDB, whichever you set under Settings → API → Games, take over once set up: RAWG needs a free key; IGDB needs a Twitch Client ID and Secret. Syncing your Steam account still needs a Steam Web API key.\n• Manga (Reading): Jikan (MyAnimeList data). No key needed.\n\nThe anime API choice only affects new titles; existing titles keep the source they were added with.\n\nMake sure the correct type is selected before searching. If Anime is selected and you search for a movie or TV show (or vice versa), it most likely won\'t be found, because each type queries its own API. APIs are a convenience, not a requirement; you can always add a title manually. The "Add from URL" button also relies on an API.',
 			},
 		},
 		reading: {
@@ -531,7 +531,7 @@ const settings = {
 			},
 			covers: {
 				heading: 'Covers',
-				body: 'Covers are fetched automatically as cards scroll into view; Google Books for books, Jikan for manga. If a cover is missing or wrong, use "Refresh cover" from a card\'s ⋮ menu. (Refreshing a book cover needs the Google Books API key.)',
+				body: 'Covers are fetched automatically as cards scroll into view; Open Library or Google Books for books, Jikan for manga. If a cover is missing or wrong, use "Refresh cover" from a card\'s ⋮ menu.',
 			},
 			columns: {
 				heading: 'Custom columns',
