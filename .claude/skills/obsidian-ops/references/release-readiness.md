@@ -49,21 +49,23 @@ Use this when preparing a release or when asked "is the plugin ready for release
 
 ## Interactive Checks (ask the user)
 
-Before the release:
+Before the release, on the development machine only (the agent runs these, no question needed):
 
-- [ ] Tested on Windows / macOS / Linux as applicable
-- [ ] Tested with a large vault and with other plugins disabled
 - [ ] Mobile layout covered by desktop emulation (`pnpm mobile:smoke`), or `isDesktopOnly: true`
+- [ ] `pnpm smoke` against `hoard-test-vault` when Obsidian is running
 
-After the release (a mobile device installs plugins only from a published release, through BRAT or the directory, so this cannot be a precondition):
+After the release (other desktops and mobile devices install plugins only from a published release, through BRAT or the directory, so none of this can be a precondition):
 
 - [ ] Release created with tag = version, assets `main.js`, `manifest.json`, `styles.css` attached individually
-- [ ] Tested on Android / iOS from that release; a regression found there gets a patch release
+- [ ] Tested on the other desktop platforms (Windows / macOS / Linux) from that release
+- [ ] Tested on Android / iOS from that release
+- [ ] Tested with a large vault and with other plugins disabled
+- [ ] A regression found there gets a patch release
 
 ## Agent workflow
 
 1. Run the automated checks, report pass/fail/warning per item with concrete fixes.
-2. Ask the interactive questions.
+2. Run the local pre-release checks; leave the after-release items for after the tag.
 3. If ready, continue with [versioning-releases.md](versioning-releases.md).
 
 ## Related Documentation
