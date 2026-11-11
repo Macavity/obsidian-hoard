@@ -24,7 +24,9 @@
 		"vault:theme": "node scripts/vault-theme.mjs",
 		"reload": "node scripts/reload.mjs",
 		"smoke": "node test/e2e/smoke.mjs",
-		"mobile:smoke": "node scripts/mobile-smoke.mjs"
+		"mobile:smoke": "node scripts/mobile-smoke.mjs",
+		"visual:shots": "node test/visual/shots.mjs",
+		"visual:diff": "node test/visual/diff.mjs"
 	},
 	"author": "Alexander Pape",
 	"license": "MIT",

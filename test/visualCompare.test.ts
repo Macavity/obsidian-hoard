@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { Buffer } from "buffer";
 import { PNG } from "pngjs";
-import { diffDumps, diffPixels, buildReport, renderReportHtml } from "../scripts/lib/visual-compare.mjs";
+import { diffDumps, diffPixels, buildReport, renderReportHtml, compactDump, expandDump, pairStates, mergeNotes } from "./visual/compare.mjs";
+import { STATES } from "./visual/states.mjs";
 
 const el = (path: string, style: Record<string, string>, text = "") => ({ path, text, style });
 
@@ -95,5 +96,64 @@ describe("visual compare", () => {
 		expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
 		expect(html).toContain("+5 more");
 		expect(html).not.toContain("p44");
+	});
+});
+
+describe("visual catalogue", () => {
+	it("has unique kebab ids", () => {
+		const ids = STATES.map((s) => s.id);
+		expect(new Set(ids).size).toBe(ids.length);
+		for (const id of ids) expect(id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+	});
+
+	it("roots survive the class rename", () => {
+		for (const s of STATES) expect(s.root.replace(/hoard-view/g, "")).not.toContain("hoard-");
+	});
+
+	it("covers the agreed surface", () => {
+		expect(STATES.length).toBeGreaterThanOrEqual(55);
+	});
+
+	it("marks phone states", () => {
+		expect(STATES.filter((s) => s.phone).length).toBeGreaterThanOrEqual(13);
+	});
+});
+
+describe("visual dump storage", () => {
+	const dump = [
+		el("div[0]", { color: "red", width: "100px", "font-size": "14px" }, "root"),
+		el("div[0]/span[0]", { color: "red", width: "20px", "font-size": "14px" }, "a"),
+		el("div[0]/span[0]::before", { color: "blue", width: "20px", "font-size": "14px" }, '"x"'),
+		el("div[0]/span[1]", { color: "green", width: "20px", "font-size": "14px", extra: "1" }),
+	];
+
+	it("round-trips through the compact form", () => {
+		const stored = JSON.parse(JSON.stringify(compactDump(dump))) as ReturnType<typeof compactDump>;
+		expect(expandDump(stored)).toEqual(dump);
+	});
+
+	it("keeps only what differs from the parent", () => {
+		const compact = compactDump(dump);
+		expect(compact.els[1]?.d.length).toBe(2); // width only
+	});
+});
+
+describe("visual pairing and notes", () => {
+	it("pairs states of both sides and flags the lonely ones", () => {
+		expect(pairStates(["a/x", "a/y"], ["a/y", "a/z"])).toEqual([
+			{ key: "a/x", inBefore: true, inAfter: false },
+			{ key: "a/y", inBefore: true, inAfter: true },
+			{ key: "a/z", inBefore: false, inAfter: true },
+		]);
+	});
+
+	it("merges notes by id and ignores unknown ids", () => {
+		const states = [
+			{ id: "a/x", styleDiff: [], pixels: { changed: 1, total: 2 } },
+			{ id: "a/y", styleDiff: [], pixels: { changed: 0, total: 2 } },
+		];
+		const out = mergeNotes(states, { "a/x": { verdict: "expected", reason: "renamed" }, "a/q": { verdict: "open", reason: "?" } });
+		expect(out[0]?.note).toEqual({ verdict: "expected", reason: "renamed" });
+		expect(out[1]?.note).toBeUndefined();
 	});
 });
