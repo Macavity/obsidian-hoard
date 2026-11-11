@@ -80,10 +80,3 @@ describe('Steam pick in AddGameModal', () => {
 		});
 	});
 });
-
-describe('gamesKeyChip', () => {
-	it('shows no key hint for the keyless Steam source', async () => {
-		const { gamesKeyChip } = await import('../src/ui/gamesKeyChip');
-		expect(gamesKeyChip({ gamesApiSource: 'steam', rawgApiKey: '', igdbClientId: '', igdbClientSecret: '' }).tone).toBe('ok');
-	});
-});

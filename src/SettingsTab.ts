@@ -1462,9 +1462,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 			const active = s.gamesApiSource;
 			rawg.setActive(active === 'rawg');
 			igdb.setActive(active === 'igdb');
-			// the chip reads only the source and the credentials of both providers
-			games.setChip(active === 'steam' ? keylessChip(GAME_NAMES.steam) : gamesKeyChip({
-				gamesApiSource: s.gamesApiSource,
+			// the chip reads only the keyed source and the credentials of both providers
+			games.setChip(active === 'steam' ? keylessChip(GAME_NAMES.steam) : gamesKeyChip(active, {
 				rawgApiKey: s.rawgApiKey,
 				igdbClientId: s.igdbClientId,
 				igdbClientSecret: s.igdbClientSecret,

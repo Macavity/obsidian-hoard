@@ -3,7 +3,7 @@ import { Notice as RealNotice } from 'obsidian';
 
 /** the mock records every string notice */
 const Notice = RealNotice as unknown as { shown: string[] };
-const gamesKeyChip = (s: Record<string, string>) => realChip(s as never);
+const gamesKeyChip = (source: 'rawg' | 'igdb', s: Record<string, string>) => realChip(source, s as never);
 import { HoardSettingsTab } from '../src/SettingsTab';
 import { gamesKeyChip as realChip } from '../src/ui/gamesKeyChip';
 import type { HoardTitle, TagDefinition } from '../src/types';
@@ -97,10 +97,10 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('gamesKeyChip', () => {
 	it('reports the active provider and whether its key is set', () => {
-		expect(gamesKeyChip({})).toEqual({ text: 'RAWG · key needed', tone: 'warn' });
-		expect(gamesKeyChip({ rawgApiKey: 'k' })).toEqual({ text: 'RAWG · key set', tone: 'ok' });
-		expect(gamesKeyChip({ gamesApiSource: 'igdb', igdbClientId: 'id' })).toEqual({ text: 'IGDB · key needed', tone: 'warn' });
-		expect(gamesKeyChip({ gamesApiSource: 'igdb', igdbClientId: 'id', igdbClientSecret: 's' })).toEqual({ text: 'IGDB · key set', tone: 'ok' });
+		expect(gamesKeyChip('rawg', {})).toEqual({ text: 'RAWG · key needed', tone: 'warn' });
+		expect(gamesKeyChip('rawg', { rawgApiKey: 'k' })).toEqual({ text: 'RAWG · key set', tone: 'ok' });
+		expect(gamesKeyChip('igdb', { igdbClientId: 'id' })).toEqual({ text: 'IGDB · key needed', tone: 'warn' });
+		expect(gamesKeyChip('igdb', { igdbClientId: 'id', igdbClientSecret: 's' })).toEqual({ text: 'IGDB · key set', tone: 'ok' });
 	});
 });
 
