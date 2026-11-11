@@ -844,7 +844,11 @@ export class HoardSettingsTab extends PluginSettingTab {
 	/** Bulk studio backfill; the rewriteAllFrontmatter progress/cancel pattern. */
 	private async fetchAllStudios(): Promise<void> {
 		const dm = this.plugin.dataManager;
-		const pending = dm.getTitles().filter((title) => needsStudioFetch(title));
+		const api = this.plugin.apiService;
+		const mapping = this.plugin.settings.typeApiMapping;
+		// movie studios need TMDB: without a key a miss is not an answer, so leave the field unfetched
+		const pending = dm.getTitles().filter((title) =>
+			needsStudioFetch(title) && (getApiGroupForType(title.type, mapping) !== 'movie' || api.hasTmdbKey()));
 		const total = pending.length;
 		if (total === 0) {
 			new Notice(t('settings.general.studios.allHave'));
@@ -864,8 +868,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				if (isCancelled()) break;
 				const title = pending[i]!;
 				try {
-					const group = getApiGroupForType(title.type, this.plugin.settings.typeApiMapping);
-					const found = await this.plugin.apiService.fetchStudio(title, animeSource, group);
+					const group = getApiGroupForType(title.type, mapping);
+					const found = await api.fetchStudio(title, animeSource, group);
 					// a miss stores 'none' so the next run skips it instead of retrying forever
 					await dm.updateStudio(title.id, found?.studio ?? [CREDITS_NONE], found?.tmdbId, found?.tmdbMediaType);
 					if (found?.studio && !isCreditsNone(found.studio)) filled++; else missed++;

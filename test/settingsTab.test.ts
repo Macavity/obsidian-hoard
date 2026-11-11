@@ -281,6 +281,17 @@ describe('HoardSettingsTab fetchAllStudios', () => {
 		expect(plugin.importProgress).toBeNull();
 		expect(Notice.shown).toContain('Done: 1 title filled, 2 with no studio available.');
 	});
+	it('leaves movies unfetched without a TMDB key and fetches them with one', async () => {
+		const movie = { id: 'm', title: 'hit', type: 'Movie' };
+		const without = makeTab({ titles: [movie, anime('hit')] });
+		await without.tab.fetchAllStudios();
+		expect(without.plugin.apiService.fetchStudio).toHaveBeenCalledTimes(1);
+		expect(without.dm.updateStudio).toHaveBeenCalledTimes(1);
+		const keyed = makeTab({ titles: [movie] });
+		keyed.settings.tmdbApiKey = 'k';
+		await keyed.tab.fetchAllStudios();
+		expect(keyed.dm.updateStudio).toHaveBeenCalledTimes(1);
+	});
 	it('stops when cancelled', async () => {
 		const { tab, plugin } = makeTab({ titles: [anime('hit'), anime('hit2')] });
 		plugin.apiService.fetchStudio.mockImplementationOnce(() => {
