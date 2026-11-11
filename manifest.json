@@ -2,7 +2,7 @@
 	"id": "hoard",
 	"name": "Hoard",
 	"version": "0.1.0",
-	"minAppVersion": "1.11.0",
+	"minAppVersion": "1.11.5",
 	"description": "A media library for movies, TV, anime, books, manga and games, stored as notes in your vault.",
 	"author": "Alexander Pape",
 	"authorUrl": "https://github.com/Macavity",

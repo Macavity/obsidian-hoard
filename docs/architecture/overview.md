@@ -36,6 +36,7 @@ flowchart TD
   GDM --> Idx
   Idx --> Codecs[titleCodec / readingCodec / gameCodec]
   DM --> Local[LocalStore data.json]
+  Local --> Sec[SecretStore secret storage]
   DM --> Shared[SharedConfigStore Hoard.base]
   HM --> HS[HistoryStore History.md]
   Idx -. metadataCache events .-> Vault[(vault notes)]
@@ -45,7 +46,7 @@ flowchart TD
 
 1. **Storage** ([architecture/storage](storage.md)), free of i18n imports ([i18n](i18n.md)): `VaultLayout` (paths and ids), `EntryIndex`
    (read-only map id → entry fed by `metadataCache`), codecs (properties ↔ objects), `LocalStore`
-   (`data.json`), `SharedConfigStore` (`hoard:` block of `Hoard.base`), `HistoryStore` (`History.md`).
+   (`data.json`), `SecretStore` (API keys in Obsidian's secret storage), `SharedConfigStore` (`hoard:` block of `Hoard.base`), `HistoryStore` (`History.md`).
 2. **Managers**: [DataManager](../modules/watchlist.md) (titles, groups, Maybe, airtime entries,
    custom-list time lookups), [ReadingDataManager](../modules/reading.md),
    [GameDataManager](../modules/games.md). They own in-memory copies, write notes through
@@ -68,7 +69,7 @@ status bar recounts. External changes (sync, hand edits) arrive through `EntryIn
 
 ## Cross-cutting
 
-- Settings are composed from defaults, `data.json` and the base; see
+- Settings are composed from defaults, `data.json`, secret storage and the base; see
   [shared vs local](../concepts/shared-vs-local.md).
 - Errors from APIs are classified once (`ApiError`, `apiErrorMessage`) so every caller shows the
   same wording; note writes with invalid YAML emit a notice code and skip.

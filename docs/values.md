@@ -33,16 +33,19 @@ one ([flows/startup](flows/startup.md)).
 
 ## Secrets stay on the device
 
-API keys, Steam id and logins live in the plugin's `data.json` and nowhere else: not in the base,
-not in a note, not in a backup written into the vault.
+API keys, Steam id and logins live in Obsidian's secret storage on this device, never in
+`data.json`, the base, a note or a backup.
 
-This rules out: a shared-settings key that is not on the whitelist; a backup copy in the vault
-that still holds a key; an endpoint URL with credentials leaving the device.
+This rules out: a shared-settings key that is not on the whitelist; a key written to `data.json`
+by any path (settings, restore, import); a backup that still holds a key; an endpoint URL with
+credentials leaving the device.
 
 Where it bites: `SHARED_SETTING_KEYS` is a whitelist applied on every read and write
-([shared vs local](concepts/shared-vs-local.md)); `withoutSecrets` and `withoutCredentials` strip
-the vault copy of a backup ([flows/backup-restore](flows/backup-restore.md)); `restoreBackup`
-refuses shared keys coming from the local section.
+([shared vs local](concepts/shared-vs-local.md)); `SecretStore.absorb` runs before every write of
+`data.json` and moves any key into secret storage, losing none when the storage refuses it;
+`buildBackup` leaves keys out, and `withoutSecrets` and `withoutCredentials` still strip the vault
+copy of a backup ([flows/backup-restore](flows/backup-restore.md)); `restoreBackup` refuses shared
+keys coming from the local section.
 
 ## Everything works without a key
 

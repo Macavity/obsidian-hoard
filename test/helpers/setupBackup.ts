@@ -7,10 +7,11 @@ import { GameDataManager } from '../../src/GameDataManager';
 import { HistoryManager } from '../../src/HistoryManager';
 import { HistoryStore } from '../../src/storage/HistoryStore';
 
-export async function setupBackup(files: Record<string, string>) {
+export async function setupBackup(files: Record<string, string>, secrets: Record<string, string> = {}) {
 	const { f, plugin, local, layout, shared, stores } = await createStores(files, {
 		types: ['Movie', 'TV Show'],
 		loadShared: true,
+		secrets,
 		pluginExtra: { posterService: { enqueue: () => Promise.resolve(null) } },
 	});
 	const dataManager = new DataManager(plugin, stores);
@@ -33,5 +34,7 @@ export async function setupBackup(files: Record<string, string>) {
 			history: new HistoryStore(f.app, () => layout),
 		}),
 	};
-	return { f, local, shared, dataManager, readingDataManager, gameDataManager, historyManager, storage };
+	/** What was last written to data.json. */
+	const savedData = () => f.plugin.data;
+	return { f, local, secrets: f.secrets, savedData, shared, dataManager, readingDataManager, gameDataManager, historyManager, storage };
 }
