@@ -9,7 +9,7 @@ The release workflow takes the section of the released version from this file as
 ### Changed
 
 - API keys, the Steam id, the IGDB client id and the Jikan endpoint now live in Obsidian's keychain (secret storage) on each device instead of the plugin's `data.json`. Existing keys move there on first start. On every further device, enter them again in Hoard's settings; Hoard says so once.
-- Backups no longer contain API keys. Restoring an older backup that still holds keys fills only keys that are not set on this device.
+- Backups no longer contain API keys, the Steam id, the IGDB client id or the Jikan endpoint. Restoring an older backup that still holds them fills only values that are not set on this device.
 - Hoard now requires Obsidian 1.11.4 or later.
 
 ## [0.1.0] - 2026-11-10
