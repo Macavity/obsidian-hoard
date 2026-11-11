@@ -70,7 +70,7 @@ const csv = {
 		volumesRead: 'Volumes read',
 		totalVolumes: 'Total volumes',
 		googleBooksId: 'Google Books ID',
-		openLibraryId: 'Open library ID',
+		openLibraryId: 'Open Library ID',
 		malId: 'MAL ID',
 	},
 	notice: {
