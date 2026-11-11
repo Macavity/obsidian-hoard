@@ -3,13 +3,13 @@
 // phone (Obsidian: below 600px) and checks the results panel keeps its height instead of being squashed by the capped modal
 // column. Saves screenshots and switches emulation off again. Obsidian must be running with the test vault open and the
 // current build deployed (`pnpm vault:link-test`, `pnpm reload`).
-// Output dir: $MOBILE_SMOKE_OUT or <tmp>/hoard-mobile.
+// Output dir: $MOBILE_SMOKE_OUT or <tmp>/hoard-view--mobile.
 import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assert, ensureVault, evalJs, obs, screenshot, waitFor } from "./lib/cli.mjs";
 
-const OUT = process.env.MOBILE_SMOKE_OUT ?? join(tmpdir(), "hoard-mobile");
+const OUT = process.env.MOBILE_SMOKE_OUT ?? join(tmpdir(), "hoard-view--mobile");
 const PHONE_WIDTH = 360; // a small Android phone; iPhones start at 375
 const RESULTS = 9; // one page
 const MIN_PANEL_HEIGHT = 200;
@@ -46,20 +46,20 @@ const SEARCH = `(() => {
 	const modal = document.querySelector('.hoard-add-modal');
 	const type = modal.querySelector('select');
 	if (type && type.value !== 'Anime') { type.value = 'Anime'; type.dispatchEvent(new Event('change')); }
-	const query = modal.querySelector('.hoard-search-query');
+	const query = modal.querySelector('.hoard-search-picker__query');
 	query.value = 'smoke';
 	query.dispatchEvent(new Event('input'));
-	modal.querySelector('.hoard-search-fields .hoard-btn').click();
+	modal.querySelector('.hoard-search-picker__fields .hoard-btn').click();
 	return 'ok';
 })()`;
-const CARDS = `String(document.querySelectorAll('.hoard-add-modal > .hoard-modal-results .hoard-result-card').length)`;
+const CARDS = `String(document.querySelectorAll('.hoard-add-modal > .hoard-modal__results .hoard-search-picker__result-card').length)`;
 const IS_PHONE = `String(document.body.classList.contains('is-phone'))`;
 const PANEL = `(() => {
-	const panel = document.querySelector('.hoard-add-modal > .hoard-modal-results');
-	const card = panel?.querySelector('.hoard-result-card');
+	const panel = document.querySelector('.hoard-add-modal > .hoard-modal__results');
+	const card = panel?.querySelector('.hoard-search-picker__result-card');
 	if (!panel || !card) return null;
 	const p = panel.getBoundingClientRect(), c = card.getBoundingClientRect();
-	return { height: p.height, cardVisible: c.top >= p.top && c.top + 40 <= p.bottom, cards: panel.querySelectorAll('.hoard-result-card').length };
+	return { height: p.height, cardVisible: c.top >= p.top && c.top + 40 <= p.bottom, cards: panel.querySelectorAll('.hoard-search-picker__result-card').length };
 })()`;
 
 const failures = [];
@@ -78,7 +78,7 @@ try {
 	await untilReady();
 	assert(evalJs(STUB) === "ok", "search stub not installed");
 	evalJs("app.commands.executeCommandById('hoard:add-title')");
-	await waitFor(() => evalJs("document.querySelector('.hoard-add-modal .hoard-search-query') ? 'yes' : 'no'") === "yes", 10000);
+	await waitFor(() => evalJs("document.querySelector('.hoard-add-modal .hoard-search-picker__query') ? 'yes' : 'no'") === "yes", 10000);
 	evalJs(SEARCH);
 	await waitFor(() => evalJs(CARDS) === String(RESULTS), 10000);
 	await sleep(300);

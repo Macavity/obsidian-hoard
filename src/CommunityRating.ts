@@ -10,10 +10,10 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Per-source badge class; spelled out so every class name appears literally. */
 const SOURCE_CLASSES: Record<string, string> = {
-	imdb: 'hoard-community-source--imdb',
-	mal: 'hoard-community-source--mal',
-	anilist: 'hoard-community-source--anilist',
-	tmdb: 'hoard-community-source--tmdb',
+	imdb: 'hoard-community-rating__source--imdb',
+	mal: 'hoard-community-rating__source--mal',
+	anilist: 'hoard-community-rating__source--anilist',
+	tmdb: 'hoard-community-rating__source--tmdb',
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -37,9 +37,9 @@ export function renderCommunityRating(
 	const title = plugin.dataManager.getTitle(titleId);
 	if (!title) return;
 
-	parent.createSpan({ cls: 'hoard-rating-divider' });
+	parent.createSpan({ cls: 'hoard-star-rating__divider' });
 
-	const badge = parent.createDiv({ cls: 'hoard-community-badge' });
+	const badge = parent.createDiv({ cls: 'hoard-community-rating__badge' });
 	const community = getCommunityRating(title);
 	const hasRating = !!community.source && (community.rating ?? 0) > 0;
 
@@ -47,28 +47,28 @@ export function renderCommunityRating(
 		const source = community.source ?? '';
 		const label = SOURCE_LABELS[source] ?? source.toUpperCase();
 		badge.createSpan({
-			cls: `hoard-community-source ${SOURCE_CLASSES[source] ?? ''}`.trimEnd(),
+			cls: `hoard-community-rating__source ${SOURCE_CLASSES[source] ?? ''}`.trimEnd(),
 			text: label,
 		});
 		badge.createSpan({
-			cls: 'hoard-community-score',
+			cls: 'hoard-community-rating__score',
 			text: formatScore(community.rating ?? 0, source),
 		});
 		if ((community.votes ?? 0) > 0) {
 			badge.createSpan({
-				cls: 'hoard-community-votes',
+				cls: 'hoard-community-rating__votes',
 				text: `(${formatVoteCount(community.votes ?? 0)})`,
 			});
 		}
 	} else {
-		badge.createSpan({ cls: 'hoard-community-empty', text: t('detail.community.empty') });
+		badge.createSpan({ cls: 'hoard-community-rating__empty', text: t('detail.community.empty') });
 	}
 
 	const refreshBtn = createIconButton(badge, {
 		icon: 'refresh-cw',
 		label: t('detail.community.refresh'),
 		variant: 'framed',
-		cls: 'hoard-community-refresh',
+		cls: 'hoard-community-rating__refresh',
 	});
 	refreshBtn.addEventListener('click', (e) => {
 		e.stopPropagation();

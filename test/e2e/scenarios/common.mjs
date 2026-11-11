@@ -18,7 +18,7 @@ export function findReportNote(vault, now = new Date()) {
 	return [reportNotePath(now), reportNotePath(yesterday)].find((p) => existsSync(join(vault, p))) ?? null;
 }
 
-const WIZARD = ".hoard-onboarding-modal";
+const WIZARD = ".hoard-onboarding";
 const btn = (action) => `${WIZARD} [data-action="${action}"]`;
 const P = "app.plugins.plugins['hoard']";
 
@@ -36,7 +36,7 @@ export async function clickThroughWizard() {
 	await waitForSelector(WIZARD, 30000);
 	await step("import");
 	await step("report");
-	await waitFor(() => evalJs(`String(!!document.querySelector('${WIZARD} .hoard-onboarding-hint'))`) === "true", 10000);
+	await waitFor(() => evalJs(`String(!!document.querySelector('${WIZARD} .hoard-onboarding__hint'))`) === "true", 10000);
 	await step("next");
 	await step("skip");
 	await step("close");

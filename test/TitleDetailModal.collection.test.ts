@@ -24,7 +24,7 @@ function build() {
 		maybeRenderCollectionButton: (host: HTMLElement) => Promise<void>;
 	};
 	const footer = document.createElement('div');
-	footer.className = 'hoard-detail-footer';
+	footer.className = 'hoard-detail__footer';
 	const host = footer.createDiv();
 	document.body.appendChild(footer);
 	return { modal, host, footer };
@@ -60,7 +60,7 @@ describe('TitleDetailModal collection button', () => {
 		const { modal, host } = build();
 		vi.mocked(resolveCollection).mockResolvedValueOnce(collection(3));
 		await modal.maybeRenderCollectionButton(host);
-		const btn = host.querySelector('button.hoard-collection-btn')!;
+		const btn = host.querySelector('button.hoard-detail__collection-btn')!;
 		expect(btn.classList.contains('has-missing')).toBe(false);
 		expect(btn.textContent).toBe(t('detail.collection.label'));
 		expect(btn.getAttribute('aria-label')).toBe(t('detail.collection.tipComplete', { name: 'Alien Collection' }));
@@ -72,9 +72,9 @@ describe('TitleDetailModal collection button', () => {
 		const { modal, host, footer } = build();
 		vi.mocked(resolveCollection).mockResolvedValueOnce(collection(3));
 		await modal.maybeRenderCollectionButton(host);
-		const btn = host.querySelector('button.hoard-collection-btn')!;
+		const btn = host.querySelector('button.hoard-detail__collection-btn')!;
 		expect(btn.classList.contains('has-missing')).toBe(true);
 		expect(btn.textContent).toBe(t('detail.collection.missing', { count: 2 }));
-		expect(footer.classList.contains('hoard-footer-heart-left')).toBe(true);
+		expect(footer.classList.contains('hoard-detail__footer--heart-left')).toBe(true);
 	});
 });

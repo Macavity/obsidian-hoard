@@ -70,7 +70,7 @@ function build(o: Setup = {}) {
 const only = (ids: string[]) => ['favorites', 'recommended', 'recentlyAdded', 'recentlyPlayed', 'groups', 'recentlyReleased', 'byType', 'byStatus']
 	.map((id) => ({ id, enabled: ids.includes(id) }));
 
-const titles = (el: HTMLElement) => Array.from(el.querySelectorAll('.hoard-rows-shelf-title')).map((e) => e.textContent ?? '');
+const titles = (el: HTMLElement) => Array.from(el.querySelectorAll('.hoard-rows-view__shelf-title')).map((e) => e.textContent ?? '');
 
 interface CustomizeOpts {
 	shelves: { id: string; label: string }[];
@@ -94,7 +94,7 @@ describe('GamesTab.renderContent', () => {
 		const g2 = game('b');
 		const group = { id: 'grp', name: 'Zelda', gameIds: ['b'], dateAdded: '2024-01-01' };
 		const { content } = build({ games: [g1, g2], groups: [group], rowsLayout: only(['favorites']) });
-		const count = content.querySelector('.hoard-results-count')!.textContent!;
+		const count = content.querySelector('.hoard-toolbar__results-count')!.textContent!;
 		expect(count).toContain(t('ui.group.countGame', { count: 1 }));
 		expect(count).toContain(t('games.countGroup', { count: 1 }));
 	});
@@ -112,20 +112,20 @@ describe('GamesTab.renderContent', () => {
 		expect(shown.some((s) => s.startsWith(t('games.shelves.recentlyAdded')))).toBe(true);
 		expect(shown.some((s) => s.startsWith(t('games.shelves.recentlyReleased')))).toBe(true);
 		expect(shown.some((s) => s.startsWith(t('games.shelves.groups')))).toBe(true);
-		expect(content.querySelector('.hoard-rows-shelf .hoard-card[data-game-id="fav"]')).not.toBeNull();
+		expect(content.querySelector('.hoard-rows-view__shelf .hoard-card[data-game-id="fav"]')).not.toBeNull();
 		expect(content.textContent).toContain(t('games.shelves.emptyGroups'));
 	});
 
 	it('renders the By genre grid and skips disabled sections', () => {
 		const { content } = build({ games: [game('a', { type: 'RPG' })], rowsLayout: only(['byType']) });
-		expect(content.querySelector('.hoard-rows-bytype-title')!.textContent).toBe(t('games.shelves.byGenre'));
+		expect(content.querySelector('.hoard-rows-view__grouped-title')!.textContent).toBe(t('games.shelves.byGenre'));
 		expect(content.textContent).toContain('RPG');
 		expect(titles(content).some((s) => s.startsWith(t('games.shelves.favorites')))).toBe(false);
 	});
 
 	it('renders the By status grid with localized status names', () => {
 		const { content } = build({ games: [game('a')], rowsLayout: only(['byStatus']) });
-		expect(content.querySelector('.hoard-rows-bytype-title')!.textContent).toBe(t('games.shelves.byStatus'));
+		expect(content.querySelector('.hoard-rows-view__grouped-title')!.textContent).toBe(t('games.shelves.byStatus'));
 	});
 
 	it('falls back to the flat All games grid when no grouped grid is enabled', () => {
@@ -136,7 +136,7 @@ describe('GamesTab.renderContent', () => {
 	it('omits the All games header when it is the only section', () => {
 		const { content } = build({ games: [game('a')], rowsLayout: only([]) });
 		expect(content.textContent).not.toContain(t('games.shelves.allGames'));
-		expect(content.querySelector('.hoard-rows-bytype')).not.toBeNull();
+		expect(content.querySelector('.hoard-rows-view__grouped')).not.toBeNull();
 	});
 
 	it('explains a search without matches', () => {
@@ -151,7 +151,7 @@ describe('GamesTab.renderContent', () => {
 
 	it('hides grouped grids that have no matches while filtering and shows the empty hint otherwise', () => {
 		const filtered = build({ games: [game('a')], rowsLayout: only(['byType']), query: 'zzzz' });
-		expect(filtered.content.querySelector('.hoard-rows-bytype')).toBeNull();
+		expect(filtered.content.querySelector('.hoard-rows-view__grouped')).toBeNull();
 		const empty = build({ games: [], groups: [{ id: 'g', name: 'G', gameIds: [], dateAdded: '' }], rowsLayout: only(['byType']) });
 		expect(empty.content.textContent).toContain(t('games.shelves.emptyByGenre'));
 		const emptyStatus = build({ games: [], groups: [{ id: 'g', name: 'G', gameIds: [], dateAdded: '' }], rowsLayout: only(['byStatus']) });
@@ -161,14 +161,14 @@ describe('GamesTab.renderContent', () => {
 	it('renders group cards in the flat grid and rebuilds cleanly on a second render', () => {
 		const group = { id: 'grp', name: 'Zelda', gameIds: ['a'], dateAdded: '2024-01-01' };
 		const { content, internals } = build({ games: [game('a')], groups: [group], rowsLayout: only(['groups']) });
-		expect(content.querySelectorAll('.hoard-rows-scroll-container')).toHaveLength(1);
+		expect(content.querySelectorAll('.hoard-rows-view__scroll-container')).toHaveLength(1);
 		internals.renderContent();
-		expect(content.querySelectorAll('.hoard-rows-scroll-container')).toHaveLength(1);
+		expect(content.querySelectorAll('.hoard-rows-view__scroll-container')).toHaveLength(1);
 	});
 
 	it('opens the rows customize modal from the gear button and wires its layout hooks', () => {
 		const { content } = build({ games: [game('a')], rowsLayout: only([]) });
-		(content.querySelector('.hoard-rows-customize-btn') as HTMLElement).click();
+		(content.querySelector('.hoard-rows-customize__btn') as HTMLElement).click();
 		expect(customizeOpts).not.toBeNull();
 		expect(customizeOpts!.shelves.map((s) => s.id)).toContain('byType');
 		expect(customizeOpts!.shelves.find((s) => s.id === 'byType')!.label).toBe(t('games.shelves.byGenre'));
@@ -176,15 +176,15 @@ describe('GamesTab.renderContent', () => {
 		expect(customizeOpts!.getLayout()).toEqual([{ id: 'favorites', enabled: true }]);
 		customizeOpts!.persist();
 		customizeOpts!.onChanged();
-		expect(content.querySelectorAll('.hoard-rows-scroll-container')).toHaveLength(1);
+		expect(content.querySelectorAll('.hoard-rows-view__scroll-container')).toHaveLength(1);
 	});
 
 	it('renders group cards on the Groups shelf and opens the group detail on click', () => {
 		const group = { id: 'grp', name: 'Zelda', gameIds: ['a'], dateAdded: '2024-01-01' };
 		const { content } = build({ games: [game('a')], groups: [group], rowsLayout: only(['groups']) });
-		const card = content.querySelector<HTMLElement>('.hoard-rows-strip .hoard-card, .hoard-rows-strip [data-group-id]');
+		const card = content.querySelector<HTMLElement>('.hoard-rows-view__strip .hoard-card, .hoard-rows-view__strip [data-group-id]');
 		expect(card).not.toBeNull();
-		expect(content.querySelector('.hoard-rows-strip')!.textContent).toContain('Zelda');
+		expect(content.querySelector('.hoard-rows-view__strip')!.textContent).toContain('Zelda');
 		card!.click();
 		expect(groupModalOpened).toHaveBeenCalledTimes(1);
 	});

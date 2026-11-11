@@ -2,24 +2,24 @@
 
 /* ══ RECTANGLE DASHBOARD CARDS ══ */
 
-.hoard-rect-item {
+.hoard-stat-rect__item {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
   background: var(--background-secondary-alt);
-  border: 2px solid var(--hoard-accent);
+  border: 2px solid var(--hoard-view-accent);
   border-radius: 8px;
 }
 
-.hoard-rect-top {
+.hoard-stat-rect__top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 4px;
 }
 
-.hoard-rect-label {
+.hoard-stat-rect__label {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-normal);
@@ -28,28 +28,28 @@
   text-overflow: ellipsis;
 }
 
-.hoard-rect-unwatched {
+.hoard-stat-rect__unwatched {
   font-size: 10px;
   color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.hoard-rect-value {
+.hoard-stat-rect__value {
   font-size: 22px;
   font-weight: 700;
   color: var(--text-normal);
   line-height: 1;
 }
 
-.hoard-rect-bar {
+.hoard-stat-rect__bar {
   height: 100%;
   border-radius: 2px;
   transition: width 0.3s ease;
 }
 
 /* caption under the bar; min-height keeps card heights equal */
-.hoard-rect-subline {
+.hoard-stat-rect__subline {
   font-size: 10px;
   color: var(--text-muted);
   min-height: 1.3em;

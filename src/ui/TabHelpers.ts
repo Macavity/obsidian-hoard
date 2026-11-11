@@ -49,7 +49,7 @@ export function mountVirtualCardGrid(
 	count: number,
 	callbacks: VirtualGridCallbacks,
 ): { spacer: HTMLElement; vgrid: VirtualGrid } {
-	const spacer = section.createDiv({ cls: 'hoard-rows-bytype-spacer' });
-	const grid = spacer.createDiv({ cls: 'hoard-cards-grid hoard-cards-grid-virtual' });
+	const spacer = section.createDiv({ cls: 'hoard-rows-view__grouped-spacer' });
+	const grid = spacer.createDiv({ cls: 'hoard-card-grid hoard-card-grid--virtual' });
 	return { spacer, vgrid: new VirtualGrid(spacer, grid, count, callbacks) };
 }

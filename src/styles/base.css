@@ -17,17 +17,17 @@
 .hoard-view,
 .hoard-widget,
 .hoard-widget-minimal,
-.hoard-wstat,
-.hoard-wstat-triple,
-.hoard-wupcoming,
-.hoard-wnow,
-.hoard-wnownext {
+.hoard-widget-stat,
+.hoard-widget-stat--triple,
+.hoard-widget-upcoming,
+.hoard-widget-now,
+.hoard-widget-now-next {
   /* default theme follows Obsidian's own colours, so it reads on light and dark backgrounds */
-  --hoard-accent: var(--interactive-accent);
-  --hoard-rating-color: #BA7517;
-  --hoard-watched-color: #1D9E75;
-  --hoard-group-border-overlay: var(--background-modifier-border);
-  --hoard-due-border-color: #207119;
+  --hoard-view-accent: var(--interactive-accent);
+  --hoard-star-rating-color: #BA7517;
+  --hoard-view-watched-color: #1D9E75;
+  --hoard-view-group-border-overlay: var(--background-modifier-border);
+  --hoard-view-due-border-color: #207119;
 }
 
 /* Tab bar */
@@ -43,12 +43,12 @@
 }
 
 /* Mobile: icon-only tabs — 7 text labels overflow a phone panel */
-.hoard-view.hoard-mobile .hoard-tab-bar {
+.hoard-view.hoard-view--mobile .hoard-tab-bar {
   gap: 0;
   padding: 6px 4px 0;
 }
 
-button.hoard-tab-btn-icon {
+button.hoard-tab-bar__btn--icon {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
@@ -58,7 +58,7 @@ button.hoard-tab-btn-icon {
   position: relative;
 }
 
-button.hoard-tab-btn-icon .svg-icon {
+button.hoard-tab-bar__btn--icon .svg-icon {
   width: 20px;
   height: 20px;
 }
@@ -66,7 +66,7 @@ button.hoard-tab-btn-icon .svg-icon {
 /* icon mode: dot instead of (N) */
 
 /* not element-qualified: a pseudo-element, core sets nothing here */
-.hoard-tab-btn-icon.hoard-tab-has-badge::after {
+.hoard-tab-bar__btn--icon.hoard-tab-bar__btn--has-badge::after {
   content: '';
   position: absolute;
   top: 3px;
@@ -78,10 +78,10 @@ button.hoard-tab-btn-icon .svg-icon {
 }
 
 /* underlined tab look, shared by the main tabs, Reading/Upcoming sub-tabs and settings nav */
-button.hoard-tab-btn,
-button.hoard-settings-nav-btn,
-button.hoard-reading-subtab,
-button.hoard-inner-tab-btn {
+button.hoard-tab-bar__btn,
+button.hoard-settings__nav-btn,
+button.hoard-reading__subtab,
+button.hoard-inner-tabs__btn {
   background: none;
   border: none;
   border-radius: 0;
@@ -96,21 +96,21 @@ button.hoard-inner-tab-btn {
   transition: color 0.15s, border-color 0.15s;
 }
 
-button.hoard-tab-btn {
+button.hoard-tab-bar__btn {
   padding: 5px 14px;
 }
 
-button.hoard-tab-btn:hover {
+button.hoard-tab-bar__btn:hover {
   color: var(--text-normal);
 }
 
-button.hoard-tab-btn.is-active {
+button.hoard-tab-bar__btn.is-active {
   color: var(--text-accent);
   border-bottom-color: var(--text-accent);
 }
 
 /* Tab content */
-.hoard-tab-content {
+.hoard-view__tab-content {
   flex: 1 1 0%;
   min-height: 0;
   overflow: hidden auto;
@@ -119,9 +119,9 @@ button.hoard-tab-btn.is-active {
   padding: 12px 10px;
 }
 
-/* mobile keyboard: HoardView pins a px height via --hoard-pinned-tab-height */
-.hoard-tab-content.hoard-tab-content-pinned {
+/* mobile keyboard: HoardView pins a px height via --hoard-view-pinned-tab-height */
+.hoard-view__tab-content.hoard-view__tab-content--pinned {
   flex: none;
-  height: var(--hoard-pinned-tab-height);
+  height: var(--hoard-view-pinned-tab-height);
 }
 

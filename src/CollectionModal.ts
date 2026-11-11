@@ -160,11 +160,11 @@ export class CollectionModal extends Modal {
 	onOpen(): void {
 		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
 		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.modalEl.addClass('hoard-collection-modal-shell');
+		this.modalEl.addClass('hoard-collection__modal-shell');
 		this.contentEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-detail-modal');
-		this.contentEl.addClass('hoard-collection-modal');
+		this.contentEl.addClass('hoard-detail');
+		this.contentEl.addClass('hoard-collection');
 		this.renderAll();
 	}
 
@@ -179,34 +179,34 @@ export class CollectionModal extends Modal {
 		this.contentEl.empty();
 		this.renderHeader();
 		this.gridEl = this.contentEl.createDiv({
-			cls: 'hoard-cards-grid hoard-detail-group-grid hoard-collection-grid',
+			cls: 'hoard-card-grid hoard-detail__group-grid hoard-collection__grid',
 		});
 		this.renderGrid();
-		this.footerEl = this.contentEl.createDiv({ cls: 'hoard-detail-footer hoard-collection-footer' });
+		this.footerEl = this.contentEl.createDiv({ cls: 'hoard-detail__footer hoard-collection__footer' });
 		this.renderFooter();
 		pinModalFooter(this.footerEl);
 	}
 
 	private renderHeader(): void {
-		const header = this.contentEl.createDiv({ cls: 'hoard-collection-header' });
+		const header = this.contentEl.createDiv({ cls: 'hoard-collection__header' });
 
 		const posterUrl = tmdbPoster(this.collection.poster_path, 'w185');
 		if (posterUrl) {
-			const cover = header.createDiv({ cls: 'hoard-collection-cover' });
-			const img = cover.createEl('img', { cls: 'hoard-collection-cover-img' });
+			const cover = header.createDiv({ cls: 'hoard-collection__cover' });
+			const img = cover.createEl('img', { cls: 'hoard-collection__cover-img' });
 			img.src = posterUrl;
 			img.alt = this.collection.name;
 			img.decoding = 'async';
 			img.onerror = () => cover.addClass('hoard-hidden');
 		}
 
-		const left = header.createDiv({ cls: 'hoard-collection-header-left' });
-		left.createEl('h2', { cls: 'hoard-detail-title', text: this.collection.name });
-		this.metaEl = left.createDiv({ cls: 'hoard-collection-meta' });
+		const left = header.createDiv({ cls: 'hoard-collection__header-left' });
+		left.createEl('h2', { cls: 'hoard-detail__title', text: this.collection.name });
+		this.metaEl = left.createDiv({ cls: 'hoard-collection__meta' });
 		this.renderMeta();
 
 		if (this.collection.overview) {
-			left.createDiv({ cls: 'hoard-collection-overview', text: this.collection.overview });
+			left.createDiv({ cls: 'hoard-collection__overview', text: this.collection.overview });
 		}
 	}
 
@@ -288,10 +288,10 @@ export class CollectionModal extends Modal {
 				},
 				menuCtx,
 			);
-			card.addClass('hoard-collection-card-missing');
+			card.addClass('hoard-card--missing');
 
 			// marker only — whole card toggles
-			const tick = card.createDiv({ cls: 'hoard-collection-tick' });
+			const tick = card.createDiv({ cls: 'hoard-collection__tick' });
 			tick.setText('✓');
 		}
 	}
@@ -303,7 +303,7 @@ export class CollectionModal extends Modal {
 		} else {
 			this.selected.add(partId);
 		}
-		card.toggleClass('hoard-card-selected', this.selected.has(partId));
+		card.toggleClass('hoard-card--selected', this.selected.has(partId));
 		this.renderFooter();
 	}
 
@@ -315,12 +315,12 @@ export class CollectionModal extends Modal {
 		const titles = this.dataManager.getTitles();
 		const missing = this.parts.filter((p) => !matchLibraryTitle(p, titles));
 
-		const left = footer.createDiv({ cls: 'hoard-collection-footer-left' });
+		const left = footer.createDiv({ cls: 'hoard-collection__footer-left' });
 
 		if (missing.length > 0) {
 			const allSelected = missing.every((p) => this.selected.has(p.id));
 			const selectBtn = left.createEl('button', {
-				cls: 'hoard-btn hoard-btn-sm',
+				cls: 'hoard-btn hoard-btn--sm',
 				text: allSelected ? t('misc.collection.selectNone') : t('misc.collection.selectAll'),
 				attr: { type: 'button' },
 			});
@@ -336,7 +336,7 @@ export class CollectionModal extends Modal {
 			});
 		}
 
-		const groupLabel = left.createEl('label', { cls: 'hoard-collection-group-toggle' });
+		const groupLabel = left.createEl('label', { cls: 'hoard-collection__group-toggle' });
 		const groupCheck = groupLabel.createEl('input', { attr: { type: 'checkbox' } });
 		groupCheck.checked = this.createGroup;
 		groupCheck.disabled = this.isAdding;
@@ -346,7 +346,7 @@ export class CollectionModal extends Modal {
 		groupLabel.createSpan({ text: t('misc.collection.groupAs', { name: this.collection.name }) });
 
 		const addBtn = footer.createEl('button', {
-			cls: 'hoard-btn hoard-btn-primary hoard-collection-add',
+			cls: 'hoard-btn hoard-btn--primary hoard-collection__add',
 			attr: { type: 'button' },
 		});
 		const count = this.selected.size;
@@ -369,7 +369,7 @@ export class CollectionModal extends Modal {
 		this.isAdding = true;
 		this.renderFooter();
 		// renderFooter detached the clicked button — re-query
-		const addBtn = this.footerEl?.querySelector<HTMLElement>('.hoard-collection-add') ?? null;
+		const addBtn = this.footerEl?.querySelector<HTMLElement>('.hoard-collection__add') ?? null;
 
 		const api = this.plugin.apiService;
 		const settings = this.plugin.settings;

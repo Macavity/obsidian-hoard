@@ -1,11 +1,11 @@
 /* By-type grids, poster slots, title detail stats */
 
 /* "By type" — wrapping Cards-style grids among the shelves (any position). */
-.hoard-rows-bytype {
+.hoard-rows-view__grouped {
   margin-top: 4px;
 }
 
-.hoard-rows-bytype-title {
+.hoard-rows-view__grouped-title {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-normal);
@@ -15,20 +15,20 @@
 }
 
 /* fixed-height wrapper; the inline height reserves the grid's full extent up-front */
-.hoard-rows-bytype-spacer {
+.hoard-rows-view__grouped-spacer {
   position: relative;
 
   /* tops the trailing gap up to the 20px the non-virtual grid had */
   margin: 4px 0 8px;
 }
 
-.hoard-rows-bytype-spacer .hoard-cards-grid.hoard-cards-grid-virtual {
+.hoard-rows-view__grouped-spacer .hoard-card-grid.hoard-card-grid--virtual {
   /* longhand only — padding-top is owned by VirtualGrid */
   padding-left: 2px;
   padding-right: 2px;
 }
 
-.hoard-detail-modal {
+.hoard-detail {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -36,14 +36,14 @@
   overflow-y: auto;
 }
 
-.hoard-detail-header {
+.hoard-detail__header {
   display: flex;
   flex-flow: row wrap;
   align-items: flex-start;
   gap: 16px;
 }
 
-.hoard-detail-header-left {
+.hoard-detail__header-left {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -56,7 +56,7 @@
 }
 
 /* in-flow aspect-ratio slot; placeholder + poster stacked, swapped by opacity */
-.hoard-detail-cover {
+.hoard-detail__cover {
   position: relative;
   width: 120px;
   height: 200px;
@@ -67,7 +67,7 @@
   background: var(--background-secondary);
 }
 
-.hoard-detail-cover-placeholder {
+.hoard-detail__cover-placeholder {
   position: absolute;
   inset: 0;
   display: flex;
@@ -78,16 +78,16 @@
   color: rgb(255 255 255 / 85%);
 }
 
-.hoard-detail-cover-placeholder.is-loading {
+.hoard-detail__cover-placeholder.is-loading {
   animation: hoard-poster-pulse 1.5s ease-in-out infinite;
 }
 
-.hoard-detail-cover-placeholder span {
+.hoard-detail__cover-placeholder span {
   text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
 }
 
-.hoard-detail-cover-img,
-.hoard-card-poster {
+.hoard-detail__cover-img,
+.hoard-card__poster {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -100,18 +100,18 @@
   transition: opacity 0.2s ease;
 }
 
-.hoard-detail-cover.has-poster .hoard-detail-cover-img {
+.hoard-detail__cover.has-poster .hoard-detail__cover-img {
   opacity: 1;
 }
 
-.hoard-detail-title {
+.hoard-detail__title {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 700;
 }
 
 /* studio / network line under the title (the Games title -> developer order) */
-.hoard-detail-studio {
+.hoard-detail__studio {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -119,27 +119,27 @@
   margin-top: 1px;
 }
 
-.hoard-detail-studio-chip {
+.hoard-detail__studio-chip {
   font-size: 0.78rem;
   color: var(--text-muted);
 }
 
-.hoard-detail-studio-chip:nth-last-child(n + 2)::after {
+.hoard-detail__studio-chip:nth-last-child(n + 2)::after {
   content: '·';
   margin-left: 6px;
   color: var(--text-faint);
 }
 
-.hoard-detail-studio-chip.is-clickable {
+.hoard-detail__studio-chip.is-clickable {
   cursor: pointer;
 }
 
-.hoard-detail-studio-chip.is-clickable:hover {
+.hoard-detail__studio-chip.is-clickable:hover {
   color: var(--text-accent);
   text-decoration: underline;
 }
 
-.hoard-detail-studio-more {
+.hoard-detail__studio-more {
   font-size: 0.72rem;
   color: var(--text-faint);
   cursor: pointer;
@@ -148,20 +148,20 @@
   padding: 0 6px;
 }
 
-.hoard-detail-studio-more:hover {
+.hoard-detail__studio-more:hover {
   color: var(--text-normal);
 }
 
 /* heading hugs its text so the dotted hint underlines the title, not the row */
-.hoard-detail-title-wrap {
+.hoard-detail__title-wrap {
   line-height: 1;
 }
 
-.hoard-detail-title-wrap .hoard-detail-title {
+.hoard-detail__title-wrap .hoard-detail__title {
   display: inline-block;
 }
 
-.hoard-detail-title-input {
+.hoard-detail__title-input {
   width: 100%;
   box-sizing: border-box;
   font-size: 1.3rem;
@@ -175,18 +175,18 @@
   color: var(--text-normal);
 }
 
-.hoard-detail-badge-row {
+.hoard-detail__badge-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.hoard-detail-group-meta {
+.hoard-detail__group-meta {
   font-size: 0.85rem;
   opacity: 0.7;
 }
 
-.hoard-detail-stats-box {
+.hoard-detail__stats-box {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -198,7 +198,7 @@
 
 /* title-detail: 4 stats in one row over a full-width bar (modifier only; group modals keep the
    plain box) */
-.hoard-detail-stats-box-bar {
+.hoard-detail__stats-box--bar {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
@@ -209,29 +209,29 @@
 }
 
 /* equal columns; shrink:0 blocks spilled out of a narrow modal */
-.hoard-detail-stats-row {
+.hoard-detail__stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px 10px;
 }
 
-.hoard-detail-stats-row .hoard-acc-stat-block,
-.hoard-detail-stats-row .hoard-acc-header-right {
+.hoard-detail__stats-row .hoard-accordion__stat-block,
+.hoard-detail__stats-row .hoard-accordion__header-right {
   min-width: 0;
   text-align: center;
 }
 
-.hoard-detail-stats-row .hoard-acc-progress-label {
+.hoard-detail__stats-row .hoard-accordion__progress-label {
   margin-bottom: 0;
 }
 
-.hoard-detail-stats-box-bar .hoard-detail-stats-bar {
+.hoard-detail__stats-box--bar .hoard-detail__stats-bar {
   width: auto;
 }
 
 /* narrow: tighter gap + padding so the 4 blocks fit */
 @media (width <= 600px) {
-  .hoard-detail-stats-box {
+  .hoard-detail__stats-box {
     gap: 7px;
     padding: 8px 7px;
   }
@@ -239,18 +239,18 @@
 
 /* under ~290px: 3 time stats on top, progress centered below */
 @container hoard-detail-left (max-width: 310px) {
-  .hoard-detail-stats-box-bar {
+  .hoard-detail__stats-box--bar {
     gap: 6px;
     padding: 8px;
   }
 
-  .hoard-detail-stats-row {
+  .hoard-detail__stats-row {
     grid-template-columns: repeat(3, 1fr);
     gap: 6px;
   }
 
   /* progress spans all three columns */
-  .hoard-detail-stats-row .hoard-acc-header-right {
+  .hoard-detail__stats-row .hoard-accordion__header-right {
     grid-column: 1 / -1;
     display: flex;
     justify-content: center;
@@ -261,15 +261,15 @@
 
 /* cover is a fixed 120px; tighten spacing so 3 columns fit a 360px phone */
 @container hoard-detail-left (max-width: 213px) {
-  .hoard-detail-stats-box-bar {
+  .hoard-detail__stats-box--bar {
     padding: 8px 6px;
   }
 
-  .hoard-detail-stats-row {
+  .hoard-detail__stats-row {
     gap: 5px 4px;
   }
 
-  .hoard-detail-stats-row .hoard-acc-percent {
+  .hoard-detail__stats-row .hoard-accordion__percent {
     font-size: 13px;
   }
 }

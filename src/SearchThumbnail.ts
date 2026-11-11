@@ -15,11 +15,11 @@ function renderSearchThumbnail(
 	alt: string,
 	fallbackIcon: string,
 ): HTMLElement {
-	const thumb = parent.createDiv({ cls: 'hoard-result-thumb' });
-	thumb.createSpan({ cls: 'hoard-result-thumb-icon', text: fallbackIcon });
+	const thumb = parent.createDiv({ cls: 'hoard-search-picker__result-thumb' });
+	thumb.createSpan({ cls: 'hoard-search-picker__result-thumb-icon', text: fallbackIcon });
 	if (url) {
 		const img = thumb.createEl('img', {
-			cls: 'hoard-result-thumb-img',
+			cls: 'hoard-search-picker__result-thumb-img',
 			attr: { src: url, alt, loading: 'lazy' },
 		});
 		img.onerror = () => { img.remove(); };
@@ -43,26 +43,26 @@ interface SearchResultRowSpec {
 
 /**
  * Renders one search-result card (cover on top · title · meta beneath) shared by every add-flow
- * modal, so the card's look lives in one place. The parent `.hoard-modal-results` lays these out as a
+ * modal, so the card's look lives in one place. The parent `.hoard-modal__results` lays these out as a
  * grid. Appends to `container` and returns the card.
  */
 export function renderSearchResultRow(
 	container: HTMLElement,
 	spec: SearchResultRowSpec,
 ): HTMLElement {
-	const item = container.createDiv({ cls: 'hoard-result-card' });
+	const item = container.createDiv({ cls: 'hoard-search-picker__result-card' });
 	const thumb = renderSearchThumbnail(item, spec.thumbUrl, spec.title, spec.fallbackIcon);
 	if (spec.inLibrary) {
 		// badge after the img so it paints on top; the card still adds normally
 		item.addClass('is-in-library');
-		const badge = thumb.createDiv({ cls: 'hoard-result-owned-badge' });
-		badge.createSpan({ cls: 'hoard-result-owned-check', text: '✓' });
+		const badge = thumb.createDiv({ cls: 'hoard-search-picker__result-owned-badge' });
+		badge.createSpan({ cls: 'hoard-search-picker__result-owned-check', text: '✓' });
 		badge.createSpan({ text: spec.inLibrary });
 		item.title = t('misc.searchThumb.alreadyIn', { library: spec.inLibrary });
 	}
-	const text = item.createDiv({ cls: 'hoard-result-text' });
-	text.createDiv({ cls: 'hoard-result-title', text: spec.title });
-	text.createDiv({ cls: 'hoard-result-meta', text: spec.meta });
+	const text = item.createDiv({ cls: 'hoard-search-picker__result-text' });
+	text.createDiv({ cls: 'hoard-search-picker__result-title', text: spec.title });
+	text.createDiv({ cls: 'hoard-search-picker__result-meta', text: spec.meta });
 	item.addEventListener('click', () => spec.onClick(item));
 	return item;
 }

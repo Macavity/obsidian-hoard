@@ -69,22 +69,22 @@ type SettingsGroupVariant =
 
 /** Accent class per settings group; spelled out so every class name appears literally. */
 const SETTINGS_GROUP_CLASSES: Record<SettingsGroupVariant, string> = {
-	movies: 'hoard-sg--movies',
-	anime: 'hoard-sg--anime',
-	books: 'hoard-sg--books',
-	games: 'hoard-sg--games',
-	watchlist: 'hoard-sg--watchlist',
-	reading: 'hoard-sg--reading',
-	theme: 'hoard-sg--theme',
-	shared: 'hoard-sg--shared',
-	cards: 'hoard-sg--cards',
-	general: 'hoard-sg--general',
-	drafts: 'hoard-sg--drafts',
-	lists: 'hoard-sg--lists',
-	csv: 'hoard-sg--csv',
-	folders: 'hoard-sg--folders',
-	subfolders: 'hoard-sg--subfolders',
-	backup: 'hoard-sg--backup',
+	movies: 'hoard-settings-group--movies',
+	anime: 'hoard-settings-group--anime',
+	books: 'hoard-settings-group--books',
+	games: 'hoard-settings-group--games',
+	watchlist: 'hoard-settings-group--watchlist',
+	reading: 'hoard-settings-group--reading',
+	theme: 'hoard-settings-group--theme',
+	shared: 'hoard-settings-group--shared',
+	cards: 'hoard-settings-group--cards',
+	general: 'hoard-settings-group--general',
+	drafts: 'hoard-settings-group--drafts',
+	lists: 'hoard-settings-group--lists',
+	csv: 'hoard-settings-group--csv',
+	folders: 'hoard-settings-group--folders',
+	subfolders: 'hoard-settings-group--subfolders',
+	backup: 'hoard-settings-group--backup',
 };
 
 /** Card-style preview class per text style; spelled out so every class name appears literally. */
@@ -207,9 +207,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 		// mobile/tablet: 9 text labels overflow the pane — icon-only nav (same icons as the view tabs)
 		const iconOnly = Platform.isMobile;
-		containerEl.toggleClass('hoard-settings-mobile', iconOnly);
+		containerEl.toggleClass('hoard-settings--mobile', iconOnly);
 
-		const nav = containerEl.createDiv({ cls: 'hoard-settings-nav' });
+		const nav = containerEl.createDiv({ cls: 'hoard-settings__nav' });
 		const sections: { key: SettingsSection; label: string; icon: string }[] = [
 			{ key: 'general', label: t('settings.nav.general'), icon: 'settings' },
 			{ key: 'api', label: t('settings.nav.api'), icon: 'plug' },
@@ -225,10 +225,10 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const buttons: Map<SettingsSection, HTMLButtonElement> = new Map();
 		for (const sec of sections) {
 			const btn = nav.createEl('button', {
-				cls: `hoard-settings-nav-btn${this.activeSection === sec.key ? ' is-active' : ''}`,
+				cls: `hoard-settings__nav-btn${this.activeSection === sec.key ? ' is-active' : ''}`,
 			});
 			if (iconOnly) {
-				btn.addClass('hoard-settings-nav-btn-icon');
+				btn.addClass('hoard-settings__nav-btn--icon');
 				setIcon(btn, sec.icon);
 				btn.setAttribute('aria-label', sec.label);
 			} else {
@@ -245,7 +245,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			});
 		}
 
-		const body = containerEl.createDiv({ cls: 'hoard-settings-body' });
+		const body = containerEl.createDiv({ cls: 'hoard-settings__body' });
 		this.renderSection(body);
 	}
 
@@ -308,7 +308,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			label: t('settings.cards.text.label'),
 			help: t('settings.cards.text.help'),
 		});
-		const picker = styleBody.createDiv({ cls: 'hoard-card-style-picker' });
+		const picker = styleBody.createDiv({ cls: 'hoard-card-style__picker' });
 		const options: Array<{ value: CardTextStyle; name: string; hint: string }> = [
 			{ value: 'under', name: t('settings.cards.textUnder'), hint: t('settings.cards.hintUnder') },
 			{ value: 'inside', name: t('settings.cards.textInside'), hint: t('settings.cards.hintInside') },
@@ -331,18 +331,18 @@ export class HoardSettingsTab extends PluginSettingTab {
 		};
 
 		for (const opt of options) {
-			const btn = picker.createEl('button', { cls: 'hoard-card-style-option' });
+			const btn = picker.createEl('button', { cls: 'hoard-card-style__option' });
 			btn.setAttr('aria-label', t('settings.cards.applyAll', { name: opt.name }));
 			tiles.set(opt.value, btn);
 			// mini preview: a poster rectangle with two text lines below it or in a scrim
-			const thumb = btn.createDiv({ cls: `hoard-card-style-thumb ${CARD_STYLE_THUMB_CLASSES[opt.value]}` });
-			const poster = thumb.createDiv({ cls: 'hoard-card-style-thumb-poster' });
+			const thumb = btn.createDiv({ cls: `hoard-card-style__thumb ${CARD_STYLE_THUMB_CLASSES[opt.value]}` });
+			const poster = thumb.createDiv({ cls: 'hoard-card-style__thumb-poster' });
 			const lines = (opt.value === 'inside' ? poster : thumb)
-				.createDiv({ cls: 'hoard-card-style-thumb-lines' });
-			lines.createDiv({ cls: 'hoard-card-style-thumb-line' });
-			lines.createDiv({ cls: 'hoard-card-style-thumb-line is-short' });
-			btn.createDiv({ cls: 'hoard-card-style-name', text: opt.name });
-			btn.createDiv({ cls: 'hoard-card-style-hint', text: opt.hint });
+				.createDiv({ cls: 'hoard-card-style__thumb-lines' });
+			lines.createDiv({ cls: 'hoard-card-style__thumb-line' });
+			lines.createDiv({ cls: 'hoard-card-style__thumb-line is-short' });
+			btn.createDiv({ cls: 'hoard-card-style__name', text: opt.name });
+			btn.createDiv({ cls: 'hoard-card-style__hint', text: opt.hint });
 			if (unanimous() === opt.value) btn.addClass('is-active');
 			btn.addEventListener('click', () => {
 				// typed record, not Object.fromEntries — that returns `any`
@@ -353,16 +353,16 @@ export class HoardSettingsTab extends PluginSettingTab {
 		}
 
 		// per-tab rows: icon · tab name · [Under | Inside]
-		const tabRows = styleBody.createDiv({ cls: 'hoard-card-style-tabs' });
+		const tabRows = styleBody.createDiv({ cls: 'hoard-card-style__tabs' });
 		for (const tab of tabs) {
-			const row = tabRows.createDiv({ cls: 'hoard-card-style-tab-row' });
-			const iconEl = row.createSpan({ cls: 'hoard-card-style-tab-icon' });
+			const row = tabRows.createDiv({ cls: 'hoard-card-style__tab-row' });
+			const iconEl = row.createSpan({ cls: 'hoard-card-style__tab-icon' });
 			setIcon(iconEl, tab.icon);
-			row.createSpan({ cls: 'hoard-card-style-tab-label', text: t(tab.label) });
-			const group = row.createDiv({ cls: 'hoard-card-style-tab-group' });
+			row.createSpan({ cls: 'hoard-card-style__tab-label', text: t(tab.label) });
+			const group = row.createDiv({ cls: 'hoard-card-style__tab-group' });
 			for (const opt of options) {
 				const btn = group.createEl('button', {
-					cls: 'hoard-card-style-tab-btn',
+					cls: 'hoard-card-style__tab-btn',
 					text: opt.value === 'under' ? t('settings.cards.under') : t('settings.cards.inside'),
 				});
 				btn.setAttr('aria-label', t('settings.cards.tabStyle', { tab: t(tab.label), style: opt.name.toLowerCase() }));
@@ -380,7 +380,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			label: t('settings.cards.size.label'),
 			help: t('settings.cards.size.help'),
 		});
-		const rows = sizeBody.createDiv({ cls: 'hoard-card-size-rows' });
+		const rows = sizeBody.createDiv({ cls: 'hoard-card-size__rows' });
 		this.renderCardSizeRow(rows, 'monitor', t('settings.cards.desktop'),
 			() => s.cardSize ?? 0, (v) => { s.cardSize = v; }, syncChip);
 		this.renderCardSizeRow(rows, 'smartphone', t('settings.cards.mobile'),
@@ -401,17 +401,17 @@ export class HoardSettingsTab extends PluginSettingTab {
 		set: (v: number) => void,
 		onChanged: () => void,
 	): void {
-		const row = parent.createDiv({ cls: 'hoard-card-size-row' });
-		const iconEl = row.createSpan({ cls: 'hoard-card-size-row-icon' });
+		const row = parent.createDiv({ cls: 'hoard-card-size__row' });
+		const iconEl = row.createSpan({ cls: 'hoard-card-size__row-icon' });
 		setIcon(iconEl, icon);
-		row.createSpan({ cls: 'hoard-card-size-row-label', text: label });
+		row.createSpan({ cls: 'hoard-card-size__row-label', text: label });
 
 		const fmt = (v: number): string => t('settings.cards.valuePx', {
 			label: t(HoardSettingsTab.CARD_SIZE_KEYS[v + 3] ?? 'settings.cardSize.default'),
 			px: cardSizeToMinWidth(v),
 		});
 		const slider = new SliderComponent(row);
-		const valueEl = row.createSpan({ cls: 'hoard-card-size-value', text: fmt(get()) });
+		const valueEl = row.createSpan({ cls: 'hoard-card-size__value', text: fmt(get()) });
 		slider
 			.setLimits(-3, 3, 1)
 			.setValue(get())
@@ -427,7 +427,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	}
 
 	private renderGeneral(container: HTMLElement): void {
-		const page = container.createDiv({ cls: 'hoard-sg-page' });
+		const page = container.createDiv({ cls: 'hoard-settings-group__page' });
 
 		// main
 		const mainGroup = this.settingsGroup(page, {
@@ -618,12 +618,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 				}),
 			);
 
-		const regenProgressWrap = bk.createDiv({ cls: 'hoard-regen-progress-wrap' });
+		const regenProgressWrap = bk.createDiv({ cls: 'hoard-csv__regenerate-progress-wrap' });
 		regenProgressWrap.hide();
-		regenProgressWrap.createSpan({ cls: 'hoard-csv-bg-note', text: t('settings.backup.regenerate.note') });
-		const regenProgressTrack = regenProgressWrap.createDiv({ cls: 'hoard-csv-progress-track' });
-		const regenProgressFill = regenProgressTrack.createDiv({ cls: 'hoard-csv-progress-fill' });
-		const regenProgressText = regenProgressWrap.createSpan({ cls: 'hoard-csv-progress-text', text: '0 / 0' });
+		regenProgressWrap.createSpan({ cls: 'hoard-csv__background-note', text: t('settings.backup.regenerate.note') });
+		const regenProgressTrack = regenProgressWrap.createDiv({ cls: 'hoard-csv__progress-track' });
+		const regenProgressFill = regenProgressTrack.createDiv({ cls: 'hoard-csv__progress-fill' });
+		const regenProgressText = regenProgressWrap.createSpan({ cls: 'hoard-csv__progress-text', text: '0 / 0' });
 
 		regenHolder.wrap = regenProgressWrap;
 		regenHolder.fill = regenProgressFill;
@@ -779,7 +779,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 		const notice = new Notice('', 0);
 		const label = notice.messageEl.createSpan({ text });
-		const cancelBtn = notice.messageEl.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-notice-cancel-btn', text: t('common.cancel') });
+		const cancelBtn = notice.messageEl.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-settings__notice-cancel-btn', text: t('common.cancel') });
 		cancelBtn.addEventListener('click', cancelFn);
 		return { notice, label, cancelFn, isCancelled: () => cancelled };
 	}
@@ -966,24 +966,24 @@ export class HoardSettingsTab extends PluginSettingTab {
 			rows?: boolean;
 		},
 	): { head: HTMLElement; body: HTMLElement; setChip: (status: ChipStatus) => void } {
-		const box = parent.createDiv({ cls: `hoard-sg ${SETTINGS_GROUP_CLASSES[opts.variant]}` });
+		const box = parent.createDiv({ cls: `hoard-settings-group ${SETTINGS_GROUP_CLASSES[opts.variant]}` });
 
-		const head = box.createDiv({ cls: 'hoard-sg-head' });
-		const icon = head.createDiv({ cls: 'hoard-sg-icon' });
+		const head = box.createDiv({ cls: 'hoard-settings-group__head' });
+		const icon = head.createDiv({ cls: 'hoard-settings-group__icon' });
 		setIcon(icon, opts.icon);
-		const titles = head.createDiv({ cls: 'hoard-sg-titles' });
-		titles.createDiv({ cls: 'hoard-sg-title', text: opts.title });
-		titles.createDiv({ cls: 'hoard-sg-sub', text: opts.sub });
+		const titles = head.createDiv({ cls: 'hoard-settings-group__titles' });
+		titles.createDiv({ cls: 'hoard-settings-group__title', text: opts.title });
+		titles.createDiv({ cls: 'hoard-settings-group__subtitle', text: opts.sub });
 
-		const chip = head.createDiv({ cls: 'hoard-sg-chip' });
-		chip.createSpan({ cls: 'hoard-sg-chip-dot' });
-		const chipText = chip.createSpan({ cls: 'hoard-sg-chip-text' });
+		const chip = head.createDiv({ cls: 'hoard-settings-group__chip' });
+		chip.createSpan({ cls: 'hoard-settings-group__chip-dot' });
+		const chipText = chip.createSpan({ cls: 'hoard-settings-group__chip-text' });
 		// groups with nothing to report never call setChip — an empty pill reads as broken
 		chip.hide();
 
 		return {
 			head,
-			body: box.createDiv({ cls: `hoard-sg-body${opts.rows ? ' hoard-sg-body--rows' : ''}` }),
+			body: box.createDiv({ cls: `hoard-settings-group__body${opts.rows ? ' hoard-settings-group__body--rows' : ''}` }),
 			setChip: (status) => {
 				chipText.textContent = status.text;
 				this.setChipTone(chip, status.tone);
@@ -1000,19 +1000,19 @@ export class HoardSettingsTab extends PluginSettingTab {
 		parent: HTMLElement,
 		opts: { label: string; help?: string },
 	): HTMLElement {
-		const card = parent.createDiv({ cls: 'hoard-sg-card' });
+		const card = parent.createDiv({ cls: 'hoard-settings-group__card' });
 
-		const head = card.createDiv({ cls: 'hoard-sg-card-head' });
-		head.createDiv({ cls: 'hoard-sg-card-label', text: opts.label });
+		const head = card.createDiv({ cls: 'hoard-settings-group__card-head' });
+		head.createDiv({ cls: 'hoard-settings-group__card-label', text: opts.label });
 
 		if (opts.help) {
-			const tools = head.createDiv({ cls: 'hoard-sg-card-tools' });
+			const tools = head.createDiv({ cls: 'hoard-settings-group__card-tools' });
 			const toggle = tools.createEl('button', {
-				cls: 'hoard-sg-icon-btn hoard-sg-help-btn',
+				cls: 'hoard-settings-group__icon-btn hoard-settings-group__help-btn',
 				text: '?',
 				attr: { 'aria-label': t('settings.about', { label: opts.label }) },
 			});
-			const help = card.createDiv({ cls: 'hoard-sg-help hoard-sg-help--card', text: opts.help });
+			const help = card.createDiv({ cls: 'hoard-settings-group__help hoard-settings-group__help--card', text: opts.help });
 			toggle.addEventListener('click', () => {
 				const open = !help.hasClass('is-open');
 				help.toggleClass('is-open', open);
@@ -1020,7 +1020,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			});
 		}
 
-		return card.createDiv({ cls: 'hoard-sg-card-body' });
+		return card.createDiv({ cls: 'hoard-settings-group__card-body' });
 	}
 
 	/** Segmented picker replacing the old "which API" dropdown. */
@@ -1033,13 +1033,13 @@ export class HoardSettingsTab extends PluginSettingTab {
 			onChange: (v: string) => void;
 		},
 	): void {
-		const row = parent.createDiv({ cls: 'hoard-sg-seg-row' });
-		row.createDiv({ cls: 'hoard-sg-seg-label', text: opts.label });
+		const row = parent.createDiv({ cls: 'hoard-settings-group__segment-row' });
+		row.createDiv({ cls: 'hoard-settings-group__segment-label', text: opts.label });
 
-		const wrap = row.createDiv({ cls: 'hoard-sg-seg' });
+		const wrap = row.createDiv({ cls: 'hoard-settings-group__segment' });
 		const btns = new Map<string, HTMLElement>();
 		for (const o of opts.options) {
-			const btn = wrap.createEl('button', { cls: 'hoard-sg-seg-btn', text: o.label });
+			const btn = wrap.createEl('button', { cls: 'hoard-settings-group__segment-btn', text: o.label });
 			btns.set(o.value, btn);
 			btn.addEventListener('click', () => {
 				btns.forEach((el, v) => {
@@ -1056,7 +1056,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	 * one has no key. The returned updater takes that fallback's name, or null to hide it.
 	 */
 	private fallbackHint(parent: HTMLElement): (source: string | null) => void {
-		const hint = parent.createDiv({ cls: 'hoard-sg-note hoard-sg-fallback' });
+		const hint = parent.createDiv({ cls: 'hoard-settings-group__note hoard-settings-group__fallback' });
 		hint.hide();
 		return (source) => {
 			hint.textContent = source ? t('settings.api.keylessFallback', { source }) : '';
@@ -1072,24 +1072,24 @@ export class HoardSettingsTab extends PluginSettingTab {
 	private apiProvider(parent: HTMLElement, spec: ApiProviderSpec): ApiProviderHandle {
 		const card = parent.createDiv({ cls: 'hoard-api-provider' });
 
-		const head = card.createDiv({ cls: 'hoard-api-provider-head' });
-		head.createDiv({ cls: 'hoard-api-provider-avatar', text: spec.initials });
-		const names = head.createDiv({ cls: 'hoard-api-provider-names' });
-		names.createDiv({ cls: 'hoard-api-provider-name', text: spec.name });
-		if (spec.note) names.createDiv({ cls: 'hoard-api-provider-note', text: spec.note });
-		const state = head.createDiv({ cls: 'hoard-api-provider-state' });
+		const head = card.createDiv({ cls: 'hoard-api-provider__head' });
+		head.createDiv({ cls: 'hoard-api-provider__avatar', text: spec.initials });
+		const names = head.createDiv({ cls: 'hoard-api-provider__names' });
+		names.createDiv({ cls: 'hoard-api-provider__name', text: spec.name });
+		if (spec.note) names.createDiv({ cls: 'hoard-api-provider__note', text: spec.note });
+		const state = head.createDiv({ cls: 'hoard-api-provider__state' });
 		if (spec.badge) state.textContent = spec.badge;
 
 		// credential fields
 		for (const f of spec.fields ?? []) {
-			const field = card.createDiv({ cls: 'hoard-api-field' });
-			field.createDiv({ cls: 'hoard-api-field-label', text: f.label });
+			const field = card.createDiv({ cls: 'hoard-api-provider__field' });
+			field.createDiv({ cls: 'hoard-api-provider__field-label', text: f.label });
 			// plain fields keep the reveal button's gutter so every input ends on the same edge
 			const row = field.createDiv({
-				cls: `hoard-api-field-row${f.secret ? '' : ' hoard-api-field-row--plain'}`,
+				cls: `hoard-api-provider__field-row${f.secret ? '' : ' hoard-api-provider__field-row--plain'}`,
 			});
 
-			const input = row.createEl('input', { cls: 'hoard-api-input' });
+			const input = row.createEl('input', { cls: 'hoard-api-provider__input' });
 			input.type = f.secret ? 'password' : 'text';
 			input.placeholder = f.placeholder;
 			input.value = f.get();
@@ -1100,7 +1100,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			f.onInput?.(input);
 
 			if (f.secret) {
-				const eye = row.createEl('button', { cls: 'hoard-sg-icon-btn', attr: { 'aria-label': t('settings.api.showKey') } });
+				const eye = row.createEl('button', { cls: 'hoard-settings-group__icon-btn', attr: { 'aria-label': t('settings.api.showKey') } });
 				setIcon(eye, 'eye');
 				eye.addEventListener('click', () => {
 					const hidden = input.type === 'password';
@@ -1112,26 +1112,26 @@ export class HoardSettingsTab extends PluginSettingTab {
 		}
 
 		// footer: status + actions
-		const foot = card.createDiv({ cls: 'hoard-api-provider-foot' });
-		const chip = foot.createDiv({ cls: 'hoard-sg-chip' });
-		chip.createSpan({ cls: 'hoard-sg-chip-dot' });
-		const chipText = chip.createSpan({ cls: 'hoard-sg-chip-text' });
+		const foot = card.createDiv({ cls: 'hoard-api-provider__footer' });
+		const chip = foot.createDiv({ cls: 'hoard-settings-group__chip' });
+		chip.createSpan({ cls: 'hoard-settings-group__chip-dot' });
+		const chipText = chip.createSpan({ cls: 'hoard-settings-group__chip-text' });
 
-		const actions = foot.createDiv({ cls: 'hoard-api-actions' });
+		const actions = foot.createDiv({ cls: 'hoard-api-provider__actions' });
 		if (spec.link) {
 			const a = actions.createEl('a', {
-				cls: 'hoard-api-link',
+				cls: 'hoard-api-provider__link',
 				href: spec.link.href,
 				attr: { target: '_blank', rel: 'noopener noreferrer' },
 			});
 			a.createSpan({ text: spec.link.text });
-			setIcon(a.createSpan({ cls: 'hoard-api-link-icon' }), 'external-link');
+			setIcon(a.createSpan({ cls: 'hoard-api-provider__link-icon' }), 'external-link');
 		}
 
 		let help: HTMLElement | null = null;
 		if (spec.help) {
 			const toggle = actions.createEl('button', {
-				cls: 'hoard-sg-icon-btn hoard-sg-help-btn',
+				cls: 'hoard-settings-group__icon-btn hoard-settings-group__help-btn',
 				text: '?',
 				attr: { 'aria-label': t('settings.about', { label: spec.name }) },
 			});
@@ -1143,7 +1143,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			});
 		}
 
-		const diagnosis = card.createDiv({ cls: 'hoard-api-diagnosis' });
+		const diagnosis = card.createDiv({ cls: 'hoard-api-provider__diagnosis' });
 		diagnosis.hide();
 
 		const setStatus = (status: ChipStatus): void => {
@@ -1156,7 +1156,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 		const runTest = spec.test;
 		if (runTest) {
-			const test = actions.createEl('button', { cls: 'hoard-api-test', text: t('settings.api.test') });
+			const test = actions.createEl('button', { cls: 'hoard-api-provider__test', text: t('settings.api.test') });
 			test.addEventListener('click', () => {
 				test.disabled = true;
 				setStatus({ text: t('settings.api.testing'), tone: 'pending' });
@@ -1171,7 +1171,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		}
 
 		if (spec.help) {
-			help = card.createDiv({ cls: 'hoard-sg-help', text: spec.help });
+			help = card.createDiv({ cls: 'hoard-settings-group__help', text: spec.help });
 		}
 		spec.extra?.(card);
 
@@ -1189,7 +1189,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	}
 
 	private renderApi(el: HTMLElement): void {
-		const page = el.createDiv({ cls: 'hoard-sg-page' });
+		const page = el.createDiv({ cls: 'hoard-settings-group__page' });
 		const s = this.plugin.settings;
 
 		// 1. Movies & TV shows
@@ -1296,7 +1296,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		syncMovies();
 
 		movies.body.createDiv({
-			cls: 'hoard-sg-note',
+			cls: 'hoard-settings-group__note',
 			text: t('settings.api.movies.note'),
 		});
 
@@ -1357,8 +1357,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 			},
 			help: t('settings.api.jikan.help'),
 			extra: (card) => {
-				const row = card.createDiv({ cls: 'hoard-api-presets' });
-				const btn = row.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('settings.api.jikan.useTenrai') });
+				const row = card.createDiv({ cls: 'hoard-api-provider__presets' });
+				const btn = row.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('settings.api.jikan.useTenrai') });
 				btn.addEventListener('click', () => {
 					if (!endpointInput) return;
 					endpointInput.value = '';
@@ -1378,7 +1378,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		syncAnime();
 
 		anime.body.createDiv({
-			cls: 'hoard-sg-note',
+			cls: 'hoard-settings-group__note',
 			text: t('settings.api.anime.note'),
 		});
 
@@ -1626,14 +1626,14 @@ export class HoardSettingsTab extends PluginSettingTab {
 					: { text: steamFailureLabel(result.reason), tone: 'error' as const };
 			},
 			extra: (card) => {
-				const row = card.createDiv({ cls: 'hoard-api-action' });
-				const texts = row.createDiv({ cls: 'hoard-api-action-texts' });
-				texts.createDiv({ cls: 'hoard-api-action-title', text: t('settings.steam.sync.title') });
+				const row = card.createDiv({ cls: 'hoard-api-provider__action' });
+				const texts = row.createDiv({ cls: 'hoard-api-provider__action-texts' });
+				texts.createDiv({ cls: 'hoard-api-provider__action-title', text: t('settings.steam.sync.title') });
 				texts.createDiv({
-					cls: 'hoard-api-action-desc',
+					cls: 'hoard-api-provider__action-description',
 					text: t('settings.steam.sync.desc'),
 				});
-				const btn = row.createEl('button', { cls: 'hoard-api-action-btn mod-cta', text: t('settings.steam.sync.button') });
+				const btn = row.createEl('button', { cls: 'hoard-api-provider__action-btn mod-cta', text: t('settings.steam.sync.button') });
 				btn.addEventListener('click', () => {
 					if (!this.plugin.apiService.hasSteamCredentials()) {
 						new Notice(t('settings.steam.sync.needCreds'));
@@ -1650,14 +1650,14 @@ export class HoardSettingsTab extends PluginSettingTab {
 	}
 
 	private renderTypeApiMapping(parent: HTMLElement): void {
-		const card = parent.createDiv({ cls: 'hoard-settings-card' });
-		card.createDiv({ cls: 'hoard-settings-card-title', text: t('settings.api.routing.title') });
+		const card = parent.createDiv({ cls: 'hoard-settings__card' });
+		card.createDiv({ cls: 'hoard-settings__card-title', text: t('settings.api.routing.title') });
 		card.createDiv({
-			cls: 'hoard-settings-card-desc',
+			cls: 'hoard-settings__card-description',
 			text: t('settings.api.routing.desc'),
 		});
 
-		const list = card.createDiv({ cls: 'hoard-type-api-list' });
+		const list = card.createDiv({ cls: 'hoard-api-provider__type-api-list' });
 		const allTypes = this.plugin.settings.types ?? [];
 		const mapping = this.plugin.settings.typeApiMapping ?? {};
 
@@ -1673,15 +1673,15 @@ export class HoardSettingsTab extends PluginSettingTab {
 		if (pruned) void this.plugin.saveSettings();
 
 		for (const type of allTypes) {
-			const row = list.createDiv({ cls: 'hoard-type-api-row' });
-			row.createSpan({ cls: 'hoard-type-api-name', text: typeLabel(type.name) });
+			const row = list.createDiv({ cls: 'hoard-api-provider__type-api-row' });
+			row.createSpan({ cls: 'hoard-api-provider__type-api-name', text: typeLabel(type.name) });
 
 			if (type.name === 'Anime') {
-				row.createSpan({ cls: 'hoard-type-api-locked', text: t('settings.api.routing.locked', { apis: 'Jikan / AniList' }) });
+				row.createSpan({ cls: 'hoard-api-provider__type-api-locked', text: t('settings.api.routing.locked', { apis: 'Jikan / AniList' }) });
 			} else if (type.name === 'Movie' || type.name === 'TV Show' || type.name === 'TvShow') {
-				row.createSpan({ cls: 'hoard-type-api-locked', text: t('settings.api.routing.locked', { apis: 'OMDb / TMDB' }) });
+				row.createSpan({ cls: 'hoard-api-provider__type-api-locked', text: t('settings.api.routing.locked', { apis: 'OMDb / TMDB' }) });
 			} else {
-				const select = row.createEl('select', { cls: 'hoard-select hoard-type-api-select' });
+				const select = row.createEl('select', { cls: 'hoard-input__select hoard-api-provider__type-api-select' });
 				const current = mapping[type.name] ?? '';
 				const opts: Array<{ value: '' | 'anime' | 'movie'; label: string }> = [
 					{ value: '', label: t('settings.api.routing.notSet') },
@@ -1714,7 +1714,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	 * shared by all three.
 	 */
 	private renderCustomize(el: HTMLElement): void {
-		const page = el.createDiv({ cls: 'hoard-sg-page' });
+		const page = el.createDiv({ cls: 'hoard-settings-group__page' });
 		const s = this.plugin.settings;
 
 		// theme
@@ -1824,30 +1824,30 @@ export class HoardSettingsTab extends PluginSettingTab {
 			help: t('settings.customize.rating.help'),
 		});
 
-		const list = wrap.createDiv({ cls: 'hoard-rating-tier-list' });
+		const list = wrap.createDiv({ cls: 'hoard-rating-tier__list' });
 		this.plugin.settings.ratingSystem.forEach((tier, idx) => {
 			const tierNumber = idx + 1;
-			const rowEl = list.createDiv({ cls: 'hoard-rating-tier-row' });
+			const rowEl = list.createDiv({ cls: 'hoard-rating-tier__row' });
 
 			// clickable colour dot + hidden native picker
-			const dotWrap = rowEl.createDiv({ cls: 'hoard-tag-dot-wrap' });
-			const dot = dotWrap.createSpan({ cls: 'hoard-tag-dot' });
+			const dotWrap = rowEl.createDiv({ cls: 'hoard-tag-editor__dot-wrap' });
+			const dot = dotWrap.createSpan({ cls: 'hoard-tag-editor__dot' });
 			dot.style.backgroundColor = tier.color;
 			const colorPicker = dotWrap.createEl('input', {
-				cls: 'hoard-tag-color-picker',
+				cls: 'hoard-tag-editor__color-picker',
 				attr: { type: 'color', value: tier.color, 'aria-label': t('settings.customize.rating.colorAria', { tier: tierNumber }) },
 			});
 
 			// static preview: `tierNumber` filled stars in the tier colour
-			const preview = rowEl.createDiv({ cls: 'hoard-star-rating hoard-rating-tier-preview' });
-			preview.style.setProperty('--hoard-rating-color', tier.color);
+			const preview = rowEl.createDiv({ cls: 'hoard-star-rating hoard-rating-tier__preview' });
+			preview.style.setProperty('--hoard-star-rating-color', tier.color);
 			for (let i = 1; i <= 5; i++) {
-				const star = preview.createSpan({ cls: 'hoard-star', text: '★' });
+				const star = preview.createSpan({ cls: 'hoard-star-rating__star', text: '★' });
 				if (i <= tierNumber) star.addClass('is-active');
 			}
 
 			const labelInput = rowEl.createEl('input', {
-				cls: 'hoard-modal-input hoard-rating-tier-label',
+				cls: 'hoard-modal__input hoard-rating-tier__label',
 				attr: {
 					type: 'text',
 					value: tier.label,
@@ -1860,7 +1860,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				void (async () => {
 					tier.color = colorPicker.value;
 					dot.style.backgroundColor = colorPicker.value;
-					preview.style.setProperty('--hoard-rating-color', colorPicker.value);
+					preview.style.setProperty('--hoard-star-rating-color', colorPicker.value);
 					await this.plugin.saveSettings();
 					this.refreshOpenViews();
 				})();
@@ -1903,15 +1903,15 @@ export class HoardSettingsTab extends PluginSettingTab {
 			{ label: t('settings.customize.readingType.book'), kind: 'book' },
 		];
 
-		const tagsEl = wrap.createDiv({ cls: 'hoard-tags-list' });
+		const tagsEl = wrap.createDiv({ cls: 'hoard-tag-editor__tags-list' });
 		for (const { label, kind } of entries) {
-			const pill = tagsEl.createDiv({ cls: 'hoard-tag-pill' });
+			const pill = tagsEl.createDiv({ cls: 'hoard-tag-editor__pill' });
 
-			const dotWrap = pill.createDiv({ cls: 'hoard-tag-dot-wrap' });
-			const dot = dotWrap.createSpan({ cls: 'hoard-tag-dot' });
+			const dotWrap = pill.createDiv({ cls: 'hoard-tag-editor__dot-wrap' });
+			const dot = dotWrap.createSpan({ cls: 'hoard-tag-editor__dot' });
 			dot.style.backgroundColor = this.plugin.settings.readingTypeColors[kind];
 			const colorPicker = dotWrap.createEl('input', {
-				cls: 'hoard-tag-color-picker',
+				cls: 'hoard-tag-editor__color-picker',
 				attr: { type: 'color', value: this.plugin.settings.readingTypeColors[kind], 'aria-label': t('settings.colorFor', { name: label }) },
 			});
 			dot.addEventListener('click', () => colorPicker.click());
@@ -1923,7 +1923,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				})();
 			});
 
-			pill.createSpan({ cls: 'hoard-tag-name', text: label });
+			pill.createSpan({ cls: 'hoard-tag-editor__name', text: label });
 		}
 	}
 
@@ -2049,7 +2049,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		});
 
 		el.createDiv({
-			cls: 'hoard-sg-note',
+			cls: 'hoard-settings-group__note',
 			text: t('settings.customize.games.note'),
 		});
 	}
@@ -2109,19 +2109,19 @@ export class HoardSettingsTab extends PluginSettingTab {
 		];
 
 		const currentTheme = this.plugin.settings.colorTheme ?? 'default';
-		const cardsRow = el.createDiv({ cls: 'hoard-theme-cards' });
+		const cardsRow = el.createDiv({ cls: 'hoard-theme-picker__cards' });
 		onPicked?.(themes.find((th) => th.key === currentTheme)?.label ?? t('settings.customize.theme.default'));
 
 		const allCards: HTMLElement[] = [];
 		for (const theme of themes) {
 			const card = cardsRow.createDiv({
-				cls: `hoard-theme-card${currentTheme === theme.key ? ' is-selected' : ''}`,
+				cls: `hoard-theme-picker__card${currentTheme === theme.key ? ' is-selected' : ''}`,
 			});
 			allCards.push(card);
-			card.createDiv({ cls: 'hoard-theme-card-name', text: theme.label });
-			const strip = card.createDiv({ cls: 'hoard-theme-strip' });
+			card.createDiv({ cls: 'hoard-theme-picker__card-name', text: theme.label });
+			const strip = card.createDiv({ cls: 'hoard-theme-picker__strip' });
 			for (const color of theme.colors) {
-				const swatch = strip.createDiv({ cls: 'hoard-theme-swatch' });
+				const swatch = strip.createDiv({ cls: 'hoard-theme-picker__swatch' });
 				swatch.style.backgroundColor = color;
 			}
 			card.addEventListener('click', () => {
@@ -2149,13 +2149,13 @@ export class HoardSettingsTab extends PluginSettingTab {
 			help: t('settings.customize.season.help'),
 		});
 
-		const colorsEl = wrap.createDiv({ cls: 'hoard-season-colors-list' });
+		const colorsEl = wrap.createDiv({ cls: 'hoard-tag-editor__season-colors-list' });
 		const renderColors = (): void => {
 			colorsEl.empty();
 			this.plugin.settings.seasonPalette.forEach((color, idx) => {
-				const pill = colorsEl.createDiv({ cls: 'hoard-season-color-pill' });
+				const pill = colorsEl.createDiv({ cls: 'hoard-tag-editor__season-color-pill' });
 				const swatch = pill.createEl('input', {
-					cls: 'hoard-color-input',
+					cls: 'hoard-color-picker__input',
 					attr: { type: 'color', value: color },
 				});
 				swatch.addEventListener('change', () => {
@@ -2164,11 +2164,11 @@ export class HoardSettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})();
 				});
-				pill.createSpan({ cls: 'hoard-season-color-label', text: t('settings.customize.season.name', { number: idx + 1 }) });
+				pill.createSpan({ cls: 'hoard-tag-editor__season-color-label', text: t('settings.customize.season.name', { number: idx + 1 }) });
 				const del = createIconButton(pill, {
 					icon: 'x',
 					label: t('settings.customize.season.remove', { number: idx + 1 }),
-					cls: 'hoard-tag-del',
+					cls: 'hoard-tag-editor__delete',
 					variant: 'sm',
 				});
 				del.addEventListener('click', () => {
@@ -2182,12 +2182,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 		};
 		renderColors();
 
-		const addRow = wrap.createDiv({ cls: 'hoard-tag-add-row' });
+		const addRow = wrap.createDiv({ cls: 'hoard-tag-editor__add-row' });
 		const colorInput = addRow.createEl('input', {
-			cls: 'hoard-color-input',
+			cls: 'hoard-color-picker__input',
 			attr: { type: 'color', value: '#888780' },
 		});
-		const addBtn = addRow.createEl('button', { cls: 'hoard-btn hoard-btn-success', text: t('settings.customize.season.add') });
+		const addBtn = addRow.createEl('button', { cls: 'hoard-btn hoard-btn--success', text: t('settings.customize.season.add') });
 		addBtn.addEventListener('click', () => {
 			void (async () => {
 				this.plugin.settings.seasonPalette.push(colorInput.value);
@@ -2209,7 +2209,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	private renderTagListSection(parent: HTMLElement, cfg: TagListSectionConfig): void {
 		const wrap = this.sgCard(parent, { label: cfg.label, help: cfg.info });
 
-		const tagsEl = wrap.createDiv({ cls: 'hoard-tags-list' });
+		const tagsEl = wrap.createDiv({ cls: 'hoard-tag-editor__tags-list' });
 		const renderTags = (): void => {
 			tagsEl.empty();
 			for (const tag of cfg.getList()) {
@@ -2220,16 +2220,16 @@ export class HoardSettingsTab extends PluginSettingTab {
 		renderTags();
 
 		if (cfg.add) {
-			const addRow = wrap.createDiv({ cls: 'hoard-tag-add-row' });
+			const addRow = wrap.createDiv({ cls: 'hoard-tag-editor__add-row' });
 			const nameInput = addRow.createEl('input', {
-				cls: 'hoard-modal-input',
+				cls: 'hoard-modal__input',
 				attr: { type: 'text', placeholder: t('settings.tags.namePlaceholder') },
 			});
 			const colorInput = addRow.createEl('input', {
-				cls: 'hoard-color-input',
+				cls: 'hoard-color-picker__input',
 				attr: { type: 'color', value: '#888780' },
 			});
-			const addBtn = addRow.createEl('button', { cls: 'hoard-btn hoard-btn-success', text: t('settings.tags.add') });
+			const addBtn = addRow.createEl('button', { cls: 'hoard-btn hoard-btn--success', text: t('settings.tags.add') });
 			addBtn.addEventListener('click', () => {
 				void (async () => {
 					const name = nameInput.value.trim();
@@ -2257,14 +2257,14 @@ export class HoardSettingsTab extends PluginSettingTab {
 		cfg: TagListSectionConfig,
 		refresh: () => void,
 	): void {
-		const pill = parent.createDiv({ cls: 'hoard-tag-pill' });
+		const pill = parent.createDiv({ cls: 'hoard-tag-editor__pill' });
 		const locked = cfg.isLocked?.(tag.name) ?? false;
 
-		const dotWrap = pill.createDiv({ cls: 'hoard-tag-dot-wrap' });
-		const dot = dotWrap.createSpan({ cls: 'hoard-tag-dot' });
+		const dotWrap = pill.createDiv({ cls: 'hoard-tag-editor__dot-wrap' });
+		const dot = dotWrap.createSpan({ cls: 'hoard-tag-editor__dot' });
 		dot.style.backgroundColor = tag.color;
 		const colorPicker = dotWrap.createEl('input', {
-			cls: 'hoard-tag-color-picker',
+			cls: 'hoard-tag-editor__color-picker',
 			attr: { type: 'color', value: tag.color, 'aria-label': t('settings.colorFor', { name: tag.name }) },
 		});
 		dot.addEventListener('click', () => colorPicker.click());
@@ -2278,7 +2278,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		if (cfg.rename && !locked) {
 			// editable name; commits on change/blur, empty or duplicate reverts
 			const nameInput = pill.createEl('input', {
-				cls: 'hoard-tag-name-input',
+				cls: 'hoard-tag-editor__name-input',
 				attr: {
 					type: 'text',
 					value: tag.name,
@@ -2313,14 +2313,14 @@ export class HoardSettingsTab extends PluginSettingTab {
 			nameInput.addEventListener('change', commit);
 			nameInput.addEventListener('blur', commit);
 		} else {
-			pill.createSpan({ cls: 'hoard-tag-name', text: cfg.display?.(tag.name) ?? tag.name });
+			pill.createSpan({ cls: 'hoard-tag-editor__name', text: cfg.display?.(tag.name) ?? tag.name });
 		}
 
 		if (cfg.remove && !locked) {
 			const del = createIconButton(pill, {
 				icon: 'x',
 				label: t('settings.tags.remove', { name: tag.name }),
-				cls: 'hoard-tag-del',
+				cls: 'hoard-tag-editor__delete',
 				variant: 'sm',
 			});
 			del.addEventListener('click', () => {
@@ -2380,7 +2380,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	// Folders
 
 	private renderWatchlist(container: HTMLElement): void {
-		const page = container.createDiv({ cls: 'hoard-sg-page' });
+		const page = container.createDiv({ cls: 'hoard-settings-group__page' });
 
 		// main
 		const el = this.settingsGroup(page, {
@@ -2430,7 +2430,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.addText((t) => {
 				t.inputEl.type = 'number';
 				t.inputEl.min = '1';
-				t.inputEl.addClass('hoard-settings-count-input');
+				t.inputEl.addClass('hoard-settings__count-input');
 				t.setValue(String(this.plugin.settings.dashboardTopCredits ?? 5)).onChange(
 					async (v) => {
 						const n = parseInt(v, 10);
@@ -2550,10 +2550,10 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 		const listEl = subfolders.body.createDiv({ cls: 'hoard-folder-list' });
 		for (const type of this.plugin.settings.types) {
-			const row = listEl.createDiv({ cls: 'hoard-folder-row' });
-			row.createSpan({ cls: 'hoard-folder-type', text: typeLabel(type.name) });
+			const row = listEl.createDiv({ cls: 'hoard-folder-list__row' });
+			row.createSpan({ cls: 'hoard-folder-list__type', text: typeLabel(type.name) });
 			row.createSpan({
-				cls: 'hoard-folder-path',
+				cls: 'hoard-folder-list__path',
 				text: `${this.plugin.getLayout().root}/${type.name}`,
 			});
 		}
@@ -2562,7 +2562,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	// Drafts
 
 	private renderDrafts(container: HTMLElement): void {
-		const page = container.createDiv({ cls: 'hoard-sg-page' });
+		const page = container.createDiv({ cls: 'hoard-settings-group__page' });
 
 		// main
 		const el = this.settingsGroup(page, {
@@ -2603,7 +2603,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	// Custom Lists
 
 	private renderCustomLists(container: HTMLElement): void {
-		const page = container.createDiv({ cls: 'hoard-sg-page' });
+		const page = container.createDiv({ cls: 'hoard-settings-group__page' });
 
 		// main
 		const el = this.settingsGroup(page, {
@@ -2651,7 +2651,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	private renderReading(container: HTMLElement): void {
 		const readingData = this.plugin.readingDataManager;
 		const settings = readingData.getSettings();
-		const page = container.createDiv({ cls: 'hoard-sg-page' });
+		const page = container.createDiv({ cls: 'hoard-settings-group__page' });
 
 		// main
 		const main = this.settingsGroup(page, {
@@ -2734,7 +2734,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	// Quick Info
 
 	private renderQuickInfo(el: HTMLElement): void {
-		el.createDiv({ cls: 'hoard-settings-section-title', text: t('settings.nav.quickInfo') });
+		el.createDiv({ cls: 'hoard-settings__section-title', text: t('settings.nav.quickInfo') });
 
 		// emoji stay in code; heading/body are keys of settings.quickInfo
 		const sections: { icon: string; title: TranslationKey; items: { heading: TranslationKey; body: TranslationKey }[] }[] = [
@@ -2787,23 +2787,23 @@ export class HoardSettingsTab extends PluginSettingTab {
 		];
 
 		for (const section of sections) {
-			const wrapper = el.createDiv({ cls: 'hoard-qi-section' });
+			const wrapper = el.createDiv({ cls: 'hoard-quick-info__section' });
 
-			const header = wrapper.createDiv({ cls: 'hoard-qi-section-header' });
-			const chevron = header.createSpan({ cls: 'hoard-qi-chevron', text: '▶' });
-			header.createSpan({ cls: 'hoard-qi-section-label', text: `${section.icon} ${t(section.title)}` });
+			const header = wrapper.createDiv({ cls: 'hoard-quick-info__section-header' });
+			const chevron = header.createSpan({ cls: 'hoard-quick-info__chevron', text: '▶' });
+			header.createSpan({ cls: 'hoard-quick-info__section-label', text: `${section.icon} ${t(section.title)}` });
 
-			const body = wrapper.createDiv({ cls: 'hoard-qi-section-body hoard-qi-section-body-hidden' });
+			const body = wrapper.createDiv({ cls: 'hoard-quick-info__section-body hoard-quick-info__section-body--hidden' });
 
 			for (const item of section.items) {
-				const banner = body.createDiv({ cls: 'hoard-qi-banner' });
-				banner.createDiv({ cls: 'hoard-qi-banner-heading', text: t(item.heading) });
-				banner.createDiv({ cls: 'hoard-qi-banner-body', text: t(item.body) });
+				const banner = body.createDiv({ cls: 'hoard-quick-info__banner' });
+				banner.createDiv({ cls: 'hoard-quick-info__banner-heading', text: t(item.heading) });
+				banner.createDiv({ cls: 'hoard-quick-info__banner-body', text: t(item.body) });
 			}
 
 			header.addEventListener('click', () => {
-				const isOpen = !body.hasClass('hoard-qi-section-body-hidden');
-				if (isOpen) { body.addClass('hoard-qi-section-body-hidden'); } else { body.removeClass('hoard-qi-section-body-hidden'); }
+				const isOpen = !body.hasClass('hoard-quick-info__section-body--hidden');
+				if (isOpen) { body.addClass('hoard-quick-info__section-body--hidden'); } else { body.removeClass('hoard-quick-info__section-body--hidden'); }
 				chevron.textContent = isOpen ? '▶' : '▼';
 			});
 		}
@@ -2813,7 +2813,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 	private renderWidgets(el: HTMLElement): void {
 		el.createDiv({
-			cls: 'hoard-settings-info',
+			cls: 'hoard-settings__info',
 			text: t('settings.widgets.intro', { command: `Hoard: ${t('app.commands.insertWidget')}` }),
 		});
 
@@ -2861,12 +2861,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 		];
 
 		for (const w of widgets) {
-			const section = el.createDiv({ cls: 'hoard-widget-info-section' });
-			section.createDiv({ cls: 'hoard-widget-info-name', text: w.name });
-			section.createDiv({ cls: 'hoard-widget-info-desc', text: w.desc });
-			const codeRow = section.createDiv({ cls: 'hoard-widget-info-code-row' });
-			codeRow.createEl('code', { cls: 'hoard-widget-info-code', text: w.syntax });
-			const copyBtn = codeRow.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('settings.widgets.copy') });
+			const section = el.createDiv({ cls: 'hoard-settings__widget-info-section' });
+			section.createDiv({ cls: 'hoard-settings__widget-info-name', text: w.name });
+			section.createDiv({ cls: 'hoard-settings__widget-info-description', text: w.desc });
+			const codeRow = section.createDiv({ cls: 'hoard-settings__widget-info-code-row' });
+			codeRow.createEl('code', { cls: 'hoard-settings__widget-info-code', text: w.syntax });
+			const copyBtn = codeRow.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('settings.widgets.copy') });
 			copyBtn.addEventListener('click', () => {
 				void navigator.clipboard.writeText(w.syntax).then(() => {
 					copyBtn.textContent = t('settings.widgets.copied');

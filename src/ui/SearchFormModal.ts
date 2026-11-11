@@ -47,7 +47,7 @@ export abstract class SearchFormModal<R> extends Modal {
 		});
 		this.picker = picker;
 		picker.mount(this.contentEl);
-		this.formEl = this.contentEl.createDiv({ cls: 'hoard-modal-form' });
+		this.formEl = this.contentEl.createDiv({ cls: 'hoard-modal__form' });
 		this.renderForm();
 		// a prefilled query searches right away; an empty one is a no-op
 		void picker.search();

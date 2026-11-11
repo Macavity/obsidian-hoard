@@ -6,10 +6,10 @@ import { readNote } from "../note.mjs";
 import { chooseOption, runCommand } from "./common.mjs";
 
 const TITLE = "Smoke Manual Title";
-const TYPE_SELECT = ".hoard-add-modal > .hoard-modal-row:first-child select";
-const STATUS_SELECT = ".hoard-modal-form .hoard-modal-pair-cell:first-child select";
-const TITLE_INPUT = ".hoard-modal-form input[type=text]";
-const SAVE = ".hoard-modal-form .hoard-modal-btn-row .hoard-btn-primary";
+const TYPE_SELECT = ".hoard-add-modal > .hoard-modal__row:first-child select";
+const STATUS_SELECT = ".hoard-modal__form .hoard-modal__pair-cell:first-child select";
+const TITLE_INPUT = ".hoard-modal__form input[type=text]";
+const SAVE = ".hoard-modal__form .hoard-modal__btn-row .hoard-btn--primary";
 const COUNT = "String(app.plugins.plugins['hoard'].dataManager.getTitles().length)";
 
 export async function addTitleManual() {

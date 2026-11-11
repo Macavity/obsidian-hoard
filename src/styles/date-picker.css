@@ -1,16 +1,16 @@
 /* Shared date picker */
 
 /* Shared date picker (src/DatePicker.ts) — the field keeps its call-site classes; the calendar
-   is a fixed layer in body, placed via --hoard-dp-top/left */
+   is a fixed layer in body, placed via --hoard-date-picker-top/left */
 
-.hoard-datepicker-input {
+.hoard-date-picker__input {
   cursor: pointer;
 }
 
-.hoard-datepicker-panel {
+.hoard-date-picker__panel {
   position: fixed;
-  top: var(--hoard-dp-top, 0);
-  left: var(--hoard-dp-left, 0);
+  top: var(--hoard-date-picker-top, 0);
+  left: var(--hoard-date-picker-left, 0);
   z-index: var(--layer-menu);
   width: 252px;
   max-width: calc(100vw - 16px);
@@ -22,7 +22,7 @@
   font-size: var(--font-ui-small);
 }
 
-.hoard-datepicker-head {
+.hoard-date-picker__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -30,29 +30,29 @@
   margin-bottom: 6px;
 }
 
-.hoard-datepicker-month {
+.hoard-date-picker__month {
   font-weight: 600;
   color: var(--text-normal);
 }
 
-button.hoard-datepicker-nav {
+button.hoard-date-picker__nav {
   width: 24px;
   height: 24px;
   border-radius: 4px;
 }
 
-.hoard-datepicker-dow,
-.hoard-datepicker-grid {
+.hoard-date-picker__weekday,
+.hoard-date-picker__grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
 }
 
-.hoard-datepicker-dow {
+.hoard-date-picker__weekday {
   margin-bottom: 2px;
 }
 
-.hoard-datepicker-dow span {
+.hoard-date-picker__weekday span {
   text-align: center;
   font-size: 10px;
   text-transform: uppercase;
@@ -60,7 +60,7 @@ button.hoard-datepicker-nav {
   color: var(--text-faint);
 }
 
-.hoard-datepicker-day {
+.hoard-date-picker__day {
   height: 28px;
   padding: 0;
   border: none;
@@ -72,22 +72,22 @@ button.hoard-datepicker-nav {
   box-shadow: none;
 }
 
-.hoard-datepicker-day:hover {
+.hoard-date-picker__day:hover {
   background: var(--background-modifier-hover);
 }
 
-/* Obsidian's accent, not --hoard-accent (near-black in the default theme) */
-.hoard-datepicker-day.is-today {
+/* Obsidian's accent, not --hoard-view-accent (near-black in the default theme) */
+.hoard-date-picker__day.is-today {
   font-weight: 700;
   color: var(--interactive-accent);
 }
 
-.hoard-datepicker-day.is-selected {
+.hoard-date-picker__day.is-selected {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
 }
 
-.hoard-datepicker-foot {
+.hoard-date-picker__footer {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
@@ -98,11 +98,11 @@ button.hoard-datepicker-nav {
 
 /* Phones: a touch-sized grid, still anchored to the field. */
 @media (width <= 600px) {
-  .hoard-datepicker-panel {
+  .hoard-date-picker__panel {
     width: 280px;
   }
 
-  .hoard-datepicker-day {
+  .hoard-date-picker__day {
     height: 34px;
   }
 }

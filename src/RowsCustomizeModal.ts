@@ -57,10 +57,10 @@ export class RowsCustomizeModal extends Modal {
 		this.config.setLayout(this.layout);
 
 		this.contentEl.createDiv({
-			cls: 'hoard-rows-customize-hint',
+			cls: 'hoard-rows-customize__hint',
 			text: this.config.hint ?? t('list.rows.hint'),
 		});
-		this.listEl = this.contentEl.createDiv({ cls: 'hoard-rows-customize-list' });
+		this.listEl = this.contentEl.createDiv({ cls: 'hoard-rows-customize__list' });
 		this.renderList();
 	}
 
@@ -92,14 +92,14 @@ export class RowsCustomizeModal extends Modal {
 		const layout = this.layout;
 
 		layout.forEach((entry, i) => {
-			const row = list.createDiv({ cls: 'hoard-rows-customize-row' });
-			row.createSpan({ cls: 'hoard-rows-customize-name', text: this.labelFor(entry.id) });
-			const controls = row.createDiv({ cls: 'hoard-rows-customize-controls' });
+			const row = list.createDiv({ cls: 'hoard-rows-customize__row' });
+			row.createSpan({ cls: 'hoard-rows-customize__name', text: this.labelFor(entry.id) });
+			const controls = row.createDiv({ cls: 'hoard-rows-customize__controls' });
 
 			const upBtn = createIconButton(controls, {
 				icon: 'chevron-up',
 				label: t('list.rows.moveUp'),
-				cls: 'hoard-rows-customize-move',
+				cls: 'hoard-rows-customize__move',
 				variant: 'framed',
 			});
 			upBtn.disabled = i === 0;
@@ -114,7 +114,7 @@ export class RowsCustomizeModal extends Modal {
 			const downBtn = createIconButton(controls, {
 				icon: 'chevron-down',
 				label: t('list.rows.moveDown'),
-				cls: 'hoard-rows-customize-move',
+				cls: 'hoard-rows-customize__move',
 				variant: 'framed',
 			});
 			downBtn.disabled = i === layout.length - 1;

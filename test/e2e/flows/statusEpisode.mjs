@@ -8,8 +8,8 @@ import { changedProps, readNote } from "../note.mjs";
 import { openDetail } from "./common.mjs";
 
 const TITLE_ID = "TV Show/Severance";
-const NEXT_EPISODE = ".hoard-detail-modal .hoard-episode-box:not(.is-watched)";
-const STATUS_PILL = ".hoard-detail-modal .hoard-detail-badge-row .hoard-reading-detail-status-wrap:nth-child(2) .hoard-reading-detail-status";
+const NEXT_EPISODE = ".hoard-detail .hoard-accordion__episode-box:not(.is-watched)";
+const STATUS_PILL = ".hoard-detail .hoard-detail__badge-row .hoard-reading-detail__status-wrap:nth-child(2) .hoard-reading-detail__status";
 const NEW_STATUS = "Dropped";
 
 export async function statusEpisode() {
@@ -20,11 +20,11 @@ export async function statusEpisode() {
 	await waitFor(() => readNote(VAULT_PATH, FIXTURE_EDIT_TITLE).props["Watched Episodes"] !== before.props["Watched Episodes"], 10000);
 
 	await click(STATUS_PILL);
-	await waitForSelector(".hoard-reading-status-dropdown");
+	await waitForSelector(".hoard-status-dropdown");
 	// the dropdown lists the configured statuses without "To be released", in settings order
 	const index = Number(evalJs(`String(app.plugins.plugins['hoard'].settings.statuses.filter((s) => s.name !== 'To be released').findIndex((s) => s.name === ${JSON.stringify(NEW_STATUS)}) + 1)`));
 	assert(index > 0, `status ${NEW_STATUS} not configured`);
-	await click(`.hoard-reading-status-dropdown .hoard-reading-status-option:nth-child(${index})`);
+	await click(`.hoard-status-dropdown .hoard-status-dropdown__option:nth-child(${index})`);
 	await waitFor(() => readNote(VAULT_PATH, FIXTURE_EDIT_TITLE).props.Status === NEW_STATUS, 10000);
 
 	const after = readNote(VAULT_PATH, FIXTURE_EDIT_TITLE);

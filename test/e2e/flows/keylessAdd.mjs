@@ -5,16 +5,16 @@ import { click, type, waitForSelector } from "../ui.mjs";
 import { findNoteByExternalId } from "../note.mjs";
 import { chooseOption, runCommand } from "./common.mjs";
 
-const TYPE_SELECT = ".hoard-add-modal > .hoard-modal-row:first-child select";
+const TYPE_SELECT = ".hoard-add-modal > .hoard-modal__row:first-child select";
 const PICK_ATTR = "data-smoke-pick";
 const PICKED = `[${PICK_ATTR}]`;
-const DUPLICATE_CONTINUE = ".hoard-duplicate-warning .hoard-btn-primary";
+const DUPLICATE_CONTINUE = ".hoard-modal__duplicate-warning .hoard-btn--primary";
 
 /** The search results are network answers: wait for the card, mark it, and click it like a user would. */
 async function pickResult({ title, metaIncludes = "" }) {
 	const find = `(() => {
-	const cards = [...document.querySelectorAll('.hoard-modal-results .hoard-result-card')];
-	const hit = cards.find((c) => c.querySelector('.hoard-result-title')?.textContent === ${JSON.stringify(title)} && (c.querySelector('.hoard-result-meta')?.textContent ?? '').includes(${JSON.stringify(metaIncludes)}));
+	const cards = [...document.querySelectorAll('.hoard-modal__results .hoard-search-picker__result-card')];
+	const hit = cards.find((c) => c.querySelector('.hoard-search-picker__result-title')?.textContent === ${JSON.stringify(title)} && (c.querySelector('.hoard-search-picker__result-meta')?.textContent ?? '').includes(${JSON.stringify(metaIncludes)}));
 	if (!hit) return "false";
 	hit.setAttribute(${JSON.stringify(PICK_ATTR)}, "1");
 	return "true";
@@ -51,46 +51,46 @@ function assertNote(dir, externalId) {
 
 async function addTitle({ kind, query, title, metaIncludes, externalId }) {
 	runCommand("hoard:add-title");
-	await waitForSelector(".hoard-add-modal .hoard-search-query");
+	await waitForSelector(".hoard-add-modal .hoard-search-picker__query");
 	await chooseOption(TYPE_SELECT, kind);
-	await click(".hoard-add-modal .hoard-search-query");
+	await click(".hoard-add-modal .hoard-search-picker__query");
 	await type(query);
 	await pickResult({ title, metaIncludes });
-	await waitForFilledTitle(".hoard-modal-form", title);
+	await waitForFilledTitle(".hoard-modal__form", title);
 	const found = () => findNoteByExternalId(VAULT_PATH, `Hoard/${kind}`, externalId) !== null;
-	await submit(".hoard-modal-form .hoard-modal-btn-row .hoard-btn-primary", found);
+	await submit(".hoard-modal__form .hoard-modal__btn-row .hoard-btn--primary", found);
 	return assertNote(`Hoard/${kind}`, externalId);
 }
 
 async function openTabAdd(tabIndex, addSelector) {
 	runCommand("hoard:open-panel");
-	await waitForSelector(".hoard-tab-btn");
-	await click(`.hoard-tab-btn:nth-child(${tabIndex})`);
+	await waitForSelector(".hoard-tab-bar__btn");
+	await click(`.hoard-tab-bar__btn:nth-child(${tabIndex})`);
 	await waitForSelector(addSelector);
 	await click(addSelector);
 }
 
 async function addBook({ query, title, metaIncludes, externalId }) {
-	await openTabAdd(4, ".hoard-tab-content .hoard-reading-add-btn");
-	await waitForSelector(".hoard-reading-lookup-input");
-	await click(".hoard-reading-lookup-input");
+	await openTabAdd(4, ".hoard-view__tab-content .hoard-reading-modal__add-btn");
+	await waitForSelector(".hoard-reading-form__lookup-input");
+	await click(".hoard-reading-form__lookup-input");
 	await type(query);
 	await pickResult({ title, metaIncludes });
-	await waitForFilledTitle(".hoard-reading-form-wrap", title);
+	await waitForFilledTitle(".hoard-reading-form__wrap", title);
 	const found = () => findNoteByExternalId(VAULT_PATH, "Hoard/Books", externalId) !== null;
-	await submit(".hoard-reading-modal-save", found);
+	await submit(".hoard-reading-modal__save", found);
 	return assertNote("Hoard/Books", externalId);
 }
 
 async function addGame({ query, title, externalId }) {
-	await openTabAdd(5, ".hoard-tab-content .hoard-add-btn");
-	await waitForSelector(".hoard-add-game-modal input.hoard-modal-input");
-	await click(".hoard-add-game-modal input.hoard-modal-input");
+	await openTabAdd(5, ".hoard-view__tab-content .hoard-toolbar__add-btn");
+	await waitForSelector(".hoard-add-game input.hoard-modal__input");
+	await click(".hoard-add-game input.hoard-modal__input");
 	await type(query);
 	await pickResult({ title });
-	await waitForFilledTitle(".hoard-modal-form", title);
+	await waitForFilledTitle(".hoard-modal__form", title);
 	const found = () => findNoteByExternalId(VAULT_PATH, "Hoard/Games", externalId) !== null;
-	await submit(".hoard-modal-form .hoard-modal-btn-row .hoard-btn-primary", found);
+	await submit(".hoard-modal__form .hoard-modal__btn-row .hoard-btn--primary", found);
 	return assertNote("Hoard/Games", externalId);
 }
 

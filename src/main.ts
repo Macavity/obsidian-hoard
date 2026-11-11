@@ -112,7 +112,7 @@ export default class HoardPlugin extends Plugin {
 		this.maybeShowSecretsNotice();
 		// the card-size CSS var must be live before any view or modal renders a grid
 		this.applyCardSizeCssVar();
-		this.register(() => activeDocument.body.style.removeProperty('--hoard-card-min-width'));
+		this.register(() => activeDocument.body.style.removeProperty('--hoard-card-minimum-width'));
 
 		this.apiService = new ApiService(
 			this.settings.omdbApiKey,
@@ -441,7 +441,7 @@ export default class HoardPlugin extends Plugin {
 		// the status bar doesn't exist on mobile: skip entirely there
 		if (Platform.isMobile) return;
 		this.statusBarEl = this.addStatusBarItem();
-		this.statusBarEl.addClass('hoard-statusbar-upcoming');
+		this.statusBarEl.addClass('hoard-statusbar');
 		this.statusBarEl.setAttribute('aria-label', t('app.statusBar.label'));
 		this.statusBarEl.addEventListener('click', () => void this.activateView('upcoming'));
 		this.updateStatusBar();
@@ -464,10 +464,10 @@ export default class HoardPlugin extends Plugin {
 		}
 		el.empty();
 		el.show();
-		// orange icon + "N due" (colour from .hoard-statusbar-upcoming), reusing the ribbon's 'tv' icon
-		const icon = el.createSpan({ cls: 'hoard-statusbar-icon' });
+		// orange icon + "N due" (colour from .hoard-statusbar), reusing the ribbon's 'tv' icon
+		const icon = el.createSpan({ cls: 'hoard-statusbar__icon' });
 		setIcon(icon, 'tv');
-		el.createSpan({ cls: 'hoard-statusbar-text', text: t('app.statusBar.due', { count }) });
+		el.createSpan({ cls: 'hoard-statusbar__text', text: t('app.statusBar.due', { count }) });
 	}
 
 	/**
@@ -493,7 +493,7 @@ export default class HoardPlugin extends Plugin {
 	 * member grids, non-virtual fallbacks) track the setting too. Called on load and on every change.
 	 */
 	applyCardSizeCssVar(): void {
-		activeDocument.body.style.setProperty('--hoard-card-min-width', `${this.getCardMinWidth()}px`);
+		activeDocument.body.style.setProperty('--hoard-card-minimum-width', `${this.getCardMinWidth()}px`);
 	}
 
 	/** Keys do not sync between devices: tell a migrated device once that its keychain is empty. */

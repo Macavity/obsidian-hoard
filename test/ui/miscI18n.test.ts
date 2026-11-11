@@ -11,6 +11,6 @@ describe('misc modal i18n', () => {
 		setLocale('de');
 		const modal = new ConfirmModal({} as never, 'Eintrag entfernen?', () => {});
 		modal.open();
-		expect(modal.contentEl.querySelector('.hoard-btn-danger')?.textContent).toBe('Bestätigen');
+		expect(modal.contentEl.querySelector('.hoard-btn--danger')?.textContent).toBe('Bestätigen');
 	});
 });

@@ -34,22 +34,22 @@ function render(entries: Entry[]): { root: HTMLElement; counts: number[] } {
 describe('DraftsTab duplicate labels', () => {
 	it('names the library that already holds a draft', () => {
 		const { root } = render([draft('Breaking Bad'), draft('Dune'), draft('Berserk'), draft('Hades')]);
-		const dups = qsa(root, '.hoard-drafts-card-dup').map((d) => d.textContent);
+		const dups = qsa(root, '.hoard-drafts__card-duplicate').map((d) => d.textContent);
 		expect(dups.sort()).toEqual(['In Books', 'In Games', 'In Manga', 'In Watchlist']);
-		const watchlist = qsa(root, '.hoard-drafts-card-dup span').find((s) => s.textContent === 'In Watchlist')!;
+		const watchlist = qsa(root, '.hoard-drafts__card-duplicate span').find((s) => s.textContent === 'In Watchlist')!;
 		expect(watchlist.getAttribute('title')).toBe('This title already exists in your Watchlist');
-		const games = qsa(root, '.hoard-drafts-card-dup span').find((s) => s.textContent === 'In Games')!;
+		const games = qsa(root, '.hoard-drafts__card-duplicate span').find((s) => s.textContent === 'In Games')!;
 		expect(games.getAttribute('title')).toBe('This title already exists in your Games library');
 	});
 
 	it('counts only new drafts as pending and offers Add just for them', () => {
 		const { root, counts } = render([draft('Hades'), draft('Totally New'), draft('Marked', true)]);
 		expect(counts).toEqual([1]);
-		expect(qsa(root, '.hoard-drafts-card')).toHaveLength(3);
-		expect(qsa(root, 'button.hoard-btn-primary')).toHaveLength(1);
-		expect(qsa(root, '.hoard-drafts-added-label')).toHaveLength(2);
+		expect(qsa(root, '.hoard-drafts__card')).toHaveLength(3);
+		expect(qsa(root, 'button.hoard-btn--primary')).toHaveLength(1);
+		expect(qsa(root, '.hoard-drafts__added-label')).toHaveLength(2);
 		// already-present drafts sort last
-		const titles = qsa(root, '.hoard-drafts-card-title').map((e) => e.textContent);
+		const titles = qsa(root, '.hoard-drafts__card-title').map((e) => e.textContent);
 		expect(titles[titles.length - 1]).toBe('Hades');
 	});
 });

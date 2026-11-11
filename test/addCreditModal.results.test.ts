@@ -12,23 +12,23 @@ function open(field: CreditsField, edited: Partial<HoardTitle>, others: Partial<
 	};
 	const modal = new AddCreditModal({} as never, plugin as never, editedTitle, field, () => {});
 	modal.open();
-	const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credit-search-input')!;
+	const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credits__search-input')!;
 	const type = (q: string): void => {
 		input.value = q;
 		input.dispatchEvent(new Event('input'));
 	};
-	const rows = (): HTMLElement[] => Array.from(modal.contentEl.querySelectorAll<HTMLElement>('.hoard-credit-result'));
-	const names = (): string[] => rows().map((r) => r.querySelector('.hoard-result-title')!.textContent ?? '');
+	const rows = (): HTMLElement[] => Array.from(modal.contentEl.querySelectorAll<HTMLElement>('.hoard-credits__result'));
+	const names = (): string[] => rows().map((r) => r.querySelector('.hoard-search-picker__result-title')!.textContent ?? '');
 	return { modal, type, rows, names };
 }
 
 describe('AddCreditModal results', () => {
 	it('shows a hint until something is typed', () => {
 		const { modal, type, rows } = open('cast', {}, []);
-		expect(modal.contentEl.querySelector('.hoard-credit-results')!.textContent).toBe('Start typing to search names from your other titles.');
+		expect(modal.contentEl.querySelector('.hoard-credits__results')!.textContent).toBe('Start typing to search names from your other titles.');
 		type('   ');
 		expect(rows()).toHaveLength(0);
-		expect(modal.contentEl.querySelector('.hoard-credit-hint')).not.toBeNull();
+		expect(modal.contentEl.querySelector('.hoard-credits__hint')).not.toBeNull();
 	});
 
 	it('leads with an Add row, then ranks names by usage in the edited field, present ones last', () => {
@@ -46,12 +46,12 @@ describe('AddCreditModal results', () => {
 		expect(names()).toEqual([
 			'Add "chris"', 'Christian Bale', 'Chris Evans', 'Chris Aaa', 'Chris Bbb', 'Christopher Nolan', 'Chris Pine',
 		]);
-		expect(rows()[0]!.classList.contains('hoard-credit-result-new')).toBe(true);
-		expect(rows()[0]!.querySelector('.hoard-result-meta')!.textContent).toBe('New cast name');
-		expect(rows()[1]!.querySelector('.hoard-result-meta')!.textContent).toBe('Cast in 2 titles · Director in 1 title');
+		expect(rows()[0]!.classList.contains('hoard-credits__result--new')).toBe(true);
+		expect(rows()[0]!.querySelector('.hoard-search-picker__result-meta')!.textContent).toBe('New cast name');
+		expect(rows()[1]!.querySelector('.hoard-search-picker__result-meta')!.textContent).toBe('Cast in 2 titles · Director in 1 title');
 		const present = rows()[6]!;
 		expect(present.classList.contains('is-disabled')).toBe(true);
-		expect(present.querySelector('.hoard-result-meta')!.textContent).toBe('Already on this title');
+		expect(present.querySelector('.hoard-search-picker__result-meta')!.textContent).toBe('Already on this title');
 	});
 
 	it('ranks by the director count when editing directors', () => {
@@ -64,8 +64,8 @@ describe('AddCreditModal results', () => {
 		);
 		type('sam');
 		expect(names()).toEqual(['Add "sam"', 'Sam Mendes', 'Sam Raimi', 'Sam Rockwell']);
-		expect(rows()[0]!.querySelector('.hoard-result-meta')!.textContent).toBe('New director name');
-		expect(rows()[1]!.querySelector('.hoard-result-meta')!.textContent).toBe('Director in 2 titles');
+		expect(rows()[0]!.querySelector('.hoard-search-picker__result-meta')!.textContent).toBe('New director name');
+		expect(rows()[1]!.querySelector('.hoard-search-picker__result-meta')!.textContent).toBe('Director in 2 titles');
 	});
 
 	it('drops the Add row on an exact match and caps the list at twelve names', () => {
@@ -82,7 +82,7 @@ describe('AddCreditModal results', () => {
 		const { type, rows, modal } = open('cast', {}, [{ cast: ['Ann Lee'] }]);
 		type('ann');
 		rows()[1]!.dispatchEvent(new Event('mousedown', { cancelable: true }));
-		expect(modal.contentEl.querySelector('.hoard-credit-staged')!.textContent).toContain('Ann Lee');
+		expect(modal.contentEl.querySelector('.hoard-credits__staged')!.textContent).toContain('Ann Lee');
 	});
 });
 
@@ -91,24 +91,24 @@ describe('AddCreditModal keyboard and staged chips', () => {
 		input.dispatchEvent(new KeyboardEvent('keydown', { key: k }));
 	};
 	const chips = (modal: AddCreditModal): string[] =>
-		Array.from(modal.contentEl.querySelectorAll('.hoard-credit-chip-name')).map((c) => c.textContent ?? '');
+		Array.from(modal.contentEl.querySelectorAll('.hoard-credits__staged-chip-name')).map((c) => c.textContent ?? '');
 
 	it('moves the focus with the arrows and stages the focused row on Enter', () => {
 		const { modal, type, rows } = open('cast', {}, [{ cast: ['Chris Aaa', 'Chris Bbb'] }]);
-		const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credit-search-input')!;
+		const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credits__search-input')!;
 		type('chris');
 		key(input, 'ArrowDown');
 		key(input, 'ArrowDown');
 		key(input, 'ArrowDown');
 		key(input, 'ArrowUp');
-		expect(rows().map((r) => r.classList.contains('hoard-result-item-focused'))).toEqual([false, true, false]);
+		expect(rows().map((r) => r.classList.contains('hoard-search-picker__result-item--focused'))).toEqual([false, true, false]);
 		key(input, 'Enter');
 		expect(chips(modal)).toEqual(['Chris Aaa']);
 	});
 
 	it('stages the top row on Enter without a focused row, and ignores keys without results', () => {
 		const { modal, type } = open('cast', {}, []);
-		const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credit-search-input')!;
+		const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credits__search-input')!;
 		key(input, 'ArrowDown');
 		key(input, 'Enter');
 		expect(chips(modal)).toEqual([]);
@@ -119,10 +119,10 @@ describe('AddCreditModal keyboard and staged chips', () => {
 
 	it('removes a staged name through its icon button', () => {
 		const { modal, type } = open('cast', {}, []);
-		const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credit-search-input')!;
+		const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credits__search-input')!;
 		type('Newbie');
 		key(input, 'Enter');
-		const del = modal.contentEl.querySelector<HTMLButtonElement>('button.hoard-credit-chip-del')!;
+		const del = modal.contentEl.querySelector<HTMLButtonElement>('button.hoard-credits__staged-chip-delete')!;
 		expect(del.classList.contains('hoard-icon-btn--sm')).toBe(true);
 		expect(del.getAttribute('data-icon')).toBe('x');
 		del.click();

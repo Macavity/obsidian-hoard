@@ -2,42 +2,42 @@
 
 /* ══ utility classes replacing inline style= ══ */
 
-.hoard-modal-row-mt {
+.hoard-modal__row--margin-top {
   margin-top: 10px;
 }
 
-.hoard-btn-mr {
+.hoard-btn--margin-right {
   margin-right: 6px;
 }
 
-.hoard-editcols-bold-btn {
+.hoard-edit-columns__bold-btn {
   font-weight: bold;
 }
 
-.hoard-editcols-italic-btn {
+.hoard-edit-columns__italic-btn {
   font-style: italic;
 }
 
-.hoard-cell-bold {
+.hoard-custom-list-table__cell-text--bold {
   font-weight: 700;
 }
 
-.hoard-cell-italic {
+.hoard-custom-list-table__cell-text--italic {
   font-style: italic;
 }
 
-.hoard-pos-fixed {
+.hoard-popover--fixed {
   position: fixed;
 }
 
-.hoard-group-name-input {
+.hoard-action-bar__group-name-input {
   width: 110px;
   font-size: 11px;
   padding: 2px 6px;
   flex: unset;
 }
 
-.hoard-filters-panel-popup {
+.hoard-filter-panel--popup {
   position: fixed;
   z-index: 9999;
   max-height: 70vh;
@@ -50,7 +50,7 @@
   width: 230px;
 }
 
-.hoard-sorting-panel-mobile {
+.hoard-sort-panel--mobile {
   position: fixed;
   left: 8px;
   right: 8px;
@@ -58,12 +58,12 @@
   overflow-y: auto;
 }
 
-.hoard-qi-section-body-hidden {
+.hoard-quick-info__section-body--hidden {
   display: none;
 }
 
 /* Inner sub-tab bar (Upcoming Tracker/History/Maybe) */
-.hoard-inner-tab-bar {
+.hoard-inner-tabs {
   display: flex;
   gap: 2px;
   padding: 6px 10px 0;
@@ -72,34 +72,34 @@
 }
 
 /* look shared with the main tabs (base.css); only size and bar offset differ */
-button.hoard-inner-tab-btn {
+button.hoard-inner-tabs__btn {
   padding: 4px 12px;
   margin-bottom: -1px;
 }
 
-button.hoard-inner-tab-btn:hover { color: var(--text-normal); }
+button.hoard-inner-tabs__btn:hover { color: var(--text-normal); }
 
-button.hoard-inner-tab-btn.is-active {
+button.hoard-inner-tabs__btn.is-active {
   color: var(--text-accent);
   border-bottom-color: var(--text-accent);
 }
 
 /* Feature 1: Recently arrived label */
-.hoard-badge-row {
+.hoard-list__badge-row {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
 }
 
-.hoard-recently-arrived {
+.hoard-list__recently-arrived {
   font-size: 10px;
   color: var(--color-green);
   font-style: italic;
   opacity: 0.85;
 }
 
-.hoard-recently-arrived-filter {
+.hoard-filter-panel__recently-arrived-filter {
   color: var(--color-green);
   font-size: 11px;
 }

@@ -50,7 +50,7 @@ describe('settings tab i18n', () => {
 		};
 		const { render, root } = makeTab({ apiService }, 'api');
 		render();
-		const steamTest = Array.from(root.querySelectorAll<HTMLElement>('.hoard-api-test')).at(-1)!;
+		const steamTest = Array.from(root.querySelectorAll<HTMLElement>('.hoard-api-provider__test')).at(-1)!;
 		steamTest.click();
 		await tick(20);
 		expect(allText(root)).toContain(de.settings.steam.badKey);

@@ -4,9 +4,9 @@ import { setActiveDateFormat } from '../../src/types';
 
 (globalThis as { activeDocument?: Document }).activeDocument = document;
 
-const panel = (): HTMLElement | null => document.body.querySelector<HTMLElement>('.hoard-datepicker-panel');
+const panel = (): HTMLElement | null => document.body.querySelector<HTMLElement>('.hoard-date-picker__panel');
 const qa = (sel: string): HTMLElement[] => Array.from(panel()!.querySelectorAll<HTMLElement>(sel));
-const month = (): string => panel()!.querySelector('.hoard-datepicker-month')!.textContent ?? '';
+const month = (): string => panel()!.querySelector('.hoard-date-picker__month')!.textContent ?? '';
 
 function setup(value: string | null, extra: Partial<Parameters<typeof createDatePicker>[0]> = {}) {
 	const parent = document.createElement('div');
@@ -27,7 +27,7 @@ describe('date picker calendar', () => {
 		const { handle } = setup('2024-02-15');
 		handle.inputEl.click();
 		expect(month()).toContain('2024');
-		const days = qa('.hoard-datepicker-day');
+		const days = qa('.hoard-date-picker__day');
 		expect(days).toHaveLength(29);
 		expect(days.filter((d) => d.classList.contains('is-selected')).map((d) => d.textContent)).toEqual(['15']);
 	});
@@ -35,35 +35,35 @@ describe('date picker calendar', () => {
 	it('starts weeks on Monday, with leading pads for the first weekday', () => {
 		const { handle } = setup('2024-02-15');
 		handle.inputEl.click();
-		expect(qa('.hoard-datepicker-dow span')[0]!.textContent).toBe('Mon');
+		expect(qa('.hoard-date-picker__weekday span')[0]!.textContent).toBe('Mon');
 		// 1 Feb 2024 is a Thursday: three pads on a Monday-first grid
-		expect(qa('.hoard-datepicker-pad')).toHaveLength(3);
+		expect(qa('.hoard-date-picker__padding')).toHaveLength(3);
 	});
 
 	it('starts weeks on Sunday in the American format', () => {
 		setActiveDateFormat('american');
 		const { handle } = setup('2024-02-15');
 		handle.inputEl.click();
-		expect(qa('.hoard-datepicker-dow span')[0]!.textContent).toBe('Sun');
-		expect(qa('.hoard-datepicker-pad')).toHaveLength(4);
+		expect(qa('.hoard-date-picker__weekday span')[0]!.textContent).toBe('Sun');
+		expect(qa('.hoard-date-picker__padding')).toHaveLength(4);
 	});
 
 	it('wraps the year when stepping back from January and forward from December', () => {
 		const { handle } = setup('2024-01-10');
 		handle.inputEl.click();
-		const [prev, next] = qa('.hoard-datepicker-nav') as [HTMLElement, HTMLElement];
+		const [prev, next] = qa('.hoard-date-picker__nav') as [HTMLElement, HTMLElement];
 		prev.click();
 		expect(month()).toContain('2023');
 		next.click();
 		expect(month()).toContain('2024');
-		for (let i = 0; i < 12; i++) qa('.hoard-datepicker-nav')[1]!.click();
+		for (let i = 0; i < 12; i++) qa('.hoard-date-picker__nav')[1]!.click();
 		expect(month()).toContain('2025');
 	});
 
 	it('commits a clicked day, closes the panel and reports the ISO date', () => {
 		const { handle, onChange } = setup('2024-02-15');
 		handle.inputEl.click();
-		qa('.hoard-datepicker-day')[9]!.click();
+		qa('.hoard-date-picker__day')[9]!.click();
 		expect(onChange).toHaveBeenCalledWith('2024-02-10');
 		expect(handle.getValue()).toBe('2024-02-10');
 		expect(handle.inputEl.value).toBe('10/02/2024');
@@ -73,13 +73,13 @@ describe('date picker calendar', () => {
 	it('commits today and clears through the footer buttons', () => {
 		const { handle, onChange } = setup(null);
 		handle.inputEl.click();
-		const todayBtn = qa('.hoard-datepicker-foot button')[0]!;
+		const todayBtn = qa('.hoard-date-picker__footer button')[0]!;
 		expect(qa('.is-today')).toHaveLength(1);
 		todayBtn.click();
 		expect(onChange).toHaveBeenLastCalledWith(handle.getValue());
 		expect(handle.getValue()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 		handle.inputEl.click();
-		qa('.hoard-datepicker-foot button')[1]!.click();
+		qa('.hoard-date-picker__footer button')[1]!.click();
 		expect(onChange).toHaveBeenLastCalledWith(null);
 		expect(handle.inputEl.value).toBe('');
 	});
@@ -114,7 +114,7 @@ describe('date picker calendar', () => {
 	it('repositions on scroll and closes when the input was removed', () => {
 		const { handle, parent } = setup('2024-02-15');
 		handle.inputEl.click();
-		expect(panel()!.style.getPropertyValue('--hoard-dp-top')).not.toBe('');
+		expect(panel()!.style.getPropertyValue('--hoard-date-picker-top')).not.toBe('');
 		document.dispatchEvent(new Event('scroll'));
 		expect(panel()).not.toBeNull();
 		parent.remove();
@@ -129,8 +129,8 @@ describe('date picker calendar', () => {
 		);
 		Object.defineProperty(window, 'innerHeight', { value: 768, configurable: true });
 		handle.inputEl.click();
-		const top = parseFloat(panel()!.style.getPropertyValue('--hoard-dp-top'));
-		const left = parseFloat(panel()!.style.getPropertyValue('--hoard-dp-left'));
+		const top = parseFloat(panel()!.style.getPropertyValue('--hoard-date-picker-top'));
+		const left = parseFloat(panel()!.style.getPropertyValue('--hoard-date-picker-left'));
 		expect(top).toBeLessThan(700);
 		expect(left).toBe(8);
 	});
@@ -142,7 +142,7 @@ describe('date picker calendar', () => {
 		);
 		Object.defineProperty(window, 'innerHeight', { value: 300, configurable: true });
 		handle.inputEl.click();
-		expect(parseFloat(panel()!.style.getPropertyValue('--hoard-dp-top'))).toBe(74);
+		expect(parseFloat(panel()!.style.getPropertyValue('--hoard-date-picker-top'))).toBe(74);
 	});
 
 	it('opens on today for free-text leftovers without selecting anything', () => {
@@ -162,12 +162,12 @@ describe('date picker typed input', () => {
 		expect(onChange).toHaveBeenCalledWith('2024-03-01');
 		handle.inputEl.value = 'nonsense';
 		handle.inputEl.dispatchEvent(new Event('change'));
-		expect(handle.inputEl.classList.contains('hoard-input-error')).toBe(true);
+		expect(handle.inputEl.classList.contains('hoard-input--error')).toBe(true);
 		expect(onChange).toHaveBeenCalledTimes(1);
 		expect(handle.getValue()).toBe('2024-03-01');
 		handle.inputEl.value = '02/03/2024';
 		handle.inputEl.dispatchEvent(new Event('change'));
-		expect(handle.inputEl.classList.contains('hoard-input-error')).toBe(false);
+		expect(handle.inputEl.classList.contains('hoard-input--error')).toBe(false);
 	});
 
 	it('clears on empty text and commits on Enter', () => {

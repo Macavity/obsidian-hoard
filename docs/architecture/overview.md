@@ -76,5 +76,5 @@ status bar recounts. External changes (sync, hand edits) arrive through `EntryIn
 - **Text**: only the UI layer renders display text. Storage and managers emit codes (`ManagerNotice`
   through `notifyManager` in `main.ts`), `src/i18n/labels.ts` maps stored values; see
   [i18n](i18n.md).
-- Mobile: `Platform.isMobile` toggles `hoard-mobile` on the view; card size is per device class
+- Mobile: `Platform.isMobile` toggles `hoard-view--mobile` on the view; card size is per device class
   (`getCardMinWidth`), card text placement is per tab (`isCardTextUnder`), both in `main.ts`.

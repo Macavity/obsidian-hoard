@@ -146,7 +146,7 @@ export class AddReadingModal extends Modal {
 		this.contentEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.addClass('hoard-view');
 		this.contentEl.addClass('hoard-reading-modal');
-		this.contentEl.addClass(this.mode === 'book' ? 'hoard-reading-modal-book' : 'hoard-reading-modal-manga');
+		this.contentEl.addClass(this.mode === 'book' ? 'hoard-reading-modal--book' : 'hoard-reading-modal--manga');
 		this.titleEl.setText(this.headerTitle());
 		this.buildUI();
 	}
@@ -169,28 +169,28 @@ export class AddReadingModal extends Modal {
 
 		this.renderHeaderRow(c);
 		this.renderLookupBar(c);
-		c.createDiv({ cls: 'hoard-reading-modal-divider' });
-		this.formEl = c.createDiv({ cls: 'hoard-reading-form-wrap' });
+		c.createDiv({ cls: 'hoard-reading-modal__divider' });
+		this.formEl = c.createDiv({ cls: 'hoard-reading-form__wrap' });
 		this.renderForm(this.formEl);
 		this.renderFooter(c);
 	}
 
 	private renderHeaderRow(parent: HTMLElement): void {
-		const row = parent.createDiv({ cls: 'hoard-reading-modal-header' });
-		const left = row.createDiv({ cls: 'hoard-reading-modal-header-left' });
+		const row = parent.createDiv({ cls: 'hoard-reading-modal__header' });
+		const left = row.createDiv({ cls: 'hoard-reading-modal__header-left' });
 		left.createSpan({
-			cls: 'hoard-reading-modal-header-icon',
+			cls: 'hoard-reading-modal__header-icon',
 			text: this.mode === 'book' ? '📖' : '📓',
 		});
 		left.createSpan({
-			cls: 'hoard-reading-modal-header-title',
+			cls: 'hoard-reading-modal__header-title',
 			text: this.headerTitle(),
 		});
 
-		const actions = row.createDiv({ cls: 'hoard-reading-modal-header-actions' });
+		const actions = row.createDiv({ cls: 'hoard-reading-modal__header-actions' });
 		// no "Link" button here on purpose — vault-page linking lives in ReadingDetailModal
 		this.openVaultBtn = actions.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm',
+			cls: 'hoard-btn hoard-btn--sm',
 			text: t('add.reading.open'),
 		});
 		this.openVaultBtn.addEventListener('click', () => this.openLinkedVaultPage());
@@ -224,9 +224,9 @@ export class AddReadingModal extends Modal {
 	}
 
 	private renderLookupBar(parent: HTMLElement): void {
-		const lookup = parent.createDiv({ cls: 'hoard-reading-lookup' });
+		const lookup = parent.createDiv({ cls: 'hoard-reading-form__lookup' });
 		const input = lookup.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-lookup-input',
+			cls: 'hoard-modal__input hoard-reading-form__lookup-input',
 			attr: {
 				type: 'text',
 				placeholder: this.mode === 'book'
@@ -235,10 +235,10 @@ export class AddReadingModal extends Modal {
 			},
 		});
 		const fetchBtn = lookup.createEl('button', {
-			cls: 'hoard-btn hoard-reading-lookup-btn',
+			cls: 'hoard-btn hoard-reading-form__lookup-btn',
 			text: t('common.search'),
 		});
-		this.lookupResultsEl = parent.createDiv({ cls: 'hoard-modal-results hoard-results-grid' });
+		this.lookupResultsEl = parent.createDiv({ cls: 'hoard-modal__results hoard-search-picker__results-grid' });
 
 		const runFetch = (): void => {
 			const q = input.value.trim();
@@ -277,7 +277,7 @@ export class AddReadingModal extends Modal {
 		const gen = ++this.lookupSearchGen;
 		if (!this.lookupResultsEl) return;
 		this.lookupResultsEl.empty();
-		this.lookupResultsEl.createDiv({ cls: 'hoard-modal-loading', text: t('ui.picker.searching') });
+		this.lookupResultsEl.createDiv({ cls: 'hoard-modal__loading', text: t('ui.picker.searching') });
 
 		try {
 			const outcome = this.mode === 'book'
@@ -287,7 +287,7 @@ export class AddReadingModal extends Modal {
 			this.renderLookupOutcome(outcome);
 		} catch (err) {
 			if (gen !== this.lookupSearchGen) return;
-			this.showLookupMessage('hoard-modal-error', apiErrorMessage(err));
+			this.showLookupMessage('hoard-modal__error', apiErrorMessage(err));
 		}
 	}
 
@@ -330,7 +330,7 @@ export class AddReadingModal extends Modal {
 		if (!this.lookupResultsEl) return;
 		this.lookupResultsEl.empty();
 		if (results.length === 0) {
-			this.lookupResultsEl.createDiv({ cls: 'hoard-modal-loading', text: t('add.noMatches') });
+			this.lookupResultsEl.createDiv({ cls: 'hoard-modal__loading', text: t('add.noMatches') });
 			return;
 		}
 		// books check Books, manga check Manga — the two libraries stay separate
@@ -440,13 +440,13 @@ export class AddReadingModal extends Modal {
 	}
 
 	private renderProgressOptionalGrid(parent: HTMLElement): void {
-		const grid = parent.createDiv({ cls: 'hoard-reading-form-grid' });
+		const grid = parent.createDiv({ cls: 'hoard-reading-form__grid' });
 
-		const progressCol = grid.createDiv({ cls: 'hoard-reading-form-grid-col' });
-		const progressLabel = progressCol.createDiv({ cls: 'hoard-reading-section-label' });
+		const progressCol = grid.createDiv({ cls: 'hoard-reading-form__grid-column' });
+		const progressLabel = progressCol.createDiv({ cls: 'hoard-reading-modal__section-label' });
 		progressLabel.createSpan({ text: t('add.reading.progress') });
 		if (this.mode === 'book') {
-			progressLabel.addClass('hoard-reading-section-label-row');
+			progressLabel.addClass('hoard-reading-modal__section-label--row');
 			// Pages/Words switch: swaps which counter pair the form collects. The other unit's numbers stay in
 			// state, so flipping back is lossless.
 			renderSegmentedToggle<BookProgressUnit>({
@@ -491,8 +491,8 @@ export class AddReadingModal extends Modal {
 			);
 		}
 
-		const optionalCol = grid.createDiv({ cls: 'hoard-reading-form-grid-col' });
-		optionalCol.createDiv({ cls: 'hoard-reading-section-label', text: t('add.reading.optional') });
+		const optionalCol = grid.createDiv({ cls: 'hoard-reading-form__grid-column' });
+		optionalCol.createDiv({ cls: 'hoard-reading-modal__section-label', text: t('add.reading.optional') });
 		this.renderTextField(optionalCol, t('add.coverUrl'), 'https://...', this.state.coverUrl, (v) => {
 			this.state.coverUrl = v;
 		});
@@ -511,10 +511,10 @@ export class AddReadingModal extends Modal {
 		value: string,
 		onChange: (v: string) => void,
 	): void {
-		const row = parent.createDiv({ cls: 'hoard-reading-row' });
-		row.createSpan({ cls: 'hoard-reading-label', text: label });
+		const row = parent.createDiv({ cls: 'hoard-reading-form__row' });
+		row.createSpan({ cls: 'hoard-reading-form__label', text: label });
 		const input = row.createEl('input', {
-			cls: 'hoard-modal-input',
+			cls: 'hoard-modal__input',
 			attr: { type: 'text', placeholder },
 		});
 		input.value = value;
@@ -522,11 +522,11 @@ export class AddReadingModal extends Modal {
 	}
 
 	private renderStatusRatingRow(parent: HTMLElement): void {
-		const row = parent.createDiv({ cls: 'hoard-reading-status-rating-row' });
+		const row = parent.createDiv({ cls: 'hoard-reading-form__status-rating-row' });
 
-		const statusGroup = row.createDiv({ cls: 'hoard-reading-inline-group' });
-		statusGroup.createSpan({ cls: 'hoard-reading-label', text: t('add.status') });
-		const select = statusGroup.createEl('select', { cls: 'hoard-select hoard-reading-status-select' });
+		const statusGroup = row.createDiv({ cls: 'hoard-reading-form__inline-group' });
+		statusGroup.createSpan({ cls: 'hoard-reading-form__label', text: t('add.status') });
+		const select = statusGroup.createEl('select', { cls: 'hoard-input__select hoard-reading-form__status-select' });
 		for (const s of SELECTABLE_READING_STATUSES) {
 			const opt = select.createEl('option', { text: readingStatusLabel(s), value: s });
 			if (s === this.state.status) opt.selected = true;
@@ -535,9 +535,9 @@ export class AddReadingModal extends Modal {
 			this.state.status = select.value as ReadingStatus;
 		});
 
-		const ratingGroup = row.createDiv({ cls: 'hoard-reading-inline-group' });
-		ratingGroup.createSpan({ cls: 'hoard-reading-label', text: t('add.rating') });
-		this.starsWrap = ratingGroup.createDiv({ cls: 'hoard-stars hoard-reading-stars' });
+		const ratingGroup = row.createDiv({ cls: 'hoard-reading-form__inline-group' });
+		ratingGroup.createSpan({ cls: 'hoard-reading-form__label', text: t('add.rating') });
+		this.starsWrap = ratingGroup.createDiv({ cls: 'hoard-star-rating--row hoard-reading-form__stars' });
 		this.renderStars();
 	}
 
@@ -559,7 +559,7 @@ export class AddReadingModal extends Modal {
 		left: { label: string; value: number; onChange: (n: number) => void },
 		right: { label: string; value: number; onChange: (n: number) => void },
 	): void {
-		const row = parent.createDiv({ cls: 'hoard-reading-row hoard-reading-row-split' });
+		const row = parent.createDiv({ cls: 'hoard-reading-form__row hoard-reading-form__row--split' });
 		this.renderNumberCol(row, left);
 		this.renderNumberCol(row, right);
 	}
@@ -568,10 +568,10 @@ export class AddReadingModal extends Modal {
 		parent: HTMLElement,
 		field: { label: string; value: number; onChange: (n: number) => void },
 	): void {
-		const col = parent.createDiv({ cls: 'hoard-reading-col' });
-		col.createSpan({ cls: 'hoard-reading-label', text: field.label });
+		const col = parent.createDiv({ cls: 'hoard-reading-form__column' });
+		col.createSpan({ cls: 'hoard-reading-form__label', text: field.label });
 		const input = col.createEl('input', {
-			cls: 'hoard-modal-input hoard-modal-input-sm',
+			cls: 'hoard-modal__input hoard-modal__input--sm',
 			attr: { type: 'number', min: '0' },
 		});
 		input.value = String(field.value);
@@ -587,23 +587,23 @@ export class AddReadingModal extends Modal {
 		value: string | null,
 		onParsed: (parsed: string | null) => void,
 	): void {
-		const row = parent.createDiv({ cls: 'hoard-reading-row' });
-		row.createSpan({ cls: 'hoard-reading-label', text: label });
+		const row = parent.createDiv({ cls: 'hoard-reading-form__row' });
+		row.createSpan({ cls: 'hoard-reading-form__label', text: label });
 		createDatePicker({
 			parent: row,
-			inputCls: 'hoard-modal-input',
+			inputCls: 'hoard-modal__input',
 			value,
 			onChange: onParsed,
 		});
 	}
 
 	private renderFooter(parent: HTMLElement): void {
-		const footer = parent.createDiv({ cls: 'hoard-reading-modal-footer' });
+		const footer = parent.createDiv({ cls: 'hoard-reading-modal__footer' });
 		const cancelBtn = footer.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') });
 		cancelBtn.addEventListener('click', () => this.close());
 
 		const saveBtn = footer.createEl('button', {
-			cls: 'hoard-reading-add-btn hoard-btn-success hoard-reading-modal-save',
+			cls: 'hoard-reading-modal__add-btn hoard-btn--success hoard-reading-modal__save',
 			text: this.saveButtonLabel(),
 		});
 		saveBtn.addEventListener('click', () => void this.save());

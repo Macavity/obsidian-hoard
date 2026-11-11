@@ -9,15 +9,15 @@
 }
 
 /* Header */
-.hoard-list-header {
+.hoard-list__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-bottom: 4px;
 }
 
-.hoard-add-btn {
-  /* color via .hoard-btn-success */
+.hoard-toolbar__add-btn {
+  /* color via .hoard-btn--success */
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
@@ -26,11 +26,11 @@
 }
 
 /* Search */
-.hoard-search-wrap {
+.hoard-search-box {
   width: 100%;
 }
 
-.hoard-search-input {
+.hoard-search-box__text-input {
   width: 100%;
   padding: 6px 10px;
   border-radius: 5px;
@@ -41,12 +41,12 @@
   box-sizing: border-box;
 }
 
-.hoard-search-input:focus {
+.hoard-search-box__text-input:focus {
   outline: none;
   border-color: var(--interactive-accent);
 }
 
-.hoard-select {
+.hoard-input__select {
   padding: 4px 6px;
   border-radius: 4px;
   border: 0.5px solid var(--background-modifier-border);
@@ -61,12 +61,12 @@
   min-width: 0;
 }
 
-.hoard-select-sm {
+.hoard-input__select--sm {
   flex: unset;
   width: auto;
 }
 
-.hoard-select:focus {
+.hoard-input__select:focus {
   outline: none;
   border-color: var(--interactive-accent);
 }
@@ -79,7 +79,7 @@
 }
 
 /* Results count */
-.hoard-results-count {
+.hoard-toolbar__results-count {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-normal);
@@ -87,51 +87,51 @@
 }
 
 /* rows view: the count line also carries the gear */
-.hoard-results-count-rows {
+.hoard-toolbar__results-count--rows {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-button.hoard-rows-customize-btn {
+button.hoard-rows-customize__btn {
   margin: 0;
 }
 
-button.hoard-rows-customize-btn .svg-icon {
+button.hoard-rows-customize__btn .svg-icon {
   width: 15px;
   height: 15px;
 }
 
 /* Table */
-.hoard-table-section {
+.hoard-list__table-section {
   display: flex;
   flex-direction: column;
   gap: 4px;
 
   /* the compact column layout follows the pane width, not the window (responsive.css) */
   container-type: inline-size;
-  container-name: hoard-table;
+  container-name: hoard-list-table;
 }
 
-.hoard-table {
+.hoard-list__table {
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 6px;
   overflow: hidden;
 }
 
 /* virtual scroll: fixed height, children absolute */
-.hoard-virt-container {
+.hoard-list__virtual-container {
   position: relative;
 }
 
 /* virtual scroll: top set inline from the offset table */
-.hoard-virt-item {
+.hoard-list__virtual-item {
   position: absolute;
   left: 0;
   right: 0;
 }
 
-.hoard-table-header-row {
+.hoard-list__table-header-row {
   display: grid;
 
   /* Title | Priority | Started | Rating | Status | Pin */
@@ -144,52 +144,52 @@ button.hoard-rows-customize-btn .svg-icon {
   border-bottom: 0.5px solid var(--background-modifier-border);
 }
 
-.hoard-col-priority-h,
-.hoard-col-started-h,
-.hoard-col-rating-h,
-.hoard-col-status-h {
+.hoard-list__column-priority-header,
+.hoard-list__column-started-header,
+.hoard-list__column-rating-header,
+.hoard-list__column-status-header {
   text-align: center;
 }
 
 /* Row */
-.hoard-row {
+.hoard-list__row {
   display: grid;
   grid-template-columns: 1fr 56px 72px 56px 90px 20px;
   padding: 7px 8px;
   align-items: center;
   cursor: pointer;
-  border-bottom: 2px solid var(--hoard-group-border-overlay);
+  border-bottom: 2px solid var(--hoard-view-group-border-overlay);
   transition: background 0.1s;
-  border-top: 2px solid var(--hoard-group-border-overlay);
+  border-top: 2px solid var(--hoard-view-group-border-overlay);
   border-left: 2px solid rgb(255 255 255 / 20%);
   border-right: 2px solid rgb(255 255 255 / 20%);
 }
 
 /* Selection mode — add checkbox column; before responsive.css so its compact tracks win */
-.hoard-table.hoard-selection-mode .hoard-table-header-row,
-.hoard-table.hoard-selection-mode .hoard-row {
+.hoard-list__table.hoard-list__table--selection-mode .hoard-list__table-header-row,
+.hoard-list__table.hoard-list__table--selection-mode .hoard-list__row {
   grid-template-columns: 24px 1fr 56px 72px 56px 90px 20px;
 }
 
 /* gap between top-level rows and after accordions; indented member rows stay flush */
-.hoard-row + .hoard-row,
-.hoard-accordion + .hoard-row {
+.hoard-list__row + .hoard-list__row,
+.hoard-accordion + .hoard-list__row {
   margin-top: 8px;
 }
 
-.hoard-row.hoard-row-indented {
+.hoard-list__row.hoard-list__row--indented {
   margin-top: 0;
 }
 
-.hoard-row:hover {
+.hoard-list__row:hover {
   background: var(--background-modifier-hover);
 }
 
-.hoard-row.is-expanded {
+.hoard-list__row.is-expanded {
   background: var(--background-secondary);
 }
 
-.hoard-col-title {
+.hoard-list__column-title {
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -199,7 +199,7 @@ button.hoard-rows-customize-btn .svg-icon {
   align-items: flex-start;
 }
 
-.hoard-row-title-text {
+.hoard-list__row-title-text {
   /* flex-start leaves it at max-content; cap it so long titles end in an ellipsis */
   max-width: 100%;
   font-weight: 500;
@@ -208,32 +208,32 @@ button.hoard-rows-customize-btn .svg-icon {
   text-overflow: ellipsis;
 }
 
-.hoard-col-started {
+.hoard-list__column-started {
   font-size: 11px;
   color: var(--text-muted);
   text-align: center;
 }
 
 /* Rating column */
-.hoard-col-rating {
+.hoard-list__column-rating {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.hoard-row-rating {
+.hoard-list__row-rating {
   font-size: 11px;
-  color: var(--hoard-rating-color);
+  color: var(--hoard-star-rating-color);
   font-weight: 600;
   white-space: nowrap;
 }
 
-.hoard-row-rating-empty {
+.hoard-list__row-rating--empty {
   color: var(--text-faint);
   font-weight: 400;
 }
 
-.hoard-col-status {
+.hoard-list__column-status {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -242,8 +242,8 @@ button.hoard-rows-customize-btn .svg-icon {
   min-width: 0;
 }
 
-.hoard-col-status .hoard-badge,
-.hoard-col-status .hoard-badge-plain {
+.hoard-list__column-status .hoard-badge,
+.hoard-list__column-status .hoard-badge__plain {
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
@@ -263,8 +263,8 @@ button.hoard-rows-customize-btn .svg-icon {
 }
 
 /* Progress bar */
-.hoard-progress-wrap,
-.hoard-rect-bar-wrap {
+.hoard-progress__wrap,
+.hoard-stat-rect__bar-wrap {
   height: 3px;
   background: var(--background-modifier-border);
   border-radius: 2px;
@@ -272,9 +272,9 @@ button.hoard-rows-customize-btn .svg-icon {
   width: 100%;
 }
 
-.hoard-progress-bar {
+.hoard-progress__bar {
   height: 100%;
-  background: var(--hoard-accent);
+  background: var(--hoard-view-accent);
   border-radius: 2px;
   transition: width 0.3s ease;
   min-width: 0;
@@ -292,12 +292,12 @@ button.hoard-rows-customize-btn .svg-icon {
   line-height: 1.4;
 }
 
-.hoard-badge-sm {
+.hoard-badge--sm {
   padding: 1px 6px;
   font-size: 10px;
 }
 
-.hoard-badge-plain {
+.hoard-badge__plain {
   display: inline-block;
   font-size: 11px;
   font-weight: bold;

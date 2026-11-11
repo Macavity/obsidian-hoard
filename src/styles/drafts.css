@@ -3,36 +3,36 @@
 /* ══ DRAFTS TAB ══ */
 
 /* Notice banner (matches Custom Lists draft banner) */
-.hoard-drafts-notice {
+.hoard-drafts__notice {
   margin: 4px 0 10px;
   line-height: 1.5;
 }
 
 /* Count label */
-.hoard-drafts-count-label {
+.hoard-drafts__count-label {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   margin-left: 4px;
 }
 
 /* Empty state */
-.hoard-drafts-empty {
+.hoard-drafts__empty {
   text-align: center;
   padding: 32px 16px;
   color: var(--text-muted);
   font-style: italic;
 }
 
-/* Cards list (mirrors .hoard-airtime-cards) */
-.hoard-drafts-cards {
+/* Cards list (mirrors .hoard-airtime__cards) */
+.hoard-drafts__cards {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-top: 6px;
 }
 
-/* Single card (mirrors .hoard-airtime-card) */
-.hoard-drafts-card {
+/* Single card (mirrors .hoard-airtime__card) */
+.hoard-drafts__card {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -43,12 +43,12 @@
   transition: background 0.1s;
 }
 
-.hoard-drafts-card:hover {
+.hoard-drafts__card:hover {
   background: var(--background-modifier-hover);
 }
 
 /* Title */
-.hoard-drafts-card-title {
+.hoard-drafts__card-title {
   font-weight: 600;
   font-size: var(--font-ui-small);
   flex: 1;
@@ -59,7 +59,7 @@
 }
 
 /* Source note link */
-.hoard-drafts-card-source {
+.hoard-drafts__card-source {
   flex-shrink: 0;
   max-width: 180px;
   overflow: hidden;
@@ -67,25 +67,25 @@
   white-space: nowrap;
 }
 
-.hoard-drafts-source-link {
+.hoard-drafts__source-link {
   color: var(--text-accent);
   cursor: pointer;
   font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
 }
 
-.hoard-drafts-source-link:hover {
+.hoard-drafts__source-link:hover {
   text-decoration: underline;
 }
 
-.hoard-drafts-source-count {
+.hoard-drafts__source-count {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   cursor: help;
 }
 
 /* "In Watchlist" indicator */
-.hoard-drafts-card-dup {
+.hoard-drafts__card-duplicate {
   flex-shrink: 0;
   font-size: var(--font-ui-smaller);
   font-weight: 500;
@@ -94,15 +94,15 @@
 }
 
 /* Action buttons */
-.hoard-drafts-card-actions,
-.hoard-maybe-card-right {
+.hoard-drafts__card-actions,
+.hoard-maybe-card__right {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.hoard-drafts-added-label {
+.hoard-drafts__added-label {
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
   font-style: italic;
@@ -112,25 +112,25 @@
   white-space: nowrap;
 }
 
-button.hoard-drafts-dismiss:hover {
+button.hoard-drafts__dismiss:hover {
   color: var(--color-red, #e24b4a);
 }
 
 /* "In Watchlist" state — italic + dimmed (Fix 4) */
-.hoard-drafts-card-watchlist {
+.hoard-drafts__card--watchlist {
   opacity: 0.55;
   font-style: italic;
 }
 
 /* "Added" state */
-.hoard-drafts-card-added .hoard-drafts-card-title {
+.hoard-drafts__card--added .hoard-drafts__card-title {
   font-style: italic;
   color: var(--text-muted);
 }
 
 /* Season total preview (Edit modal) */
-.hoard-modal-season-total,
-.hoard-reading-quote-ref {
+.hoard-modal__season-total,
+.hoard-reading-quotes__reference {
   font-size: 11px;
   color: var(--text-muted);
   margin-top: 4px;
@@ -138,18 +138,18 @@ button.hoard-drafts-dismiss:hover {
 }
 
 /* Skip count inline labels next to Total Episodes input */
-.hoard-modal-skip-inline {
+.hoard-modal__skip-inline {
   font-size: var(--font-ui-small);
   color: var(--text-muted);
   white-space: nowrap;
 }
 
 /* Quick Info tab */
-.hoard-qi-section {
+.hoard-quick-info__section {
   margin-bottom: 6px;
 }
 
-.hoard-qi-section-header {
+.hoard-quick-info__section-header {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -163,28 +163,28 @@ button.hoard-drafts-dismiss:hover {
   user-select: none;
 }
 
-.hoard-qi-section-header:hover {
+.hoard-quick-info__section-header:hover {
   background: var(--background-modifier-hover);
 }
 
-.hoard-qi-chevron {
+.hoard-quick-info__chevron {
   font-size: 10px;
   color: var(--text-muted);
   flex-shrink: 0;
 }
 
-.hoard-qi-section-label {
+.hoard-quick-info__section-label {
   color: var(--text-normal);
 }
 
-.hoard-qi-section-body {
+.hoard-quick-info__section-body {
   margin-top: 4px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.hoard-qi-banner {
+.hoard-quick-info__banner {
   padding: 8px 12px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--background-secondary) 80%, #1D9E75 20%);
@@ -194,14 +194,14 @@ button.hoard-drafts-dismiss:hover {
   line-height: 1.5;
 }
 
-.hoard-qi-banner-heading {
+.hoard-quick-info__banner-heading {
   font-weight: 600;
   color: var(--text-normal);
   margin-bottom: 3px;
   font-size: 13px;
 }
 
-.hoard-qi-banner-body {
+.hoard-quick-info__banner-body {
   white-space: pre-line;
 }
 

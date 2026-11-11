@@ -66,7 +66,7 @@ export class AddCreditModal extends Modal {
 		this.contentEl.setAttribute('data-theme', colorTheme);
 		this.titleEl.setText(this.field === 'director' ? t('add.credit.titleDirector') : t('add.credit.titleCast'));
 		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-credit-modal');
+		this.contentEl.addClass('hoard-credits__modal');
 		this.renderBody();
 	}
 
@@ -132,16 +132,16 @@ export class AddCreditModal extends Modal {
 		content.empty();
 
 		content.createDiv({
-			cls: 'hoard-modal-info',
+			cls: 'hoard-modal__info',
 			text: this.field === 'director' ? t('add.credit.infoDirector') : t('add.credit.infoCast'),
 		});
 
-		const panes = content.createDiv({ cls: 'hoard-credit-panes' });
+		const panes = content.createDiv({ cls: 'hoard-credits__panes' });
 
 		// left — search + results
-		const searchPane = panes.createDiv({ cls: 'hoard-credit-pane hoard-credit-search-pane' });
+		const searchPane = panes.createDiv({ cls: 'hoard-credits__pane hoard-credits__search-pane' });
 		this.searchInput = searchPane.createEl('input', {
-			cls: 'hoard-modal-input hoard-credit-search-input',
+			cls: 'hoard-modal__input hoard-credits__search-input',
 			attr: { type: 'text', placeholder: this.field === 'director' ? t('add.credit.placeholderDirector') : t('add.credit.placeholderCast') },
 		});
 		this.searchInput.value = this.query;
@@ -151,17 +151,17 @@ export class AddCreditModal extends Modal {
 			this.renderResults();
 		});
 		this.searchInput.addEventListener('keydown', (e) => this.onSearchKeydown(e));
-		this.resultsEl = searchPane.createDiv({ cls: 'hoard-credit-results' });
+		this.resultsEl = searchPane.createDiv({ cls: 'hoard-credits__results' });
 
 		// right — staged names
-		const stagedPane = panes.createDiv({ cls: 'hoard-credit-pane hoard-credit-staged-pane' });
-		stagedPane.createDiv({ cls: 'hoard-credit-pane-title', text: t('add.credit.toAdd') });
-		this.stagedEl = stagedPane.createDiv({ cls: 'hoard-credit-staged' });
+		const stagedPane = panes.createDiv({ cls: 'hoard-credits__pane hoard-credits__staged-pane' });
+		stagedPane.createDiv({ cls: 'hoard-credits__pane-title', text: t('add.credit.toAdd') });
+		this.stagedEl = stagedPane.createDiv({ cls: 'hoard-credits__staged' });
 
-		const btnRow = content.createDiv({ cls: 'hoard-modal-btn-row' });
-		const cancelBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-mr', text: t('common.cancel') });
+		const btnRow = content.createDiv({ cls: 'hoard-modal__btn-row' });
+		const cancelBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--margin-right', text: t('common.cancel') });
 		cancelBtn.addEventListener('click', () => this.close());
-		this.saveBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('add.credit.addAll') });
+		this.saveBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('add.credit.addAll') });
 		this.saveBtn.addEventListener('click', () => void this.commit());
 
 		this.renderResults();
@@ -178,7 +178,7 @@ export class AddCreditModal extends Modal {
 		const q = this.query.trim();
 		if (!q) {
 			list.createDiv({
-				cls: 'hoard-credit-hint',
+				cls: 'hoard-credits__hint',
 				text: t('add.credit.startTyping'),
 			});
 			return;
@@ -210,7 +210,7 @@ export class AddCreditModal extends Modal {
 			this.renderResultRow(list, s.name, this.metaFor(s), false);
 		}
 		if (exact && matches.length === 0) {
-			list.createDiv({ cls: 'hoard-credit-hint', text: t('add.noMatches') });
+			list.createDiv({ cls: 'hoard-credits__hint', text: t('add.noMatches') });
 		}
 	}
 
@@ -221,10 +221,10 @@ export class AddCreditModal extends Modal {
 		isNew: boolean,
 	): void {
 		const present = this.isPresent(name);
-		const item = list.createDiv({ cls: 'hoard-result-item hoard-credit-result' });
-		if (isNew) item.addClass('hoard-credit-result-new');
-		item.createDiv({ cls: 'hoard-result-title', text: isNew ? t('add.credit.addNamed', { name }) : name });
-		item.createDiv({ cls: 'hoard-result-meta', text: present ? t('add.credit.alreadyPresent') : meta });
+		const item = list.createDiv({ cls: 'hoard-search-picker__result-item hoard-credits__result' });
+		if (isNew) item.addClass('hoard-credits__result--new');
+		item.createDiv({ cls: 'hoard-search-picker__result-title', text: isNew ? t('add.credit.addNamed', { name }) : name });
+		item.createDiv({ cls: 'hoard-search-picker__result-meta', text: present ? t('add.credit.alreadyPresent') : meta });
 		if (present) {
 			item.addClass('is-disabled');
 			return;
@@ -241,7 +241,7 @@ export class AddCreditModal extends Modal {
 	private selectableItems(): HTMLElement[] {
 		if (!this.resultsEl) return [];
 		return Array.from(
-			this.resultsEl.querySelectorAll<HTMLElement>('.hoard-credit-result:not(.is-disabled)'),
+			this.resultsEl.querySelectorAll<HTMLElement>('.hoard-credits__result:not(.is-disabled)'),
 		);
 	}
 
@@ -255,7 +255,7 @@ export class AddCreditModal extends Modal {
 					? Math.min(this.focusedIdx + 1, items.length - 1)
 					: Math.max(this.focusedIdx - 1, 0);
 			items.forEach((item, i) =>
-				item.toggleClass('hoard-result-item-focused', i === this.focusedIdx),
+				item.toggleClass('hoard-search-picker__result-item--focused', i === this.focusedIdx),
 			);
 			items[this.focusedIdx]?.scrollIntoView({ block: 'nearest' });
 			return;
@@ -290,18 +290,18 @@ export class AddCreditModal extends Modal {
 		wrap.empty();
 
 		if (this.staged.length === 0) {
-			wrap.createDiv({ cls: 'hoard-credit-hint', text: t('add.credit.nothingStaged') });
+			wrap.createDiv({ cls: 'hoard-credits__hint', text: t('add.credit.nothingStaged') });
 			this.updateSaveState();
 			return;
 		}
 
 		this.staged.forEach((name, idx) => {
-			const chip = wrap.createDiv({ cls: 'hoard-credit-chip' });
-			chip.createSpan({ cls: 'hoard-credit-chip-name', text: name });
+			const chip = wrap.createDiv({ cls: 'hoard-credits__staged-chip' });
+			chip.createSpan({ cls: 'hoard-credits__staged-chip-name', text: name });
 			const del = createIconButton(chip, {
 				icon: 'x',
 				label: t('add.credit.removeName', { name }),
-				cls: 'hoard-credit-chip-del',
+				cls: 'hoard-credits__staged-chip-delete',
 				variant: 'sm',
 			});
 			del.addEventListener('click', () => {

@@ -36,7 +36,7 @@ describe("css class check", () => {
 	});
 
 	it("flags short name parts outside the allow list", () => {
-		expect(shortTokens(["hoard-cl-table", "hoard-btn--sm", "hoard-custom-list__td", "hoard-card__pct", "is-active"])).toEqual(["hoard-card__pct", "hoard-cl-table"]);
+		expect(shortTokens(["hoard-xy-table", "hoard-btn--sm", "hoard-custom-list__td", "hoard-card__pct", "is-active"])).toEqual(["hoard-card__pct", "hoard-xy-table"]);
 	});
 
 	it("accepts BEM names only", () => {

@@ -65,7 +65,7 @@ export function buildFilterSections(input: FilterSectionsInput): FilterSection[]
 			formatOpt: input.formatStatus,
 			specials: [{
 				text: `✦ ${t('ui.filters.recentlyArrived')}`,
-				spanCls: 'hoard-recently-arrived-filter',
+				spanCls: 'hoard-filter-panel__recently-arrived-filter',
 				get: () => draft.filterRecentlyArrivedOnly,
 				set: (v) => { draft.filterRecentlyArrivedOnly = v; },
 				mode: 'exclusive',
@@ -93,7 +93,7 @@ export function buildFilterSections(input: FilterSectionsInput): FilterSection[]
 			label: t('ui.filters.group'), opts: input.groupOpts, excludeSet: draft.groupExclude,
 			specials: [{
 				text: `◇ ${t('ui.filters.groupsOnly')}`,
-				spanCls: 'hoard-recently-arrived-filter',
+				spanCls: 'hoard-filter-panel__recently-arrived-filter',
 				get: () => draft.filterGroupsOnly,
 				set: (v) => { draft.filterGroupsOnly = v; },
 				mode: 'independent',
@@ -136,10 +136,10 @@ export interface FiltersDropdownOptions {
 
 /** "Filters ▼" button with its active dot, the "✕ clear" button next to it, and the panel wiring. */
 export function renderFiltersDropdown(parent: HTMLElement, opts: FiltersDropdownOptions): void {
-	const wrap = parent.createDiv({ cls: 'hoard-add-btn-wrap' });
-	const btn = wrap.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('ui.filters.button') });
-	const dotEl = btn.createSpan({ cls: 'hoard-filter-dot' });
-	const clearBtn = parent.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-btn-clear-filters', text: t('ui.filters.clear') });
+	const wrap = parent.createDiv({ cls: 'hoard-toolbar__add-btn-wrap' });
+	const btn = wrap.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('ui.filters.button') });
+	const dotEl = btn.createSpan({ cls: 'hoard-filter-panel__dot' });
+	const clearBtn = parent.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-btn--clear-filters', text: t('ui.filters.clear') });
 	clearBtn.title = t('ui.filters.clearTip');
 	const syncIndicators = (): void => {
 		if (opts.hasActiveFilter()) { dotEl.show(); clearBtn.show(); } else { dotEl.hide(); clearBtn.hide(); }

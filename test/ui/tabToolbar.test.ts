@@ -45,7 +45,7 @@ class El {
 }
 
 const asEl = (e: El): HTMLElement => e as unknown as HTMLElement;
-const selected = (e: El): boolean => e.classes.has('hoard-card-selected');
+const selected = (e: El): boolean => e.classes.has('hoard-card--selected');
 
 describe('renderSelectionButtons', () => {
 	const opts = (over: Partial<Parameters<typeof renderSelectionButtons>[1]> = {}) => ({
@@ -71,7 +71,7 @@ describe('renderSelectionButtons', () => {
 		renderSelectionButtons(asEl(parent), o);
 		expect(parent.children.map((c) => c.text)).toEqual(['All', 'Cancel']);
 		expect(parent.children[0]!.title).toBe('Select all visible');
-		expect(parent.children[1]!.classes.has('hoard-btn-cancel')).toBe(true);
+		expect(parent.children[1]!.classes.has('hoard-btn--cancel')).toBe(true);
 		parent.children[0]!.fire('click');
 		expect(o.onToggleAll).toHaveBeenCalledOnce();
 	});
@@ -111,7 +111,7 @@ describe('renderToolbarCore', () => {
 		const onApply = vi.fn();
 		const { parent, saved } = make({ preset: { active: true, onApply } });
 		expect(parent.children[0]).toBe(saved as unknown as El);
-		expect(parent.children[0]!.classes.has('hoard-btn-preset-active')).toBe(true);
+		expect(parent.children[0]!.classes.has('hoard-btn--preset-active')).toBe(true);
 		parent.children[0]!.fire('click');
 		expect(onApply).toHaveBeenCalledOnce();
 	});
@@ -132,7 +132,7 @@ describe('renderAddButton', () => {
 		const parent = new El();
 		const onClick = vi.fn();
 		const btn = renderAddButton(asEl(parent), onClick) as unknown as El;
-		expect(parent.children[0]!.classes.has('hoard-add-btn-wrap')).toBe(true);
+		expect(parent.children[0]!.classes.has('hoard-toolbar__add-btn-wrap')).toBe(true);
 		const stop = vi.fn();
 		btn.fire('click', { stopPropagation: stop });
 		expect(stop).toHaveBeenCalledOnce();

@@ -171,7 +171,7 @@ export class LogTab {
 	render(): void {
 		this.destroyVirtualScroll();
 		this.container.empty();
-		this.container.addClass('hoard-log-tab');
+		this.container.addClass('hoard-log');
 
 		this.renderFilterBar();
 
@@ -183,7 +183,7 @@ export class LogTab {
 		if (filtered.length === 0) {
 			this.pendingScroll = null;
 			this.container.createDiv({
-				cls: 'hoard-log-empty',
+				cls: 'hoard-log__empty',
 				text: this.sourceFilter === 'all'
 					? t('dashboard.log.empty')
 					: t('dashboard.log.emptySource', { source: sourceLabel(this.sourceFilter) }),
@@ -196,7 +196,7 @@ export class LogTab {
 	}
 
 	private renderFilterBar(): void {
-		const bar = this.container.createDiv({ cls: 'hoard-log-filter-bar' });
+		const bar = this.container.createDiv({ cls: 'hoard-log__filter-bar' });
 
 		const filters: { label: string; value: SourceFilter }[] = [
 			{ label: t('ui.toolbar.all'), value: 'all' },
@@ -207,7 +207,7 @@ export class LogTab {
 
 		for (const f of filters) {
 			const btn = bar.createEl('button', {
-				cls: `hoard-log-filter-btn${this.sourceFilter === f.value ? ' is-active' : ''}`,
+				cls: `hoard-log__filter-btn${this.sourceFilter === f.value ? ' is-active' : ''}`,
 				text: f.label,
 			});
 			btn.addEventListener('click', () => {
@@ -258,9 +258,9 @@ export class LogTab {
 	}
 
 	private renderVirtualTimeline(): void {
-		const scroll = this.container.createDiv({ cls: 'hoard-log-timeline hoard-log-virtual-scroll' });
-		const spacer = scroll.createDiv({ cls: 'hoard-log-spacer' });
-		const viewport = spacer.createDiv({ cls: 'hoard-log-viewport' });
+		const scroll = this.container.createDiv({ cls: 'hoard-log__timeline hoard-log__virtual-scroll' });
+		const spacer = scroll.createDiv({ cls: 'hoard-log__spacer' });
+		const viewport = spacer.createDiv({ cls: 'hoard-log__viewport' });
 
 		this.scrollContainer = scroll;
 		this.spacer = spacer;
@@ -332,7 +332,7 @@ export class LogTab {
 
 			let el: HTMLElement;
 			if (row.type === 'header') {
-				el = createDiv({ cls: 'hoard-log-day-header', text: formatDayHeader(row.date!) });
+				el = createDiv({ cls: 'hoard-log__day-header', text: formatDayHeader(row.date!) });
 				el.setCssProps({ height: `${HEADER_HEIGHT}px` });
 			} else {
 				el = this.buildEntryRow(row);
@@ -353,28 +353,28 @@ export class LogTab {
 		const source = inferHistorySource(entry);
 		const dotColor = SOURCE_COLORS[source] ?? '#888780';
 
-		const el = createDiv({ cls: 'hoard-log-entry' });
+		const el = createDiv({ cls: 'hoard-log__entry' });
 		el.setCssProps({ height: `${ROW_HEIGHT}px` });
 
-		const dotCol = el.createDiv({ cls: 'hoard-log-dot-col' });
-		const dot = dotCol.createDiv({ cls: 'hoard-log-dot' });
+		const dotCol = el.createDiv({ cls: 'hoard-log__dot-column' });
+		const dot = dotCol.createDiv({ cls: 'hoard-log__dot' });
 		dot.style.backgroundColor = dotColor;
-		if (!row.isLastInGroup) dotCol.createDiv({ cls: 'hoard-log-connector' });
+		if (!row.isLastInGroup) dotCol.createDiv({ cls: 'hoard-log__connector' });
 
-		const content = el.createDiv({ cls: 'hoard-log-content' });
-		content.createSpan({ cls: 'hoard-log-source', text: sourceLabel(source) });
-		content.createSpan({ cls: 'hoard-log-sep', text: ' · ' });
-		content.createSpan({ cls: 'hoard-log-title', text: titleFromEntry(entry) });
-		content.createSpan({ cls: 'hoard-log-sep', text: ' · ' });
-		const actionSpan = content.createSpan({ cls: 'hoard-log-action', text: actionLabel(entry) });
+		const content = el.createDiv({ cls: 'hoard-log__content' });
+		content.createSpan({ cls: 'hoard-log__source', text: sourceLabel(source) });
+		content.createSpan({ cls: 'hoard-log__separator', text: ' · ' });
+		content.createSpan({ cls: 'hoard-log__title', text: titleFromEntry(entry) });
+		content.createSpan({ cls: 'hoard-log__separator', text: ' · ' });
+		const actionSpan = content.createSpan({ cls: 'hoard-log__action', text: actionLabel(entry) });
 		actionSpan.style.color = color;
 
-		el.createDiv({ cls: 'hoard-log-time', text: formatTime(entry.timestamp) });
+		el.createDiv({ cls: 'hoard-log__time', text: formatTime(entry.timestamp) });
 
 		const delBtn = createIconButton(el, {
 			icon: 'x',
 			label: t('dashboard.log.deleteEvent'),
-			cls: 'hoard-log-del',
+			cls: 'hoard-log__delete',
 		});
 		delBtn.addEventListener('click', (ev) => {
 			ev.stopPropagation();

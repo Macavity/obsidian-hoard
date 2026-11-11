@@ -153,7 +153,7 @@ describe('ReadingDetailModal.renderCustomValueEditor', () => {
 		sel.dispatchEvent(new Event('change'));
 		await flush();
 		expect(readingData.setCustomField).toHaveBeenCalledWith('book', 'b1', 'c1', 'A');
-		expect(cell.querySelector('.hoard-reading-custom-display')!.textContent).toBe('A');
+		expect(cell.querySelector('.hoard-reading-custom-fields__display')!.textContent).toBe('A');
 	});
 
 	it('clears a select value with the blank option', async () => {
@@ -177,7 +177,7 @@ describe('ReadingDetailModal.renderCustomValueEditor', () => {
 		input.dispatchEvent(new Event('blur'));
 		await flush();
 		expect(readingData.setCustomField).toHaveBeenCalledWith('book', 'b1', 'c2', 'hi');
-		expect(cell.querySelector('.hoard-reading-custom-display')!.textContent).toBe('hi');
+		expect(cell.querySelector('.hoard-reading-custom-fields__display')!.textContent).toBe('hi');
 	});
 
 	it('saves null for an empty value and parses numbers, dropping invalid ones', async () => {
@@ -204,7 +204,7 @@ describe('ReadingDetailModal.renderCustomValueEditor', () => {
 		const input = cell.querySelector('input')!;
 		input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 		expect(cell.querySelector('input')).toBeNull();
-		expect(cell.querySelector('.hoard-reading-custom-display')).not.toBeNull();
+		expect(cell.querySelector('.hoard-reading-custom-fields__display')).not.toBeNull();
 		expect(readingData.setCustomField).not.toHaveBeenCalled();
 		const cell2 = document.createElement('div');
 		document.body.appendChild(cell2);
@@ -223,7 +223,7 @@ describe('ReadingDetailModal.renderVaultRow', () => {
 		const { modal } = build();
 		const row = document.createElement('div');
 		modal.renderVaultRow(row);
-		expect(row.querySelector('.hoard-reading-detail-vault-empty')!.textContent).toBe(t('detail.reading.notLinked'));
+		expect(row.querySelector('.hoard-reading-detail__vault-empty')!.textContent).toBe(t('detail.reading.notLinked'));
 		expect(row.querySelectorAll('button')).toHaveLength(1);
 		expect(row.querySelector('button')!.title).toBe(t('detail.reading.linkVaultNote'));
 	});
@@ -232,8 +232,8 @@ describe('ReadingDetailModal.renderVaultRow', () => {
 		const { modal } = build({ item: baseBook({ vaultPage: 'Notes/Dune.md' }) });
 		const row = document.createElement('div');
 		modal.renderVaultRow(row);
-		expect(row.querySelector('.hoard-reading-detail-vault-path')!.textContent).toBe('Dune.md');
-		expect((row.querySelector('.hoard-reading-detail-vault-path') as HTMLElement).title).toBe('Notes/Dune.md');
+		expect(row.querySelector('.hoard-reading-detail__vault-path')!.textContent).toBe('Dune.md');
+		expect((row.querySelector('.hoard-reading-detail__vault-path') as HTMLElement).title).toBe('Notes/Dune.md');
 		expect(row.querySelectorAll('button')).toHaveLength(2);
 		expect(row.querySelector('button')!.title).toBe(t('detail.reading.linked', { path: 'Notes/Dune.md' }));
 	});

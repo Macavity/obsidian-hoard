@@ -3,7 +3,7 @@ import { t } from './i18n';
 import { renderAddButton } from './ui/TabToolbar';
 
 export interface MobileToolbarOptions {
-	/** The flex container row that holds the toolbar (e.g. hoard-header-controls / hoard-reading-toolbar). */
+	/** The flex container row that holds the toolbar (e.g. hoard-toolbar__controls / hoard-reading__toolbar). */
 	controls: HTMLElement;
 	/** Builds the search input into the given parent. */
 	renderSearch: (parent: HTMLElement) => void;
@@ -38,15 +38,15 @@ export function renderToolbarWithMobileToggle(options: MobileToolbarOptions): vo
 
 	let expanded = options.expanded;
 
-	const slot = controls.createDiv({ cls: 'hoard-toolbar-slot' });
-	const searchWrap = slot.createDiv({ cls: 'hoard-toolbar-slot-pane hoard-toolbar-fade' });
+	const slot = controls.createDiv({ cls: 'hoard-toolbar__slot' });
+	const searchWrap = slot.createDiv({ cls: 'hoard-toolbar__slot-pane hoard-toolbar__slot-pane--fade' });
 	renderSearch(searchWrap);
-	const actionsWrap = slot.createDiv({ cls: 'hoard-toolbar-slot-pane hoard-toolbar-fade' });
+	const actionsWrap = slot.createDiv({ cls: 'hoard-toolbar__slot-pane hoard-toolbar__slot-pane--fade' });
 	renderActions(actionsWrap);
 
 	const applyState = (): void => {
-		searchWrap.toggleClass('hoard-toolbar-pane-hidden', expanded);
-		actionsWrap.toggleClass('hoard-toolbar-pane-hidden', !expanded);
+		searchWrap.toggleClass('hoard-toolbar__slot-pane--hidden', expanded);
+		actionsWrap.toggleClass('hoard-toolbar__slot-pane--hidden', !expanded);
 		// the faded-out pane stays in the DOM; inert keeps Tab and typing out of it
 		searchWrap.inert = expanded;
 		actionsWrap.inert = !expanded;
@@ -58,9 +58,9 @@ export function renderToolbarWithMobileToggle(options: MobileToolbarOptions): vo
 	const addLabel = (addBtn.textContent ?? '').replace(/^\+\s*/, '');
 	setIcon(addBtn, 'plus');
 	addBtn.setAttr('aria-label', addLabel);
-	addBtn.addClass('hoard-toolbar-add-btn');
+	addBtn.addClass('hoard-toolbar__add-btn--icon-only');
 
-	const toggleBtn = controls.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-toolbar-toggle-btn' });
+	const toggleBtn = controls.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-toolbar__toggle-btn' });
 	const applyIcon = (): void => {
 		setIcon(toggleBtn, expanded ? 'search' : 'sliders-horizontal');
 		toggleBtn.setAttr('aria-label', t(expanded ? 'airtime.toolbar.showSearch' : 'airtime.toolbar.showFilters'));
@@ -87,10 +87,10 @@ export interface HeaderToolbarOptions {
 /** Watchlist/Games header row: search, a rebuildable actions wrap and the add button. */
 export function renderHeaderToolbar(header: HTMLElement, options: HeaderToolbarOptions): void {
 	renderToolbarWithMobileToggle({
-		controls: header.createDiv({ cls: 'hoard-header-controls' }),
+		controls: header.createDiv({ cls: 'hoard-toolbar__controls' }),
 		renderSearch: options.renderSearch,
 		// display: contents — children stay in the flex row, buttons rebuild in isolation
-		renderActions: (parent) => options.renderActions(parent.createDiv({ cls: 'hoard-toolbar-actions' })),
+		renderActions: (parent) => options.renderActions(parent.createDiv({ cls: 'hoard-toolbar__actions' })),
 		renderAdd: (parent) => renderAddButton(parent, options.onAdd),
 		expanded: options.expanded,
 		onToggleChange: options.onToggleChange,

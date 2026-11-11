@@ -1,7 +1,7 @@
 /* Code-block widgets (stat, upcoming, now watching) */
 
 /* hoard-stat widget */
-.hoard-wstat {
+.hoard-widget-stat {
   display: inline-block;
 
   /* caps the shrink-to-fit box so a full card's max-width can take effect */
@@ -9,7 +9,7 @@
   margin: 2px 0;
 }
 
-.hoard-stat-card {
+.hoard-widget-stat__card {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -20,28 +20,28 @@
   white-space: nowrap;
 }
 
-.hoard-stat-icon {
+.hoard-widget-stat__icon {
   font-size: 13px;
 }
 
-.hoard-stat-value {
+.hoard-widget-stat__value {
   font-weight: 700;
   font-size: var(--font-ui-small);
   color: var(--text-normal);
 }
 
-.hoard-stat-label {
+.hoard-widget-stat__label {
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.hoard-stat-sep {
+.hoard-widget-stat__separator {
   color: var(--text-faint);
   margin: 0 2px;
 }
 
 /* Full cards (140×55px base) */
-.hoard-full-card {
+.hoard-widget__full-card {
   display: flex;
   flex-direction: column;
   width: 160px;
@@ -57,7 +57,7 @@
   overflow: hidden;
 }
 
-.hoard-full-card-header {
+.hoard-widget__full-card-header {
   font-size: 10px;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -65,7 +65,7 @@
   margin-bottom: 2px;
 }
 
-.hoard-full-card-value {
+.hoard-widget__full-card-value {
   font-size: 18px;
   font-weight: 700;
   color: var(--text-normal);
@@ -73,7 +73,7 @@
   white-space: nowrap;
 }
 
-.hoard-full-card-title {
+.hoard-widget__full-card-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-normal);
@@ -83,14 +83,14 @@
   margin-bottom: 2px;
 }
 
-.hoard-full-card-sub {
+.hoard-widget__full-card-subtitle {
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 1px;
   white-space: nowrap;
 }
 
-.hoard-full-card-meta {
+.hoard-widget__full-card-meta {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -99,7 +99,7 @@
   margin-top: auto;
 }
 
-.hoard-full-card-bar-wrap {
+.hoard-widget__full-card-bar-wrap {
   height: 3px;
   background: var(--background-modifier-border);
   border-radius: 2px;
@@ -107,49 +107,49 @@
   overflow: hidden;
 }
 
-.hoard-full-card-bar {
+.hoard-widget__full-card-bar {
   height: 100%;
   background: var(--interactive-accent);
   border-radius: 2px;
 }
 
 /* Time full card (280×55px, two-column) */
-.hoard-full-card-time {
+.hoard-widget__full-card--time {
   width: 320px;
 }
 
-.hoard-full-card-time-cols {
+.hoard-widget__full-card-time-columns {
   display: flex;
   gap: 10px;
   flex: 1;
 }
 
-.hoard-full-card-time-col {
+.hoard-widget__full-card-time-column {
   flex: 1;
   min-width: 0;
 }
 
 /* a value too long for a shrunk column ends in an ellipsis instead of being cut off */
-.hoard-full-card-time-col > *,
-.hoard-triple-col > * {
+.hoard-widget__full-card-time-column > *,
+.hoard-widget-stat__triple-column > * {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.hoard-full-card-days {
+.hoard-widget__full-card-days {
   font-size: 15px;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
 /* hoard-upcoming widget */
-.hoard-wupcoming {
+.hoard-widget-upcoming {
   display: inline-block;
   margin: 2px 0;
 }
 
-.hoard-upcoming-card,
-.hoard-now-card {
+.hoard-widget-upcoming__card,
+.hoard-widget-now__card {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -161,51 +161,51 @@
   flex-wrap: wrap;
 }
 
-.hoard-upcoming-empty {
+.hoard-widget-upcoming__card--empty {
   color: var(--text-muted);
   font-style: italic;
   font-size: var(--font-ui-small);
 }
 
-.hoard-upcoming-title {
+.hoard-widget-upcoming__title {
   font-weight: 600;
   font-size: var(--font-ui-small);
 }
 
-.hoard-upcoming-date {
+.hoard-widget-upcoming__date {
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.hoard-upcoming-countdown {
+.hoard-widget-upcoming__countdown {
   font-size: 11px;
   font-weight: 600;
   color: var(--interactive-accent);
 }
 
 /* hoard-now widget */
-.hoard-wnow {
+.hoard-widget-now {
   display: inline-block;
   margin: 2px 0;
 }
 
-.hoard-now-empty {
+.hoard-widget-now__card--empty {
   color: var(--text-muted);
   font-style: italic;
   font-size: var(--font-ui-small);
 }
 
-.hoard-now-title {
+.hoard-widget-now__title {
   font-weight: 600;
   font-size: var(--font-ui-small);
 }
 
-.hoard-now-ep {
+.hoard-widget-now__episode {
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.hoard-now-bar-wrap {
+.hoard-widget-now__bar-wrap {
   width: 60px;
   height: 4px;
   background: var(--background-modifier-border);
@@ -213,34 +213,34 @@
   overflow: hidden;
 }
 
-.hoard-now-bar {
+.hoard-widget-now__bar {
   height: 100%;
   background: var(--interactive-accent);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
 
-.hoard-now-pct {
+.hoard-widget-now__percent {
   font-size: 11px;
   color: var(--text-muted);
   font-weight: 600;
 }
 
 /* hoard-now full layout */
-.hoard-full-card-nw {
+.hoard-widget__full-card--now-watching {
   height: auto;
   width: 200px;
 }
 
-.hoard-nw-bottom-row,
-.hoard-reading-detail-actions {
+.hoard-widget-now__full-bottom-row,
+.hoard-reading-detail__actions {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-top: 4px;
 }
 
-.hoard-nw-bar-col {
+.hoard-widget-now__full-bar-column {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -249,14 +249,14 @@
   min-width: 0;
 }
 
-.hoard-nw-pct {
+.hoard-widget-now__full-percent {
   font-size: 9px;
   color: var(--text-muted);
   font-weight: 600;
 }
 
 /* Shared vertical separator */
-.hoard-vert-sep {
+.hoard-vertical-separator {
   width: 1px;
   background: var(--background-modifier-border);
   align-self: stretch;
@@ -265,69 +265,69 @@
 }
 
 /* hoard-stat: time completed full (triple card) */
-.hoard-wstat.hoard-wstat-triple {
+.hoard-widget-stat.hoard-widget-stat--triple {
   display: block;
 }
 
-.hoard-full-card-triple {
+.hoard-widget__full-card--triple {
   width: 100%;
   height: auto;
   padding: 8px 10px;
 }
 
-.hoard-triple-cols {
+.hoard-widget-stat__triple-columns {
   display: flex;
   align-items: stretch;
   gap: 0;
 }
 
-.hoard-triple-col {
+.hoard-widget-stat__triple-column {
   flex: 1;
   min-width: 0;
   padding: 0 8px;
 }
 
-.hoard-triple-col:first-child {
+.hoard-widget-stat__triple-column:first-child {
   padding-left: 0;
 }
 
 /* hoard-now-next (combined now watching + up next) */
-.hoard-wnownext {
+.hoard-widget-now-next {
   display: block;
   margin: 2px 0;
 }
 
-.hoard-full-card-now-next {
+.hoard-widget__full-card--now-next {
   width: 100%;
   height: auto;
   padding: 8px 10px;
 }
 
-.hoard-double-cols {
+.hoard-widget-now-next__columns {
   display: flex;
   align-items: stretch;
   gap: 0;
 }
 
-.hoard-double-col {
+.hoard-widget-now-next__column {
   flex: 1;
   min-width: 0;
   padding: 0 8px;
 }
 
-.hoard-double-col:first-child {
+.hoard-widget-now-next__column:first-child {
   padding-left: 0;
 }
 
 /* Widgets settings tab */
-.hoard-widget-info-section {
+.hoard-settings__widget-info-section {
   margin-bottom: 16px;
   padding: 10px 12px;
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 6px;
 }
 
-.hoard-widget-info-name {
+.hoard-settings__widget-info-name {
   font-size: 13px;
   font-weight: 700;
   font-family: var(--font-monospace);
@@ -335,19 +335,19 @@
   margin-bottom: 4px;
 }
 
-.hoard-widget-info-desc {
+.hoard-settings__widget-info-description {
   font-size: var(--font-ui-small);
   color: var(--text-muted);
   margin-bottom: 8px;
 }
 
-.hoard-widget-info-code-row {
+.hoard-settings__widget-info-code-row {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
-.hoard-widget-info-code {
+.hoard-settings__widget-info-code {
   flex: 1;
   font-size: 11px;
   background: var(--background-primary-alt);

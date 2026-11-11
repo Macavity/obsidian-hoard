@@ -40,10 +40,10 @@ export interface StatusDropdownOptions {
 export function openStatusDropdown(opts: StatusDropdownOptions): void {
 	const { anchor, container, options, getOptionColor, onSelect, onClose } = opts;
 
-	container.querySelectorAll('.hoard-reading-status-dropdown').forEach((el) => el.remove());
+	container.querySelectorAll('.hoard-status-dropdown').forEach((el) => el.remove());
 
 	const rect = anchor.getBoundingClientRect();
-	const dropdown = container.createDiv({ cls: 'hoard-reading-status-dropdown' });
+	const dropdown = container.createDiv({ cls: 'hoard-status-dropdown' });
 	dropdown.style.top = `${rect.bottom + 4}px`;
 	dropdown.style.left = `${rect.left}px`;
 	// capture the owning document once so add/remove can't desync across popout windows
@@ -54,8 +54,8 @@ export function openStatusDropdown(opts: StatusDropdownOptions): void {
 	for (const entry of options) {
 		const value = typeof entry === 'string' ? entry : entry.value;
 		const label = typeof entry === 'string' ? entry : (entry.label ?? entry.value);
-		const opt = dropdown.createDiv({ cls: 'hoard-reading-status-option' });
-		const dot = opt.createSpan({ cls: 'hoard-reading-status-option-dot' });
+		const opt = dropdown.createDiv({ cls: 'hoard-status-dropdown__option' });
+		const dot = opt.createSpan({ cls: 'hoard-status-dropdown__option-dot' });
 		const color = getOptionColor?.(value);
 		// no colour → leave the dot to its default CSS appearance
 		if (color) dot.style.backgroundColor = color;
@@ -111,9 +111,9 @@ export function renderTagPill(opts: TagPillOptions): HTMLElement {
 	wrap.empty();
 
 	const badge = wrap.createSpan({
-		cls: `hoard-reading-detail-status${color ? '' : ' hoard-detail-priority-empty'}`,
+		cls: `hoard-reading-detail__status${color ? '' : ' hoard-reading-detail__status--priority-empty'}`,
 	});
-	if (opts.showDot) badge.createSpan({ cls: 'hoard-detail-status-dot' });
+	if (opts.showDot) badge.createSpan({ cls: 'hoard-status-dropdown__status-dot' });
 	badge.createSpan({ text: value ? (opts.valueLabel ?? value) : (opts.emptyLabel ?? t('common.none')) });
 	if (color) badge.style.backgroundColor = color;
 	if (opts.tooltip) badge.title = opts.tooltip;
@@ -148,7 +148,7 @@ export interface TagChipsOptions {
  * their fill from the same `TagDefinition.color` the settings editor writes.
  *
  * Selected chips are filled with their own colour; unselected ones stay muted and carry it only as
- * a tint, driven by `--hoard-chip-color` so the CSS stays static.
+ * a tint, driven by `--hoard-game-detail-chip-color` so the CSS stays static.
  */
 export function renderTagChips(opts: TagChipsOptions): void {
 	const { wrap, tags, onToggle } = opts;
@@ -157,11 +157,11 @@ export function renderTagChips(opts: TagChipsOptions): void {
 
 	for (const tag of tags) {
 		const chip = wrap.createEl('button', {
-			cls: 'hoard-game-modal-platform',
+			cls: 'hoard-game-detail__platform',
 			text: tag.name,
 			attr: { type: 'button' },
 		});
-		chip.setCssProps({ '--hoard-chip-color': tag.color });
+		chip.setCssProps({ '--hoard-game-detail-chip-color': tag.color });
 		const sync = (): void => chip.toggleClass('is-active', selected.includes(tag.name));
 		sync();
 		chip.addEventListener('click', (e) => {
@@ -189,16 +189,16 @@ export interface SegmentedToggleOptions<T extends string> {
 }
 
 /**
- * A compact single-select segmented pill — the Settings `hoard-sg-seg` look without its accent-triple
+ * A compact single-select segmented pill — the Settings `hoard-settings-group__segment` look without its accent-triple
  * dependency, so it works anywhere. Used for the Pages/Words switch in the Reading modals.
  */
 export function renderSegmentedToggle<T extends string>(opts: SegmentedToggleOptions<T>): HTMLElement {
-	const seg = opts.parent.createDiv({ cls: 'hoard-seg-toggle' });
-	seg.setCssProps({ '--hoard-seg-color': opts.color ?? '#8b5cf6' });
+	const seg = opts.parent.createDiv({ cls: 'hoard-segmented' });
+	seg.setCssProps({ '--hoard-segmented-color': opts.color ?? '#8b5cf6' });
 
 	for (const option of opts.options) {
 		const btn = seg.createEl('button', {
-			cls: 'hoard-seg-toggle-btn',
+			cls: 'hoard-segmented__btn',
 			text: option.label,
 			attr: { type: 'button', title: option.title ?? option.label },
 		});

@@ -74,9 +74,9 @@ export class TitleDetailModal extends Modal {
 		this.modalEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-detail-modal');
+		this.contentEl.addClass('hoard-detail');
 		this.mobile = Platform.isMobile;
-		this.contentEl.toggleClass('hoard-detail-mobile', this.mobile);
+		this.contentEl.toggleClass('hoard-detail--mobile', this.mobile);
 		this.renderAll();
 	}
 
@@ -114,7 +114,7 @@ export class TitleDetailModal extends Modal {
 
 	// Header
 	private renderHeader(parent: HTMLElement): void {
-		this.headerEl = parent.createDiv({ cls: 'hoard-detail-header' });
+		this.headerEl = parent.createDiv({ cls: 'hoard-detail__header' });
 		this.renderHeaderBody();
 	}
 
@@ -129,14 +129,14 @@ export class TitleDetailModal extends Modal {
 		const mobile = this.mobile;
 
 		// mobile: poster + title/stars share a top row; the rest spans the modal width below it
-		const top = mobile ? header.createDiv({ cls: 'hoard-detail-header-top' }) : header;
+		const top = mobile ? header.createDiv({ cls: 'hoard-detail__header-top' }) : header;
 
 		// cover on the left, mirroring ReadingTab's in-flow aspect-ratio box
 		this.renderCover(top);
 
-		const left = top.createDiv({ cls: 'hoard-detail-header-left' });
+		const left = top.createDiv({ cls: 'hoard-detail__header-left' });
 		// inline-editable title: click to swap in an input, commit on blur or Enter, Escape aborts
-		const titleWrap = left.createDiv({ cls: 'hoard-detail-title-wrap' });
+		const titleWrap = left.createDiv({ cls: 'hoard-detail__title-wrap' });
 		this.renderTitleDisplay(titleWrap);
 
 		if (mobile) {
@@ -144,31 +144,31 @@ export class TitleDetailModal extends Modal {
 			this.studioEl = null;
 			this.renderRatingSection(left);
 		} else {
-			this.studioEl = left.createDiv({ cls: 'hoard-detail-studio' });
+			this.studioEl = left.createDiv({ cls: 'hoard-detail__studio' });
 			this.renderStudioLine();
 		}
 
 		// full width under the poster on mobile, stacked beside it on desktop
 		const body = mobile ? header : left;
 
-		const badgeRow = body.createDiv({ cls: 'hoard-detail-badge-row' });
+		const badgeRow = body.createDiv({ cls: 'hoard-detail__badge-row' });
 
 		// editable type badge — the status/priority pill + dropdown, over the configured types
-		const typeWrap = badgeRow.createSpan({ cls: 'hoard-reading-detail-status-wrap' });
+		const typeWrap = badgeRow.createSpan({ cls: 'hoard-reading-detail__status-wrap' });
 		this.renderTypeBadge(typeWrap);
 
 		// badge row: Type · Status · Priority · globe · note — the link icons trail the pills.
 		// editable status badge, over the user-configured statuses and their colors.
-		const statusWrap = badgeRow.createSpan({ cls: 'hoard-reading-detail-status-wrap' });
+		const statusWrap = badgeRow.createSpan({ cls: 'hoard-reading-detail__status-wrap' });
 		this.statusWrapEl = statusWrap;
 		this.renderStatusBadge(statusWrap);
 
 		// editable priority badge; a muted placeholder pill when none is set
-		const priorityWrap = badgeRow.createSpan({ cls: 'hoard-reading-detail-status-wrap' });
+		const priorityWrap = badgeRow.createSpan({ cls: 'hoard-reading-detail__status-wrap' });
 		this.renderPriorityBadge(priorityWrap);
 
 		if (this.title.externalLink) {
-			const linkIcon = badgeRow.createEl('a', { cls: 'hoard-acc-link-icon' });
+			const linkIcon = badgeRow.createEl('a', { cls: 'hoard-accordion__link-icon' });
 			setIcon(linkIcon, 'globe');
 			linkIcon.href = this.title.externalLink;
 			linkIcon.setAttr('aria-label', t('list.openExternalLink'));
@@ -191,12 +191,12 @@ export class TitleDetailModal extends Modal {
 		// the -bar variant lays the four stats over a full-width bar and shrinks to content; the plain box
 		// (group modals) keeps its row layout. Mobile drops the box for a plain stat line.
 		this.statsBoxEl = body.createDiv({
-			cls: mobile ? 'hoard-detail-stats-line' : 'hoard-detail-stats-box hoard-detail-stats-box-bar',
+			cls: mobile ? 'hoard-detail__stats-line' : 'hoard-detail__stats-box hoard-detail__stats-box--bar',
 		});
 		this.renderStatsBox();
 
 		// credits rows; missing fields kick off the one-time backfill and re-render when it lands
-		this.creditsEl = body.createDiv({ cls: 'hoard-detail-credits' });
+		this.creditsEl = body.createDiv({ cls: 'hoard-detail__credits' });
 		this.renderCreditsSection();
 		this.maybeBackfillCredits();
 		this.maybeBackfillStudio();
@@ -206,7 +206,7 @@ export class TitleDetailModal extends Modal {
 	private renderTitleDisplay(wrap: HTMLElement): void {
 		wrap.empty();
 		const titleEl = wrap.createEl('h2', {
-			cls: 'hoard-detail-title hoard-reading-detail-editable-text',
+			cls: 'hoard-detail__title hoard-reading-detail__editable-text',
 			text: this.title.title,
 		});
 		titleEl.title = t('detail.clickToEdit');
@@ -216,7 +216,7 @@ export class TitleDetailModal extends Modal {
 	private editTitleInline(wrap: HTMLElement): void {
 		wrap.empty();
 		const input = wrap.createEl('input', {
-			cls: 'hoard-modal-input hoard-detail-title-input',
+			cls: 'hoard-modal__input hoard-detail__title-input',
 			attr: { type: 'text' },
 		});
 		input.value = this.title.title;
@@ -381,7 +381,7 @@ export class TitleDetailModal extends Modal {
 		wrap.removeClass('hoard-hidden');
 
 		const chip = (name: string): void => {
-			const el = wrap.createSpan({ cls: 'hoard-detail-studio-chip', text: name });
+			const el = wrap.createSpan({ cls: 'hoard-detail__studio-chip', text: name });
 			if (!this.onPersonClick) return;
 			el.addClass('is-clickable');
 			el.title = t('detail.filterBy', { name });
@@ -396,7 +396,7 @@ export class TitleDetailModal extends Modal {
 		if (overflow.length === 0) return;
 
 		const more = wrap.createSpan({
-			cls: 'hoard-detail-studio-more',
+			cls: 'hoard-detail__studio-more',
 			text: t('detail.more', { count: overflow.length }),
 		});
 		more.addEventListener('click', () => {
@@ -439,18 +439,18 @@ export class TitleDetailModal extends Modal {
 	// cover box mirroring the Cards view: the resolved poster (manual or auto), else the type-coloured
 	// letter placeholder. Reserves its aspect-ratio space from first paint.
 	private renderCover(parent: HTMLElement): void {
-		const cover = parent.createDiv({ cls: 'hoard-detail-cover' });
+		const cover = parent.createDiv({ cls: 'hoard-detail__cover' });
 		const typeDef = this.getTagDef(this.title.type, this.plugin.settings.types);
 		const typeColor = typeDef
 			? getThemedColor(this.title.type, typeDef.color, this.plugin.settings.colorTheme)
 			: '#888780';
 
-		const placeholder = cover.createDiv({ cls: 'hoard-detail-cover-placeholder' });
+		const placeholder = cover.createDiv({ cls: 'hoard-detail__cover-placeholder' });
 		placeholder.style.backgroundColor = typeColor;
 		const letter = (this.title.title.trim().charAt(0) || '?').toUpperCase();
 		placeholder.createSpan({ text: letter });
 
-		const img = cover.createEl('img', { cls: 'hoard-detail-cover-img' });
+		const img = cover.createEl('img', { cls: 'hoard-detail__cover-img' });
 		img.alt = this.title.title;
 
 		const showImg = (url: string): void => {
@@ -489,20 +489,20 @@ export class TitleDetailModal extends Modal {
 
 		// mobile: plain "2h 15m left · 0m watched · 0/1 eps" line, then a full-width bar and its caption
 		if (this.mobile) {
-			const line = this.statsBoxEl.createDiv({ cls: 'hoard-detail-statline' });
+			const line = this.statsBoxEl.createDiv({ cls: 'hoard-detail__statline' });
 			const stat = (value: string, label: string): void => {
-				const item = line.createSpan({ cls: 'hoard-detail-statline-item' });
-				item.createSpan({ cls: 'hoard-detail-statline-value', text: value });
-				item.createSpan({ cls: 'hoard-detail-statline-label', text: label });
+				const item = line.createSpan({ cls: 'hoard-detail__statline-item' });
+				item.createSpan({ cls: 'hoard-detail__statline-value', text: value });
+				item.createSpan({ cls: 'hoard-detail__statline-label', text: label });
 			};
 			stat(formatTime(timeLeft), t('list.stat.left'));
 			stat(formatTime(timeWatched), t('list.stat.watched'));
 			stat(`${watchedEps}/${effectiveTotal}`, t('detail.epsShort'));
 
-			const bar = this.statsBoxEl.createDiv({ cls: 'hoard-acc-progress-wrap' });
-			bar.createDiv({ cls: 'hoard-progress-bar' }).style.width = `${progress}%`;
+			const bar = this.statsBoxEl.createDiv({ cls: 'hoard-accordion__progress-wrap' });
+			bar.createDiv({ cls: 'hoard-progress__bar' }).style.width = `${progress}%`;
 			this.statsBoxEl.createDiv({
-				cls: 'hoard-detail-progress-label',
+				cls: 'hoard-detail__progress-label',
 				text: t('detail.progressPercent', { percent: progress }),
 			});
 			return;
@@ -510,25 +510,25 @@ export class TitleDetailModal extends Modal {
 
 		// the bar is a sibling of the stats row, not a child of the progress block, so it spans the full
 		// box width instead of a 70px stub under "progress"
-		const row = this.statsBoxEl.createDiv({ cls: 'hoard-detail-stats-row' });
+		const row = this.statsBoxEl.createDiv({ cls: 'hoard-detail__stats-row' });
 
 		const makeBlock = (value: string, label: string): void => {
-			const block = row.createDiv({ cls: 'hoard-acc-stat-block' });
-			block.createDiv({ cls: 'hoard-acc-percent', text: value });
-			block.createDiv({ cls: 'hoard-acc-progress-label', text: label });
+			const block = row.createDiv({ cls: 'hoard-accordion__stat-block' });
+			block.createDiv({ cls: 'hoard-accordion__percent', text: value });
+			block.createDiv({ cls: 'hoard-accordion__progress-label', text: label });
 		};
 		makeBlock(formatTime(timeLeft), t('list.stat.left'));
 		makeBlock(formatTime(timeWatched), t('list.stat.watched'));
 		makeBlock(`${watchedEps} / ${effectiveTotal}`, t('list.stat.episodes'));
 
-		const progBlock = row.createDiv({ cls: 'hoard-acc-header-right' });
-		progBlock.createDiv({ cls: 'hoard-acc-percent', text: `${progress}%` });
-		progBlock.createDiv({ cls: 'hoard-acc-progress-label', text: t('list.stat.progress') });
+		const progBlock = row.createDiv({ cls: 'hoard-accordion__header-right' });
+		progBlock.createDiv({ cls: 'hoard-accordion__percent', text: `${progress}%` });
+		progBlock.createDiv({ cls: 'hoard-accordion__progress-label', text: t('list.stat.progress') });
 
 		const barWrap = this.statsBoxEl.createDiv({
-			cls: 'hoard-acc-progress-wrap hoard-detail-stats-bar',
+			cls: 'hoard-accordion__progress-wrap hoard-detail__stats-bar',
 		});
-		barWrap.createDiv({ cls: 'hoard-progress-bar' }).style.width = `${progress}%`;
+		barWrap.createDiv({ cls: 'hoard-progress__bar' }).style.width = `${progress}%`;
 	}
 
 	// repaint the header pill / date-watched so a Mark-as-Watched press shows without reopening
@@ -545,7 +545,7 @@ export class TitleDetailModal extends Modal {
 
 	// Episodes / Seasons
 	private renderEpisodesSection(parent: HTMLElement): void {
-		this.episodesSectionEl = parent.createDiv({ cls: 'hoard-detail-episodes' });
+		this.episodesSectionEl = parent.createDiv({ cls: 'hoard-detail__episodes' });
 		this.renderEpisodesBody();
 	}
 
@@ -554,7 +554,7 @@ export class TitleDetailModal extends Modal {
 		this.episodesSectionEl.empty();
 		const entry = this.title;
 		if (isSingleEpisodeTitle(entry)) {
-			const row = this.episodesSectionEl.createDiv({ cls: 'hoard-movie-row' });
+			const row = this.episodesSectionEl.createDiv({ cls: 'hoard-accordion__movie-row' });
 			// the shared toggle owns the status → Completed and watch-date writes; this only mirrors them back
 			// into the open modal
 			appendMarkWatchedButton(this.dataManager, row, entry.id, () => {
@@ -574,15 +574,15 @@ export class TitleDetailModal extends Modal {
 		}
 		entry.seasons.forEach((season, seasonIdx) => {
 			let isCollapsed = this.collapsedSeasons.has(seasonIdx);
-			const seasonWrap = this.episodesSectionEl!.createDiv({ cls: 'hoard-season-wrap' });
-			const seasonHeader = seasonWrap.createDiv({ cls: 'hoard-season-header' });
-			const badge = seasonHeader.createSpan({ cls: 'hoard-season-badge' });
+			const seasonWrap = this.episodesSectionEl!.createDiv({ cls: 'hoard-accordion__season-wrap' });
+			const seasonHeader = seasonWrap.createDiv({ cls: 'hoard-accordion__season-header' });
+			const badge = seasonHeader.createSpan({ cls: 'hoard-accordion__season-badge' });
 			badge.textContent = season.name;
 			const palette = this.plugin.settings.seasonPalette;
 			badge.style.backgroundColor = palette[seasonIdx % palette.length] ?? '#888780';
 			const skipCount = (season.skippedEpisodes ?? []).length;
 			seasonHeader.createSpan({
-				cls: 'hoard-season-ep-count',
+				cls: 'hoard-accordion__season-episode-count',
 				text: skipCount > 0
 					? t('list.season.epsToSkip', { eps: season.episodes, skip: skipCount })
 					: t('list.season.eps', { count: season.episodes }),
@@ -606,7 +606,7 @@ export class TitleDetailModal extends Modal {
 					isCollapsed = true;
 					this.collapsedSeasons.add(seasonIdx);
 					chevron.classList.remove('is-open');
-					seasonWrap.querySelector('.hoard-episode-grid')?.remove();
+					seasonWrap.querySelector('.hoard-accordion__episode-grid')?.remove();
 				}
 				void this.dataManager.persistCollapsedSeasons(this.title.id, this.collapsedSeasons);
 			});
@@ -644,21 +644,21 @@ export class TitleDetailModal extends Modal {
 	// Rating
 	private renderRatingSection(parent: HTMLElement): void {
 		const mobile = this.mobile;
-		const wrap = parent.createDiv({ cls: 'hoard-detail-rating' });
+		const wrap = parent.createDiv({ cls: 'hoard-detail__rating' });
 		// no "Rating" label on mobile — stars carry their own tier label
-		if (mobile) wrap.addClass('hoard-detail-rating-stacked');
-		else wrap.createSpan({ cls: 'hoard-stars-label', text: t('list.footer.rating') });
-		this.starsWrapEl = wrap.createDiv({ cls: 'hoard-stars hoard-detail-stars' });
+		if (mobile) wrap.addClass('hoard-detail__rating--stacked');
+		else wrap.createSpan({ cls: 'hoard-star-rating__stars-label', text: t('list.footer.rating') });
+		this.starsWrapEl = wrap.createDiv({ cls: 'hoard-star-rating--row hoard-detail__stars' });
 		this.renderStars();
 
 		// mobile drops the community badge + trailer onto their own line under the stars
-		const commHost = mobile ? wrap.createDiv({ cls: 'hoard-detail-community-row' }) : wrap;
+		const commHost = mobile ? wrap.createDiv({ cls: 'hoard-detail__community-row' }) : wrap;
 
 		const rerenderCommunity = (): void => {
 			if (mobile) {
 				commHost.empty();
 			} else {
-				const next = wrap.querySelector('.hoard-rating-divider');
+				const next = wrap.querySelector('.hoard-star-rating__divider');
 				let n: ChildNode | null = next;
 				while (n) {
 					const toRemove = n;
@@ -678,7 +678,7 @@ export class TitleDetailModal extends Modal {
 
 	/** Appends the trailer control (its own container) to the rating row. */
 	private renderTrailerControl(parent: HTMLElement): void {
-		const container = parent.createSpan({ cls: 'hoard-trailer-control' });
+		const container = parent.createSpan({ cls: 'hoard-trailer-btn__control' });
 		this.paintTrailerControl(container);
 	}
 
@@ -769,10 +769,10 @@ export class TitleDetailModal extends Modal {
 
 	// Notes
 	private renderNotesSection(parent: HTMLElement): void {
-		const wrap = parent.createDiv({ cls: 'hoard-detail-notes' });
-		wrap.createSpan({ cls: 'hoard-stars-label', text: t('detail.notes') });
+		const wrap = parent.createDiv({ cls: 'hoard-detail__notes' });
+		wrap.createSpan({ cls: 'hoard-star-rating__stars-label', text: t('detail.notes') });
 		const textarea = wrap.createEl('textarea', {
-			cls: 'hoard-detail-notes-input',
+			cls: 'hoard-detail__notes-input',
 			attr: { placeholder: t('detail.addNotes'), rows: '3' },
 		});
 		textarea.value = this.title.notes;
@@ -815,15 +815,15 @@ export class TitleDetailModal extends Modal {
 	// Dates (started / watched / release). Started + watched share the first row, reading
 	// chronologically; release date sits on its own row below.
 	private renderDateSection(parent: HTMLElement): void {
-		const wrap = parent.createDiv({ cls: 'hoard-detail-date' });
-		const topRow = wrap.createDiv({ cls: 'hoard-detail-date-row' });
+		const wrap = parent.createDiv({ cls: 'hoard-detail__date' });
+		const topRow = wrap.createDiv({ cls: 'hoard-detail__date-row' });
 		this.renderDateField(topRow, t('list.footer.dateStarted'), 'dateStarted');
 		const watched = this.renderDateField(topRow, t('list.footer.dateWatched'), 'dateFinished');
 		// kept so a Mark-as-Watched press can restamp the field in place
 		this.datePickerEl = watched.picker;
 		this.refreshDateDimmed = watched.refreshDimmed;
 
-		const bottomRow = wrap.createDiv({ cls: 'hoard-detail-date-row' });
+		const bottomRow = wrap.createDiv({ cls: 'hoard-detail__date-row' });
 		this.renderReleaseDateField(bottomRow);
 	}
 
@@ -833,11 +833,11 @@ export class TitleDetailModal extends Modal {
 	 * pill is repainted afterwards.
 	 */
 	private renderReleaseDateField(parent: HTMLElement): void {
-		const wrap = parent.createDiv({ cls: 'hoard-date-field' });
-		wrap.createSpan({ cls: 'hoard-stars-label', text: t('list.footer.releaseDate') });
+		const wrap = parent.createDiv({ cls: 'hoard-date-picker__field' });
+		wrap.createSpan({ cls: 'hoard-star-rating__stars-label', text: t('list.footer.releaseDate') });
 		const picker = createDatePicker({
 			parent: wrap,
-			inputCls: 'hoard-footer-date hoard-date-input',
+			inputCls: 'hoard-accordion__footer-date hoard-date-picker__input--compact',
 			value: this.title.releaseDate,
 			lenient: true,
 			onChange: (iso) => {
@@ -864,15 +864,15 @@ export class TitleDetailModal extends Modal {
 		label: string,
 		field: 'dateStarted' | 'dateFinished',
 	): { picker: DatePickerHandle; refreshDimmed: () => void } {
-		const wrap = parent.createDiv({ cls: 'hoard-date-field' });
-		wrap.createSpan({ cls: 'hoard-stars-label', text: label });
+		const wrap = parent.createDiv({ cls: 'hoard-date-picker__field' });
+		wrap.createSpan({ cls: 'hoard-star-rating__stars-label', text: label });
 		const todayBtn = wrap.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-footer-today-btn',
+			cls: 'hoard-btn hoard-btn--sm hoard-accordion__footer-today-btn',
 			text: t('list.footer.today'),
 		});
 		const picker = createDatePicker({
 			parent: wrap,
-			inputCls: 'hoard-footer-date hoard-date-input',
+			inputCls: 'hoard-accordion__footer-date hoard-date-picker__input--compact',
 			value: this.title[field],
 			onChange: (iso) => {
 				void (async () => {
@@ -969,10 +969,10 @@ export class TitleDetailModal extends Modal {
 
 	// Footer
 	private renderFooter(parent: HTMLElement): void {
-		const footer = parent.createDiv({ cls: 'hoard-detail-footer hoard-detail-footer-centered' });
+		const footer = parent.createDiv({ cls: 'hoard-detail__footer hoard-detail__footer--centered' });
 		this.footerEl = footer;
 		const removeBtn = footer.createEl('button', {
-			cls: 'hoard-delete-btn hoard-btn-danger hoard-detail-remove',
+			cls: 'hoard-accordion__delete-btn hoard-btn--danger hoard-detail__remove',
 			text: t('common.remove'),
 		});
 		removeBtn.addEventListener('click', () => {
@@ -990,7 +990,7 @@ export class TitleDetailModal extends Modal {
 
 		// favorite heart, centered by the footer's space-between. Updates in place, no re-render.
 		const favBtn = footer.createEl('button', {
-			cls: 'hoard-detail-fav-btn',
+			cls: 'hoard-detail__favorite-btn',
 			attr: { type: 'button' },
 		});
 		setIcon(favBtn, 'heart');
@@ -1007,12 +1007,12 @@ export class TitleDetailModal extends Modal {
 		});
 
 		// grouped with Edit so the footer keeps three children and the heart stays centered
-		const right = footer.createDiv({ cls: 'hoard-detail-footer-right' });
-		const collectionHost = right.createDiv({ cls: 'hoard-detail-collection-host' });
+		const right = footer.createDiv({ cls: 'hoard-detail__footer-right' });
+		const collectionHost = right.createDiv({ cls: 'hoard-detail__collection-host' });
 		void this.maybeRenderCollectionButton(collectionHost);
 
 		const editBtn = right.createEl('button', {
-			cls: 'hoard-edit-btn hoard-detail-edit',
+			cls: 'hoard-accordion__edit-btn hoard-detail__edit',
 			text: t('common.edit'),
 		});
 		editBtn.addEventListener('click', () => {
@@ -1045,19 +1045,19 @@ export class TitleDetailModal extends Modal {
 		const missing = countMissing(collection, this.dataManager.getTitles());
 
 		const btn = host.createEl('button', {
-			cls: 'hoard-collection-btn',
+			cls: 'hoard-detail__collection-btn',
 			attr: { type: 'button' },
 		});
 		setIcon(btn, 'layers');
 		btn.createSpan({
-			cls: 'hoard-collection-btn-label',
+			cls: 'hoard-detail__collection-btn-label',
 			text: missing > 0 ? t('detail.collection.missing', { count: missing }) : t('detail.collection.label'),
 		});
 		if (missing > 0) btn.addClass('has-missing');
 		// mobile has no room for Remove · centred heart · Collection + Edit — park the heart
 		// beside Remove instead. Only when this button exists; otherwise it stays centred.
 		if (Platform.isMobile) {
-			host.closest<HTMLElement>('.hoard-detail-footer')?.addClass('hoard-footer-heart-left');
+			host.closest<HTMLElement>('.hoard-detail__footer')?.addClass('hoard-detail__footer--heart-left');
 		}
 		const label = missing > 0
 			? t('detail.collection.tipMissing', { name: collection.name, count: missing })
@@ -1113,7 +1113,7 @@ export function renderCreditsRefreshButton(
 	const btn = createIconButton(parent, {
 		icon: 'refresh-cw',
 		label: t('detail.credits.refresh'),
-		cls: 'hoard-credits-refresh',
+		cls: 'hoard-credits__refresh',
 		variant: 'framed',
 	});
 	if (creditsRefreshInFlight.has(title.id)) btn.addClass('is-loading');
@@ -1188,15 +1188,15 @@ export function renderCreditsRows(
 			field === 'director' ? title.director : field === 'cast' ? title.cast : title.studio;
 		if (values.length === 0 && isCreditsUnfetched(fetched) && !onAddCredits) return;
 
-		const row = parent.createDiv({ cls: 'hoard-credits-row' });
-		const labelEl = row.createSpan({ cls: 'hoard-credits-label' });
+		const row = parent.createDiv({ cls: 'hoard-credits__row' });
+		const labelEl = row.createSpan({ cls: 'hoard-credits__label' });
 
 		// studio has no add path — AddCreditModal's pool and labels are director/cast only
 		if (onAddCredits && field !== 'studio') {
 			const addBtn = createIconButton(labelEl, {
 				icon: 'plus',
 				label: t(field === 'director' ? 'detail.credits.addDirector' : 'detail.credits.addCast'),
-				cls: 'hoard-credits-add',
+				cls: 'hoard-credits__add',
 				variant: 'sm',
 			});
 			addBtn.addEventListener('click', (e) => {
@@ -1204,21 +1204,21 @@ export function renderCreditsRows(
 				onAddCredits(field);
 			});
 		}
-		labelEl.createSpan({ cls: 'hoard-credits-label-text', text: label });
+		labelEl.createSpan({ cls: 'hoard-credits__label-text', text: label });
 
-		const valuesEl = row.createSpan({ cls: 'hoard-credits-values' });
+		const valuesEl = row.createSpan({ cls: 'hoard-credits__values' });
 
 		if (values.length === 0) {
-			valuesEl.createSpan({ cls: 'hoard-credits-empty', text: '—' });
+			valuesEl.createSpan({ cls: 'hoard-credits__empty', text: '—' });
 			return;
 		}
 
 		const manualKeys = new Set(getManualCredits(title, field).map((n) => n.toLowerCase()));
 		const renderName = (container: HTMLElement, name: string): HTMLElement => {
 			const isManual = manualKeys.has(name.toLowerCase());
-			const el = container.createSpan({ cls: 'hoard-credits-name' });
+			const el = container.createSpan({ cls: 'hoard-credits__name' });
 			if (isManual) el.addClass('is-manual');
-			const text = el.createSpan({ cls: 'hoard-credits-name-text', text: name });
+			const text = el.createSpan({ cls: 'hoard-credits__name-text', text: name });
 			if (onPersonClick) {
 				text.addClass('is-clickable');
 				text.title = t('detail.credits.showTitlesWith', { name });
@@ -1231,7 +1231,7 @@ export function renderCreditsRows(
 				const del = createIconButton(el, {
 					icon: 'x',
 					label: t('detail.credits.removeName', { name }),
-					cls: 'hoard-credits-name-del',
+					cls: 'hoard-credits__name-delete',
 					variant: 'sm',
 				});
 				del.addEventListener('click', (e) => {
@@ -1245,18 +1245,18 @@ export function renderCreditsRows(
 		const inline = values.slice(0, CREDITS_INLINE_LIMIT);
 		const overflow = values.slice(CREDITS_INLINE_LIMIT);
 		inline.forEach((name, i) => {
-			if (i > 0) valuesEl.createSpan({ cls: 'hoard-credits-sep', text: ', ' });
+			if (i > 0) valuesEl.createSpan({ cls: 'hoard-credits__separator', text: ', ' });
 			renderName(valuesEl, name);
 		});
 
 		if (overflow.length === 0) return;
 		const moreBtn = valuesEl.createEl('button', {
-			cls: 'hoard-credits-more',
+			cls: 'hoard-credits__more',
 			text: t('detail.more', { count: overflow.length }),
 		});
-		const overflowEl = parent.createDiv({ cls: 'hoard-credits-overflow' });
+		const overflowEl = parent.createDiv({ cls: 'hoard-credits__overflow' });
 		overflowEl.hide();
-		for (const name of overflow) renderName(overflowEl, name).addClass('hoard-credits-chip');
+		for (const name of overflow) renderName(overflowEl, name).addClass('hoard-credits__chip');
 		moreBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			const expanded = !overflowEl.isShown();
@@ -1305,7 +1305,7 @@ export class GroupDetailModal extends Modal {
 		this.modalEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-detail-modal');
+		this.contentEl.addClass('hoard-detail');
 		this.renderAll();
 	}
 
@@ -1328,7 +1328,7 @@ export class GroupDetailModal extends Modal {
 			progress,
 		});
 
-		const grid = this.contentEl.createDiv({ cls: 'hoard-cards-grid hoard-detail-group-grid' });
+		const grid = this.contentEl.createDiv({ cls: 'hoard-card-grid hoard-detail__group-grid' });
 		for (const m of this.members) {
 			const card = buildTitleCardElement(this.plugin, m, {
 				onOpenDetail: () => {
@@ -1376,12 +1376,12 @@ function buildTitleCardElement(
 	const card = tmp.createDiv({ cls: 'hoard-card' });
 	card.dataset.titleId = title.id;
 
-	const placeholder = card.createDiv({ cls: 'hoard-card-poster-placeholder' });
+	const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
 	placeholder.style.backgroundColor = typeColor;
 	const letter = (title.title.trim().charAt(0) || '?').toUpperCase();
 	placeholder.createSpan({ text: letter });
 
-	const img = card.createEl('img', { cls: 'hoard-card-poster' });
+	const img = card.createEl('img', { cls: 'hoard-card__poster' });
 	img.alt = title.title;
 
 	const showImg = (url: string): void => {
@@ -1409,7 +1409,7 @@ function buildTitleCardElement(
 
 	if (statusDef) {
 		const statusBadge = card.createSpan({
-			cls: 'hoard-card-status-badge',
+			cls: 'hoard-card__status-badge',
 			text: statusLabel(title.status),
 		});
 		statusBadge.style.backgroundColor = getThemedColor(
@@ -1419,14 +1419,14 @@ function buildTitleCardElement(
 		);
 	}
 
-	const overlay = card.createDiv({ cls: 'hoard-card-overlay' });
-	overlay.createSpan({ cls: 'hoard-card-title', text: title.title });
-	const metaRow = overlay.createDiv({ cls: 'hoard-card-meta-row' });
-	const typeBadge = metaRow.createSpan({ cls: 'hoard-card-type-badge', text: typeLabel(title.type) });
+	const overlay = card.createDiv({ cls: 'hoard-card__overlay' });
+	overlay.createSpan({ cls: 'hoard-card__title', text: title.title });
+	const metaRow = overlay.createDiv({ cls: 'hoard-card__meta-row' });
+	const typeBadge = metaRow.createSpan({ cls: 'hoard-card__type-badge', text: typeLabel(title.type) });
 	typeBadge.style.backgroundColor = typeColor;
 	// release year beside the type badge; omitted when unknown (matches ListTab's card)
 	const yearMatch = title.releaseDate?.match(/^(\d{4})/);
-	if (yearMatch) metaRow.createSpan({ cls: 'hoard-card-year', text: yearMatch[1] });
+	if (yearMatch) metaRow.createSpan({ cls: 'hoard-card__year', text: yearMatch[1] });
 
 	const total = title.totalEpisodes;
 	if (total && total > 0) {
@@ -1434,12 +1434,12 @@ function buildTitleCardElement(
 		const ratio = isCompleted
 			? 1
 			: Math.max(0, Math.min(1, title.watchedEpisodes.length / total));
-		const bar = overlay.createDiv({ cls: 'hoard-card-progress-bar' });
-		const fill = bar.createDiv({ cls: 'hoard-card-progress-fill' });
+		const bar = overlay.createDiv({ cls: 'hoard-card__progress-bar' });
+		const fill = bar.createDiv({ cls: 'hoard-card__progress-fill' });
 		fill.style.width = `${ratio * 100}%`;
 	}
 
-	const menuBtn = createIconButton(card, { icon: 'more-vertical', label: t('common.edit'), cls: 'hoard-card-menu-btn' });
+	const menuBtn = createIconButton(card, { icon: 'more-vertical', label: t('common.edit'), cls: 'hoard-card__menu-btn' });
 	menuBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
 		handlers.onEdit();

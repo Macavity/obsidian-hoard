@@ -29,7 +29,7 @@ class StubModal extends SearchFormModal<string> {
 	}
 	protected noApiMessage(): string | null { return null; }
 	protected renderResult(host: HTMLElement, result: string, select: (itemEl: HTMLElement) => void): HTMLElement {
-		const item = (host as unknown as El).createDiv({ cls: 'hoard-result-item', text: result });
+		const item = (host as unknown as El).createDiv({ cls: 'hoard-search-picker__result-item', text: result });
 		item.addEventListener('click', () => select(item as unknown as HTMLElement));
 		return item as unknown as HTMLElement;
 	}
@@ -49,9 +49,9 @@ function open() {
 	const modal = new StubModal();
 	modal.open();
 	const content = modal.contentEl as unknown as El;
-	const results = content.find('hoard-modal-results')!;
+	const results = content.find('hoard-modal__results')!;
 	const typeQuery = (q: string): void => {
-		const input = content.find('hoard-modal-input')!;
+		const input = content.find('hoard-modal__input')!;
 		input.value = q;
 		input.fire('input');
 	};
@@ -67,7 +67,7 @@ describe('SearchFormModal', () => {
 		expect((modal.titleEl as unknown as El).text).toBe('Add thing');
 		expect(content.has('hoard-add-modal')).toBe(true);
 		const classes = content.children.map((c) => [...c.classes][0]);
-		expect(classes.indexOf('hoard-modal-results')).toBeLessThan(classes.indexOf('hoard-modal-form'));
+		expect(classes.indexOf('hoard-modal__results')).toBeLessThan(classes.indexOf('hoard-modal__form'));
 		expect(modal.log).toEqual(['renderForm:Anime']);
 	});
 
@@ -77,7 +77,7 @@ describe('SearchFormModal', () => {
 		vi.advanceTimersByTime(50);
 		modal.pending[0]!(['dune-1', 'dune-2']);
 		await flush();
-		const [a, b] = results.findAll('hoard-result-item');
+		const [a, b] = results.findAll('hoard-search-picker__result-item');
 		a!.fire('click');
 		expect(modal.selections[0]!.isCurrent()).toBe(true);
 		b!.fire('click');
@@ -92,12 +92,12 @@ describe('SearchFormModal', () => {
 		vi.advanceTimersByTime(50);
 		modal.pending[0]!(['dune-1']);
 		await flush();
-		expect(results.findAll('hoard-result-item')).toHaveLength(1);
-		const select = content.find('hoard-select')!;
+		expect(results.findAll('hoard-search-picker__result-item')).toHaveLength(1);
+		const select = content.find('hoard-input__select')!;
 		select.value = 'Movie';
 		select.fire('change');
 		expect(modal.log).toEqual(['renderForm:Anime', 'search:dune', 'renderForm:Movie']);
-		expect(results.findAll('hoard-result-item')).toHaveLength(0);
+		expect(results.findAll('hoard-search-picker__result-item')).toHaveLength(0);
 		expect(content.find('hoard-field')!.text).toBe('Movie');
 	});
 

@@ -157,7 +157,7 @@ export class EditTitleModal extends Modal {
 
 		// total episodes + ep. duration paired on one row (episodes keeps its seasons skip/watch inline
 		// labels — only the layout changed)
-		const epsDurRow = content.createDiv({ cls: 'hoard-modal-row hoard-modal-row-pair' });
+		const epsDurRow = content.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });
 		const epsCell = makeCell(epsDurRow, t('edit.totalEpisodes'));
 		numberInput(epsCell, {
 			value: this.fieldEpisodes,
@@ -167,8 +167,8 @@ export class EditTitleModal extends Modal {
 				updateSkipCounts();
 			},
 		});
-		const epsSkipLabel = epsCell.createSpan({ cls: 'hoard-modal-skip-inline' });
-		const epsWatchLabel = epsCell.createSpan({ cls: 'hoard-modal-skip-inline' });
+		const epsSkipLabel = epsCell.createSpan({ cls: 'hoard-modal__skip-inline' });
+		const epsWatchLabel = epsCell.createSpan({ cls: 'hoard-modal__skip-inline' });
 
 		const updateSkipCounts = (): void => {
 			const parsed = parseSeasonsText(this.fieldSeasonsText);
@@ -193,29 +193,29 @@ export class EditTitleModal extends Modal {
 
 		// poster URL (the note's `Cover` property)
 		const posterRow = makeRow(t('edit.posterUrl'));
-		const posterStack = posterRow.createDiv({ cls: 'hoard-modal-input-stack' });
+		const posterStack = posterRow.createDiv({ cls: 'hoard-modal__input-stack' });
 		const posterInput = posterStack.createEl('input', {
-			cls: 'hoard-modal-input',
+			cls: 'hoard-modal__input',
 			attr: { type: 'url', placeholder: 'https://example.com/poster.jpg' },
 		});
 		posterInput.value = this.fieldPosterUrl;
 		posterInput.addEventListener('input', () => { this.fieldPosterUrl = posterInput.value; });
 		posterStack.createDiv({
-			cls: 'hoard-modal-info',
+			cls: 'hoard-modal__info',
 			text: t('edit.posterHelp'),
 		});
 
 		// trailer URL (manual override)
 		const trailerRow = makeRow(t('edit.trailerUrl'));
-		const trailerStack = trailerRow.createDiv({ cls: 'hoard-modal-input-stack' });
+		const trailerStack = trailerRow.createDiv({ cls: 'hoard-modal__input-stack' });
 		const trailerInput = trailerStack.createEl('input', {
-			cls: 'hoard-modal-input',
+			cls: 'hoard-modal__input',
 			attr: { type: 'url', placeholder: 'https://www.youtube.com/watch?v=...' },
 		});
 		trailerInput.value = this.fieldTrailerUrl;
 		trailerInput.addEventListener('input', () => { this.fieldTrailerUrl = trailerInput.value; });
 		trailerStack.createDiv({
-			cls: 'hoard-modal-info',
+			cls: 'hoard-modal__info',
 			text: t('edit.trailerHelp'),
 		});
 
@@ -223,14 +223,14 @@ export class EditTitleModal extends Modal {
 		renderGroupPicker(content, this.dataManager.getGroups(), this.group);
 
 		const seasonsRow = makeRow(t('edit.seasons'));
-		const seasonsHelp = seasonsRow.createDiv({ cls: 'hoard-modal-input-stack' });
+		const seasonsHelp = seasonsRow.createDiv({ cls: 'hoard-modal__input-stack' });
 		const seasonsInput = seasonsHelp.createEl('textarea', {
-			cls: 'hoard-modal-textarea',
+			cls: 'hoard-modal__textarea',
 			attr: { rows: '4', placeholder: 'Season 1: 12\nSeason 2: 13 (5,8,33-37)' },
 		});
 		seasonsInput.value = this.fieldSeasonsText;
 
-		const totalPreviewEl = seasonsHelp.createDiv({ cls: 'hoard-modal-season-total' });
+		const totalPreviewEl = seasonsHelp.createDiv({ cls: 'hoard-modal__season-total' });
 		const updateTotalPreview = (): void => {
 			const parsed = parseSeasonsText(seasonsInput.value);
 			const total = parsed.reduce((sum, s) => sum + s.episodes, 0);
@@ -249,22 +249,22 @@ export class EditTitleModal extends Modal {
 		});
 
 		seasonsHelp.createDiv({
-			cls: 'hoard-modal-info',
+			cls: 'hoard-modal__info',
 			text: t('edit.formatHelp'),
 		});
 		seasonsHelp.createDiv({
-			cls: 'hoard-modal-info',
+			cls: 'hoard-modal__info',
 			text: t('edit.skipHelp'),
 		});
 		seasonsHelp.createDiv({
-			cls: 'hoard-modal-info',
+			cls: 'hoard-modal__info',
 			text: t('edit.totalNote'),
 		});
 
-		const btnRow = content.createDiv({ cls: 'hoard-modal-btn-row' });
+		const btnRow = content.createDiv({ cls: 'hoard-modal__btn-row' });
 		const cancelBtn = btnRow.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') });
 		cancelBtn.addEventListener('click', () => this.close());
-		const saveBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('edit.saveChanges') });
+		const saveBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('edit.saveChanges') });
 		saveBtn.addEventListener('click', () => void this.saveTitle());
 	}
 

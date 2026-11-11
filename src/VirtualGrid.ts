@@ -45,7 +45,7 @@ export function computeGridMetrics(containerWidth: number, minCardWidth = MIN_CA
 }
 
 /**
- * Publish the grid-mirrored card width on a Rows scroll container — the `--hoard-rows-card-width` the
+ * Publish the grid-mirrored card width on a Rows scroll container — the `--hoard-rows-view-card-width` the
  * shelf cards size from. Shelves track the *computed* grid card width, not the raw minimum, so
  * shelf and grid cards match at any pane width. No-ops on an unchanged value (this runs on every
  * scroll tick) and on degenerate widths (a hidden pane measures 0).
@@ -53,8 +53,8 @@ export function computeGridMetrics(containerWidth: number, minCardWidth = MIN_CA
 export function setRowsCardWidth(scroll: HTMLElement, cardWidth: number): void {
 	if (!(cardWidth > 0)) return;
 	const px = `${Math.round(cardWidth)}px`;
-	if (scroll.style.getPropertyValue('--hoard-rows-card-width') !== px) {
-		scroll.style.setProperty('--hoard-rows-card-width', px);
+	if (scroll.style.getPropertyValue('--hoard-rows-view-card-width') !== px) {
+		scroll.style.setProperty('--hoard-rows-view-card-width', px);
 	}
 }
 
@@ -104,7 +104,7 @@ export class VirtualGrid {
 		this.grid = grid;
 		this.itemCount = itemCount;
 		this.cb = cb;
-		this.colsVar = options?.colsVar ?? '--hoard-cards-cols';
+		this.colsVar = options?.colsVar ?? '--hoard-card-grid-columns';
 		this.cardHeightVar = options?.cardHeightVar ?? '--hoard-card-height';
 	}
 

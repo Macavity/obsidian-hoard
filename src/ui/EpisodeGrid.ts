@@ -11,7 +11,7 @@ interface SeasonFillButtonOptions {
 
 /** The ✓/✗ fill-or-clear toggle that opens an episode grid. Returns a refresh for after episode clicks. */
 function renderSeasonFillButton(grid: HTMLElement, opts: SeasonFillButtonOptions): () => void {
-	const fillBtn = grid.createDiv({ cls: 'hoard-season-fill-btn' });
+	const fillBtn = grid.createDiv({ cls: 'hoard-accordion__season-fill-btn' });
 	const allWatched = (): boolean => {
 		const watched = new Set(opts.getTitle().watchedEpisodes);
 		return opts.seasonEps.length > 0 && opts.seasonEps.every((ep) => watched.has(ep));
@@ -42,7 +42,7 @@ interface EpisodeBoxOptions {
 
 /** One episode cell: watched ✓, skipped —, else its number. */
 function renderEpisodeBox(grid: HTMLElement, opts: EpisodeBoxOptions): void {
-	const box = grid.createDiv({ cls: 'hoard-episode-box' });
+	const box = grid.createDiv({ cls: 'hoard-accordion__episode-box' });
 	// read fresh state: closures over isWatched/isSkipped go stale
 	const refreshBox = (): void => {
 		const isWatched = opts.getTitle().watchedEpisodes.includes(opts.epNum);
@@ -74,7 +74,7 @@ export interface EpisodeGridOptions {
 /** Episode grid of one season: fill/clear toggle plus one box per episode. */
 export function renderEpisodeGrid(parent: HTMLElement, opts: EpisodeGridOptions): void {
 	const { season } = opts;
-	const grid = parent.createDiv({ cls: 'hoard-episode-grid' });
+	const grid = parent.createDiv({ cls: 'hoard-accordion__episode-grid' });
 	const count = season ? season.episodes : opts.getTitle().totalEpisodes;
 	const offset = season ? season.offset : 0;
 	const seasonEps = Array.from({ length: count }, (_, i) => offset + i + 1);

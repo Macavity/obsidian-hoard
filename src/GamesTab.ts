@@ -242,7 +242,7 @@ export class GamesTab {
 	private deactivateSavedFilter(): void {
 		if (this.savedFilterActive) {
 			this.savedFilterActive = false;
-			this.savedFilterBtnEl?.removeClass('hoard-btn-preset-active');
+			this.savedFilterBtnEl?.removeClass('hoard-btn--preset-active');
 		}
 	}
 
@@ -505,11 +505,11 @@ export class GamesTab {
 
 	render(): void {
 		this.container.empty();
-		this.container.addClass('hoard-games-tab');
+		this.container.addClass('hoard-games');
 
 		// header — the Watchlist toolbar structure (search + action buttons, crossfading behind a
 		// toggle on mobile)
-		const header = this.container.createDiv({ cls: 'hoard-list-header' });
+		const header = this.container.createDiv({ cls: 'hoard-list__header' });
 		renderHeaderToolbar(header, {
 			renderSearch: (parent) => this.renderSearch(parent),
 			renderActions: (wrap) => {
@@ -522,7 +522,7 @@ export class GamesTab {
 			onToggleChange: (expanded) => { this.toolbarExpanded = expanded; },
 		});
 
-		this.contentEl = this.container.createDiv({ cls: 'hoard-games-content' });
+		this.contentEl = this.container.createDiv({ cls: 'hoard-games__content' });
 		this.renderContent();
 	}
 
@@ -543,9 +543,9 @@ export class GamesTab {
 
 		const allGames = this.gameData.getGames();
 		if (allGames.length === 0 && this.gameData.getGroups().length === 0) {
-			const empty = content.createDiv({ cls: 'hoard-cards-empty' });
-			empty.createSpan({ cls: 'hoard-cards-empty-icon', text: '🎮' });
-			empty.createEl('p', { cls: 'hoard-cards-empty-msg', text: t('games.empty') });
+			const empty = content.createDiv({ cls: 'hoard-card-grid__empty' });
+			empty.createSpan({ cls: 'hoard-card-grid__empty-icon', text: '🎮' });
+			empty.createEl('p', { cls: 'hoard-card-grid__empty-message', text: t('games.empty') });
 			return;
 		}
 
@@ -563,13 +563,13 @@ export class GamesTab {
 		const countParts = [t('ui.group.countGame', { count: gameCount })];
 		if (groupCount > 0) countParts.push(t('games.countGroup', { count: groupCount }));
 		const countEl = content.createDiv({
-			cls: 'hoard-results-count hoard-results-count-rows',
+			cls: 'hoard-toolbar__results-count hoard-toolbar__results-count--rows',
 			text: countParts.join(', '),
 		});
 		const gearBtn = createIconButton(countEl, {
 			icon: 'settings',
 			label: t('games.customizeRows'),
-			cls: 'hoard-rows-customize-btn',
+			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
 			new RowsCustomizeModal(this.plugin.app, this.plugin, {
@@ -588,7 +588,7 @@ export class GamesTab {
 			}).open();
 		});
 
-		const scroll = content.createDiv({ cls: 'hoard-rows-scroll-container' });
+		const scroll = content.createDiv({ cls: 'hoard-rows-view__scroll-container' });
 		// shelf cards mirror the grids' *computed* card width (setRowsCardWidth); one metrics source
 		// keeps shelves matching grids across resizes. Heights come from the CSS 2:3 ratio.
 		const metrics = (w: number): GridMetrics => {
@@ -723,16 +723,16 @@ export class GamesTab {
 		filtering: boolean,
 	): void {
 		if (filtering && groups.length === 0) return;
-		const shelf = parent.createDiv({ cls: 'hoard-rows-shelf' });
+		const shelf = parent.createDiv({ cls: 'hoard-rows-view__shelf' });
 		renderShelfTitle(shelf, t('games.shelves.groups'), groups.length, this.shelfSelect(groups.map((g) => g.data.id)));
 		if (groups.length === 0) {
 			shelf.createDiv({
-				cls: 'hoard-rows-shelf-empty',
+				cls: 'hoard-rows-view__shelf-empty',
 				text: t('games.shelves.emptyGroups'),
 			});
 			return;
 		}
-		const strip = shelf.createDiv({ cls: 'hoard-rows-strip' });
+		const strip = shelf.createDiv({ cls: 'hoard-rows-view__strip' });
 		for (const group of groups) {
 			this.renderGroupCard(strip, group.data, group.members);
 		}
@@ -754,8 +754,8 @@ export class GamesTab {
 		const defs = byType ? settings.types : settings.statuses;
 		const keyOf = (g: Game): string => (byType ? g.type : g.status);
 
-		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
-		section.createDiv({ cls: 'hoard-rows-bytype-title', text: byType ? t('games.shelves.byGenre') : t('games.shelves.byStatus') });
+		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
+		section.createDiv({ cls: 'hoard-rows-view__grouped-title', text: byType ? t('games.shelves.byGenre') : t('games.shelves.byStatus') });
 
 		const allGames = this.gameData.getGames();
 		let rendered = 0;
@@ -766,8 +766,8 @@ export class GamesTab {
 			if (bucketGames.length === 0) continue;
 			rendered++;
 			renderShelfTitle(section, byType ? def.name : gameStatusLabel(def.name), bucketGames.length, this.shelfSelect(bucketGames.map((g) => g.id)));
-			const spacer = section.createDiv({ cls: 'hoard-rows-bytype-spacer' });
-			const grid = spacer.createDiv({ cls: 'hoard-cards-grid hoard-cards-grid-virtual' });
+			const spacer = section.createDiv({ cls: 'hoard-rows-view__grouped-spacer' });
+			const grid = spacer.createDiv({ cls: 'hoard-card-grid hoard-card-grid--virtual' });
 			const vgrid = new VirtualGrid(spacer, grid, bucketGames.length, {
 				buildItem: (i, w, h) => {
 					const game = bucketGames[i];
@@ -786,7 +786,7 @@ export class GamesTab {
 				return;
 			}
 			section.createDiv({
-				cls: 'hoard-rows-shelf-empty',
+				cls: 'hoard-rows-view__shelf-empty',
 				text: byType ? t('games.shelves.emptyByGenre') : t('games.shelves.emptyByStatus'),
 			});
 		}
@@ -800,7 +800,7 @@ export class GamesTab {
 		if (items.length === 0) {
 			if (!titled) {
 				parent.createDiv({
-					cls: 'hoard-reading-empty-search',
+					cls: 'hoard-reading__empty-search',
 					text: this.searchQuery.trim()
 						? t('games.noMatchesQuery', { query: this.searchQuery.trim() })
 						: t('games.noMatchesFilters'),
@@ -808,7 +808,7 @@ export class GamesTab {
 			}
 			return;
 		}
-		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
+		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
 		if (titled) renderShelfTitle(section, t('games.shelves.allGames'), items.length, this.shelfSelect(items.map((i) => i.data.id)));
 		const { spacer, vgrid } = mountVirtualCardGrid(section, items.length, {
 			buildItem: (i, w, h) => {
@@ -1003,7 +1003,7 @@ export class GamesTab {
 					},
 					standaloneRows: [{
 						text: `🎁 ${t('games.filters.wishlist')}`,
-						spanCls: 'hoard-wishlist-filter',
+						spanCls: 'hoard-filter-panel__wishlist-filter',
 						get: () => draft.filterWishlistOnly,
 						set: (v) => { draft.filterWishlistOnly = v; },
 					}],
@@ -1076,7 +1076,7 @@ export class GamesTab {
 		});
 	}
 
-	/** Applies/removes hoard-card-selected on every currently rendered card. */
+	/** Applies/removes hoard-card--selected on every currently rendered card. */
 	private syncCardSelectionClasses(): void {
 		syncSelectionClasses(this.container, this.selectedIds, (card) => card.dataset.gameId ?? card.dataset.groupId);
 		refreshShelfSelects(this.shelfSelectRefreshers);
@@ -1246,7 +1246,7 @@ export class GamesTab {
 			// skip if it vanished, already has a cover, or failed earlier this session
 			if (!game || game.coverUrl || this.coverFetchFailed.has(id)) continue;
 
-			const placeholder = card.querySelector('.hoard-card-poster-placeholder');
+			const placeholder = card.querySelector('.hoard-card__poster-placeholder');
 			placeholder?.addClass('is-loading');
 			void this.resolveCover(game).then((res) => {
 				placeholder?.removeClass('is-loading');
@@ -1269,7 +1269,7 @@ export class GamesTab {
 	}
 
 	private applyCoverToCard(card: HTMLElement, url: string): void {
-		const img = card.querySelector<HTMLImageElement>('.hoard-card-poster');
+		const img = card.querySelector<HTMLImageElement>('.hoard-card__poster');
 		if (!img) return;
 		img.onload = () => { card.addClass('has-poster'); };
 		img.onerror = () => { card.removeClass('has-poster'); };

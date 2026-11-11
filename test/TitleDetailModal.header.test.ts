@@ -79,11 +79,11 @@ describe('TitleDetailModal.renderHeaderBody', () => {
 	it('renders the desktop header with title, studio line, badges, stats box and note button', () => {
 		const { modal } = build(mkTitle({ externalLink: 'https://imdb.com/title/tt1' }));
 		const h = header(modal);
-		expect(h.querySelector('.hoard-detail-header-top')).toBeNull();
-		expect(h.querySelector('.hoard-detail-title')!.textContent).toBe('Alien');
-		expect(h.querySelector('.hoard-detail-studio')).not.toBeNull();
-		expect(h.querySelectorAll('.hoard-reading-detail-status-wrap')).toHaveLength(3);
-		const link = h.querySelector('a.hoard-acc-link-icon') as HTMLAnchorElement;
+		expect(h.querySelector('.hoard-detail__header-top')).toBeNull();
+		expect(h.querySelector('.hoard-detail__title')!.textContent).toBe('Alien');
+		expect(h.querySelector('.hoard-detail__studio')).not.toBeNull();
+		expect(h.querySelectorAll('.hoard-reading-detail__status-wrap')).toHaveLength(3);
+		const link = h.querySelector('a.hoard-accordion__link-icon') as HTMLAnchorElement;
 		expect(link.textContent).toBe('');
 		expect(link.getAttribute('data-icon')).toBe('globe');
 		expect(link.getAttribute('href')).toBe('https://imdb.com/title/tt1');
@@ -91,28 +91,28 @@ describe('TitleDetailModal.renderHeaderBody', () => {
 		expect(link.getAttribute('aria-label')).toBe(t('list.openExternalLink'));
 		expect(link.getAttribute('data-tooltip')).toBe(t('list.openExternalLink'));
 		expect(link.hasAttribute('title')).toBe(false);
-		expect(h.querySelector('.hoard-detail-stats-box-bar')).not.toBeNull();
+		expect(h.querySelector('.hoard-detail__stats-box--bar')).not.toBeNull();
 		expect(h.querySelector('.note-link-stub')).not.toBeNull();
 		// desktop: refresh button lives in the credits block, built from the shared icon button
-		const refresh = h.querySelector('.hoard-detail-credits .hoard-credits-refresh')!;
+		const refresh = h.querySelector('.hoard-detail__credits .hoard-credits__refresh')!;
 		expect(refresh.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(refresh.getAttribute('data-icon')).toBe('refresh-cw');
 	});
 
 	it('omits the link icon without an external link', () => {
 		const { modal } = build(mkTitle());
-		expect(header(modal).querySelector('a.hoard-acc-link-icon')).toBeNull();
+		expect(header(modal).querySelector('a.hoard-accordion__link-icon')).toBeNull();
 	});
 
 	it('renders the mobile header with a top row, rating section and refresh in the badge row', () => {
 		const { modal } = build(mkTitle({ externalLink: 'https://x.test' }), { mobile: true });
 		const h = header(modal);
-		expect(h.querySelector('.hoard-detail-header-top')).not.toBeNull();
-		expect(h.querySelector('.hoard-detail-header-top .hoard-detail-rating')).not.toBeNull();
-		expect(h.querySelector('.hoard-detail-studio')).toBeNull();
-		expect(h.querySelector('.hoard-detail-stats-line')).not.toBeNull();
-		expect(h.querySelector('.hoard-detail-badge-row .hoard-credits-refresh')).not.toBeNull();
-		expect(h.querySelector('a.hoard-acc-link-icon')!.textContent).toBe('');
+		expect(h.querySelector('.hoard-detail__header-top')).not.toBeNull();
+		expect(h.querySelector('.hoard-detail__header-top .hoard-detail__rating')).not.toBeNull();
+		expect(h.querySelector('.hoard-detail__studio')).toBeNull();
+		expect(h.querySelector('.hoard-detail__stats-line')).not.toBeNull();
+		expect(h.querySelector('.hoard-detail__badge-row .hoard-credits__refresh')).not.toBeNull();
+		expect(h.querySelector('a.hoard-accordion__link-icon')!.textContent).toBe('');
 	});
 
 	it('does nothing without a header element', () => {
@@ -222,22 +222,22 @@ describe('TitleDetailModal seasons', () => {
 
 	it('renders a header per season with episode and skip counts and a grid per open season', () => {
 		const { parent } = render(seasoned());
-		const counts = Array.from(parent.querySelectorAll('.hoard-season-ep-count')).map((e) => e.textContent);
+		const counts = Array.from(parent.querySelectorAll('.hoard-accordion__season-episode-count')).map((e) => e.textContent);
 		expect(counts).toEqual([t('list.season.epsToSkip', { eps: 2, skip: 1 }), t('list.season.eps', { count: 2 })]);
-		expect((parent.querySelector('.hoard-season-badge') as HTMLElement).style.backgroundColor).not.toBe('');
-		expect(parent.querySelectorAll('.hoard-episode-grid')).toHaveLength(2);
+		expect((parent.querySelector('.hoard-accordion__season-badge') as HTMLElement).style.backgroundColor).not.toBe('');
+		expect(parent.querySelectorAll('.hoard-accordion__episode-grid')).toHaveLength(2);
 	});
 
 	it('collapses and re-expands a season, persisting the state', () => {
 		const { parent, dataManager, modal } = render(seasoned());
-		const header0 = parent.querySelector('.hoard-season-header') as HTMLElement;
+		const header0 = parent.querySelector('.hoard-accordion__season-header') as HTMLElement;
 		header0.click();
 		expect(modal.collapsedSeasons.has(0)).toBe(true);
-		expect(parent.querySelectorAll('.hoard-episode-grid')).toHaveLength(1);
+		expect(parent.querySelectorAll('.hoard-accordion__episode-grid')).toHaveLength(1);
 		expect(header0.querySelector('.hoard-chevron')!.classList.contains('is-open')).toBe(false);
 		header0.click();
 		expect(modal.collapsedSeasons.has(0)).toBe(false);
-		expect(parent.querySelectorAll('.hoard-episode-grid')).toHaveLength(2);
+		expect(parent.querySelectorAll('.hoard-accordion__episode-grid')).toHaveLength(2);
 		expect(header0.querySelector('.hoard-chevron')!.classList.contains('is-open')).toBe(true);
 		expect(dataManager.persistCollapsedSeasons).toHaveBeenCalledTimes(2);
 	});
@@ -247,20 +247,20 @@ describe('TitleDetailModal seasons', () => {
 		b.modal.collapsedSeasons.add(1);
 		const parent = document.createElement('div');
 		b.modal.renderEpisodesSection(parent);
-		expect(parent.querySelectorAll('.hoard-episode-grid')).toHaveLength(1);
+		expect(parent.querySelectorAll('.hoard-accordion__episode-grid')).toHaveLength(1);
 		expect(parent.querySelectorAll('.hoard-chevron.is-open')).toHaveLength(1);
 	});
 
 	it('renders one grid for a seasonless series with episodes and nothing without', () => {
 		const withEps = render(mkTitle({ type: 'TV', totalEpisodes: 3 }));
-		expect(withEps.parent.querySelectorAll('.hoard-episode-box')).toHaveLength(3);
+		expect(withEps.parent.querySelectorAll('.hoard-accordion__episode-box')).toHaveLength(3);
 		const none = render(mkTitle({ type: 'TV', totalEpisodes: 0 }));
-		expect(none.parent.querySelector('.hoard-episode-grid')).toBeNull();
+		expect(none.parent.querySelector('.hoard-accordion__episode-grid')).toBeNull();
 	});
 
 	it('shows the mark-as-watched button for a movie', () => {
 		const { parent } = render(mkTitle());
-		expect(parent.querySelector('.hoard-mark-watched-btn')).not.toBeNull();
+		expect(parent.querySelector('.hoard-accordion__mark-watched-btn')).not.toBeNull();
 	});
 });
 
@@ -275,7 +275,7 @@ describe('TitleDetailModal trailer control', () => {
 
 	it('shows one muted play button that fetches when no trailer is known', () => {
 		const { row, apiService } = ratingRow(mkTitle({ trailerUrl: 'none' }));
-		const btns = row.querySelectorAll('.hoard-trailer-control button');
+		const btns = row.querySelectorAll('.hoard-trailer-btn__control button');
 		expect(btns).toHaveLength(1);
 		const btn = btns[0] as HTMLButtonElement;
 		expect(btn.classList.contains('hoard-trailer-btn--fetch')).toBe(true);
@@ -290,7 +290,7 @@ describe('TitleDetailModal trailer control', () => {
 	it('shows the same play button, unmuted, when a trailer is known', () => {
 		const open = vi.spyOn(window, 'open').mockImplementation(() => null);
 		const { row, apiService } = ratingRow(mkTitle({ trailerUrl: 'https://youtu.be/x' }));
-		const btn = row.querySelector('.hoard-trailer-control button') as HTMLButtonElement;
+		const btn = row.querySelector('.hoard-trailer-btn__control button') as HTMLButtonElement;
 		expect(btn.classList.contains('hoard-trailer-btn--fetch')).toBe(false);
 		expect(btn.getAttribute('data-icon')).toBe('play');
 		expect(btn.getAttribute('aria-label')).toBe(t('detail.trailer.watch'));
@@ -302,7 +302,7 @@ describe('TitleDetailModal trailer control', () => {
 
 	it('labels the button on mobile', () => {
 		const { row } = ratingRow(mkTitle({ trailerUrl: 'https://youtu.be/x' }), true);
-		const btn = row.querySelector('.hoard-trailer-control button')!;
+		const btn = row.querySelector('.hoard-trailer-btn__control button')!;
 		expect(btn.classList.contains('hoard-trailer-btn--labeled')).toBe(true);
 		expect(btn.querySelector('.hoard-trailer-btn__label')!.textContent).toBe(t('detail.trailer.label'));
 	});

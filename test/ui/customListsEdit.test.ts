@@ -12,7 +12,7 @@ const key = (el: HTMLElement, k: string, init: KeyboardEventInit = {}): void => 
 	el.dispatchEvent(new KeyboardEvent('keydown', { key: k, cancelable: true, bubbles: true, ...init }));
 };
 const cell = (container: HTMLElement, rowIdx: number, col: string): HTMLElement =>
-	qa(container, '.hoard-cl-tr-body')[rowIdx]!.querySelector<HTMLElement>(`[data-wl-col="${col}"]`)!;
+	qa(container, '.hoard-custom-list-table__tr--body')[rowIdx]!.querySelector<HTMLElement>(`[data-wl-col="${col}"]`)!;
 
 afterEach(() => {
 	document.body.replaceChildren();
@@ -27,25 +27,25 @@ describe('inline cell editing', () => {
 		});
 		const { container, stored } = await setupCustomLists([list]);
 		cell(container, 0, 'col_1').click();
-		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		expect(input.value).toBe('old');
-		expect(cell(container, 0, 'col_1').classList.contains('hoard-cl-editing')).toBe(true);
+		expect(cell(container, 0, 'col_1').classList.contains('hoard-custom-list-table__td--editing')).toBe(true);
 		input.value = 'fresh';
 		key(input, 'Enter');
 		await until(() => stored('Backlog').rows[0]!.col_1 === 'fresh');
-		await until(() => cell(container, 0, 'col_1').querySelector('.hoard-cell-bold') !== null);
+		await until(() => cell(container, 0, 'col_1').querySelector('.hoard-custom-list-table__cell-text--bold') !== null);
 	});
 
 	it('parses number cells, and clears the value when the input is not a number', async () => {
 		const { container, stored } = await setupCustomLists([makeList()]);
 		cell(container, 0, 'col_1').click();
-		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		expect(input.type).toBe('number');
 		input.value = '7.5';
 		input.dispatchEvent(new Event('blur'));
 		await until(() => stored('Backlog').rows[0]!.col_1 === 7.5);
 		cell(container, 0, 'col_1').click();
-		const again = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const again = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		again.value = '';
 		key(again, 'Enter');
 		await until(() => stored('Backlog').rows[0]!.col_1 === undefined);
@@ -54,10 +54,10 @@ describe('inline cell editing', () => {
 	it('cancels on Escape without saving', async () => {
 		const { container, stored } = await setupCustomLists([makeList()]);
 		cell(container, 0, 'col_1').click();
-		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		input.value = '99';
 		key(input, 'Escape');
-		await until(() => cell(container, 0, 'col_1').querySelector('.hoard-cl-cell-input') === null);
+		await until(() => cell(container, 0, 'col_1').querySelector('.hoard-custom-list-table__cell-input') === null);
 		expect(stored('Backlog').rows[0]!.col_1).toBe(5);
 		expect(cell(container, 0, 'col_1').textContent).toBe('5');
 	});
@@ -72,7 +72,7 @@ describe('inline cell editing', () => {
 		vi.spyOn(f.app.vault, 'process').mockImplementation((file, fn) => { record(file.path); return process(file, fn); });
 		vi.spyOn(f.app.vault, 'modify').mockImplementation((file, data) => { record(file.path); return modify(file, data); });
 		cell(container, 0, 'col_1').click();
-		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		input.value = '8';
 		key(input, 'Enter');
 		input.value = '9';
@@ -95,10 +95,10 @@ describe('inline cell editing', () => {
 		});
 		const { container, stored } = await setupCustomLists([list]);
 		cell(container, 0, 'col_1').click();
-		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		input.value = 'a2';
 		key(input, 'Tab');
-		await until(() => cell(container, 0, 'col_2').classList.contains('hoard-cl-editing'));
+		await until(() => cell(container, 0, 'col_2').classList.contains('hoard-custom-list-table__td--editing'));
 		expect(stored('Backlog').rows[0]!.col_1).toBe('a2');
 	});
 
@@ -109,7 +109,7 @@ describe('inline cell editing', () => {
 		});
 		const { container } = await setupCustomLists([list]);
 		cell(container, 0, 'col_1').click();
-		expect((q(container, '.hoard-cl-cell-input') as HTMLInputElement).value).toBe('');
+		expect((q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement).value).toBe('');
 	});
 });
 
@@ -126,28 +126,28 @@ describe('table settings: option renames', () => {
 
 	it('composes keystroke renames into one migration of the row cells', async () => {
 		const { stored } = await open();
-		const input = q(document.body, '.hoard-editcol-card-opt-input') as HTMLInputElement;
+		const input = q(document.body, '.hoard-edit-columns__card-option-input') as HTMLInputElement;
 		rename(input, 'hap');
 		rename(input, 'happier');
-		qa(document.body, '.hoard-btn-primary').find((b) => b.textContent === 'Save')!.click();
+		qa(document.body, '.hoard-btn--primary').find((b) => b.textContent === 'Save')!.click();
 		await until(() => stored('Backlog').rows[0]!.col_2 === 'happier');
 		expect(stored('Backlog').columns.find((c) => c.id === 'col_2')?.options).toEqual(['happier']);
 	});
 
 	it('leaves rows alone when the rename is cancelled', async () => {
 		const { stored } = await open();
-		rename(q(document.body, '.hoard-editcol-card-opt-input') as HTMLInputElement, 'changed');
+		rename(q(document.body, '.hoard-edit-columns__card-option-input') as HTMLInputElement, 'changed');
 		qa(document.body, '.hoard-btn').find((b) => b.textContent === 'Cancel')!.click();
 		expect(stored('Backlog').rows[0]!.col_2).toBe('happy');
 	});
 
 	it('does not touch other rows or values on a renamed-back option', async () => {
 		const { stored } = await open();
-		const input = q(document.body, '.hoard-editcol-card-opt-input') as HTMLInputElement;
+		const input = q(document.body, '.hoard-edit-columns__card-option-input') as HTMLInputElement;
 		rename(input, 'x');
 		rename(input, 'happy');
-		qa(document.body, '.hoard-btn-primary').find((b) => b.textContent === 'Save')!.click();
-		await until(() => document.body.querySelector('.hoard-editcols-modal') === null);
+		qa(document.body, '.hoard-btn--primary').find((b) => b.textContent === 'Save')!.click();
+		await until(() => document.body.querySelector('.hoard-edit-columns') === null);
 		expect(stored('Backlog').rows[0]!.col_2).toBe('happy');
 		expect(stored('Backlog').rows[1]!.col_2).toBeUndefined();
 	});
@@ -157,27 +157,27 @@ describe('import from pasted rows', () => {
 	const open = async (list = makeList()) => {
 		const ctx = await setupCustomLists([list]);
 		toolbarButton(ctx.container, 'Import').click();
-		const textarea = q(document.body, '.hoard-import-textarea') as HTMLTextAreaElement;
+		const textarea = q(document.body, '.hoard-import__textarea') as HTMLTextAreaElement;
 		const paste = (text: string): void => {
 			textarea.value = text;
 			textarea.dispatchEvent(new Event('input'));
 		};
 		const addBtn = (): HTMLButtonElement =>
-			qa(document.body, '.hoard-modal-btn-row .hoard-btn-primary')[0] as HTMLButtonElement;
+			qa(document.body, '.hoard-modal__btn-row .hoard-btn--primary')[0] as HTMLButtonElement;
 		return { ...ctx, paste, addBtn };
 	};
 
 	it('prompts to paste and disables Add while empty', async () => {
 		const { addBtn } = await open();
 		expect(addBtn().disabled).toBe(true);
-		expect(q(document.body, '.hoard-import-counts').textContent).toContain('Paste');
+		expect(q(document.body, '.hoard-import__counts').textContent).toContain('Paste');
 	});
 
 	it('appends rows mapped onto name, number and select columns', async () => {
 		const { paste, addBtn, stored } = await open();
 		paste('Name\tScore\tMood\nGamma\t9\thappy\nDelta\t\t');
 		expect(addBtn().disabled).toBe(false);
-		expect(q(document.body, '.hoard-import-counts').textContent).toContain('2');
+		expect(q(document.body, '.hoard-import__counts').textContent).toContain('2');
 		addBtn().click();
 		await until(() => stored('Backlog').rows.length === 4);
 		const rows = stored('Backlog').rows;
@@ -191,7 +191,7 @@ describe('import from pasted rows', () => {
 	it('creates trailing text columns, named from the header or by position', async () => {
 		const { paste, addBtn, stored } = await open();
 		paste('Name\tScore\tMood\tExtra\t\nGamma\t1\thappy\tx\ty');
-		expect(q(document.body, '.hoard-import-banner').textContent).toContain('2');
+		expect(q(document.body, '.hoard-import__banner').textContent).toContain('2');
 		addBtn().click();
 		await until(() => stored('Backlog').columns.length === 5);
 		const cols = stored('Backlog').columns;
@@ -203,7 +203,7 @@ describe('import from pasted rows', () => {
 	it('adds unseen select values as options and warns about it', async () => {
 		const { paste, addBtn, stored } = await open();
 		paste('Name\tScore\tMood\nGamma\t1\tsad\nDelta\t2\tsad\nEps\t3\thappy');
-		expect(qa(document.body, '.hoard-import-banner').some((b) => b.textContent!.includes('sad'))).toBe(true);
+		expect(qa(document.body, '.hoard-import__banner').some((b) => b.textContent!.includes('sad'))).toBe(true);
 		addBtn().click();
 		await until(() => stored('Backlog').rows.length === 5);
 		expect(stored('Backlog').columns.find((c) => c.id === 'col_2')?.options).toEqual(['happy', 'sad']);
@@ -213,7 +213,7 @@ describe('import from pasted rows', () => {
 		const { paste, addBtn, stored } = await open();
 		paste('Name\tScore\nGamma\tabc');
 		expect(addBtn().disabled).toBe(true);
-		expect(q(document.body, '.hoard-import-banner-error').textContent).toContain('Score');
+		expect(q(document.body, '.hoard-import__banner-error').textContent).toContain('Score');
 		addBtn().click();
 		await new Promise((r) => setTimeout(r, 20));
 		expect(stored('Backlog').rows).toHaveLength(2);
@@ -222,12 +222,12 @@ describe('import from pasted rows', () => {
 	it('warns when fewer columns are pasted than the list has', async () => {
 		const { paste } = await open();
 		paste('Name\nGamma');
-		expect(qa(document.body, '.hoard-import-banner').some((b) => b.textContent!.includes('⚠'))).toBe(true);
+		expect(qa(document.body, '.hoard-import__banner').some((b) => b.textContent!.includes('⚠'))).toBe(true);
 	});
 
 	it('treats every line as data when the header toggle is off', async () => {
 		const { paste, addBtn, stored } = await open();
-		const toggle = q(document.body, '.hoard-import-header-checkbox') as HTMLInputElement;
+		const toggle = q(document.body, '.hoard-import__header-checkbox') as HTMLInputElement;
 		toggle.checked = false;
 		toggle.dispatchEvent(new Event('change'));
 		paste('Solo\t4');
@@ -266,7 +266,7 @@ describe('name cell Escape', () => {
 		columns: [{ id: 'name', label: 'Name', type: 'text', locked: true }],
 		rows: [{ id: 'row_1', name: 'Alpha' }],
 	});
-	const nameCell = (container: HTMLElement): HTMLElement => q(container, '.hoard-cl-tr-body .hoard-cl-td-name');
+	const nameCell = (container: HTMLElement): HTMLElement => q(container, '.hoard-custom-list-table__tr--body .hoard-custom-list-table__td--name');
 	const reachedDocument = (): { seen: () => boolean; stop: () => void } => {
 		let hit = false;
 		const fn = (): void => { hit = true; };
@@ -277,12 +277,12 @@ describe('name cell Escape', () => {
 	it('cancels the edit without saving and does not leak outward', async () => {
 		const { container, stored } = await setup([nameList()]);
 		nameCell(container).click();
-		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		input.value = 'Changed';
 		const probe = reachedDocument();
 		key(input, 'Escape');
 		probe.stop();
-		await until(() => nameCell(container).querySelector('.hoard-cl-cell-input') === null);
+		await until(() => nameCell(container).querySelector('.hoard-custom-list-table__cell-input') === null);
 		expect(stored('Backlog').rows[0]!['name']).toBe('Alpha');
 		expect(nameCell(container).textContent).toBe('Alpha');
 		expect(probe.seen()).toBe(false);
@@ -295,24 +295,24 @@ describe('name cell Escape', () => {
 			gameDataManager: { getGames: () => [] },
 		});
 		nameCell(container).click();
-		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		input.value = 'a';
 		input.dispatchEvent(new Event('input'));
-		expect(document.querySelector('.hoard-cl-autofill-dropdown')).not.toBeNull();
+		expect(document.querySelector('.hoard-custom-list-table__autofill-dropdown')).not.toBeNull();
 		key(input, 'Escape');
-		expect(document.querySelector('.hoard-cl-autofill-dropdown')).toBeNull();
-		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
+		expect(document.querySelector('.hoard-custom-list-table__autofill-dropdown')).toBeNull();
+		expect(nameCell(container).querySelector('.hoard-custom-list-table__cell-input')).not.toBeNull();
 	});
 
 	it('keeps the edit open when Escape aborts an IME composition', async () => {
 		const { container, stored } = await setup([nameList()]);
 		nameCell(container).click();
-		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		input.value = 'Changed';
 		const probe = reachedDocument();
 		key(input, 'Escape', { isComposing: true });
 		probe.stop();
-		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
+		expect(nameCell(container).querySelector('.hoard-custom-list-table__cell-input')).not.toBeNull();
 		expect(probe.seen()).toBe(false);
 		expect(stored('Backlog').rows[0]!['name']).toBe('Alpha');
 	});
@@ -324,11 +324,11 @@ describe('name cell Escape', () => {
 			gameDataManager: { getGames: () => [] },
 		});
 		nameCell(container).click();
-		const input = q(container, '.hoard-cl-cell-input') as HTMLInputElement;
+		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		input.value = 'a';
 		input.dispatchEvent(new Event('input'));
 		key(input, 'Escape', { isComposing: true });
-		expect(document.querySelector('.hoard-cl-autofill-dropdown')).not.toBeNull();
-		expect(nameCell(container).querySelector('.hoard-cl-cell-input')).not.toBeNull();
+		expect(document.querySelector('.hoard-custom-list-table__autofill-dropdown')).not.toBeNull();
+		expect(nameCell(container).querySelector('.hoard-custom-list-table__cell-input')).not.toBeNull();
 	});
 });

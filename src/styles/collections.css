@@ -4,50 +4,50 @@
 
 /* space-between only centers the middle child when the outer two match in width — the
    Collection button breaks that. minmax(0,1fr) side columns pin the heart to true centre. */
-.hoard-detail-footer-centered {
+.hoard-detail__footer--centered {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
 }
 
-.hoard-detail-footer-centered .hoard-detail-remove {
+.hoard-detail__footer--centered .hoard-detail__remove {
   justify-self: start;
 }
 
-.hoard-detail-footer-centered .hoard-detail-fav-btn {
+.hoard-detail__footer--centered .hoard-detail__favorite-btn {
   justify-self: center;
 }
 
-.hoard-detail-footer-centered .hoard-detail-footer-right {
+.hoard-detail__footer--centered .hoard-detail__footer-right {
   justify-self: end;
 }
 
 /* mobile + Collection button: heart moves beside Remove (set by paintCollectionButton) */
-.hoard-detail-footer-centered.hoard-footer-heart-left {
+.hoard-detail__footer--centered.hoard-detail__footer--heart-left {
   grid-template-columns: auto auto minmax(0, 1fr);
 }
 
-.hoard-detail-footer-centered.hoard-footer-heart-left .hoard-detail-fav-btn {
+.hoard-detail__footer--centered.hoard-detail__footer--heart-left .hoard-detail__favorite-btn {
   justify-self: start;
 }
 
-.hoard-detail-footer-right {
+.hoard-detail__footer-right {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.hoard-detail-collection-host {
+.hoard-detail__collection-host {
   display: flex;
   align-items: center;
 }
 
 /* no button = no width, no gap */
-.hoard-detail-collection-host:empty {
+.hoard-detail__collection-host:empty {
   display: none;
 }
 
-.hoard-collection-btn {
+.hoard-detail__collection-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -64,30 +64,30 @@
   box-shadow: none;
 }
 
-.hoard-collection-btn:hover {
+.hoard-detail__collection-btn:hover {
   color: var(--text-normal);
   border-color: var(--interactive-accent);
 }
 
-.hoard-collection-btn svg {
+.hoard-detail__collection-btn svg {
   width: 15px;
   height: 15px;
 }
 
 /* has something to add */
-.hoard-collection-btn.has-missing {
+.hoard-detail__collection-btn.has-missing {
   color: var(--interactive-accent);
   border-color: var(--interactive-accent);
 }
 
-.hoard-collection-header {
+.hoard-collection__header {
   display: flex;
   gap: 14px;
   align-items: flex-start;
   margin-bottom: 12px;
 }
 
-.hoard-collection-cover {
+.hoard-collection__cover {
   flex: 0 0 auto;
   width: 84px;
   aspect-ratio: 2 / 3;
@@ -96,26 +96,26 @@
   background: var(--background-secondary);
 }
 
-.hoard-collection-cover-img,
-.hoard-reading-detail-cover-img {
+.hoard-collection__cover-img,
+.hoard-reading-detail__cover-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.hoard-collection-header-left {
+.hoard-collection__header-left {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.hoard-collection-meta {
+.hoard-collection__meta {
   color: var(--text-muted);
   font-size: 14px;
   margin-top: 2px;
 }
 
-.hoard-collection-overview {
+.hoard-collection__overview {
   color: var(--text-muted);
   font-size: 0.82rem;
   line-height: 1.45;
@@ -129,16 +129,16 @@
 }
 
 /* not added yet */
-.hoard-collection-card-missing:not(.hoard-card-selected) {
+.hoard-card--missing:not(.hoard-card--selected) {
   opacity: 0.72;
 }
 
-.hoard-collection-card-missing:hover {
+.hoard-card--missing:hover {
   opacity: 1;
 }
 
 /* right side — the "Not added" status badge owns top-left */
-.hoard-collection-tick {
+.hoard-collection__tick {
   position: absolute;
   top: 6px;
   right: 6px;
@@ -158,32 +158,32 @@
   pointer-events: none;
 }
 
-.hoard-card-selected .hoard-collection-tick {
-  background: var(--hoard-watched-color);
-  border-color: var(--hoard-watched-color);
+.hoard-card--selected .hoard-collection__tick {
+  background: var(--hoard-view-watched-color);
+  border-color: var(--hoard-view-watched-color);
   color: #fff;
 }
 
 /* default modal is too narrow for the grid */
-.hoard-collection-modal-shell {
+.hoard-collection__modal-shell {
   width: min(860px, 92vw);
   max-width: 92vw;
 }
 
-/* sticky comes from .hoard-sticky-bottom */
-.hoard-collection-footer {
+/* sticky comes from .hoard-sticky-footer */
+.hoard-collection__footer {
   flex-wrap: wrap;
   margin-top: 0;
 }
 
-.hoard-collection-footer-left {
+.hoard-collection__footer-left {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.hoard-collection-group-toggle {
+.hoard-collection__group-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -192,7 +192,7 @@
   cursor: pointer;
 }
 
-.hoard-collection-group-toggle input {
+.hoard-collection__group-toggle input {
   margin: 0;
 }
 
@@ -214,16 +214,16 @@
 /* selected card: border only, drawn as the ::after below */
 
 /* ::after overlay, not an outline — the absolute poster paints over an outline */
-.hoard-card.hoard-card-selected::after {
+.hoard-card.hoard-card--selected::after {
   content: '';
   position: absolute;
   inset: 0;
-  border: 3px solid var(--hoard-watched-color);
+  border: 3px solid var(--hoard-view-watched-color);
   border-radius: inherit;
   pointer-events: none;
 }
 
-.hoard-card-poster-placeholder {
+.hoard-card__poster-placeholder {
   position: absolute;
   inset: 0;
   display: flex;
@@ -234,7 +234,7 @@
   color: rgb(255 255 255 / 85%);
 }
 
-.hoard-card-poster-placeholder.is-loading {
+.hoard-card__poster-placeholder.is-loading {
   animation: hoard-poster-pulse 1.5s ease-in-out infinite;
 }
 
@@ -243,12 +243,12 @@
   50% { opacity: 0.6; }
 }
 
-.hoard-card-poster-placeholder span {
+.hoard-card__poster-placeholder span {
   text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
 }
 
 /* group collage: vertical strips, the gaps reveal the card bg */
-.hoard-card-collage {
+.hoard-card__collage {
   position: absolute;
   inset: 0;
   display: flex;
@@ -256,7 +256,7 @@
   background-color: var(--background-primary);
 }
 
-.hoard-card-collage-strip {
+.hoard-card__collage-strip {
   flex: 1;
   min-width: 0;
   background-size: cover;
@@ -264,7 +264,7 @@
   background-repeat: no-repeat;
 }
 
-.hoard-card-progress-bar {
+.hoard-card__progress-bar {
   margin-top: 6px;
   width: 100%;
   height: 3px;
@@ -273,14 +273,14 @@
   overflow: hidden;
 }
 
-.hoard-card-progress-fill {
+.hoard-card__progress-fill {
   height: 100%;
   border-radius: 2px;
   background: rgb(255 255 255 / 80%);
   transition: width 0.2s ease;
 }
 
-.hoard-cards-empty {
+.hoard-card-grid__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -290,12 +290,12 @@
   color: var(--text-muted, rgb(255 255 255 / 55%));
 }
 
-.hoard-cards-empty-icon {
+.hoard-card-grid__empty-icon {
   font-size: 2.5rem;
   opacity: 0.6;
 }
 
-.hoard-cards-empty-msg {
+.hoard-card-grid__empty-message {
   margin: 0;
   font-size: 15px;
 }
@@ -314,17 +314,17 @@
   outline-offset: 2px;
 }
 
-.hoard-detail-episodes .hoard-episode-grid {
+.hoard-detail__episodes .hoard-accordion__episode-grid {
   flex-wrap: wrap;
 }
 
 /* opacity, not display — zero layout shift */
-.hoard-card.has-poster .hoard-card-poster {
+.hoard-card.has-poster .hoard-card__poster {
   opacity: 1;
 }
 
-.hoard-card-overlay,
-.hoard-reading-card-overlay {
+.hoard-card__overlay,
+.hoard-reading-card__overlay {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -337,7 +337,7 @@
   gap: 4px;
 }
 
-.hoard-card-title {
+.hoard-card__title {
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -348,13 +348,13 @@
   overflow: hidden;
 }
 
-.hoard-card-meta-row {
+.hoard-card__meta-row {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.hoard-card-type-badge {
+.hoard-card__type-badge {
   font-size: 0.65rem;
   padding: 3px 6px;
   border-radius: 3px;
@@ -362,7 +362,7 @@
   width: fit-content;
 }
 
-.hoard-card-year {
+.hoard-card__year {
   font-size: 0.65rem;
   color: rgb(255 255 255 / 75%);
 }

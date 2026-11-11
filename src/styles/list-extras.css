@@ -7,8 +7,8 @@
 }
 
 /* Priority column */
-.hoard-col-priority-h,
-.hoard-col-priority {
+.hoard-list__column-priority-header,
+.hoard-list__column-priority {
   font-size: 12px;
   color: #fff;
   overflow: hidden;
@@ -18,18 +18,18 @@
   justify-content: center;
 }
 
-.hoard-priority-badge {
+.hoard-badge__priority {
   font-size: 10px;
   font-weight: 600;
 }
 
 /* Row spacing */
-.hoard-row:not(.hoard-row-indented) {
+.hoard-list__row:not(.hoard-list__row--indented) {
   margin-bottom: 3px;
 }
 
 /* Pin icon */
-.hoard-col-pin {
+.hoard-list__column-pin {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -37,7 +37,7 @@
   flex-shrink: 0;
 }
 
-.hoard-pin-icon {
+.hoard-list__pin-icon {
   font-size: 12px;
   opacity: 0.2;
   cursor: pointer;
@@ -46,13 +46,13 @@
   line-height: 1;
 }
 
-.hoard-pin-icon:hover,
-.hoard-pin-icon.is-pinned {
+.hoard-list__pin-icon:hover,
+.hoard-list__pin-icon.is-pinned {
   opacity: 1;
 }
 
 /* Link icon in accordion */
-.hoard-acc-link-icon {
+.hoard-accordion__link-icon {
   /* kill the inherited 1.5 line-height; min-height below sets the chip height */
   line-height: 1;
 
@@ -78,13 +78,13 @@
 }
 
 /* center the SVG at glyph size (--icon-size: 13px, 16px where the mobile modals enlarge the chip) */
-.hoard-acc-link-icon svg {
+.hoard-accordion__link-icon svg {
   display: block;
   width: var(--icon-size);
   height: var(--icon-size);
 }
 
-.hoard-acc-link-icon:hover {
+.hoard-accordion__link-icon:hover {
   opacity: 1;
   background-color: var(--background-modifier-border-hover);
 }

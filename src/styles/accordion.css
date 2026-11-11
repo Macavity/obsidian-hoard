@@ -9,7 +9,7 @@
 }
 
 /* Accordion header */
-.hoard-accordion-header {
+.hoard-accordion__header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -17,12 +17,12 @@
   gap: 10px;
 }
 
-.hoard-acc-header-left {
+.hoard-accordion__header-left {
   flex: 1;
   min-width: 0;
 }
 
-.hoard-acc-subtitle {
+.hoard-accordion__subtitle {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-normal);
@@ -31,25 +31,25 @@
   gap: 5px;
 }
 
-.hoard-acc-header-right {
+.hoard-accordion__header-right {
   flex-shrink: 0;
   text-align: right;
   min-width: 70px;
 }
 
-.hoard-acc-percent {
+.hoard-accordion__percent {
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
 }
 
-.hoard-acc-progress-label {
+.hoard-accordion__progress-label {
   font-size: 11px;
   color: var(--text-muted);
   margin-bottom: 4px;
 }
 
-.hoard-acc-progress-wrap {
+.hoard-accordion__progress-wrap {
   height: 3px;
   background: var(--background-modifier-border);
   border-radius: 2px;
@@ -58,16 +58,16 @@
 }
 
 /* Accordion body */
-.hoard-accordion-body {
+.hoard-accordion__body {
   margin-bottom: 12px;
 }
 
 /* Season */
-.hoard-season-wrap {
+.hoard-accordion__season-wrap {
   margin-bottom: 10px;
 }
 
-.hoard-season-header {
+.hoard-accordion__season-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -76,11 +76,11 @@
   user-select: none;
 }
 
-.hoard-season-header:hover {
+.hoard-accordion__season-header:hover {
   opacity: 0.85;
 }
 
-.hoard-season-badge {
+.hoard-accordion__season-badge {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 20px;
@@ -89,21 +89,21 @@
   color: #fff;
 }
 
-.hoard-season-ep-count {
+.hoard-accordion__season-episode-count {
   font-size: 11px;
   color: var(--text-muted);
   flex: 1;
 }
 
 /* Episode grid */
-.hoard-episode-grid {
+.hoard-accordion__episode-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   padding: 6px 0;
 }
 
-.hoard-episode-box {
+.hoard-accordion__episode-box {
   width: 28px;
   height: 28px;
   border-radius: 4px;
@@ -120,31 +120,31 @@
   user-select: none;
 }
 
-.hoard-episode-box:hover {
+.hoard-accordion__episode-box:hover {
   border-color: var(--interactive-accent);
   color: var(--text-normal);
 }
 
-.hoard-episode-box.is-watched {
-  background: var(--hoard-watched-color);
-  border-color: var(--hoard-watched-color);
+.hoard-accordion__episode-box.is-watched {
+  background: var(--hoard-view-watched-color);
+  border-color: var(--hoard-view-watched-color);
   color: #fff;
   font-size: 14px;
 }
 
-.hoard-episode-box.is-skipped {
+.hoard-accordion__episode-box.is-skipped {
   border-color: #6b2972;
   color: #6b2972;
   font-size: 14px;
 }
 
 /* Watched + skipped: keep watched background, override border to purple */
-.hoard-episode-box.is-watched.is-skipped {
+.hoard-accordion__episode-box.is-watched.is-skipped {
   border-color: #6b2972;
 }
 
 /* Season fill/clear button */
-.hoard-season-fill-btn {
+.hoard-accordion__season-fill-btn {
   width: 20px;
   height: 28px;
   border-radius: 4px;
@@ -159,24 +159,24 @@
   flex-shrink: 0;
 }
 
-.hoard-season-fill-btn.is-fill {
+.hoard-accordion__season-fill-btn.is-fill {
   background: #1D9E75;
   border: 0.5px solid #1D9E75;
   color: #fff;
 }
 
-.hoard-season-fill-btn.is-clear {
+.hoard-accordion__season-fill-btn.is-clear {
   background: #E24B4A;
   border: 0.5px solid #E24B4A;
   color: #fff;
 }
 
-.hoard-season-fill-btn:hover {
+.hoard-accordion__season-fill-btn:hover {
   opacity: 0.75;
 }
 
 /* Movie row */
-.hoard-movie-row {
+.hoard-accordion__movie-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -184,7 +184,7 @@
 }
 
 /* detail-modal stand-in for the movie checkbox; green once watched */
-.hoard-mark-watched-btn {
+.hoard-accordion__mark-watched-btn {
   padding: 3px 10px;
   border-radius: 4px;
   font-size: 11px;
@@ -196,27 +196,27 @@
   transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.hoard-mark-watched-btn:hover {
+.hoard-accordion__mark-watched-btn:hover {
   background: var(--background-modifier-hover);
   border-color: var(--background-modifier-border-hover);
   color: var(--text-normal);
 }
 
-.hoard-mark-watched-btn.is-watched {
+.hoard-accordion__mark-watched-btn.is-watched {
   background: transparent;
   border-color: rgb(var(--color-green-rgb), 0.65);
   color: var(--color-green);
 }
 
 /* watched hover fills green */
-.hoard-mark-watched-btn.is-watched:hover {
+.hoard-accordion__mark-watched-btn.is-watched:hover {
   background: var(--color-green);
   border-color: var(--color-green);
   color: var(--text-on-accent);
 }
 
 /* Accordion footer */
-.hoard-accordion-footer {
+.hoard-accordion__footer {
   border-top: 0.5px solid var(--background-modifier-border);
   padding-top: 10px;
   display: flex;
@@ -224,26 +224,26 @@
   gap: 8px;
 }
 
-.hoard-stars-row {
+.hoard-accordion__stars-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* the mobile detail modal widens date-field labels via --hoard-stars-label-width */
-.hoard-stars-label {
+/* the mobile detail modal widens date-field labels via --hoard-star-rating-stars-label-width */
+.hoard-star-rating__stars-label {
   font-size: 11px;
   color: var(--text-muted);
-  width: var(--hoard-stars-label-width, 48px);
+  width: var(--hoard-star-rating-stars-label-width, 48px);
   flex-shrink: 0;
 }
 
-.hoard-stars {
+.hoard-star-rating--row {
   display: flex;
   gap: 3px;
 }
 
-.hoard-star {
+.hoard-star-rating__star {
   font-size: 18px;
   color: var(--text-faint);
   cursor: pointer;
@@ -251,9 +251,9 @@
   line-height: 1;
 }
 
-.hoard-star:hover,
-.hoard-star.is-active {
-  color: var(--hoard-rating-color);
+.hoard-star-rating__star:hover,
+.hoard-star-rating__star.is-active {
+  color: var(--hoard-star-rating-color);
 }
 
 /* Shared star-rating control (StarRating.ts) */
@@ -267,87 +267,87 @@
   gap: 8px;
 }
 
-.hoard-star-rating-stars {
+.hoard-star-rating__stars {
   display: inline-flex;
   gap: 3px;
 }
 
 /* tier text; JS sets the color */
-.hoard-star-rating-label {
+.hoard-star-rating__label {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-.hoard-star-rating-label.is-unrated {
+.hoard-star-rating__label.is-unrated {
   font-weight: 400;
   color: var(--text-faint);
 }
 
-.hoard-star-rating .hoard-star {
+.hoard-star-rating .hoard-star-rating__star {
   position: relative;
 }
 
-.hoard-star-rating .hoard-star:hover {
+.hoard-star-rating .hoard-star-rating__star:hover {
   color: var(--text-faint);
 }
 
 /* same specificity as the :hover kill above and later, so it wins while hovered too */
-.hoard-star-rating .hoard-star.is-active {
-  color: var(--hoard-rating-color);
+.hoard-star-rating .hoard-star-rating__star.is-active {
+  color: var(--hoard-star-rating-color);
 }
 
 /* half star: clipped overlay glyph over a faint base (is-half is only set by StarRating) */
-.hoard-star.is-half::after {
+.hoard-star-rating__star.is-half::after {
   content: '★';
   position: absolute;
   left: 0;
   top: 0;
   width: 50%;
   overflow: hidden;
-  color: var(--hoard-rating-color);
+  color: var(--hoard-star-rating-color);
 }
 
 /* Rating system (Settings → Customize) */
-.hoard-rating-tier-list {
+.hoard-rating-tier__list {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
 }
 
-.hoard-rating-tier-row {
+.hoard-rating-tier__row {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
 /* static preview; stars are direct children, so restate the gap */
-.hoard-rating-tier-preview {
+.hoard-rating-tier__preview {
   pointer-events: none;
   flex-shrink: 0;
   gap: 3px;
 }
 
-.hoard-rating-tier-preview .hoard-star {
+.hoard-rating-tier__preview .hoard-star-rating__star {
   font-size: 15px;
   cursor: default;
 }
 
-.hoard-rating-tier-label {
+.hoard-rating-tier__label {
   flex: 1;
   min-width: 0;
   max-width: 200px;
 }
 
-.hoard-footer-row {
+.hoard-accordion__footer-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.hoard-footer-label {
+.hoard-accordion__footer-label {
   font-size: 11px;
   color: var(--text-muted);
   width: 80px;
@@ -355,14 +355,14 @@
 }
 
 /* second label hugs its text */
-.hoard-footer-label-auto {
+.hoard-accordion__footer-label--auto {
   width: auto;
 }
 
 /* Date field (label + Today + input) */
 
 /* shared by the detail modal and the List expanded footer */
-.hoard-date-field {
+.hoard-date-picker__field {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -370,19 +370,19 @@
 }
 
 /* fits dd/mm/yyyy */
-.hoard-date-input {
+.hoard-date-picker__input--compact {
   box-sizing: border-box;
   width: calc(10ch + 13px);
   flex-shrink: 0;
 }
 
 /* wrap to two lines in a narrow sidebar */
-.hoard-footer-row-pair {
+.hoard-accordion__footer-row--pair {
   flex-wrap: wrap;
   row-gap: 6px;
 }
 
-.hoard-notes-input {
+.hoard-accordion__notes-input {
   flex: 1;
   padding: 4px 8px;
   border: 0.5px solid var(--background-modifier-border);
@@ -392,7 +392,7 @@
   font-size: var(--font-ui-small);
 }
 
-.hoard-footer-date {
+.hoard-accordion__footer-date {
   padding: 3px 6px;
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 4px;
@@ -401,24 +401,24 @@
   font-size: var(--font-ui-small);
 }
 
-.hoard-footer-today-btn {
+.hoard-accordion__footer-today-btn {
   font-size: 11px;
   padding: 2px 8px;
   line-height: 1.4;
 }
 
-.hoard-footer-today-btn.is-dimmed {
+.hoard-accordion__footer-today-btn.is-dimmed {
   opacity: 0.4;
   cursor: default;
 }
 
-.hoard-footer-action-row {
+.hoard-accordion__footer-action-row {
   margin-top: 4px;
   gap: 6px;
   justify-content: space-between;
 }
 
-.hoard-edit-btn {
+.hoard-accordion__edit-btn {
   padding: 3px 10px;
   background: transparent;
   border: 0.5px solid var(--color-cyan);
@@ -428,12 +428,12 @@
   font-size: 11px;
 }
 
-.hoard-edit-btn:hover {
+.hoard-accordion__edit-btn:hover {
   background: var(--background-modifier-hover);
 }
 
-.hoard-delete-btn {
-  /* color via .hoard-btn-danger */
+.hoard-accordion__delete-btn {
+  /* color via .hoard-btn--danger */
   padding: 3px 10px;
   border-radius: 4px;
   cursor: pointer;

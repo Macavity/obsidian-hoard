@@ -13,10 +13,10 @@ function openInlineInput(onCreate: (name: string) => Promise<void>) {
 		onCreate,
 		onCancel,
 	});
-	const select = bar.find('hoard-select')!;
+	const select = bar.find('hoard-input__select')!;
 	select.value = '__new__';
 	select.fire('change');
-	const input = bar.find('hoard-group-name-input')!;
+	const input = bar.find('hoard-action-bar__group-name-input')!;
 	const confirm = bar.children.find((c) => c.attr['data-icon'] === 'check')!;
 	expect(confirm.has('hoard-icon-btn')).toBe(true);
 	expect(bar.children.find((c) => c.attr['data-icon'] === 'x')!.attr['aria-label']).toBe('Cancel');
@@ -30,7 +30,7 @@ describe('renderMoveToGroupSelect', () => {
 		renderMoveToGroupSelect(bar as unknown as HTMLElement, {
 			groups: [{ id: 'g1', name: 'Favorites' }], disabled: false, onMove, onCreate: vi.fn(), onCancel: vi.fn(),
 		});
-		const select = bar.find('hoard-select')!;
+		const select = bar.find('hoard-input__select')!;
 		select.value = 'g1';
 		select.fire('change');
 		await Promise.resolve();

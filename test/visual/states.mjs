@@ -81,7 +81,7 @@ async function openTab(tab, { watchlistView = "rows" } = {}) {
 	void app.workspace.revealLeaf(leaf);
 	if (leaf.isDeferred) void leaf.loadIfDeferred();
 	app.workspace.setActiveLeaf(leaf, { focus: true });
-	return String(${PLUGIN}.indexReady === true && document.querySelectorAll('.hoard-tab-btn').length === ${TABS.length});
+	return String(${PLUGIN}.indexReady === true && document.querySelectorAll('.hoard-tab-bar__btn').length === ${TABS.length});
 })()`) === "true",
 		40000,
 		300,
@@ -97,7 +97,7 @@ async function openTab(tab, { watchlistView = "rows" } = {}) {
 })()`);
 	const index = TABS.indexOf(tab);
 	await waitFor(
-		() => evalJs(`String(document.querySelectorAll('.hoard-tab-btn')[${index}]?.classList.contains('is-active'))`) === "true",
+		() => evalJs(`String(document.querySelectorAll('.hoard-tab-bar__btn')[${index}]?.classList.contains('is-active'))`) === "true",
 		10000,
 		200,
 	);
@@ -118,14 +118,14 @@ async function openTitleDetail(name) {
 	await openTab("watchlist");
 	run(
 		`(() => {
-	const cell = [...document.querySelectorAll('.hoard-card-cell')].find((c) => c.querySelector('.hoard-card-under-title')?.textContent.trim() === ${q(name)});
+	const cell = [...document.querySelectorAll('.hoard-card__cell')].find((c) => c.querySelector('.hoard-card__under-title')?.textContent.trim() === ${q(name)});
 	if (!cell) return 'missing';
 	cell.querySelector('.hoard-card').click();
 	return 'ok';
 })()`,
 		name,
 	);
-	await waitForSelector(".modal .hoard-detail-remove", 10000);
+	await waitForSelector(".modal .hoard-detail__remove", 10000);
 }
 
 /** Clicks the card of a reading entry on the given sub tab. */
@@ -134,7 +134,7 @@ async function openReadingDetail(kind, name) {
 	await selectReadingKind(kind);
 	run(
 		`(() => {
-	const card = [...document.querySelectorAll('.hoard-reading-card')].find((c) => c.querySelector('.hoard-reading-card-title')?.textContent.trim() === ${q(name)});
+	const card = [...document.querySelectorAll('.hoard-reading-card')].find((c) => c.querySelector('.hoard-reading-card__title')?.textContent.trim() === ${q(name)});
 	if (!card) return 'missing';
 	card.click();
 	return 'ok';
@@ -145,7 +145,7 @@ async function openReadingDetail(kind, name) {
 }
 
 const selectReadingKind = async (kind) => {
-	evalJs(`document.querySelectorAll('.hoard-reading-subtab')[${kind === "manga" ? 1 : 0}].click()`);
+	evalJs(`document.querySelectorAll('.hoard-reading__subtab')[${kind === "manga" ? 1 : 0}].click()`);
 	await sleep(400);
 };
 
@@ -153,7 +153,7 @@ async function openGameDetail(name) {
 	await openTab("games");
 	run(
 		`(() => {
-	const cell = [...document.querySelectorAll('.hoard-card-cell')].find((c) => c.querySelector('.hoard-card-under-title')?.textContent.trim() === ${q(name)});
+	const cell = [...document.querySelectorAll('.hoard-card__cell')].find((c) => c.querySelector('.hoard-card__under-title')?.textContent.trim() === ${q(name)});
 	if (!cell) return 'missing';
 	cell.querySelector('.hoard-card').click();
 	return 'ok';
@@ -164,7 +164,7 @@ async function openGameDetail(name) {
 }
 
 /** Opens the toolbar button with the given visible label on the current tab. */
-const toolbarButton = (label) => clickEl(".hoard-tab-content button", label);
+const toolbarButton = (label) => clickEl(".hoard-view__tab-content button", label);
 
 /** Shows Hoard's settings section. Obsidian opens its settings in a separate window that no screenshot sees, so the
  * plugin's own settings tab is hosted in a copy of the settings modal inside the main window. */
@@ -181,8 +181,8 @@ async function openSettings(section) {
 	tab.display();
 	return 'ok';
 })()`);
-	await waitForSelector(".vertical-tab-content .hoard-settings-nav-btn", 10000);
-	evalJs(`document.querySelectorAll('.vertical-tab-content .hoard-settings-nav-btn')[${section}].click()`);
+	await waitForSelector(".vertical-tab-content .hoard-settings__nav-btn", 10000);
+	evalJs(`document.querySelectorAll('.vertical-tab-content .hoard-settings__nav-btn')[${section}].click()`);
 	await sleep(300);
 }
 
@@ -279,7 +279,7 @@ const FINDER_PICK = (name) => `(() => {
 
 async function openScheduleFor(name) {
 	await openTab("upcoming");
-	await clickEl(".hoard-tab-content .hoard-add-btn");
+	await clickEl(".hoard-view__tab-content .hoard-toolbar__add-btn");
 	await waitForSelector(".prompt .suggestion-item", 10000);
 	await waitFor(() => run(FINDER_PICK(name), name) === "ok", 10000, 300);
 	await waitForSelector(".modal", 10000);
@@ -288,9 +288,9 @@ async function openScheduleFor(name) {
 /** Opens a title's detail modal in the list view and the accordion of one title. */
 async function expandListRow(name) {
 	evalJs(`(() => {
-	const row = [...document.querySelectorAll('.hoard-virt-item, .hoard-accordion')].find((r) => r.textContent.includes(${q(name)}));
+	const row = [...document.querySelectorAll('.hoard-list__virtual-item, .hoard-accordion')].find((r) => r.textContent.includes(${q(name)}));
 	if (!row) return 'missing';
-	(row.querySelector('.hoard-accordion-header') ?? row.querySelector('.hoard-col-title') ?? row).click();
+	(row.querySelector('.hoard-accordion__header') ?? row.querySelector('.hoard-list__column-title') ?? row).click();
 	return 'ok';
 })()`);
 	await sleep(400);
@@ -321,8 +321,8 @@ export const STATES = [
 			evalJs(`${PLUGIN}.settings.upcomingTrackerView = 'list'`);
 		},
 	},
-	{ id: "upcoming-history", root: VIEW, setup: onTab("upcoming", () => clickEl(".hoard-inner-tab-btn", "Verlauf")) },
-	{ id: "upcoming-maybe", root: VIEW, setup: onTab("upcoming", () => clickEl(".hoard-inner-tab-btn", "Vielleicht")) },
+	{ id: "upcoming-history", root: VIEW, setup: onTab("upcoming", () => clickEl(".hoard-inner-tabs__btn", "Verlauf")) },
+	{ id: "upcoming-maybe", root: VIEW, setup: onTab("upcoming", () => clickEl(".hoard-inner-tabs__btn", "Vielleicht")) },
 	{
 		id: "watchlist-list",
 		root: VIEW,
@@ -349,7 +349,7 @@ export const STATES = [
 			await openTab("watchlist", { watchlistView: "list" });
 			await toolbarButton("Auswählen");
 			await sleep(300);
-			await clickEl(".hoard-col-select input, .hoard-col-select");
+			await clickEl(".hoard-list__column-select input, .hoard-list__column-select");
 			await sleep(300);
 		},
 		teardown: async () => {
@@ -361,7 +361,7 @@ export const STATES = [
 		root: VIEW,
 		setup: async () => {
 			await openTab("custom-lists");
-			await waitForSelector(".hoard-cl-add-btn", 10000);
+			await waitForSelector(".hoard-custom-list-table__row-action--add", 10000);
 		},
 	},
 
@@ -377,7 +377,7 @@ export const STATES = [
 		setup: async () => {
 			stubCollection();
 			await openTitleDetail("Blade Runner 2049");
-			await clickEl(".modal .hoard-collection-btn");
+			await clickEl(".modal .hoard-detail__collection-btn");
 			await waitFor(() => evalJs("String(document.querySelectorAll('.modal-container').length)") === "2", 10000, 200);
 			await markTopModal();
 		},
@@ -393,8 +393,8 @@ export const STATES = [
 		root: ".modal",
 		setup: async () => {
 			await openTab("watchlist");
-			await clickEl(".hoard-tab-content .hoard-add-btn");
-			await waitForSelector(".modal .hoard-draft-choice-btn", 10000);
+			await clickEl(".hoard-view__tab-content .hoard-toolbar__add-btn");
+			await waitForSelector(".modal .hoard-draft-choice__btn", 10000);
 		},
 	},
 	{
@@ -402,7 +402,7 @@ export const STATES = [
 		root: ".modal",
 		setup: async () => {
 			evalJs("app.commands.executeCommandById('hoard:add-title')");
-			await waitForSelector(".modal .hoard-search-query, .modal input", 10000);
+			await waitForSelector(".modal .hoard-search-picker__query, .modal input", 10000);
 		},
 		phone: true,
 	},
@@ -411,8 +411,8 @@ export const STATES = [
 		root: ".modal",
 		setup: async () => {
 			await openTab("watchlist");
-			await clickEl(".hoard-tab-content .hoard-add-btn");
-			await clickEl(".modal .hoard-draft-choice-btn", "Aus URL hinzufügen");
+			await clickEl(".hoard-view__tab-content .hoard-toolbar__add-btn");
+			await clickEl(".modal .hoard-draft-choice__btn", "Aus URL hinzufügen");
 			await waitForSelector(".modal input", 10000);
 		},
 	},
@@ -421,7 +421,7 @@ export const STATES = [
 		root: ".modal",
 		setup: async () => {
 			await openTab("reading");
-			await clickEl(".hoard-reading-add-btn");
+			await clickEl(".hoard-reading-modal__add-btn");
 			await waitForSelector(".modal input", 10000);
 		},
 	},
@@ -430,7 +430,7 @@ export const STATES = [
 		root: ".modal",
 		setup: async () => {
 			await openTab("games");
-			await clickEl(".hoard-tab-content .hoard-add-btn");
+			await clickEl(".hoard-view__tab-content .hoard-toolbar__add-btn");
 			await waitForSelector(".modal input", 10000);
 		},
 	},
@@ -439,7 +439,7 @@ export const STATES = [
 		root: MARKED,
 		setup: async () => {
 			await openTitleDetail("Severance");
-			await clickEl(".modal .hoard-credits-add");
+			await clickEl(".modal .hoard-credits__add");
 			await waitFor(() => evalJs("String(document.querySelectorAll('.modal-container').length)") === "2", 10000, 200);
 			await markTopModal();
 		},
@@ -452,12 +452,12 @@ export const STATES = [
 		root: MARKED,
 		setup: async () => {
 			await openSettings(3);
-			await clickEl(".vertical-tab-content .hoard-settings-body button", "CSV exportieren");
+			await clickEl(".vertical-tab-content .hoard-settings__body button", "CSV exportieren");
 			await waitFor(() => evalJs("String(document.querySelectorAll('.modal-container').length)") === "2", 10000, 200);
 			await markTopModal();
 			// the list follows the order the notes were indexed in, which varies; sort it by title
 			evalJs(`(() => {
-	const list = document.querySelector('[data-visual-root] .hoard-csv-list');
+	const list = document.querySelector('[data-visual-root] .hoard-csv__list');
 	[...list.children].sort((a, b) => a.textContent.localeCompare(b.textContent)).forEach((row) => list.appendChild(row));
 	return 'ok';
 })()`);
@@ -472,7 +472,7 @@ export const STATES = [
 		root: MARKED,
 		setup: async () => {
 			await openSettings(3);
-			await clickEl(".vertical-tab-content .hoard-settings-body button", "CSV importieren");
+			await clickEl(".vertical-tab-content .hoard-settings__body button", "CSV importieren");
 			await waitFor(() => evalJs("String(document.querySelectorAll('.modal-container').length)") === "2", 10000, 200);
 			await markTopModal();
 		},
@@ -487,7 +487,7 @@ export const STATES = [
 		setup: async () => {
 			stubSteam();
 			await openSettings(1);
-			await clickEl(".vertical-tab-content .hoard-api-action-btn");
+			await clickEl(".vertical-tab-content .hoard-api-provider__action-btn");
 			await waitFor(() => evalJs("String(document.querySelectorAll('.modal-container').length)") === "2", 10000, 200);
 			await markTopModal();
 		},
@@ -520,7 +520,7 @@ export const STATES = [
 		root: ".modal",
 		setup: async () => {
 			await openTab("reading");
-			await clickEl(".hoard-reading-manage-btn");
+			await clickEl(".hoard-reading__manage-btn");
 			await waitForSelector(".modal", 10000);
 		},
 	},
@@ -529,7 +529,7 @@ export const STATES = [
 		root: ".modal",
 		setup: async () => {
 			await openTab("watchlist");
-			await clickEl(".hoard-rows-customize-btn");
+			await clickEl(".hoard-rows-customize__btn");
 			await waitForSelector(".modal", 10000);
 		},
 	},
@@ -540,7 +540,7 @@ export const STATES = [
 		root: ".modal",
 		setup: async () => {
 			await openTab("watchlist");
-			await clickEl(".hoard-search-help-btn");
+			await clickEl(".hoard-search-help__btn");
 			await waitForSelector(".modal", 10000);
 		},
 	},
@@ -549,7 +549,7 @@ export const STATES = [
 		root: ".modal",
 		setup: async () => {
 			await openTab("custom-lists");
-			await clickEl(".hoard-cl-sub-tab-del");
+			await clickEl(".hoard-custom-lists__subtab-delete");
 			await waitForSelector(".modal", 10000);
 		},
 	},
@@ -567,7 +567,7 @@ export const STATES = [
 		root: ".prompt",
 		setup: async () => {
 			await openTab("upcoming");
-			await clickEl(".hoard-tab-content .hoard-add-btn");
+			await clickEl(".hoard-view__tab-content .hoard-toolbar__add-btn");
 			await waitForSelector(".prompt .suggestion-item", 10000);
 		},
 	},
@@ -587,11 +587,11 @@ export const STATES = [
 		setup: async () => {
 			await openTab("watchlist");
 			await toolbarButton("Filter ▼");
-			await markRoot(".hoard-filters-panel");
+			await markRoot(".hoard-filter-panel");
 		},
 		teardown: async () => {
 			await unmarkRoot();
-			evalJs("document.querySelectorAll('.hoard-filters-panel-popup').forEach((e) => e.remove()); 'ok'");
+			evalJs("document.querySelectorAll('.hoard-filter-panel--popup').forEach((e) => e.remove()); 'ok'");
 		},
 	},
 	{
@@ -600,7 +600,7 @@ export const STATES = [
 		setup: async () => {
 			await openTab("watchlist");
 			await toolbarButton("Sortierung ▼");
-			await waitForSelector(".hoard-sorting-panel", 10000);
+			await waitForSelector(".hoard-sort-panel", 10000);
 		},
 	},
 	{
@@ -608,8 +608,8 @@ export const STATES = [
 		root: VIEW,
 		setup: async () => {
 			await openTab("watchlist");
-			await clickEl(".hoard-view-btn");
-			await waitForSelector(".hoard-view-panel", 10000);
+			await clickEl(".hoard-view-switch__btn");
+			await waitForSelector(".hoard-view-switch__panel", 10000);
 		},
 	},
 	{
@@ -618,9 +618,9 @@ export const STATES = [
 		setup: async () => {
 			await openTab("custom-lists");
 			await toolbarButton("Tabelleneinstellungen");
-			await waitForSelector(".modal .hoard-editcols-tabcolor-dot", 10000);
-			await clickEl(".modal .hoard-editcols-tabcolor-dot");
-			await markRoot(".hoard-reading-col-palette");
+			await waitForSelector(".modal .hoard-edit-columns__tab-color-dot", 10000);
+			await clickEl(".modal .hoard-edit-columns__tab-color-dot");
+			await markRoot(".hoard-color-picker__palette");
 		},
 		teardown: unmarkRoot,
 	},
@@ -629,8 +629,8 @@ export const STATES = [
 		root: MARKED,
 		setup: async () => {
 			await openTitleDetail("Severance");
-			evalJs("document.querySelector('.modal .hoard-datepicker-input').dispatchEvent(new MouseEvent('click', { bubbles: true })); document.querySelector('.modal .hoard-datepicker-input').focus(); 'ok'");
-			await markRoot(".hoard-datepicker-panel");
+			evalJs("document.querySelector('.modal .hoard-date-picker__input').dispatchEvent(new MouseEvent('click', { bubbles: true })); document.querySelector('.modal .hoard-date-picker__input').focus(); 'ok'");
+			await markRoot(".hoard-date-picker__panel");
 		},
 		teardown: unmarkRoot,
 	},
@@ -639,8 +639,8 @@ export const STATES = [
 		root: MARKED,
 		setup: async () => {
 			await openReadingDetail("books", "Dune");
-			await clickEl(".modal .hoard-reading-detail-status");
-			await markRoot(".hoard-reading-status-dropdown");
+			await clickEl(".modal .hoard-reading-detail__status");
+			await markRoot(".hoard-status-dropdown");
 		},
 		teardown: unmarkRoot,
 	},

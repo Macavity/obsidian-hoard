@@ -36,8 +36,8 @@ describe('CsvModal import wizard', () => {
 		await uploadCsv(modal, 'Title,Type,Status\nDune,Anime,Completed\nHeat,Movie,Plan to watch');
 		clickNext(modal);
 		expect(previewTitles(modal)).toEqual(['Dune', 'Heat']);
-		expect(modal.contentEl.querySelector('.hoard-csv-valmap-select')).toBeNull();
-		expect(modal.contentEl.querySelector('.hoard-csv-count')!.textContent).toBe('2 of 2 selected');
+		expect(modal.contentEl.querySelector('.hoard-csv__value-map-select')).toBeNull();
+		expect(modal.contentEl.querySelector('.hoard-csv__count')!.textContent).toBe('2 of 2 selected');
 	});
 
 	it('maps unknown statuses, types and ratings, then imports with created types', async () => {
@@ -51,7 +51,7 @@ describe('CsvModal import wizard', () => {
 		clickNext(modal);
 
 		// one select per distinct unknown value: status "Finished", type "anime" + "Doku", rating "Great"
-		const selects = modal.contentEl.querySelectorAll<HTMLSelectElement>('.hoard-csv-valmap-select');
+		const selects = modal.contentEl.querySelectorAll<HTMLSelectElement>('.hoard-csv__value-map-select');
 		expect(selects).toHaveLength(4);
 		expect(valueSelect(modal, 1).value).toBe('Anime'); // case-insensitive pre-fill of the type
 		expect(valueSelect(modal, 2).value).toBe('__create__'); // no match → create
@@ -60,8 +60,8 @@ describe('CsvModal import wizard', () => {
 		clickByText(modal.contentEl, 'button', 'Preview →');
 
 		expect(previewTitles(modal)).toEqual(['Dune', 'Akira', 'Heat']);
-		expect(modal.contentEl.querySelectorAll('.hoard-csv-row-dupe')).toHaveLength(1);
-		expect(modal.contentEl.querySelector('.hoard-csv-count')!.textContent).toBe('2 of 3 selected');
+		expect(modal.contentEl.querySelectorAll('.hoard-csv__row--duplicate')).toHaveLength(1);
+		expect(modal.contentEl.querySelector('.hoard-csv__count')!.textContent).toBe('2 of 3 selected');
 
 		clickByText(modal.contentEl, 'button', 'Import selected');
 		await vi.waitFor(() => expect(added).toHaveLength(1));
@@ -91,7 +91,7 @@ describe('CsvModal import wizard', () => {
 		await uploadCsv(modal, 'Title,Type,Status,Rating\nA,,Weird,\n,,,\nB,,Weird,x\nC,,,x');
 		clickNext(modal);
 		// status "Weird" once, rating "x" once
-		expect(modal.contentEl.querySelectorAll('.hoard-csv-valmap-select')).toHaveLength(2);
+		expect(modal.contentEl.querySelectorAll('.hoard-csv__value-map-select')).toHaveLength(2);
 		clickByText(modal.contentEl, 'button', 'Preview →');
 		expect(previewTitles(modal)).toEqual(['A', 'B', 'C']);
 	});
@@ -101,7 +101,7 @@ describe('CsvModal import wizard', () => {
 		await uploadCsv(modal, 'Title,Status\nA,Weird');
 		clickNext(modal);
 		clickByText(modal.contentEl, 'button', 'Preview →');
-		const [stepMapping, stepValues, stepPreview] = Array.from(modal.contentEl.querySelectorAll<HTMLElement>('.hoard-csv-step')).slice(1);
+		const [stepMapping, stepValues, stepPreview] = Array.from(modal.contentEl.querySelectorAll<HTMLElement>('.hoard-csv__step')).slice(1);
 		expect(stepPreview!.style.display).toBe('');
 		clickByText(stepPreview!, 'button', '← back');
 		expect(stepPreview!.style.display).toBe('none');
@@ -112,7 +112,7 @@ describe('CsvModal import wizard', () => {
 		const plain = setup();
 		await uploadCsv(plain.modal, 'Title,Status\nA,Completed');
 		clickNext(plain.modal);
-		const steps = Array.from(plain.modal.contentEl.querySelectorAll<HTMLElement>('.hoard-csv-step'));
+		const steps = Array.from(plain.modal.contentEl.querySelectorAll<HTMLElement>('.hoard-csv__step'));
 		clickByText(steps[3]!, 'button', '← back');
 		expect(steps[1]!.style.display).toBe('');
 	});
@@ -125,13 +125,13 @@ describe('CsvModal import wizard', () => {
 		expect(importBtn.disabled).toBe(false);
 		clickByText(modal.contentEl, 'button', 'Select none');
 		expect(importBtn.disabled).toBe(true);
-		expect(modal.contentEl.querySelector('.hoard-csv-count')!.textContent).toBe('0 of 2 selected');
-		const boxes = modal.contentEl.querySelectorAll<HTMLInputElement>('.hoard-csv-list input');
+		expect(modal.contentEl.querySelector('.hoard-csv__count')!.textContent).toBe('0 of 2 selected');
+		const boxes = modal.contentEl.querySelectorAll<HTMLInputElement>('.hoard-csv__list input');
 		boxes[1]!.checked = true;
 		boxes[1]!.dispatchEvent(new Event('change'));
 		expect(importBtn.disabled).toBe(false);
 		clickByText(modal.contentEl, 'button', 'Select all');
-		expect(modal.contentEl.querySelector('.hoard-csv-count')!.textContent).toBe('2 of 2 selected');
+		expect(modal.contentEl.querySelector('.hoard-csv__count')!.textContent).toBe('2 of 2 selected');
 	});
 
 	it('shows progress UI while importing and cancel marks the run as cancelling', async () => {
@@ -139,13 +139,13 @@ describe('CsvModal import wizard', () => {
 		await uploadCsv(modal, 'Title\nA');
 		clickNext(modal);
 		const cancelBtn = Array.from(modal.contentEl.querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent === 'Cancel')!;
-		const wrap = modal.contentEl.querySelector<HTMLElement>('.hoard-csv-progress-wrap')!;
+		const wrap = modal.contentEl.querySelector<HTMLElement>('.hoard-csv__progress-wrap')!;
 		expect(wrap.style.display).toBe('none');
 		(modal as unknown as { startImportUi(n: number): void }).startImportUi(5);
 		expect(wrap.style.display).toBe('');
 		expect(cancelBtn.textContent).toBe('Cancel import');
-		expect(modal.contentEl.querySelector('.hoard-csv-progress-text')!.textContent).toBe('0 / 5');
-		expect(modal.contentEl.querySelector<HTMLElement>('.hoard-csv-progress-fill')!.style.width).toBe('0%');
+		expect(modal.contentEl.querySelector('.hoard-csv__progress-text')!.textContent).toBe('0 / 5');
+		expect(modal.contentEl.querySelector<HTMLElement>('.hoard-csv__progress-fill')!.style.width).toBe('0%');
 		cancelBtn.click();
 		expect(cancelBtn.disabled).toBe(true);
 		expect(cancelBtn.textContent).toBe('Cancelling…');

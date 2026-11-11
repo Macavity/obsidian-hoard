@@ -381,9 +381,9 @@ class EditColumnsModal extends Modal {
 	}
 
 	onOpen(): void {
-		this.modalEl.addClass('hoard-editcol-modal');
+		this.modalEl.addClass('hoard-edit-columns__modal');
 		this.titleEl.setText(t('lists.tableSettingsTitle', { name: this.list.name }));
-		this.contentEl.addClass('hoard-editcols-modal');
+		this.contentEl.addClass('hoard-edit-columns');
 		this.renderBody();
 	}
 
@@ -400,16 +400,16 @@ class EditColumnsModal extends Modal {
 	}
 
 	private renderTabColorRow(parent: HTMLElement): void {
-		const row = parent.createDiv({ cls: 'hoard-editcols-tabcolor-row' });
-		row.createSpan({ cls: 'hoard-editcols-tabcolor-label', text: t('lists.tabColor') });
+		const row = parent.createDiv({ cls: 'hoard-edit-columns__tab-color-row' });
+		row.createSpan({ cls: 'hoard-edit-columns__tab-color-label', text: t('lists.tabColor') });
 
-		const dot = row.createEl('button', { cls: 'hoard-reading-col-color-dot hoard-editcols-tabcolor-dot' });
+		const dot = row.createEl('button', { cls: 'hoard-color-picker__dot hoard-edit-columns__tab-color-dot' });
 
 		const sync = (): void => {
 			if (this.tabColor) {
 				dot.removeClass('is-unset');
 				// colour flows through a CSS var; .is-unset gates whether it applies
-				dot.setCssProps({ '--hoard-dot-fill': this.tabColor });
+				dot.setCssProps({ '--hoard-color-picker-dot-fill': this.tabColor });
 			} else {
 				dot.addClass('is-unset');
 			}
@@ -483,9 +483,9 @@ export class DefaultColumnsModal extends Modal {
 	}
 
 	onOpen(): void {
-		this.modalEl.addClass('hoard-editcol-modal');
+		this.modalEl.addClass('hoard-edit-columns__modal');
 		this.titleEl.setText(t('lists.defaultColumns'));
-		this.contentEl.addClass('hoard-editcols-modal');
+		this.contentEl.addClass('hoard-edit-columns');
 		this.renderBody();
 	}
 
@@ -495,7 +495,7 @@ export class DefaultColumnsModal extends Modal {
 			rows: [],
 			renderHeader: (parent) => {
 				parent.createDiv({
-					cls: 'hoard-settings-info',
+					cls: 'hoard-settings__info',
 					text: t('lists.defaultColumnsInfo'),
 				});
 			},
@@ -530,15 +530,15 @@ class NotesModal extends Modal {
 		this.previewComponent.load();
 		this.titleEl.setText(t('lists.notesTitle', { name: this.listName }));
 		const { contentEl } = this;
-		contentEl.addClass('hoard-notes-modal');
+		contentEl.addClass('hoard-notes-editor');
 
-		const modeBar = contentEl.createDiv({ cls: 'hoard-notes-mode-bar' });
-		const editBtn = modeBar.createEl('button', { cls: 'hoard-btn hoard-btn-sm is-active', text: t('common.edit') });
-		const previewBtn = modeBar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('lists.preview') });
+		const modeBar = contentEl.createDiv({ cls: 'hoard-notes-editor__mode-bar' });
+		const editBtn = modeBar.createEl('button', { cls: 'hoard-btn hoard-btn--sm is-active', text: t('common.edit') });
+		const previewBtn = modeBar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.preview') });
 
-		const editArea = contentEl.createDiv({ cls: 'hoard-notes-edit-area' });
+		const editArea = contentEl.createDiv({ cls: 'hoard-notes-editor__edit-area' });
 		const textarea = editArea.createEl('textarea', {
-			cls: 'hoard-modal-textarea hoard-notes-textarea',
+			cls: 'hoard-modal__textarea hoard-notes-editor__textarea',
 			attr: { placeholder: t('lists.notesPlaceholder') },
 		});
 		textarea.value = this.initialNotes;
@@ -547,7 +547,7 @@ class NotesModal extends Modal {
 			textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 		}, 0);
 
-		const previewArea = contentEl.createDiv({ cls: 'hoard-notes-preview-area' });
+		const previewArea = contentEl.createDiv({ cls: 'hoard-notes-editor__preview-area' });
 		previewArea.hide();
 
 		const showEdit = (): void => {
@@ -582,7 +582,7 @@ class NotesModal extends Modal {
 			}
 		});
 
-		const footer = contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
+		const footer = contentEl.createDiv({ cls: 'hoard-modal__btn-row' });
 		renderCancelSave(footer, {
 			onCancel: () => this.close(),
 			onSave: () => void this.onSave(textarea.value).then((saved) => { if (saved) this.close(); }),
@@ -620,7 +620,7 @@ class ListNameModal extends Modal {
 		const { contentEl } = this;
 
 		let value = '';
-		const errorEl = contentEl.createDiv({ cls: 'hoard-cl-name-error' });
+		const errorEl = contentEl.createDiv({ cls: 'hoard-edit-columns__name-error' });
 		errorEl.hide();
 
 		new Setting(contentEl)
@@ -646,9 +646,9 @@ class ListNameModal extends Modal {
 			this.onSubmit(trimmed);
 		};
 
-		const btnRow = contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
+		const btnRow = contentEl.createDiv({ cls: 'hoard-modal__btn-row' });
 		btnRow.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') }).addEventListener('click', () => this.close());
-		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('lists.create') }).addEventListener('click', submit);
+		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('lists.create') }).addEventListener('click', submit);
 	}
 
 	onClose(): void { this.contentEl.empty(); }
@@ -711,7 +711,7 @@ export class CustomListsTab {
 		const list = this.currentList;
 		// no list shown: the note was corrupt; show it once it parses again
 		const reload = list ? await this.manager.isStale(list) : Boolean(await this.manager.peek(name));
-		if (!reload || list !== this.currentList || this.container.querySelector('.hoard-cl-editing')) return;
+		if (!reload || list !== this.currentList || this.container.querySelector('.hoard-custom-list-table__td--editing')) return;
 		await this.render();
 	}
 
@@ -795,23 +795,23 @@ export class CustomListsTab {
 	}
 
 	private buildEmptyState(): void {
-		const es = this.container.createDiv({ cls: 'hoard-cl-empty-state' });
-		es.createDiv({ cls: 'hoard-cl-empty-text', text: t('lists.emptyText') });
-		const btn = es.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('lists.createFirst') });
+		const es = this.container.createDiv({ cls: 'hoard-custom-lists__empty-state' });
+		es.createDiv({ cls: 'hoard-custom-lists__empty-text', text: t('lists.emptyText') });
+		const btn = es.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('lists.createFirst') });
 		btn.addEventListener('click', () => this.promptCreateList());
 	}
 
 	private buildSubTabs(tabColors: Map<string, string>): void {
-		const tabBar = this.container.createDiv({ cls: 'hoard-cl-sub-tabs' });
+		const tabBar = this.container.createDiv({ cls: 'hoard-custom-lists__subtabs' });
 		let dragFromName: string | null = null;
 
 		for (const name of this.listNames) {
 			const tab = tabBar.createDiv({
-				cls: `hoard-cl-sub-tab${name === this.activeListName ? ' is-active' : ''}`,
+				cls: `hoard-custom-lists__subtab${name === this.activeListName ? ' is-active' : ''}`,
 			});
 			tab.setAttribute('draggable', 'true');
 
-			const nameSpan = tab.createSpan({ cls: 'hoard-cl-sub-tab-name', text: name });
+			const nameSpan = tab.createSpan({ cls: 'hoard-custom-lists__subtab-name', text: name });
 			const tabColor = tabColors.get(name);
 			if (tabColor) nameSpan.style.color = tabColor;
 			nameSpan.addEventListener('dblclick', (e) => {
@@ -822,7 +822,7 @@ export class CustomListsTab {
 			const delBtn = createIconButton(tab, {
 				icon: 'x',
 				label: t('lists.deleteList', { name }),
-				cls: 'hoard-cl-sub-tab-del',
+				cls: 'hoard-custom-lists__subtab-delete',
 				variant: 'sm',
 			});
 			delBtn.addEventListener('click', (e) => { e.stopPropagation(); void this.deleteList(name); });
@@ -840,14 +840,14 @@ export class CustomListsTab {
 			tab.addEventListener('dragstart', (e) => {
 				dragFromName = name;
 				e.dataTransfer?.setData('text/plain', name);
-				tab.addClass('hoard-cl-dragging');
+				tab.addClass('hoard-custom-lists__dragging');
 			});
-			tab.addEventListener('dragend', () => tab.removeClass('hoard-cl-dragging'));
-			tab.addEventListener('dragover', (e) => { e.preventDefault(); tab.addClass('hoard-cl-drag-over'); });
-			tab.addEventListener('dragleave', () => tab.removeClass('hoard-cl-drag-over'));
+			tab.addEventListener('dragend', () => tab.removeClass('hoard-custom-lists__dragging'));
+			tab.addEventListener('dragover', (e) => { e.preventDefault(); tab.addClass('hoard-custom-lists__drag-over'); });
+			tab.addEventListener('dragleave', () => tab.removeClass('hoard-custom-lists__drag-over'));
 			tab.addEventListener('drop', (e) => {
 				e.preventDefault();
-				tab.removeClass('hoard-cl-drag-over');
+				tab.removeClass('hoard-custom-lists__drag-over');
 				if (!dragFromName || dragFromName === name) return;
 				const fromIdx = this.listNames.indexOf(dragFromName);
 				const toIdx = this.listNames.indexOf(name);
@@ -859,14 +859,14 @@ export class CustomListsTab {
 			});
 		}
 
-		const addBtn = createIconButton(tabBar, { icon: 'plus', label: t('lists.newList'), cls: 'hoard-cl-sub-tab-add hoard-btn-success' });
+		const addBtn = createIconButton(tabBar, { icon: 'plus', label: t('lists.newList'), cls: 'hoard-custom-lists__subtab-add hoard-btn--success' });
 		addBtn.addEventListener('click', () => this.promptCreateList());
 	}
 
 	private startRenameTab(tab: HTMLElement, nameSpan: HTMLElement, oldName: string): void {
 		nameSpan.hide();
 		const input = tab.createEl('input', {
-			cls: 'hoard-cl-sub-tab-rename',
+			cls: 'hoard-custom-lists__subtab-rename',
 			attr: { type: 'text', value: oldName },
 		});
 		input.focus();
@@ -935,13 +935,13 @@ export class CustomListsTab {
 	}
 
 	private buildListView(list: CustomList): void {
-		const view = this.container.createDiv({ cls: 'hoard-cl-list-view' });
+		const view = this.container.createDiv({ cls: 'hoard-custom-lists__list-view' });
 
-		const header = view.createDiv({ cls: 'hoard-cl-header' });
-		const countEl = header.createSpan({ cls: 'hoard-results-count hoard-cl-count' });
-		const toolbar = header.createDiv({ cls: 'hoard-cl-toolbar' });
+		const header = view.createDiv({ cls: 'hoard-custom-lists__header' });
+		const countEl = header.createSpan({ cls: 'hoard-toolbar__results-count hoard-custom-lists__count' });
+		const toolbar = header.createDiv({ cls: 'hoard-custom-lists__toolbar' });
 
-		const notesBtn = toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('lists.notes') });
+		const notesBtn = toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.notes') });
 		notesBtn.addEventListener('click', () => {
 			new NotesModal(
 				this.plugin.app,
@@ -951,7 +951,7 @@ export class CustomListsTab {
 			).open();
 		});
 
-		const sortBtn = toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('lists.sort') });
+		const sortBtn = toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.sort') });
 		let sortPanel: HTMLElement | null = null;
 		sortBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -960,13 +960,13 @@ export class CustomListsTab {
 			activeDocument.addEventListener('click', () => { sortPanel?.remove(); sortPanel = null; }, { once: true });
 		});
 
-		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('lists.export') })
+		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.export') })
 			.addEventListener('click', () => this.exportToClipboard(list));
 
-		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('lists.import') })
+		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.import') })
 			.addEventListener('click', () => this.openImport(list));
 
-		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('lists.tableSettings') })
+		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.tableSettings') })
 			.addEventListener('click', () => {
 				new EditColumnsModal(
 					this.plugin.app,
@@ -993,9 +993,9 @@ export class CustomListsTab {
 				).open();
 			});
 
-		const searchWrap = view.createDiv({ cls: 'hoard-search-wrap' });
+		const searchWrap = view.createDiv({ cls: 'hoard-search-box' });
 		const searchInput = searchWrap.createEl('input', {
-			cls: 'hoard-search-input',
+			cls: 'hoard-search-box__text-input',
 			attr: { type: 'text', placeholder: t('lists.searchPlaceholder'), value: this.searchQuery },
 		});
 		let searchDebounce: number | null = null;
@@ -1013,38 +1013,38 @@ export class CustomListsTab {
 
 		if (this.plugin.settings.showHintBanners) {
 			view.createDiv({
-				cls: 'hoard-cl-draft-banner',
+				cls: 'hoard-custom-lists__draft-banner',
 				text: `⚠ ${t('lists.draftBanner')}`,
 			});
 		}
 
-		const tableWrap = view.createDiv({ cls: 'hoard-cl-table-wrap' });
+		const tableWrap = view.createDiv({ cls: 'hoard-custom-lists__table-wrap' });
 		this.buildTable(tableWrap, list, countEl);
 	}
 
 	private buildSortPanel(list: CustomList, anchor: HTMLElement, onClose: () => void): HTMLElement {
-		const panel = anchor.createDiv({ cls: 'hoard-cl-sort-panel' });
+		const panel = anchor.createDiv({ cls: 'hoard-custom-lists__sort-panel' });
 
-		const row1 = panel.createDiv({ cls: 'hoard-filter-row' });
-		row1.createSpan({ cls: 'hoard-filter-label', text: t('lists.sortBy') });
-		const colSel = row1.createEl('select', { cls: 'hoard-select' });
+		const row1 = panel.createDiv({ cls: 'hoard-filter-panel__row' });
+		row1.createSpan({ cls: 'hoard-filter-panel__label', text: t('lists.sortBy') });
+		const colSel = row1.createEl('select', { cls: 'hoard-input__select' });
 		colSel.createEl('option', { value: 'name', text: t('lists.name') });
 		for (const col of list.columns.filter(c => !c.locked)) {
 			colSel.createEl('option', { value: col.id, text: col.label });
 		}
 		if (this.sortCol) colSel.value = this.sortCol;
 
-		const row2 = panel.createDiv({ cls: 'hoard-filter-row' });
-		row2.createSpan({ cls: 'hoard-filter-label', text: t('lists.direction') });
-		const dirSel = row2.createEl('select', { cls: 'hoard-select' });
+		const row2 = panel.createDiv({ cls: 'hoard-filter-panel__row' });
+		row2.createSpan({ cls: 'hoard-filter-panel__label', text: t('lists.direction') });
+		const dirSel = row2.createEl('select', { cls: 'hoard-input__select' });
 		dirSel.createEl('option', { value: 'asc', text: t('lists.ascending') });
 		dirSel.createEl('option', { value: 'desc', text: t('lists.descending') });
 		dirSel.value = this.sortDir;
 
-		const btnRow = panel.createDiv({ cls: 'hoard-modal-btn-row' });
-		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('lists.clearSort') })
+		const btnRow = panel.createDiv({ cls: 'hoard-modal__btn-row' });
+		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.clearSort') })
 			.addEventListener('click', (e) => { e.stopPropagation(); this.sortCol = null; this.sortDir = 'asc'; onClose(); void this.render(); });
-		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-btn-primary', text: t('lists.apply') })
+		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-btn--primary', text: t('lists.apply') })
 			.addEventListener('click', (e) => {
 				e.stopPropagation();
 				this.sortCol = colSel.value;
@@ -1128,14 +1128,14 @@ export class CustomListsTab {
 
 		const nonLockedCols = list.columns.filter(c => !c.locked);
 
-		const table = container.createDiv({ cls: 'hoard-cl-table' });
+		const table = container.createDiv({ cls: 'hoard-custom-list-table' });
 
-		const thead = table.createDiv({ cls: 'hoard-cl-thead' });
-		const hRow = thead.createDiv({ cls: 'hoard-cl-tr hoard-cl-tr-header' });
+		const thead = table.createDiv({ cls: 'hoard-custom-list-table__thead' });
+		const hRow = thead.createDiv({ cls: 'hoard-custom-list-table__tr hoard-custom-list-table__tr--header' });
 		// tick column header: a two-state select-all over the visible rows
-		const tickTh = hRow.createDiv({ cls: 'hoard-cl-th hoard-cl-th-tick' });
+		const tickTh = hRow.createDiv({ cls: 'hoard-custom-list-table__th hoard-custom-list-table__th--tick' });
 		const allChecked = visibleRows.length > 0 && visibleRows.every(r => r.checked === true);
-		const selectAllBtn = tickTh.createDiv({ cls: `hoard-cl-tick-btn${allChecked ? ' is-checked' : ''}` });
+		const selectAllBtn = tickTh.createDiv({ cls: `hoard-custom-list-table__tick-btn${allChecked ? ' is-checked' : ''}` });
 		selectAllBtn.title = allChecked ? t('lists.uncheckAll') : t('lists.checkAll');
 		selectAllBtn.textContent = allChecked ? '✓' : '○';
 		selectAllBtn.addEventListener('click', () => {
@@ -1145,12 +1145,12 @@ export class CustomListsTab {
 			for (const r of list.rows) if (visibleIds.has(r.id)) r.checked = next;
 			void this.manager.saveList(list).then(() => { container.empty(); this.buildTable(container, list, countEl); });
 		});
-		hRow.createDiv({ cls: 'hoard-cl-th hoard-cl-th-num', text: '#' });
-		const nameTh = hRow.createDiv({ cls: 'hoard-cl-th', text: t('lists.name') });
+		hRow.createDiv({ cls: 'hoard-custom-list-table__th hoard-custom-list-table__th--number', text: '#' });
+		const nameTh = hRow.createDiv({ cls: 'hoard-custom-list-table__th', text: t('lists.name') });
 		nameTh.dataset.wlCol = '__name';
 		this.addResizeHandle(nameTh, '__name', list, table);
 		for (const col of nonLockedCols) {
-			const th = hRow.createDiv({ cls: 'hoard-cl-th' });
+			const th = hRow.createDiv({ cls: 'hoard-custom-list-table__th' });
 			th.dataset.wlCol = col.id;
 			th.createSpan({ text: col.label });
 			this.addResizeHandle(th, col.id, list, table);
@@ -1158,7 +1158,7 @@ export class CustomListsTab {
 				const refreshBtn = createIconButton(th, {
 					icon: 'refresh-cw',
 					label: t('lists.refreshRemaining'),
-					cls: 'hoard-cl-autotime-refresh',
+					cls: 'hoard-custom-list-table__autotime-refresh',
 					variant: 'sm',
 				});
 				refreshBtn.addEventListener('click', (e) => {
@@ -1171,15 +1171,15 @@ export class CustomListsTab {
 				});
 			}
 		}
-		hRow.createDiv({ cls: 'hoard-cl-th hoard-cl-th-actions' });
+		hRow.createDiv({ cls: 'hoard-custom-list-table__th hoard-custom-list-table__th--actions' });
 
-		const tbody = table.createDiv({ cls: 'hoard-cl-tbody' });
+		const tbody = table.createDiv({ cls: 'hoard-custom-list-table__tbody' });
 		let dragFromIndex = -1;
 
 		// one listener for every row's add button — the table rebuilds on each edit, so per-row
 		// listeners here would be re-bound N times per keystroke
 		tbody.addEventListener('click', (e) => {
-			const btn = (e.target as HTMLElement).closest('.hoard-cl-add-btn');
+			const btn = (e.target as HTMLElement).closest('.hoard-custom-list-table__row-action--add');
 			if (!btn) return;
 			const rowId = btn.closest<HTMLElement>('[data-row-id]')?.dataset.rowId;
 			const target = list.rows.find((r) => r.id === rowId);
@@ -1195,11 +1195,11 @@ export class CustomListsTab {
 
 		visibleRows.forEach((row, displayIdx) => {
 			const isChecked = row.checked === true;
-			const tr = tbody.createDiv({ cls: `hoard-cl-tr hoard-cl-tr-body${isChecked ? ' hoard-cl-tr-checked' : ''}` });
+			const tr = tbody.createDiv({ cls: `hoard-custom-list-table__tr hoard-custom-list-table__tr--body${isChecked ? ' hoard-custom-list-table__tr--checked' : ''}` });
 			tr.dataset.rowId = row.id;
 
-			const tickCell = tr.createDiv({ cls: 'hoard-cl-td hoard-cl-td-tick' });
-			const tickBtn = tickCell.createDiv({ cls: `hoard-cl-tick-btn${isChecked ? ' is-checked' : ''}` });
+			const tickCell = tr.createDiv({ cls: 'hoard-custom-list-table__td hoard-custom-list-table__td--tick' });
+			const tickBtn = tickCell.createDiv({ cls: `hoard-custom-list-table__tick-btn${isChecked ? ' is-checked' : ''}` });
 			tickBtn.title = isChecked ? t('lists.uncheckRow') : t('lists.checkRow');
 			tickBtn.textContent = isChecked ? '✓' : '○';
 			tickBtn.addEventListener('click', () => {
@@ -1209,24 +1209,24 @@ export class CustomListsTab {
 				void this.manager.saveList(list).then(() => { container.empty(); this.buildTable(container, list, countEl); });
 			});
 
-			tr.createDiv({ cls: 'hoard-cl-td hoard-cl-td-num', text: String(displayIdx + 1) });
+			tr.createDiv({ cls: 'hoard-custom-list-table__td hoard-custom-list-table__td--number', text: String(displayIdx + 1) });
 
-			const nameCell = tr.createDiv({ cls: 'hoard-cl-td hoard-cl-td-name' });
+			const nameCell = tr.createDiv({ cls: 'hoard-custom-list-table__td hoard-custom-list-table__td--name' });
 			nameCell.dataset.wlCol = '__name';
 			this.renderNameCell(nameCell, row, list, countEl, nonLockedCols, container);
 
 			for (const col of nonLockedCols) {
-				const td = tr.createDiv({ cls: 'hoard-cl-td' });
+				const td = tr.createDiv({ cls: 'hoard-custom-list-table__td' });
 				td.dataset.wlCol = col.id;
 				this.renderCustomCell(td, row, col, list);
 			}
 
-			const actCell = tr.createDiv({ cls: 'hoard-cl-td hoard-cl-td-actions' });
+			const actCell = tr.createDiv({ cls: 'hoard-custom-list-table__td hoard-custom-list-table__td--actions' });
 
 			const dragHandle = createIconButton(actCell, {
 				icon: 'grip-vertical',
 				label: t('ui.columns.dragToReorder'),
-				cls: 'hoard-cl-row-action hoard-cl-drag-handle',
+				cls: 'hoard-custom-list-table__row-action hoard-custom-list-table__row-action--drag-handle',
 			});
 			// mouse-only grip: no tab stop without a keyboard action behind it
 			dragHandle.tabIndex = -1;
@@ -1234,10 +1234,10 @@ export class CustomListsTab {
 
 			// unnamed rows have nothing to send to a library; the click is delegated on the table
 			if (rowName(row)) {
-				createIconButton(actCell, { icon: 'plus', label: t('lists.addToLibrary'), cls: 'hoard-cl-row-action hoard-cl-add-btn' });
+				createIconButton(actCell, { icon: 'plus', label: t('lists.addToLibrary'), cls: 'hoard-custom-list-table__row-action hoard-custom-list-table__row-action--add' });
 			}
 
-			const dupBtn = createIconButton(actCell, { icon: 'copy', label: t('lists.duplicateRow'), cls: 'hoard-cl-row-action hoard-cl-dup-btn' });
+			const dupBtn = createIconButton(actCell, { icon: 'copy', label: t('lists.duplicateRow'), cls: 'hoard-custom-list-table__row-action hoard-custom-list-table__row-action--duplicate' });
 			dupBtn.addEventListener('click', () => {
 				const realIdx = list.rows.findIndex(r => r.id === row.id);
 				if (realIdx < 0) return;
@@ -1250,7 +1250,7 @@ export class CustomListsTab {
 				void this.manager.saveList(list).then(() => { container.empty(); this.buildTable(container, list, countEl); });
 			});
 
-			const rowDelBtn = createIconButton(actCell, { icon: 'x', label: t('lists.deleteRow'), cls: 'hoard-cl-row-action hoard-cl-row-del' });
+			const rowDelBtn = createIconButton(actCell, { icon: 'x', label: t('lists.deleteRow'), cls: 'hoard-custom-list-table__row-action hoard-custom-list-table__row-action--delete' });
 			rowDelBtn.addEventListener('click', () => {
 				list.rows = list.rows.filter(r => r.id !== row.id);
 				this.duplicatedRowIds.delete(row.id);
@@ -1263,14 +1263,14 @@ export class CustomListsTab {
 			tr.addEventListener('dragstart', (e) => {
 				dragFromIndex = list.rows.findIndex(r => r.id === row.id);
 				e.dataTransfer?.setData('text/plain', row.id);
-				tr.addClass('hoard-cl-dragging');
+				tr.addClass('hoard-custom-lists__dragging');
 			});
-			tr.addEventListener('dragend', () => { tr.removeClass('hoard-cl-dragging'); tr.setAttribute('draggable', 'false'); });
-			tr.addEventListener('dragover', (e) => { e.preventDefault(); tr.addClass('hoard-cl-drag-over'); });
-			tr.addEventListener('dragleave', () => tr.removeClass('hoard-cl-drag-over'));
+			tr.addEventListener('dragend', () => { tr.removeClass('hoard-custom-lists__dragging'); tr.setAttribute('draggable', 'false'); });
+			tr.addEventListener('dragover', (e) => { e.preventDefault(); tr.addClass('hoard-custom-lists__drag-over'); });
+			tr.addEventListener('dragleave', () => tr.removeClass('hoard-custom-lists__drag-over'));
 			tr.addEventListener('drop', (e) => {
 				e.preventDefault();
-				tr.removeClass('hoard-cl-drag-over');
+				tr.removeClass('hoard-custom-lists__drag-over');
 				const toRealIdx = list.rows.findIndex(r => r.id === row.id);
 				if (dragFromIndex !== toRealIdx && dragFromIndex >= 0) {
 					const [moved] = list.rows.splice(dragFromIndex, 1);
@@ -1283,8 +1283,8 @@ export class CustomListsTab {
 		// apply persisted column widths — switches the table into resizable mode
 		this.applyColumnWidths(table, list);
 
-		const addRowEl = container.createDiv({ cls: 'hoard-cl-add-row' });
-		addRowEl.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-btn-success', text: t('lists.addRow') })
+		const addRowEl = container.createDiv({ cls: 'hoard-custom-list-table__add-row' });
+		addRowEl.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-btn--success', text: t('lists.addRow') })
 			.addEventListener('click', () => {
 				const newRow: CustomListRow = { id: this.manager.generateRowId(list.rows), name: '' };
 				list.rows.push(newRow);
@@ -1292,9 +1292,9 @@ export class CustomListsTab {
 					container.empty();
 					this.buildTable(container, list, countEl);
 					window.setTimeout(() => {
-						const newTbody = container.querySelector('.hoard-cl-tbody');
-						const lastTr = newTbody?.querySelector('.hoard-cl-tr-body:last-child') as HTMLElement | null;
-						(lastTr?.querySelector('.hoard-cl-td-name') as HTMLElement | null)?.click();
+						const newTbody = container.querySelector('.hoard-custom-list-table__tbody');
+						const lastTr = newTbody?.querySelector('.hoard-custom-list-table__tr--body:last-child') as HTMLElement | null;
+						(lastTr?.querySelector('.hoard-custom-list-table__td--name') as HTMLElement | null)?.click();
 					}, 0);
 				});
 			});
@@ -1326,15 +1326,15 @@ export class CustomListsTab {
 	 */
 	private applyColumnWidths(table: HTMLElement, list: CustomList): void {
 		if (!this.isTableResizable(list)) {
-			table.removeClass('hoard-cl-table-resizable');
+			table.removeClass('hoard-custom-list-table--resizable');
 			return;
 		}
-		table.addClass('hoard-cl-table-resizable');
+		table.addClass('hoard-custom-list-table--resizable');
 		const apply = (key: string, width: number | undefined): void => {
 			const w = width ?? DEFAULT_COL_WIDTH;
 			table.querySelectorAll<HTMLElement>(`[data-hoard-col="${key}"]`).forEach((el) => {
-				el.addClass('hoard-cl-col-fixed');
-				el.setCssProps({ '--hoard-cl-cw': `${w}px` });
+				el.addClass('hoard-custom-list-table__column-fixed');
+				el.setCssProps({ '--hoard-custom-list-table-column-width': `${w}px` });
 			});
 		};
 		apply('__name', list.nameWidth);
@@ -1350,7 +1350,7 @@ export class CustomListsTab {
 	 */
 	private pinCurrentWidths(table: HTMLElement, list: CustomList): void {
 		const measure = (key: string): number => {
-			const el = table.querySelector<HTMLElement>(`.hoard-cl-th[data-hoard-col="${key}"]`);
+			const el = table.querySelector<HTMLElement>(`.hoard-custom-list-table__th[data-hoard-col="${key}"]`);
 			return el ? Math.round(el.getBoundingClientRect().width) : DEFAULT_COL_WIDTH;
 		};
 		if (list.nameWidth === undefined) list.nameWidth = measure('__name');
@@ -1363,8 +1363,8 @@ export class CustomListsTab {
 	/** Adds a right-edge drag handle to a resizable header cell (desktop only). */
 	private addResizeHandle(th: HTMLElement, key: string, list: CustomList, table: HTMLElement): void {
 		if (Platform.isMobile) return;
-		th.addClass('hoard-cl-th-resizable');
-		const handle = th.createDiv({ cls: 'hoard-cl-col-resize' });
+		th.addClass('hoard-custom-list-table__th--resizable');
+		const handle = th.createDiv({ cls: 'hoard-custom-list-table__column-resize' });
 		handle.addEventListener('mousedown', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -1377,19 +1377,19 @@ export class CustomListsTab {
 				const newWidth = Math.max(MIN_COL_WIDTH, Math.round(startWidth + (ev.clientX - startX)));
 				this.setColWidth(list, key, newWidth);
 				table.querySelectorAll<HTMLElement>(`[data-hoard-col="${key}"]`).forEach((el) => {
-					el.setCssProps({ '--hoard-cl-cw': `${newWidth}px` });
+					el.setCssProps({ '--hoard-custom-list-table-column-width': `${newWidth}px` });
 				});
 			};
 			const onUp = (): void => {
 				activeDocument.removeEventListener('mousemove', onMove);
 				activeDocument.removeEventListener('mouseup', onUp);
-				activeDocument.body.removeClass('hoard-cl-col-resizing');
+				activeDocument.body.removeClass('hoard-custom-list-table__column-resizing');
 				// persist only on drag end
 				void this.manager.saveList(list);
 			};
 			activeDocument.addEventListener('mousemove', onMove);
 			activeDocument.addEventListener('mouseup', onUp);
-			activeDocument.body.addClass('hoard-cl-col-resizing');
+			activeDocument.body.addClass('hoard-custom-list-table__column-resizing');
 		});
 	}
 
@@ -1450,15 +1450,15 @@ export class CustomListsTab {
 		tableContainer: HTMLElement,
 	): void {
 		cell.empty();
-		cell.removeClass('hoard-cl-editing');
+		cell.removeClass('hoard-custom-list-table__td--editing');
 		const nameVal = String((row as Record<string, string | undefined>)['name'] ?? '');
 		const isDuplicated = this.duplicatedRowIds.has(row.id);
 
 		if (nameVal) {
-			const span = cell.createSpan({ cls: 'hoard-cl-cell-text', text: nameVal });
-			if (isDuplicated) span.addClass('hoard-cl-dup-name');
+			const span = cell.createSpan({ cls: 'hoard-custom-list-table__cell-text', text: nameVal });
+			if (isDuplicated) span.addClass('hoard-custom-list-table__cell-text--duplicate');
 		} else {
-			cell.createSpan({ cls: 'hoard-cl-cell-empty', text: '—' });
+			cell.createSpan({ cls: 'hoard-custom-list-table__cell-empty', text: '—' });
 		}
 
 		cell.addEventListener('click', () => {
@@ -1477,12 +1477,12 @@ export class CustomListsTab {
 		const prevVal = String((row as Record<string, string | undefined>)['name'] ?? '');
 
 		cell.empty();
-		cell.addClass('hoard-cl-editing');
+		cell.addClass('hoard-custom-list-table__td--editing');
 		const stopKeyboardScroll = this.watchKeyboardScroll(cell);
 
-		const wrap = cell.createDiv({ cls: 'hoard-cl-autofill-wrap' });
+		const wrap = cell.createDiv({ cls: 'hoard-custom-list-table__autofill-wrap' });
 		const input = wrap.createEl('input', {
-			cls: 'hoard-cl-cell-input',
+			cls: 'hoard-custom-list-table__cell-input',
 			attr: { type: 'text', value: prevVal },
 		});
 		input.focus();
@@ -1511,14 +1511,14 @@ export class CustomListsTab {
 				.slice(0, 10);
 			if (!suggestions.length) return;
 			const rect = input.getBoundingClientRect();
-			dropdown = activeDocument.body.createDiv({ cls: 'hoard-cl-autofill-dropdown hoard-pos-fixed' });
+			dropdown = activeDocument.body.createDiv({ cls: 'hoard-custom-list-table__autofill-dropdown hoard-popover--fixed' });
 			dropdown.style.top = `${rect.bottom}px`;
 			dropdown.style.left = `${rect.left}px`;
 			dropdown.style.width = `${rect.width}px`;
 			for (const sug of suggestions) {
-				const item = dropdown.createDiv({ cls: 'hoard-result-item' });
-				item.createDiv({ cls: 'hoard-result-title', text: sug.title });
-				item.createDiv({ cls: 'hoard-result-meta', text: sug.meta });
+				const item = dropdown.createDiv({ cls: 'hoard-search-picker__result-item' });
+				item.createDiv({ cls: 'hoard-search-picker__result-title', text: sug.title });
+				item.createDiv({ cls: 'hoard-search-picker__result-meta', text: sug.meta });
 				item.addEventListener('mousedown', (e) => { e.preventDefault(); input.value = sug.title; clearDropdown(); });
 			}
 		});
@@ -1545,18 +1545,18 @@ export class CustomListsTab {
 
 		/** Arrow / Enter / Escape on the open suggestion list; true when the key was consumed. */
 		const handleSuggestionKey = (e: KeyboardEvent, list: HTMLElement): boolean => {
-			const items = Array.from(list.querySelectorAll<HTMLElement>('.hoard-result-item'));
+			const items = Array.from(list.querySelectorAll<HTMLElement>('.hoard-search-picker__result-item'));
 			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
 				e.preventDefault();
 				focusedSuggestionIdx = e.key === 'ArrowDown'
 					? Math.min(focusedSuggestionIdx + 1, items.length - 1)
 					: Math.max(focusedSuggestionIdx - 1, 0);
-				items.forEach((item, i) => item.toggleClass('hoard-result-item-focused', i === focusedSuggestionIdx));
+				items.forEach((item, i) => item.toggleClass('hoard-search-picker__result-item--focused', i === focusedSuggestionIdx));
 				return true;
 			}
 			if (e.key === 'Enter' && focusedSuggestionIdx >= 0) {
 				e.preventDefault();
-				const titleText = items[focusedSuggestionIdx]?.querySelector<HTMLElement>('.hoard-result-title')?.textContent ?? '';
+				const titleText = items[focusedSuggestionIdx]?.querySelector<HTMLElement>('.hoard-search-picker__result-title')?.textContent ?? '';
 				if (titleText) input.value = titleText;
 				clearDropdown();
 				return true;
@@ -1585,13 +1585,13 @@ export class CustomListsTab {
 		list: CustomList,
 	): void {
 		cell.empty();
-		cell.removeClass('hoard-cl-editing');
+		cell.removeClass('hoard-custom-list-table__td--editing');
 		const val = (row as Record<string, string | number | undefined>)[col.id];
 
 		if (col.type === 'select') {
 			const strVal = String(val ?? '');
 			if (strVal) {
-				const badge = cell.createSpan({ cls: 'hoard-cl-select-badge', text: strVal });
+				const badge = cell.createSpan({ cls: 'hoard-custom-list-table__select-badge', text: strVal });
 				const optColor = col.optionColors?.[strVal];
 				// no colour assigned → leave the badge exactly as the default CSS renders it
 				if (optColor) {
@@ -1600,16 +1600,16 @@ export class CustomListsTab {
 					badge.style.color = deriveBorderColor(optColor);
 				}
 			} else {
-				cell.createSpan({ cls: 'hoard-cl-cell-empty', text: '—' });
+				cell.createSpan({ cls: 'hoard-custom-list-table__cell-empty', text: '—' });
 			}
 		} else {
 			const strVal = val !== undefined && val !== null && val !== '' ? String(val) : '';
 			if (strVal) {
-				const span = cell.createSpan({ cls: 'hoard-cl-cell-text', text: strVal });
-				if (col.bold) span.addClass('hoard-cell-bold');
-				if (col.italic) span.addClass('hoard-cell-italic');
+				const span = cell.createSpan({ cls: 'hoard-custom-list-table__cell-text', text: strVal });
+				if (col.bold) span.addClass('hoard-custom-list-table__cell-text--bold');
+				if (col.italic) span.addClass('hoard-custom-list-table__cell-text--italic');
 			} else {
-				cell.createSpan({ cls: 'hoard-cl-cell-empty', text: '—' });
+				cell.createSpan({ cls: 'hoard-custom-list-table__cell-empty', text: '—' });
 			}
 		}
 
@@ -1663,7 +1663,7 @@ export class CustomListsTab {
 		const currentVal = (row as Record<string, string | number | undefined>)[col.id];
 
 		cell.empty();
-		cell.addClass('hoard-cl-editing');
+		cell.addClass('hoard-custom-list-table__td--editing');
 
 		const stopKeyboardScroll = this.watchKeyboardScroll(cell);
 
@@ -1676,7 +1676,7 @@ export class CustomListsTab {
 			saved = true;
 			stopKeyboardScroll();
 			this.releaseEscapeGuard();
-			cell.removeClass('hoard-cl-editing');
+			cell.removeClass('hoard-custom-list-table__td--editing');
 			if (!cancel) {
 				const newVal = getValue();
 				(row as Record<string, unknown>)[col.id] = (newVal === '' || newVal === undefined) ? undefined : newVal;
@@ -1689,7 +1689,7 @@ export class CustomListsTab {
 		// select cells never reach startCustomEdit — they open the shared dropdown (openSelectDropdown)
 		const isNumber = col.type === 'number';
 		const input = cell.createEl('input', {
-			cls: 'hoard-cl-cell-input',
+			cls: 'hoard-custom-list-table__cell-input',
 			attr: { type: isNumber ? 'number' : 'text', value: currentVal !== undefined && currentVal !== null ? String(currentVal) : '' },
 		});
 		getValue = isNumber
@@ -1724,16 +1724,16 @@ export class CustomListsTab {
 
 	/** Editable cells (Name + custom) in a row, skipping # and actions. */
 	private getEditableCells(tr: Element): Element[] {
-		return Array.from(tr.querySelectorAll(':scope > .hoard-cl-td'))
-			.filter(c => !c.classList.contains('hoard-cl-td-num') && !c.classList.contains('hoard-cl-td-actions'));
+		return Array.from(tr.querySelectorAll(':scope > .hoard-custom-list-table__td'))
+			.filter(c => !c.classList.contains('hoard-custom-list-table__td--number') && !c.classList.contains('hoard-custom-list-table__td--actions'));
 	}
 
 	private navigateCell(cell: HTMLElement, direction: CellNavDirection): void {
-		const tr = cell.closest('.hoard-cl-tr-body');
+		const tr = cell.closest('.hoard-custom-list-table__tr--body');
 		const tbody = tr?.parentElement;
 		if (!tr || !tbody) return;
 
-		const rows = Array.from(tbody.querySelectorAll(':scope > .hoard-cl-tr-body'));
+		const rows = Array.from(tbody.querySelectorAll(':scope > .hoard-custom-list-table__tr--body'));
 		const rowIdx = rows.indexOf(tr);
 		const editableCells = this.getEditableCells(tr);
 		const target = cellNavTarget(direction, rowIdx, editableCells.indexOf(cell), rows.length, editableCells.length);
@@ -1759,9 +1759,9 @@ export class CustomListsTab {
 			tableContainer.empty();
 			this.buildTable(tableContainer, list, countEl);
 			window.setTimeout(() => {
-				const newTbody = tableContainer.querySelector('.hoard-cl-tbody');
+				const newTbody = tableContainer.querySelector('.hoard-custom-list-table__tbody');
 				if (!newTbody) return;
-				const allRows = Array.from(newTbody.querySelectorAll('.hoard-cl-tr-body'));
+				const allRows = Array.from(newTbody.querySelectorAll('.hoard-custom-list-table__tr--body'));
 				const lastRow = allRows[allRows.length - 1];
 				if (!lastRow) return;
 				const cells = this.getEditableCells(lastRow);
@@ -1784,15 +1784,15 @@ class ExportFormatModal extends Modal {
 
 	onOpen(): void {
 		this.titleEl.setText(t('lists.exportTitle'));
-		this.contentEl.addClass('hoard-export-modal');
+		this.contentEl.addClass('hoard-export');
 
 		this.contentEl.createDiv({
-			cls: 'hoard-settings-info',
+			cls: 'hoard-settings__info',
 			text: t('lists.exportInfo'),
 		});
 
-		const row = this.contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
-		const tsvBtn = row.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('lists.copyTsv') });
+		const row = this.contentEl.createDiv({ cls: 'hoard-modal__btn-row' });
+		const tsvBtn = row.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('lists.copyTsv') });
 		tsvBtn.addEventListener('click', () => { this.close(); this.onChoose('tsv'); });
 		const mdBtn = row.createEl('button', { cls: 'hoard-btn', text: t('lists.copyMarkdown') });
 		mdBtn.addEventListener('click', () => { this.close(); this.onChoose('md'); });
@@ -1844,22 +1844,22 @@ class ImportListModal extends Modal {
 
 	onOpen(): void {
 		this.titleEl.setText(t('lists.importTitle'));
-		this.contentEl.addClass('hoard-import-modal');
+		this.contentEl.addClass('hoard-import');
 
 		this.contentEl.createDiv({
-			cls: 'hoard-settings-info',
+			cls: 'hoard-settings__info',
 			text: t('lists.importInfo'),
 		});
 
 		this.textarea = this.contentEl.createEl('textarea', {
-			cls: 'hoard-modal-textarea hoard-import-textarea',
+			cls: 'hoard-modal__textarea hoard-import__textarea',
 			attr: { placeholder: t('lists.pastePlaceholder'), rows: '8' },
 		});
 		this.textarea.addEventListener('input', () => this.refreshPreview());
 
-		const headerToggleRow = this.contentEl.createDiv({ cls: 'hoard-import-header-toggle' });
+		const headerToggleRow = this.contentEl.createDiv({ cls: 'hoard-import__header-toggle' });
 		const headerCheckbox = headerToggleRow.createEl('input', {
-			cls: 'hoard-import-header-checkbox',
+			cls: 'hoard-import__header-checkbox',
 			attr: { type: 'checkbox', id: 'hoard-import-header-cb' },
 		});
 		headerCheckbox.checked = this.firstRowIsHeader;
@@ -1872,10 +1872,10 @@ class ImportListModal extends Modal {
 			this.refreshPreview();
 		});
 
-		this.previewEl = this.contentEl.createDiv({ cls: 'hoard-import-preview' });
+		this.previewEl = this.contentEl.createDiv({ cls: 'hoard-import__preview' });
 
-		const btnRow = this.contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
-		this.addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('common.add') });
+		const btnRow = this.contentEl.createDiv({ cls: 'hoard-modal__btn-row' });
+		this.addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('common.add') });
 		this.addBtn.addEventListener('click', () => void this.apply());
 		btnRow.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') })
 			.addEventListener('click', () => this.close());
@@ -1968,12 +1968,12 @@ class ImportListModal extends Modal {
 
 		if (!a) {
 			this.addBtn.disabled = true;
-			this.previewEl.createDiv({ cls: 'hoard-import-counts', text: t('lists.pasteToPreview') });
+			this.previewEl.createDiv({ cls: 'hoard-import__counts', text: t('lists.pasteToPreview') });
 			return;
 		}
 
 		this.previewEl.createDiv({
-			cls: 'hoard-import-counts',
+			cls: 'hoard-import__counts',
 			text: t('lists.detected', {
 				rows: t('lists.rowCount', { count: a.rowCount }),
 				cols: t('lists.columnCount', { count: a.totalCols }),
@@ -1984,28 +1984,28 @@ class ImportListModal extends Modal {
 
 		if (a.newColCount > 0) {
 			this.previewEl.createDiv({
-				cls: 'hoard-import-banner',
+				cls: 'hoard-import__banner',
 				text: `⚠ ${t('lists.newTextColumns', { count: a.newColCount })}`,
 			});
 		}
 
 		for (const sel of a.selectAdditions) {
 			this.previewEl.createDiv({
-				cls: 'hoard-import-banner',
+				cls: 'hoard-import__banner',
 				text: `⚠ ${t('lists.selectGain', { label: sel.label, count: sel.values.length, values: sel.values.join(', ') })}`,
 			});
 		}
 
 		if (a.totalCols < a.existingCount) {
 			this.previewEl.createDiv({
-				cls: 'hoard-import-banner',
+				cls: 'hoard-import__banner',
 				text: `⚠ ${t('lists.fewerColumns')}`,
 			});
 		}
 
 		for (const label of a.numberConflicts) {
 			this.previewEl.createDiv({
-				cls: 'hoard-import-banner-error',
+				cls: 'hoard-import__banner-error',
 				text: `⛔ ${t('lists.numberConflict', { label })}`,
 			});
 		}

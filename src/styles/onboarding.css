@@ -1,5 +1,5 @@
 /* WatchLog onboarding wizard */
-.hoard-onboarding-steps {
+.hoard-onboarding__steps {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
@@ -8,51 +8,51 @@
   color: var(--text-faint);
 }
 
-.hoard-onboarding-step.is-done {
+.hoard-onboarding__step.is-done {
   color: var(--text-muted);
 }
 
-.hoard-onboarding-step.is-active {
+.hoard-onboarding__step.is-active {
   color: var(--text-normal);
   font-weight: var(--font-semibold);
 }
 
-.hoard-onboarding-source {
+.hoard-onboarding__source {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 4px 0;
 }
 
-.hoard-onboarding-source-counts,
-.hoard-onboarding-hint,
-.hoard-onboarding-review-detail {
+.hoard-onboarding__source-counts,
+.hoard-onboarding__hint,
+.hoard-onboarding__review-detail {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
 
-.hoard-onboarding-warning,
-.hoard-onboarding-error {
+.hoard-onboarding__warning,
+.hoard-onboarding__error {
   color: var(--text-error);
   font-size: var(--font-ui-small);
 }
 
-.hoard-onboarding-progress {
+.hoard-onboarding__progress {
   width: 100%;
 }
 
-.hoard-onboarding-reason {
+.hoard-onboarding__reason {
   margin-top: 6px;
   font-weight: var(--font-semibold);
   font-size: var(--font-ui-small);
 }
 
-.hoard-onboarding-review-row {
+.hoard-onboarding__review-row {
   display: flex;
   flex-direction: column;
 }
 
-.hoard-onboarding-review-link {
+.hoard-onboarding__review-link {
   background: none;
   box-shadow: none;
   padding: 0;
@@ -62,11 +62,11 @@
   cursor: pointer;
 }
 
-.hoard-onboarding-cleanup-item {
+.hoard-onboarding__cleanup-item {
   margin-bottom: 8px;
 }
 
-.hoard-onboarding-path {
+.hoard-onboarding__path {
   font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);

@@ -17,8 +17,8 @@ function setup(over: { watched?: number[]; season?: Season | null; perSeason?: b
 	};
 	const parent = document.createElement('div');
 	renderEpisodeGrid(parent, opts);
-	const boxes = () => Array.from(parent.querySelectorAll<HTMLElement>('.hoard-episode-box'));
-	return { parent, title, onFill, onEpisode, boxes, fill: () => parent.querySelector<HTMLElement>('.hoard-season-fill-btn')! };
+	const boxes = () => Array.from(parent.querySelectorAll<HTMLElement>('.hoard-accordion__episode-box'));
+	return { parent, title, onFill, onEpisode, boxes, fill: () => parent.querySelector<HTMLElement>('.hoard-accordion__season-fill-btn')! };
 }
 
 describe('renderEpisodeGrid', () => {

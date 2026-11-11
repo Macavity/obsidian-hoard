@@ -24,9 +24,9 @@ export class ConfirmModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
-		contentEl.createDiv({ cls: 'hoard-confirm-msg', text: this.message });
-		const btnRow = contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
-		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-danger', text: t('misc.confirm.confirm') })
+		contentEl.createDiv({ cls: 'hoard-confirm__message', text: this.message });
+		const btnRow = contentEl.createDiv({ cls: 'hoard-modal__btn-row' });
+		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--danger', text: t('misc.confirm.confirm') })
 			.addEventListener('click', () => { this.close(); this.onConfirm(); });
 		if (this.extraButton) {
 			const extra = this.extraButton;

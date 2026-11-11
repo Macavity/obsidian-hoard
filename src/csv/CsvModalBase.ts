@@ -127,10 +127,10 @@ function selectedValues(raws: string[], selects: Record<string, HTMLSelectElemen
 
 /** One `"raw" → select` row, the select being filled by the caller. */
 function createValueMapRow(el: HTMLElement, raw: string): HTMLSelectElement {
-	const row = el.createDiv({ cls: 'hoard-csv-valmap-row' });
-	row.createSpan({ cls: 'hoard-csv-valmap-orig', text: `"${raw}"` });
-	row.createSpan({ cls: 'hoard-csv-valmap-arrow', text: '→' });
-	return row.createEl('select', { cls: 'hoard-select hoard-csv-valmap-select' });
+	const row = el.createDiv({ cls: 'hoard-csv__value-map-row' });
+	row.createSpan({ cls: 'hoard-csv__value-map-original', text: `"${raw}"` });
+	row.createSpan({ cls: 'hoard-csv__value-map-arrow', text: '→' });
+	return row.createEl('select', { cls: 'hoard-input__select hoard-csv__value-map-select' });
 }
 
 /**
@@ -225,7 +225,7 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 	onOpen(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.addClass('hoard-csv-modal');
+		contentEl.addClass('hoard-csv');
 		if (this.mode === 'export') this.renderExport(contentEl);
 		else this.renderImport(contentEl);
 	}
@@ -237,17 +237,17 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 	// Export
 
 	private renderExport(el: HTMLElement): void {
-		el.createEl('h2', { cls: 'hoard-modal-title', text: this.exportHeading() });
+		el.createEl('h2', { cls: 'hoard-modal__title', text: this.exportHeading() });
 
 		const items = this.exportRows();
 		items.forEach((it) => this.selectedIds.add(it.id));
 
-		const ctrlRow = el.createDiv({ cls: 'hoard-csv-ctrl-row' });
+		const ctrlRow = el.createDiv({ cls: 'hoard-csv__control-row' });
 		const selectAllBtn = ctrlRow.createEl('button', { cls: 'hoard-btn', text: t('csv.selectAll') });
 		const selectNoneBtn = ctrlRow.createEl('button', { cls: 'hoard-btn', text: t('csv.selectNone') });
-		const countEl = ctrlRow.createSpan({ cls: 'hoard-csv-count', text: t('csv.selected', { count: items.length }) });
+		const countEl = ctrlRow.createSpan({ cls: 'hoard-csv__count', text: t('csv.selected', { count: items.length }) });
 
-		const listEl = el.createDiv({ cls: 'hoard-csv-list' });
+		const listEl = el.createDiv({ cls: 'hoard-csv__list' });
 		const checkboxes: HTMLInputElement[] = [];
 
 		const updateCount = (): void => {
@@ -255,12 +255,12 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 		};
 
 		for (const item of items) {
-			const row = listEl.createDiv({ cls: 'hoard-csv-row' });
+			const row = listEl.createDiv({ cls: 'hoard-csv__row' });
 			const cb = row.createEl('input', { attr: { type: 'checkbox' } });
 			cb.checked = true;
 			checkboxes.push(cb);
-			row.createSpan({ cls: 'hoard-csv-row-title', text: item.title });
-			if (item.meta) row.createSpan({ cls: 'hoard-csv-row-meta', text: item.meta });
+			row.createSpan({ cls: 'hoard-csv__row-title', text: item.title });
+			if (item.meta) row.createSpan({ cls: 'hoard-csv__row-meta', text: item.meta });
 
 			cb.addEventListener('change', () => {
 				if (cb.checked) this.selectedIds.add(item.id);
@@ -281,9 +281,9 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 			updateCount();
 		});
 
-		const btnRow = el.createDiv({ cls: 'hoard-modal-btn-row hoard-csv-btn-row' });
+		const btnRow = el.createDiv({ cls: 'hoard-modal__btn-row hoard-csv__btn-row' });
 		const cancelBtn = btnRow.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') });
-		const exportBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('csv.exportButton') });
+		const exportBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('csv.exportButton') });
 
 		cancelBtn.addEventListener('click', () => this.close());
 		exportBtn.addEventListener('click', () => {
@@ -301,35 +301,35 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 	// Import shell: steps, progress, file pick
 
 	private renderImport(el: HTMLElement): void {
-		el.createEl('h2', { cls: 'hoard-modal-title', text: this.importHeading() });
+		el.createEl('h2', { cls: 'hoard-modal__title', text: this.importHeading() });
 
-		this.stepUpload = el.createDiv({ cls: 'hoard-csv-step' });
-		const dropZone = this.stepUpload.createDiv({ cls: 'hoard-csv-drop-zone' });
-		dropZone.createDiv({ cls: 'hoard-csv-drop-label', text: t('csv.pickFile') });
+		this.stepUpload = el.createDiv({ cls: 'hoard-csv__step' });
+		const dropZone = this.stepUpload.createDiv({ cls: 'hoard-csv__drop-zone' });
+		dropZone.createDiv({ cls: 'hoard-csv__drop-label', text: t('csv.pickFile') });
 		const fileInput = dropZone.createEl('input', {
 			attr: { type: 'file', accept: '.csv' },
-			cls: 'hoard-csv-file-input',
+			cls: 'hoard-csv__file-input',
 		});
 
-		this.stepMapping = el.createDiv({ cls: 'hoard-csv-step' });
+		this.stepMapping = el.createDiv({ cls: 'hoard-csv__step' });
 		this.stepMapping.hide();
-		this.stepValueMap = el.createDiv({ cls: 'hoard-csv-step' });
+		this.stepValueMap = el.createDiv({ cls: 'hoard-csv__step' });
 		this.stepValueMap.hide();
-		this.stepPreview = el.createDiv({ cls: 'hoard-csv-step' });
+		this.stepPreview = el.createDiv({ cls: 'hoard-csv__step' });
 		this.stepPreview.hide();
 
-		const btnRow = el.createDiv({ cls: 'hoard-modal-btn-row hoard-csv-btn-row' });
+		const btnRow = el.createDiv({ cls: 'hoard-modal__btn-row hoard-csv__btn-row' });
 
 		// background-import note (hidden until the import starts)
-		this.progressWrap = btnRow.createDiv({ cls: 'hoard-csv-progress-wrap' });
+		this.progressWrap = btnRow.createDiv({ cls: 'hoard-csv__progress-wrap' });
 		this.progressWrap.hide();
-		this.progressWrap.createSpan({ cls: 'hoard-csv-bg-note', text: t('csv.bgNote') });
-		const progressTrack = this.progressWrap.createDiv({ cls: 'hoard-csv-progress-track' });
-		this.progressBarFill = progressTrack.createDiv({ cls: 'hoard-csv-progress-fill' });
-		this.progressText = this.progressWrap.createSpan({ cls: 'hoard-csv-progress-text', text: '0 / 0' });
+		this.progressWrap.createSpan({ cls: 'hoard-csv__background-note', text: t('csv.bgNote') });
+		const progressTrack = this.progressWrap.createDiv({ cls: 'hoard-csv__progress-track' });
+		this.progressBarFill = progressTrack.createDiv({ cls: 'hoard-csv__progress-fill' });
+		this.progressText = this.progressWrap.createSpan({ cls: 'hoard-csv__progress-text', text: '0 / 0' });
 
 		this.cancelBtn = btnRow.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') });
-		this.importBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('csv.importSelected') });
+		this.importBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('csv.importSelected') });
 		this.importBtn.disabled = true;
 		this.importBtn.hide();
 
@@ -372,19 +372,19 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 
 	private renderMappingStep(el: HTMLElement): void {
 		el.empty();
-		el.createDiv({ cls: 'hoard-csv-step-title', text: t('csv.map.title') });
-		el.createDiv({ cls: 'hoard-csv-step-desc', text: this.mapDescription() });
-		el.createDiv({ cls: 'hoard-csv-info-note', text: this.mapNote() });
+		el.createDiv({ cls: 'hoard-csv__step-title', text: t('csv.map.title') });
+		el.createDiv({ cls: 'hoard-csv__step-description', text: this.mapDescription() });
+		el.createDiv({ cls: 'hoard-csv__info-note', text: this.mapNote() });
 
 		const SKIP_VALUE = '';
-		const grid = el.createDiv({ cls: 'hoard-csv-map-grid' });
+		const grid = el.createDiv({ cls: 'hoard-csv__map-grid' });
 		const selectEls: Record<string, HTMLSelectElement> = {};
 		const fields = this.importFields();
 
 		for (const field of fields) {
-			const row = grid.createDiv({ cls: 'hoard-csv-map-row' });
-			row.createSpan({ cls: 'hoard-csv-map-label', text: t(field.labelKey) });
-			const sel = row.createEl('select', { cls: 'hoard-select hoard-csv-map-select' });
+			const row = grid.createDiv({ cls: 'hoard-csv__map-row' });
+			row.createSpan({ cls: 'hoard-csv__map-label', text: t(field.labelKey) });
+			const sel = row.createEl('select', { cls: 'hoard-input__select hoard-csv__map-select' });
 			selectEls[field.key] = sel;
 			sel.createEl('option', { value: SKIP_VALUE, text: t('csv.skip') });
 			for (const col of this.csvHeaders) {
@@ -394,7 +394,7 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 		}
 
 		const previewBtn = el.createEl('button', {
-			cls: 'hoard-btn hoard-btn-primary hoard-csv-preview-btn',
+			cls: 'hoard-btn hoard-btn--primary hoard-csv__preview-btn',
 			text: t('csv.next'),
 		});
 		previewBtn.addEventListener('click', () => {
@@ -463,7 +463,7 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 	): Record<string, HTMLSelectElement> {
 		const selects: Record<string, HTMLSelectElement> = {};
 		if (values.length === 0) return selects;
-		el.createDiv({ cls: 'hoard-csv-valmap-section-title', text: t(titleKey) });
+		el.createDiv({ cls: 'hoard-csv__value-map-section-title', text: t(titleKey) });
 		for (const raw of values) {
 			const sel = createValueMapRow(el, raw);
 			selects[raw] = sel;
@@ -475,8 +475,8 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 
 	private renderValueMapStep(el: HTMLElement, unknowns: CsvUnknowns): void {
 		el.empty();
-		el.createDiv({ cls: 'hoard-csv-step-title', text: t('csv.values.title') });
-		el.createDiv({ cls: 'hoard-csv-step-desc', text: this.valuesDescription() });
+		el.createDiv({ cls: 'hoard-csv__step-title', text: t('csv.values.title') });
+		el.createDiv({ cls: 'hoard-csv__step-description', text: this.valuesDescription() });
 
 		const choices = this.statusChoices();
 		const statusSelects = this.renderValueSection(el, 'csv.fields.status', unknowns.statuses, (sel, sv) => {
@@ -493,9 +493,9 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 			}
 		});
 
-		const btnRow = el.createDiv({ cls: 'hoard-csv-valmap-btn-row' });
+		const btnRow = el.createDiv({ cls: 'hoard-csv__value-map-btn-row' });
 		const backBtn = btnRow.createEl('button', { cls: 'hoard-btn', text: t('csv.back') });
-		const confirmBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('csv.preview') });
+		const confirmBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('csv.preview') });
 
 		backBtn.addEventListener('click', () => {
 			if (!this.stepValueMap || !this.stepMapping) return;
@@ -554,14 +554,14 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 
 		const dupeCount = this.importRows.filter((r) => r.isDuplicate).length;
 		if (dupeCount > 0) {
-			el.createDiv({ cls: 'hoard-csv-dupe-warning', text: t('csv.duplicates', { count: dupeCount }) });
+			el.createDiv({ cls: 'hoard-csv__duplicate-warning', text: t('csv.duplicates', { count: dupeCount }) });
 		}
 
-		const ctrlRow = el.createDiv({ cls: 'hoard-csv-ctrl-row' });
+		const ctrlRow = el.createDiv({ cls: 'hoard-csv__control-row' });
 		const backBtn = ctrlRow.createEl('button', { cls: 'hoard-btn', text: t('csv.back') });
 		const selectAllBtn = ctrlRow.createEl('button', { cls: 'hoard-btn', text: t('csv.selectAll') });
 		const selectNoneBtn = ctrlRow.createEl('button', { cls: 'hoard-btn', text: t('csv.selectNone') });
-		const countEl = ctrlRow.createSpan({ cls: 'hoard-csv-count', text: '' });
+		const countEl = ctrlRow.createSpan({ cls: 'hoard-csv__count', text: '' });
 
 		backBtn.addEventListener('click', () => {
 			if (!this.stepPreview || !this.stepValueMap || !this.stepMapping || !this.importBtn) return;
@@ -576,7 +576,7 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 			else this.stepMapping.show();
 		});
 
-		const listEl = el.createDiv({ cls: 'hoard-csv-list' });
+		const listEl = el.createDiv({ cls: 'hoard-csv__list' });
 		const checkboxes: HTMLInputElement[] = [];
 
 		const updateCount = (): void => {
@@ -587,14 +587,14 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 
 		for (let i = 0; i < this.importRows.length; i++) {
 			const r = this.importRows[i]!;
-			const row = listEl.createDiv({ cls: `hoard-csv-row${r.isDuplicate ? ' hoard-csv-row-dupe' : ''}` });
+			const row = listEl.createDiv({ cls: `hoard-csv__row${r.isDuplicate ? ' hoard-csv__row--duplicate' : ''}` });
 			const cb = row.createEl('input', { attr: { type: 'checkbox' } });
 			cb.checked = r.selected;
 			checkboxes.push(cb);
-			row.createSpan({ cls: 'hoard-csv-row-title', text: r.entry.title ?? t('csv.noTitle') });
+			row.createSpan({ cls: 'hoard-csv__row-title', text: r.entry.title ?? t('csv.noTitle') });
 			const metaParts = this.previewMeta(r.entry);
-			if (metaParts) row.createSpan({ cls: 'hoard-csv-row-meta', text: metaParts });
-			if (r.isDuplicate) row.createSpan({ cls: 'hoard-csv-dupe-badge', text: t('csv.duplicate') });
+			if (metaParts) row.createSpan({ cls: 'hoard-csv__row-meta', text: metaParts });
+			if (r.isDuplicate) row.createSpan({ cls: 'hoard-csv__duplicate-badge', text: t('csv.duplicate') });
 			const idx = i;
 			cb.addEventListener('change', () => {
 				this.importRows[idx]!.selected = cb.checked;

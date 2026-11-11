@@ -1,7 +1,7 @@
 /* Segmented toggle, game modes, API routing, filter toggles */
 
-/* generic segmented pill (renderSegmentedToggle), accented via --hoard-seg-color */
-.hoard-seg-toggle {
+/* generic segmented pill (renderSegmentedToggle), accented via --hoard-segmented-color */
+.hoard-segmented {
   display: inline-flex;
   gap: 2px;
   padding: 2px;
@@ -11,7 +11,7 @@
   flex: 0 0 auto;
 }
 
-button.hoard-seg-toggle-btn {
+button.hoard-segmented__btn {
   padding: 2px 10px;
   height: auto;
   border: none;
@@ -26,14 +26,14 @@ button.hoard-seg-toggle-btn {
   cursor: pointer;
 }
 
-button.hoard-seg-toggle-btn:hover {
+button.hoard-segmented__btn:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
 }
 
-button.hoard-seg-toggle-btn.is-active {
-  background: color-mix(in srgb, var(--hoard-seg-color) 16%, transparent);
-  color: var(--hoard-seg-color);
+button.hoard-segmented__btn.is-active {
+  background: color-mix(in srgb, var(--hoard-segmented-color) 16%, transparent);
+  color: var(--hoard-segmented-color);
 }
 
 /* game modes: Solo (red) | Co-op (green) | Multi (blue), each toggleable */
@@ -45,7 +45,7 @@ button.hoard-seg-toggle-btn.is-active {
   overflow: hidden;
 }
 
-.hoard-mode-pill-seg {
+.hoard-mode-pill__segment {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -62,48 +62,48 @@ button.hoard-seg-toggle-btn.is-active {
   height: 25px;
 }
 
-.hoard-mode-pill-seg + .hoard-mode-pill-seg {
+.hoard-mode-pill__segment + .hoard-mode-pill__segment {
   border-left: 1px solid var(--background-modifier-border);
 }
 
 /* inactive segments dim their icon */
-.hoard-mode-pill-icon {
+.hoard-mode-pill__icon {
   display: inline-flex;
   align-items: center;
   opacity: 0.7;
 }
 
-.hoard-mode-pill-icon .svg-icon {
+.hoard-mode-pill__icon .svg-icon {
   width: 14px;
   height: 14px;
 }
 
-.hoard-mode-pill-seg.is-active .hoard-mode-pill-icon {
+.hoard-mode-pill__segment.is-active .hoard-mode-pill__icon {
   opacity: 1;
 }
 
-.hoard-mode-pill-seg:not(.is-active):hover {
+.hoard-mode-pill__segment:not(.is-active):hover {
   background-color: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.hoard-mode-pill-solo.is-active {
+.hoard-mode-pill__segment--solo.is-active {
   background: rgb(229 72 77 / 18%);
   color: #E5484D;
 }
 
-.hoard-mode-pill-coop.is-active {
+.hoard-mode-pill__segment--coop.is-active {
   background: rgb(45 168 115 / 18%);
   color: #2DA873;
 }
 
-.hoard-mode-pill-multi.is-active {
+.hoard-mode-pill__segment--multi.is-active {
   background: rgb(74 137 220 / 18%);
   color: #4A89DC;
 }
 
 /* Modes row in the game detail modal — sits under the rating row. */
-.hoard-game-modal-modes {
+.hoard-game-detail__modes {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -116,13 +116,13 @@ button.hoard-seg-toggle-btn.is-active {
 }
 
 /* Small numeric settings input (e.g. top directors/actors count): ~3 digits wide. */
-input.hoard-settings-count-input {
+input.hoard-settings__count-input {
   width: 64px;
   text-align: center;
 }
 
 /* API routing card */
-.hoard-settings-card {
+.hoard-settings__card {
   margin-top: 24px;
   padding: 14px 16px;
   border: 1px solid var(--background-modifier-border);
@@ -130,19 +130,19 @@ input.hoard-settings-count-input {
   background-color: var(--background-secondary);
 }
 
-.hoard-settings-card-desc {
+.hoard-settings__card-description {
   font-size: 12px;
   color: var(--text-muted);
   margin-bottom: 12px;
 }
 
-.hoard-type-api-list {
+.hoard-api-provider__type-api-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.hoard-type-api-row {
+.hoard-api-provider__type-api-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -151,28 +151,28 @@ input.hoard-settings-count-input {
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.hoard-type-api-row:last-child {
+.hoard-api-provider__type-api-row:last-child {
   border-bottom: none;
 }
 
-.hoard-type-api-name {
+.hoard-api-provider__type-api-name {
   font-size: 13px;
   color: var(--text-normal);
 }
 
-.hoard-type-api-locked {
+.hoard-api-provider__type-api-locked {
   font-size: 12px;
   color: var(--text-muted);
   opacity: 0.55;
   font-style: italic;
 }
 
-.hoard-type-api-select {
+.hoard-api-provider__type-api-select {
   max-width: 240px;
 }
 
 /* AddTitleModal: "no API configured" message */
-.hoard-modal-no-api {
+.hoard-search-picker__missing-api {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -183,13 +183,13 @@ input.hoard-settings-count-input {
   text-align: center;
 }
 
-.hoard-modal-no-api-icon {
+.hoard-search-picker__missing-api-icon {
   font-size: 16px;
   opacity: 0.7;
 }
 
 /* API failure in a results panel — same slot as the no-api notice, warning-toned */
-.hoard-modal-api-error {
+.hoard-search-picker__api-error {
   align-items: flex-start;
   text-align: left;
   color: var(--text-normal);
@@ -198,18 +198,18 @@ input.hoard-settings-count-input {
   border-radius: 6px;
 }
 
-.hoard-modal-api-error .hoard-modal-no-api-icon {
+.hoard-search-picker__api-error .hoard-search-picker__missing-api-icon {
   opacity: 1;
   line-height: 1.4;
 }
 
 /* Filter panel: per-section "All" toggle + Groups-only divider */
-.hoard-filter-all-toggle {
+.hoard-filter-panel__all-toggle {
   color: var(--interactive-accent);
   font-weight: 500;
 }
 
-.hoard-filter-section-divider {
+.hoard-filter-panel__section-divider {
   height: 1px;
   background-color: var(--background-modifier-border);
   margin: 6px 0;

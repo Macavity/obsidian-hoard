@@ -20,7 +20,7 @@ export function renderActionBar(parent: HTMLElement, app: App, opts: DeleteSelec
 	const deleteBtn = createIconButton(bar, {
 		icon: 'x',
 		label: opts.title,
-		cls: 'hoard-group-action-btn hoard-group-action-btn-delete hoard-btn-danger',
+		cls: 'hoard-group-header__action-btn hoard-group-header__action-btn--delete hoard-btn--danger',
 	});
 	deleteBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
@@ -36,7 +36,7 @@ export function renderBatchStatusSelect(
 	onPick: (status: string) => Promise<void>,
 	formatStatus: (status: string) => string = (s) => s,
 ): void {
-	const statusSelect = bar.createEl('select', { cls: 'hoard-select hoard-select-sm' });
+	const statusSelect = bar.createEl('select', { cls: 'hoard-input__select hoard-input__select--sm' });
 	statusSelect.createEl('option', { text: t('ui.actionBar.status'), value: '' });
 	for (const name of statusNames) {
 		statusSelect.createEl('option', { text: formatStatus(name), value: name });
@@ -65,7 +65,7 @@ export interface MoveToGroupOptions {
 
 /** "Group…" select with "Create new group…", which swaps the select for an inline name input. */
 export function renderMoveToGroupSelect(bar: HTMLElement, opts: MoveToGroupOptions): void {
-	const moveSelect = bar.createEl('select', { cls: 'hoard-select hoard-select-sm' });
+	const moveSelect = bar.createEl('select', { cls: 'hoard-input__select hoard-input__select--sm' });
 	if (opts.disabled) {
 		moveSelect.disabled = true;
 		moveSelect.title = t('ui.actionBar.groupSelected');
@@ -91,11 +91,11 @@ export function renderMoveToGroupSelect(bar: HTMLElement, opts: MoveToGroupOptio
 /** Inline input — prompt() is unavailable in Obsidian/Electron. */
 function renderInlineGroupInput(bar: HTMLElement, opts: MoveToGroupOptions): void {
 	const nameInput = bar.createEl('input', {
-		cls: 'hoard-modal-input hoard-group-name-input',
+		cls: 'hoard-modal__input hoard-action-bar__group-name-input',
 		attr: { type: 'text', placeholder: t('ui.actionBar.groupName'), maxlength: '64' },
 	});
-	const confirmBtn = createIconButton(bar, { icon: 'check', label: t('ui.actionBar.createGroup'), cls: 'hoard-group-action-btn' });
-	const cancelBtn = createIconButton(bar, { icon: 'x', label: t('common.cancel'), cls: 'hoard-group-action-btn' });
+	const confirmBtn = createIconButton(bar, { icon: 'check', label: t('ui.actionBar.createGroup'), cls: 'hoard-group-header__action-btn' });
+	const cancelBtn = createIconButton(bar, { icon: 'x', label: t('common.cancel'), cls: 'hoard-group-header__action-btn' });
 
 	// Enter twice (or Enter + ✓) while onCreate awaits the store would build two identical groups
 	let creating = false;

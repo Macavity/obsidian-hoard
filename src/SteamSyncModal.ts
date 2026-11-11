@@ -60,14 +60,14 @@ export class SteamSyncModal extends Modal {
 		const c = this.contentEl;
 		c.empty();
 		c.createEl('h2', { text: t('steam.title') });
-		const status = c.createDiv({ cls: 'hoard-steam-status', text: t('steam.fetching') });
+		const status = c.createDiv({ cls: 'hoard-steam-sync__status', text: t('steam.fetching') });
 
 		const result = await this.plugin.apiService.getSteamOwnedGames();
 		if (this.cancelled) return;
 
 		if (!result.ok) {
 			status.textContent = failureMessage(result.reason);
-			status.addClass('hoard-status-error');
+			status.addClass('hoard-steam-sync__status--error');
 			this.renderCloseOnly();
 			return;
 		}
@@ -122,17 +122,17 @@ export class SteamSyncModal extends Modal {
 		c.createEl('h2', { text: t('steam.title') });
 
 		c.createDiv({
-			cls: 'hoard-steam-summary',
+			cls: 'hoard-steam-sync__summary',
 			text: t('steam.summary', { owned: this.owned.length, matched: this.matches.length, unmatched: this.unmatched.length }),
 		});
 
 		c.createDiv({
-			cls: 'hoard-modal-info',
+			cls: 'hoard-modal__info',
 			text: t('steam.info'),
 		});
 
 		// achievements opt-out — the only part that scales with library size
-		const achRow = c.createDiv({ cls: 'hoard-steam-option' });
+		const achRow = c.createDiv({ cls: 'hoard-steam-sync__option' });
 		const achBox = achRow.createEl('input', { attr: { type: 'checkbox' } });
 		achBox.checked = this.syncAchievements;
 		// label/for would need a document-unique id; a click handler does the same job without
@@ -140,7 +140,7 @@ export class SteamSyncModal extends Modal {
 		const achLabel = achRow.createEl('label', { text: t('steam.alsoAchievements') });
 		const achCount = this.matches.length + this.selectedNew.size;
 		const achNote = achRow.createSpan({
-			cls: 'hoard-steam-option-note',
+			cls: 'hoard-steam-sync__option-note',
 			text: t('steam.requestNote', { count: achCount }),
 		});
 		const setAchievements = (on: boolean): void => {
@@ -153,8 +153,8 @@ export class SteamSyncModal extends Modal {
 
 		if (this.unmatched.length > 0) this.renderNewGamesPicker(c, achNote);
 
-		const btnRow = c.createDiv({ cls: 'hoard-modal-btn-row' });
-		const runBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('steam.sync') });
+		const btnRow = c.createDiv({ cls: 'hoard-modal__btn-row' });
+		const runBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('steam.sync') });
 		runBtn.addEventListener('click', () => { void this.run(); });
 		btnRow.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') })
 			.addEventListener('click', () => this.close());
@@ -165,33 +165,33 @@ export class SteamSyncModal extends Modal {
 	}
 
 	private renderNewGamesPicker(parent: HTMLElement, achNote: HTMLElement): void {
-		const section = parent.createDiv({ cls: 'hoard-steam-section' });
-		const head = section.createDiv({ cls: 'hoard-steam-section-head' });
-		head.createSpan({ cls: 'hoard-game-modal-label', text: t('steam.notInLibrary') });
+		const section = parent.createDiv({ cls: 'hoard-steam-sync__section' });
+		const head = section.createDiv({ cls: 'hoard-steam-sync__section-head' });
+		head.createSpan({ cls: 'hoard-game-detail__label', text: t('steam.notInLibrary') });
 
-		const countEl = head.createSpan({ cls: 'hoard-steam-picked' });
+		const countEl = head.createSpan({ cls: 'hoard-steam-sync__picked' });
 		const paintCount = (): void => {
 			countEl.textContent = t('steam.selected', { count: this.selectedNew.size });
 			achNote.textContent = t('steam.requestNote', { count: this.matches.length + this.selectedNew.size });
 		};
 
-		const actions = head.createDiv({ cls: 'hoard-steam-section-actions' });
-		const allBtn = actions.createEl('button', { cls: 'hoard-btn hoard-btn-mini', text: t('steam.all') });
-		const noneBtn = actions.createEl('button', { cls: 'hoard-btn hoard-btn-mini', text: t('steam.none') });
+		const actions = head.createDiv({ cls: 'hoard-steam-sync__section-actions' });
+		const allBtn = actions.createEl('button', { cls: 'hoard-btn hoard-btn--mini', text: t('steam.all') });
+		const noneBtn = actions.createEl('button', { cls: 'hoard-btn hoard-btn--mini', text: t('steam.none') });
 
-		const list = section.createDiv({ cls: 'hoard-steam-list' });
+		const list = section.createDiv({ cls: 'hoard-steam-sync__list' });
 		const boxes: HTMLInputElement[] = [];
 
 		for (const steam of this.unmatched) {
-			const row = list.createDiv({ cls: 'hoard-steam-row' });
+			const row = list.createDiv({ cls: 'hoard-steam-sync__row' });
 			const box = row.createEl('input', { attr: { type: 'checkbox' } });
 			box.checked = this.selectedNew.has(steam.appId);
 			boxes.push(box);
 
-			const label = row.createDiv({ cls: 'hoard-steam-row-label' });
-			label.createSpan({ cls: 'hoard-steam-row-title', text: steam.name || t('steam.appFallback', { id: steam.appId }) });
+			const label = row.createDiv({ cls: 'hoard-steam-sync__row-label' });
+			label.createSpan({ cls: 'hoard-steam-sync__row-title', text: steam.name || t('steam.appFallback', { id: steam.appId }) });
 			label.createSpan({
-				cls: 'hoard-steam-row-time',
+				cls: 'hoard-steam-sync__row-time',
 				text: steam.playtimeMinutes > 0 ? formatTime(steam.playtimeMinutes) : t('steam.neverPlayed'),
 			});
 
@@ -214,13 +214,13 @@ export class SteamSyncModal extends Modal {
 		allBtn.addEventListener('click', () => {
 			for (const s of this.unmatched) this.selectedNew.add(s.appId);
 			for (const b of boxes) b.checked = true;
-			list.findAll('.hoard-steam-row').forEach((r) => r.addClass('is-picked'));
+			list.findAll('.hoard-steam-sync__row').forEach((r) => r.addClass('is-picked'));
 			paintCount();
 		});
 		noneBtn.addEventListener('click', () => {
 			this.selectedNew.clear();
 			for (const b of boxes) b.checked = false;
-			list.findAll('.hoard-steam-row').forEach((r) => r.removeClass('is-picked'));
+			list.findAll('.hoard-steam-sync__row').forEach((r) => r.removeClass('is-picked'));
 			paintCount();
 		});
 
@@ -238,11 +238,11 @@ export class SteamSyncModal extends Modal {
 		const c = this.contentEl;
 		c.empty();
 		c.createEl('h2', { text: t('steam.syncing') });
-		const label = c.createDiv({ cls: 'hoard-steam-status', text: t('steam.starting') });
-		const barWrap = c.createDiv({ cls: 'hoard-steam-progress' });
-		const bar = barWrap.createDiv({ cls: 'hoard-steam-progress-fill' });
+		const label = c.createDiv({ cls: 'hoard-steam-sync__status', text: t('steam.starting') });
+		const barWrap = c.createDiv({ cls: 'hoard-steam-sync__progress' });
+		const bar = barWrap.createDiv({ cls: 'hoard-steam-sync__progress-fill' });
 
-		const btnRow = c.createDiv({ cls: 'hoard-modal-btn-row' });
+		const btnRow = c.createDiv({ cls: 'hoard-modal__btn-row' });
 		const cancelBtn = btnRow.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') });
 		cancelBtn.addEventListener('click', () => {
 			this.cancelled = true;
@@ -259,7 +259,7 @@ export class SteamSyncModal extends Modal {
 		const tick = (text: string): void => {
 			step++;
 			const pct = totalSteps > 0 ? Math.round((step / totalSteps) * 100) : 100;
-			bar.setCssProps({ '--hoard-steam-progress': `${pct}%` });
+			bar.setCssProps({ '--hoard-steam-sync-progress': `${pct}%` });
 			label.textContent = t('steam.step', { text, step, total: totalSteps });
 		};
 
@@ -378,23 +378,23 @@ export class SteamSyncModal extends Modal {
 		c.empty();
 		c.createEl('h2', { text: cancelled ? t('steam.stopped') : t('steam.complete') });
 		c.createDiv({
-			cls: 'hoard-steam-status',
+			cls: 'hoard-steam-sync__status',
 			text: t('steam.result', { count: updated, imported }),
 		});
 		if (cancelled) {
 			c.createDiv({
-				cls: 'hoard-modal-info',
+				cls: 'hoard-modal__info',
 				text: t('steam.saved'),
 			});
 		}
-		const btnRow = c.createDiv({ cls: 'hoard-modal-btn-row' });
-		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('steam.done') })
+		const btnRow = c.createDiv({ cls: 'hoard-modal__btn-row' });
+		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('steam.done') })
 			.addEventListener('click', () => this.close());
 		new Notice(t('steam.notice', { updated, imported }));
 	}
 
 	private renderCloseOnly(): void {
-		const btnRow = this.contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
+		const btnRow = this.contentEl.createDiv({ cls: 'hoard-modal__btn-row' });
 		btnRow.createEl('button', { cls: 'hoard-btn', text: t('common.close') })
 			.addEventListener('click', () => this.close());
 	}

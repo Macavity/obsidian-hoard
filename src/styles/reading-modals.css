@@ -2,17 +2,17 @@
 
 /* Reading card context menu */
 
-/* base look shared with .hoard-card-menu-btn in detail-rating.css */
-.hoard-reading-card-menu-btn {
+/* base look shared with .hoard-card__menu-btn in detail-rating.css */
+.hoard-reading-card__menu-btn {
   z-index: 5;
 }
 
-.hoard-reading-card:hover .hoard-reading-card-menu-btn,
-button.hoard-reading-card-menu-btn:focus-visible {
+.hoard-reading-card:hover .hoard-reading-card__menu-btn,
+button.hoard-reading-card__menu-btn:focus-visible {
   opacity: 1;
 }
 
-.is-mobile .hoard-reading-card-menu-btn {
+.is-mobile .hoard-reading-card__menu-btn {
   opacity: 1;
 }
 
@@ -23,7 +23,7 @@ button.hoard-reading-card-menu-btn:focus-visible {
   border-radius: 6px;
 }
 
-.hoard-reading-action-bar {
+.hoard-reading__action-bar {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -40,7 +40,7 @@ button.hoard-reading-card-menu-btn:focus-visible {
   padding: 4px 2px;
 }
 
-.hoard-reading-modal-header {
+.hoard-reading-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -51,90 +51,90 @@ button.hoard-reading-card-menu-btn:focus-visible {
   padding: 0 2px 4px;
 }
 
-.hoard-reading-modal-header-left {
+.hoard-reading-modal__header-left {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
 
-.hoard-reading-modal-header-actions {
+.hoard-reading-modal__header-actions {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
 }
 
-.hoard-reading-modal-header-actions .hoard-btn.is-hidden {
+.hoard-reading-modal__header-actions .hoard-btn.is-hidden {
   display: none;
 }
 
-.hoard-reading-modal-header-icon {
+.hoard-reading-modal__header-icon {
   font-size: 1.2rem;
   line-height: 1;
 }
 
-.hoard-reading-lookup {
+.hoard-reading-form__lookup {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.hoard-reading-lookup-input {
+.hoard-reading-form__lookup-input {
   flex: 1;
   min-width: 0;
 }
 
-.hoard-reading-lookup-btn {
+.hoard-reading-form__lookup-btn {
   flex-shrink: 0;
 }
 
 /* the add modals are capped flex columns (on phones too); a scroll container's auto min-height is 0,
    so the results panel got squashed instead of keeping its 400px. Don't shrink: let the modal scroll */
-.hoard-add-modal > .hoard-modal-results,
-.hoard-reading-modal > .hoard-modal-results {
+.hoard-add-modal > .hoard-modal__results,
+.hoard-reading-modal > .hoard-modal__results {
   flex-shrink: 0;
 }
 
-.hoard-reading-status-rating-row {
+.hoard-reading-form__status-rating-row {
   display: flex;
   flex-flow: row wrap;
   align-items: center;
   gap: 16px;
 }
 
-.hoard-reading-inline-group {
+.hoard-reading-form__inline-group {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.hoard-reading-status-select {
+.hoard-reading-form__status-select {
   width: auto;
   min-width: 0;
   flex: 0 0 auto;
   padding-right: 24px;
 }
 
-.hoard-reading-form-grid {
+.hoard-reading-form__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: start;
 }
 
-.hoard-reading-form-grid-col {
+.hoard-reading-form__grid-column {
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
 }
 
-.hoard-reading-form-grid-col .hoard-reading-section-label {
+.hoard-reading-form__grid-column .hoard-reading-modal__section-label {
   margin-top: 0;
 }
 
-.hoard-reading-modal-divider {
+.hoard-reading-modal__divider {
   height: 1px;
   background: var(--background-modifier-border);
   margin: 4px 0;
@@ -146,7 +146,7 @@ button.hoard-reading-card-menu-btn:focus-visible {
   gap: 8px;
 }
 
-.hoard-reading-section-label {
+.hoard-reading-modal__section-label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -158,7 +158,7 @@ button.hoard-reading-card-menu-btn:focus-visible {
 }
 
 /* section label carrying a control at its tail */
-.hoard-reading-section-label-row {
+.hoard-reading-modal__section-label--row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -166,37 +166,37 @@ button.hoard-reading-card-menu-btn:focus-visible {
   min-height: 24px;
 }
 
-.hoard-reading-row {
+.hoard-reading-form__row {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.hoard-reading-row-split {
+.hoard-reading-form__row--split {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-.hoard-reading-col {
+.hoard-reading-form__column {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
 }
 
-.hoard-reading-label {
+.hoard-reading-form__label {
   font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
 }
 
-.hoard-reading-stars {
+.hoard-reading-form__stars {
   display: flex;
   gap: 2px;
 }
 
-.hoard-reading-modal-footer {
+.hoard-reading-modal__footer {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -204,7 +204,7 @@ button.hoard-reading-card-menu-btn:focus-visible {
   border-top: 0.5px solid var(--background-modifier-border);
 }
 
-.hoard-reading-modal-save {
-  /* uses .hoard-reading-add-btn — color via .hoard-btn-success */
+.hoard-reading-modal__save {
+  /* uses .hoard-reading-modal__add-btn — color via .hoard-btn--success */
 }
 

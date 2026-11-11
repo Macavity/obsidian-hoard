@@ -15,8 +15,8 @@ export function appendNoteLinkButton(
 	target: TFile | string,
 	onOpen?: () => void,
 ): HTMLElement {
-	// sizing/alignment come from .hoard-acc-link-icon (matches the globe)
-	const noteIcon = parent.createSpan({ cls: 'hoard-acc-link-icon' });
+	// sizing/alignment come from .hoard-accordion__link-icon (matches the globe)
+	const noteIcon = parent.createSpan({ cls: 'hoard-accordion__link-icon' });
 	setIcon(noteIcon, 'file-text');
 	noteIcon.setAttr('aria-label', t('misc.noteLink.open'));
 	noteIcon.title = t('misc.noteLink.open');

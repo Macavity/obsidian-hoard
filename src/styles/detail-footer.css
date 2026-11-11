@@ -1,13 +1,13 @@
 /* Detail footer dates and favorite heart */
 
 /* started + watched, then release date; the field is shared with the List footer */
-.hoard-detail-date {
+.hoard-detail__date {
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
 }
 
-.hoard-detail-date-row {
+.hoard-detail__date-row {
   display: flex;
   flex-flow: row wrap;
   align-items: center;
@@ -15,7 +15,7 @@
   row-gap: 8px;
 }
 
-.hoard-detail-notes-input {
+.hoard-detail__notes-input {
   width: 100%;
   min-height: 60px;
   resize: vertical;
@@ -23,7 +23,7 @@
   font-size: 0.9rem;
 }
 
-.hoard-detail-footer {
+.hoard-detail__footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -32,7 +32,7 @@
 }
 
 /* favorite heart, centered by the footer's space-between */
-.hoard-detail-fav-btn {
+.hoard-detail__favorite-btn {
   background: transparent;
   border: none;
   box-shadow: none;
@@ -44,24 +44,24 @@
   color: var(--text-muted);
 }
 
-.hoard-detail-fav-btn:hover {
+.hoard-detail__favorite-btn:hover {
   color: var(--text-normal);
 }
 
-.hoard-detail-fav-btn svg {
+.hoard-detail__favorite-btn svg {
   width: 18px;
   height: 18px;
 }
 
-.hoard-detail-fav-btn.is-active {
+.hoard-detail__favorite-btn.is-active {
   color: var(--text-error);
 }
 
-.hoard-detail-fav-btn.is-active svg {
+.hoard-detail__favorite-btn.is-active svg {
   fill: currentcolor;
 }
 
-.hoard-detail-group-grid {
-  /* Scrolls inside the parent .hoard-detail-modal, no own scroll container. */
+.hoard-detail__group-grid {
+  /* Scrolls inside the parent .hoard-detail, no own scroll container. */
 }
 

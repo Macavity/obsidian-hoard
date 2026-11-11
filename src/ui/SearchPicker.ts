@@ -67,12 +67,12 @@ export function createSearchPicker<R>(config: SearchPickerConfig<R>): SearchPick
 
 	function mountSearchRow(parent: HTMLElement): void {
 		const withYear = config.withYear ?? false;
-		const row = parent.createDiv({ cls: withYear ? 'hoard-modal-row hoard-search-row' : 'hoard-modal-row' });
-		row.createSpan({ cls: 'hoard-modal-label', text: t('common.search') });
+		const row = parent.createDiv({ cls: withYear ? 'hoard-modal__row hoard-search-picker__row' : 'hoard-modal__row' });
+		row.createSpan({ cls: 'hoard-modal__label', text: t('common.search') });
 		// one wrapper so mobile can stack: query on top, year + button under it
-		const fields = withYear ? row.createDiv({ cls: 'hoard-search-fields' }) : row;
+		const fields = withYear ? row.createDiv({ cls: 'hoard-search-picker__fields' }) : row;
 		const queryInput = fields.createEl('input', {
-			cls: withYear ? 'hoard-modal-input hoard-search-query' : 'hoard-modal-input',
+			cls: withYear ? 'hoard-modal__input hoard-search-picker__query' : 'hoard-modal__input',
 			attr: { type: 'text', placeholder: config.placeholder },
 		});
 		queryInput.value = query;
@@ -82,7 +82,7 @@ export function createSearchPicker<R>(config: SearchPickerConfig<R>): SearchPick
 		});
 		if (withYear) {
 			const yearInput = fields.createEl('input', {
-				cls: 'hoard-modal-input hoard-search-year',
+				cls: 'hoard-modal__input hoard-search-picker__year',
 				attr: { type: 'text', inputmode: 'numeric', maxlength: '4', placeholder: t('ui.picker.year') },
 			});
 			yearInput.value = year;
@@ -107,9 +107,9 @@ export function createSearchPicker<R>(config: SearchPickerConfig<R>): SearchPick
 		}
 		mountSearchRow(parent);
 		resultsEl = parent.createDiv({
-			cls: config.grid ? 'hoard-modal-results hoard-results-grid' : 'hoard-modal-results',
+			cls: config.grid ? 'hoard-modal__results hoard-search-picker__results-grid' : 'hoard-modal__results',
 		});
-		if (config.pageSize) pagerEl = parent.createDiv({ cls: 'hoard-result-pager' });
+		if (config.pageSize) pagerEl = parent.createDiv({ cls: 'hoard-search-picker__result-pager' });
 	}
 
 	async function search(): Promise<void> {
@@ -150,9 +150,9 @@ export function createSearchPicker<R>(config: SearchPickerConfig<R>): SearchPick
 	}
 
 	function renderMessage(host: HTMLElement, icon: string, text: string, extraCls = ''): void {
-		const msg = host.createDiv({ cls: `hoard-modal-no-api${extraCls}` });
-		msg.createSpan({ cls: 'hoard-modal-no-api-icon', text: icon });
-		msg.createSpan({ cls: 'hoard-modal-no-api-text', text });
+		const msg = host.createDiv({ cls: `hoard-search-picker__missing-api${extraCls}` });
+		msg.createSpan({ cls: 'hoard-search-picker__missing-api-icon', text: icon });
+		msg.createSpan({ cls: 'hoard-search-picker__missing-api-text', text });
 	}
 
 	function select(result: R, itemEl: HTMLElement): void {
@@ -170,11 +170,11 @@ export function createSearchPicker<R>(config: SearchPickerConfig<R>): SearchPick
 		host.empty();
 		renderPager();
 		if (isSearching) {
-			host.createDiv({ cls: 'hoard-modal-loading', text: t('ui.picker.searching') });
+			host.createDiv({ cls: 'hoard-modal__loading', text: t('ui.picker.searching') });
 			return;
 		}
 		if (noApi) return renderMessage(host, 'ℹ', noApi);
-		if (error) return renderMessage(host, '⚠', error, ' hoard-modal-api-error');
+		if (error) return renderMessage(host, '⚠', error, ' hoard-search-picker__api-error');
 		const start = config.pageSize ? page * config.pageSize : 0;
 		const visible = config.pageSize ? results.slice(start, start + config.pageSize) : results;
 		visible.forEach((result, i) => {
@@ -189,13 +189,13 @@ export function createSearchPicker<R>(config: SearchPickerConfig<R>): SearchPick
 		const total = pageCount();
 		if (isSearching || total <= 1) return;
 
-		const prev = pagerEl.createEl('button', { cls: 'hoard-btn hoard-result-pager-btn', text: '‹' });
+		const prev = pagerEl.createEl('button', { cls: 'hoard-btn hoard-search-picker__result-pager-btn', text: '‹' });
 		prev.disabled = page === 0;
 		prev.addEventListener('click', () => goToPage(page - 1));
 
-		pagerEl.createSpan({ cls: 'hoard-result-pager-info', text: t('ui.picker.page', { page: page + 1, total }) });
+		pagerEl.createSpan({ cls: 'hoard-search-picker__result-pager-info', text: t('ui.picker.page', { page: page + 1, total }) });
 
-		const next = pagerEl.createEl('button', { cls: 'hoard-btn hoard-result-pager-btn', text: '›' });
+		const next = pagerEl.createEl('button', { cls: 'hoard-btn hoard-search-picker__result-pager-btn', text: '›' });
 		next.disabled = page >= total - 1;
 		next.addEventListener('click', () => goToPage(page + 1));
 	}

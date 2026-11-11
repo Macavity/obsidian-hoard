@@ -147,14 +147,14 @@ export class WidgetRenderer {
 		const idMatch = source.match(/id:\s*(.+)/);
 		const id = idMatch?.[1]?.trim();
 		if (!id) {
-			el.createDiv({ cls: 'hoard-widget-error', text: `Hoard: ${t('widget.missingId')}` });
+			el.createDiv({ cls: 'hoard-widget__error', text: `Hoard: ${t('widget.missingId')}` });
 			return;
 		}
 
 		const title = this.dataManager.getTitle(id);
 		if (!title) {
 			el.createDiv({
-				cls: 'hoard-widget-error',
+				cls: 'hoard-widget__error',
 				text: `Hoard: ${t('widget.titleNotFound', { id })}`,
 			});
 			return;
@@ -174,23 +174,23 @@ export class WidgetRenderer {
 		el.empty();
 		el.addClass('hoard-widget');
 
-		const mainRow = el.createDiv({ cls: 'hoard-widget-main-row' });
+		const mainRow = el.createDiv({ cls: 'hoard-widget__main-row' });
 
 		// checkbox 1: visual-only task marker — does NOT modify Hoard data
 		const taskCb = mainRow.createEl('input', {
-			cls: 'hoard-widget-cb',
+			cls: 'hoard-widget__checkbox',
 			attr: { type: 'checkbox' },
 		});
 		taskCb.title = t('widget.taskMarker');
 		taskCb.addEventListener('change', () => {
-			const titleSpan = mainRow.querySelector<HTMLElement>('.hoard-widget-title');
+			const titleSpan = mainRow.querySelector<HTMLElement>('.hoard-widget__title');
 			if (titleSpan) {
 				titleSpan.style.textDecoration = taskCb.checked ? 'line-through' : '';
 				titleSpan.style.opacity = taskCb.checked ? '0.5' : '';
 			}
 		});
 
-		mainRow.createSpan({ cls: 'hoard-widget-title', text: title.title });
+		mainRow.createSpan({ cls: 'hoard-widget__title', text: title.title });
 
 		this.sep(mainRow);
 
@@ -204,12 +204,12 @@ export class WidgetRenderer {
 		this.sep(mainRow);
 
 		const progress = this.dataManager.getProgress(title);
-		const barWrap = mainRow.createDiv({ cls: 'hoard-widget-bar-wrap' });
-		barWrap.createDiv({ cls: 'hoard-progress-bar' }).style.width = `${progress}%`;
+		const barWrap = mainRow.createDiv({ cls: 'hoard-widget__bar-wrap' });
+		barWrap.createDiv({ cls: 'hoard-progress__bar' }).style.width = `${progress}%`;
 
 		this.sep(mainRow);
 
-		mainRow.createSpan({ cls: 'hoard-widget-percent', text: `${progress}%` });
+		mainRow.createSpan({ cls: 'hoard-widget__percent', text: `${progress}%` });
 
 		this.sep(mainRow);
 
@@ -217,31 +217,31 @@ export class WidgetRenderer {
 		const dateLabel = title.dateStarted
 			? t('widget.since', { date: this.formatShortDate(dateStr) })
 			: t('widget.addedOn', { date: this.formatShortDate(dateStr) });
-		mainRow.createSpan({ cls: 'hoard-widget-date', text: dateLabel });
+		mainRow.createSpan({ cls: 'hoard-widget__date', text: dateLabel });
 
 		// checkbox 2: "Next up" — writes to Hoard data
 		const isMovie = title.type === 'Movie';
 		if (!isMovie) {
 			const nextEp = this.dataManager.getNextUnwatchedEpisode(title);
-			const nextRow = el.createDiv({ cls: 'hoard-widget-next-row' });
+			const nextRow = el.createDiv({ cls: 'hoard-widget__next-row' });
 
 			if (nextEp !== null) {
 				this.renderEpisodeCheckbox(nextRow, title, {
 					episode: nextEp, checked: false, tooltip: t('widget.markEpisode', { episode: nextEp }), follow: false,
 				}, (t) => this.renderWidget(el, t));
-				nextRow.createSpan({ cls: 'hoard-widget-next-label', text: t('widget.nextUp', { episode: nextEp }) });
+				nextRow.createSpan({ cls: 'hoard-widget__next-label', text: t('widget.nextUp', { episode: nextEp }) });
 			} else {
-				nextRow.createSpan({ cls: 'hoard-widget-next-label', text: `✓ ${t('widget.allWatched')}` });
+				nextRow.createSpan({ cls: 'hoard-widget__next-label', text: `✓ ${t('widget.allWatched')}` });
 			}
 		} else {
 			// movie: watch checkbox that writes to Hoard data
-			const watchRow = el.createDiv({ cls: 'hoard-widget-next-row' });
+			const watchRow = el.createDiv({ cls: 'hoard-widget__next-row' });
 			const watched = title.watchedEpisodes.includes(1);
 			this.renderEpisodeCheckbox(watchRow, title, {
 				episode: 1, checked: watched, tooltip: t('widget.markMovie'), follow: true,
 			}, (t) => this.renderWidget(el, t));
 			watchRow.createSpan({
-				cls: 'hoard-widget-next-label',
+				cls: 'hoard-widget__next-label',
 				text: watched ? t('widget.watched') : t('widget.markAsWatched'),
 			});
 		}
@@ -251,23 +251,23 @@ export class WidgetRenderer {
 		el.empty();
 		el.addClass('hoard-widget-minimal');
 
-		const row = el.createDiv({ cls: 'hoard-widget-minimal-row' });
+		const row = el.createDiv({ cls: 'hoard-widget-minimal__row' });
 
 		// left checkbox: visual-only task marker
 		const taskCb = row.createEl('input', {
-			cls: 'hoard-widget-cb',
+			cls: 'hoard-widget__checkbox',
 			attr: { type: 'checkbox' },
 		});
 		taskCb.title = t('widget.taskMarker');
 		taskCb.addEventListener('change', () => {
-			const titleSpan = row.querySelector<HTMLElement>('.hoard-widget-title');
+			const titleSpan = row.querySelector<HTMLElement>('.hoard-widget__title');
 			if (titleSpan) {
 				titleSpan.style.textDecoration = taskCb.checked ? 'line-through' : '';
 				titleSpan.style.opacity = taskCb.checked ? '0.5' : '';
 			}
 		});
 
-		row.createSpan({ cls: 'hoard-widget-title', text: title.title });
+		row.createSpan({ cls: 'hoard-widget__title', text: title.title });
 
 		this.sep(row);
 
@@ -281,7 +281,7 @@ export class WidgetRenderer {
 		this.sep(row);
 
 		const progress = this.dataManager.getProgress(title);
-		row.createSpan({ cls: 'hoard-widget-percent', text: `${progress}%` });
+		row.createSpan({ cls: 'hoard-widget__percent', text: `${progress}%` });
 
 		this.sep(row);
 
@@ -300,7 +300,7 @@ export class WidgetRenderer {
 				}, (t) => this.renderWidgetMinimal(el, t));
 			} else {
 				const nextCb = row.createEl('input', {
-					cls: 'hoard-widget-next-cb',
+					cls: 'hoard-widget__next-checkbox',
 					attr: { type: 'checkbox' },
 				});
 				nextCb.checked = true;
@@ -315,7 +315,7 @@ export class WidgetRenderer {
 		const def = this.getTagDef(text, tags);
 		const colored = this.plugin.settings.coloredTypeBadges;
 		const badge = host.createSpan({
-			cls: colored ? 'hoard-badge hoard-badge-sm' : 'hoard-badge-plain',
+			cls: colored ? 'hoard-badge hoard-badge--sm' : 'hoard-badge__plain',
 			text: display,
 		});
 		if (colored && def) badge.style.backgroundColor = getThemedColor(text, def.color, this.plugin.settings.colorTheme);
@@ -332,7 +332,7 @@ export class WidgetRenderer {
 		rerender: (updated: HoardTitle) => void,
 	): void {
 		const cb = host.createEl('input', {
-			cls: 'hoard-widget-next-cb',
+			cls: 'hoard-widget__next-checkbox',
 			attr: { type: 'checkbox' },
 		});
 		cb.checked = spec.checked;
@@ -372,13 +372,13 @@ export class WidgetRenderer {
 	}
 
 	private renderNwBarCol(bottomRow: HTMLElement, progress: number): void {
-		const barCol = bottomRow.createDiv({ cls: 'hoard-nw-bar-col' });
-		barCol.createDiv({ cls: 'hoard-nw-pct', text: `${progress}%` });
-		barCol.createDiv({ cls: 'hoard-full-card-bar-wrap' }).createDiv({ cls: 'hoard-full-card-bar' }).style.width = `${progress}%`;
+		const barCol = bottomRow.createDiv({ cls: 'hoard-widget-now__full-bar-column' });
+		barCol.createDiv({ cls: 'hoard-widget-now__full-percent', text: `${progress}%` });
+		barCol.createDiv({ cls: 'hoard-widget__full-card-bar-wrap' }).createDiv({ cls: 'hoard-widget__full-card-bar' }).style.width = `${progress}%`;
 	}
 
 	private sep(parent: HTMLElement): void {
-		parent.createSpan({ cls: 'hoard-widget-sep', text: '·' });
+		parent.createSpan({ cls: 'hoard-widget__separator', text: '·' });
 	}
 
 	private getTagDef(name: string, tags: TagDefinition[]): TagDefinition | undefined {
@@ -402,14 +402,14 @@ export class WidgetRenderer {
 		const isMini = lines.includes('mini');
 		const titleName = lines.find((l) => l !== 'mini') ?? '';
 		if (!titleName) {
-			el.createDiv({ cls: 'hoard-widget-error', text: `hoard-todo: ${t('widget.todoMissingTitle')}` });
+			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-todo: ${t('widget.todoMissingTitle')}` });
 			return;
 		}
 		const title = this.dataManager.getTitles().find(
 			(t) => t.title.toLowerCase() === titleName.toLowerCase(),
 		);
 		if (!title) {
-			el.createDiv({ cls: 'hoard-widget-error', text: `hoard-todo: ${t('widget.todoNotFound', { name: titleName })}` });
+			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-todo: ${t('widget.todoNotFound', { name: titleName })}` });
 			return;
 		}
 		this.widgetRegistry.set(el, title.id);
@@ -431,7 +431,7 @@ export class WidgetRenderer {
 	private renderWlStat(source: string, el: HTMLElement): void {
 		const kind = source.trim().toLowerCase();
 		el.empty();
-		el.addClass('hoard-wstat');
+		el.addClass('hoard-widget-stat');
 
 		if (kind === 'watched') {
 			const minutes = this.dataManager.getTotalTimeWatched();
@@ -459,44 +459,44 @@ export class WidgetRenderer {
 			const count = this.dataManager.getCompletedCount();
 			this.renderTripleStatCard(el, watched, remaining, count);
 		} else {
-			el.createDiv({ cls: 'hoard-widget-error', text: `hoard-stat: ${t('widget.unknownStat', { kind })}` });
+			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-stat: ${t('widget.unknownStat', { kind })}` });
 		}
 	}
 
 	private renderStatCard(el: HTMLElement, icon: string, value: string, label: string): void {
 		el.empty();
-		const card = el.createDiv({ cls: 'hoard-stat-card' });
-		card.createSpan({ cls: 'hoard-stat-icon', text: icon });
-		card.createSpan({ cls: 'hoard-stat-value', text: value });
-		card.createSpan({ cls: 'hoard-stat-label', text: label });
+		const card = el.createDiv({ cls: 'hoard-widget-stat__card' });
+		card.createSpan({ cls: 'hoard-widget-stat__icon', text: icon });
+		card.createSpan({ cls: 'hoard-widget-stat__value', text: value });
+		card.createSpan({ cls: 'hoard-widget-stat__label', text: label });
 	}
 
 	private renderTimeCardMini(el: HTMLElement, watchedMins: number, remainingMins: number): void {
 		el.empty();
-		const card = el.createDiv({ cls: 'hoard-stat-card hoard-stat-card-time' });
-		card.createSpan({ cls: 'hoard-stat-icon', text: '🕐' });
-		card.createSpan({ cls: 'hoard-stat-value', text: formatTime(watchedMins) });
-		card.createSpan({ cls: 'hoard-stat-label', text: t('widget.statWatched') });
-		card.createSpan({ cls: 'hoard-stat-sep', text: '·' });
-		card.createSpan({ cls: 'hoard-stat-icon', text: '⏳' });
-		card.createSpan({ cls: 'hoard-stat-value', text: formatTime(remainingMins) });
-		card.createSpan({ cls: 'hoard-stat-label', text: t('widget.statLeft') });
+		const card = el.createDiv({ cls: 'hoard-widget-stat__card hoard-widget-stat__card--time' });
+		card.createSpan({ cls: 'hoard-widget-stat__icon', text: '🕐' });
+		card.createSpan({ cls: 'hoard-widget-stat__value', text: formatTime(watchedMins) });
+		card.createSpan({ cls: 'hoard-widget-stat__label', text: t('widget.statWatched') });
+		card.createSpan({ cls: 'hoard-widget-stat__separator', text: '·' });
+		card.createSpan({ cls: 'hoard-widget-stat__icon', text: '⏳' });
+		card.createSpan({ cls: 'hoard-widget-stat__value', text: formatTime(remainingMins) });
+		card.createSpan({ cls: 'hoard-widget-stat__label', text: t('widget.statLeft') });
 	}
 
 	private renderTimeCardFull(el: HTMLElement, watchedMins: number, remainingMins: number): void {
 		el.empty();
-		const card = el.createDiv({ cls: 'hoard-full-card hoard-full-card-time' });
-		card.createDiv({ cls: 'hoard-full-card-header', text: t('widget.timeHeader') });
-		const cols = card.createDiv({ cls: 'hoard-full-card-time-cols' });
-		this.renderTimeCol(cols, 'hoard-full-card-time-col', watchedMins, t('widget.statWatched'));
-		this.renderTimeCol(cols, 'hoard-full-card-time-col', remainingMins, t('widget.statRemaining'));
+		const card = el.createDiv({ cls: 'hoard-widget__full-card hoard-widget__full-card--time' });
+		card.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.timeHeader') });
+		const cols = card.createDiv({ cls: 'hoard-widget__full-card-time-columns' });
+		this.renderTimeCol(cols, 'hoard-widget__full-card-time-column', watchedMins, t('widget.statWatched'));
+		this.renderTimeCol(cols, 'hoard-widget__full-card-time-column', remainingMins, t('widget.statRemaining'));
 	}
 
 	private renderTimeCol(cols: HTMLElement, cls: string, mins: number, label: string): void {
 		const col = cols.createDiv({ cls });
-		col.createDiv({ cls: 'hoard-full-card-value', text: formatTime(mins) });
-		col.createDiv({ cls: 'hoard-full-card-days', text: this.formatTimeDays(mins) });
-		col.createDiv({ cls: 'hoard-full-card-sub', text: label });
+		col.createDiv({ cls: 'hoard-widget__full-card-value', text: formatTime(mins) });
+		col.createDiv({ cls: 'hoard-widget__full-card-days', text: this.formatTimeDays(mins) });
+		col.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: label });
 	}
 
 	private formatTimeDays(minutes: number): string {
@@ -508,26 +508,26 @@ export class WidgetRenderer {
 
 	private renderCompletedCardFull(el: HTMLElement, count: number): void {
 		el.empty();
-		const card = el.createDiv({ cls: 'hoard-full-card' });
-		card.createDiv({ cls: 'hoard-full-card-header', text: t('widget.completedHeader') });
-		card.createDiv({ cls: 'hoard-full-card-value', text: String(count) });
-		card.createDiv({ cls: 'hoard-full-card-sub', text: t('widget.titlesCompleted') });
+		const card = el.createDiv({ cls: 'hoard-widget__full-card' });
+		card.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.completedHeader') });
+		card.createDiv({ cls: 'hoard-widget__full-card-value', text: String(count) });
+		card.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.titlesCompleted') });
 	}
 
 	private renderTripleStatCard(el: HTMLElement, watchedMins: number, remainingMins: number, completed: number): void {
 		el.empty();
-		el.addClass('hoard-wstat-triple');
-		const card = el.createDiv({ cls: 'hoard-full-card hoard-full-card-triple' });
-		const cols = card.createDiv({ cls: 'hoard-triple-cols' });
+		el.addClass('hoard-widget-stat--triple');
+		const card = el.createDiv({ cls: 'hoard-widget__full-card hoard-widget__full-card--triple' });
+		const cols = card.createDiv({ cls: 'hoard-widget-stat__triple-columns' });
 
-		this.renderTimeCol(cols, 'hoard-triple-col', watchedMins, t('widget.statWatched'));
-		cols.createDiv({ cls: 'hoard-vert-sep' });
-		this.renderTimeCol(cols, 'hoard-triple-col', remainingMins, t('widget.statRemaining'));
-		cols.createDiv({ cls: 'hoard-vert-sep' });
+		this.renderTimeCol(cols, 'hoard-widget-stat__triple-column', watchedMins, t('widget.statWatched'));
+		cols.createDiv({ cls: 'hoard-vertical-separator' });
+		this.renderTimeCol(cols, 'hoard-widget-stat__triple-column', remainingMins, t('widget.statRemaining'));
+		cols.createDiv({ cls: 'hoard-vertical-separator' });
 
-		const completedCol = cols.createDiv({ cls: 'hoard-triple-col' });
-		completedCol.createDiv({ cls: 'hoard-full-card-value', text: String(completed) });
-		completedCol.createDiv({ cls: 'hoard-full-card-sub', text: t('widget.statCompleted') });
+		const completedCol = cols.createDiv({ cls: 'hoard-widget-stat__triple-column' });
+		completedCol.createDiv({ cls: 'hoard-widget__full-card-value', text: String(completed) });
+		completedCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.statCompleted') });
 	}
 
 	// hoard-upcoming
@@ -542,14 +542,14 @@ export class WidgetRenderer {
 		const kind = source.trim().toLowerCase();
 		const isFull = kind === 'next full';
 		if (kind !== 'next' && kind !== 'next full') {
-			el.createDiv({ cls: 'hoard-widget-error', text: `hoard-upcoming: ${t('widget.upcomingUsage')}` });
+			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-upcoming: ${t('widget.upcomingUsage')}` });
 			return;
 		}
 
 		// the entry with the soonest future release date
 		const bestEntry = this.nextRelease();
 
-		el.addClass('hoard-wupcoming');
+		el.addClass('hoard-widget-upcoming');
 
 		if (isFull) {
 			this.renderUpcomingFull(el, bestEntry);
@@ -557,22 +557,22 @@ export class WidgetRenderer {
 		}
 
 		if (!bestEntry) {
-			el.createDiv({ cls: 'hoard-upcoming-card hoard-upcoming-empty', text: t('widget.noUpcomingTitles') });
+			el.createDiv({ cls: 'hoard-widget-upcoming__card hoard-widget-upcoming__card--empty', text: t('widget.noUpcomingTitles') });
 			return;
 		}
 
-		const card = el.createDiv({ cls: 'hoard-upcoming-card' });
-		card.createSpan({ cls: 'hoard-upcoming-title', text: bestEntry.titleName });
+		const card = el.createDiv({ cls: 'hoard-widget-upcoming__card' });
+		card.createSpan({ cls: 'hoard-widget-upcoming__title', text: bestEntry.titleName });
 
 		this.renderBadge(card, bestEntry.type, this.plugin.settings.types, typeLabel(bestEntry.type));
 
-		card.createSpan({ cls: 'hoard-upcoming-date', text: formatDateDisplay(bestEntry.releaseDate) });
+		card.createSpan({ cls: 'hoard-widget-upcoming__date', text: formatDateDisplay(bestEntry.releaseDate) });
 		const daysUntil = bestEntry.daysUntil;
 		const countdown = daysUntil === 0 ? t('widget.today')
 			: daysUntil === 1 ? t('widget.tomorrow')
 				: daysUntil >= 30 ? t('widget.inDaysMonths', { days: daysUntil, count: Math.round(daysUntil / 30) })
 					: t('widget.inDays', { count: daysUntil });
-		card.createSpan({ cls: 'hoard-upcoming-countdown', text: countdown });
+		card.createSpan({ cls: 'hoard-widget-upcoming__countdown', text: countdown });
 	}
 
 	private renderUpcomingFull(
@@ -580,19 +580,19 @@ export class WidgetRenderer {
 		bestEntry: NextRelease | null,
 	): void {
 		el.empty();
-		const card = el.createDiv({ cls: 'hoard-full-card' });
-		card.createDiv({ cls: 'hoard-full-card-header', text: t('widget.upNext') });
+		const card = el.createDiv({ cls: 'hoard-widget__full-card' });
+		card.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.upNext') });
 		if (!bestEntry) {
-			card.createDiv({ cls: 'hoard-full-card-sub', text: t('widget.noUpcomingTitles') });
+			card.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.noUpcomingTitles') });
 			return;
 		}
-		card.createDiv({ cls: 'hoard-full-card-title', text: bestEntry.titleName });
-		const meta = card.createDiv({ cls: 'hoard-full-card-meta' });
+		card.createDiv({ cls: 'hoard-widget__full-card-title', text: bestEntry.titleName });
+		const meta = card.createDiv({ cls: 'hoard-widget__full-card-meta' });
 		this.renderBadge(meta, bestEntry.type, this.plugin.settings.types, typeLabel(bestEntry.type));
 		const daysUntil = bestEntry.daysUntil;
 		const countdown = daysUntil === 0 ? t('widget.today') : daysUntil === 1 ? t('widget.tomorrow') : t('widget.inDays', { count: daysUntil });
 		meta.createSpan({ text: countdown });
-		meta.createSpan({ cls: 'hoard-full-card-sub', text: formatDateDisplay(bestEntry.releaseDate) });
+		meta.createSpan({ cls: 'hoard-widget__full-card-subtitle', text: formatDateDisplay(bestEntry.releaseDate) });
 	}
 
 	// hoard-now
@@ -605,7 +605,7 @@ export class WidgetRenderer {
 	private renderNow(source: string, el: HTMLElement): void {
 		el.empty();
 		const isFull = source.trim().toLowerCase() === 'full';
-		el.addClass('hoard-wnow');
+		el.addClass('hoard-widget-now');
 
 		const { pinnedTitle, pinnedGroup } = this.getPinned();
 
@@ -615,37 +615,37 @@ export class WidgetRenderer {
 		}
 
 		if (!pinnedTitle && !pinnedGroup) {
-			el.createDiv({ cls: 'hoard-now-card hoard-now-empty', text: t('widget.pinToWatch') });
+			el.createDiv({ cls: 'hoard-widget-now__card hoard-widget-now__card--empty', text: t('widget.pinToWatch') });
 			return;
 		}
 
-		const card = el.createDiv({ cls: 'hoard-now-card' });
+		const card = el.createDiv({ cls: 'hoard-widget-now__card' });
 
 		if (pinnedGroup) {
-			card.createSpan({ cls: 'hoard-now-title', text: pinnedGroup.name });
+			card.createSpan({ cls: 'hoard-widget-now__title', text: pinnedGroup.name });
 			const { count, progress } = this.pinnedGroupStats(pinnedGroup);
-			card.createSpan({ cls: 'hoard-now-ep', text: t('widget.titlesCount', { count }) });
-			const barWrap = card.createDiv({ cls: 'hoard-now-bar-wrap' });
-			barWrap.createDiv({ cls: 'hoard-now-bar' }).style.width = `${progress}%`;
-			card.createSpan({ cls: 'hoard-now-pct', text: `${progress}%` });
+			card.createSpan({ cls: 'hoard-widget-now__episode', text: t('widget.titlesCount', { count }) });
+			const barWrap = card.createDiv({ cls: 'hoard-widget-now__bar-wrap' });
+			barWrap.createDiv({ cls: 'hoard-widget-now__bar' }).style.width = `${progress}%`;
+			card.createSpan({ cls: 'hoard-widget-now__percent', text: `${progress}%` });
 			return;
 		}
 
 		const pinned = pinnedTitle!;
-		card.createSpan({ cls: 'hoard-now-title', text: pinned.title });
+		card.createSpan({ cls: 'hoard-widget-now__title', text: pinned.title });
 
 		this.renderBadge(card, pinned.type, this.plugin.settings.types, typeLabel(pinned.type));
 
 		if (pinned.type !== 'Movie') {
 			const nextEp = this.dataManager.getNextUnwatchedEpisode(pinned);
-			card.createSpan({ cls: 'hoard-now-ep', text: nextEp !== null ? t('widget.episodeShort', { episode: nextEp }) : `✓ ${t('widget.completed')}` });
+			card.createSpan({ cls: 'hoard-widget-now__episode', text: nextEp !== null ? t('widget.episodeShort', { episode: nextEp }) : `✓ ${t('widget.completed')}` });
 		}
 
 		const progress = this.dataManager.getProgress(pinned);
-		const barWrap = card.createDiv({ cls: 'hoard-now-bar-wrap' });
-		const bar = barWrap.createDiv({ cls: 'hoard-now-bar' });
+		const barWrap = card.createDiv({ cls: 'hoard-widget-now__bar-wrap' });
+		const bar = barWrap.createDiv({ cls: 'hoard-widget-now__bar' });
 		bar.style.width = `${progress}%`;
-		card.createSpan({ cls: 'hoard-now-pct', text: `${progress}%` });
+		card.createSpan({ cls: 'hoard-widget-now__percent', text: `${progress}%` });
 	}
 
 	private renderNowFull(
@@ -654,28 +654,28 @@ export class WidgetRenderer {
 		pinnedGroup: HoardGroup | null,
 	): void {
 		el.empty();
-		const card = el.createDiv({ cls: 'hoard-full-card hoard-full-card-nw' });
-		card.createDiv({ cls: 'hoard-full-card-header', text: t('widget.nowWatchingHeader') });
+		const card = el.createDiv({ cls: 'hoard-widget__full-card hoard-widget__full-card--now-watching' });
+		card.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.nowWatchingHeader') });
 
 		if (!pinnedTitle && !pinnedGroup) {
-			card.createDiv({ cls: 'hoard-full-card-sub', text: t('widget.pinToWatch') });
+			card.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.pinToWatch') });
 			return;
 		}
 
 		if (pinnedGroup) {
-			card.createDiv({ cls: 'hoard-full-card-title', text: pinnedGroup.name });
+			card.createDiv({ cls: 'hoard-widget__full-card-title', text: pinnedGroup.name });
 			const { count, progress } = this.pinnedGroupStats(pinnedGroup);
-			const bottomRow = card.createDiv({ cls: 'hoard-nw-bottom-row' });
-			bottomRow.createSpan({ cls: 'hoard-full-card-sub', text: t('widget.titlesCount', { count }) });
+			const bottomRow = card.createDiv({ cls: 'hoard-widget-now__full-bottom-row' });
+			bottomRow.createSpan({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.titlesCount', { count }) });
 			this.renderNwBarCol(bottomRow, progress);
 			return;
 		}
 
 		const pinned = pinnedTitle!;
-		card.createDiv({ cls: 'hoard-full-card-title', text: pinned.title });
+		card.createDiv({ cls: 'hoard-widget__full-card-title', text: pinned.title });
 
 		const progress = this.dataManager.getProgress(pinned);
-		const bottomRow = card.createDiv({ cls: 'hoard-nw-bottom-row' });
+		const bottomRow = card.createDiv({ cls: 'hoard-widget-now__full-bottom-row' });
 
 		this.renderBadge(bottomRow, pinned.type, this.plugin.settings.types, typeLabel(pinned.type));
 
@@ -691,7 +691,7 @@ export class WidgetRenderer {
 
 	private renderWlNowNext(_source: string, el: HTMLElement): void {
 		el.empty();
-		el.addClass('hoard-wnownext');
+		el.addClass('hoard-widget-now-next');
 
 		const { pinnedTitle, pinnedGroup } = this.getPinned();
 
@@ -707,39 +707,39 @@ export class WidgetRenderer {
 		bestEntry: NextRelease | null,
 	): void {
 		el.empty();
-		const card = el.createDiv({ cls: 'hoard-full-card hoard-full-card-now-next' });
-		const cols = card.createDiv({ cls: 'hoard-double-cols' });
+		const card = el.createDiv({ cls: 'hoard-widget__full-card hoard-widget__full-card--now-next' });
+		const cols = card.createDiv({ cls: 'hoard-widget-now-next__columns' });
 
 		// left column: Now Watching
-		const nowCol = cols.createDiv({ cls: 'hoard-double-col' });
-		nowCol.createDiv({ cls: 'hoard-full-card-header', text: t('widget.nowWatchingHeader') });
+		const nowCol = cols.createDiv({ cls: 'hoard-widget-now-next__column' });
+		nowCol.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.nowWatchingHeader') });
 
 		if (!pinnedTitle && !pinnedGroup) {
-			nowCol.createDiv({ cls: 'hoard-full-card-sub', text: t('widget.nothingPinned') });
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.nothingPinned') });
 		} else if (pinnedGroup) {
-			nowCol.createDiv({ cls: 'hoard-full-card-title', text: pinnedGroup.name });
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-title', text: pinnedGroup.name });
 			const { count, progress } = this.pinnedGroupStats(pinnedGroup);
-			nowCol.createDiv({ cls: 'hoard-full-card-sub', text: `${t('widget.titlesCount', { count })} · ${progress}%` });
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: `${t('widget.titlesCount', { count })} · ${progress}%` });
 		} else {
 			const pinned = pinnedTitle!;
-			nowCol.createDiv({ cls: 'hoard-full-card-title', text: pinned.title });
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-title', text: pinned.title });
 			const progress = this.dataManager.getProgress(pinned);
-			nowCol.createDiv({ cls: 'hoard-full-card-sub', text: `${progress}%` });
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: `${progress}%` });
 		}
 
-		cols.createDiv({ cls: 'hoard-vert-sep' });
+		cols.createDiv({ cls: 'hoard-vertical-separator' });
 
 		// right column: Up Next
-		const nextCol = cols.createDiv({ cls: 'hoard-double-col' });
-		nextCol.createDiv({ cls: 'hoard-full-card-header', text: t('widget.upcomingNextHeader') });
+		const nextCol = cols.createDiv({ cls: 'hoard-widget-now-next__column' });
+		nextCol.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.upcomingNextHeader') });
 
 		if (!bestEntry) {
-			nextCol.createDiv({ cls: 'hoard-full-card-sub', text: t('widget.noUpcoming') });
+			nextCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.noUpcoming') });
 		} else {
-			nextCol.createDiv({ cls: 'hoard-full-card-title', text: bestEntry.titleName });
+			nextCol.createDiv({ cls: 'hoard-widget__full-card-title', text: bestEntry.titleName });
 			const daysUntil = bestEntry.daysUntil;
 			const countdown = daysUntil === 0 ? t('widget.today') : daysUntil === 1 ? t('widget.tomorrow') : t('widget.inDaysShort', { count: daysUntil });
-			nextCol.createDiv({ cls: 'hoard-full-card-sub', text: `${bestEntry.releaseDate} · ${countdown}` });
+			nextCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: `${bestEntry.releaseDate} · ${countdown}` });
 		}
 	}
 }

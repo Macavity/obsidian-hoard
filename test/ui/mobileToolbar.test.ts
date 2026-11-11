@@ -16,7 +16,7 @@ function setup(mobile: boolean): { controls: El; addBtn: El; onToggleChange: Ret
 		renderSearch: (p) => { (p as unknown as El).createDiv({ cls: 'search' }); },
 		renderActions: (p) => { (p as unknown as El).createDiv({ cls: 'actions' }); },
 		renderAdd: (p) => {
-			addBtn = (p as unknown as El).createEl('button', { cls: 'hoard-add-btn', text: '+ add' });
+			addBtn = (p as unknown as El).createEl('button', { cls: 'hoard-toolbar__add-btn', text: '+ add' });
 			return addBtn as unknown as HTMLButtonElement;
 		},
 		expanded: false,
@@ -31,16 +31,16 @@ describe('renderToolbarWithMobileToggle', () => {
 	it('mobile: add button sits outside the fading panes, as an icon with the old text as label', () => {
 		const { controls, addBtn } = setup(true);
 		expect(controls.children.map((c) => (c === addBtn ? 'add' : [...c.classes][0])))
-			.toEqual(['hoard-toolbar-slot', 'add', 'hoard-btn']);
-		expect(controls.find('hoard-toolbar-slot')!.find('hoard-add-btn')).toBeUndefined();
-		expect(addBtn.has('hoard-toolbar-add-btn')).toBe(true);
+			.toEqual(['hoard-toolbar__slot', 'add', 'hoard-btn']);
+		expect(controls.find('hoard-toolbar__slot')!.find('hoard-toolbar__add-btn')).toBeUndefined();
+		expect(addBtn.has('hoard-toolbar__add-btn--icon-only')).toBe(true);
 		expect(addBtn.attr['aria-label']).toBe('add');
 		expect(addBtn.attr['data-icon']).toBe('plus');
 	});
 
 	it('mobile: toggle shows a filter icon, switches to a search icon on click', () => {
 		const { controls, onToggleChange } = setup(true);
-		const toggle = controls.find('hoard-toolbar-toggle-btn')!;
+		const toggle = controls.find('hoard-toolbar__toggle-btn')!;
 		expect(toggle.attr['data-icon']).toBe('sliders-horizontal');
 		expect(toggle.attr['aria-label']).toBe('Show filters and actions');
 		toggle.fire('click');
@@ -52,18 +52,18 @@ describe('renderToolbarWithMobileToggle', () => {
 
 	it('mobile: the hidden pane is inert, so keyboard focus cannot reach its controls', () => {
 		const { controls } = setup(true);
-		const [search, actions] = controls.find('hoard-toolbar-slot')!.children as unknown as Array<El & { inert?: boolean }>;
+		const [search, actions] = controls.find('hoard-toolbar__slot')!.children as unknown as Array<El & { inert?: boolean }>;
 		expect([search!.inert, actions!.inert]).toEqual([false, true]);
-		controls.find('hoard-toolbar-toggle-btn')!.fire('click');
+		controls.find('hoard-toolbar__toggle-btn')!.fire('click');
 		expect([search!.inert, actions!.inert]).toEqual([true, false]);
 	});
 
 	it('desktop: search, actions, add inline in order; add keeps its text', () => {
 		const { controls, addBtn } = setup(false);
-		expect(controls.children.map((c) => [...c.classes][0])).toEqual(['search', 'actions', 'hoard-add-btn']);
-		expect(controls.find('hoard-toolbar-toggle-btn')).toBeUndefined();
+		expect(controls.children.map((c) => [...c.classes][0])).toEqual(['search', 'actions', 'hoard-toolbar__add-btn']);
+		expect(controls.find('hoard-toolbar__toggle-btn')).toBeUndefined();
 		expect(addBtn.text).toBe('+ add');
-		expect(addBtn.has('hoard-toolbar-add-btn')).toBe(false);
+		expect(addBtn.has('hoard-toolbar__add-btn--icon-only')).toBe(false);
 	});
 });
 
@@ -79,9 +79,9 @@ describe('renderHeaderToolbar', () => {
 			expanded: false,
 			onToggleChange: () => {},
 		});
-		const controls = header.find('hoard-header-controls')!;
-		expect(controls.find('hoard-toolbar-actions')).toBe(actionsWrap);
-		controls.find('hoard-add-btn')!.fire('click');
+		const controls = header.find('hoard-toolbar__controls')!;
+		expect(controls.find('hoard-toolbar__actions')).toBe(actionsWrap);
+		controls.find('hoard-toolbar__add-btn')!.fire('click');
 		expect(onAdd).toHaveBeenCalledOnce();
 	});
 });

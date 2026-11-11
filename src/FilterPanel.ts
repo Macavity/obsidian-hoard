@@ -13,7 +13,7 @@ import { t } from './i18n';
 /** A boolean toggle row rendered inside a section, under its ◆ All row. */
 export interface FilterSpecialToggle {
 	text: string;
-	/** Class for the label span (e.g. hoard-recently-arrived-filter). */
+	/** Class for the label span (e.g. hoard-filter-panel__recently-arrived-filter). */
 	spanCls?: string;
 	get: () => boolean;
 	set: (v: boolean) => void;
@@ -75,9 +75,9 @@ export interface FilterPanelConfig {
  * `onToggle`; the checkbox's native toggle is cancelled because the caller drives its state.
  */
 export function renderAllToggleRow(content: HTMLElement, onToggle: () => void): HTMLInputElement {
-	const allRow = content.createDiv({ cls: 'hoard-filter-checkbox-row' });
+	const allRow = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
 	const allCb = allRow.createEl('input', { attr: { type: 'checkbox' } });
-	allRow.createSpan({ cls: 'hoard-filter-all-toggle', text: `◆ ${t('ui.toolbar.all')}` });
+	allRow.createSpan({ cls: 'hoard-filter-panel__all-toggle', text: `◆ ${t('ui.toolbar.all')}` });
 	allCb.addEventListener('click', (ev) => { ev.stopPropagation(); onToggle(); });
 	allRow.addEventListener('click', (ev) => {
 		if (ev.target === allCb) return;
@@ -88,10 +88,10 @@ export function renderAllToggleRow(content: HTMLElement, onToggle: () => void): 
 }
 
 export function toggleFilterPanel(cfg: FilterPanelConfig): void {
-	const existing = activeDocument.querySelector('.hoard-filters-panel');
+	const existing = activeDocument.querySelector('.hoard-filter-panel');
 	if (existing) { existing.remove(); return; }
 
-	const panel = activeDocument.body.createDiv({ cls: 'hoard-dropdown hoard-filters-panel hoard-filters-panel-popup' });
+	const panel = activeDocument.body.createDiv({ cls: 'hoard-popover hoard-filter-panel hoard-filter-panel--popup' });
 	const rect = cfg.anchor.getBoundingClientRect();
 	panel.style.top = `${rect.bottom + 4}px`;
 	panel.style.left = `${rect.left}px`;
@@ -117,16 +117,16 @@ export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 		}
 	};
 
-	const globalRow = panel.createDiv({ cls: 'hoard-filter-global-btns' });
+	const globalRow = panel.createDiv({ cls: 'hoard-filter-panel__global-btns' });
 
-	const selectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('list.filter.selectAll') });
+	const selectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('list.filter.selectAll') });
 	selectAllBtn.addEventListener('click', (ev) => {
 		ev.stopPropagation();
 		for (const { excludeSet } of cfg.sections) excludeSet.clear();
 		for (const { cb } of allCheckboxRefs) cb.checked = true;
 		resetGlobals();
 	});
-	const deselectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('ui.toolbar.deselectAll') });
+	const deselectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('ui.toolbar.deselectAll') });
 	deselectAllBtn.addEventListener('click', (ev) => {
 		ev.stopPropagation();
 		for (const { opts, excludeSet } of cfg.sections) {
@@ -138,7 +138,7 @@ export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 
 	// Save / Delete preset button
 	const saveDeleteBtn = globalRow.createEl('button', {
-		cls: 'hoard-btn hoard-btn-sm',
+		cls: 'hoard-btn hoard-btn--sm',
 		text: cfg.presetExists ? t('common.delete') : t('common.save'),
 	});
 	saveDeleteBtn.addEventListener('click', (ev) => {
@@ -157,16 +157,16 @@ export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 	// favorites-only toggle — standalone row above the sections
 	if (cfg.favorites) {
 		const fav = cfg.favorites;
-		const favRow = panel.createDiv({ cls: 'hoard-filter-checkbox-row hoard-filter-favorites-row' });
+		const favRow = panel.createDiv({ cls: 'hoard-filter-panel__checkbox-row hoard-filter-panel__checkbox-row--favorites' });
 		const favCb = favRow.createEl('input', { attr: { type: 'checkbox' } });
 		favCb.checked = fav.get();
-		favRow.createSpan({ cls: 'hoard-favorites-filter', text: `♥ ${t('list.shelves.favorites')}` });
+		favRow.createSpan({ cls: 'hoard-filter-panel__favorites-filter', text: `♥ ${t('list.shelves.favorites')}` });
 		favCb.addEventListener('change', () => { fav.set(favCb.checked); });
 		globalResetRefs.push({ cb: favCb, set: fav.set });
 	}
 
 	for (const row of cfg.standaloneRows ?? []) {
-		const rowEl = panel.createDiv({ cls: 'hoard-filter-checkbox-row hoard-filter-favorites-row' });
+		const rowEl = panel.createDiv({ cls: 'hoard-filter-panel__checkbox-row hoard-filter-panel__checkbox-row--favorites' });
 		const cb = rowEl.createEl('input', { attr: { type: 'checkbox' } });
 		cb.checked = row.get();
 		rowEl.createSpan(row.spanCls ? { cls: row.spanCls, text: row.text } : { text: row.text });
@@ -181,13 +181,13 @@ export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 	}
 
 	for (const { label, opts, excludeSet, formatOpt, specials } of cfg.sections) {
-		const section = panel.createDiv({ cls: 'hoard-filter-section' });
+		const section = panel.createDiv({ cls: 'hoard-filter-panel__section' });
 
-		const sectionHeader = section.createDiv({ cls: 'hoard-filter-section-header' });
-		sectionHeader.createSpan({ cls: 'hoard-filter-label', text: label });
-		const chevron = sectionHeader.createSpan({ cls: 'hoard-filter-chevron', text: '▼' });
+		const sectionHeader = section.createDiv({ cls: 'hoard-filter-panel__section-header' });
+		sectionHeader.createSpan({ cls: 'hoard-filter-panel__label', text: label });
+		const chevron = sectionHeader.createSpan({ cls: 'hoard-filter-panel__chevron', text: '▼' });
 
-		const content = section.createDiv({ cls: 'hoard-filter-section-content hoard-hidden' });
+		const content = section.createDiv({ cls: 'hoard-filter-panel__section-content hoard-hidden' });
 
 		sectionHeader.addEventListener('click', (ev) => {
 			ev.stopPropagation();
@@ -205,7 +205,7 @@ export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 		const exclusiveRefs: Array<{ cb: HTMLInputElement; set: (v: boolean) => void }> = [];
 
 		for (const special of specials ?? []) {
-			const row = content.createDiv({ cls: 'hoard-filter-checkbox-row' });
+			const row = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
 			const cb = row.createEl('input', { attr: { type: 'checkbox' } });
 			cb.checked = special.get();
 			row.createSpan(special.spanCls ? { cls: special.spanCls, text: special.text } : { text: special.text });
@@ -221,11 +221,11 @@ export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 
 			if (special.mode === 'exclusive') exclusiveRefs.push({ cb, set: special.set });
 			if (special.resetOnGlobal) globalResetRefs.push({ cb, set: special.set });
-			if (special.dividerAfter) content.createDiv({ cls: 'hoard-filter-section-divider' });
+			if (special.dividerAfter) content.createDiv({ cls: 'hoard-filter-panel__section-divider' });
 		}
 
 		for (const opt of opts) {
-			const cbRow = content.createDiv({ cls: 'hoard-filter-checkbox-row' });
+			const cbRow = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
 			const cb = cbRow.createEl('input', { attr: { type: 'checkbox' } });
 			cb.checked = !excludeSet.has(opt);
 			cbRow.createSpan({ text: formatOpt ? formatOpt(opt) : opt });
@@ -263,7 +263,7 @@ export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 	}
 
 	// Apply — commits the draft, re-renders, closes the panel
-	const applyBtn = panel.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-filter-apply-btn', text: t('list.filter.apply') });
+	const applyBtn = panel.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-filter-panel__apply-btn', text: t('list.filter.apply') });
 	applyBtn.addEventListener('click', (ev) => {
 		ev.stopPropagation();
 		cfg.onApply();

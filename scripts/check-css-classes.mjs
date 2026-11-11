@@ -56,12 +56,11 @@ export function runCheck() {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
 	const { unreferenced, staleAllowlist, unimported, shortTokens: short, notBem: nonBem } = runCheck();
-	const strict = process.env.HOARD_CSS_STRICT === "1";
 	if (unreferenced.length) console.error(`Dead CSS: no source references ${unreferenced.map((c) => `.${c}`).join(", ")}`);
 	if (staleAllowlist.length) console.error(`Stale OBSIDIAN_CLASSES entries in scripts/check-css-classes.mjs: ${staleAllowlist.join(", ")}`);
 	if (unimported.length) console.error(`Not imported by src/styles/index.css: ${unimported.join(", ")}`);
-	if (short.length) console.error(`${strict ? "Short" : "Short (not enforced yet)"} name parts: ${short.length} classes`);
-	if (nonBem.length) console.error(`${strict ? "Not BEM" : "Not BEM (not enforced yet)"}: ${nonBem.length} classes`);
-	if (unreferenced.length || staleAllowlist.length || unimported.length || (strict && (short.length || nonBem.length))) process.exit(1);
+	if (short.length) console.error(`Abbreviated name parts (spell them out or extend ALLOWED_SHORT): ${short.map((c) => `.${c}`).join(", ")}`);
+	if (nonBem.length) console.error(`Not hoard-<block>[__<element>][--<modifier>]: ${nonBem.map((c) => `.${c}`).join(", ")}`);
+	if (unreferenced.length || staleAllowlist.length || unimported.length || short.length || nonBem.length) process.exit(1);
 	console.log("✓ Every CSS class is referenced");
 }

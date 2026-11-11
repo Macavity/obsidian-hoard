@@ -2,7 +2,7 @@
 
 /* Editable tag name (Settings → Games) — reads as text until focused */
 
-.hoard-tag-name-input {
+.hoard-tag-editor__name-input {
   border: none;
   background: transparent;
   color: var(--text-normal);
@@ -17,11 +17,11 @@
   border-radius: 3px;
 }
 
-.hoard-tag-name-input:hover {
+.hoard-tag-editor__name-input:hover {
   background: var(--background-modifier-hover);
 }
 
-.hoard-tag-name-input:focus {
+.hoard-tag-editor__name-input:focus {
   background: var(--background-primary);
   box-shadow: 0 0 0 1px var(--interactive-accent);
   outline: none;
@@ -32,7 +32,7 @@
    --modal-background, not --background-primary: on mobile those differ and the footer
    painted itself as a black bar over a lighter modal. */
 
-.hoard-sticky-bottom {
+.hoard-sticky-footer {
   position: sticky;
   bottom: 0;
   z-index: 3;
@@ -43,7 +43,7 @@
 }
 
 /* closes the gap under the bar — see pinModalFooter */
-.modal-content.hoard-has-sticky-footer {
+.modal-content.hoard-sticky-footer__host {
   padding-bottom: 0;
 }
 

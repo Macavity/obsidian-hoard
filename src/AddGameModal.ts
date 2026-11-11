@@ -103,7 +103,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		onAdded: () => void,
 		prefill?: { searchQuery?: string; title?: string },
 	) {
-		super(app, t('add.game.heading'), ['hoard-add-modal', 'hoard-add-game-modal']);
+		super(app, t('add.game.heading'), ['hoard-add-modal', 'hoard-add-game']);
 		this.plugin = plugin;
 		this.gameData = gameData;
 		this.onAdded = onAdded;
@@ -218,7 +218,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 
 		titleField(form, this.fieldTitle, t('add.game.titlePlaceholder'), (v) => { this.fieldTitle = v; });
 
-		const devPubRow = form.createDiv({ cls: 'hoard-modal-row hoard-modal-row-pair' });
+		const devPubRow = form.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });
 		textInput(makeCell(devPubRow, t('add.game.developer')), {
 			value: this.fieldDeveloper,
 			placeholder: t('add.game.developer'),
@@ -231,7 +231,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		});
 
 		const settings = this.gameData.getSettings();
-		const genrePriRow = form.createDiv({ cls: 'hoard-modal-row hoard-modal-row-pair' });
+		const genrePriRow = form.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });
 		nameSelect(makeCell(genrePriRow, t('add.game.genre')), settings.types.map((t) => t.name), this.fieldGenre,
 			(v) => { this.fieldGenre = v; });
 		nameSelect(makeCell(genrePriRow, t('add.priority'), true), this.plugin.settings.priorities.map((p) => p.name),
@@ -239,7 +239,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 
 		// status + date started paired 50/50 (the auto "To be released" is excluded — it follows the
 		// release date)
-		const statusStartRow = form.createDiv({ cls: 'hoard-modal-row hoard-modal-row-pair' });
+		const statusStartRow = form.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });
 		const statuses = settings.statuses.filter((s) => s.name !== GAME_AUTO_STATUS);
 		nameSelect(makeCell(statusStartRow, t('add.status')), statuses.map((s) => s.name), this.fieldStatus,
 			(v) => { this.fieldStatus = v; }, false, gameStatusLabel);
@@ -247,7 +247,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		const startCell = makeCell(statusStartRow, t('add.dateStarted'), true);
 		createDatePicker({
 			parent: startCell,
-			inputCls: 'hoard-modal-input',
+			inputCls: 'hoard-modal__input',
 			value: this.fieldDateStarted || null,
 			onChange: (iso) => { this.fieldDateStarted = iso ?? ''; },
 		});
@@ -256,7 +256,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 
 		const storeRow = makeRow(t('add.game.storeLink'));
 		const storeInput = storeRow.createEl('input', {
-			cls: 'hoard-modal-input',
+			cls: 'hoard-modal__input',
 			attr: { type: 'url', placeholder: 'https://store.steampowered.com/...' },
 		});
 		storeInput.value = this.fieldStoreUrl;
@@ -305,7 +305,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		// platforms — the shared coloured toggle chips, driven by Settings → Customize → Games
 		const platRow = makeRow(t('add.game.platforms'));
 		renderTagChips({
-			wrap: platRow.createDiv({ cls: 'hoard-game-modal-platforms hoard-add-game-platforms' }),
+			wrap: platRow.createDiv({ cls: 'hoard-game-detail__platforms hoard-add-game__platforms' }),
 			tags: settings.platforms,
 			selected: this.fieldPlatforms,
 			onToggle: (sel) => { this.fieldPlatforms = sel; },
@@ -314,8 +314,8 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		// group fields (mutually exclusive, the AddTitleModal pattern)
 		renderGroupPicker(form, this.gameData.getGroups(), this.group);
 
-		const btnRow = form.createDiv({ cls: 'hoard-modal-btn-row' });
-		const addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('add.game.submit') });
+		const btnRow = form.createDiv({ cls: 'hoard-modal__btn-row' });
+		const addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('add.game.submit') });
 		addBtn.addEventListener('click', () => void this.addGame());
 	}
 

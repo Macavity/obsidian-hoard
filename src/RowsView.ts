@@ -25,7 +25,7 @@ export interface ShelfSelect {
 
 /** Tri-state box: all / none / some of the section's ids selected. */
 function renderShelfSelect(parent: HTMLElement, label: string, spec: ShelfSelect): void {
-	const box = parent.createEl('button', { cls: 'hoard-shelf-select' });
+	const box = parent.createEl('button', { cls: 'hoard-rows-view__shelf-select' });
 	const countSelected = (): number => spec.ids.reduce((n, id) => n + (spec.selected.has(id) ? 1 : 0), 0);
 
 	const refresh = (): void => {
@@ -54,10 +54,10 @@ export function renderShelfTitle(
 	count: number,
 	select?: ShelfSelect,
 ): void {
-	const titleEl = parent.createDiv({ cls: 'hoard-rows-shelf-title' });
+	const titleEl = parent.createDiv({ cls: 'hoard-rows-view__shelf-title' });
 	if (select && select.ids.length > 0) renderShelfSelect(titleEl, label, select);
 	titleEl.createSpan({ text: label });
-	titleEl.createSpan({ cls: 'hoard-rows-shelf-count', text: `(${count})` });
+	titleEl.createSpan({ cls: 'hoard-rows-view__shelf-count', text: `(${count})` });
 }
 
 /**
@@ -74,13 +74,13 @@ export function renderShelf<T>(
 	select?: ShelfSelect,
 ): void {
 	if (items.length === 0 && hideWhenEmpty) return;
-	const shelf = parent.createDiv({ cls: 'hoard-rows-shelf' });
+	const shelf = parent.createDiv({ cls: 'hoard-rows-view__shelf' });
 	renderShelfTitle(shelf, label, items.length, select);
 	if (items.length === 0) {
-		shelf.createDiv({ cls: 'hoard-rows-shelf-empty', text: emptyMsg });
+		shelf.createDiv({ cls: 'hoard-rows-view__shelf-empty', text: emptyMsg });
 		return;
 	}
-	const strip = shelf.createDiv({ cls: 'hoard-rows-strip' });
+	const strip = shelf.createDiv({ cls: 'hoard-rows-view__strip' });
 	for (const item of items) {
 		renderCard(strip, item);
 	}

@@ -7,13 +7,13 @@
   gap: 14px;
 }
 
-.hoard-reading-detail-header {
+.hoard-reading-detail__header {
   display: flex;
   gap: 14px;
   align-items: flex-start;
 }
 
-.hoard-reading-detail-cover {
+.hoard-reading-detail__cover {
   position: relative;
   width: 90px;
   aspect-ratio: 2 / 3;
@@ -26,31 +26,31 @@
   background: var(--background-secondary);
 }
 
-.hoard-reading-detail-cover-icon {
+.hoard-reading-detail__cover-icon {
   font-size: 2.2rem;
   opacity: 0.75;
 }
 
-.hoard-reading-detail-title {
+.hoard-reading-detail__title {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
   color: var(--text-normal);
 }
 
-.hoard-reading-detail-author {
+.hoard-reading-detail__author {
   font-size: 13px;
   color: var(--text-muted);
 }
 
-.hoard-reading-detail-meta-row {
+.hoard-reading-detail__meta-row {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-top: 2px;
 }
 
-.hoard-reading-detail-status {
+.hoard-reading-detail__status {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -63,7 +63,7 @@
 }
 
 /* colour dot inside the pill (Games) */
-.hoard-detail-status-dot {
+.hoard-status-dropdown__status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -71,34 +71,34 @@
   flex-shrink: 0;
 }
 
-.hoard-detail-priority-empty .hoard-detail-status-dot {
+.hoard-reading-detail__status--priority-empty .hoard-status-dropdown__status-dot {
   background: var(--text-faint);
 }
 
 /* placeholder priority pill, muted */
-.hoard-detail-priority-empty {
+.hoard-reading-detail__status--priority-empty {
   background-color: var(--background-modifier-border);
   color: var(--text-muted);
 }
 
-.hoard-reading-detail-stars {
+.hoard-reading-detail__stars {
   display: flex;
   gap: 2px;
 }
 
-.hoard-reading-external-link-wrap {
+.hoard-reading-detail__external-link-wrap {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.hoard-reading-external-link-input {
+.hoard-reading-detail__external-link-input {
   flex: 1;
   min-width: 160px;
   font-size: 12px;
 }
 
-.hoard-reading-detail-vault-row {
+.hoard-reading-detail__vault-row {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -107,7 +107,7 @@
   color: var(--text-muted);
 }
 
-.hoard-reading-detail-vault-path {
+.hoard-reading-detail__vault-path {
   color: var(--text-normal);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -115,25 +115,25 @@
   max-width: 100%;
 }
 
-.hoard-reading-detail-vault-empty {
+.hoard-reading-detail__vault-empty {
   font-style: italic;
 }
 
 /* Detail progress */
-.hoard-reading-detail-progress {
+.hoard-reading-detail__progress {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.hoard-reading-arc-row {
+.hoard-reading-detail__arc-row {
   display: flex;
   justify-content: center;
   gap: 24px;
   flex-wrap: wrap;
 }
 
-.hoard-reading-arc-col {
+.hoard-reading-detail__arc-column {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -142,89 +142,89 @@
 }
 
 /* words mode: 6-digit counters need more room */
-.hoard-reading-arc-col-wide {
+.hoard-reading-detail__arc-column--wide {
   min-width: 150px;
 }
 
-.hoard-reading-arc-col-wide .hoard-reading-arc-input {
+.hoard-reading-detail__arc-column--wide .hoard-reading-detail__arc-input {
   width: 74px;
 }
 
-.hoard-reading-arc-col-wide .hoard-reading-arc-total-input {
+.hoard-reading-detail__arc-column--wide .hoard-reading-detail__arc-total-input {
   width: 70px;
 }
 
-.hoard-reading-arc-svg-wrap {
+.hoard-reading-detail__arc-svg-wrap {
   width: 100px;
   height: 56px;
   overflow: hidden;
 }
 
-.hoard-reading-arc-svg {
+.hoard-reading-detail__arc-svg {
   width: 100px;
   height: 100px;
   display: block;
 }
 
-.hoard-reading-arc-pct {
+.hoard-reading-detail__arc-percent {
   font-size: 14px;
   font-weight: 600;
   fill: var(--text-normal);
 }
 
-.hoard-reading-arc-controls {
+.hoard-reading-detail__arc-controls {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.hoard-reading-step-btn {
+.hoard-reading-detail__step-btn {
   min-width: 32px;
   padding: 2px 8px;
 }
 
-.hoard-reading-arc-input {
+.hoard-reading-detail__arc-input {
   width: 52px;
   text-align: center;
 }
 
-.hoard-reading-arc-label {
+.hoard-reading-detail__arc-label {
   font-size: 13px;
   color: var(--text-muted);
   text-align: center;
 }
 
-.hoard-reading-arc-total-input {
+.hoard-reading-detail__arc-total-input {
   width: 48px;
   text-align: center;
 }
 
 /* Detail details grid */
-.hoard-reading-detail-details {
+.hoard-reading-detail__details {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.hoard-reading-detail-grid {
+.hoard-reading-detail__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px 16px;
 }
 
-.hoard-reading-detail-cell {
+.hoard-reading-detail__cell {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
 /* ADDED + RELEASE share one grid cell so the modal keeps its height. */
-.hoard-reading-detail-cell-pair {
+.hoard-reading-detail__cell--pair {
   flex-direction: row;
   gap: 16px;
 }
 
-.hoard-reading-detail-pair-col {
+.hoard-reading-detail__pair-column {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -232,7 +232,7 @@
   flex: 1;
 }
 
-.hoard-reading-detail-cell-label {
+.hoard-reading-detail__cell-label {
   font-size: 10.5px;
   font-weight: 600;
   text-transform: uppercase;
@@ -240,23 +240,23 @@
   color: var(--text-muted);
 }
 
-.hoard-reading-detail-cell-value {
+.hoard-reading-detail__cell-value {
   font-size: 13px;
   color: var(--text-normal);
 }
 
-.hoard-reading-detail-link {
+.hoard-reading-detail__link {
   color: var(--interactive-accent);
   text-decoration: underline;
 }
 
-.hoard-reading-detail-id-value {
+.hoard-reading-detail__id-value {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.hoard-reading-detail-id-edit {
+.hoard-reading-detail__id-edit {
   flex: 0 0 auto;
   padding: 0 6px;
   min-width: 0;
@@ -264,25 +264,25 @@
 }
 
 /* Inline-editable title / author */
-.hoard-reading-detail-title-wrap {
+.hoard-reading-detail__title-wrap {
   line-height: 1;
 }
 
-.hoard-reading-detail-author-wrap {
+.hoard-reading-detail__author-wrap {
   line-height: 1;
 }
 
 /* dotted editable hint: transparent border-bottom that gains colour */
-.hoard-reading-detail-editable-text {
+.hoard-reading-detail__editable-text {
   cursor: text;
   border-bottom: 1px dotted transparent;
 }
 
-.hoard-reading-detail-editable-text:hover {
+.hoard-reading-detail__editable-text:hover {
   border-bottom-color: var(--text-faint);
 }
 
-.hoard-reading-detail-title-input {
+.hoard-reading-detail__title-input {
   width: 100%;
   box-sizing: border-box;
   font-size: 16px;
@@ -299,7 +299,7 @@
   line-height: 1.2;
 }
 
-.hoard-reading-detail-author-input {
+.hoard-reading-detail__author-input {
   width: 100%;
   box-sizing: border-box;
   font-size: 13px;
@@ -315,11 +315,11 @@
 }
 
 /* Inline status badge & dropdown */
-.hoard-reading-detail-status-wrap {
+.hoard-reading-detail__status-wrap {
   display: inline-block;
 }
 
-.hoard-reading-status-dropdown {
+.hoard-status-dropdown {
   position: fixed;
   background: var(--background-primary);
   border: 0.5px solid var(--background-modifier-border);
@@ -330,7 +330,7 @@
   z-index: 1000;
 }
 
-.hoard-reading-status-option {
+.hoard-status-dropdown__option {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -340,11 +340,11 @@
   color: var(--text-normal);
 }
 
-.hoard-reading-status-option:hover {
+.hoard-status-dropdown__option:hover {
   background: var(--background-modifier-hover);
 }
 
-.hoard-reading-status-option-dot {
+.hoard-status-dropdown__option-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -355,25 +355,25 @@
 }
 
 /* Editable date cells */
-.hoard-reading-detail-cell-date {
+.hoard-reading-detail__cell-date {
   display: flex;
   align-items: center;
   gap: 5px;
   margin-top: 2px;
 }
 
-.hoard-reading-detail-today-btn {
+.hoard-reading-detail__today-btn {
   font-size: 10px;
   padding: 1px 6px;
   line-height: 1.4;
 }
 
-.hoard-reading-detail-today-btn.is-dimmed {
+.hoard-reading-detail__today-btn.is-dimmed {
   opacity: 0.4;
   cursor: default;
 }
 
-.hoard-reading-detail-date-input {
+.hoard-reading-detail__date-input {
   font-size: 12px;
   width: 88px;
   padding: 1px 5px;
@@ -385,7 +385,7 @@
 }
 
 /* Detail footer */
-.hoard-reading-detail-footer {
+.hoard-reading-detail__footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -394,13 +394,13 @@
   border-top: 0.5px solid var(--background-modifier-border);
 }
 
-.hoard-reading-detail-footer-left,
-.hoard-reading-detail-footer-right {
+.hoard-reading-detail__footer-left,
+.hoard-reading-detail__footer-right {
   display: flex;
   gap: 8px;
 }
 
-.hoard-reading-detail-delete {
-  /* uses .hoard-delete-btn — color via .hoard-btn-danger */
+.hoard-reading-detail__delete {
+  /* uses .hoard-accordion__delete-btn — color via .hoard-btn--danger */
 }
 

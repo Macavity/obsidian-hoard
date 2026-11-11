@@ -82,10 +82,10 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 	const { anchor, container, current, allowCustom, onPick } = opts;
 
 	// remove any palette already open in this container
-	container.querySelectorAll('.hoard-reading-col-palette').forEach((el) => el.remove());
+	container.querySelectorAll('.hoard-color-picker__palette').forEach((el) => el.remove());
 
 	const rect = anchor.getBoundingClientRect();
-	const palette = container.createDiv({ cls: 'hoard-reading-col-palette' });
+	const palette = container.createDiv({ cls: 'hoard-color-picker__palette' });
 	palette.style.top = `${rect.bottom + 4}px`;
 	palette.style.left = `${rect.left}px`;
 	// capture the owning document once so add/remove can't desync across popout windows
@@ -105,7 +105,7 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 
 	let matchedPreset = false;
 	for (const { color600, color50 } of FIELD_COLORS) {
-		const swatch = palette.createEl('button', { cls: 'hoard-reading-col-palette-swatch' });
+		const swatch = palette.createEl('button', { cls: 'hoard-color-picker__palette-swatch' });
 		swatch.style.backgroundColor = color50;
 		swatch.style.borderColor = color600;
 		if (normalizeHex(color600) === normCurrent) {
@@ -122,12 +122,12 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 
 	if (allowCustom) {
 		const customSwatch = palette.createEl('button', {
-			cls: 'hoard-reading-col-palette-swatch hoard-color-custom-swatch',
+			cls: 'hoard-color-picker__palette-swatch hoard-color-picker__palette-swatch--custom',
 		});
 		customSwatch.title = t('misc.colorPicker.custom');
 		if (matchedPreset) {
 			// current colour is a preset: present the custom swatch as a rainbow invite
-			customSwatch.addClass('hoard-color-custom-rainbow');
+			customSwatch.addClass('hoard-color-picker__palette-swatch--rainbow');
 		} else {
 			// current colour is custom: show it, marked active
 			customSwatch.addClass('is-active');
@@ -136,7 +136,7 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 		}
 
 		const colorInput = customSwatch.createEl('input', {
-			cls: 'hoard-color-custom-input',
+			cls: 'hoard-color-picker__custom-input',
 			attr: { type: 'color' },
 		});
 		colorInput.value = normCurrent;
@@ -154,7 +154,7 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 
 	// clear / "no colour" swatch — reverts the consumer to its default appearance
 	const clearSwatch = palette.createEl('button', {
-		cls: 'hoard-reading-col-palette-swatch hoard-color-clear-swatch',
+		cls: 'hoard-color-picker__palette-swatch hoard-color-picker__palette-swatch--clear',
 	});
 	clearSwatch.title = t('misc.colorPicker.clear');
 	clearSwatch.addEventListener('click', (e) => {

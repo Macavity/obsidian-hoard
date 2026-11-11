@@ -112,7 +112,7 @@ describe('HoardSettingsTab tag colour pickers', () => {
 		const { tab } = makeTab();
 		const el = document.createElement('div');
 		tab.renderTagSection(el, 'Types', 'types');
-		const labels = Array.from(el.querySelectorAll<HTMLInputElement>('input.hoard-tag-color-picker'), (i) => i.getAttribute('aria-label'));
+		const labels = Array.from(el.querySelectorAll<HTMLInputElement>('input.hoard-tag-editor__color-picker'), (i) => i.getAttribute('aria-label'));
 		expect(labels).toEqual(['Color for Movie', 'Color for Docu']);
 	});
 });
@@ -122,16 +122,16 @@ describe('HoardSettingsTab tag sections', () => {
 		const { tab, settings, plugin } = makeTab();
 		const el = document.createElement('div');
 		tab.renderTagSection(el, 'Statuses', 'statuses');
-		expect(el.querySelector('.hoard-tag-del')).toBeNull();
-		expect(el.querySelector('.hoard-tag-name')!.textContent).toBe('Watching');
-		const picker = el.querySelector<HTMLInputElement>('.hoard-tag-color-picker')!;
+		expect(el.querySelector('.hoard-tag-editor__delete')).toBeNull();
+		expect(el.querySelector('.hoard-tag-editor__name')!.textContent).toBe('Watching');
+		const picker = el.querySelector<HTMLInputElement>('.hoard-tag-editor__color-picker')!;
 		picker.value = '#abcdef';
 		picker.dispatchEvent(new Event('change'));
 		await until(() => plugin.saveSettings.mock.calls.length > 0);
 		expect(settings.statuses[0]!.color).toBe('#abcdef');
 		const types = document.createElement('div');
 		tab.renderTagSection(types, 'Types', 'types');
-		expect(types.querySelectorAll('.hoard-tag-del')).toHaveLength(1);
+		expect(types.querySelectorAll('.hoard-tag-editor__delete')).toHaveLength(1);
 	});
 
 	it('adds, rejects duplicates and bad names, removes', async () => {
@@ -139,8 +139,8 @@ describe('HoardSettingsTab tag sections', () => {
 		const { tab, settings } = makeTab();
 		const el = document.createElement('div');
 		tab.renderTagSection(el, 'Types', 'types', onChanged);
-		const name = el.querySelector<HTMLInputElement>('.hoard-tag-add-row .hoard-modal-input')!;
-		const add = el.querySelector<HTMLButtonElement>('.hoard-tag-add-row button')!;
+		const name = el.querySelector<HTMLInputElement>('.hoard-tag-editor__add-row .hoard-modal__input')!;
+		const add = el.querySelector<HTMLButtonElement>('.hoard-tag-editor__add-row button')!;
 		add.click();
 		name.value = 'docu';
 		add.click();
@@ -154,12 +154,12 @@ describe('HoardSettingsTab tag sections', () => {
 		await until(() => name.value === '');
 		expect(settings.types).toHaveLength(3);
 		expect(name.value).toBe('');
-		el.querySelector<HTMLElement>('.hoard-tag-del')!.click();
+		el.querySelector<HTMLElement>('.hoard-tag-editor__delete')!.click();
 		await until(() => Notice.shown.includes('Removed "Docu".'));
 		expect(settings.types.map((t) => t.name)).toEqual(['Movie', 'Anime Film']);
 		expect(onChanged).toHaveBeenCalled();
-		const dot = el.querySelector<HTMLElement>('.hoard-tag-dot')!;
-		const click = vi.spyOn(el.querySelector<HTMLInputElement>('.hoard-tag-color-picker')!, 'click');
+		const dot = el.querySelector<HTMLElement>('.hoard-tag-editor__dot')!;
+		const click = vi.spyOn(el.querySelector<HTMLInputElement>('.hoard-tag-editor__color-picker')!, 'click');
 		dot.click();
 		expect(click).toHaveBeenCalled();
 	});
@@ -175,7 +175,7 @@ describe('HoardSettingsTab rename commit', () => {
 			label: 'Platforms', getList: () => list, setColor: () => Promise.resolve(), rename,
 			validateName: (n: string) => (n.includes('/') ? 'bad name' : null),
 		});
-		const input = () => el.querySelector<HTMLInputElement>('.hoard-tag-name-input')!;
+		const input = () => el.querySelector<HTMLInputElement>('.hoard-tag-editor__name-input')!;
 		const commit = (v: string) => { input().value = v; input().dispatchEvent(new Event('change')); };
 		commit('  ');
 		expect(input().value).toBe('PC');
@@ -208,7 +208,7 @@ describe('HoardSettingsTab theme picker', () => {
 		const el = document.createElement('div');
 		tab.renderThemePicker(el, picked);
 		expect(picked).toHaveBeenCalledWith('Default');
-		const cards = el.querySelectorAll<HTMLElement>('.hoard-theme-card');
+		const cards = el.querySelectorAll<HTMLElement>('.hoard-theme-picker__card');
 		expect(cards[0]!.classList.contains('is-selected')).toBe(true);
 		cards[1]!.click();
 		await until(() => picked.mock.calls.length > 1);
@@ -333,8 +333,8 @@ describe('HoardSettingsTab keyless source selectors', () => {
 		Object.assign(made.settings, over);
 		const el = document.createElement('div');
 		made.tab.renderApi(el);
-		const seg = (label: string) => Array.from(el.querySelectorAll<HTMLElement>('.hoard-sg-seg-btn')).find((b) => b.textContent === label)!;
-		const hints = () => Array.from(el.querySelectorAll('.hoard-sg-fallback'), (n) => n.textContent ?? '').filter(Boolean);
+		const seg = (label: string) => Array.from(el.querySelectorAll<HTMLElement>('.hoard-settings-group__segment-btn')).find((b) => b.textContent === label)!;
+		const hints = () => Array.from(el.querySelectorAll('.hoard-settings-group__fallback'), (n) => n.textContent ?? '').filter(Boolean);
 		return { ...made, el, seg, hints };
 	};
 

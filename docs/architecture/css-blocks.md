@@ -30,8 +30,9 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
   `sm`, `md`, `lg`), proper names and formats (`svg`, `mal`, `jst`) and plain words (`row`, `tab`, `bar`, `add`, `log`, …).
   `shortTokens` reports every other part of three letters or fewer. Custom properties
   (`--hoard-<block>-<name>`) follow the same rules.
-- **Check**: `scripts/check-css-classes.mjs` reports `shortTokens` and `notBem` counts; it fails on them
-  only with `HOARD_CSS_STRICT=1`.
+- **Check**: `scripts/check-css-classes.mjs` (part of `pnpm lint`) fails on any class that `shortTokens` or
+  `notBem` reports; stylelint's `selector-class-pattern` enforces the same pattern in the stylesheets.
+  Container names are not classes and stay plain kebab-case (`hoard-list-table`).
 - **Protected strings**: `hoard-view` is both the CSS class and the view type, so it keeps its name.
   Code-block languages, event names, element ids and secret ids that start with `hoard-` are no classes.
 

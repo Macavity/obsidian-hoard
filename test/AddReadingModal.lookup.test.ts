@@ -42,7 +42,7 @@ function setup(mode: ReadingMode, over: ApiOver = {}, opts: { prefill?: string; 
 		: undefined;
 	const modal = new AddReadingModal({} as never, plugin as never, readingData as never, mode, () => {}, initial, opts.prefill);
 	modal.open();
-	const results = () => modal.contentEl.querySelector('.hoard-modal-results') as HTMLElement;
+	const results = () => modal.contentEl.querySelector('.hoard-modal__results') as HTMLElement;
 	const state = () => (modal as unknown as { state: Record<string, unknown> }).state;
 	return { modal, api, results, state, added };
 }
@@ -64,7 +64,7 @@ describe('AddReadingModal lookup', () => {
 		const olWork = { author: 'Frank Herbert', totalPages: 412, coverUrl: 'http://c/ol.jpg', releaseDate: '1965-08-01' };
 		const { modal, results, state, added } = setup('book', { source: 'openlibrary', olBooks: [olRow], olWork }, { prefill: 'dune' });
 		await flush();
-		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		(results().querySelector('.hoard-search-picker__result-card') as HTMLElement).click();
 		expect(state().openLibraryId).toBe('OL1W');
 		await flush();
 		expect(state().coverUrl).toBe('http://c/ol.jpg');
@@ -78,7 +78,7 @@ describe('AddReadingModal lookup', () => {
 		let resolveWork: (v: unknown) => void = () => {};
 		api.getOpenLibraryWork.mockImplementationOnce(() => new Promise((r) => { resolveWork = r; }));
 		await flush();
-		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		(results().querySelector('.hoard-search-picker__result-card') as HTMLElement).click();
 		state().totalPages = 321;
 		state().author = 'Typed Author';
 		resolveWork({ author: 'Frank Herbert', totalPages: 412, coverUrl: 'http://c/ol.jpg', releaseDate: '1965-08-01' });
@@ -94,7 +94,7 @@ describe('AddReadingModal lookup', () => {
 		let resolveWork: (v: unknown) => void = () => {};
 		api.getOpenLibraryWork.mockImplementationOnce(() => new Promise((r) => { resolveWork = r; }));
 		await flush();
-		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		(results().querySelector('.hoard-search-picker__result-card') as HTMLElement).click();
 		state().coverUrl = 'http://c/mine.jpg';
 		resolveWork({ author: '', totalPages: 0, coverUrl: 'http://c/ol.jpg', releaseDate: '' });
 		await flush();
@@ -105,7 +105,7 @@ describe('AddReadingModal lookup', () => {
 		const olRow = { ...book, googleBooksId: '', openLibraryId: 'OL1W' };
 		const { results, state } = setup('book', { source: 'openlibrary', olBooks: [olRow], olWork: { author: 'X', totalPages: 9, coverUrl: 'x', releaseDate: '2000' } }, { prefill: 'dune' });
 		await flush();
-		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		(results().querySelector('.hoard-search-picker__result-card') as HTMLElement).click();
 		await flush();
 		expect(state().author).toBe('Herbert');
 		expect(state().totalPages).toBe(100);
@@ -116,7 +116,7 @@ describe('AddReadingModal lookup', () => {
 		const { api, results, state } = setup('book', { books: [book], bookDetail: { totalPages: 412, coverUrl: 'http://c/2.jpg' } }, { prefill: 'dune' });
 		await flush();
 		expect(api.searchGoogleBooks).toHaveBeenCalledWith('dune');
-		const cards = results().querySelectorAll('.hoard-result-card');
+		const cards = results().querySelectorAll('.hoard-search-picker__result-card');
 		expect(cards).toHaveLength(1);
 		expect(cards[0]!.classList.contains('is-in-library')).toBe(true);
 		expect(cards[0]!.textContent).toContain('Herbert · 1965');
@@ -131,7 +131,7 @@ describe('AddReadingModal lookup', () => {
 	it('falls back to placeholder labels for untitled results without author or year', async () => {
 		const { results } = setup('book', { books: [{ ...book, title: '', author: '', year: 0, googleBooksId: '' }] }, { prefill: 'x' });
 		await flush();
-		const card = results().querySelector('.hoard-result-card') as HTMLElement;
+		const card = results().querySelector('.hoard-search-picker__result-card') as HTMLElement;
 		expect(card.textContent).toContain(t('add.reading.untitled'));
 		expect(card.textContent).toContain(t('add.reading.unknownAuthor'));
 		expect(card.classList.contains('is-in-library')).toBe(false);
@@ -147,7 +147,7 @@ describe('AddReadingModal lookup', () => {
 		const { api, results, state } = setup('manga', { manga: [{ ...manga, malId: 7 }], mangaDetail: { totalChapters: 364, totalVolumes: 41 } }, { prefill: 'berserk' });
 		await flush();
 		expect(api.searchManga).toHaveBeenCalledWith('berserk');
-		const card = results().querySelector('.hoard-result-card') as HTMLElement;
+		const card = results().querySelector('.hoard-search-picker__result-card') as HTMLElement;
 		expect(card.textContent).toContain('Miura · 1989');
 		card.click();
 		expect(state().malId).toBe('7');
@@ -161,7 +161,7 @@ describe('AddReadingModal lookup', () => {
 		await flush();
 		expect(api.getMangaByMalId).toHaveBeenCalledWith(2);
 		expect(api.searchManga).not.toHaveBeenCalled();
-		expect(results().querySelectorAll('.hoard-result-card')).toHaveLength(1);
+		expect(results().querySelectorAll('.hoard-search-picker__result-card')).toHaveLength(1);
 	});
 
 	it('shows no matches when the MAL id does not exist', async () => {
@@ -173,7 +173,7 @@ describe('AddReadingModal lookup', () => {
 	it('keeps the picked manga values when the detail lookup reports zero totals', async () => {
 		const { results, state } = setup('manga', { manga: [{ ...manga, malId: 7, totalChapters: 10, totalVolumes: 3 }], mangaDetail: { totalChapters: 0, totalVolumes: 0 } }, { prefill: 'm' });
 		await flush();
-		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		(results().querySelector('.hoard-search-picker__result-card') as HTMLElement).click();
 		await flush();
 		expect(state().totalChapters).toBe(10);
 		expect(state().totalVolumes).toBe(3);
@@ -182,7 +182,7 @@ describe('AddReadingModal lookup', () => {
 	it('reports an API failure in the results area', async () => {
 		const { results } = setup('book', { fail: new Error('boom') }, { prefill: 'x' });
 		await flush();
-		expect(results().querySelector('.hoard-modal-error')).not.toBeNull();
+		expect(results().querySelector('.hoard-modal__error')).not.toBeNull();
 	});
 
 	it('discards a superseded lookup', async () => {
@@ -192,7 +192,7 @@ describe('AddReadingModal lookup', () => {
 		const first = perform('slow');
 		await perform('fast');
 		await first;
-		expect(results().querySelectorAll('.hoard-result-card')).toHaveLength(1);
+		expect(results().querySelectorAll('.hoard-search-picker__result-card')).toHaveLength(1);
 		expect(api.searchGoogleBooks).toHaveBeenCalledTimes(2);
 	});
 });
@@ -200,11 +200,11 @@ describe('AddReadingModal lookup', () => {
 describe('AddReadingModal form', () => {
 	it('toggles the open-vault button with the linked page', () => {
 		const withLink = setup('book', {}, { initialState: true });
-		const open = withLink.modal.contentEl.querySelector('.hoard-reading-modal-header-actions button') as HTMLButtonElement;
+		const open = withLink.modal.contentEl.querySelector('.hoard-reading-modal__header-actions button') as HTMLButtonElement;
 		expect(open.disabled).toBe(false);
 		expect(open.classList.contains('is-hidden')).toBe(false);
 		const none = setup('book');
-		const open2 = none.modal.contentEl.querySelector('.hoard-reading-modal-header-actions button') as HTMLButtonElement;
+		const open2 = none.modal.contentEl.querySelector('.hoard-reading-modal__header-actions button') as HTMLButtonElement;
 		expect(open2.disabled).toBe(true);
 		expect(open2.classList.contains('is-hidden')).toBe(true);
 	});

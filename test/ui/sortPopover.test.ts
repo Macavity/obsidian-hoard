@@ -21,7 +21,7 @@ function setup(over: Partial<SortPopoverConfig> = {}) {
 	return { cfg, wrap, anchor, onChange };
 }
 
-const rows = (wrap: HTMLElement): HTMLElement[] => Array.from(wrap.querySelectorAll<HTMLElement>('.hoard-filter-row'));
+const rows = (wrap: HTMLElement): HTMLElement[] => Array.from(wrap.querySelectorAll<HTMLElement>('.hoard-filter-panel__row'));
 
 afterEach(() => {
 	document.body.replaceChildren();
@@ -35,10 +35,10 @@ describe('sort popover', () => {
 		const [primary, secondary] = rows(wrap) as [HTMLElement, HTMLElement];
 		expect((primary.querySelector('select') as HTMLSelectElement).value).toBe('Title');
 		expect(primary.querySelector('option[value=none]')).toBeNull();
-		expect(primary.querySelector('.hoard-sort-dir-btn')!.textContent).toBe('↑');
+		expect(primary.querySelector('.hoard-btn--sort-direction')!.textContent).toBe('↑');
 		expect((secondary.querySelector('select') as HTMLSelectElement).value).toBe('Rating');
 		expect(secondary.querySelector('option[value=none]')).not.toBeNull();
-		expect(secondary.querySelector('.hoard-sort-dir-btn')!.textContent).toBe('↓');
+		expect(secondary.querySelector('.hoard-btn--sort-direction')!.textContent).toBe('↓');
 	});
 
 	it('preselects None for an unset secondary sort', () => {
@@ -50,9 +50,9 @@ describe('sort popover', () => {
 	it('toggles: a second call closes the open panel', () => {
 		const { cfg, wrap } = setup();
 		toggleSortPopover(cfg);
-		expect(wrap.querySelector('.hoard-dropdown')).not.toBeNull();
+		expect(wrap.querySelector('.hoard-popover')).not.toBeNull();
 		toggleSortPopover(cfg);
-		expect(wrap.querySelector('.hoard-dropdown')).toBeNull();
+		expect(wrap.querySelector('.hoard-popover')).toBeNull();
 	});
 
 	it('uses the mobile layout below 600px', () => {
@@ -62,8 +62,8 @@ describe('sort popover', () => {
 			{ top: 0, bottom: 40, left: 0, right: 10, width: 10, height: 40, x: 0, y: 0, toJSON: () => ({}) },
 		);
 		toggleSortPopover(cfg);
-		const panel = wrap.querySelector<HTMLElement>('.hoard-sorting-panel')!;
-		expect(panel.classList.contains('hoard-sorting-panel-mobile')).toBe(true);
+		const panel = wrap.querySelector<HTMLElement>('.hoard-sort-panel')!;
+		expect(panel.classList.contains('hoard-sort-panel--mobile')).toBe(true);
 		expect(panel.style.top).toBe('44px');
 	});
 
@@ -74,7 +74,7 @@ describe('sort popover', () => {
 		sel.value = 'Rating';
 		sel.dispatchEvent(new Event('change'));
 		expect(onChange).toHaveBeenCalledWith({ key: 'rating', dir: 'desc' }, { key: 'none', dir: 'asc' });
-		expect(wrap.querySelector('.hoard-dropdown')).toBeNull();
+		expect(wrap.querySelector('.hoard-popover')).toBeNull();
 	});
 
 	it('choosing None on the secondary row reports the none key', () => {
@@ -98,12 +98,12 @@ describe('sort popover', () => {
 	it('flips the direction of either row and closes', () => {
 		const { cfg, wrap, onChange } = setup();
 		toggleSortPopover(cfg);
-		(rows(wrap)[0]!.querySelector('.hoard-sort-dir-btn') as HTMLElement).click();
+		(rows(wrap)[0]!.querySelector('.hoard-btn--sort-direction') as HTMLElement).click();
 		expect(onChange).toHaveBeenLastCalledWith({ key: 'title', dir: 'desc' }, { key: 'none', dir: 'asc' });
 		toggleSortPopover(cfg);
-		(rows(wrap)[1]!.querySelector('.hoard-sort-dir-btn') as HTMLElement).click();
+		(rows(wrap)[1]!.querySelector('.hoard-btn--sort-direction') as HTMLElement).click();
 		expect(onChange).toHaveBeenLastCalledWith({ key: 'title', dir: 'asc' }, { key: 'none', dir: 'desc' });
-		expect(wrap.querySelector('.hoard-dropdown')).toBeNull();
+		expect(wrap.querySelector('.hoard-popover')).toBeNull();
 	});
 
 	it('closes on an outside click but not on one inside the wrap', async () => {
@@ -111,9 +111,9 @@ describe('sort popover', () => {
 		toggleSortPopover(cfg);
 		await new Promise((r) => setTimeout(r, 5));
 		wrap.click();
-		expect(wrap.querySelector('.hoard-dropdown')).not.toBeNull();
+		expect(wrap.querySelector('.hoard-popover')).not.toBeNull();
 		document.body.click();
-		expect(wrap.querySelector('.hoard-dropdown')).toBeNull();
+		expect(wrap.querySelector('.hoard-popover')).toBeNull();
 	});
 
 	it('hands out a teardown that closes the panel and survives running before the listener attaches', async () => {
@@ -123,7 +123,7 @@ describe('sort popover', () => {
 		toggleSortPopover(cfg);
 		teardown!();
 		teardown!();
-		expect(wrap.querySelector('.hoard-dropdown')).toBeNull();
+		expect(wrap.querySelector('.hoard-popover')).toBeNull();
 		await new Promise((r) => setTimeout(r, 5));
 		expect(add.mock.calls.filter(([type]) => type === 'click')).toHaveLength(0);
 		add.mockRestore();

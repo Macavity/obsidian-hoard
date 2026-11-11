@@ -2,48 +2,48 @@
 
 /* ══ MOBILE RESPONSIVE ══ */
 
-/* table columns follow the pane (hoard-table container), so a narrow split or sidebar compacts too.
+/* table columns follow the pane (hoard-list__table container), so a narrow split or sidebar compacts too.
    556/356px = the old 600/400px viewport breakpoints minus the view and tab-content padding (44px). */
-@container hoard-table (max-width: 556px) {
+@container hoard-list-table (max-width: 556px) {
   /* hide Priority / Started / Rating */
-  .hoard-col-priority,
-  .hoard-col-priority-h,
-  .hoard-col-started,
-  .hoard-col-started-h,
-  .hoard-col-rating,
-  .hoard-col-rating-h {
+  .hoard-list__column-priority,
+  .hoard-list__column-priority-header,
+  .hoard-list__column-started,
+  .hoard-list__column-started-header,
+  .hoard-list__column-rating,
+  .hoard-list__column-rating-header {
     display: none;
   }
 
-  .hoard-table-header-row,
-  .hoard-row {
+  .hoard-list__table-header-row,
+  .hoard-list__row {
     grid-template-columns: 1fr 90px 20px;
   }
 
   /* selection mode keeps its checkbox track in front */
-  .hoard-table.hoard-selection-mode .hoard-table-header-row,
-  .hoard-table.hoard-selection-mode .hoard-row {
+  .hoard-list__table.hoard-list__table--selection-mode .hoard-list__table-header-row,
+  .hoard-list__table.hoard-list__table--selection-mode .hoard-list__row {
     grid-template-columns: 24px 1fr 90px 20px;
   }
 }
 
 /* status as wide as its badge, at most 90px; a longer label ends in an ellipsis */
-@container hoard-table (max-width: 356px) {
-  .hoard-table-header-row,
-  .hoard-row {
+@container hoard-list-table (max-width: 356px) {
+  .hoard-list__table-header-row,
+  .hoard-list__row {
     grid-template-columns: 1fr fit-content(90px) 20px;
   }
 
-  .hoard-table.hoard-selection-mode .hoard-table-header-row,
-  .hoard-table.hoard-selection-mode .hoard-row {
+  .hoard-list__table.hoard-list__table--selection-mode .hoard-list__table-header-row,
+  .hoard-list__table.hoard-list__table--selection-mode .hoard-list__row {
     grid-template-columns: 24px 1fr fit-content(90px) 20px;
   }
 }
 
 @media (width <= 600px) {
   /* smaller toolbar buttons */
-  .hoard-header-controls .hoard-btn,
-  .hoard-header-controls .hoard-add-btn {
+  .hoard-toolbar__controls .hoard-btn,
+  .hoard-toolbar__controls .hoard-toolbar__add-btn {
     font-size: 10px;
     padding: 3px 6px;
   }
@@ -51,15 +51,15 @@
 
 @media (width <= 400px) {
   /* tighter rings gap on very small screens */
-  .hoard-rings-grid {
+  .hoard-dashboard__rings-grid {
     gap: 8px;
   }
 
-  .hoard-episode-grid {
+  .hoard-accordion__episode-grid {
     gap: 3px;
   }
 
-  .hoard-episode-box {
+  .hoard-accordion__episode-box {
     width: 30px;
     height: 30px;
     font-size: 10px;
@@ -67,16 +67,16 @@
 }
 
 @media (width <= 600px) {
-    .hoard-accordion-header {
+    .hoard-accordion__header {
         flex-wrap: wrap;
     }
 
-    .hoard-acc-header-left {
+    .hoard-accordion__header-left {
         width: 100%;
         margin-bottom: 6px;
     }
 
-    .hoard-acc-right-group {
+    .hoard-accordion__right-group {
         width: 100%;
     }
 }

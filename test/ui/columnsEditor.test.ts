@@ -77,9 +77,9 @@ describe('renderColumnsEditor format toggles', () => {
 
 	it('exposes bold, italic and auto-time as pressed toggles with a tooltip, not a title', () => {
 		const host = render([col({ id: 'col_1', type: 'number', bold: true })]);
-		const bold = host.querySelector<HTMLElement>('.hoard-editcols-bold-btn')!;
-		const italic = host.querySelector<HTMLElement>('.hoard-editcols-italic-btn')!;
-		const auto = host.querySelector<HTMLElement>('.hoard-editcols-autotime-btn')!;
+		const bold = host.querySelector<HTMLElement>('.hoard-edit-columns__bold-btn')!;
+		const italic = host.querySelector<HTMLElement>('.hoard-edit-columns__italic-btn')!;
+		const auto = host.querySelector<HTMLElement>('.hoard-edit-columns__autotime-btn')!;
 		expect(bold.getAttribute('aria-pressed')).toBe('true');
 		expect(italic.getAttribute('aria-pressed')).toBe('false');
 		expect(auto.getAttribute('aria-pressed')).toBe('false');
@@ -126,7 +126,7 @@ describe('renderColumnsEditor select columns', () => {
 		expect(column.type).toBe('select');
 		expect(column.options).toEqual(['High', 'Low', '3']);
 		// re-rendered with an option row per derived value
-		expect(host.querySelectorAll('.hoard-editcol-card-opt-row')).toHaveLength(3);
+		expect(host.querySelectorAll('.hoard-edit-columns__card-option-row')).toHaveLength(3);
 	});
 
 	it('keeps the stored options when switching to another type', () => {
@@ -142,17 +142,17 @@ describe('renderColumnsEditor select columns', () => {
 	it('colours a named option through the picker and clears it again', () => {
 		const column = col({ id: 'col_1', type: 'select', options: ['', 'Done'] });
 		const host = render([column]);
-		const [blankDot, doneDot] = Array.from(host.querySelectorAll<HTMLElement>('.hoard-editcol-opt-color-dot'));
+		const [blankDot, doneDot] = Array.from(host.querySelectorAll<HTMLElement>('.hoard-edit-columns__option-color-dot'));
 		blankDot!.click();
-		expect(host.querySelector('.hoard-reading-col-palette')).toBeNull();
+		expect(host.querySelector('.hoard-color-picker__palette')).toBeNull();
 
 		doneDot!.click();
-		host.querySelector<HTMLElement>('.hoard-reading-col-palette-swatch:not(.hoard-color-custom-swatch):not(.hoard-color-clear-swatch)')!.click();
+		host.querySelector<HTMLElement>('.hoard-color-picker__palette-swatch:not(.hoard-color-picker__palette-swatch--custom):not(.hoard-color-picker__palette-swatch--clear)')!.click();
 		expect(column.optionColors?.['Done']).toMatch(/^#/);
 		expect(doneDot!.classList.contains('is-unset')).toBe(false);
 
 		doneDot!.click();
-		host.querySelector<HTMLElement>('.hoard-color-clear-swatch')!.click();
+		host.querySelector<HTMLElement>('.hoard-color-picker__palette-swatch--clear')!.click();
 		expect(column.optionColors?.['Done']).toBeUndefined();
 		expect(doneDot!.classList.contains('is-unset')).toBe(true);
 	});

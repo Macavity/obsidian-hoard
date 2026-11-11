@@ -3,8 +3,8 @@ import { t } from '../i18n';
 
 /** A labelled form row: [label][fields...]. */
 export function makeRow(parent: HTMLElement, label: string): HTMLElement {
-	const row = parent.createDiv({ cls: 'hoard-modal-row' });
-	row.createSpan({ cls: 'hoard-modal-label', text: label });
+	const row = parent.createDiv({ cls: 'hoard-modal__row' });
+	row.createSpan({ cls: 'hoard-modal__label', text: label });
 	return row;
 }
 
@@ -14,9 +14,9 @@ export function makeRow(parent: HTMLElement, label: string): HTMLElement {
  */
 export function makeCell(row: HTMLElement, label: string, right = false): HTMLElement {
 	const cell = row.createDiv({
-		cls: right ? 'hoard-modal-pair-cell hoard-modal-pair-cell-right' : 'hoard-modal-pair-cell',
+		cls: right ? 'hoard-modal__pair-cell hoard-modal__pair-cell--right' : 'hoard-modal__pair-cell',
 	});
-	cell.createSpan({ cls: 'hoard-modal-label', text: label });
+	cell.createSpan({ cls: 'hoard-modal__label', text: label });
 	return cell;
 }
 
@@ -33,7 +33,7 @@ export function numberInput(cell: HTMLElement, opts: NumberInputOptions): HTMLIn
 	const attr: Record<string, string> = { type: 'number' };
 	if (opts.min !== undefined) attr['min'] = String(opts.min);
 	if (opts.placeholder !== undefined) attr['placeholder'] = opts.placeholder;
-	const input = cell.createEl('input', { cls: opts.cls ?? 'hoard-modal-input', attr });
+	const input = cell.createEl('input', { cls: opts.cls ?? 'hoard-modal__input', attr });
 	input.value = String(opts.value);
 	input.addEventListener('input', () => opts.onInput(parseInt(input.value, 10) || 0));
 	return input;
@@ -49,7 +49,7 @@ export interface TextInputOptions {
 export function textInput(cell: HTMLElement, opts: TextInputOptions): HTMLInputElement {
 	const attr: Record<string, string> = { type: opts.type ?? 'text' };
 	if (opts.placeholder !== undefined) attr['placeholder'] = opts.placeholder;
-	const input = cell.createEl('input', { cls: 'hoard-modal-input', attr });
+	const input = cell.createEl('input', { cls: 'hoard-modal__input', attr });
 	input.value = opts.value;
 	input.addEventListener('input', () => opts.onInput(input.value));
 	return input;
@@ -64,7 +64,7 @@ export function nameSelect(
 	empty = false,
 	format: (name: string) => string = (n) => n,
 ): HTMLSelectElement {
-	const select = parent.createEl('select', { cls: 'hoard-select' });
+	const select = parent.createEl('select', { cls: 'hoard-input__select' });
 	if (empty) select.createEl('option', { text: t('ui.form.none'), value: '' });
 	for (const name of names) {
 		const opt = select.createEl('option', { text: format(name), value: name });
@@ -85,7 +85,7 @@ function renderGroupSelect(
 	groups: Array<{ id: string; name: string }>,
 	selectedId: string,
 ): HTMLSelectElement {
-	const select = row.createEl('select', { cls: 'hoard-select' });
+	const select = row.createEl('select', { cls: 'hoard-input__select' });
 	select.createEl('option', { text: t('ui.form.none'), value: '' });
 	for (const g of groups) {
 		const opt = select.createEl('option', { text: g.name, value: g.id });
@@ -158,8 +158,8 @@ export function linkField(
  */
 export function releaseDateField(form: HTMLElement, value: string, onChange: (iso: string) => void): void {
 	createDatePicker({
-		parent: makeRow(form, t('ui.form.releaseDate')).createDiv({ cls: 'hoard-modal-input-stack' }),
-		inputCls: 'hoard-modal-input',
+		parent: makeRow(form, t('ui.form.releaseDate')).createDiv({ cls: 'hoard-modal__input-stack' }),
+		inputCls: 'hoard-modal__input',
 		value: value || null,
 		lenient: true,
 		onChange: (iso) => onChange(iso ?? ''),
@@ -186,11 +186,11 @@ export function renderMediaFields(form: HTMLElement, f: MediaFields, paired: boo
 	const duration = { value: f.duration, min: 0, placeholder: '24', onInput: (v: number) => { f.duration = v; } };
 	if (paired) {
 		// reclaims vertical space
-		const row = form.createDiv({ cls: 'hoard-modal-row hoard-modal-row-pair' });
+		const row = form.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });
 		numberInput(makeCell(row, t('ui.form.episodes')), episodes);
 		numberInput(makeCell(row, t('ui.form.episodeDuration'), true), duration);
 	} else {
-		const cls = 'hoard-modal-input hoard-modal-input-sm';
+		const cls = 'hoard-modal__input hoard-modal__input--sm';
 		numberInput(makeRow(form, t('ui.form.episodes')), { ...episodes, cls });
 		numberInput(makeRow(form, t('ui.form.episodeDuration')), { ...duration, cls });
 	}

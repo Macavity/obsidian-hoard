@@ -134,7 +134,7 @@ async function primeDraftsBadge() {
 	const leaf = app.workspace.getLeavesOfType('hoard-view')[0];
 	if (!leaf) return 'false';
 	if (leaf.isDeferred) void leaf.loadIfDeferred();
-	return String(typeof leaf.view.setActiveTab === 'function' && document.querySelectorAll('.hoard-tab-btn').length > 0);
+	return String(typeof leaf.view.setActiveTab === 'function' && document.querySelectorAll('.hoard-tab-bar__btn').length > 0);
 })()`) === "true",
 		30000,
 		300,

@@ -31,7 +31,7 @@ export class AddFromUrlModal extends Modal {
 		content.addClass('hoard-add-modal');
 
 		content.createDiv({
-			cls: 'hoard-modal-info',
+			cls: 'hoard-modal__info',
 			text: t('add.url.info'),
 		});
 
@@ -48,7 +48,7 @@ export class AddFromUrlModal extends Modal {
 			() => this.lookupTmdb(),
 		);
 
-		this.errorEl = content.createDiv({ cls: 'hoard-modal-error' });
+		this.errorEl = content.createDiv({ cls: 'hoard-modal__error' });
 		this.errorEl.hide();
 
 		window.setTimeout(() => this.imdbInput?.focus(), 50);
@@ -61,13 +61,13 @@ export class AddFromUrlModal extends Modal {
 		placeholder: string,
 		lookup: () => Promise<MediaSearchResult | null | 'invalid' | 'nokey'>,
 	): HTMLInputElement {
-		const row = content.createDiv({ cls: 'hoard-modal-row' });
-		row.createDiv({ cls: 'hoard-modal-label hoard-url-row-label', text: label });
+		const row = content.createDiv({ cls: 'hoard-modal__row' });
+		row.createDiv({ cls: 'hoard-modal__label hoard-modal__url-row-label', text: label });
 		const input = row.createEl('input', {
-			cls: 'hoard-modal-input',
+			cls: 'hoard-modal__input',
 			attr: { type: 'url', placeholder },
 		});
-		const btn = row.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('common.add') });
+		const btn = row.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('common.add') });
 
 		const run = () => void this.handleAdd(btn, lookup);
 		btn.addEventListener('click', run);
