@@ -185,7 +185,7 @@ export class CustomListManager {
 			const existing = this.app.vault.getAbstractFileByPath(path);
 			try {
 				if (existing instanceof TFile) {
-					await this.app.vault.modify(existing, content);
+					await this.app.vault.process(existing, () => content);
 				} else {
 					await this.app.vault.create(path, content);
 				}
@@ -202,17 +202,17 @@ export class CustomListManager {
 			const file = this.app.vault.getAbstractFileByPath(path);
 			if (!(file instanceof TFile)) return;
 			try {
-				const content = await this.app.vault.read(file);
-				const notesMarker = '## Notes\n';
-				const dataMarker = '\n## Data\n';
-				const notesIdx = content.indexOf(notesMarker);
-				if (notesIdx === -1) return;
-				const afterNotes = notesIdx + notesMarker.length;
-				const dataIdx = content.indexOf(dataMarker, afterNotes);
-				const updated = dataIdx !== -1
-					? content.slice(0, afterNotes) + notes + content.slice(dataIdx)
-					: content.slice(0, afterNotes) + notes + '\n';
-				await this.app.vault.modify(file, updated);
+				await this.app.vault.process(file, (content) => {
+					const notesMarker = '## Notes\n';
+					const dataMarker = '\n## Data\n';
+					const notesIdx = content.indexOf(notesMarker);
+					if (notesIdx === -1) return content;
+					const afterNotes = notesIdx + notesMarker.length;
+					const dataIdx = content.indexOf(dataMarker, afterNotes);
+					return dataIdx !== -1
+						? content.slice(0, afterNotes) + notes + content.slice(dataIdx)
+						: content.slice(0, afterNotes) + notes + '\n';
+				});
 			} catch (e) {
 				console.error('Hoard: failed to save notes', e);
 			}

@@ -68,10 +68,12 @@ export interface SharedConfig {
 	settings: Record<string, unknown>;
 }
 
-/** data.json in schema 2: device-local settings, secrets, cache and UI state. */
+/** data.json in schema 2: device-local settings, cache and UI state (secrets live in secret storage). */
 export interface LocalData {
 	schemaVersion: 2;
 	settings: Record<string, unknown>;
+	/** set once API keys live in secret storage; they never stay in data.json */
+	secretsInStorage?: true;
 	/** device-local part of the reading / games settings (colors, layouts, saved filters) */
 	reading?: Record<string, unknown>;
 	games?: Record<string, unknown>;

@@ -13,6 +13,7 @@ import { HistoryManager } from './HistoryManager';
 import { PosterService } from './PosterService';
 import { VaultLayout, detectRoot } from './storage/VaultLayout';
 import { LocalStore } from './storage/LocalStore';
+import { SecretStore, shouldShowSecretsNotice } from './storage/SecretStore';
 import { SharedConfigStore } from './storage/SharedConfigStore';
 import { EntryIndex } from './storage/EntryIndex';
 import { HistoryStore } from './storage/HistoryStore';
@@ -42,10 +43,11 @@ export default class HoardPlugin extends Plugin {
 	private wizardOpen = false;
 	private typeNamesKey: string | null = null;
 	private layout = new VaultLayout(DEFAULT_ROOT, () => this.settings.types.map((t) => t.name));
+	private secretStore = new SecretStore(this.app.secretStorage);
 	private local = new LocalStore({
 		loadData: () => this.loadData(),
 		saveData: (d) => this.saveData(d),
-	});
+	}, this.secretStore);
 	private yaml = { parse: parseYaml, stringify: stringifyYaml };
 	private shared = new SharedConfigStore(
 		this.app,
@@ -107,6 +109,7 @@ export default class HoardPlugin extends Plugin {
 		}
 		// local + defaults only; shared keys are re-composed once the base is loaded (startVaultStorage)
 		await this.loadSettings();
+		this.maybeShowSecretsNotice();
 		// the card-size CSS var must be live before any view or modal renders a grid
 		this.applyCardSizeCssVar();
 		this.register(() => activeDocument.body.style.removeProperty('--hoard-card-min-width'));
@@ -493,9 +496,17 @@ export default class HoardPlugin extends Plugin {
 		activeDocument.body.style.setProperty('--hoard-card-min-width', `${this.getCardMinWidth()}px`);
 	}
 
+	/** Keys do not sync between devices: tell a migrated device once that its keychain is empty. */
+	private maybeShowSecretsNotice(): void {
+		const shown = this.app.loadLocalStorage('hoard-secrets-notice') === true;
+		if (!shouldShowSecretsNotice(this.local.data.secretsInStorage === true, this.secretStore.isEmpty(), shown)) return;
+		new Notice(t('app.notices.secretsPerDevice'), 0);
+		this.app.saveLocalStorage('hoard-secrets-notice', true);
+	}
+
 	/** Composes settings from defaults, data.json and the shared base (shared keys win). */
 	loadSettings(): Promise<void> {
-		this.settings = composeSettings(this.local.data.settings, this.shared.get().settings);
+		this.settings = composeSettings(this.local.data.settings, this.shared.get().settings, this.secretStore.read());
 		// mirror into types.ts so the pure formatters render in the chosen order without a settings ref
 		setActiveDateFormat(this.settings.dateFormat);
 		this.syncTypeNames();
@@ -525,7 +536,7 @@ export default class HoardPlugin extends Plugin {
 		setActiveDateFormat(this.settings.dateFormat);
 		this.syncTypeNames();
 		this.applyApiKeys();
-		await persistSettings(this.settings, this.local, this.shared);
+		await persistSettings(this.settings, this.local, this.shared, this.secretStore);
 	}
 
 	/**

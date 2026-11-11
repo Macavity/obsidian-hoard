@@ -38,6 +38,7 @@ const app = {
 		nowNext: 'Karte mit Aktuell und Als Nächstes',
 	},
 	notices: {
+		secretsPerDevice: 'Hoard speichert API-Keys jetzt pro Gerät im Schlüsselbund von Obsidian. Bitte auf diesem Gerät in den Hoard-Einstellungen neu eingeben.',
 		newerSchema: 'Hoard: data.json stammt von einer neueren Plugin-Version. Geräteeinstellungen werden erst nach einem Update gespeichert.',
 		watchLogData: 'Hoard: Die data.json enthält WatchLog-Daten, die Hoard nicht verändert. Geräteeinstellungen (inklusive API-Schlüssel) werden erst gespeichert, wenn du die Datei aus Hoards Plugin-Ordner verschiebst.',
 		baseFilterMissing: 'Hoard: Der Ordnerfilter in {file} wurde nicht gefunden; die Base-Ansicht zeigt eventuell andere Notizen.',

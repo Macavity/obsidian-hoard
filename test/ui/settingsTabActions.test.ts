@@ -344,46 +344,47 @@ describe('card settings', () => {
 });
 
 describe('backup export to the vault', () => {
-	const adapterFor = (existing: string[], mkdirFails = false) => {
-		const files = new Set(existing);
-		const adapter = {
-			exists: vi.fn((p: string) => Promise.resolve(files.has(p))),
-			mkdir: vi.fn((p: string) => {
-				if (mkdirFails) return Promise.reject(new Error('exists'));
-				files.add(p);
-				return Promise.resolve();
+	const vaultFor = (existing: string[], createFolderFails = false) => {
+		const paths = new Set(existing);
+		const vault = {
+			getFolderByPath: vi.fn((p: string) => (paths.has(p) ? {} : null)),
+			createFolder: vi.fn((p: string) => {
+				if (createFolderFails) return Promise.reject(new Error('exists'));
+				paths.add(p);
+				return Promise.resolve({});
 			}),
-			write: vi.fn((p: string) => { files.add(p); return Promise.resolve(); }),
+			getAbstractFileByPath: vi.fn((p: string) => (paths.has(p) ? {} : null)),
+			create: vi.fn((p: string) => { paths.add(p); return Promise.resolve({}); }),
 		};
-		const ctx = makeTab({ getLayout: () => ({ root: 'W' }) }, { vault: { adapter } });
-		return { ...ctx, adapter };
+		const ctx = makeTab({ getLayout: () => ({ root: 'W' }) }, { vault });
+		return { ...ctx, vault };
 	};
 
 	it('creates the folder and writes the file', async () => {
-		const { priv, adapter } = adapterFor([]);
+		const { priv, vault } = vaultFor([]);
 		await priv.exportBackupToVault('b.json', '{}');
-		expect(adapter.mkdir).toHaveBeenCalledWith('W/backups');
-		expect(adapter.write).toHaveBeenCalledWith('W/backups/b.json', '{}');
+		expect(vault.createFolder).toHaveBeenCalledWith('W/backups');
+		expect(vault.create).toHaveBeenCalledWith('W/backups/b.json', '{}');
 		expect(shown[0]).toContain('W/backups/b.json');
 	});
 
-	it('survives a failing mkdir because the folder may exist already', async () => {
-		const { priv, adapter } = adapterFor([], true);
+	it('survives a failing createFolder because the folder may exist already', async () => {
+		const { priv, vault } = vaultFor([], true);
 		await priv.exportBackupToVault('b.json', '{}');
-		expect(adapter.write).toHaveBeenCalledWith('W/backups/b.json', '{}');
+		expect(vault.create).toHaveBeenCalledWith('W/backups/b.json', '{}');
 	});
 
 	it('numbers the file on collisions and keeps extensions', async () => {
-		const { priv, adapter } = adapterFor(['W/backups', 'W/backups/b.json', 'W/backups/b-2.json']);
+		const { priv, vault } = vaultFor(['W/backups', 'W/backups/b.json', 'W/backups/b-2.json']);
 		await priv.exportBackupToVault('b.json', '{}');
-		expect(adapter.mkdir).not.toHaveBeenCalled();
-		expect(adapter.write).toHaveBeenCalledWith('W/backups/b-3.json', '{}');
+		expect(vault.createFolder).not.toHaveBeenCalled();
+		expect(vault.create).toHaveBeenCalledWith('W/backups/b-3.json', '{}');
 	});
 
 	it('handles names without an extension', async () => {
-		const { priv, adapter } = adapterFor(['W/backups', 'W/backups/plain']);
+		const { priv, vault } = vaultFor(['W/backups', 'W/backups/plain']);
 		await priv.exportBackupToVault('plain', '{}');
-		expect(adapter.write).toHaveBeenCalledWith('W/backups/plain-2', '{}');
+		expect(vault.create).toHaveBeenCalledWith('W/backups/plain-2', '{}');
 	});
 });
 

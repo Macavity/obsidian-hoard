@@ -1,23 +1,25 @@
 ---
 type: Domain
 title: Shared vs local settings
-description: Which settings sync through Hoard.base, which stay in data.json, and why the plugin never writes an API key into the base.
+description: Which settings sync through Hoard.base, which stay in data.json, which live in secret storage, and why an API key never reaches the base.
 source:
   - src/storage/SharedConfigStore.ts
   - src/settingsSplit.ts
   - src/storage/LocalStore.ts
   - src/storage/storageTypes.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+  - src/storage/SecretStore.ts
+source_commit: cda80ae35181b2c9dfc2b412818e2a0ca596a18f
 ---
 
 # Shared vs local settings
 
-Settings are one object in memory (`plugin.settings`) but two on disk:
+Settings are one object in memory (`plugin.settings`) but three places on disk:
 
 | Where | What | Synced |
 |---|---|---|
 | `hoard:` block in `<root>/Hoard.base` | the vocabulary every device needs to read and write the same notes: `types`, `statuses`, `reviews`, `priorities`, `halfStarRatings`, `typeApiMapping`, `episodeNumbering`, `defaultCustomColumns`, `autoCompleteOnLastEpisode`, `setFinishDateAutomatically`, plus inside `reading`: `defaultStatus`, `bookColumns`, `mangaColumns`; inside `games`: `defaultStatus`, `statuses`, `types`, `platforms` | yes |
-| `data.json` of the plugin ([LocalStore](../../src/storage/LocalStore.ts)) | everything else: API keys, Steam id, colours, palettes, layouts, saved filters, UI state, the [entry cache](entry-cache.md) | no |
+| `data.json` of the plugin ([LocalStore](../../src/storage/LocalStore.ts)) | everything else: colours, palettes, layouts, saved filters, UI state, the [entry cache](entry-cache.md) | no |
+| Obsidian secret storage (`app.secretStorage`, [SecretStore](../../src/storage/SecretStore.ts)) | the nine `SECRET_SETTINGS`: OMDb, TMDB, Google Books, RAWG, Steam API keys, IGDB client id and secret, Steam id, `jikanBaseUrl` (may carry a login), under fixed ids `hoard-*` | no, per device |
 
 The whitelist is `SHARED_SETTING_KEYS` and `NESTED_SHARED_KEYS` in
 [SharedConfigStore.ts](../../src/storage/SharedConfigStore.ts). `pick()` applies it on every read and
@@ -29,9 +31,11 @@ the whole object is replaced, so unlisted nested keys do not survive.
 
 ## Composition and persistence
 
-- `composeSettings(local, shared)` = `DEFAULT_SETTINGS` ← local ← shared (shared wins), followed by
+- `composeSettings(local, shared, secrets)` = `DEFAULT_SETTINGS` ← local ← secrets ← shared (shared
+  wins), except that secret keys found in the base are dropped (`withoutSecrets`), followed by
   backfills and migrations for older data ([settingsSplit.ts](../../src/settingsSplit.ts)).
-- `persistSettings` splits by the whitelist: non-shared keys replace `local.data.settings`; for shared
+- `persistSettings` splits by the whitelist: secret keys go to `SecretStore.write`; a key the storage
+  refuses (`write` returns it after a read-back) stays in `data.json` instead of being lost. Other non-shared keys replace `local.data.settings`; for shared
   keys it computes what differs from "defaults + current base" and calls `SharedConfigStore.update`
   with only those. No difference means no write to the base.
 - `SharedConfigStore.update` patches only the `hoard:` block; the rest of the base file
@@ -47,5 +51,13 @@ it, a user-initiated note write (`EntryIndex.onLocalWrite`) or a changed shared 
 (`update` → `ensureBase`), or adopted when one appears by sync (`appeared`). See
 [flows/startup](../flows/startup.md).
 
-Backups follow the same split: `withoutSecrets` strips key-like local settings before a copy is
-written into the vault ([modules/backup](../modules/backup.md)).
+## Secrets
+
+`SecretStore.absorb` migrates keys left in `data.json` (older versions, restore, import): fill-only
+(an existing secret wins), and a key leaves the record only after a read-back confirms it is stored.
+`LocalStore` runs it on load and before every save, so keys never stay on disk in `data.json`, and sets
+`secretsInStorage`. Secret storage does not sync: on a device that has the marker but an empty store,
+`main.ts` shows a one-time notice ([startup](../flows/startup.md)).
+
+Backups never carry keys; an old backup's keys only fill empty storage on restore
+([modules/backup](../modules/backup.md)).

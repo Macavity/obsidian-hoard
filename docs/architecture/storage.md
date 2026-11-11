@@ -20,7 +20,7 @@ source_commit: 64cb1297ad64e33ac1573090568cdec0eafceea1
 # Storage
 
 **The note is the record.** Everything a user tracks is a Markdown note with properties under one
-root; the plugin only adds a shared config file, a log file and a per-device cache.
+root; the plugin only adds a shared config file, a log file, a per-device cache and API keys in Obsidian's secret storage.
 
 | File | Owner | Content | Synced |
 |---|---|---|---|
@@ -28,7 +28,8 @@ root; the plugin only adds a shared config file, a log file and a per-device cac
 | `<root>/Hoard.base` | `SharedConfigStore` | `hoard:` block with the shared settings; filters/views are Obsidian's | yes |
 | `<root>/History.md` | `HistoryStore` | one line per event ([history line](../concepts/history-line.md)) | yes |
 | `<root>/CustomLists/*.md` | `CustomListsTab` | Markdown tables ([custom lists](../modules/custom-lists.md)) | yes |
-| plugin `data.json` | `LocalStore` | device settings, API keys, [entry cache](../concepts/entry-cache.md), UI state | no |
+| plugin `data.json` | `LocalStore` | device settings, [entry cache](../concepts/entry-cache.md), UI state | no |
+| `app.secretStorage` | `SecretStore` | API keys, Steam id, IGDB id/secret, `jikanBaseUrl` under `hoard-*` ids | no, per device |
 
 ```mermaid
 flowchart LR
@@ -39,6 +40,7 @@ flowchart LR
   Mgr -- applyLocal --> Idx
   Mgr -- setCache / queueSave --> Local[LocalStore data.json]
   Mgr -- update --> Shared[SharedConfigStore Hoard.base]
+  Mgr -- write keys --> Sec[SecretStore secret storage]
   Shared -- modify event, canon diff --> Mgr
 ```
 
@@ -66,7 +68,7 @@ changed keys through `app.fileManager.processFrontMatter`; inside the callback i
 `EntryIndex.applyLocal` so the write's own `changed` event finds nothing new. The `## Notes` body
 goes through `vault.process` with `replaceNotesSection` ([noteBody.ts](../../src/storage/noteBody.ts)),
 which keeps every other section. Creates use `vault.create` with a `---` block plus `## Notes`;
-deletes use `fileManager.trashFile`. Details in [flows/entry-write](../flows/entry-write.md).
+deletes use `fileManager.trashFile`. Custom lists and the vault copy of a backup also go through the Vault API (`vault.process` / `vault.create`), not `vault.adapter`. Details in [flows/entry-write](../flows/entry-write.md).
 
 ## Messages: codes, not text
 
@@ -87,6 +89,11 @@ taken, lost edit, unreadable shared block) is a `ManagerNotice` code passed to t
   WatchLog schema-1 file (device settings and cache then start empty; notes in the vault are indexed as
   usual) or from a newer plugin version; both show a sticky Notice. The per-device WatchLog
   import decision lives in `ui.watchlogImport` ([flows/watchlog-import](../flows/watchlog-import.md)).
+- `SecretStore` ([SecretStore.ts](../../src/storage/SecretStore.ts)) wraps `getSecret`/`setSecret`; `write`
+  verifies by read-back and returns the keys it could not store, `absorb` migrates keys out of a settings
+  record. `LocalStore` takes it as an optional dependency and absorbs on load and before every save
+  (marker `secretsInStorage`), so a key never stays in `data.json`. Details:
+  [shared vs local](../concepts/shared-vs-local.md).
 - `HistoryStore` appends and caps `History.md`, ignoring its own writes by content.
 
 ## Where to change what
@@ -96,4 +103,5 @@ taken, lost edit, unreadable shared block) is a `ManagerNotice` code passed to t
   if it is API data. Reading and games: their codecs; cache merge does not exist there.
 - A new entry kind: `EntryKind`, `FOLDERS` and `classify` in `VaultLayout`, a codec, an `EntryIndex`
   case, a manager.
+- A new secret setting: `SECRET_SETTINGS` / `SecretKey` in `SecretStore.ts`.
 - A new shared setting: the whitelist in `SharedConfigStore` ([settings](../modules/settings.md)).
