@@ -6,6 +6,9 @@ const flush = () => new Promise<void>((r) => setTimeout(r, 0));
 
 interface ApiOver {
 	hasKey?: boolean;
+	source?: 'google' | 'openlibrary';
+	olBooks?: unknown[];
+	olWork?: unknown;
 	books?: unknown[];
 	manga?: unknown[];
 	single?: unknown;
@@ -17,20 +20,23 @@ interface ApiOver {
 function setup(mode: ReadingMode, over: ApiOver = {}, opts: { prefill?: string; initialState?: boolean } = {}) {
 	const api = {
 		hasGoogleBooksKey: vi.fn(() => over.hasKey ?? true),
+		searchOpenLibrary: vi.fn(() => Promise.resolve(over.olBooks ?? [])),
+		getOpenLibraryWork: vi.fn(() => Promise.resolve(over.olWork ?? null)),
 		searchGoogleBooks: vi.fn(() => (over.fail ? Promise.reject(over.fail) : Promise.resolve(over.books ?? []))),
 		searchManga: vi.fn(() => (over.fail ? Promise.reject(over.fail) : Promise.resolve(over.manga ?? []))),
 		getMangaByMalId: vi.fn((id: number) => Promise.resolve(over.single !== undefined ? over.single : (id === 7 ? over.mangaDetail : null))),
 		getGoogleBookById: vi.fn(() => Promise.resolve(over.bookDetail ?? null)),
 	};
 	const plugin = {
-		settings: {},
+		settings: { booksApiSource: over.source ?? 'google' },
 		apiService: api,
 		readingDataManager: {
 			getBooks: () => [{ title: 'Dune', googleBooksId: 'g-owned' }],
 			getMangaList: () => [{ title: 'Berserk', malId: '2' }],
 		},
 	};
-	const readingData = { getSettings: () => ({}) };
+	const added: unknown[] = [];
+	const readingData = { getSettings: () => ({}), generateBookId: () => 'b1', addBook: vi.fn((b: unknown) => { added.push(b); return Promise.resolve(); }) };
 	const initial = opts.initialState
 		? { id: 'x', state: { vaultPage: 'a.md' } as never }
 		: undefined;
@@ -38,18 +44,72 @@ function setup(mode: ReadingMode, over: ApiOver = {}, opts: { prefill?: string; 
 	modal.open();
 	const results = () => modal.contentEl.querySelector('.hoard-modal-results') as HTMLElement;
 	const state = () => (modal as unknown as { state: Record<string, unknown> }).state;
-	return { modal, api, results, state };
+	return { modal, api, results, state, added };
 }
 
 const book = { title: 'Dune', author: 'Herbert', year: 1965, coverUrl: 'http://c/1.jpg', googleBooksId: 'g-owned', totalPages: 100, releaseDate: '1965-01-01' };
 const manga = { title: 'Berserk', author: 'Miura', year: 1989, coverUrl: '', malId: 2, totalChapters: 0, totalVolumes: 0, releaseDate: undefined };
 
 describe('AddReadingModal lookup', () => {
-	it('shows the missing key hint for books without a Google Books key', async () => {
-		const { api, results } = setup('book', { hasKey: false }, { prefill: 'dune' });
+	it('searches Open Library when Google Books is chosen without a key', async () => {
+		const { api, results } = setup('book', { hasKey: false, olBooks: [] }, { prefill: 'dune' });
 		await flush();
 		expect(api.searchGoogleBooks).not.toHaveBeenCalled();
-		expect(results().textContent).toBe(t('add.reading.needGoogleKey'));
+		expect(api.searchOpenLibrary).toHaveBeenCalledWith('dune');
+		expect(results().textContent).toBe(t('add.noMatches'));
+	});
+
+	it('saves an Open Library pick with its id, filling the cover from the work record', async () => {
+		const olRow = { ...book, googleBooksId: '', openLibraryId: 'OL1W', author: '', totalPages: 0, coverUrl: '' };
+		const olWork = { author: 'Frank Herbert', totalPages: 412, coverUrl: 'http://c/ol.jpg', releaseDate: '1965-08-01' };
+		const { modal, results, state, added } = setup('book', { source: 'openlibrary', olBooks: [olRow], olWork }, { prefill: 'dune' });
+		await flush();
+		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		expect(state().openLibraryId).toBe('OL1W');
+		await flush();
+		expect(state().coverUrl).toBe('http://c/ol.jpg');
+		await (modal as unknown as { saveBook: (t: string) => Promise<void> }).saveBook('Dune');
+		expect(added[0]).toMatchObject({ openLibraryId: 'OL1W', googleBooksId: '', coverUrl: 'http://c/ol.jpg' });
+	});
+
+	it('keeps values typed while the Open Library work is loading', async () => {
+		const olRow = { ...book, googleBooksId: '', openLibraryId: 'OL1W', author: '', totalPages: 0, coverUrl: '' };
+		const { api, results, state } = setup('book', { source: 'openlibrary', olBooks: [olRow] }, { prefill: 'dune' });
+		let resolveWork: (v: unknown) => void = () => {};
+		api.getOpenLibraryWork.mockImplementationOnce(() => new Promise((r) => { resolveWork = r; }));
+		await flush();
+		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		state().totalPages = 321;
+		state().author = 'Typed Author';
+		resolveWork({ author: 'Frank Herbert', totalPages: 412, coverUrl: 'http://c/ol.jpg', releaseDate: '1965-08-01' });
+		await flush();
+		expect(state().totalPages).toBe(321);
+		expect(state().author).toBe('Typed Author');
+		expect(state().coverUrl).toBe('http://c/ol.jpg');
+	});
+
+	it('does not overwrite a cover the user already set', async () => {
+		const olRow = { ...book, googleBooksId: '', openLibraryId: 'OL1W', author: '', totalPages: 0, coverUrl: '' };
+		const { api, results, state } = setup('book', { source: 'openlibrary', olBooks: [olRow] }, { prefill: 'dune' });
+		let resolveWork: (v: unknown) => void = () => {};
+		api.getOpenLibraryWork.mockImplementationOnce(() => new Promise((r) => { resolveWork = r; }));
+		await flush();
+		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		state().coverUrl = 'http://c/mine.jpg';
+		resolveWork({ author: '', totalPages: 0, coverUrl: 'http://c/ol.jpg', releaseDate: '' });
+		await flush();
+		expect(state().coverUrl).toBe('http://c/mine.jpg');
+	});
+
+	it('keeps row values over the Open Library work record', async () => {
+		const olRow = { ...book, googleBooksId: '', openLibraryId: 'OL1W' };
+		const { results, state } = setup('book', { source: 'openlibrary', olBooks: [olRow], olWork: { author: 'X', totalPages: 9, coverUrl: 'x', releaseDate: '2000' } }, { prefill: 'dune' });
+		await flush();
+		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		await flush();
+		expect(state().author).toBe('Herbert');
+		expect(state().totalPages).toBe(100);
+		expect(state().coverUrl).toBe('http://c/1.jpg');
 	});
 
 	it('renders book results, marks owned ones and applies a pick including the detail upgrade', async () => {

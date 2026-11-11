@@ -10,6 +10,8 @@ import globals from "globals";
 // sentence-case violations are still reported. Shared by the UI rule and the
 // English locale-module rule.
 const sentenceCaseOptions = {
+    // proper nouns in canonical casing, matched in any sentence; own list, not the plugin defaults
+    brands: ["Obsidian", "Markdown", "Open Library"],
     ignoreWords: [
       // Plugin / feature names
       "Hoard", "Watchlist", "Upcoming", "Reading", "Cards",

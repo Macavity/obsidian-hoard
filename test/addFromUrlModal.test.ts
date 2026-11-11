@@ -21,6 +21,8 @@ function setup(activeApi: 'TMDB' | 'OMDb' = 'TMDB', hasKey = true) {
 		getTmdbByImdbId: vi.fn(() => Promise.resolve<MediaSearchResult | null>(result())),
 		getOmdbByImdbId: vi.fn(() => Promise.resolve<MediaSearchResult | null>(result({ mediaType: 'tv' }))),
 		hasTmdbKey: () => hasKey,
+		hasOmdbKey: () => hasKey,
+		getCinemetaDetails: vi.fn((_id: string, kind: string) => Promise.resolve<MediaSearchResult | null>(kind === 'tv' ? result({ mediaType: 'tv' }) : null)),
 		getTmdbMovieDetails: vi.fn(() => Promise.resolve<MediaSearchResult | null>(result({ trailerUrl: 'yt' }))),
 		getTmdbTvDetails: vi.fn(() => Promise.resolve<MediaSearchResult | null>(result({ mediaType: 'tv' }))),
 	};
@@ -69,6 +71,26 @@ describe('AddFromUrlModal', () => {
 		await vi.waitFor(() => expect(created.opened).toBe(1));
 		expect(api.getOmdbByImdbId).toHaveBeenCalledWith('tt0944947');
 		expect(created.calls[0]![4]).toMatchObject({ type: 'TV Show' });
+	});
+
+	it('falls back to Cinemeta without a key, trying series then movie', async () => {
+		const { imdb, imdbBtn, api } = setup('OMDb', false);
+		imdb.value = 'tt0944947';
+		imdbBtn.click();
+		await vi.waitFor(() => expect(created.opened).toBe(1));
+		expect(api.getCinemetaDetails).toHaveBeenNthCalledWith(1, 'tt0944947', 'tv');
+		expect(api.getOmdbByImdbId).not.toHaveBeenCalled();
+		expect(created.calls[0]![4]).toMatchObject({ type: 'TV Show' });
+	});
+
+	it('prefers the series record over a foreign movie record for the same id', async () => {
+		const { imdb, imdbBtn, api } = setup('OMDb', false);
+		api.getCinemetaDetails.mockImplementation((_id: string, kind: string) =>
+			Promise.resolve(kind === 'movie' ? result({ title: 'Foreign Film', mediaType: 'movie' }) : result({ title: 'Real Series', mediaType: 'tv' })));
+		imdb.value = 'tt0903747';
+		imdbBtn.click();
+		await vi.waitFor(() => expect(created.opened).toBe(1));
+		expect(created.calls[0]![4]).toMatchObject({ title: 'Real Series' });
 	});
 
 	it('reports not found when the lookup resolves empty', async () => {

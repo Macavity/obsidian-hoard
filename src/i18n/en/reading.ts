@@ -80,7 +80,7 @@ const reading = {
 		linkManga: 'add your first manga',
 	},
 	notices: {
-		noGoogleBooksId: 'No Google Books ID; cannot refresh cover.',
+		noBookId: 'No Google Books or Open Library ID; cannot refresh cover.',
 		googleBooksKeyRequired: 'Google Books API key required; add one in settings → API → Books.',
 		coverFetchFailed: 'Could not fetch cover from API.',
 		coverRefreshed: 'Cover refreshed.',

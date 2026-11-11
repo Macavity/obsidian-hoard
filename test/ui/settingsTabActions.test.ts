@@ -492,7 +492,7 @@ describe('bulk studio fetch', () => {
 		const notifyChange = vi.fn();
 		const ctx = makeTab({
 			dataManager: { getTitles: () => titles, updateStudio, notifyChange },
-			apiService: { fetchStudio: vi.fn(fetchStudio) },
+			apiService: { fetchStudio: vi.fn(fetchStudio), hasTmdbKey: () => true },
 		});
 		return { ...ctx, updateStudio, notifyChange };
 	};

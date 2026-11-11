@@ -11,6 +11,8 @@ const KINDS: Record<ExternalSource, readonly Kind[] | null> = {
 	gbooks: null,
 	rawg: null,
 	igdb: null,
+	openlibrary: null,
+	steam: null,
 };
 
 const ID_RE = /^[\w-]+$/;
@@ -38,7 +40,28 @@ export function formatExternalId(e: ExternalId): string {
 	return e.kind ? `${e.source}:${e.kind}:${e.id}` : `${e.source}:${e.id}`;
 }
 
-/** Derives the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL. */
+type LinkMatcher = (host: string, a: string, b: string) => ExternalId | null;
+
+const imdbLink: LinkMatcher = (host, a, b) =>
+	host === 'imdb.com' && a === 'title' && /^tt\d+$/.test(b) ? { source: 'imdb', id: b } : null;
+
+const tmdbLink: LinkMatcher = (host, a, b) => {
+	if (host !== 'themoviedb.org' || (a !== 'movie' && a !== 'tv')) return null;
+	const id = /^(\d+)/.exec(b)?.[1];
+	return id ? { source: 'tmdb', kind: a, id } : null;
+};
+
+const SOURCE_BY_HOST: Record<string, 'mal' | 'anilist'> = { 'myanimelist.net': 'mal', 'anilist.co': 'anilist' };
+
+const animeListLink: LinkMatcher = (host, a, b) => {
+	const source = SOURCE_BY_HOST[host];
+	if (!source || (a !== 'anime' && a !== 'manga') || !/^\d+$/.test(b)) return null;
+	return { source, kind: a, id: b };
+};
+
+const LINK_MATCHERS: readonly LinkMatcher[] = [imdbLink, tmdbLink, animeListLink];
+
+/** Derives the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL (title sources only). */
 export function externalIdFromLink(url: string): ExternalId | null {
 	let u: URL;
 	try {
@@ -49,13 +72,9 @@ export function externalIdFromLink(url: string): ExternalId | null {
 	const host = u.hostname.replace(/^www\./, '');
 	const [a, b] = u.pathname.split('/').filter(Boolean);
 	if (!a || !b) return null;
-	if (host === 'imdb.com' && a === 'title' && /^tt\d+$/.test(b)) return { source: 'imdb', id: b };
-	if (host === 'themoviedb.org' && (a === 'movie' || a === 'tv')) {
-		const id = /^(\d+)/.exec(b)?.[1];
-		return id ? { source: 'tmdb', kind: a, id } : null;
-	}
-	if ((host === 'myanimelist.net' || host === 'anilist.co') && (a === 'anime' || a === 'manga') && /^\d+$/.test(b)) {
-		return { source: host === 'myanimelist.net' ? 'mal' : 'anilist', kind: a, id: b };
+	for (const match of LINK_MATCHERS) {
+		const hit = match(host, a, b);
+		if (hit) return hit;
 	}
 	return null;
 }

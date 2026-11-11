@@ -16,7 +16,7 @@ source:
   - src/csv/csvCore.ts
   - src/coverRefresh.ts
   - src/csv/CsvModalBase.ts
-source_commit: 0cb6cc1466eedd353b592751d46e18abf3fc4d68
+source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 ---
 
 # Reading
@@ -26,7 +26,7 @@ owns the copies, writes, history and Upcoming sync; [readingCodec.ts](../../src/
 maps properties to `Book` / `Manga`. Writes follow [flows/entry-write](../flows/entry-write.md)
 (`writeItem`, `afterWrite`, [baseline](../concepts/baseline.md)); the UI is
 [ReadingTab.ts](../../src/ReadingTab.ts) (sub-tabs books/manga, shelves, virtual grid),
-[AddReadingModal.ts](../../src/AddReadingModal.ts) (Google Books for books, MAL via Jikan for manga),
+[AddReadingModal.ts](../../src/AddReadingModal.ts) (Open Library or Google Books for books via `searchBooks`, MAL via Jikan for manga),
 [ReadingDetailModal.ts](../../src/ReadingDetailModal.ts), [ReadingManageColumnsModal.ts](../../src/ReadingManageColumnsModal.ts)
 and the CSV modals opened from the settings tab. `ReadingCsvModal` and the watchlist's `CsvModal` both extend
 [CsvModalBase.ts](../../src/csv/CsvModalBase.ts), which owns the wizard (export selection, upload, header
@@ -41,9 +41,10 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
   never user-selectable. An unknown stored status decodes to "Plan to Read" and is flagged invalid.
 - **Book** progress unit is `pages` (default) or `words` (`Progress Unit`); both counter pairs are
   stored, `bookUnitProgress` picks the active one, and word properties are written only when the
-  unit is words or a word count is non-zero. Also chapters and `Google Books ID`.
+  unit is words or a word count is non-zero. Also chapters, `Google Books ID` and `openLibraryId`
+  (an Open Library work id `OL…W`; no property of its own, only `External ID`).
 - **Manga**: chapters and volumes, `MAL ID` (a number). Card progress uses chapters only.
-- Ids: `gbooks:` / `mal:manga:` in `External ID` ([external id](../concepts/external-id.md)).
+- Ids: `gbooks:` / `openlibrary:` / `mal:manga:` in `External ID` ([external id](../concepts/external-id.md)).
 
 ## Rules worth knowing
 
@@ -65,9 +66,17 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
   can end up under the old key (`Custom <old>`); nothing is lost.
 - **Quotes** are not indexed: the detail modal parses `## Quotes` for `> [!quote] <reference>`
   callouts; `appendQuote` inserts newest first and creates the section when missing.
-- **Covers**: cards without a cover fetch lazily by id, else by title search taking the first
-  result; only the cover is persisted and only when empty. Bulk refresh needs an id
-  (`fetchReadingCoverById`).
+- **Book search** is keyless: `searchBooks` ([coverRefresh.ts](../../src/coverRefresh.ts)) uses
+  Google Books when `booksApiSource` is `google` and a key is set, else Open Library
+  ([api layer](../architecture/api-layer.md)); there is no "key required" panel. A pick sets
+  `googleBooksId` or `openLibraryId`, then a background `enrichBook` fetches the full record: Google
+  upgrades pages and cover, Open Library fills only an empty cover (the work record carries no author, pages or date, and a
+  value typed meanwhile must win). Search rows from Open Library often have no page count.
+- **Covers**: cards without a cover fetch lazily by id (Open Library work or Google volume), else by
+  title (+ author) search through `searchBooks`, taking the first hit that has a cover and an id
+  (`firstBookCover`); only the cover is persisted and only when empty. Bulk refresh needs an id; a
+  Google-only book also needs the key, an Open Library book does not. The "Google Books ID" field of
+  the detail modal stays Google-only: it neither shows nor edits `openLibraryId`.
 - **CSV**: fixed export columns per kind (no custom fields, cover or groups). Import = upload,
   header mapping by aliases, value mapping for unknown statuses and ratings, duplicate preview
   (same title, case-insensitive, deselected), then batches of 10. Ambiguous `a/b/yyyy` dates read

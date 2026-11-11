@@ -427,7 +427,7 @@ export class GameDataManager {
 	 * Cover found by a title-based lookup. The resolved API source + id are identity data of the note,
 	 * which a background fetch does not write; only the cover is kept.
 	 */
-	updateCoverAndSource(id: string, url: string, _source: 'rawg' | 'igdb', _apiId: string): Promise<void> {
+	updateCoverAndSource(id: string, url: string, _source: 'rawg' | 'igdb' | 'steam', _apiId: string): Promise<void> {
 		return this.updateCoverUrl(id, url);
 	}
 

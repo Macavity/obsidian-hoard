@@ -2,7 +2,7 @@ import { formatTime } from '../types';
 import type { Game } from '../types';
 import type { Decoded } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
-import { FmReader, decodeAirtime, encodeAirtime } from './readingCodec';
+import { FmReader, airtimeProps, decodeAirtime } from './readingCodec';
 import { COMMON_PROPS as C, GAME_PROPS as G } from './properties';
 
 type Fm = Record<string, unknown>;
@@ -18,34 +18,41 @@ export function parsePlaytime(s: string): number | null {
 	return h * 60 + (m[2] ? Number(m[2]) : 0);
 }
 
-export function decodeGame(id: string, fm: Fm): Decoded<Game> {
-	const r = new FmReader(fm);
+const GAME_API_SOURCES: readonly string[] = ['rawg', 'igdb', 'steam'];
+
+function decodeApi(r: FmReader): { apiSource: Game['apiSource']; apiId: string } {
 	const ext = parseExternalId(r.str(C.externalId));
-	let apiSource: Game['apiSource'] = '';
-	let apiId = '';
-	if (ext && (ext.source === 'rawg' || ext.source === 'igdb')) {
-		apiSource = ext.source;
-		apiId = ext.id;
-	}
+	if (ext && GAME_API_SOURCES.includes(ext.source)) return { apiSource: ext.source as Game['apiSource'], apiId: ext.id };
+	return { apiSource: '', apiId: '' };
+}
 
-	let playtimeMinutes = 0;
+function decodePlaytime(r: FmReader): number {
 	const pt = r.str(G.playtime);
-	if (pt) {
-		const p = parsePlaytime(pt);
-		if (p === null) r.invalidFields.push(G.playtime);
-		else playtimeMinutes = p;
+	if (!pt) return 0;
+	const p = parsePlaytime(pt);
+	if (p === null) {
+		r.invalidFields.push(G.playtime);
+		return 0;
 	}
+	return p;
+}
 
-	let achievementsEarned = 0;
-	let achievementsTotal = 0;
+function decodeAchievements(r: FmReader): { earned: number; total: number } {
 	const ach = r.str(G.achievements);
-	if (ach) {
-		const m = /^(\d+)\s*\/\s*(\d+)$/.exec(ach.trim());
-		if (m) {
-			achievementsEarned = Number(m[1]);
-			achievementsTotal = Number(m[2]);
-		} else r.invalidFields.push(G.achievements);
+	if (!ach) return { earned: 0, total: 0 };
+	const m = /^(\d+)\s*\/\s*(\d+)$/.exec(ach.trim());
+	if (!m) {
+		r.invalidFields.push(G.achievements);
+		return { earned: 0, total: 0 };
 	}
+	return { earned: Number(m[1]), total: Number(m[2]) };
+}
+
+export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Game> {
+	const r = new FmReader(fm);
+	const { apiSource, apiId } = decodeApi(r);
+	const playtimeMinutes = decodePlaytime(r);
+	const { earned: achievementsEarned, total: achievementsTotal } = decodeAchievements(r);
 
 	const entry: Game = {
 		id,
@@ -70,7 +77,8 @@ export function decodeGame(id: string, fm: Fm): Decoded<Game> {
 		coverUrl: r.str(C.cover),
 		apiSource,
 		apiId,
-		steamAppId: r.str(G.steamAppId),
+		// a steam External ID identifies the app too, so sync matching works without the property
+		steamAppId: r.str(G.steamAppId) || (apiSource === 'steam' ? apiId : ''),
 		lastPlayed: r.strOrNull(G.lastPlayed),
 		storeUrl: r.str(G.storeUrl),
 		externalLink: r.str(C.url),
@@ -89,39 +97,68 @@ export function decodeGame(id: string, fm: Fm): Decoded<Game> {
 	return { entry, invalidFields: r.invalidFields };
 }
 
-export function encodeGame(g: Game): Fm {
-	const out: Fm = {};
-	out[C.name] = g.title;
-	out[G.developer] = g.developer ?? '';
-	out[G.publisher] = g.publisher ?? '';
-	// `genre` carries the in-app type; `type:` stays the cross-note kind marker
-	out[G.genre] = g.type ?? '';
-	out[C.status] = g.status;
-	if (g.priority) out[G.priority] = g.priority;
-	if (g.favorite) out[C.favorite] = true;
-	if (g.dateFavorited) out[C.dateFavorited] = g.dateFavorited;
-	if (g.wishlist) out[G.wishlist] = true;
-	out[C.rating] = g.rating | 0;
-	out[G.progress] = g.progress | 0;
-	if (g.playtimeMinutes > 0) out[G.playtime] = formatTime(g.playtimeMinutes);
-	if (g.achievementsTotal > 0) out[G.achievements] = `${g.achievementsEarned}/${g.achievementsTotal}`;
-	if (g.platforms.length > 0) out[G.platforms] = [...g.platforms];
-	if (g.singleplayer) out[G.singleplayer] = true;
-	if (g.coop) out[G.coop] = true;
-	if (g.multiplayer) out[G.multiplayer] = true;
-	out[C.dateStarted] = g.dateStarted ?? null;
-	out[C.dateFinished] = g.dateFinished ?? null;
-	out[C.releaseDate] = g.releaseDate ?? null;
-	out[C.dateAdded] = g.dateAdded;
-	out[C.dateModified] = g.dateModified;
-	if (g.coverUrl) out[C.cover] = g.coverUrl;
-	if (g.storeUrl) out[G.storeUrl] = g.storeUrl;
-	if (g.externalLink) out[C.url] = g.externalLink;
-	if (g.apiSource && g.apiId) out[C.externalId] = formatExternalId({ source: g.apiSource, id: g.apiId });
-	if (g.steamAppId) out[G.steamAppId] = g.steamAppId;
-	if (g.lastPlayed) out[G.lastPlayed] = g.lastPlayed;
-	if (g.groups?.length) out[C.groups] = [...g.groups];
-	encodeAirtime(g.airtime, out);
-	out[C.type] = 'game';
-	return out;
+/** `{ key: value }` when the value is set, else `{}`: optional properties stay out of the note. */
+function optional(key: string, value: unknown): Fm {
+	return value ? { [key]: value } : {};
+}
+
+function identityProps(g: Game): Fm {
+	return {
+		[C.name]: g.title,
+		[G.developer]: g.developer ?? '',
+		[G.publisher]: g.publisher ?? '',
+		// `genre` carries the in-app type; `type:` stays the cross-note kind marker
+		[G.genre]: g.type ?? '',
+		[C.status]: g.status,
+		...optional(G.priority, g.priority),
+		...optional(C.favorite, g.favorite),
+		...optional(C.dateFavorited, g.dateFavorited),
+		...optional(G.wishlist, g.wishlist),
+	};
+}
+
+function progressProps(g: Game): Fm {
+	return {
+		[C.rating]: g.rating | 0,
+		[G.progress]: g.progress | 0,
+		...optional(G.playtime, g.playtimeMinutes > 0 && formatTime(g.playtimeMinutes)),
+		...optional(G.achievements, g.achievementsTotal > 0 && `${g.achievementsEarned}/${g.achievementsTotal}`),
+		...optional(G.platforms, g.platforms.length > 0 && [...g.platforms]),
+		...optional(G.singleplayer, g.singleplayer),
+		...optional(G.coop, g.coop),
+		...optional(G.multiplayer, g.multiplayer),
+	};
+}
+
+function dateProps(g: Game): Fm {
+	return {
+		[C.dateStarted]: g.dateStarted ?? null,
+		[C.dateFinished]: g.dateFinished ?? null,
+		[C.releaseDate]: g.releaseDate ?? null,
+		[C.dateAdded]: g.dateAdded,
+		[C.dateModified]: g.dateModified,
+	};
+}
+
+function linkProps(g: Game): Fm {
+	return {
+		...optional(C.cover, g.coverUrl),
+		...optional(G.storeUrl, g.storeUrl),
+		...optional(C.url, g.externalLink),
+		...optional(C.externalId, g.apiSource && g.apiId && formatExternalId({ source: g.apiSource, id: g.apiId })),
+		...optional(G.steamAppId, g.steamAppId),
+		...optional(G.lastPlayed, g.lastPlayed),
+		...optional(C.groups, g.groups?.length && [...g.groups]),
+	};
+}
+
+export function encodeGame(g: Game): Record<string, unknown> {
+	return {
+		...identityProps(g),
+		...progressProps(g),
+		...dateProps(g),
+		...linkProps(g),
+		...airtimeProps(g.airtime),
+		[C.type]: 'game',
+	};
 }

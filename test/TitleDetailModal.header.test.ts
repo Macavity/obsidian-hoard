@@ -22,7 +22,7 @@ const mkTitle = (over: Partial<HoardTitle> = {}): HoardTitle => (({
 	...over,
 }));
 
-function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Error; stored?: HoardTitle | null; onPerson?: boolean } = {}) {
+function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Error; stored?: HoardTitle | null; onPerson?: boolean; tmdbKey?: boolean } = {}) {
 	const stored = o.stored === undefined ? title : o.stored;
 	const dataManager = {
 		getCollapsedSeasonsForTitle: () => new Set<number>(),
@@ -40,6 +40,8 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Erro
 		fetchTrailer: vi.fn(() => (o.trailer instanceof Error ? Promise.reject(o.trailer) : Promise.resolve(o.trailer ?? ''))),
 		fetchCredits: vi.fn(() => Promise.resolve(null)),
 		fetchStudio: vi.fn(() => Promise.resolve(null)),
+		hasTmdbKey: vi.fn(() => o.tmdbKey ?? true),
+		hasOmdbKey: vi.fn(() => false),
 	};
 	const plugin = {
 		settings: { ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] },
@@ -125,6 +127,28 @@ describe('TitleDetailModal.renderHeaderBody', () => {
 		await Promise.resolve();
 		expect(apiService.fetchCredits).toHaveBeenCalledTimes(1);
 		expect(apiService.fetchStudio).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('TitleDetailModal backfill without a key', () => {
+	const flushAll = () => new Promise<void>((r) => setTimeout(r, 0));
+
+	it('does not store none for credits when the fetch fails', async () => {
+		const { modal, apiService, dataManager } = build(mkTitle({ id: 'cred-fail', director: undefined, cast: undefined }));
+		(dataManager as unknown as Record<string, unknown>).updateCredits = vi.fn();
+		apiService.fetchCredits.mockRejectedValueOnce(new Error('net'));
+		header(modal);
+		await flushAll();
+		expect((dataManager as unknown as { updateCredits: unknown }).updateCredits).not.toHaveBeenCalled();
+	});
+
+	it('does not store none for a movie studio without a TMDB key', async () => {
+		const { modal, apiService, dataManager } = build(mkTitle({ id: 'studio-nokey', studio: undefined }), { tmdbKey: false });
+		(dataManager as unknown as Record<string, unknown>).updateStudio = vi.fn();
+		header(modal);
+		await flushAll();
+		expect(apiService.fetchStudio).not.toHaveBeenCalled();
+		expect((dataManager as unknown as { updateStudio: unknown }).updateStudio).not.toHaveBeenCalled();
 	});
 });
 

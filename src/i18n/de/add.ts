@@ -31,8 +31,6 @@ const add = {
 	game: {
 		heading: 'Spiel hinzufügen',
 		searchPlaceholder: 'Nach einem Spiel suchen...',
-		noIgdb: 'Keine IGDB-Zugangsdaten konfiguriert. Trage unter Einstellungen → API → Spiele die Twitch-Client-ID und das Secret ein.',
-		noRawg: 'Kein RAWG-API-Schlüssel konfiguriert. Richte ihn unter Einstellungen → API → Spiele ein.',
 		unknownPlatforms: 'Unbekannte Plattformen',
 		titlePlaceholder: 'Spieltitel',
 		developer: 'Entwickler',
@@ -60,7 +58,6 @@ const add = {
 		searchBook: 'Nach Titel oder ISBN suchen...',
 		searchManga: 'Nach Titel oder MAL-ID suchen...',
 		searchFirst: 'Gib zuerst einen Suchbegriff ein.',
-		needGoogleKey: 'Google-Books-API-Schlüssel erforderlich; hinterlege einen unter Einstellungen → API → Bücher & Manga.',
 		unknownAuthor: 'Unbekannter Autor',
 		untitled: '(ohne Titel)',
 		bookTitlePlaceholder: 'Buchtitel',

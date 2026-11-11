@@ -1,5 +1,6 @@
+import type { MediaSource } from './apiSources';
 import type HoardPlugin from './main';
-import type { AnimeSearchResult, MediaSearchResult } from './types';
+import type { AnimeSearchResult, MediaSearchResult, HoardTitle, Book, Manga, Game } from './types';
 import type { GameSearchResult, BookSearchResult, MangaSearchResult } from './ApiService';
 import { imdbIdFromLink } from './types';
 
@@ -34,12 +35,12 @@ export function animeResultIdKeys(r: AnimeSearchResult): string[] {
 }
 
 /**
- * `MediaSearchResult.imdbId` holds whatever the active API indexes by — a real imdb id under OMDb,
- * a TMDB numeric id under TMDB — so the key depends on which one produced the row.
+ * `MediaSearchResult.imdbId` holds whatever the effective source indexes by — a real imdb id under
+ * Cinemeta/OMDb, a TMDB numeric id under TMDB — so the key depends on which one produced the row.
  */
-export function mediaResultIdKeys(r: MediaSearchResult, activeApi: string): string[] {
+export function mediaResultIdKeys(r: MediaSearchResult, source: MediaSource): string[] {
 	if (!r.imdbId) return [];
-	return activeApi === 'TMDB'
+	return source === 'tmdb'
 		? [`tmdb:${r.mediaType}:${r.imdbId}`]
 		: [`imdb:${r.imdbId}`];
 }
@@ -49,11 +50,44 @@ export function gameResultIdKeys(r: GameSearchResult): string[] {
 }
 
 export function bookResultIdKeys(r: BookSearchResult): string[] {
-	return r.googleBooksId ? [`gbooks:${r.googleBooksId}`] : [];
+	const keys: string[] = [];
+	if (r.googleBooksId) keys.push(`gbooks:${r.googleBooksId}`);
+	if (r.openLibraryId) keys.push(`openlibrary:${r.openLibraryId}`);
+	return keys;
 }
 
 export function mangaResultIdKeys(r: MangaSearchResult): string[] {
 	return [`mal:${r.malId}`];
+}
+
+// ID keys for a stored entry.
+
+function titleIdKeys(t: HoardTitle): string[] {
+	const keys: string[] = [];
+	if (t.malId) keys.push(`mal:${t.malId}`);
+	if (t.anilistId) keys.push(`anilist:${t.anilistId}`);
+	if (t.tmdbId && t.tmdbMediaType) keys.push(`tmdb:${t.tmdbMediaType}:${t.tmdbId}`);
+	const imdb = imdbIdFromLink(t.externalLink);
+	if (imdb) keys.push(`imdb:${imdb}`);
+	return keys;
+}
+
+function bookIdKeys(b: Book): string[] {
+	const keys: string[] = [];
+	if (b.googleBooksId) keys.push(`gbooks:${b.googleBooksId}`);
+	if (b.openLibraryId) keys.push(`openlibrary:${b.openLibraryId}`);
+	return keys;
+}
+
+function mangaIdKeys(m: Manga): string[] {
+	return m.malId ? [`mal:${m.malId}`] : [];
+}
+
+function gameIdKeys(g: Game): string[] {
+	const keys: string[] = [];
+	if (g.apiSource && g.apiId) keys.push(`${g.apiSource}:${g.apiId}`);
+	if (g.steamAppId) keys.push(`steam:${g.steamAppId}`);
+	return keys;
 }
 
 /**
@@ -71,36 +105,21 @@ export class LibraryIndex {
 	static build(plugin: HoardPlugin, scopes: LibraryScope[]): LibraryIndex {
 		const idx = new LibraryIndex();
 
-		for (const scope of scopes) {
-			if (scope === 'watchlist') {
-				for (const t of plugin.dataManager.getTitles()) {
-					const keys: string[] = [];
-					if (t.malId) keys.push(`mal:${t.malId}`);
-					if (t.anilistId) keys.push(`anilist:${t.anilistId}`);
-					if (t.tmdbId && t.tmdbMediaType) keys.push(`tmdb:${t.tmdbMediaType}:${t.tmdbId}`);
-					const imdb = imdbIdFromLink(t.externalLink);
-					if (imdb) keys.push(`imdb:${imdb}`);
-					idx.add('Watchlist', t.title, keys);
-				}
-			} else if (scope === 'books') {
-				for (const b of plugin.readingDataManager.getBooks()) {
-					idx.add('Books', b.title, b.googleBooksId ? [`gbooks:${b.googleBooksId}`] : []);
-				}
-			} else if (scope === 'manga') {
-				for (const m of plugin.readingDataManager.getMangaList()) {
-					idx.add('Manga', m.title, m.malId ? [`mal:${m.malId}`] : []);
-				}
-			} else {
-				for (const g of plugin.gameDataManager.getGames()) {
-					const keys: string[] = [];
-					if (g.apiSource && g.apiId) keys.push(`${g.apiSource}:${g.apiId}`);
-					if (g.steamAppId) keys.push(`steam:${g.steamAppId}`);
-					idx.add('Games', g.title, keys);
-				}
-			}
-		}
+		for (const scope of scopes) idx.addScope(plugin, scope);
 
 		return idx;
+	}
+
+	private addScope(plugin: HoardPlugin, scope: LibraryScope): void {
+		if (scope === 'watchlist') {
+			for (const t of plugin.dataManager.getTitles()) this.add('Watchlist', t.title, titleIdKeys(t));
+		} else if (scope === 'books') {
+			for (const b of plugin.readingDataManager.getBooks()) this.add('Books', b.title, bookIdKeys(b));
+		} else if (scope === 'manga') {
+			for (const m of plugin.readingDataManager.getMangaList()) this.add('Manga', m.title, mangaIdKeys(m));
+		} else {
+			for (const g of plugin.gameDataManager.getGames()) this.add('Games', g.title, gameIdKeys(g));
+		}
 	}
 
 	private add(lib: LibraryName, title: string, ids: string[]): void {

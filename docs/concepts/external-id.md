@@ -8,7 +8,7 @@ source:
   - src/storage/readingCodec.ts
   - src/storage/gameCodec.ts
   - src/LibraryIndex.ts
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 ---
 
 # External id
@@ -20,11 +20,13 @@ survives sync and hand edits: `source:id` or `source:kind:id`.
 |---|---|---|
 | `tmdb` | `movie` / `tv` | `tmdb:tv:1396` |
 | `mal`, `anilist` | `anime` / `manga` | `mal:anime:5114` |
-| `imdb`, `gbooks`, `rawg`, `igdb` | none | `imdb:tt0903747`, `rawg:3498` |
+| `imdb`, `gbooks`, `openlibrary`, `rawg`, `igdb`, `steam` | none | `imdb:tt0903747`, `openlibrary:OL45883W`, `steam:620` |
 
 [externalId.ts](../../src/storage/externalId.ts): `parseExternalId` (null on unknown source,
 missing kind, or an id outside `[\w-]+`), `formatExternalId`, and `externalIdFromLink` which derives
-the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL.
+the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL, one small matcher per host
+(`LINK_MATCHERS`). Only title sources derive from links: Open Library and Steam URLs are not matched,
+since only titles call it and books and games carry their id in their own fields.
 
 ## Per kind
 
@@ -32,14 +34,20 @@ the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL.
   ids and sets `tmdbId`+`tmdbMediaType`, `malId` or `anilistId`; an `imdb` id without a link
   synthesises `URL`. On encode, `identityFor` picks the first available in order
   MAL → AniList → TMDB for type `Anime`, TMDB → MAL → AniList otherwise, then falls back to the link.
-- **Books**: `gbooks:<volumeId>`, mirrored into `Google Books ID`.
+- **Books**: `gbooks:<volumeId>`, mirrored into `Google Books ID`, or `openlibrary:OL…W` (model field
+  `openLibraryId`, stored only here, no property of its own). An Open Library id wins the `External ID` on encode; a Google id is
+  still written to `Google Books ID`, so both survive a rewrite.
 - **Manga**: `mal:manga:<id>`, mirrored into `MAL ID`.
-- **Games**: `rawg:<id>` / `igdb:<id>`, decoded into `apiSource` + `apiId` model fields (the older note properties of that name are read
-  only by the WatchLog import, [properties](properties.md)).
+- **Games**: `rawg:<id>` / `igdb:<id>` / `steam:<appid>`, decoded into `apiSource` + `apiId` model fields (the older note properties of that name are read
+  only by the WatchLog import, [properties](properties.md)). A Steam search pick also sets
+  `Steam App ID`; that property stays separate and is what Steam sync matches on; on decode a `steam:` External ID
+  fills `steamAppId` when the property is absent.
 
 ## Duplicate detection
 
-[LibraryIndex.ts](../../src/LibraryIndex.ts) keys the library by the same vocabulary
-(`mal:`, `anilist:`, `tmdb:<type>:`, `imdb:`, `gbooks:`, `<source>:<id>` for games) plus a normalised
-title key, so an add modal can warn before creating a second note for the same work. See
+[LibraryIndex.ts](../../src/LibraryIndex.ts) keys the library by the same vocabulary (`mal:`,
+`anilist:`, `tmdb:<type>:`, `imdb:`, `gbooks:`, `openlibrary:`, `<source>:<id>` and `steam:<steamAppId>`
+for games) plus a normalised title key, so an add modal can warn before creating a second note for
+the same work. A movie/TV search row's keys depend on the effective source
+(`mediaResultIdKeys(row, source)`: `tmdb:<type>:` under TMDB, `imdb:` under Cinemeta and OMDb). See
 [flows/add-title](../flows/add-title.md).

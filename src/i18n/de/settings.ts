@@ -242,7 +242,7 @@ const settings = {
 		note: 'Synchronisiert Spielzeit und Erfolge aus deiner eigenen Bibliothek',
 		badge: 'Begleiter',
 		link: 'Web-API-Schlüssel holen',
-		help: 'Steam hat keinen Such-Endpunkt und ersetzt die API oben daher nie; es läuft parallel dazu. Die Datenschutzeinstellung "Spieldetails" deines Steam-Profils muss auf "Öffentlich" stehen, sonst liefert Steam selbst für deinen eigenen Schlüssel eine leere Bibliothek.',
+		help: 'Der Konto-Abgleich braucht einen Steam-Web-API-Schlüssel und läuft parallel zur Spiele-API oben; die Spielsuche über den Steam Store braucht keinen Schlüssel. Die Datenschutzeinstellung "Spieldetails" deines Steam-Profils muss auf "Öffentlich" stehen, sonst liefert Steam selbst für deinen eigenen Schlüssel eine leere Bibliothek.',
 		apiKey: 'Web-API-Schlüssel',
 		apiKeyPlaceholder: 'Steam-Web-API-Schlüssel hier einfügen',
 		idField: 'Steam-ID oder Profil-URL',
@@ -277,6 +277,8 @@ const settings = {
 		failedCheckIdSecret: 'Fehlgeschlagen; prüfe ID und Secret',
 		chipKeySet: '{name} · Schlüssel gesetzt',
 		chipKeyNeeded: '{name} · Schlüssel nötig',
+		chipNoKey: '{name} · kein Schlüssel nötig',
+		keylessFallback: 'Nutzt {source}, bis ein Key gesetzt ist.',
 		getFreeKey: 'Kostenlosen Schlüssel holen',
 		getFreeToken: 'Kostenlosen Token holen',
 		movies: {
@@ -320,9 +322,9 @@ const settings = {
 			sub: 'Suche im Tab Lesen, Autoren und Cover',
 			google: {
 				note: 'Buchsuche, Autoren, Seitenzahlen und Cover',
-				help: 'Erstelle ein Projekt in der Google Cloud Console, aktiviere die Books API und erstelle dann unter "APIs & Services → Credentials" einen API-Schlüssel. Ohne ihn funktioniert die Buchsuche nicht.',
+				help: 'Erstelle ein Projekt in der Google Cloud Console, aktiviere die Books API und erstelle dann unter "APIs & Services → Credentials" einen API-Schlüssel. Ohne Schlüssel nutzt die Buchsuche Open Library.',
 				placeholder: 'Google-Books-Schlüssel hier einfügen',
-				noKey: 'Kein Schlüssel; Buchsuche ist aus',
+				noKey: 'Kein Schlüssel; Open Library wird genutzt',
 			},
 			manga: {
 				note: 'Manga-Suche, Kapitel, Bände und Cover',
@@ -510,7 +512,7 @@ const settings = {
 			title: 'API & Suche',
 			which: {
 				heading: 'Welche API wofür genutzt wird',
-				body: 'Hoard nutzt je Inhaltstyp eine andere API:\n• Anime: Jikan (MyAnimeList-Daten) oder AniList, je nachdem, was du unter Einstellungen → API → Anime festlegst. Für beide ist kein Schlüssel nötig.\n• Filme & Serien: OMDb oder TMDB, je nachdem, was unter Einstellungen → API aktiv ist. Beide brauchen einen kostenlosen Schlüssel bzw. Token.\n• Bücher (Lesen): Google Books. Ein kostenloser API-Schlüssel ist nötig; trage ihn unter Einstellungen → API → Bücher & Manga ein.\n• Spiele: RAWG oder IGDB, je nachdem, was du unter Einstellungen → API → Spiele festlegst. RAWG braucht einen kostenlosen Schlüssel; IGDB braucht Twitch-Client-ID und -Secret.\n• Manga (Lesen): Jikan (MyAnimeList-Daten). Kein Schlüssel nötig.\n\nDie Wahl der Anime-API betrifft nur neue Titel; bestehende Titel behalten die Quelle, mit der sie hinzugefügt wurden.\n\nWähle vor der Suche den richtigen Typ. Ist Anime gewählt und du suchst nach einem Film oder einer Serie (oder umgekehrt), wird er höchstwahrscheinlich nicht gefunden, weil jeder Typ seine eigene API abfragt. APIs sind eine Erleichterung, keine Pflicht; du kannst einen Titel immer auch manuell hinzufügen. Auch die Schaltfläche "Add from URL" nutzt eine API.',
+				body: 'Hoard nutzt je Inhaltstyp eine andere API:\n• Anime: Jikan (MyAnimeList-Daten) oder AniList, je nachdem, was du unter Einstellungen → API → Anime festlegst. Für beide ist kein Schlüssel nötig.\n• Filme & Serien: standardmäßig Cinemeta, ohne Schlüssel. OMDb oder TMDB, je nachdem, was unter Einstellungen → API aktiv ist, übernehmen, sobald ihr kostenloser Schlüssel bzw. Token gesetzt ist; Schlüssel schalten außerdem Community-Bewertungen, Ausstrahlungsinfos, Staffel-Nachladen, Reihen und Studios frei.\n• Bücher (Lesen): standardmäßig Open Library, ohne Schlüssel. Google Books ist die Alternative, sobald unter Einstellungen → API → Bücher & Manga ein kostenloser API-Schlüssel eingetragen ist.\n• Spiele: standardmäßig Steam Store, ohne Schlüssel. RAWG oder IGDB, je nachdem, was du unter Einstellungen → API → Spiele festlegst, übernehmen, sobald sie eingerichtet sind: RAWG braucht einen kostenlosen Schlüssel; IGDB braucht Twitch-Client-ID und -Secret. Der Abgleich deines Steam-Kontos braucht weiterhin einen Steam-Web-API-Schlüssel.\n• Manga (Lesen): Jikan (MyAnimeList-Daten). Kein Schlüssel nötig.\n\nDie Wahl der Anime-API betrifft nur neue Titel; bestehende Titel behalten die Quelle, mit der sie hinzugefügt wurden.\n\nWähle vor der Suche den richtigen Typ. Ist Anime gewählt und du suchst nach einem Film oder einer Serie (oder umgekehrt), wird er höchstwahrscheinlich nicht gefunden, weil jeder Typ seine eigene API abfragt. APIs sind eine Erleichterung, keine Pflicht; du kannst einen Titel immer auch manuell hinzufügen. Auch die Schaltfläche "Add from URL" nutzt eine API.',
 			},
 		},
 		reading: {
@@ -532,7 +534,7 @@ const settings = {
 			},
 			covers: {
 				heading: 'Cover',
-				body: 'Cover werden automatisch abgerufen, sobald Karten ins Bild scrollen; Google Books für Bücher, Jikan für Manga. Fehlt ein Cover oder ist es falsch, nutze "Cover aktualisieren" im ⋮-Menü einer Karte. (Zum Aktualisieren eines Buchcovers wird der Google-Books-API-Schlüssel benötigt.)',
+				body: 'Cover werden automatisch abgerufen, sobald Karten ins Bild scrollen; Open Library oder Google Books für Bücher, Jikan für Manga. Fehlt ein Cover oder ist es falsch, nutze "Cover aktualisieren" im ⋮-Menü einer Karte.',
 			},
 			columns: {
 				heading: 'Eigene Spalten',

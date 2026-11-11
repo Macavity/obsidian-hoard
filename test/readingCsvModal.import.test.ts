@@ -64,6 +64,13 @@ describe('ReadingCsvModal book import', () => {
 		});
 	});
 
+	it('imports an Open Library ID column next to the Google Books ID', async () => {
+		const { modal, books } = setup('book');
+		await importCsv(modal, 'Title,Google Books ID,Open Library ID\nDune,gb1,OL1W');
+		await vi.waitFor(() => expect(books).toHaveLength(1));
+		expect(books[0]![0]).toMatchObject({ googleBooksId: 'gb1', openLibraryId: 'OL1W' });
+	});
+
 	it.each([
 		['an explicit words unit', 'Title,Progress Unit,Total Pages\nA,words,100', 'words'],
 		['an explicit pages unit despite word counts', 'Title,Progress Unit,Total Words\nA,pages,100', 'pages'],

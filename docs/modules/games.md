@@ -12,7 +12,7 @@ source:
   - src/SteamSyncModal.ts
   - src/ApiService.ts
   - src/coverRefresh.ts
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 ---
 
 # Games
@@ -22,7 +22,7 @@ writes, derived groups, Upcoming sync and history; [gameCodec.ts](../../src/stor
 maps properties to `Game`. Writes follow [flows/entry-write](../flows/entry-write.md); one
 difference to reading: `flushViews` also diffs handed-out copies against their baseline, so an
 in-place mutation without a `*Silent` call is still written. UI: [GamesTab.ts](../../src/GamesTab.ts),
-[AddGameModal.ts](../../src/AddGameModal.ts) (RAWG or IGDB per `gamesApiSource`),
+[AddGameModal.ts](../../src/AddGameModal.ts) (Steam Store by default, RAWG or IGDB once keyed, per `effectiveGameSource`; never a "no API" panel),
 [GameDetailModal.ts](../../src/GameDetailModal.ts) (draft object, persisted on Save),
 [GameScheduleModal.ts](../../src/GameScheduleModal.ts) (single date, also sets `releaseDate`),
 [SteamSyncModal.ts](../../src/SteamSyncModal.ts) (from the Steam settings card).
@@ -37,8 +37,8 @@ in-place mutation without a `*Silent` call is still written. UI: [GamesTab.ts](.
 - **Text-encoded fields**: `Playtime` as `12h 30m` / `1,234h` / `45m` (written only when > 0;
   the decoder is strict and flags garbage as invalid; the modal input also accepts `1.5h`, `2:30`,
   bare hours), `Achievements` as `earned/total` (written only when total > 0).
-- `Genre` holds `Game.type`; `Type: game` is the kind marker. `External ID` carries RAWG or IGDB
-  source and id; `Steam App ID`, `Last Played`, `Store URL` (Steam, then GOG, then Epic when
+- `Genre` holds `Game.type`; `Type: game` is the kind marker. `External ID` carries RAWG, IGDB or Steam
+  source and id (`steam:<appid>`); `Steam App ID`, `Last Played`, `Store URL` (Steam, then GOG, then Epic when
   API-filled) are separate. `Wishlist` is a flag independent of status.
 - **Groups are derived** from the `Groups` property; id = name; an empty group does not exist.
 - **Settings split**: `defaultStatus`, `statuses`, `types`, `platforms` sync; `rowsLayout`, saved
@@ -60,13 +60,23 @@ in-place mutation without a `*Silent` call is still written. UI: [GamesTab.ts](.
    status that is not "To be released", genre only if it matches a configured type, cover = Steam
    capsule.
 
+## Search and add
+
+`AddGameModal.search` follows `effectiveGameSource` ([apiSources.ts](../../src/apiSources.ts)): the
+chosen source if keyed, else the keyless **Steam Store** search (`searchSteamStore`, apps only, rows
+with the portrait capsule). A pick fetches details by the row's own source (Steam: `appdetails`
+mapped through `getSteamStoreDetails`; missing details fall back to the search row) and stores `apiSource` + `apiId`; a Steam pick also sets
+`steamAppId`, so a later Steam sync matches by id. Non-Steam picks still derive `steamAppId` from a
+Steam store link. See [api layer](../architecture/api-layer.md).
+
 ## Covers
 
 `resolveGameCover` ([coverRefresh.ts](../../src/coverRefresh.ts)): a game with stored source and
-id uses that source's details call regardless of the setting; otherwise a title search in the
-chosen source, first result wins. Only the cover is persisted, only when empty; the found id is
+id uses that source's cover regardless of the setting (Steam: `steamLibraryCover`, stored only after
+`steamCoverExists` confirms the capsule with a HEAD request; a missing one leaves the cover unchanged); otherwise a title search in the effective source, first result with a cover
+wins. Only the cover is persisted, only when empty; the found id is
 not written. "Refresh all" is id-only. IGDB uses a cached Twitch token; RAWG images are rewritten
-to a smaller size for display ([api layer](../architecture/api-layer.md)).
+to a smaller size for display.
 
 ## Where to change what
 
@@ -76,5 +86,5 @@ to a smaller size for display ([api layer](../architecture/api-layer.md)).
 | Default statuses, genres, platforms | `defaultGamesSettings()` in `types.ts` |
 | Release status and Upcoming | `applyReleaseStatus`, `syncUpcoming` in the manager |
 | Steam matching and import defaults | `matchAgainstLibrary`, `buildGame` in `SteamSyncModal.ts` |
-| Steam, RAWG, IGDB requests | `ApiService.ts` |
+| Steam, RAWG, IGDB requests | `ApiService.ts`; Steam Store mapping and `steamLibraryCover` in `steamStoreApi.ts` |
 | Recommended and Recently played shelves | `getRecommendedGames`, `getRecentlyPlayedGames` in `GamesTab.ts` |

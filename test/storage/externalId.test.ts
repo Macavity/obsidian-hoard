@@ -14,4 +14,14 @@ describe('externalId', () => {
     expect(externalIdFromLink('https://anilist.co/anime/21')).toEqual({ source: 'anilist', kind: 'anime', id: '21' });
     expect(externalIdFromLink('https://example.com')).toBeNull();
   });
+  it('parses openlibrary and steam without kind', () => {
+    expect(parseExternalId('openlibrary:OL27448W')).toEqual({ source: 'openlibrary', id: 'OL27448W' });
+    expect(parseExternalId('steam:1145360')).toEqual({ source: 'steam', id: '1145360' });
+    expect(parseExternalId('steam:app:1')).toBeNull();
+  });
+  it('does not derive openlibrary or steam from links (title sources only)', () => {
+    expect(externalIdFromLink('https://openlibrary.org/works/OL27448W/The_Hobbit')).toBeNull();
+    expect(externalIdFromLink('https://store.steampowered.com/app/1145360/Hades/')).toBeNull();
+  });
+  it.each(['openlibrary:OL27448W', 'steam:1145360'])('round-trips %s', (s) => expect(formatExternalId(parseExternalId(s)!)).toBe(s));
 });

@@ -182,13 +182,23 @@ describe('ReadingTab.refreshCover', () => {
 	it('warns about a missing Google Books id', () => {
 		const { tab } = build('books');
 		tab.refreshCover(book());
-		expect(shown).toEqual([t('reading.notices.noGoogleBooksId')]);
+		expect(shown).toEqual(['No Google Books or Open Library ID; cannot refresh cover.']);
 	});
 
 	it('warns about a missing Google Books key', () => {
 		const { tab } = build('books', { hasKey: false });
 		tab.refreshCover(book({ googleBooksId: 'g1' }));
 		expect(shown).toEqual([t('reading.notices.googleBooksKeyRequired')]);
+	});
+
+	it('refreshes an Open Library book without a Google key', async () => {
+		const { tab, readingData } = build('books', { hasKey: false, cover: 'http://c/ol.jpg' });
+		const api = (tab as unknown as { plugin: { apiService: Record<string, unknown> } }).plugin.apiService;
+		api.getOpenLibraryWork = vi.fn(() => Promise.resolve({ coverUrl: 'http://c/ol.jpg' }));
+		tab.refreshCover(book({ openLibraryId: 'OL1W' }));
+		await flush();
+		expect(shown).toEqual([t('reading.notices.coverRefreshed')]);
+		expect(readingData.updateBook).toHaveBeenCalledWith(expect.objectContaining({ coverUrl: 'http://c/ol.jpg' }));
 	});
 
 	it('stores a fetched book cover', async () => {

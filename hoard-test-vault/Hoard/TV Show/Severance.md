@@ -3,6 +3,7 @@ Name: Severance
 Type: TV Show
 Status: Watching
 Priority: High
+Cover: none
 Seasons: ["Season 1: 9", "Season 2: 10"]
 Watched Episodes: S01E01-E03
 Date Started: 2026-10-01

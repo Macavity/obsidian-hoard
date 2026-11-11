@@ -1,5 +1,5 @@
 // Read notes straight from disk and diff them: the note is the record, so flows assert on the file, not on the UI.
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { parse } from "yaml";
@@ -30,4 +30,25 @@ export function bodyWithout(body, heading) {
 		if (!skipping) out.push(line);
 	}
 	return out.join("\n");
+}
+
+/**
+ * The note directly in the vault-relative folder `dir` whose `External ID` equals `expected` (a string) or matches it (a
+ * RegExp): `{ path, props, body, raw }`, or null. Finds an added note without knowing its file name.
+ */
+export function findNoteByExternalId(vaultPath, dir, expected) {
+	if (!existsSync(join(vaultPath, dir))) return null;
+	const matches = (id) => typeof id === "string" && (typeof expected === "string" ? id === expected : expected.test(id));
+	for (const file of readdirSync(join(vaultPath, dir))) {
+		if (!file.endsWith(".md")) continue;
+		const path = `${dir}/${file}`;
+		let note;
+		try {
+			note = readNote(vaultPath, path);
+		} catch {
+			continue; // a fixture with broken properties
+		}
+		if (matches(note.props["External ID"])) return { path, ...note };
+	}
+	return null;
 }

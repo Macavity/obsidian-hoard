@@ -1,6 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import type { ApiService } from '../src/ApiService';
+import type { Game } from '../src/types';
+import { steamLibraryCover } from '../src/steamStoreApi';
 import { parse } from 'yaml';
-import { refreshAllCovers, type CoverRefreshDeps } from '../src/coverRefresh';
+import { refreshAllCovers, resolveGameCover, searchBooks, type CoverRefreshDeps } from '../src/coverRefresh';
 import { ApiCheckQueue } from '../src/apiCheckQueue';
 import { setupGames } from './helpers/setupGameDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
@@ -33,7 +36,43 @@ async function run(files: Record<string, string>, api: Api, poster?: (dm: DataMa
 	return { res, g, r, d };
 }
 
+const OL_BOOK = '---\nName: Dune\nStatus: Reading\nType: book\nCover: https://mine\nExternal ID: openlibrary:OL1W\n---\n';
+const STEAM_GAME = '---\nName: Hades\nStatus: Playing\nType: game\nExternal ID: steam:1145360\nCover: https://mine\n---\n';
+
 describe('refreshAllCovers', () => {
+	it('book with openLibraryId fetches its cover via Open Library', async () => {
+		const getOpenLibraryWork = vi.fn().mockResolvedValue({ coverUrl: 'https://ol/c' });
+		const { res, r } = await run({ 'W/Books/Dune.md': OL_BOOK }, { getOpenLibraryWork, hasGoogleBooksKey: () => false });
+		expect(getOpenLibraryWork).toHaveBeenCalledWith('OL1W');
+		expect(fmOf(r.f.files.get('W/Books/Dune.md')).Cover).toBe('https://ol/c');
+		expect(res.updated).toBe(1);
+	});
+
+	it('steam game gets the library cover once the capsule exists', async () => {
+		const steamCoverExists = vi.fn().mockResolvedValue(true);
+		const { res, g } = await run({ 'W/Games/Hades.md': STEAM_GAME }, { steamCoverExists });
+		expect(steamCoverExists).toHaveBeenCalledWith('1145360');
+		expect(fmOf(g.f.files.get('W/Games/Hades.md')).Cover).toBe(steamLibraryCover('1145360'));
+		expect(res.updated).toBe(1);
+	});
+
+	it.each([
+		['is missing', () => Promise.resolve(false)],
+		['cannot be checked', () => Promise.reject(new Error('net'))],
+	])('keeps the stored cover when the steam capsule %s', async (_n, steamCoverExists) => {
+		const { res, g } = await run({ 'W/Games/Hades.md': STEAM_GAME }, { steamCoverExists });
+		expect(fmOf(g.f.files.get('W/Games/Hades.md')).Cover).toBe('https://mine');
+		expect(res.updated).toBe(0);
+	});
+
+	it('keyless title search uses the Steam store', async () => {
+		const searchSteamStore = vi.fn().mockResolvedValue([{ coverUrl: 'https://s/c', source: 'steam', id: 7 }]);
+		const api = { searchSteamStore, hasRawgKey: () => false, hasIgdbCredentials: () => false } as unknown as ApiService;
+		const game = { title: 'Hades', apiSource: '', apiId: '' } as Game;
+		expect(await resolveGameCover(api, 'rawg', game)).toEqual({ url: 'https://s/c', source: 'steam', apiId: '7' });
+		expect(searchSteamStore).toHaveBeenCalledWith('Hades');
+	});
+
 	it('game: hand-entered cover is replaced by the API cover', async () => {
 		const { res, g } = await run({ 'W/Games/Hades.md': GAME('https://mine') }, {
 			getRawgGameDetails: () => Promise.resolve({ coverUrl: 'https://api/x' }),
@@ -76,5 +115,38 @@ describe('refreshAllCovers', () => {
 		expect(fmOf(bad.r.f.files.get('W/Books/Dune.md')).Cover).toBe('https://mine');
 		expect(fmOf(bad.r.f.files.get('W/Manga/Berserk.md')).Cover).toBe('https://mine');
 		expect(bad.res.updated).toBe(0);
+	});
+});
+
+describe('searchBooks', () => {
+	const api = (key: boolean) => ({
+		hasGoogleBooksKey: () => key,
+		searchGoogleBooks: vi.fn().mockResolvedValue(['g']),
+		searchOpenLibrary: vi.fn().mockResolvedValue(['o']),
+	});
+
+	it('uses Google Books when chosen and keyed', async () => {
+		const a = api(true);
+		expect(await searchBooks(a as unknown as ApiService, { booksApiSource: 'google' }, 'q')).toEqual(['g']);
+		expect(a.searchGoogleBooks).toHaveBeenCalledWith('q');
+	});
+
+	it('uses Open Library without a key or when chosen', async () => {
+		const a = api(false);
+		expect(await searchBooks(a as unknown as ApiService, { booksApiSource: 'google' }, 'q')).toEqual(['o']);
+		const b = api(true);
+		expect(await searchBooks(b as unknown as ApiService, { booksApiSource: 'openlibrary' }, 'q')).toEqual(['o']);
+	});
+});
+
+describe('refreshAllCovers skips', () => {
+	it('skips google-only books without key and manga without id; unchanged cover counts unchanged', async () => {
+		const noMal = '---\nName: Berserk\nStatus: Reading\nType: manga\nCover: https://mine\n---\n';
+		const { res } = await run({ 'W/Books/Dune.md': BOOK, 'W/Manga/Berserk.md': noMal }, { hasGoogleBooksKey: () => false });
+		expect(res).toMatchObject({ total: 2, updated: 0, unchanged: 2 });
+		const same = await run({ 'W/Games/Hades.md': GAME('https://api/x') }, {
+			getRawgGameDetails: () => Promise.resolve({ coverUrl: 'https://api/x' }),
+		} as unknown as Api);
+		expect(same.res.unchanged).toBe(1);
 	});
 });

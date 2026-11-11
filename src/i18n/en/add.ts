@@ -29,8 +29,6 @@ const add = {
 	game: {
 		heading: 'Add game',
 		searchPlaceholder: 'Search for a game...',
-		noIgdb: 'No IGDB credentials configured. Go to Settings → API → Games to set the Twitch Client ID and Secret.',
-		noRawg: 'No RAWG API key configured. Go to Settings → API → Games to set one up.',
 		unknownPlatforms: 'Unknown platforms',
 		titlePlaceholder: 'Game title',
 		developer: 'Developer',
@@ -58,7 +56,6 @@ const add = {
 		searchBook: 'Search by title or ISBN...',
 		searchManga: 'Search by title or MAL ID...',
 		searchFirst: 'Enter a search term first.',
-		needGoogleKey: 'Google Books API key required; add one in Settings → API → Books.',
 		unknownAuthor: 'Unknown author',
 		untitled: '(untitled)',
 		bookTitlePlaceholder: 'Book title',

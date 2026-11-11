@@ -419,12 +419,14 @@ export interface HoardPluginSettings {
 	omdbApiKey: string;
 	tmdbApiKey: string;
 	googleBooksApiKey: string;
-	activeApi: 'OMDb' | 'TMDB';
+	/** Which API books are searched on; falls back to Open Library without a Google key. Device-local. */
+	booksApiSource: 'openlibrary' | 'google';
+	activeApi: 'Cinemeta' | 'OMDb' | 'TMDB';
 	animeApiSource: 'jikan' | 'anilist';
 	/** Jikan-v4-compatible endpoint for anime and manga; '' = Tenrai. Device-local. */
 	jikanBaseUrl: string;
 	/** Which API new games are searched on (existing games keep their data). */
-	gamesApiSource: 'rawg' | 'igdb';
+	gamesApiSource: 'steam' | 'rawg' | 'igdb';
 	rawgApiKey: string;
 	/** IGDB authenticates through Twitch — a registered app's Client ID + Secret. */
 	igdbClientId: string;
@@ -576,6 +578,8 @@ export interface Book {
 	totalChapters: number;
 	coverUrl: string;
 	googleBooksId: string;
+	/** Open Library work id (`OL…W`); stored only in External ID. */
+	openLibraryId: string;
 	externalLink?: string;
 	vaultPage: string;
 	dateStarted: string | null;
@@ -757,7 +761,7 @@ export interface Game {
 	 * Which games API resolved this entry ('' = manual or pre-field) and its id there,
 	 * stored as a string. Lets a cover be re-fetched by id instead of by title.
 	 */
-	apiSource: '' | 'rawg' | 'igdb';
+	apiSource: '' | 'rawg' | 'igdb' | 'steam';
 	apiId: string;
 	/**
 	 * Steam appid, as a string ('' when unlinked). Independent of apiSource — a RAWG
@@ -1009,10 +1013,11 @@ export const DEFAULT_SETTINGS: HoardPluginSettings = {
 	omdbApiKey: '',
 	tmdbApiKey: '',
 	googleBooksApiKey: '',
-	activeApi: 'OMDb',
+	booksApiSource: 'openlibrary',
+	activeApi: 'Cinemeta',
 	animeApiSource: 'jikan',
 	jikanBaseUrl: '',
-	gamesApiSource: 'rawg',
+	gamesApiSource: 'steam',
 	rawgApiKey: '',
 	igdbClientId: '',
 	igdbClientSecret: '',

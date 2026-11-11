@@ -9,7 +9,7 @@ export interface EpisodeRef {
 	episode: number;
 }
 
-export type ExternalSource = 'tmdb' | 'imdb' | 'mal' | 'anilist' | 'gbooks' | 'rawg' | 'igdb';
+export type ExternalSource = 'tmdb' | 'imdb' | 'mal' | 'anilist' | 'gbooks' | 'rawg' | 'igdb' | 'openlibrary' | 'steam';
 
 /** Primary API identity of an entry, stored in frontmatter as `externalId`. */
 export interface ExternalId {

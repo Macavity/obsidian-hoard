@@ -29,7 +29,7 @@ CLI calls time out after 30 s; keep the hoard-test-vault window visible while ru
 
 ### Fixtures
 
-The notes in `hoard-test-vault/` are hand-written and cover every domain plus edge cases (broken properties, a minimal note, `Maybe`, a 2099 airtime, foreign History lines, drafts). `Welcome.md` catalogues each one and what it covers. No fixture has an external id, and the anime fixture has `Cover: none`, so nothing reaches the network. `test/e2e/expected.mjs` holds the counts the smoke expects; change a fixture and its count in the same commit (`test/fixtures.test.ts` checks them against the codecs).
+The notes in `hoard-test-vault/` are hand-written and cover every domain plus edge cases (broken properties, a minimal note, `Maybe`, a 2099 airtime, foreign History lines, drafts). `Welcome.md` catalogues each one and what it covers. No fixture has an external id, and the anime fixture and the click-flow edit target (Severance) have `Cover: none`, so the background cover fill leaves them alone. `test/e2e/expected.mjs` holds the counts the smoke expects; change a fixture and its count in the same commit (`test/fixtures.test.ts` checks them against the codecs).
 
 ### Smoke
 
@@ -40,6 +40,7 @@ The notes in `hoard-test-vault/` are hand-written and cover every domain plus ed
 | `data` | the managers load exactly the counts in `expected.mjs`; no wizard open |
 | `flows` | real clicks (`test/e2e/ui.mjs`, CDP with hit-testing) add a title, tick an episode and change a status, edit the detail modal; the note on disk may change only in the expected properties |
 | `scenarios` | the WatchLog wizard imports `test/e2e/scenarios/watchlog-{original,fork}` into an empty vault; your own WatchLog data in the vault is restored afterwards |
+| `keyless` | needs the network: without API keys the add modals find, fill and add The Matrix, Breaking Bad (Cinemeta), The Hobbit (Open Library) and Hades (Steam); each note on disk has the expected `External ID` and a `Cover`. Runs last, since it adds notes |
 
 Failures collect per step; a screenshot of each failed flow or scenario goes to `$SMOKE_OUT` (default `<os tmpdir>/hoard-smoke`).
 

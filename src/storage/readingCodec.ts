@@ -81,14 +81,22 @@ export function decodeAirtime(r: FmReader): EntryAirtime | undefined {
 	return a;
 }
 
+/** Airtime properties of an entry; empty when it has no schedule. */
+export function airtimeProps(a: EntryAirtime | undefined): Record<string, unknown> {
+	if (!a) return {};
+	return {
+		[A.recurrence]: a.recurrence,
+		...(a.day !== undefined ? { [A.day]: a.day } : {}),
+		...(a.time ? { [A.time]: a.time } : {}),
+		...(a.season !== undefined ? { [A.season]: a.season } : {}),
+		...(a.episode !== undefined ? { [A.episode]: a.episode } : {}),
+		...(a.acknowledged ? { [A.acknowledged]: a.acknowledged } : {}),
+	};
+}
+
+/** Writes the airtime properties into a frontmatter object that is edited in place (processFrontMatter). */
 export function encodeAirtime(a: EntryAirtime | undefined, out: Fm): void {
-	if (!a) return;
-	out[A.recurrence] = a.recurrence;
-	if (a.day !== undefined) out[A.day] = a.day;
-	if (a.time) out[A.time] = a.time;
-	if (a.season !== undefined) out[A.season] = a.season;
-	if (a.episode !== undefined) out[A.episode] = a.episode;
-	if (a.acknowledged) out[A.acknowledged] = a.acknowledged;
+	Object.assign(out, airtimeProps(a));
 }
 
 /** Reads `Custom <name>` for each column; keys of unknown columns are ignored and stay in the note. */
@@ -194,6 +202,7 @@ export function decodeBook(id: string, fm: Record<string, unknown>, columns: rea
 		wordsRead: r.num(R.wordsRead),
 		totalWords: r.num(R.totalWords),
 		googleBooksId: r.str(R.googleBooksId) || gbooks,
+		openLibraryId: ext?.source === 'openlibrary' ? ext.id : '',
 	};
 	stripEmptyOptional(entry);
 	return { entry, invalidFields: r.invalidFields };
@@ -212,10 +221,10 @@ export function encodeBook(b: Book, columns: readonly ReadingCustomColumn[]): Re
 	}
 	out[R.chaptersRead] = b.chaptersRead | 0;
 	out[R.totalChapters] = b.totalChapters | 0;
-	if (b.googleBooksId) {
-		out[R.googleBooksId] = b.googleBooksId;
-		out[C.externalId] = formatExternalId({ source: 'gbooks', id: b.googleBooksId });
-	}
+	// lossless for both ids: the Google Books ID has its own property, so Open Library takes the External ID
+	if (b.googleBooksId) out[R.googleBooksId] = b.googleBooksId;
+	if (b.openLibraryId) out[C.externalId] = formatExternalId({ source: 'openlibrary', id: b.openLibraryId });
+	else if (b.googleBooksId) out[C.externalId] = formatExternalId({ source: 'gbooks', id: b.googleBooksId });
 	encodeTail(b, 'book', columns, out);
 	return out;
 }

@@ -40,6 +40,18 @@ describe('game codec', () => {
 		expect(encodeGame(entry)).toMatchObject({ Playtime: '12h 30m', Achievements: '10/49', 'External ID': 'rawg:274755', 'Steam App ID': '1145360', 'Last Played': '2026-10-01T20:00:00Z' });
 	});
 
+	it('feeds steamAppId from a steam External ID, an explicit property wins', () => {
+		expect(decodeGame('Games/X', { Name: 'X', 'External ID': 'steam:42' }).entry.steamAppId).toBe('42');
+		expect(decodeGame('Games/X', { Name: 'X', 'External ID': 'steam:42', 'Steam App ID': '7' }).entry.steamAppId).toBe('7');
+		expect(decodeGame('Games/X', { Name: 'X', 'External ID': 'rawg:42' }).entry.steamAppId).toBe('');
+	});
+
+	it('maps steam External ID to apiSource', () => {
+		const { entry } = decodeGame('Games/X', { Name: 'X', 'External ID': 'steam:42' });
+		expect(entry).toMatchObject({ apiSource: 'steam', apiId: '42' });
+		expect(encodeGame(entry)).toMatchObject({ 'External ID': 'steam:42' });
+	});
+
 	it('keeps groups, airtime and igdb ids', () => {
 		const fm = { Name: 'G', Developer: 'D', Publisher: 'P', Genre: 'RPG', Status: 'Playing', Priority: 'High', Wishlist: true,
 			'External ID': 'igdb:1942', Groups: ['A'], 'Airtime Recurrence': 'once', 'Airtime Acknowledged': '2026-10-01',
@@ -54,5 +66,16 @@ describe('game codec', () => {
 		const { entry, invalidFields } = decodeGame('Games/B', { Name: 'B', Status: 'Playing', Playtime: 'lots', 'Date Added': 'x', 'Date Modified': 'y' });
 		expect(invalidFields).toContain('Playtime');
 		expect(entry.playtimeMinutes).toBe(0);
+	});
+
+	it('ignores a non-game External ID', () => {
+		const { entry } = decodeGame('Games/X', { Name: 'X', 'External ID': 'imdb:tt1' });
+		expect(entry).toMatchObject({ apiSource: '', apiId: '' });
+	});
+
+	it('flags malformed achievements', () => {
+		const { entry, invalidFields } = decodeGame('Games/A', { Name: 'A', Achievements: 'many' });
+		expect(invalidFields).toContain('Achievements');
+		expect(entry).toMatchObject({ achievementsEarned: 0, achievementsTotal: 0 });
 	});
 });

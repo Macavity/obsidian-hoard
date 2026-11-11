@@ -7,9 +7,10 @@ source:
   - src/ui/SearchFormModal.ts
   - src/ui/DuplicateGuard.ts
   - src/titleSearch.ts
+  - src/apiSources.ts
   - src/LibraryIndex.ts
   - src/DataManager.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 ---
 
 # Add title
@@ -28,7 +29,7 @@ sequenceDiagram
   participant DM as DataManager
   M->>P: mount, search(initialQuery)
   P->>TS: searchTitles(type, query, year)
-  TS->>API: searchAnime / searchAniList / searchOmdb / searchTmdb
+  TS->>API: searchAnime / searchAniList / searchCinemeta / searchOmdb / searchTmdb
   API-->>P: results
   P->>LI: lookup(idKeys, title) per row → "In library" marker
   P->>M: selectResult → resolvePick (details, seasons, trailer, credits)
@@ -43,14 +44,21 @@ sequenceDiagram
    mounts a `SearchPicker` above a form and asks the subclass for picker options, `search`,
    `noApiMessage`, `renderResult`, `selectResult`, `renderForm`. A prefilled query searches at once.
 2. **Routing**: `searchTitles` ([titleSearch.ts](../../src/titleSearch.ts)) maps the selected type
-   through `typeApiMapping` to anime (Jikan or AniList) or movie/series (OMDb or TMDB); no mapping
-   shows the "No API configured" panel. The default type comes from `resolveDefaultAddType`.
+   through `typeApiMapping` to anime (Jikan or AniList) or movie/series, where
+   `effectiveMediaSource` ([apiSources.ts](../../src/apiSources.ts)) picks Cinemeta, OMDb or TMDB:
+   the chosen one if keyed, else keyless Cinemeta, so Movie and TV Show always search. The "No API
+   configured" panel (`noApiMessage`) now only shows for a custom type with no entry in
+   `typeApiMapping`. The default type comes from `resolveDefaultAddType`.
 3. **In-library marker**: on the first search the modal builds a `LibraryIndex` over the watchlist;
    each result row asks `lookup(resultIdKeys(result), title)`. Matching is exact by
    [external id](../concepts/external-id.md) first, normalised title second, deliberately not fuzzy.
 4. **Pick**: `resolvePick` fetches details for the chosen row (seasons, trailer, director, cast,
-   studio, anime ids) with an `isCurrent` guard so a stale response is dropped; `applyPick` fills
-   the media fields and the form re-renders.
+   studio, anime ids) through the same effective source, with an `isCurrent` guard so a stale
+   response is dropped; `applyPick` fills the media fields and the form re-renders. Under Cinemeta
+   the pick also carries the row's poster (`posterUrl`), which lands in the new note; OMDb and TMDB
+   picks leave it empty and the poster queue fills it later ([api layer](../architecture/api-layer.md)).
+   A pasted IMDb link (`AddFromUrlModal`) resolves the same way and opens this modal prefilled,
+   without a poster.
 5. **Submit**: `addTitle` requires a name, then `blockDuplicate`
    ([ui/DuplicateGuard.ts](../../src/ui/DuplicateGuard.ts)) warns on a same-name title with
    Continue/Cancel (Continue lets the next attempt pass once). "To be released" is not selectable;
@@ -64,5 +72,5 @@ sequenceDiagram
 7. `onAdded(entry)` lets the caller open the detail modal (`openWatchlistAfterAdd`) or refresh a
    Drafts card.
 
-Failure points: API errors render in the results panel (`apiErrorMessage`); an invalid YAML file
+Failure points: API errors (Cinemeta included) render in the results panel (`apiErrorMessage`); an invalid YAML file
 at the target path makes the create fail with a Notice.

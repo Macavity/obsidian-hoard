@@ -5,10 +5,11 @@ import { statusLabel, typeLabel, readingStatusLabel } from './i18n/labels';
 import { typeNameProblemText } from './ui/problemText';
 import { cardSizeToMinWidth } from './VirtualGrid';
 import type HoardPlugin from './main';
-import type { TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from './types';
+import type { HoardPluginSettings, TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from './types';
 import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType, isCreditsNone, CREDITS_NONE } from './types';
 import { readingStatusColor } from './readingColors';
 import { gamesKeyChip } from './ui/gamesKeyChip';
+import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from './apiSources';
 import { SteamSyncModal } from './SteamSyncModal';
 import type { SteamFailureReason } from './ApiService';
 
@@ -155,6 +156,21 @@ function jikanEndpointStatus(raw: string): ChipStatus {
 	if (parsed || raw.trim() === '') return { text: t('settings.api.jikan.default'), tone: 'ok' };
 	return { text: t('settings.api.jikan.invalid'), tone: 'warn' };
 }
+
+/** Chip for a keyless source that needs nothing from the user. */
+function keylessChip(name: string): ChipStatus {
+	return { text: t('settings.api.chipNoKey', { name }), tone: 'ok' };
+}
+
+/** Chip for a keyed source: key set or still needed. */
+function keyedChip(name: string, keySet: boolean): ChipStatus {
+	return keySet
+		? { text: t('settings.api.chipKeySet', { name }), tone: 'ok' }
+		: { text: t('settings.api.chipKeyNeeded', { name }), tone: 'warn' };
+}
+
+const MEDIA_NAMES = { cinemeta: 'Cinemeta', omdb: 'OMDb', tmdb: 'TMDB' } as const;
+const GAME_NAMES = { steam: 'Steam Store', rawg: 'RAWG', igdb: 'IGDB' } as const;
 
 type SettingsSection = 'general' | 'api' | 'customize' | 'watchlist' | 'drafts' | 'custom-lists' | 'reading' | 'widgets' | 'quick-info';
 
@@ -734,7 +750,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const p = this.plugin;
 		const res = await refreshAllCovers({
 			api: p.apiService,
-			gamesApiSource: p.settings.gamesApiSource ?? 'rawg',
+			gamesApiSource: effectiveGameSource(p.settings, p.apiService),
 			dataManager: p.dataManager,
 			posterService: p.posterService,
 			readingData: p.readingDataManager,
@@ -828,7 +844,11 @@ export class HoardSettingsTab extends PluginSettingTab {
 	/** Bulk studio backfill; the rewriteAllFrontmatter progress/cancel pattern. */
 	private async fetchAllStudios(): Promise<void> {
 		const dm = this.plugin.dataManager;
-		const pending = dm.getTitles().filter((title) => needsStudioFetch(title));
+		const api = this.plugin.apiService;
+		const mapping = this.plugin.settings.typeApiMapping;
+		// movie studios need TMDB: without a key a miss is not an answer, so leave the field unfetched
+		const pending = dm.getTitles().filter((title) =>
+			needsStudioFetch(title) && (getApiGroupForType(title.type, mapping) !== 'movie' || api.hasTmdbKey()));
 		const total = pending.length;
 		if (total === 0) {
 			new Notice(t('settings.general.studios.allHave'));
@@ -848,8 +868,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				if (isCancelled()) break;
 				const title = pending[i]!;
 				try {
-					const group = getApiGroupForType(title.type, this.plugin.settings.typeApiMapping);
-					const found = await this.plugin.apiService.fetchStudio(title, animeSource, group);
+					const group = getApiGroupForType(title.type, mapping);
+					const found = await api.fetchStudio(title, animeSource, group);
 					// a miss stores 'none' so the next run skips it instead of retrying forever
 					await dm.updateStudio(title.id, found?.studio ?? [CREDITS_NONE], found?.tmdbId, found?.tmdbMediaType);
 					if (found?.studio && !isCreditsNone(found.studio)) filled++; else missed++;
@@ -1032,6 +1052,19 @@ export class HoardSettingsTab extends PluginSettingTab {
 	}
 
 	/**
+	 * Hint line under a source selector, naming the keyless source in use while the chosen
+	 * one has no key. The returned updater takes that fallback's name, or null to hide it.
+	 */
+	private fallbackHint(parent: HTMLElement): (source: string | null) => void {
+		const hint = parent.createDiv({ cls: 'hoard-sg-note hoard-sg-fallback' });
+		hint.hide();
+		return (source) => {
+			hint.textContent = source ? t('settings.api.keylessFallback', { source }) : '';
+			hint.toggle(source !== null);
+		};
+	}
+
+	/**
 	 * A provider card: avatar + name + state on top, credential fields, then a footer with
 	 * the status chip and the link / help / Test actions. Every keystroke recomputes the
 	 * status, so an old "Connected" never outlives the key it was tested with.
@@ -1170,27 +1203,30 @@ export class HoardSettingsTab extends PluginSettingTab {
 		let omdb: ApiProviderHandle;
 		let tmdb: ApiProviderHandle;
 		const syncMovies = (): void => {
-			const active = s.activeApi ?? 'OMDb';
+			const active = s.activeApi;
 			omdb.setActive(active === 'OMDb');
 			tmdb.setActive(active === 'TMDB');
-			const keyed = active === 'OMDb' ? !!s.omdbApiKey : !!s.tmdbApiKey;
-			movies.setChip(
-				keyed
-					? { text: t('settings.api.chipKeySet', { name: active }), tone: 'ok' }
-					: { text: t('settings.api.chipKeyNeeded', { name: active }), tone: 'warn' },
-			);
+			const effective = effectiveMediaSource(s, this.plugin.apiService);
+			const fellBack = effective !== active.toLowerCase();
+			movies.setChip(active === 'Cinemeta' ? keylessChip(active) : keyedChip(active, !fellBack));
+			setMoviesHint(fellBack ? MEDIA_NAMES.cinemeta : null);
 		};
 
 		this.apiSegmented(movies.body, {
 			label: t('settings.api.activeApi'),
-			options: [{ value: 'OMDb', label: 'OMDb' }, { value: 'TMDB', label: 'TMDB' }],
-			value: s.activeApi ?? 'OMDb',
+			options: [
+				{ value: 'Cinemeta', label: 'Cinemeta' },
+				{ value: 'OMDb', label: 'OMDb' },
+				{ value: 'TMDB', label: 'TMDB' },
+			],
+			value: s.activeApi,
 			onChange: (v) => {
-				s.activeApi = v as 'OMDb' | 'TMDB';
+				s.activeApi = v as HoardPluginSettings['activeApi'];
 				void this.plugin.saveSettings();
 				syncMovies();
 			},
 		});
+		const setMoviesHint = this.fallbackHint(movies.body);
 
 		omdb = this.apiProvider(movies.body, {
 			name: 'OMDb',
@@ -1354,12 +1390,23 @@ export class HoardSettingsTab extends PluginSettingTab {
 			variant: 'books',
 		});
 		const syncBooks = (): void => {
-			books.setChip(
-				s.googleBooksApiKey
-					? { text: t('settings.api.chipKeySet', { name: t('settings.reading.subTab.books') }), tone: 'ok' }
-					: { text: t('settings.api.chipKeyNeeded', { name: t('settings.reading.subTab.books') }), tone: 'warn' },
-			);
+			const effective = effectiveBookSource(s, this.plugin.apiService);
+			const fellBack = effective !== s.booksApiSource;
+			books.setChip(s.booksApiSource === 'openlibrary' ? keylessChip('Open Library') : keyedChip('Google Books', !fellBack));
+			setBooksHint(fellBack ? 'Open Library' : null);
 		};
+
+		this.apiSegmented(books.body, {
+			label: t('settings.api.activeApi'),
+			options: [{ value: 'openlibrary', label: 'Open Library' }, { value: 'google', label: 'Google Books' }],
+			value: s.booksApiSource,
+			onChange: (v) => {
+				s.booksApiSource = v as HoardPluginSettings['booksApiSource'];
+				void this.plugin.saveSettings();
+				syncBooks();
+			},
+		});
+		const setBooksHint = this.fallbackHint(books.body);
 
 		this.apiProvider(books.body, {
 			name: 'Google Books',
@@ -1416,28 +1463,33 @@ export class HoardSettingsTab extends PluginSettingTab {
 		let rawg: ApiProviderHandle;
 		let igdb: ApiProviderHandle;
 		const syncGames = (): void => {
-			const active = s.gamesApiSource ?? 'rawg';
+			const active = s.gamesApiSource;
 			rawg.setActive(active === 'rawg');
 			igdb.setActive(active === 'igdb');
-			// the chip reads only the source and the credentials of both providers
-			games.setChip(gamesKeyChip({
-				gamesApiSource: s.gamesApiSource,
+			// the chip reads only the keyed source and the credentials of both providers
+			games.setChip(active === 'steam' ? keylessChip(GAME_NAMES.steam) : gamesKeyChip(active, {
 				rawgApiKey: s.rawgApiKey,
 				igdbClientId: s.igdbClientId,
 				igdbClientSecret: s.igdbClientSecret,
 			}));
+			setGamesHint(effectiveGameSource(s, this.plugin.apiService) !== active ? GAME_NAMES.steam : null);
 		};
 
 		this.apiSegmented(games.body, {
 			label: t('settings.api.activeApi'),
-			options: [{ value: 'rawg', label: 'RAWG' }, { value: 'igdb', label: 'IGDB' }],
-			value: s.gamesApiSource ?? 'rawg',
+			options: [
+				{ value: 'steam', label: GAME_NAMES.steam },
+				{ value: 'rawg', label: 'RAWG' },
+				{ value: 'igdb', label: 'IGDB' },
+			],
+			value: s.gamesApiSource,
 			onChange: (v) => {
-				s.gamesApiSource = v as 'rawg' | 'igdb';
+				s.gamesApiSource = v as HoardPluginSettings['gamesApiSource'];
 				void this.plugin.saveSettings();
 				syncGames();
 			},
 		});
+		const setGamesHint = this.fallbackHint(games.body);
 
 		rawg = this.apiProvider(games.body, {
 			name: 'RAWG',

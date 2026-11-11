@@ -73,6 +73,7 @@ const csv = {
 		volumesRead: 'Gelesene Bände',
 		totalVolumes: 'Bände gesamt',
 		googleBooksId: 'Google-Books-ID',
+		openLibraryId: 'Open-Library-ID',
 		malId: 'MAL-ID',
 	},
 	notice: {
