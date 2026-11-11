@@ -35,11 +35,17 @@ describe('cinemeta', () => {
 		expect(m.episodeDuration).toBeGreaterThan(0);
 	});
 	it('parses runtimes', () => {
-		const dur = (runtime: unknown) => mapCinemetaMeta({ meta: { id: 'tt1', name: 'x', runtime } }, 'movie')!.episodeDuration;
+		const dur = (runtime: unknown) => mapCinemetaMeta({ meta: { id: 'tt1', name: 'x', year: '2000', runtime } }, 'movie')!.episodeDuration;
 		expect(dur('2h 5min')).toBe(125);
 		expect(dur('49 min')).toBe(49);
 		expect(dur('soon')).toBe(0);
 		expect(dur(undefined)).toBe(0);
+	});
+	it('rejects foreign records that carry no year', () => {
+		// cinemeta answers a wrong-kind id with an unrelated title that has releaseInfo but no year
+		const foreign = { meta: { id: 'tt0903747', type: 'movie', name: 'Mirror', releaseInfo: '1975', runtime: '107 min' } };
+		expect(mapCinemetaMeta(foreign, 'movie')).toBeNull();
+		expect(mapCinemetaMeta({ meta: { ...foreign.meta, year: '' } }, 'movie')).toBeNull();
 	});
 	it('returns [] / null for garbage', () => {
 		expect(mapCinemetaSearch(null, 'movie', '', 9)).toEqual([]);

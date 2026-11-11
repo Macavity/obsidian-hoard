@@ -4,6 +4,7 @@
   "type": "movie",
   "name": "The Matrix",
   "poster": "https://images.metahub.space/poster/small/tt0133093/img",
+  "year": "1999",
   "releaseInfo": "1999",
   "released": "1999-03-31T00:00:00.000Z",
   "runtime": "136 min",

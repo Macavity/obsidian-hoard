@@ -96,10 +96,15 @@ function buildSeasons(videos: unknown): Season[] {
 	});
 }
 
+/**
+ * Cinemeta answers an IMDb id requested under the wrong kind with an unrelated title
+ * (a movie for a series id, a foreign series for a movie id). Genuine records always carry a
+ * top-level `year`; the foreign ones only have `releaseInfo`. No year means not our record.
+ */
 export function mapCinemetaMeta(json: unknown, kind: CinemetaKind): MediaSearchResult | null {
 	const raw = asObject(asObject(json)?.meta);
 	const base = raw && baseResult(raw, kind);
-	if (!raw || !base) return null;
+	if (!raw || !base || !str(raw.year)) return null;
 	const seasons = kind === 'series' ? buildSeasons(raw.videos) : [];
 	return {
 		...base,
