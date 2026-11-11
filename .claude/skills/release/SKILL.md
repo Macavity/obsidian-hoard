@@ -58,10 +58,14 @@ pnpm install --frozen-lockfile
 pnpm lint
 pnpm test
 pnpm build
-pnpm fallow:report            # informational, not a gate
+pnpm quality                  # informational here, not a gate
 ```
 
-Then the automated section of `.claude/skills/obsidian-ops/references/release-readiness.md`: files at root, manifest consistent, no stray console output, README disclosures (network use: the services in the README's APIs table). Report each item as pass or fail with a concrete fix. The interactive pre-release items (desktop platforms, large vault, mobile/tablet layout, a real phone or tablet via a synced test vault) are a question to the user, not assumed.
+Then the automated section of `.claude/skills/obsidian-ops/references/release-readiness.md`: files at root, manifest consistent, no stray console output, README disclosures (network use: the services in the README's APIs table). Report each item as pass or fail with a concrete fix.
+
+Local checks on this machine, run by you, not asked: `pnpm mobile:smoke` (mobile layout via desktop emulation) and, if Obsidian is running with `hoard-test-vault`, `pnpm smoke`. Report the result; a failure is a gate failure.
+
+Never ask before the tag whether other platforms or a real phone or tablet were tested. Other devices install the plugin only from a published release (BRAT or the directory), so that test cannot happen before it. It is part of the check after the release (step 6).
 
 A gate failure is fixed in its own `fix:` branch and PR before the release, or the release is called off.
 
@@ -133,7 +137,7 @@ gh release view <version>      # title = version, assets main.js, manifest.json,
 
 Workflow did not fire: follow "Pushing tags so the workflow actually fires" in `versioning-releases.md` (run the workflow from the Actions tab with the **tag** as ref; branch refs are rejected). Never create the release by hand as a first resort; that skips the build attestation.
 
-Report the release URL and the asset list to the user.
+Report the release URL and the asset list to the user. Then hand over the cross-device test: install the release on the other desktop platforms and a real phone or tablet (BRAT or the directory) and try it with a large vault. A regression found there gets a patch release through this skill, not a fix to the published tag.
 
 ## Rationalizations that end releases badly
 
