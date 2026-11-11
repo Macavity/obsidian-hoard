@@ -4,13 +4,29 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 The release workflow takes the section of the released version from this file as the GitHub release notes. Without a section the release only carries the compare link.
 
-## [Unreleased]
+## [0.2.0] - 2026-11-11
+
+### Added
+
+- Search, posters and covers work without any API key: Cinemeta for movies and TV shows, Open Library for books, the Steam Store for games. OMDb/TMDB, Google Books and RAWG/IGDB take over once their key is set; each API card says which keyless source is used until then.
+- Book notes keep both a Google Books and an Open Library id; the book CSV export includes the Open Library id.
 
 ### Changed
 
+- Note properties use fixed, readable names (`Name`, `Status`, `Date Added`, `Cover`, `External ID`, ...). Custom reading columns are stored as `Custom <name>`; renaming a column moves the property in every note and reports notes it skipped. Notes of Hoard 0.1 keep their old property names and are not converted; the WatchLog import translates them.
+- The widget `hoard-nowwatching` is now `hoard-now`. Existing `hoard-nowwatching` blocks no longer render; rename them.
+- Custom lists never overwrite a list note that was changed elsewhere (another device, a hand edit): the save is refused, the list reloads and keeps the other change.
 - API keys, the Steam id, the IGDB client id and the Jikan endpoint now live in Obsidian's keychain (secret storage) on each device instead of the plugin's `data.json`. Existing keys move there on first start. On every further device, enter them again in Hoard's settings; Hoard says so once.
 - Backups no longer contain API keys, the Steam id, the IGDB client id or the Jikan endpoint. Restoring an older backup that still holds them fills only values that are not set on this device.
 - Hoard now requires Obsidian 1.11.5 or later, the first version that encrypts its keychain at rest.
+
+### Fixed
+
+- Steam games on Windows show the platform as PC.
+- Picking a game search result applies its name, id and fields together; missing details fall back to the search row.
+- Watchlist search falls back to the search row when the details lookup comes back empty.
+- Without a key, the detail view and the bulk studio refresh no longer mark credits and studios as permanently missing.
+- A Steam capsule cover is checked before it is stored.
 
 ## [0.1.0] - 2026-11-10
 
@@ -32,4 +48,5 @@ The release workflow takes the section of the released version from this file as
 - Tab bars are flat and no longer show a horizontal scrollbar.
 - The trailer control in the detail view is a single button: play when a trailer is known, fetch otherwise. It no longer sits as a second refresh icon next to the rating refresh.
 
+[0.2.0]: https://github.com/Macavity/obsidian-hoard/releases/tag/0.2.0
 [0.1.0]: https://github.com/Macavity/obsidian-hoard/releases/tag/0.1.0

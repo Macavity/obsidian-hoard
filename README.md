@@ -47,7 +47,8 @@ Everything you track is a Markdown note with properties (YAML frontmatter) under
 | Entries (titles, books, manga, games), progress, ratings, groups | notes in the root folder | yes |
 | Activity log | `History.md` | yes |
 | Shared settings: types, statuses, priorities, custom columns, API mapping | `Hoard.base` (`hoard:` key) | yes |
-| API keys, Steam id, cached API data, colors, layout, saved filters | `data.json` of the plugin | no, per device |
+| API keys, Steam id, IGDB client id, Jikan endpoint | Obsidian's keychain (secret storage); never in backups | no, per device |
+| Cached API data, colors, layout, saved filters | `data.json` of the plugin | no, per device |
 
 ### Sync caveats
 
@@ -57,10 +58,13 @@ Set up a second device by syncing the vault and installing the plugin. It finds 
 
 ## API keys
 
-Everything works manually without a key; APIs fill in posters, covers, episode counts, release dates and ratings. Configure them in **Settings → Hoard → API**; each card has a **Get a key** link, a help button and a **Test** button.
+Search, posters and covers work without any key through Cinemeta, Open Library and the Steam Store. Keyed APIs add more: ratings, episode counts, cast, studios, airing info. Configure them in **Settings → Hoard → API**; each card has a **Get a key** link, a help button and a **Test** button. A keyed source takes over once its key is set; until then the keyless one answers.
 
 | Service | Used for | Key |
 |---|---|---|
+| [Cinemeta](https://v3-cinemeta.strem.io/) | Movies & TV search and posters (default) | none |
+| [Open Library](https://openlibrary.org/) | Book search and covers (default) | none |
+| [Steam Store](https://store.steampowered.com/) | Game search and covers (default) | none |
 | [Tenrai](https://tenrai.org/) (MyAnimeList, Jikan-compatible) | Anime + manga, airing schedules, scores; endpoint switchable to any Jikan v4 instance (https only) | none |
 | [AniList](https://anilist.co/) | Anime alternative to MyAnimeList | none |
 | [OMDb](https://www.omdbapi.com/apikey.aspx) | Movies & TV, season episode counts, IMDb ratings | free key |
