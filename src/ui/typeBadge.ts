@@ -13,6 +13,6 @@ export function renderTypeBadge(
 		text: typeLabel(typeName),
 	});
 	const typeDef = settings.types.find((d) => d.name === typeName);
-	if (colored && typeDef) badge.style.backgroundColor = getThemedColor(typeName, typeDef.color, settings.colorTheme);
+	if (colored && typeDef) badge.setCssProps({ '--hoard-badge-color': getThemedColor(typeName, typeDef.color, settings.colorTheme) });
 	return badge;
 }

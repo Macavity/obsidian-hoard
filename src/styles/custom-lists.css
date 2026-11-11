@@ -71,6 +71,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  color: var(--hoard-custom-lists-subtab-color, inherit);
 }
 
 /* sm icon button in the list tab, revealed on hover */
@@ -460,9 +461,9 @@ button.hoard-custom-list-table__row-action--delete:hover {
   border-radius: 20px;
   font-size: 11px;
   font-weight: 500;
-  background: var(--background-secondary);
-  border: 0.5px solid var(--background-modifier-border);
-  color: var(--text-normal);
+  background: var(--hoard-custom-list-table-badge-fill, var(--background-secondary));
+  border: 0.5px solid var(--hoard-custom-list-table-badge-border, var(--background-modifier-border));
+  color: var(--hoard-custom-list-table-badge-border, var(--text-normal));
   white-space: nowrap;
 }
 

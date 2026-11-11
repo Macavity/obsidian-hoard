@@ -263,7 +263,7 @@ export class ReadingDetailModal extends Modal {
 				attr: { src: item.coverUrl, alt: item.title },
 			});
 		} else {
-			cover.style.backgroundColor = coverFallbackColor(item.id);
+			cover.setCssProps({ '--hoard-reading-detail-cover-color': coverFallbackColor(item.id) });
 			cover.createSpan({
 				cls: 'hoard-reading-detail__cover-icon',
 				text: this.mode === 'book' ? '📖' : '📓',
@@ -395,7 +395,7 @@ export class ReadingDetailModal extends Modal {
 		const fresh = this.getItem();
 		const status = fresh?.status ?? 'Plan to Read';
 		const badge = wrap.createSpan({ cls: 'hoard-reading-detail__status', text: readingStatusLabel(status) });
-		badge.style.backgroundColor = readingStatusColor(status, this.readingData.getSettings().statusColors);
+		badge.setCssProps({ '--hoard-reading-detail-status-color': readingStatusColor(status, this.readingData.getSettings().statusColors) });
 		badge.title = t('detail.clickToChangeStatus');
 		badge.addEventListener('click', (e) => {
 			e.stopPropagation();

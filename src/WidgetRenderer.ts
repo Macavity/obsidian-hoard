@@ -318,7 +318,7 @@ export class WidgetRenderer {
 			cls: colored ? 'hoard-badge hoard-badge--sm' : 'hoard-badge__plain',
 			text: display,
 		});
-		if (colored && def) badge.style.backgroundColor = getThemedColor(text, def.color, this.plugin.settings.colorTheme);
+		if (colored && def) badge.setCssProps({ '--hoard-badge-color': getThemedColor(text, def.color, this.plugin.settings.colorTheme) });
 	}
 
 	/**

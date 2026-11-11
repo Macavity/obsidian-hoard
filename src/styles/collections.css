@@ -232,6 +232,7 @@
   font-size: 3rem;
   font-weight: 700;
   color: rgb(255 255 255 / 85%);
+  background-color: var(--hoard-card-placeholder-color, transparent);
 }
 
 .hoard-card__poster-placeholder.is-loading {
@@ -262,6 +263,7 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  background-image: var(--hoard-card-collage-image, none);
 }
 
 .hoard-card__progress-bar {
@@ -360,6 +362,7 @@
   border-radius: 3px;
   color: #fff;
   width: fit-content;
+  background-color: var(--hoard-card-type-color, transparent);
 }
 
 .hoard-card__year {

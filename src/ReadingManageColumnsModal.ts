@@ -163,7 +163,7 @@ export class ReadingManageColumnsModal extends Modal {
 			const typeSelect = renderTypeSelect(card, col.type);
 
 			const colorDot = card.createEl('button', { cls: 'hoard-color-picker__dot' });
-			colorDot.style.backgroundColor = col.color ?? DEFAULT_FIELD_COLOR;
+			colorDot.setCssProps({ '--hoard-color-picker-dot-color': col.color ?? DEFAULT_FIELD_COLOR });
 			colorDot.title = t('reading.columns.chooseColor');
 			colorDot.addEventListener('click', (e) => {
 				e.stopPropagation();

@@ -110,6 +110,7 @@
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+  background-color: var(--hoard-log-dot-color, transparent);
 }
 
 .hoard-log__connector {
@@ -145,6 +146,7 @@
 .hoard-log__action {
   font-size: 13px;
   font-weight: 500;
+  color: var(--hoard-log-action-color, inherit);
 }
 
 .hoard-log__time {

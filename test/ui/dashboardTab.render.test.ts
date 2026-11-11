@@ -79,6 +79,7 @@ describe('DashboardTab cards', () => {
 		expect(c.querySelector('.hoard-dashboard__unified--4')).toBeNull();
 		expect(texts(c, '.hoard-stat-ring__label')).toEqual(expect.arrayContaining(['Anime', 'Movie']));
 		expect(texts(c, '.hoard-stat-ring__label').length).toBe(5);
+		expect(qsa(c, '.hoard-stat-ring__arc').every((a) => a.style.getPropertyValue('--hoard-stat-ring-color') !== '')).toBe(true);
 	});
 
 	it('renders rectangles with a bordered unified card and a bar width', () => {
@@ -87,6 +88,7 @@ describe('DashboardTab cards', () => {
 		expect(c.querySelectorAll('.hoard-stat-rect__item').length).toBe(2 + 2);
 		const bars = qsa(c, '.hoard-stat-rect__bar').map((b) => b.style.width);
 		expect(bars).toContain('50%');
+		expect(qsa(c, '.hoard-stat-rect__bar').every((b) => b.style.getPropertyValue('--hoard-stat-rect-bar-color') !== '')).toBe(true);
 	});
 
 	it('adds a fourth segment only when games have playtime', () => {

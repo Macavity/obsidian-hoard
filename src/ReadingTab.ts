@@ -1317,7 +1317,7 @@ export class ReadingTab {
 		img.alt = alt;
 		img.loading = 'lazy';
 		img.onload = () => {
-			cover.style.removeProperty('background-color');
+			cover.setCssProps({ '--hoard-reading-card-cover-color': '' });
 			icon?.remove();
 		};
 		img.onerror = () => { img.remove(); };
@@ -1421,7 +1421,7 @@ export class ReadingTab {
 				attr: { src: item.coverUrl, alt: item.title, loading: 'lazy' },
 			});
 		} else {
-			cover.style.backgroundColor = coverFallbackColor(item.id);
+			cover.setCssProps({ '--hoard-reading-card-cover-color': coverFallbackColor(item.id) });
 			cover.createSpan({
 				cls: 'hoard-reading-card__cover-icon',
 				text: fallbackIcon,
@@ -1437,7 +1437,9 @@ export class ReadingTab {
 		}
 
 		const statusBadge = cover.createSpan({ cls: 'hoard-reading-card__status-badge', text: readingStatusLabel(item.status) });
-		statusBadge.style.backgroundColor = readingStatusColor(item.status, this.readingData.getSettings().statusColors);
+		statusBadge.setCssProps({
+			'--hoard-reading-card-status-color': readingStatusColor(item.status, this.readingData.getSettings().statusColors),
+		});
 
 		const menuBtn = createIconButton(card, {
 			icon: 'more-vertical',
@@ -1535,7 +1537,9 @@ export class ReadingTab {
 		const bar = card.createDiv({ cls: 'hoard-reading-card__progress-bar' });
 		const fill = bar.createDiv({ cls: 'hoard-reading-card__progress-fill' });
 		fill.style.width = `${percent}%`;
-		fill.style.backgroundColor = readingStatusColor(status, this.readingData.getSettings().statusColors);
+		fill.setCssProps({
+			'--hoard-reading-card-progress-color': readingStatusColor(status, this.readingData.getSettings().statusColors),
+		});
 	}
 
 	private renderEmptyState(): void {

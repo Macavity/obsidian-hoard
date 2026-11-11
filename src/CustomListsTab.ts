@@ -813,7 +813,7 @@ export class CustomListsTab {
 
 			const nameSpan = tab.createSpan({ cls: 'hoard-custom-lists__subtab-name', text: name });
 			const tabColor = tabColors.get(name);
-			if (tabColor) nameSpan.style.color = tabColor;
+			if (tabColor) nameSpan.setCssProps({ '--hoard-custom-lists-subtab-color': tabColor });
 			nameSpan.addEventListener('dblclick', (e) => {
 				e.stopPropagation();
 				this.startRenameTab(tab, nameSpan, name);
@@ -1595,9 +1595,10 @@ export class CustomListsTab {
 				const optColor = col.optionColors?.[strVal];
 				// no colour assigned → leave the badge exactly as the default CSS renders it
 				if (optColor) {
-					badge.style.backgroundColor = deriveFillColor(optColor);
-					badge.style.borderColor = deriveBorderColor(optColor);
-					badge.style.color = deriveBorderColor(optColor);
+					badge.setCssProps({
+						'--hoard-custom-list-table-badge-fill': deriveFillColor(optColor),
+						'--hoard-custom-list-table-badge-border': deriveBorderColor(optColor),
+					});
 				}
 			} else {
 				cell.createSpan({ cls: 'hoard-custom-list-table__cell-empty', text: '—' });

@@ -358,7 +358,7 @@ export class LogTab {
 
 		const dotCol = el.createDiv({ cls: 'hoard-log__dot-column' });
 		const dot = dotCol.createDiv({ cls: 'hoard-log__dot' });
-		dot.style.backgroundColor = dotColor;
+		dot.setCssProps({ '--hoard-log-dot-color': dotColor });
 		if (!row.isLastInGroup) dotCol.createDiv({ cls: 'hoard-log__connector' });
 
 		const content = el.createDiv({ cls: 'hoard-log__content' });
@@ -367,7 +367,7 @@ export class LogTab {
 		content.createSpan({ cls: 'hoard-log__title', text: titleFromEntry(entry) });
 		content.createSpan({ cls: 'hoard-log__separator', text: ' · ' });
 		const actionSpan = content.createSpan({ cls: 'hoard-log__action', text: actionLabel(entry) });
-		actionSpan.style.color = color;
+		actionSpan.setCssProps({ '--hoard-log-action-color': color });
 
 		el.createDiv({ cls: 'hoard-log__time', text: formatTime(entry.timestamp) });
 

@@ -667,6 +667,7 @@ button.hoard-api-provider__action-btn {
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+  background-color: var(--hoard-tag-editor-dot-color, transparent);
 }
 
 .hoard-tag-editor__color-picker {

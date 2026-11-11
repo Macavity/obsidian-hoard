@@ -175,6 +175,17 @@ describe('ReadingTab manga card', () => {
 		expect(grid.querySelector('.hoard-reading-card')!.classList.contains('is-text-inside')).toBe(true);
 		expect(grid.querySelector('.hoard-reading-card__overlay')).not.toBeNull();
 		expect(grid.querySelector('.hoard-reading-card__author')!.textContent).toBe('—');
+		const style = (sel: string, name: string): string => grid.querySelector<HTMLElement>(sel)!.style.getPropertyValue(name);
+		expect(style('.hoard-reading-card__status-badge', '--hoard-reading-card-status-color')).not.toBe('');
+		// a real cover needs no fallback colour
+		expect(style('.hoard-reading-card__cover', '--hoard-reading-card-cover-color')).toBe('');
+	});
+
+	it('paints the fallback colour on a cover-less card', () => {
+		const { tab } = build('manga', { textUnder: false });
+		const grid = document.createElement('div');
+		tab.renderMangaCard(grid, manga());
+		expect(grid.querySelector<HTMLElement>('.hoard-reading-card__cover')!.style.getPropertyValue('--hoard-reading-card-cover-color')).not.toBe('');
 	});
 });
 

@@ -58,7 +58,7 @@ export function openStatusDropdown(opts: StatusDropdownOptions): void {
 		const dot = opt.createSpan({ cls: 'hoard-status-dropdown__option-dot' });
 		const color = getOptionColor?.(value);
 		// no colour → leave the dot to its default CSS appearance
-		if (color) dot.style.backgroundColor = color;
+		if (color) dot.setCssProps({ '--hoard-status-dropdown-dot-color': color });
 		opt.createSpan({ text: label });
 		opt.addEventListener('click', () => {
 			picked = true;
@@ -115,7 +115,7 @@ export function renderTagPill(opts: TagPillOptions): HTMLElement {
 	});
 	if (opts.showDot) badge.createSpan({ cls: 'hoard-status-dropdown__status-dot' });
 	badge.createSpan({ text: value ? (opts.valueLabel ?? value) : (opts.emptyLabel ?? t('common.none')) });
-	if (color) badge.style.backgroundColor = color;
+	if (color) badge.setCssProps({ '--hoard-reading-detail-status-color': color });
 	if (opts.tooltip) badge.title = opts.tooltip;
 
 	badge.addEventListener('click', (e) => {

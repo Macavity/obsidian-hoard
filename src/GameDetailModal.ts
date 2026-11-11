@@ -371,7 +371,7 @@ export class GameDetailModal extends Modal {
 
 		// the bar picks up the genre colour, the way the type pill does
 		const typeColor = this.gameData.getSettings().types.find((t) => t.name === this.draft.type)?.color;
-		if (typeColor) section.style.setProperty('--hoard-game-detail-progress-color', typeColor);
+		if (typeColor) section.setCssProps({ '--hoard-game-detail-progress-color': typeColor });
 
 		const head = section.createDiv({ cls: 'hoard-game-detail__progress-head' });
 		head.createSpan({ cls: 'hoard-game-detail__label', text: t('detail.progress') });

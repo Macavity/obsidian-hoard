@@ -1132,7 +1132,7 @@ export class AirtimeTab {
 			cls: r.typeColor ? 'hoard-badge hoard-badge--sm' : 'hoard-badge__plain',
 			text: r.typeLabel,
 		});
-		if (r.typeColor) typeBadge.style.backgroundColor = r.typeColor;
+		if (r.typeColor) typeBadge.setCssProps({ '--hoard-badge-color': r.typeColor });
 		metaRow.createSpan({ cls: 'hoard-airtime__schedule', text: scheduleText(entry.schedule) });
 
 		// progress badge — multi-part titles only (series / manga)
@@ -1383,7 +1383,7 @@ export class AirtimeTab {
 				: '#888780';
 		}
 		const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
-		placeholder.style.backgroundColor = placeholderColor;
+		placeholder.setCssProps({ '--hoard-card-placeholder-color': placeholderColor });
 		placeholder.createSpan({ text: (r.title.trim().charAt(0) || '?').toUpperCase() });
 
 		const posterHeight = Math.round(cardWidth * 1.5);
@@ -1454,7 +1454,7 @@ export class AirtimeTab {
 			cls: `hoard-tracker__type-badge${r.typeColor ? '' : ' is-plain'}`,
 			text: r.typeLabel,
 		});
-		if (r.typeColor) typeBadge.style.backgroundColor = r.typeColor;
+		if (r.typeColor) typeBadge.setCssProps({ '--hoard-tracker-type-color': r.typeColor });
 
 		// countdown badge — top-right: big number + DAYS, or the state word
 		const cd = card.createDiv({ cls: `hoard-tracker__countdown ${COUNTDOWN_KIND_CLASSES[countdown.kind]}` });

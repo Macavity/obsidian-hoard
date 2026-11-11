@@ -137,7 +137,7 @@ export function buildPosterCard(
 	}
 
 	const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
-	placeholder.style.backgroundColor = spec.placeholderColor;
+	placeholder.setCssProps({ '--hoard-card-placeholder-color': spec.placeholderColor });
 	const letter = (spec.title.trim().charAt(0) || '?').toUpperCase();
 	placeholder.createSpan({ text: letter });
 
@@ -176,7 +176,7 @@ export function buildPosterCard(
 			cls: 'hoard-card__status-badge',
 			text: spec.statusLabel,
 		});
-		if (spec.statusColor) statusBadge.style.backgroundColor = spec.statusColor;
+		if (spec.statusColor) statusBadge.setCssProps({ '--hoard-card-status-color': spec.statusColor });
 	}
 
 	// name + type/year + progress live either in the classic bottom overlay (inside mode) or in the
@@ -194,7 +194,7 @@ export function buildPosterCard(
 			cls: 'hoard-card__type-badge',
 			text: spec.typeLabel,
 		});
-		if (spec.typeColor) typeBadge.style.backgroundColor = spec.typeColor;
+		if (spec.typeColor) typeBadge.setCssProps({ '--hoard-card-type-color': spec.typeColor });
 		if (spec.year) {
 			metaRow.createSpan({
 				cls: cell ? 'hoard-card__under-year' : 'hoard-card__year',

@@ -446,7 +446,7 @@ export class TitleDetailModal extends Modal {
 			: '#888780';
 
 		const placeholder = cover.createDiv({ cls: 'hoard-detail__cover-placeholder' });
-		placeholder.style.backgroundColor = typeColor;
+		placeholder.setCssProps({ '--hoard-detail-cover-color': typeColor });
 		const letter = (this.title.title.trim().charAt(0) || '?').toUpperCase();
 		placeholder.createSpan({ text: letter });
 
@@ -579,7 +579,7 @@ export class TitleDetailModal extends Modal {
 			const badge = seasonHeader.createSpan({ cls: 'hoard-accordion__season-badge' });
 			badge.textContent = season.name;
 			const palette = this.plugin.settings.seasonPalette;
-			badge.style.backgroundColor = palette[seasonIdx % palette.length] ?? '#888780';
+			badge.setCssProps({ '--hoard-accordion-season-color': palette[seasonIdx % palette.length] ?? '#888780' });
 			const skipCount = (season.skippedEpisodes ?? []).length;
 			seasonHeader.createSpan({
 				cls: 'hoard-accordion__season-episode-count',
@@ -1377,7 +1377,7 @@ function buildTitleCardElement(
 	card.dataset.titleId = title.id;
 
 	const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
-	placeholder.style.backgroundColor = typeColor;
+	placeholder.setCssProps({ '--hoard-card-placeholder-color': typeColor });
 	const letter = (title.title.trim().charAt(0) || '?').toUpperCase();
 	placeholder.createSpan({ text: letter });
 
@@ -1412,18 +1412,16 @@ function buildTitleCardElement(
 			cls: 'hoard-card__status-badge',
 			text: statusLabel(title.status),
 		});
-		statusBadge.style.backgroundColor = getThemedColor(
-			title.status,
-			statusDef.color,
-			settings.colorTheme,
-		);
+		statusBadge.setCssProps({
+			'--hoard-card-status-color': getThemedColor(title.status, statusDef.color, settings.colorTheme),
+		});
 	}
 
 	const overlay = card.createDiv({ cls: 'hoard-card__overlay' });
 	overlay.createSpan({ cls: 'hoard-card__title', text: title.title });
 	const metaRow = overlay.createDiv({ cls: 'hoard-card__meta-row' });
 	const typeBadge = metaRow.createSpan({ cls: 'hoard-card__type-badge', text: typeLabel(title.type) });
-	typeBadge.style.backgroundColor = typeColor;
+	typeBadge.setCssProps({ '--hoard-card-type-color': typeColor });
 	// release year beside the type badge; omitted when unknown (matches ListTab's card)
 	const yearMatch = title.releaseDate?.match(/^(\d{4})/);
 	if (yearMatch) metaRow.createSpan({ cls: 'hoard-card__year', text: yearMatch[1] });

@@ -1797,7 +1797,7 @@ export class ListTab {
 		if (!priority) return;
 		const priorityDef = this.getTagDef(priority, this.plugin.settings.priorities);
 		const pBadge = colPriority.createSpan({ cls: 'hoard-badge__priority', text: priorityLabel(priority) });
-		if (priorityDef) pBadge.style.color = priorityDef.color;
+		if (priorityDef) pBadge.setCssProps({ '--hoard-badge-priority-color': priorityDef.color });
 	}
 
 	private renderRatingCell(row: HTMLElement, rating: number, format: (rating: number) => string): void {
@@ -1807,7 +1807,7 @@ export class ListTab {
 			return;
 		}
 		const ratingEl = colRating.createSpan({ cls: 'hoard-list__row-rating', text: format(rating) });
-		ratingEl.style.color = ratingColor(rating, this.plugin.settings.ratingSystem);
+		ratingEl.setCssProps({ '--hoard-list-row-rating-color': ratingColor(rating, this.plugin.settings.ratingSystem) });
 	}
 
 	/** Status badge (respects coloredTypeBadges); `fallbackColor` colors a status without a tag definition. */
@@ -1823,7 +1823,7 @@ export class ListTab {
 		if (!colored) return;
 		const statusDef = this.getTagDef(status, this.plugin.settings.statuses);
 		const color = statusDef?.color ?? fallbackColor;
-		if (color) statusBadge.style.backgroundColor = getThemedColor(status, color, this.plugin.settings.colorTheme);
+		if (color) statusBadge.setCssProps({ '--hoard-badge-color': getThemedColor(status, color, this.plugin.settings.colorTheme) });
 	}
 
 	private renderTitlePinCell(row: HTMLElement, title: HoardTitle): void {
@@ -2191,7 +2191,7 @@ export class ListTab {
 			const badge = seasonHeader.createSpan({ cls: 'hoard-accordion__season-badge' });
 			badge.textContent = season.name;
 			const palette = this.plugin.settings.seasonPalette;
-			badge.style.backgroundColor = palette[seasonIdx % palette.length] ?? '#888780';
+			badge.setCssProps({ '--hoard-accordion-season-color': palette[seasonIdx % palette.length] ?? '#888780' });
 			seasonHeader.createSpan({ cls: 'hoard-accordion__season-episode-count', text: ListTab.seasonCountText(season) });
 			const chevron = seasonHeader.createSpan({
 				cls: `hoard-chevron${isCollapsed ? '' : ' is-open'}`,

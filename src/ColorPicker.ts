@@ -106,8 +106,7 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 	let matchedPreset = false;
 	for (const { color600, color50 } of FIELD_COLORS) {
 		const swatch = palette.createEl('button', { cls: 'hoard-color-picker__palette-swatch' });
-		swatch.style.backgroundColor = color50;
-		swatch.style.borderColor = color600;
+		swatch.setCssProps({ '--hoard-color-picker-fill': color50, '--hoard-color-picker-border': color600 });
 		if (normalizeHex(color600) === normCurrent) {
 			swatch.addClass('is-active');
 			matchedPreset = true;
@@ -131,8 +130,10 @@ export function openColorPicker(opts: ColorPickerOptions): void {
 		} else {
 			// current colour is custom: show it, marked active
 			customSwatch.addClass('is-active');
-			customSwatch.style.backgroundColor = deriveFillColor(normCurrent);
-			customSwatch.style.borderColor = deriveBorderColor(normCurrent);
+			customSwatch.setCssProps({
+				'--hoard-color-picker-fill': deriveFillColor(normCurrent),
+				'--hoard-color-picker-border': deriveBorderColor(normCurrent),
+			});
 		}
 
 		const colorInput = customSwatch.createEl('input', {

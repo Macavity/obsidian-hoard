@@ -87,6 +87,7 @@
   font-size: 11px;
   font-weight: 600;
   color: #fff;
+  background-color: var(--hoard-accordion-season-color, transparent);
 }
 
 .hoard-accordion__season-episode-count {
@@ -276,13 +277,13 @@
 .hoard-star-rating__label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--hoard-star-rating-label-color, var(--text-muted));
   white-space: nowrap;
 }
 
 .hoard-star-rating__label.is-unrated {
   font-weight: 400;
-  color: var(--text-faint);
+  color: var(--hoard-star-rating-label-color, var(--text-faint));
 }
 
 .hoard-star-rating .hoard-star-rating__star {

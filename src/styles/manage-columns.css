@@ -109,10 +109,19 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px solid;
+  border: 2px solid var(--hoard-color-picker-border, currentcolor);
   cursor: pointer;
   padding: 0;
   transition: transform 0.1s;
+}
+
+/* a button: Obsidian's own button:hover rule would otherwise repaint the fill */
+button.hoard-color-picker__palette-swatch {
+  background-color: var(--hoard-color-picker-fill, transparent);
+}
+
+button.hoard-color-picker__dot {
+  background-color: var(--hoard-color-picker-dot-color, transparent);
 }
 
 .hoard-color-picker__palette-swatch:hover {

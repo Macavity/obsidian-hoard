@@ -224,7 +224,7 @@ describe('TitleDetailModal seasons', () => {
 		const { parent } = render(seasoned());
 		const counts = Array.from(parent.querySelectorAll('.hoard-accordion__season-episode-count')).map((e) => e.textContent);
 		expect(counts).toEqual([t('list.season.epsToSkip', { eps: 2, skip: 1 }), t('list.season.eps', { count: 2 })]);
-		expect((parent.querySelector('.hoard-accordion__season-badge') as HTMLElement).style.backgroundColor).not.toBe('');
+		expect((parent.querySelector('.hoard-accordion__season-badge') as HTMLElement).style.getPropertyValue('--hoard-accordion-season-color')).not.toBe('');
 		expect(parent.querySelectorAll('.hoard-accordion__episode-grid')).toHaveLength(2);
 	});
 

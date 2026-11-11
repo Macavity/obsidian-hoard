@@ -255,6 +255,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  background-color: var(--hoard-tracker-type-color, transparent);
 }
 
 .hoard-tracker__type-badge.is-plain {

@@ -21,6 +21,7 @@
 .hoard-badge__priority {
   font-size: 10px;
   font-weight: 600;
+  color: var(--hoard-badge-priority-color, inherit);
 }
 
 /* Row spacing */

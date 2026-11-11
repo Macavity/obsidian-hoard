@@ -42,6 +42,19 @@ describe('LogTab render', () => {
 		expect(spacer.style.height).toBe(`${2 * 40 + 3 * 32}px`);
 	});
 
+	it('colours the dot and the action word through variables', () => {
+		const height = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
+		Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get: () => 500 });
+		try {
+			const c = mount([entry('1', 'Watchlist', '2026-11-06T10:00:00')]);
+			expect(c.querySelector<HTMLElement>('.hoard-log__dot')!.style.getPropertyValue('--hoard-log-dot-color')).not.toBe('');
+			expect(c.querySelector<HTMLElement>('.hoard-log__action')!.style.getPropertyValue('--hoard-log-action-color')).not.toBe('');
+		} finally {
+			if (height) Object.defineProperty(HTMLElement.prototype, 'clientHeight', height);
+			else Reflect.deleteProperty(HTMLElement.prototype, 'clientHeight');
+		}
+	});
+
 	it('filters by source and reports an empty source', () => {
 		const c = mount([entry('1', 'Watchlist', '2026-11-06T10:00:00')]);
 		expect(buttons(c).map((b) => b.textContent)).toHaveLength(4);

@@ -192,6 +192,7 @@
 
 .hoard-stat-ring__arc {
   transition: stroke-dashoffset 0.4s ease;
+  stroke: var(--hoard-stat-ring-color, none);
 }
 
 .hoard-stat-ring__percent-text {

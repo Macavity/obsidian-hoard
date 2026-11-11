@@ -166,7 +166,7 @@ describe('tag lists', () => {
 		picker.value = '#123456';
 		picker.dispatchEvent(new Event('change'));
 		await until(() => plugin.settings.priorities[0]!.color === '#123456');
-		expect(q(pill, '.hoard-tag-editor__dot').style.backgroundColor).not.toBe('');
+		expect(q(pill, '.hoard-tag-editor__dot').style.getPropertyValue('--hoard-tag-editor-dot-color')).not.toBe('');
 		expect(plugin.saveSettings).toHaveBeenCalled();
 	});
 

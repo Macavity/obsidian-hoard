@@ -269,7 +269,7 @@ export class DashboardTab {
 			item.createDiv({ cls: 'hoard-stat-rect__subline', text: subline });
 		} else {
 			const item = grid.createDiv({ cls: 'hoard-stat-ring__item' });
-			const svg = this.makeRingSvg(percent, color, `${percent}%`, '', true);
+			const svg = this.makeRingSvg(percent, color, `${percent}%`, '');
 			item.appendChild(svg);
 			item.createDiv({ cls: 'hoard-stat-ring__label', text: displayLabel });
 			item.createDiv({ cls: 'hoard-stat-ring__subtitle', text: left });
@@ -279,16 +279,12 @@ export class DashboardTab {
 
 	// Shared card content builders
 
-	/**
-	 * Builds the progress-ring SVG. With `themeStroke` the arc colour is applied inline, so CSS vars
-	 * resolve.
-	 */
+	/** Builds the progress-ring SVG. The arc colour goes through a CSS variable, so theme vars resolve. */
 	private makeRingSvg(
 		percent: number,
 		color: string,
 		centerText: string,
 		subText: string,
-		themeStroke = false,
 	): SVGSVGElement {
 		const svgNS = 'http://www.w3.org/2000/svg';
 		const svg = activeDocument.createElementNS(svgNS, 'svg');
@@ -311,8 +307,7 @@ export class DashboardTab {
 		arc.setAttribute('cy', '60');
 		arc.setAttribute('r', '45');
 		arc.setAttribute('fill', 'none');
-		if (themeStroke) arc.style.stroke = color;
-		else arc.setAttribute('stroke', color);
+		arc.setCssProps({ '--hoard-stat-ring-color': color });
 		arc.setAttribute('stroke-width', '10');
 		arc.setAttribute('stroke-linecap', 'round');
 		arc.setAttribute('stroke-dasharray', String(RING_CIRCUMFERENCE));
@@ -377,7 +372,7 @@ export class DashboardTab {
 		const barWrap = item.createDiv({ cls: 'hoard-stat-rect__bar-wrap' });
 		const bar = barWrap.createDiv({ cls: 'hoard-stat-rect__bar' });
 		bar.style.width = `${percent}%`;
-		bar.style.backgroundColor = color;
+		bar.setCssProps({ '--hoard-stat-rect-bar-color': color });
 	}
 
 	// More statistics

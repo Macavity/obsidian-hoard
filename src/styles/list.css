@@ -223,7 +223,7 @@ button.hoard-rows-customize__btn .svg-icon {
 
 .hoard-list__row-rating {
   font-size: 11px;
-  color: var(--hoard-star-rating-color);
+  color: var(--hoard-list-row-rating-color, var(--hoard-star-rating-color));
   font-weight: 600;
   white-space: nowrap;
 }
@@ -290,6 +290,7 @@ button.hoard-rows-customize__btn .svg-icon {
   color: #fff;
   white-space: nowrap;
   line-height: 1.4;
+  background-color: var(--hoard-badge-color, transparent);
 }
 
 .hoard-badge--sm {

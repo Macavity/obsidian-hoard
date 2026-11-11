@@ -1832,7 +1832,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			// clickable colour dot + hidden native picker
 			const dotWrap = rowEl.createDiv({ cls: 'hoard-tag-editor__dot-wrap' });
 			const dot = dotWrap.createSpan({ cls: 'hoard-tag-editor__dot' });
-			dot.style.backgroundColor = tier.color;
+			dot.setCssProps({ '--hoard-tag-editor-dot-color': tier.color });
 			const colorPicker = dotWrap.createEl('input', {
 				cls: 'hoard-tag-editor__color-picker',
 				attr: { type: 'color', value: tier.color, 'aria-label': t('settings.customize.rating.colorAria', { tier: tierNumber }) },
@@ -1840,7 +1840,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 			// static preview: `tierNumber` filled stars in the tier colour
 			const preview = rowEl.createDiv({ cls: 'hoard-star-rating hoard-rating-tier__preview' });
-			preview.style.setProperty('--hoard-star-rating-color', tier.color);
+			preview.setCssProps({ '--hoard-star-rating-color': tier.color });
 			for (let i = 1; i <= 5; i++) {
 				const star = preview.createSpan({ cls: 'hoard-star-rating__star', text: '★' });
 				if (i <= tierNumber) star.addClass('is-active');
@@ -1859,8 +1859,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 			colorPicker.addEventListener('change', () => {
 				void (async () => {
 					tier.color = colorPicker.value;
-					dot.style.backgroundColor = colorPicker.value;
-					preview.style.setProperty('--hoard-star-rating-color', colorPicker.value);
+					dot.setCssProps({ '--hoard-tag-editor-dot-color': colorPicker.value });
+					preview.setCssProps({ '--hoard-star-rating-color': colorPicker.value });
 					await this.plugin.saveSettings();
 					this.refreshOpenViews();
 				})();
@@ -1909,7 +1909,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 			const dotWrap = pill.createDiv({ cls: 'hoard-tag-editor__dot-wrap' });
 			const dot = dotWrap.createSpan({ cls: 'hoard-tag-editor__dot' });
-			dot.style.backgroundColor = this.plugin.settings.readingTypeColors[kind];
+			dot.setCssProps({ '--hoard-tag-editor-dot-color': this.plugin.settings.readingTypeColors[kind] });
 			const colorPicker = dotWrap.createEl('input', {
 				cls: 'hoard-tag-editor__color-picker',
 				attr: { type: 'color', value: this.plugin.settings.readingTypeColors[kind], 'aria-label': t('settings.colorFor', { name: label }) },
@@ -1918,7 +1918,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			colorPicker.addEventListener('change', () => {
 				void (async () => {
 					this.plugin.settings.readingTypeColors[kind] = colorPicker.value;
-					dot.style.backgroundColor = colorPicker.value;
+					dot.setCssProps({ '--hoard-tag-editor-dot-color': colorPicker.value });
 					await this.plugin.saveSettings();
 				})();
 			});
@@ -2122,7 +2122,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			const strip = card.createDiv({ cls: 'hoard-theme-picker__strip' });
 			for (const color of theme.colors) {
 				const swatch = strip.createDiv({ cls: 'hoard-theme-picker__swatch' });
-				swatch.style.backgroundColor = color;
+				swatch.setCssProps({ '--hoard-theme-picker-swatch-color': color });
 			}
 			card.addEventListener('click', () => {
 				void (async () => {
@@ -2262,7 +2262,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 		const dotWrap = pill.createDiv({ cls: 'hoard-tag-editor__dot-wrap' });
 		const dot = dotWrap.createSpan({ cls: 'hoard-tag-editor__dot' });
-		dot.style.backgroundColor = tag.color;
+		dot.setCssProps({ '--hoard-tag-editor-dot-color': tag.color });
 		const colorPicker = dotWrap.createEl('input', {
 			cls: 'hoard-tag-editor__color-picker',
 			attr: { type: 'color', value: tag.color, 'aria-label': t('settings.colorFor', { name: tag.name }) },
@@ -2270,7 +2270,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		dot.addEventListener('click', () => colorPicker.click());
 		colorPicker.addEventListener('change', () => {
 			void (async () => {
-				dot.style.backgroundColor = colorPicker.value;
+				dot.setCssProps({ '--hoard-tag-editor-dot-color': colorPicker.value });
 				await cfg.setColor(tag.name, colorPicker.value);
 			})();
 		});

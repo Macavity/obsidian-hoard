@@ -70,5 +70,6 @@
 .hoard-theme-picker__swatch {
   flex: 1;
   height: 12px;
+  background-color: var(--hoard-theme-picker-swatch-color, transparent);
 }
 

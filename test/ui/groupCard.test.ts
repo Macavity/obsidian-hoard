@@ -22,6 +22,7 @@ class El {
 		for (const c of (opts.cls ?? '').split(' ').filter(Boolean)) this.classes.add(c);
 		this.text = opts.text ?? '';
 	}
+	setCssProps(props: Record<string, string>): void { Object.assign(this.style, props); }
 	createDiv(opts?: { cls?: string }): El { return this.createEl('div', opts); }
 	createSpan(opts?: { cls?: string; text?: string }): El { return this.createEl('span', opts); }
 	createEl(tag: string, opts?: { cls?: string; text?: string }): El {
@@ -91,8 +92,14 @@ describe('renderGroupCard', () => {
 		expect(card.find('hoard-card__title')!.text).toBe('zelda');
 		const badge = card.find('hoard-card__type-badge')!;
 		expect(badge.textContent).toBe('2 games');
-		expect(badge.style.backgroundColor).toBe('#123456');
+		expect(badge.style['--hoard-card-type-color']).toBe('#123456');
 		expect(vi.mocked(renderGroupCollage)).toHaveBeenCalled();
+	});
+
+	it('no type colour: the badge variable stays empty', () => {
+		const parent = new El();
+		renderGroupCard(parent as unknown as HTMLElement, opts({ typeColor: '' }));
+		expect(parent.children[0]!.find('hoard-card__type-badge')!.style['--hoard-card-type-color']).toBe('');
 	});
 
 	it('under mode: wraps in a cell, pins the height on the cell, click is on the cell', () => {

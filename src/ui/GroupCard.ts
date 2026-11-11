@@ -44,7 +44,7 @@ export function groupCountLabel(count: number, unit: GroupUnit): string {
 function renderGroupText(textHost: HTMLElement, under: boolean, name: string, label: string, color: string): void {
 	textHost.createSpan({ cls: under ? 'hoard-card__under-title' : 'hoard-card__title', text: name });
 	const badge = textHost.createDiv({ cls: 'hoard-card__meta-row' }).createSpan({ cls: 'hoard-card__type-badge' });
-	badge.style.backgroundColor = color;
+	badge.setCssProps({ '--hoard-card-type-color': color });
 	badge.textContent = label;
 }
 

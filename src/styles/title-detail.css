@@ -76,6 +76,7 @@
   font-size: 2.6rem;
   font-weight: 700;
   color: rgb(255 255 255 / 85%);
+  background-color: var(--hoard-detail-cover-color, transparent);
 }
 
 .hoard-detail__cover-placeholder.is-loading {
