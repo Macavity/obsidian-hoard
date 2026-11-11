@@ -266,24 +266,26 @@ export class PosterService {
 	/** TMDB, then OMDb, then Cinemeta: a clean miss moves on, a failed request never ends as a final 'none'. */
 	private async fetchMediaPoster(title: HoardTitle): Promise<string | null> {
 		const settings = this.getSettings();
-		let failure: Error | null = null;
-		if (settings.tmdbApiKey) {
-			try {
-				const poster = await this.fetchTmdbPoster(title, settings);
-				if (poster) return poster;
-			} catch (err) {
-				// a rejected TMDB token used to dead-end here, leaving a working OMDb key unused
-				if (!settings.omdbApiKey) throw err;
-				failure = err instanceof Error ? err : new Error(String(err));
-			}
-		}
-		if (settings.omdbApiKey) {
-			const poster = await this.fetchOmdbPoster(title, settings);
-			if (poster) return poster;
-		}
-		const poster = await this.fetchCinemetaPoster(title);
-		if (!poster && failure) throw failure;
+		const tmdb = settings.tmdbApiKey ? await this.tryTmdbPoster(title, settings) : { poster: null, failure: null };
+		if (tmdb.poster) return tmdb.poster;
+		const omdb = settings.omdbApiKey ? await this.fetchOmdbPoster(title, settings) : null;
+		const poster = omdb ?? (await this.fetchCinemetaPoster(title));
+		if (!poster && tmdb.failure) throw tmdb.failure;
 		return poster;
+	}
+
+	/** A TMDB failure is returned, not thrown, when another source can still answer; without one it propagates. */
+	private async tryTmdbPoster(
+		title: HoardTitle,
+		settings: HoardPluginSettings,
+	): Promise<{ poster: string | null; failure: Error | null }> {
+		try {
+			return { poster: await this.fetchTmdbPoster(title, settings), failure: null };
+		} catch (err) {
+			// a rejected TMDB token used to dead-end here, leaving a working OMDb key unused
+			if (!settings.omdbApiKey) throw err;
+			return { poster: null, failure: err instanceof Error ? err : new Error(String(err)) };
+		}
 	}
 
 	/** Keyless fallback: by IMDb id when known, else a title search. Errors propagate (never cached as 'none'). */
