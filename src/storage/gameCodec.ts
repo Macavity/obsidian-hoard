@@ -2,7 +2,7 @@ import { formatTime } from '../types';
 import type { Game } from '../types';
 import type { Decoded } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
-import { FmReader, decodeAirtime, encodeAirtime } from './readingCodec';
+import { FmReader, airtimeProps, decodeAirtime } from './readingCodec';
 import { COMMON_PROPS as C, GAME_PROPS as G } from './properties';
 
 type Fm = Record<string, unknown>;
@@ -96,52 +96,68 @@ export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Gam
 	return { entry, invalidFields: r.invalidFields };
 }
 
-/** Sets `key` only when `value` is truthy, so empty optional fields stay out of the note. */
-function setIf(out: Fm, key: string, value: unknown): void {
-	if (value) out[key] = value;
+/** `{ key: value }` when the value is set, else `{}`: optional properties stay out of the note. */
+function optional(key: string, value: unknown): Fm {
+	return value ? { [key]: value } : {};
 }
 
-function encodeProgress(g: Game, out: Fm): void {
-	out[C.rating] = g.rating | 0;
-	out[G.progress] = g.progress | 0;
-	if (g.playtimeMinutes > 0) out[G.playtime] = formatTime(g.playtimeMinutes);
-	if (g.achievementsTotal > 0) out[G.achievements] = `${g.achievementsEarned}/${g.achievementsTotal}`;
-	if (g.platforms.length > 0) out[G.platforms] = [...g.platforms];
-	setIf(out, G.singleplayer, g.singleplayer);
-	setIf(out, G.coop, g.coop);
-	setIf(out, G.multiplayer, g.multiplayer);
+function identityProps(g: Game): Fm {
+	return {
+		[C.name]: g.title,
+		[G.developer]: g.developer ?? '',
+		[G.publisher]: g.publisher ?? '',
+		// `genre` carries the in-app type; `type:` stays the cross-note kind marker
+		[G.genre]: g.type ?? '',
+		[C.status]: g.status,
+		...optional(G.priority, g.priority),
+		...optional(C.favorite, g.favorite),
+		...optional(C.dateFavorited, g.dateFavorited),
+		...optional(G.wishlist, g.wishlist),
+	};
 }
 
-function encodeLinks(g: Game, out: Fm): void {
-	setIf(out, C.cover, g.coverUrl);
-	setIf(out, G.storeUrl, g.storeUrl);
-	setIf(out, C.url, g.externalLink);
-	if (g.apiSource && g.apiId) out[C.externalId] = formatExternalId({ source: g.apiSource, id: g.apiId });
-	setIf(out, G.steamAppId, g.steamAppId);
-	setIf(out, G.lastPlayed, g.lastPlayed);
-	if (g.groups?.length) out[C.groups] = [...g.groups];
+function progressProps(g: Game): Fm {
+	return {
+		[C.rating]: g.rating | 0,
+		[G.progress]: g.progress | 0,
+		...optional(G.playtime, g.playtimeMinutes > 0 && formatTime(g.playtimeMinutes)),
+		...optional(G.achievements, g.achievementsTotal > 0 && `${g.achievementsEarned}/${g.achievementsTotal}`),
+		...optional(G.platforms, g.platforms.length > 0 && [...g.platforms]),
+		...optional(G.singleplayer, g.singleplayer),
+		...optional(G.coop, g.coop),
+		...optional(G.multiplayer, g.multiplayer),
+	};
+}
+
+function dateProps(g: Game): Fm {
+	return {
+		[C.dateStarted]: g.dateStarted ?? null,
+		[C.dateFinished]: g.dateFinished ?? null,
+		[C.releaseDate]: g.releaseDate ?? null,
+		[C.dateAdded]: g.dateAdded,
+		[C.dateModified]: g.dateModified,
+	};
+}
+
+function linkProps(g: Game): Fm {
+	return {
+		...optional(C.cover, g.coverUrl),
+		...optional(G.storeUrl, g.storeUrl),
+		...optional(C.url, g.externalLink),
+		...optional(C.externalId, g.apiSource && g.apiId && formatExternalId({ source: g.apiSource, id: g.apiId })),
+		...optional(G.steamAppId, g.steamAppId),
+		...optional(G.lastPlayed, g.lastPlayed),
+		...optional(C.groups, g.groups?.length && [...g.groups]),
+	};
 }
 
 export function encodeGame(g: Game): Record<string, unknown> {
-	const out: Fm = {};
-	out[C.name] = g.title;
-	out[G.developer] = g.developer ?? '';
-	out[G.publisher] = g.publisher ?? '';
-	// `genre` carries the in-app type; `type:` stays the cross-note kind marker
-	out[G.genre] = g.type ?? '';
-	out[C.status] = g.status;
-	setIf(out, G.priority, g.priority);
-	setIf(out, C.favorite, g.favorite);
-	setIf(out, C.dateFavorited, g.dateFavorited);
-	setIf(out, G.wishlist, g.wishlist);
-	encodeProgress(g, out);
-	out[C.dateStarted] = g.dateStarted ?? null;
-	out[C.dateFinished] = g.dateFinished ?? null;
-	out[C.releaseDate] = g.releaseDate ?? null;
-	out[C.dateAdded] = g.dateAdded;
-	out[C.dateModified] = g.dateModified;
-	encodeLinks(g, out);
-	encodeAirtime(g.airtime, out);
-	out[C.type] = 'game';
-	return out;
+	return {
+		...identityProps(g),
+		...progressProps(g),
+		...dateProps(g),
+		...linkProps(g),
+		...airtimeProps(g.airtime),
+		[C.type]: 'game',
+	};
 }
