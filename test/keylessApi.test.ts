@@ -45,7 +45,9 @@ describe('steam cover check', () => {
 	it('sends a HEAD request and maps 200 to true, 404 to false', async () => {
 		fail(200);
 		expect(await api().steamCoverExists('1145360')).toBe(true);
-		expect(sent.mock.calls[0]![0]).toMatchObject({ url: expect.stringContaining('/1145360/library_600x900.jpg'), method: 'HEAD', throw: false });
+		const sentParams = sent.mock.calls[0]![0] as { url: string; method: string; throw: boolean };
+		expect(sentParams.url).toContain('/1145360/library_600x900.jpg');
+		expect(sentParams).toMatchObject({ method: 'HEAD', throw: false });
 		fail(404);
 		expect(await api().steamCoverExists('1145360')).toBe(false);
 	});

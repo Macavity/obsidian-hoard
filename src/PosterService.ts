@@ -266,7 +266,7 @@ export class PosterService {
 	/** TMDB, then OMDb, then Cinemeta: a clean miss moves on, a failed request never ends as a final 'none'. */
 	private async fetchMediaPoster(title: HoardTitle): Promise<string | null> {
 		const settings = this.getSettings();
-		let failure: unknown = null;
+		let failure: Error | null = null;
 		if (settings.tmdbApiKey) {
 			try {
 				const poster = await this.fetchTmdbPoster(title, settings);
@@ -274,7 +274,7 @@ export class PosterService {
 			} catch (err) {
 				// a rejected TMDB token used to dead-end here, leaving a working OMDb key unused
 				if (!settings.omdbApiKey) throw err;
-				failure = err;
+				failure = err instanceof Error ? err : new Error(String(err));
 			}
 		}
 		if (settings.omdbApiKey) {
