@@ -130,7 +130,8 @@ function deploy() {
 
 async function main() {
 	const { label, only, variants, screenshot } = readArgs(process.argv.slice(2));
-	const states = STATES.filter((s) => s.id.startsWith(only));
+	// without --screenshots the window stays in the background, where `foreground` states cannot render
+	const states = STATES.filter((s) => s.id.startsWith(only) && (screenshot || !s.foreground));
 	if (states.length === 0) throw new Error(`no state matches --only ${only}`);
 	const failures = [];
 	const found = { mobile: false, theme: "system" };

@@ -298,7 +298,7 @@ async function expandListRow(name) {
 
 // ---- catalogue ----
 
-/** @type {{ id: string, root: string, setup: () => Promise<void>, teardown?: () => Promise<void>, phone?: boolean }[]} */
+/** @type {{ id: string, root: string, setup: () => Promise<void>, teardown?: () => Promise<void>, phone?: boolean, foreground?: boolean }[]} */
 export const STATES = [
 	// tabs
 	{ id: "tab-dashboard", root: VIEW, setup: openTabs("dashboard"), phone: true },
@@ -649,6 +649,8 @@ export const STATES = [
 	{
 		id: "note-widgets",
 		root: ".markdown-reading-view",
+		// the reading view renders nothing while the window is in the background
+		foreground: true,
 		setup: async () => {
 			// opening is asynchronous and the CLI does not wait for it: ask again until the widgets are on screen
 			await waitFor(

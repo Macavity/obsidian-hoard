@@ -167,12 +167,15 @@ export function clearViewport() {
 	cdp("Emulation.clearDeviceMetricsOverride", {});
 }
 
-/** Waits for two animation frames, loaded fonts and a DOM that stopped changing. */
+/** Waits for two animation frames (or 150 ms), loaded fonts and a DOM that stopped changing. */
 async function settle() {
 	evalJs(`(() => {
 		window.__visualFrames = 0;
 		window.__visualFonts = false;
-		requestAnimationFrame(() => requestAnimationFrame(() => { window.__visualFrames = 2; }));
+		// a window in the background gets no animation frames; the timer is what counts there
+		const done = () => { window.__visualFrames = 2; };
+		requestAnimationFrame(() => requestAnimationFrame(done));
+		setTimeout(done, 150);
 		document.fonts.ready.then(() => { window.__visualFonts = true; });
 		return 'ok';
 	})()`);
