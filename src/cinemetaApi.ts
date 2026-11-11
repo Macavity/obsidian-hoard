@@ -1,10 +1,18 @@
 import { httpsOrEmpty } from './httpsUrl';
-import type { MediaSearchResult, Season } from './types';
+import type { HoardTitle, MediaSearchResult, Season } from './types';
 
 const CINEMETA_BASE = 'https://v3-cinemeta.strem.io';
 
 export type CinemetaKind = 'movie' | 'series';
 type Raw = Record<string, unknown>;
+
+/** Movie or TV from the type, else from the episode count; null when neither says. */
+export function titleMediaKind(title: Pick<HoardTitle, 'type' | 'totalEpisodes'>): 'movie' | 'tv' | null {
+	if (title.type === 'Movie') return 'movie';
+	if (title.type === 'TV Show' || title.type === 'TvShow') return 'tv';
+	if (title.totalEpisodes === 1) return 'movie';
+	return title.totalEpisodes > 1 ? 'tv' : null;
+}
 
 export function cinemetaSearchUrl(kind: CinemetaKind, query: string): string {
 	return `${CINEMETA_BASE}/catalog/${kind}/top/search=${encodeURIComponent(query)}.json`;

@@ -41,6 +41,36 @@ describe('cinemeta', () => {
 	});
 });
 
+describe('cinemeta credits', () => {
+	const bb = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'TV Show', totalEpisodes: 0 } as never;
+	const unknownKind = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'Doc', totalEpisodes: 0 } as never;
+
+	it('fills credits from the series meta when the source is cinemeta', async () => {
+		respond(cinemetaMeta);
+		const credits = await api().fetchCredits(bb, 'cinemeta');
+		expect(urlOf()).toBe('https://v3-cinemeta.strem.io/meta/series/tt0903747.json');
+		expect(credits).toEqual({ director: ['none'], cast: ['Bryan Cranston', 'Aaron Paul', 'Anna Gunn'] });
+	});
+
+	it('tries series before movie for an unknown kind', async () => {
+		sent.mockResolvedValueOnce({ status: 200, text: '{}', json: {} } as never);
+		sent.mockResolvedValueOnce({ status: 200, text: JSON.stringify(cinemetaMeta), json: cinemetaMeta } as never);
+		await api().fetchCredits(unknownKind, 'cinemeta');
+		expect(urlOf(0)).toContain('/meta/series/');
+		expect(urlOf(1)).toContain('/meta/movie/');
+	});
+
+	it('lets a network error propagate so nothing is stored as none', async () => {
+		fail(429);
+		await expect(api().fetchCredits(bb, 'cinemeta')).rejects.toMatchObject({ source: 'cinemeta' });
+	});
+
+	it('returns null when cinemeta knows neither kind', async () => {
+		respond({});
+		expect(await api().fetchCredits(unknownKind, 'cinemeta')).toBeNull();
+	});
+});
+
 describe('open library', () => {
 	it('searches and loads a work', async () => {
 		respond(openLibrarySearch);

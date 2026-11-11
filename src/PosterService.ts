@@ -1,4 +1,5 @@
 import type { RequestUrlParam } from 'obsidian';
+import { titleMediaKind } from './cinemetaApi';
 import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from './types';
 import { getApiGroupForType } from './types';
@@ -238,12 +239,7 @@ export class PosterService {
 	 * (1 → movie, >1 → series). null when there is no signal, so the caller falls back to multi-search.
 	 */
 	private resolveMediaKind(title: HoardTitle): 'movie' | 'tv' | null {
-		if (title.type === 'Movie') return 'movie';
-		if (title.type === 'TV Show' || title.type === 'TvShow') return 'tv';
-		const eps = title.totalEpisodes;
-		if (eps === 1) return 'movie';
-		if (eps > 1) return 'tv';
-		return null;
+		return titleMediaKind(title);
 	}
 
 	/**

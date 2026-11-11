@@ -29,7 +29,7 @@ import type {
 	AniListSearchResponse,
 	AniListMediaResponse,
 } from './types';
-import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, mapCinemetaSearch, type CinemetaKind } from './cinemetaApi';
+import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, mapCinemetaSearch, titleMediaKind, type CinemetaKind } from './cinemetaApi';
 import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLibraryWorkUrl } from './openLibraryApi';
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { isCreditsNone, normalizeCreditsForStore, imdbIdFromLink } from './types';
@@ -1784,9 +1784,9 @@ export class ApiService {
 
 	/**
 	 * One-time director/cast backfill for an existing title, keyed off the IMDb id in its
-	 * stored externalLink. Prefers the active API, falls back to the other when it has a key.
-	 * Returns normalized stored lists, or null when there is no usable id / no keyed API /
-	 * the requests failed — the caller then marks the fields 'none' so it never re-attempts.
+	 * stored externalLink. Prefers the active API, falls back to the others, Cinemeta last (keyless).
+	 * Returns normalized stored lists, or null when there is no usable id or no source knows the
+	 * title. Keyed-API failures yield null; Cinemeta network errors throw so the caller stores nothing.
 	 */
 	async fetchCredits(
 		title: HoardTitle,
@@ -1844,10 +1844,32 @@ export class ApiService {
 			}
 		};
 
-		const order = source === 'tmdb' ? [tryTmdb, tryOmdb] : [tryOmdb, tryTmdb];
+		// Cinemeta errors propagate on purpose: the caller must not store 'none' for a network failure
+		const tryCinemeta = (): Promise<{ director: string[]; cast: string[] } | null> => this.fetchCinemetaCredits(imdbId, title);
+
+		const order =
+			source === 'cinemeta' ? [tryCinemeta, tryOmdb, tryTmdb]
+				: source === 'tmdb' ? [tryTmdb, tryOmdb, tryCinemeta]
+					: [tryOmdb, tryTmdb, tryCinemeta];
 		for (const attempt of order) {
 			const result = await attempt();
 			if (result) return result;
+		}
+		return null;
+	}
+
+	/** Keyless credits: the series record first for an unknown kind (the movie endpoint answers series ids with a foreign film). */
+	private async fetchCinemetaCredits(
+		imdbId: string,
+		title: HoardTitle,
+	): Promise<{ director: string[]; cast: string[] } | null> {
+		const kind = titleMediaKind(title);
+		for (const k of kind ? [kind] : (['tv', 'movie'] as const)) {
+			const meta = await this.getCinemetaDetails(imdbId, k);
+			if (!meta) continue;
+			const { director = [], cast = [] } = meta;
+			if (director.length === 0 && cast.length === 0) return null;
+			return { director: normalizeCreditsForStore(director), cast: normalizeCreditsForStore(cast) };
 		}
 		return null;
 	}

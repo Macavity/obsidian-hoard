@@ -409,10 +409,12 @@ export class TitleDetailModal extends Modal {
 	private maybeBackfillStudio(): void {
 		const t = this.dataManager.getTitle(this.title.id);
 		if (!t || !needsStudioFetch(t) || studioBackfillInFlight.has(t.id)) return;
+		const group = getApiGroupForType(t.type, this.plugin.settings.typeApiMapping);
+		// movie studios need TMDB: without a key a miss is not an answer, so leave the field unfetched
+		if (group === 'movie' && !this.plugin.apiService.hasTmdbKey()) return;
 		studioBackfillInFlight.add(t.id);
 		void (async () => {
 			try {
-				const group = getApiGroupForType(t.type, this.plugin.settings.typeApiMapping);
 				const found = await this.plugin.apiService.fetchStudio(
 					t,
 					this.plugin.settings.animeApiSource ?? 'jikan',
