@@ -263,19 +263,27 @@ export class PosterService {
 		return first?.poster_path ?? null;
 	}
 
+	/** TMDB, then OMDb, then Cinemeta: a clean miss moves on, a failed request never ends as a final 'none'. */
 	private async fetchMediaPoster(title: HoardTitle): Promise<string | null> {
 		const settings = this.getSettings();
-
+		let failure: unknown = null;
 		if (settings.tmdbApiKey) {
 			try {
-				return await this.fetchTmdbPoster(title, settings);
+				const poster = await this.fetchTmdbPoster(title, settings);
+				if (poster) return poster;
 			} catch (err) {
 				// a rejected TMDB token used to dead-end here, leaving a working OMDb key unused
 				if (!settings.omdbApiKey) throw err;
+				failure = err;
 			}
 		}
-		if (settings.omdbApiKey) return this.fetchOmdbPoster(title, settings);
-		return this.fetchCinemetaPoster(title);
+		if (settings.omdbApiKey) {
+			const poster = await this.fetchOmdbPoster(title, settings);
+			if (poster) return poster;
+		}
+		const poster = await this.fetchCinemetaPoster(title);
+		if (!poster && failure) throw failure;
+		return poster;
 	}
 
 	/** Keyless fallback: by IMDb id when known, else a title search. Errors propagate (never cached as 'none'). */

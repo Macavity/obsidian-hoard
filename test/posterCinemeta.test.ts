@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
+import { requestUrl } from 'obsidian';
 import { PosterService } from '../src/PosterService';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
 import type { ApiService } from '../src/ApiService';
 import type { DataManager } from '../src/DataManager';
 
-function setup(api: Partial<ApiService>) {
+function setup(api: Partial<ApiService>, keys: { tmdbApiKey?: string; omdbApiKey?: string } = {}) {
 	const updatePosterUrl = vi.fn().mockResolvedValue(undefined);
 	const svc = new PosterService(
 		{ updatePosterUrl } as unknown as DataManager,
-		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', typeApiMapping: { Doc: 'movie' } }),
+		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', ...keys, typeApiMapping: { Doc: 'movie' } }),
 		() => api as ApiService,
 	);
 	return { svc, updatePosterUrl };
@@ -17,6 +18,23 @@ const title = (extra: Partial<HoardTitle>) =>
 	({ id: 'Movie/A', title: 'Breaking Bad', type: 'TV Show', ...extra }) as HoardTitle;
 
 describe('PosterService keyless (Cinemeta)', () => {
+	const noMatch = { json: { Response: 'False' }, text: '{}', status: 200 } as never;
+
+	it('continues to cinemeta after a clean keyed miss', async () => {
+		vi.mocked(requestUrl).mockResolvedValue(noMatch);
+		const getCinemetaDetails = vi.fn().mockResolvedValue({ posterUrl: 'https://img/bb.jpg' });
+		const { svc } = setup({ getCinemetaDetails }, { omdbApiKey: 'k' });
+		const url = await svc.enqueue(title({ externalLink: 'https://www.imdb.com/title/tt0903747/' }));
+		expect(url).toBe('https://img/bb.jpg');
+	});
+
+	it('does not store none when a keyed request fails and cinemeta has nothing', async () => {
+		vi.mocked(requestUrl).mockRejectedValue(new Error('net'));
+		const { svc, updatePosterUrl } = setup({ searchCinemeta: vi.fn().mockResolvedValue([]) }, { tmdbApiKey: 't' });
+		expect(await svc.enqueue(title({}))).toBeNull();
+		expect(updatePosterUrl).not.toHaveBeenCalled();
+	});
+
 	it('uses getCinemetaDetails with the IMDb id from the external link', async () => {
 		const getCinemetaDetails = vi.fn().mockResolvedValue({ posterUrl: 'https://img/bb.jpg' });
 		const { svc } = setup({ getCinemetaDetails });
