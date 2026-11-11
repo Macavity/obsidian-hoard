@@ -75,11 +75,17 @@ function replaceDataBlock(content: string, json: string): string {
 	return `${content.replace(/\n*$/, '')}\n\n${block}\n`;
 }
 
-/** Replaces the body of `## Notes` up to `## Data`; a note without `## Notes` is returned as is. */
+/** Replaces the body of `## Notes` up to `## Data`; a note without `## Notes` gets one before `## Data`. */
 function replaceNotes(content: string, notes: string): string {
 	const notesMarker = '## Notes\n';
 	const notesIdx = content.indexOf(notesMarker);
-	if (notesIdx === -1) return content;
+	if (notesIdx === -1) {
+		const section = `${notesMarker}${notes}\n\n`;
+		const dataIdx = content.indexOf('## Data\n');
+		return dataIdx !== -1
+			? content.slice(0, dataIdx) + section + content.slice(dataIdx)
+			: `${content.replace(/\n*$/, '')}\n\n${section}`;
+	}
 	const afterNotes = notesIdx + notesMarker.length;
 	const dataIdx = content.indexOf('\n## Data\n', afterNotes);
 	return dataIdx !== -1
@@ -137,12 +143,21 @@ export class CustomListManager {
 		);
 	}
 
-	/** True when the note no longer holds the state `list` was made from. */
+	/**
+	 * True when the note holds a different valid state than the one `list` was made from. A note that
+	 * does not parse is not stale: it is most likely mid-edit, and a save refuses it anyway.
+	 */
 	async isStale(list: CustomList): Promise<boolean> {
-		const file = this.app.vault.getAbstractFileByPath(this.pathOf(list.name));
-		if (!(file instanceof TFile)) return this.baselines.has(list);
-		const disk = this.parse(list.name, await this.app.vault.read(file));
-		return !disk || this.stateKey(disk) !== this.baselines.get(list);
+		const disk = await this.peek(list.name);
+		if (disk === undefined) return this.baselines.has(list);
+		return disk !== null && this.stateKey(disk) !== this.baselines.get(list);
+	}
+
+	/** The note's list without reporting corruption: undefined without a file, null if it does not parse. */
+	async peek(name: string): Promise<CustomList | null | undefined> {
+		const file = this.app.vault.getAbstractFileByPath(this.pathOf(name));
+		if (!(file instanceof TFile)) return undefined;
+		return this.parse(name, await this.app.vault.read(file), false);
 	}
 
 	/**
@@ -152,7 +167,7 @@ export class CustomListManager {
 	private async writeChecked(list: CustomList, file: TFile, transform: (data: string) => string): Promise<boolean> {
 		let written = false;
 		await this.app.vault.process(file, (data) => {
-			const disk = this.parse(list.name, data);
+			const disk = this.parse(list.name, data, false);
 			if (!disk || this.stateKey(disk) !== this.baselines.get(list)) return data;
 			const next = transform(data);
 			const after = this.parse(list.name, next);
@@ -192,7 +207,10 @@ export class CustomListManager {
 		if (!(file instanceof TFile)) return null;
 		try {
 			const list = this.parse(name, await this.app.vault.read(file));
-			if (list) this.baselines.set(list, this.stateKey(list));
+			if (list) {
+				this.corruptLists.delete(name);
+				this.baselines.set(list, this.stateKey(list));
+			}
 			return list;
 		} catch (e) {
 			console.warn('[Hoard] Failed to read custom list', name, e);
@@ -213,7 +231,11 @@ export class CustomListManager {
 		return out;
 	}
 
-	private parse(name: string, content: string): CustomList | null {
+	/**
+	 * `report` marks a corrupt list and tells the user; the foreign-edit guard passes false, since a
+	 * note being hand-edited is invalid JSON between two keystrokes and only counts as changed.
+	 */
+	private parse(name: string, content: string, report = true): CustomList | null {
 		const notesMatch = content.match(/## Notes\n([\s\S]*?)(?=\n## |\s*$)/);
 		const notes = (notesMatch?.[1] ?? '').trim();
 
@@ -240,6 +262,7 @@ export class CustomListManager {
 					);
 				}
 			} catch (e) {
+				if (!report) return null;
 				console.warn('[Hoard] Custom list JSON parse failed for', name, e);
 				new Notice(t('lists.corrupt', { name }));
 				this.corruptLists.add(name);
@@ -284,7 +307,10 @@ export class CustomListManager {
 	async saveNotes(list: CustomList, notes: string): Promise<boolean> {
 		return this.saveSerialized(list.name, async () => {
 			const file = this.app.vault.getAbstractFileByPath(this.pathOf(list.name));
-			if (!(file instanceof TFile)) return false;
+			if (!(file instanceof TFile)) {
+				this.onConflict(list); // deleted or renamed elsewhere
+				return false;
+			}
 			const written = await this.writeChecked(list, file, (data) => replaceNotes(data, notes));
 			if (written) list.notes = notes;
 			return written;
@@ -496,7 +522,8 @@ class NotesModal extends Modal {
 		app: App,
 		private listName: string,
 		private initialNotes: string,
-		private onSave: (notes: string) => Promise<void>,
+		/** Resolves false when nothing was saved; the modal then stays open with the typed text. */
+		private onSave: (notes: string) => Promise<boolean>,
 	) { super(app); }
 
 	onOpen(): void {
@@ -558,7 +585,7 @@ class NotesModal extends Modal {
 		const footer = contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
 		renderCancelSave(footer, {
 			onCancel: () => this.close(),
-			onSave: () => void this.onSave(textarea.value).then(() => this.close()),
+			onSave: () => void this.onSave(textarea.value).then((saved) => { if (saved) this.close(); }),
 		});
 	}
 
@@ -674,15 +701,17 @@ export class CustomListsTab {
 	}
 
 	/**
-	 * Reloads the open list when its note changed elsewhere (sync, hand edit). Own writes move the
-	 * baseline first, so they are not stale. An open cell editor is left alone; its save then
+	 * Reloads the open list when its note changed elsewhere (sync, hand edit), or shows it again once a
+	 * corrupt note parses. Own writes move the baseline first, so they are not stale. An open cell editor is left alone; its save then
 	 * meets the changed baseline and reloads via `onSaveConflict`.
 	 */
 	private async onVaultModify(file: TAbstractFile): Promise<void> {
+		const name = this.activeListName;
+		if (!name || file.path !== normalizePath(`${this.manager.folderPath}/${name}.md`)) return;
 		const list = this.currentList;
-		if (!list || file.path !== normalizePath(`${this.manager.folderPath}/${list.name}.md`)) return;
-		if (!(await this.manager.isStale(list))) return;
-		if (list !== this.currentList || this.container.querySelector('.hoard-cl-editing')) return;
+		// no list shown: the note was corrupt; show it once it parses again
+		const reload = list ? await this.manager.isStale(list) : Boolean(await this.manager.peek(name));
+		if (!reload || list !== this.currentList || this.container.querySelector('.hoard-cl-editing')) return;
 		await this.render();
 	}
 
@@ -918,7 +947,7 @@ export class CustomListsTab {
 				this.plugin.app,
 				list.name,
 				list.notes,
-				async (notes) => { await this.manager.saveNotes(list, notes); },
+				(notes) => this.manager.saveNotes(list, notes),
 			).open();
 		});
 

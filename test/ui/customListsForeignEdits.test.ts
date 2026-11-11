@@ -155,3 +155,68 @@ describe('notes modal', () => {
 		await until(() => f.files.get(PATH)!.includes('## Notes\n***word***'));
 	});
 });
+
+describe('review follow-ups', () => {
+	it('a half-typed JSON on disk neither spams notices nor blocks later saves', async () => {
+		const { f, container, stored } = await setupCustomLists([makeList()]);
+		const file = f.app.vault.getAbstractFileByPath(PATH) as TFile;
+		const good = f.files.get(PATH)!;
+		await f.app.vault.modify(file, good.replace('"rows": [', '"rows": [ {'));
+		await f.app.vault.modify(file, good.replace('"rows": [', '"rows": [ {"'));
+		await new Promise((r) => setTimeout(r, 20));
+		await f.app.vault.modify(file, good);
+		await new Promise((r) => setTimeout(r, 20));
+		expect(shown.length).toBeLessThanOrEqual(1);
+
+		commitCell(container, 0, 'col_1', '42');
+		await until(() => stored('Backlog').rows[0]!.col_1 === 42);
+	});
+
+	it('shows the list again once a corrupt note is repaired', async () => {
+		const { f, container, stored } = await setupCustomLists([makeList()]);
+		const file = f.app.vault.getAbstractFileByPath(PATH) as TFile;
+		const good = f.files.get(PATH)!;
+		f.files.set(PATH, good.replace('"rows": [', '"rows": [ {'));
+		commitCell(container, 0, 'col_1', '7'); // refused: the note does not parse
+		await until(() => container.querySelector('.hoard-cl-td-name') === null);
+
+		await f.app.vault.modify(file, good);
+		await until(() => rowNames(container).includes('Alpha'));
+		commitCell(container, 0, 'col_1', '8');
+		await until(() => stored('Backlog').rows[0]!.col_1 === 8);
+	});
+
+	it('keeps the notes modal open with the typed text when the save is refused', async () => {
+		const { f, container } = await setupCustomLists([makeList({ notes: 'x' })]);
+		qa(container, '.hoard-btn').find((b) => b.textContent === 'Notes')!.click();
+		const ta = document.body.querySelector<HTMLTextAreaElement>('textarea')!;
+		f.files.set(PATH, f.files.get(PATH)!.replace('## Notes\nx', '## Notes\nfrom phone'));
+		ta.value = 'long prose';
+		qa(document.body, '.hoard-modal-btn-row .hoard-btn-primary')[0]!.click();
+		await until(() => shown.length > 0);
+		expect(document.body.contains(ta)).toBe(true);
+		expect(ta.value).toBe('long prose');
+		expect(f.files.get(PATH)).toContain('## Notes\nfrom phone');
+	});
+
+	it('reports notes saved into a list deleted elsewhere', async () => {
+		const { f, plugin } = await setupCustomLists([makeList()]);
+		const conflicts: string[] = [];
+		const manager = new CustomListManager(f.app, plugin as never, (l) => conflicts.push(l.name));
+		const list = (await manager.loadList('Backlog'))!;
+		f.files.delete(PATH);
+		(f.app.vault as unknown as { getAbstractFileByPath: (p: string) => unknown }).getAbstractFileByPath = () => null;
+		expect(await manager.saveNotes(list, 'mine')).toBe(false);
+		expect(conflicts).toEqual(['Backlog']);
+	});
+
+	it('adds a ## Notes section when the note has none', async () => {
+		const { f, plugin } = await setupCustomLists([makeList()]);
+		const manager = new CustomListManager(f.app, plugin as never);
+		f.files.set(PATH, f.files.get(PATH)!.replace('## Notes\n\n\n', ''));
+		const list = (await manager.loadList('Backlog'))!;
+		expect(await manager.saveNotes(list, 'mine')).toBe(true);
+		expect((await manager.loadList('Backlog'))!.notes).toBe('mine');
+	});
+
+});

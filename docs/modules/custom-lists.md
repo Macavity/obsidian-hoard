@@ -38,7 +38,8 @@ type-checked); a JSON parse error puts the list into `corruptLists`,
 shows a Notice, and `saveList` refuses to overwrite it. File name = list name, rename = vault
 rename. Saves are serialised per list so table and notes writes cannot clobber each other.
 `saveList` replaces only the `## Data` block (appends one if missing) and `saveNotes` only the
-`## Notes` body, both through `vault.process`, never a separate read and modify; title, notes and any hand-written sections stay as they are on disk. A new list
+`## Notes` body (adding the heading before `## Data` if the note has none), both through
+`vault.process`, never a separate read and modify; title, notes and any hand-written sections stay as they are on disk. A new list
 is created with the full format. Tab order is the device-local `customListTabOrder`; default
 columns for new lists are the shared `defaultCustomColumns`.
 
@@ -53,9 +54,15 @@ The same idea as the entries' [baseline](../concepts/baseline.md), per list obje
   `lists.changedElsewhere` and reloads the list; the user's last change is dropped, the foreign
   one kept. A list that has a baseline but no file any more (deleted or renamed elsewhere) is
   not recreated.
+- The guard parses the note quietly: invalid JSON (a hand edit between two keystrokes) counts
+  as a conflict for a save but neither marks the list corrupt nor shows `lists.corrupt`, and does
+  not trigger a reload. A successful `loadList` clears the corrupt mark.
+- A refused notes save keeps `NotesModal` open with the typed text; a notes save into a deleted
+  note is reported like a table save.
 - Because the baseline sits on the object, a save still queued from a copy made before a reload
   also meets the old baseline and is refused.
-- The tab listens to vault `modify` for the open list's note and reloads when `isStale` holds.
+- The tab listens to vault `modify` for the open list's note and reloads when `isStale` holds,
+  or, if no list is shown because the note was corrupt, once `peek` parses it again.
   Own writes move the baseline inside the `process` callback, so they never count as stale. An
   open cell editor (`.hoard-cl-editing`) blocks the reload; its commit then hits the conflict
   path. `destroy` (view close, tab switch) drops the listener; `render` only tears down the

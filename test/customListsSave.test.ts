@@ -41,13 +41,13 @@ describe('custom list saves go through vault.process', () => {
 		expect(f.files.get(path)).toBe(`# Backlog\n\n## Notes\nnew\n${DATA}`);
 	});
 
-	it('saveNotes leaves the file unchanged without a ## Notes heading', async () => {
+	it('saveNotes adds a ## Notes heading before ## Data when there is none', async () => {
 		const { f, plugin } = await setupCustomLists([makeList()]);
 		const manager = new CustomListManager(f.app, plugin as never);
 		const path = [...f.files.keys()].find((p) => p.endsWith('/Backlog.md'))!;
 		const original = `# Backlog\n${DATA}`;
 		f.files.set(path, original);
-		await manager.saveNotes((await manager.loadList('Backlog'))!, 'new\n');
-		expect(f.files.get(path)).toBe(original);
+		await manager.saveNotes((await manager.loadList('Backlog'))!, 'new');
+		expect(f.files.get(path)).toBe(`# Backlog\n\n## Notes\nnew\n\n## Data\n\`\`\`json\n{\n  "x": 1\n}\n\`\`\`\n`);
 	});
 });
