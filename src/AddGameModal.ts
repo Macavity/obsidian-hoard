@@ -176,16 +176,21 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 			const full = await this.fetchDetails(result);
 			if (!isCurrent()) return;
 			if (full) this.applyDetails(full);
+			else this.applySearchRow(result);
 		} catch {
-			// detail fetch failed — fall back to what the search row carried
-			this.fieldTitle = result.title;
-			this.fieldReleaseDate = result.releaseDate;
-			this.fieldCoverUrl = result.coverUrl;
-			this.fieldLink = result.url;
-			this.fieldPlatforms = this.matchOwnPlatforms(result.platforms);
+			this.applySearchRow(result);
 		}
 
 		this.renderForm();
+	}
+
+	/** Detail fetch failed or came back empty — fall back to what the search row carried. */
+	private applySearchRow(result: GameSearchResult): void {
+		this.fieldTitle = result.title;
+		this.fieldReleaseDate = result.releaseDate;
+		this.fieldCoverUrl = result.coverUrl;
+		this.fieldLink = result.url;
+		this.fieldPlatforms = this.matchOwnPlatforms(result.platforms);
 	}
 
 	/** Maps API platform names onto the user's configured platform chips. */

@@ -35,16 +35,16 @@ describe('Steam pick in AddGameModal', () => {
 		...steamRow, developer: 'Supergiant', publisher: 'Supergiant', singleplayer: true, coop: false, multiplayer: false, storeUrl: '',
 	};
 
-	function setup() {
+	function setup(detailsResult: GameDetailsResult | null = details) {
 		const added: Game[] = [];
 		const api = {
 			hasRawgKey: () => false,
 			hasIgdbCredentials: () => false,
 			searchSteamStore: vi.fn(() => Promise.resolve([steamRow])),
-			getSteamStoreDetails: vi.fn(() => Promise.resolve<GameDetailsResult | null>(details)),
+			getSteamStoreDetails: vi.fn(() => Promise.resolve<GameDetailsResult | null>(detailsResult)),
 		};
 		const gameData = {
-			getSettings: () => ({ types: [], platforms: [], statuses: [], defaultStatus: '' }),
+			getSettings: () => ({ types: [], platforms: [{ name: 'PC' }], statuses: [], defaultStatus: '' }),
 			getGames: () => [],
 			getGroups: () => [],
 			generateGameId: () => 'g1',
@@ -67,6 +67,17 @@ describe('Steam pick in AddGameModal', () => {
 		expect(api.getSteamStoreDetails).toHaveBeenCalledWith(steamRow);
 		await m.addGame();
 		expect(added[0]).toMatchObject({ apiSource: 'steam', apiId: '1145360', steamAppId: '1145360', title: 'Hades' });
+	});
+
+	it('falls back to the search row when the details come back empty', async () => {
+		const { modal, added } = setup(null);
+		type Internals = { selectResult: (r: GameSearchResult, c: () => boolean) => Promise<void>; addGame: () => Promise<void> };
+		const m = modal as unknown as Internals;
+		await m.selectResult({ ...steamRow, coverUrl: 'https://img/hades.jpg' }, () => true);
+		await m.addGame();
+		expect(added[0]).toMatchObject({
+			title: 'Hades', coverUrl: 'https://img/hades.jpg', externalLink: 'https://store.steampowered.com/app/1145360', platforms: ['PC'],
+		});
 	});
 });
 
