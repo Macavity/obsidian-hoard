@@ -96,6 +96,32 @@ export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Gam
 	return { entry, invalidFields: r.invalidFields };
 }
 
+/** Sets `key` only when `value` is truthy, so empty optional fields stay out of the note. */
+function setIf(out: Fm, key: string, value: unknown): void {
+	if (value) out[key] = value;
+}
+
+function encodeProgress(g: Game, out: Fm): void {
+	out[C.rating] = g.rating | 0;
+	out[G.progress] = g.progress | 0;
+	if (g.playtimeMinutes > 0) out[G.playtime] = formatTime(g.playtimeMinutes);
+	if (g.achievementsTotal > 0) out[G.achievements] = `${g.achievementsEarned}/${g.achievementsTotal}`;
+	if (g.platforms.length > 0) out[G.platforms] = [...g.platforms];
+	setIf(out, G.singleplayer, g.singleplayer);
+	setIf(out, G.coop, g.coop);
+	setIf(out, G.multiplayer, g.multiplayer);
+}
+
+function encodeLinks(g: Game, out: Fm): void {
+	setIf(out, C.cover, g.coverUrl);
+	setIf(out, G.storeUrl, g.storeUrl);
+	setIf(out, C.url, g.externalLink);
+	if (g.apiSource && g.apiId) out[C.externalId] = formatExternalId({ source: g.apiSource, id: g.apiId });
+	setIf(out, G.steamAppId, g.steamAppId);
+	setIf(out, G.lastPlayed, g.lastPlayed);
+	if (g.groups?.length) out[C.groups] = [...g.groups];
+}
+
 export function encodeGame(g: Game): Record<string, unknown> {
 	const out: Fm = {};
 	out[C.name] = g.title;
@@ -104,30 +130,17 @@ export function encodeGame(g: Game): Record<string, unknown> {
 	// `genre` carries the in-app type; `type:` stays the cross-note kind marker
 	out[G.genre] = g.type ?? '';
 	out[C.status] = g.status;
-	if (g.priority) out[G.priority] = g.priority;
-	if (g.favorite) out[C.favorite] = true;
-	if (g.dateFavorited) out[C.dateFavorited] = g.dateFavorited;
-	if (g.wishlist) out[G.wishlist] = true;
-	out[C.rating] = g.rating | 0;
-	out[G.progress] = g.progress | 0;
-	if (g.playtimeMinutes > 0) out[G.playtime] = formatTime(g.playtimeMinutes);
-	if (g.achievementsTotal > 0) out[G.achievements] = `${g.achievementsEarned}/${g.achievementsTotal}`;
-	if (g.platforms.length > 0) out[G.platforms] = [...g.platforms];
-	if (g.singleplayer) out[G.singleplayer] = true;
-	if (g.coop) out[G.coop] = true;
-	if (g.multiplayer) out[G.multiplayer] = true;
+	setIf(out, G.priority, g.priority);
+	setIf(out, C.favorite, g.favorite);
+	setIf(out, C.dateFavorited, g.dateFavorited);
+	setIf(out, G.wishlist, g.wishlist);
+	encodeProgress(g, out);
 	out[C.dateStarted] = g.dateStarted ?? null;
 	out[C.dateFinished] = g.dateFinished ?? null;
 	out[C.releaseDate] = g.releaseDate ?? null;
 	out[C.dateAdded] = g.dateAdded;
 	out[C.dateModified] = g.dateModified;
-	if (g.coverUrl) out[C.cover] = g.coverUrl;
-	if (g.storeUrl) out[G.storeUrl] = g.storeUrl;
-	if (g.externalLink) out[C.url] = g.externalLink;
-	if (g.apiSource && g.apiId) out[C.externalId] = formatExternalId({ source: g.apiSource, id: g.apiId });
-	if (g.steamAppId) out[G.steamAppId] = g.steamAppId;
-	if (g.lastPlayed) out[G.lastPlayed] = g.lastPlayed;
-	if (g.groups?.length) out[C.groups] = [...g.groups];
+	encodeLinks(g, out);
 	encodeAirtime(g.airtime, out);
 	out[C.type] = 'game';
 	return out;
