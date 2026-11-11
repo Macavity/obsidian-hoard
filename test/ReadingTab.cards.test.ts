@@ -182,7 +182,7 @@ describe('ReadingTab.refreshCover', () => {
 	it('warns about a missing Google Books id', () => {
 		const { tab } = build('books');
 		tab.refreshCover(book());
-		expect(shown).toEqual([t('reading.notices.noGoogleBooksId')]);
+		expect(shown).toEqual(['No Google Books or Open Library ID; cannot refresh cover.']);
 	});
 
 	it('warns about a missing Google Books key', () => {

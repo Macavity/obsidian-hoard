@@ -1485,7 +1485,7 @@ export class ReadingTab {
 		if (kind === 'book') {
 			const book = item as Book;
 			if (!book.googleBooksId && !book.openLibraryId) {
-				new Notice(t('reading.notices.noGoogleBooksId'));
+				new Notice(t('reading.notices.noBookId'));
 				return;
 			}
 			if (!book.openLibraryId && !this.plugin.apiService.hasGoogleBooksKey()) {
