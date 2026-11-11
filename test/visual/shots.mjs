@@ -106,6 +106,12 @@ async function restore({ mobile, theme }, failures) {
 	// Obsidian saves the colour scheme with a delay; a reset before that write would leave appearance.json modified
 	await sleep(3000);
 	await attempt("final vault:reset", () => pnpm("vault:reset"));
+	// stabilise() replaced the clock, Math.random and the image and observer classes of the window; only a reload undoes that
+	await attempt("reloading Obsidian", async () => {
+		obs("reload");
+		await sleep(2000);
+		await untilReady();
+	});
 }
 
 /** Desktop variants first, then the phone ones (they need the app in mobile emulation, which reloads it). */
