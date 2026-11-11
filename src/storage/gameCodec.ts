@@ -48,7 +48,7 @@ function decodeAchievements(r: FmReader): { earned: number; total: number } {
 	return { earned: Number(m[1]), total: Number(m[2]) };
 }
 
-export function decodeGame(id: string, fm: Fm): Decoded<Game> {
+export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Game> {
 	const r = new FmReader(fm);
 	const { apiSource, apiId } = decodeApi(r);
 	const playtimeMinutes = decodePlaytime(r);
@@ -96,7 +96,7 @@ export function decodeGame(id: string, fm: Fm): Decoded<Game> {
 	return { entry, invalidFields: r.invalidFields };
 }
 
-export function encodeGame(g: Game): Fm {
+export function encodeGame(g: Game): Record<string, unknown> {
 	const out: Fm = {};
 	out[C.name] = g.title;
 	out[G.developer] = g.developer ?? '';
