@@ -115,8 +115,8 @@
   transition: transform 0.1s;
 }
 
-/* a button: Obsidian's own button:hover rule would otherwise repaint the fill */
-button.hoard-color-picker__palette-swatch {
+/* a button: Obsidian's own button:hover rule would otherwise repaint the fill; the clear swatch keeps the button look */
+button.hoard-color-picker__palette-swatch:not(.hoard-color-picker__palette-swatch--clear) {
   background-color: var(--hoard-color-picker-fill, transparent);
 }
 
