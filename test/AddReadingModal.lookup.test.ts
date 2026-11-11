@@ -59,7 +59,7 @@ describe('AddReadingModal lookup', () => {
 		expect(results().textContent).toBe(t('add.noMatches'));
 	});
 
-	it('saves an Open Library pick with its id, filling gaps from the work record', async () => {
+	it('saves an Open Library pick with its id, filling the cover from the work record', async () => {
 		const olRow = { ...book, googleBooksId: '', openLibraryId: 'OL1W', author: '', totalPages: 0, coverUrl: '' };
 		const olWork = { author: 'Frank Herbert', totalPages: 412, coverUrl: 'http://c/ol.jpg', releaseDate: '1965-08-01' };
 		const { modal, results, state, added } = setup('book', { source: 'openlibrary', olBooks: [olRow], olWork }, { prefill: 'dune' });
@@ -67,10 +67,38 @@ describe('AddReadingModal lookup', () => {
 		(results().querySelector('.hoard-result-card') as HTMLElement).click();
 		expect(state().openLibraryId).toBe('OL1W');
 		await flush();
-		expect(state().author).toBe('Frank Herbert');
-		expect(state().totalPages).toBe(412);
+		expect(state().coverUrl).toBe('http://c/ol.jpg');
 		await (modal as unknown as { saveBook: (t: string) => Promise<void> }).saveBook('Dune');
-		expect(added[0]).toMatchObject({ openLibraryId: 'OL1W', googleBooksId: '', totalPages: 412 });
+		expect(added[0]).toMatchObject({ openLibraryId: 'OL1W', googleBooksId: '', coverUrl: 'http://c/ol.jpg' });
+	});
+
+	it('keeps values typed while the Open Library work is loading', async () => {
+		const olRow = { ...book, googleBooksId: '', openLibraryId: 'OL1W', author: '', totalPages: 0, coverUrl: '' };
+		const { api, results, state } = setup('book', { source: 'openlibrary', olBooks: [olRow] }, { prefill: 'dune' });
+		let resolveWork: (v: unknown) => void = () => {};
+		api.getOpenLibraryWork.mockImplementationOnce(() => new Promise((r) => { resolveWork = r; }));
+		await flush();
+		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		state().totalPages = 321;
+		state().author = 'Typed Author';
+		resolveWork({ author: 'Frank Herbert', totalPages: 412, coverUrl: 'http://c/ol.jpg', releaseDate: '1965-08-01' });
+		await flush();
+		expect(state().totalPages).toBe(321);
+		expect(state().author).toBe('Typed Author');
+		expect(state().coverUrl).toBe('http://c/ol.jpg');
+	});
+
+	it('does not overwrite a cover the user already set', async () => {
+		const olRow = { ...book, googleBooksId: '', openLibraryId: 'OL1W', author: '', totalPages: 0, coverUrl: '' };
+		const { api, results, state } = setup('book', { source: 'openlibrary', olBooks: [olRow] }, { prefill: 'dune' });
+		let resolveWork: (v: unknown) => void = () => {};
+		api.getOpenLibraryWork.mockImplementationOnce(() => new Promise((r) => { resolveWork = r; }));
+		await flush();
+		(results().querySelector('.hoard-result-card') as HTMLElement).click();
+		state().coverUrl = 'http://c/mine.jpg';
+		resolveWork({ author: '', totalPages: 0, coverUrl: 'http://c/ol.jpg', releaseDate: '' });
+		await flush();
+		expect(state().coverUrl).toBe('http://c/mine.jpg');
 	});
 
 	it('keeps row values over the Open Library work record', async () => {
@@ -81,6 +109,7 @@ describe('AddReadingModal lookup', () => {
 		await flush();
 		expect(state().author).toBe('Herbert');
 		expect(state().totalPages).toBe(100);
+		expect(state().coverUrl).toBe('http://c/1.jpg');
 	});
 
 	it('renders book results, marks owned ones and applies a pick including the detail upgrade', async () => {

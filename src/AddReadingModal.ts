@@ -375,7 +375,7 @@ export class AddReadingModal extends Modal {
 			const detail = r.googleBooksId ? await api.getGoogleBookById(r.googleBooksId) : await api.getOpenLibraryWork(r.openLibraryId);
 			if (gen !== this.selectGen || !detail) return; // a newer selection superseded this one
 			if (r.googleBooksId) this.applyGoogleDetail(detail);
-			else this.applyOpenLibraryDetail(r, detail);
+			else this.applyOpenLibraryDetail(detail);
 			this.refreshForm();
 		} catch {
 			// best-effort enrichment; the book is already applied from the search results
@@ -387,12 +387,9 @@ export class AddReadingModal extends Modal {
 		if (detail.coverUrl) this.state.coverUrl = detail.coverUrl;
 	}
 
-	/** The search row wins for author, pages and date when it has them; the work record fills the gaps. */
-	private applyOpenLibraryDetail(row: BookSearchResult, detail: BookSearchResult): void {
-		if (!row.author) this.state.author = detail.author;
-		if (!(row.totalPages > 0)) this.state.totalPages = detail.totalPages;
-		if (!row.releaseDate) this.state.releaseDate = detail.releaseDate;
-		if (!row.coverUrl) this.state.coverUrl = detail.coverUrl;
+	/** The work record only supplies a cover, and only while none is set: anything typed in the meantime wins. */
+	private applyOpenLibraryDetail(detail: BookSearchResult): void {
+		if (!this.state.coverUrl && detail.coverUrl) this.state.coverUrl = detail.coverUrl;
 	}
 
 	private applyMangaResult(r: MangaSearchResult): void {
