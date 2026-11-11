@@ -51,7 +51,7 @@ const settings = {
 		tabStyle: '{tab}: {style}',
 		text: {
 			label: 'Card text',
-			help: 'Where a tab\'s poster cards show their name, type and year; in a block under the poster (the classic reading/upcoming style) or overlaid at the bottom of the poster (the classic watchlist style). Status badges stay on the poster either way. The two big previews apply a style to every tab at once; the rows below set each tab on its own.',
+			help: 'Where a tab\'s poster cards show their name, type and year; in a block under the poster (the classic Reading/Upcoming style) or overlaid at the bottom of the poster (the classic Watchlist style). Status badges stay on the poster either way. The two big previews apply a style to every tab at once; the rows below set each tab on its own.',
 		},
 		size: {
 			label: 'Card size',
@@ -96,7 +96,7 @@ const settings = {
 		},
 		rewrite: {
 			name: 'Rewrite all note frontmatter',
-			desc: 'Rewrites the YAML properties on every existing watchlist and reading note, applying newer properties to older notes. Body content (the notes and quotes sections) is preserved. Notes without a file on disk are skipped; use the regenerate button to create them.',
+			desc: 'Rewrites the YAML properties on every existing Watchlist and Reading note, applying newer properties to older notes. Body content (the notes and quotes sections) is preserved. Notes without a file on disk are skipped; use Regenerate to create them.',
 			button: 'Rewrite frontmatter',
 			confirm: 'This will rewrite the YAML frontmatter on all existing notes for {titles} watch titles and {reading} reading entries. Body content is preserved; notes without a file on disk are skipped. Continue?',
 			none: 'No notes to rewrite.',
@@ -116,11 +116,11 @@ const settings = {
 		},
 		hints: {
 			name: 'Show hint banners',
-			desc: 'Show informational hint banners in the upcoming, drafts and custom lists tabs.',
+			desc: 'Show informational hint banners in the Upcoming, Drafts and custom lists tabs.',
 		},
 		statusBar: {
-			name: 'Show upcoming count in status bar',
-			desc: 'Show a "3 due" counter in the status bar when upcoming entries are due. Click it to open the upcoming tab. (Desktop only.)',
+			name: 'Show Upcoming count in status bar',
+			desc: 'Show a "3 due" counter in the status bar when Upcoming entries are due. Click it to open the Upcoming tab. (Desktop only.)',
 		},
 	},
 	tags: {
@@ -157,7 +157,7 @@ const settings = {
 			sub: 'Badge and status colours for books and manga',
 		},
 		games: {
-			sub: 'Status, genre and platform colours for the games tab',
+			sub: 'Status, genre and platform colours for the Games tab',
 			note: 'Game note files pick up a renamed genre or platform the next time that game is saved.',
 		},
 		shared: {
@@ -171,7 +171,7 @@ const settings = {
 		},
 		rating: {
 			label: 'Rating system',
-			help: 'The color and text shown for each star rating across watchlist, reading, and games. A whole star shares a tier with the half-step below it; e.g. 2.5★ and 3★ are both good by default.',
+			help: 'The color and text shown for each star rating across Watchlist, Reading, and Games. A whole star shares a tier with the half-step below it; e.g. 2.5★ and 3★ are both "Good".',
 			labelAria: 'Label for {tier}-star rating',
 			colorAria: 'Color for {tier}-star rating',
 		},
@@ -195,7 +195,7 @@ const settings = {
 		},
 		defaultType: {
 			name: 'Default type for new titles',
-			desc: 'Type preselected when adding a title. The asterisk option follows whatever you added last.',
+			desc: 'Type preselected when adding a title. "Last type used" follows whatever you added last.',
 			last: '* Last type used',
 		},
 		topCredits: {
@@ -225,7 +225,7 @@ const settings = {
 		},
 		subTab: {
 			name: 'Default sub-tab',
-			desc: 'Which sub-tab opens by default when you switch to the reading tab.',
+			desc: 'Which sub-tab opens by default when you switch to the Reading tab.',
 			books: 'Books',
 			manga: 'Manga',
 		},
@@ -238,7 +238,7 @@ const settings = {
 		unreachable: 'Could not reach Steam',
 		note: 'Syncs playtime and achievements from your own library',
 		badge: 'Companion',
-		link: 'Get a web API key',
+		link: 'Get a Web API key',
 		help: 'Account sync needs a Steam API key and runs alongside the games API above; game search through Steam needs no key. Set your Steam profile\'s game details privacy to public, or Steam returns an empty library even to your own key.',
 		apiKey: 'Web API key',
 		apiKeyPlaceholder: 'Paste your Steam Web API key here',
@@ -281,7 +281,7 @@ const settings = {
 		movies: {
 			title: 'Movies & TV shows',
 			sub: 'Watchlist metadata, posters, cast and ratings',
-			note: 'Missing a name? Use the + on a title\'s director or cast row to add your own. Manual additions are unlimited, sit after the fetched names, and are never overwritten by a refresh or by switching API.',
+			note: 'Missing a name? Use the + on a title\'s Director or Cast row to add your own. Manual additions are unlimited, sit after the fetched names, and are never overwritten by a refresh or by switching API.',
 		},
 		omdb: {
 			note: 'Up to 4 cast members and the director',
@@ -346,10 +346,10 @@ const settings = {
 			clientSecretPlaceholder: 'Paste your Twitch client secret here',
 		},
 		routing: {
-			title: 'API routing by type in watchlist',
-			desc: 'Choose which API group to use for each title type. Anime, movie, and TV show are locked to their default APIs.',
+			title: 'API routing by type in Watchlist',
+			desc: 'Choose which API group to use for each title type. Anime, Movie, and TV Show are locked to their default APIs.',
 			locked: '{apis} (locked)',
-			notSet: 'Not set',
+			notSet: '— not set —',
 			anime: 'Anime API (Jikan / AniList)',
 			movie: 'Movie / TV API (OMDb / TMDB)',
 		},
@@ -434,7 +434,7 @@ const settings = {
 		after: {
 			name: 'After adding a title',
 			desc: 'What happens to a draft entry once you hit add and confirm.',
-			keep: 'Keep as added',
+			keep: 'Keep as Added',
 		},
 	},
 	lists: {
@@ -464,33 +464,33 @@ const settings = {
 		statTime: 'Time watched & remaining combined (mini).',
 		upcomingNext: 'Next upcoming title with name, type badge, release date, and countdown.',
 		nowWatching: 'Currently pinned title with name, type badge, and progress bar.',
-		statTimeCompletedFull: 'Full-width triple card: time watched · time remaining · completed.',
-		nowNext: 'Full-width double card: now watching · up next.',
+		statTimeCompletedFull: 'Full-width triple card: Time watched · Time remaining · Completed.',
+		nowNext: 'Full-width double card: Now watching · Up next.',
 	},
 	quickInfo: {
 		dashboard: {
 			title: 'Dashboard',
 			note: {
 				heading: 'Please note',
-				body: 'Statuses to be released or dropped (time left) are not included in any calculations, only watching, completed and dropped (time watched).',
+				body: 'Statuses To be released or Dropped (time left) are not included in any calculations, only Watching, Completed and Dropped (time watched).',
 			},
 			watched: {
 				heading: 'Time watched',
-				body: 'Calculated as: episodes watched × episode duration, summed across all titles with status watching and completed.',
+				body: 'Calculated as: episodes watched × episode duration, summed across all titles with status Watching and Completed.',
 			},
 			remaining: {
 				heading: 'Time remaining',
-				body: 'Calculated as: episodes remaining × episode duration, summed across all titles with status watching and plan to watch.',
+				body: 'Calculated as: episodes remaining × episode duration, summed across all titles with status Watching and Plan to watch.',
 			},
 			dropped: {
 				heading: 'Dropped',
-				body: 'Calculated as: episodes watched × episode duration, summed across all titles with status dropped.',
+				body: 'Calculated as: episodes watched × episode duration, summed across all titles with status Dropped.',
 			},
 		},
 		watchlist: {
 			groups: {
 				heading: 'Why groups exist',
-				body: 'Groups let you combine related titles under one entry; for example, a movie and its sequel, a TV show and its anime adaptation, or an anime series and its movie. They appear as a single collapsible row in your watchlist.',
+				body: 'Groups let you combine related titles under one entry; for example, a movie and its sequel, a TV show and its anime adaptation, or an anime series and its movie. They appear as a single collapsible row in your Watchlist.',
 			},
 			rating: {
 				heading: 'Group rating',
@@ -498,50 +498,50 @@ const settings = {
 			},
 			pin: {
 				heading: 'Pin to top',
-				body: 'Pinning a title moves it to the top of your watchlist regardless of sorting. Pinned titles also appear in the now watching widget, so you can quickly see what you\'re currently watching inside your notes or Homepage.',
+				body: 'Pinning a title moves it to the top of your Watchlist regardless of sorting. Pinned titles also appear in the "Now watching" widget, so you can quickly see what you\'re currently watching inside your notes or Homepage.',
 			},
 			season: {
 				heading: 'How to add a new season',
-				body: 'Open the title and click edit at the bottom. In the edit modal, scroll down to the seasons field and add a new line in the format "Season Name: N" (e.g. "Season 3: 10" or "Season name: 10").',
+				body: 'Open the title and click Edit at the bottom. In the Edit modal, scroll down to the Seasons field and add a new line in the format "Season Name: N" (e.g. "Season 3: 10" or "Season name: 10").',
 			},
 		},
 		api: {
 			title: 'API & search',
 			which: {
 				heading: 'Which API is used for what',
-				body: 'Hoard uses a different API per content type:\n• anime: Jikan (MyAnimeList data) or AniList, whichever you set under settings → API → anime. No key is needed for either.\n• movies & TV shows: Cinemeta by default, no key needed. OMDb or TMDB, whichever is set as active under settings → API, take over once their free key/token is set; keys also add community ratings, airing info, season refill, collections and studios.\n• books (reading): Open Library by default, no key needed. Google Books is an alternative once a free API key is set under settings → API → books.\n• games: Steam store by default, no key needed. RAWG or IGDB, whichever you set under settings → API → games, take over once set up: RAWG needs a free key; IGDB needs a Twitch client ID and secret. Syncing your Steam account still needs a Steam Web API key.\n• manga (reading): Jikan (MyAnimeList data). No key needed.\n\nThe anime API choice only affects new titles; existing titles keep the source they were added with.\n\nMake sure the correct type is selected before searching. If anime is selected and you search for a movie or TV show (or vice versa), it most likely won\'t be found, because each type queries its own API. APIs are a convenience, not a requirement; you can always add a title manually. The "add from URL" button also relies on an API.',
+				body: 'Hoard uses a different API per content type:\n• Anime: Jikan (MyAnimeList data) or AniList, whichever you set under Settings → API → Anime. No key is needed for either.\n• Movies & TV Shows: Cinemeta by default, no key needed. OMDb or TMDB, whichever is set as active under Settings → API, take over once their free key/token is set; keys also add community ratings, airing info, season refill, collections and studios.\n• Books (Reading): Open Library by default, no key needed. Google Books is an alternative once a free API key is set under Settings → API → Books.\n• Games: Steam Store by default, no key needed. RAWG or IGDB, whichever you set under Settings → API → Games, take over once set up: RAWG needs a free key; IGDB needs a Twitch Client ID and Secret. Syncing your Steam account still needs a Steam Web API key.\n• Manga (Reading): Jikan (MyAnimeList data). No key needed.\n\nThe anime API choice only affects new titles; existing titles keep the source they were added with.\n\nMake sure the correct type is selected before searching. If Anime is selected and you search for a movie or TV show (or vice versa), it most likely won\'t be found, because each type queries its own API. APIs are a convenience, not a requirement; you can always add a title manually. The "Add from URL" button also relies on an API.',
 			},
 		},
 		reading: {
 			booksManga: {
 				heading: 'Books vs manga',
-				body: 'Reading has two independent sub-tabs: books and manga. Each keeps its own entries, custom columns, filters, sort order, and saved filter. Set which one opens by default under settings → reading.',
+				body: 'Reading has two independent sub-tabs: Books and Manga. Each keeps its own entries, custom columns, filters, sort order, and saved filter. Set which one opens by default under Settings → Reading.',
 			},
 			statuses: {
 				heading: 'Statuses',
-				body: 'Reading entries use five statuses: reading, completed, plan to read, to be released, and dropped. The to be released status is set automatically when an entry has a release date in the future and cannot be chosen manually; once that date passes, the entry reverts to plan to read. Future-dated entries also appear in the shared upcoming tab.',
+				body: 'Reading entries use five statuses: Reading, Completed, Plan to Read, To be released, and Dropped. "To be released" is set automatically when an entry has a release date in the future and cannot be chosen manually; once that date passes, the entry reverts to Plan to Read. Future-dated entries also appear in the shared Upcoming tab.',
 			},
 			progress: {
 				heading: 'Progress tracking',
-				body: 'Books track pages read out of total pages; or words, if you prefer: the pages/words switch on the progress section of a book\'s detail view sets the unit per book, and both counters are kept, so switching back and forth never loses numbers. Manga track chapters read out of total chapters, plus volumes read out of total volumes. The card progress bar fills based on the book\'s chosen unit (or chapters, for manga); entries with no total show a "no progress" label instead of a percentage. On the dashboard, words-tracked books are folded into the books ring at 250 words per page so one ring can cover both units.',
+				body: 'Books track pages read out of total pages; or words, if you prefer: the Pages/Words switch on the Progress section of a book\'s detail view sets the unit per book, and both counters are kept, so switching back and forth never loses numbers. Manga track chapters read out of total chapters, plus volumes read out of total volumes. The card progress bar fills based on the book\'s chosen unit (or chapters, for manga); entries with no total show "No progress" instead of a percentage. On the Dashboard, words-tracked books are folded into the Books ring at 250 words per page so one ring can cover both units.',
 			},
 			notes: {
 				heading: 'Notes & favorite quotes',
-				body: 'Each entry generates a Markdown note file (under your reading folder) with properties plus notes and quotes sections. Favorite quotes you add from an entry\'s detail view are saved into that note as quote callouts, so they live alongside your own notes.',
+				body: 'Each entry generates a Markdown note file (under your Reading folder) with properties plus Notes and Quotes sections. Favorite quotes you add from an entry\'s detail view are saved into that note as quote callouts, so they live alongside your own notes.',
 			},
 			covers: {
 				heading: 'Covers',
-				body: 'Covers are fetched automatically as cards scroll into view; Open Library or Google Books for books, Jikan for manga. If a cover is missing or wrong, use "refresh cover" from a card\'s ⋮ menu.',
+				body: 'Covers are fetched automatically as cards scroll into view; Open Library or Google Books for books, Jikan for manga. If a cover is missing or wrong, use "Refresh cover" from a card\'s ⋮ menu.',
 			},
 			columns: {
 				heading: 'Custom columns',
-				body: 'Use the ⚙ button in the reading toolbar to add custom columns (text, number, or select). Columns are per sub-tab, and you can filter and sort by them just like the built-in fields.',
+				body: 'Use the ⚙ button in the Reading toolbar to add custom columns (text, number, or select). Columns are per sub-tab, and you can filter and sort by them just like the built-in fields.',
 			},
 		},
 		upcoming: {
 			how: {
-				heading: 'How upcoming works',
-				body: 'Any title with a release date set in the future is automatically marked as to be released and appears in this tab. This status cannot be set manually; it is determined solely by the release date you enter. If a title has already started airing but only some episodes are out (for example, an ongoing series), it will not appear here automatically; you\'ll need to manually add it through the add button in the upcoming tab.',
+				heading: 'How Upcoming works',
+				body: 'Any title with a release date set in the future is automatically marked as To be released and appears in this tab. This status cannot be set manually; it is determined solely by the release date you enter. If a title has already started airing but only some episodes are out (e.g. an ongoing series), it will not appear here automatically; you\'ll need to manually add it through the Add button in the Upcoming tab.',
 			},
 		},
 	},

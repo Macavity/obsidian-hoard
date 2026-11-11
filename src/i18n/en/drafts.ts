@@ -3,7 +3,7 @@ const drafts = {
 	pending: { one: 'Pending draft', other: 'Pending drafts' },
 	empty: 'No drafts found. Add {tag} followed by a title in any vault note.',
 	inLibrary: 'In {library}',
-	existsWatchlist: 'This title already exists in your watchlist',
+	existsWatchlist: 'This title already exists in your Watchlist',
 	existsLibrary: 'This title already exists in your {library} library',
 	added: 'Added',
 	dismiss: 'Dismiss',

@@ -14,7 +14,7 @@ const edit = {
 	totalPreviewSkip: 'Total episodes: {total} · {skipped} to skip',
 	formatHelp: 'Format: "Season Name: N" (e.g. "Season 1: 12")',
 	skipHelp: 'Skip episodes: add "(1,3,5-10)" after count (e.g. "Season 1: 48 (33-37)")',
-	totalNote: 'Note: when adding a new season, remember to update the total episodes so progress calculates correctly.',
+	totalNote: 'Note: when adding a new season, remember to update "Total episodes" so progress calculates correctly.',
 	saveChanges: 'Save changes',
 	emptyName: 'Title name cannot be empty.',
 	updated: '"{name}" updated.',

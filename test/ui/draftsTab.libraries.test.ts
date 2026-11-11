@@ -37,7 +37,7 @@ describe('DraftsTab duplicate labels', () => {
 		const dups = qsa(root, '.hoard-drafts__card-duplicate').map((d) => d.textContent);
 		expect(dups.sort()).toEqual(['In Books', 'In Games', 'In Manga', 'In Watchlist']);
 		const watchlist = qsa(root, '.hoard-drafts__card-duplicate span').find((s) => s.textContent === 'In Watchlist')!;
-		expect(watchlist.getAttribute('title')).toBe('This title already exists in your watchlist');
+		expect(watchlist.getAttribute('title')).toBe('This title already exists in your Watchlist');
 		const games = qsa(root, '.hoard-drafts__card-duplicate span').find((s) => s.textContent === 'In Games')!;
 		expect(games.getAttribute('title')).toBe('This title already exists in your Games library');
 	});

@@ -133,7 +133,7 @@ describe('AddFromUrlModal', () => {
 		const { tmdb, tmdbBtn, error, api } = setup('TMDB', false);
 		tmdb.value = 'https://www.themoviedb.org/movie/27205-inception';
 		tmdbBtn.click();
-		await vi.waitFor(() => expect(error().textContent).toBe('Add a TMDB API key in settings → API to use TMDB links.'));
+		await vi.waitFor(() => expect(error().textContent).toBe('Add a TMDB API key in Settings → API to use TMDB links.'));
 		expect(api.getTmdbMovieDetails).not.toHaveBeenCalled();
 	});
 

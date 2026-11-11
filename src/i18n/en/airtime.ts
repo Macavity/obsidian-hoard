@@ -8,10 +8,10 @@ const airtime = {
 	hint: 'All titles with a release date in the future will be automatically marked as "{status}" in Watchlist and added here.',
 	searchPlaceholder: 'Search upcoming...',
 	empty: {
-		tracker: 'No titles in the upcoming tab. Click + add to track airing schedules.',
+		tracker: 'No titles in Upcoming. Click + add to track airing schedules.',
 		search: 'No upcoming titles match your search.',
 		history: 'No past releases yet.',
-		maybe: 'Nothing marked as maybe yet. Click + add to track something you\'re considering.',
+		maybe: 'No "Maybe" titles yet. Click + add to track something you\'re considering.',
 	},
 	countdown: {
 		today: 'Today',

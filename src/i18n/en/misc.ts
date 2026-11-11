@@ -10,14 +10,14 @@ const misc = {
 		added: '"{title}" added to Maybe.',
 	},
 	upcomingFinder: {
-		placeholder: 'Search a title to add to upcoming...',
+		placeholder: 'Search a title to add to Upcoming...',
 	},
 	draftChoice: {
 		heading: 'Add draft',
-		addWatchlist: 'Add in watchlist',
+		addWatchlist: 'Add in Watchlist',
 		addBook: 'Add book',
 		addManga: 'Add manga',
-		addGame: 'Add to games',
+		addGame: 'Add to Games',
 	},
 	collection: {
 		libraryCount: '{owned} of {total} in your library',

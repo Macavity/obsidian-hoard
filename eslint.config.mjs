@@ -16,12 +16,22 @@ export const sentenceCaseOptions = {
     "Google Books", "Google Cloud", "Books API",  // Google services
     "Steam Web API", "TMDB", "RAWG", "IGDB", "MAL", "Jikan", // API providers (Jikan: hyphenated "Jikan-compatible")
     "TV", "TSV", "ISBN", "PC", "UTC", "JST",      // acronyms missing from the rule defaults
+    // names of things in the interface, written as the user sees them there
+    "Plan to watch", "Plan to Read", "To be released", // statuses
+    // wording of external services
+    "Web API", "Google Sheets",
   ],
   // proper names kept as written when they are not at the start of a sentence
   ignoreWords: [
     "Hoard",                                      // this plugin
     "Homepage",                                   // another Obsidian plugin
     "Steam", "Twitch", "Tenrai",                  // API providers and services
+    "Cinemeta", "OMDb", "AniList", "MyAnimeList", "Excel",
+    // names of things in the interface, written as the user sees them there
+    "Watchlist", "Upcoming", "Reading", "Drafts", "Books", "Manga", "Games", "Settings", // tabs and sub-tabs
+    "Watching", "Completed", "Dropped", "Maybe",  // statuses
+    "Anime", "Movie", "Movies", "Book",           // types
+    "Edit", "Seasons", "Director", "Cast", "Name", "Notes", "Quotes", "Progress", "Pages", "Words", "Regenerate", // buttons, fields, sections
   ],
   // whole texts the rules cannot judge
   ignoreRegex: [
@@ -40,6 +50,15 @@ export const sentenceCaseOptions = {
     "^(left|watched|episodes|progress|completed|remaining|titles completed|today|tomorrow)$",
     // link text that continues the sentence "No books yet; "
     "^add your first (book|manga)$",
+    // help texts that quote a label of the interface exactly as it is shown there
+    '"(Skip|By (genre|type|status)|Plan to watch|Last type used|Refresh cover|Good|Total episodes|Now watching)"',
+    // help texts that list labels, types or a switch of the interface without quotes
+    "^Full-width (triple|double) card: ",
+    "Anime, Movie, and TV Show",
+    "Movies & TV Shows",
+    "the Pages/Words switch",
+    "^Any title with a release date",
+    "^Keep as Added$",          // names the stored status
     // names the literal `id` field of a widget block
     "^Missing id field\\.$",
   ],

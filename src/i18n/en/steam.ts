@@ -29,8 +29,8 @@ const steam = {
 	saved: 'Everything processed before you stopped has been saved.',
 	done: 'Done',
 	failure: {
-		missing: 'Set your Steam API key and Steam ID under settings → API → games first.',
-		badKey: 'Steam rejected the API key. Check it under settings → API → games.',
+		missing: 'Set your Steam API key and Steam ID under Settings → API → Games first.',
+		badKey: 'Steam rejected the API key. Check it under Settings → API → Games.',
 		private: 'Steam returned no library. Your profile\'s "Game details" privacy setting must be Public; Steam hides owned games otherwise, even from your own API key.',
 		empty: 'Steam reports no games on this account. Check the Steam ID is the right one.',
 		unreachable: 'Could not reach Steam. Check your connection and try again.',

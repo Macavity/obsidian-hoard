@@ -352,7 +352,7 @@ const settings = {
 			title: 'API-Zuordnung nach Typ in der Watchlist',
 			desc: 'Wähle, welche API-Gruppe für jeden Titeltyp verwendet wird. Anime, Film und Serie sind auf ihre Standard-APIs festgelegt.',
 			locked: '{apis} (gesperrt)',
-			notSet: '— Nicht festgelegt —',
+			notSet: '— nicht festgelegt —',
 			anime: 'Anime-API (Jikan / AniList)',
 			movie: 'Film-/Serien-API (OMDb / TMDB)',
 		},

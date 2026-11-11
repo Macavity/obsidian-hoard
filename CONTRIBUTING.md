@@ -75,11 +75,12 @@ Obsidian's review bot lints the plugin with `eslint-plugin-obsidianmd` and its d
 
 `pnpm lint:bot` runs the unmodified `recommendedWithLocalesEn` config over `src/` and prints the warning count per rule (information only, exit code 0; `--list` adds every flagged text). `test/eslintConfig.test.ts` fails when an `ignoreRegex` entry no longer covers any bot warning. Rule of thumb: rewrite a text so it is sentence case; add an exception only for the classes below.
 
-Remaining after the rewrite: 101 warnings (95 `sentence-case-locale-module`, 6 `sentence-case`), down from 174.
+Remaining after the rewrite: 146 warnings (140 `sentence-case-locale-module`, 6 `sentence-case`), down from 174.
 
 | Group | Warnings | Why it stays |
 |---|---|---|
 | Proper names, services, acronyms (Hoard, Steam, TMDB, RAWG, IGDB, Twitch, Jikan, Tenrai, MAL, Google Books, TV, TSV, ISBN, UTC, JST) and Steam's and Google's own UI wording | 67 | The rule only knows its default brands. Listed in `brands` / `ignoreWords`. |
+| Names of things in the interface, written as they are shown there: tabs (Watchlist, Upcoming, Reading, Games, …), statuses, types, buttons, fields, settings paths (`Settings → API → Games`), quoted labels | 45 | A help text that names a tab or a button must match what the user looks for on screen. |
 | Format placeholders and examples (URL, `0h`, `#hoard`, season mask `Season Name: N`) | 11 | The text a user types must match letter for letter. |
 | Label values equal to stored values (`TV Show`, `Korean TV Show`, `Plan to Read`) | 3 | `labels.ts` keys are the stored values; the display text of these three is kept identical. |
 | Lowercase captions under a value, units after a number, link fragment, literal field name (`eps`, `pages`, `chapters`, `left`, `watched`, `of`, `today`, `add your first book`, `Missing id field.`) | 20 | The text is composed in code around a number, another element or a sentence, so it cannot start with a capital letter without changing the layout. |

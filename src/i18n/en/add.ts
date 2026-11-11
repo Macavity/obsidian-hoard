@@ -16,7 +16,7 @@ const add = {
 	},
 	url: {
 		info: 'Please enter an IMDb or TMDB URL (e.g. https://www.imdb.com/title/tt1375666/ or https://www.themoviedb.org/movie/27205)',
-		noTmdbKey: 'Add a TMDB API key in settings → API to use TMDB links.',
+		noTmdbKey: 'Add a TMDB API key in Settings → API to use TMDB links.',
 		notFound: 'Title not found. Please check the URL and try again.',
 	},
 	title: {

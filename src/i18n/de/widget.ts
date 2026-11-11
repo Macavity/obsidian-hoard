@@ -37,8 +37,8 @@ const widget = {
 	pinToWatch: 'Einen Titel anpinnen, um ihn als "Läuft gerade" zu setzen.',
 	episodeShort: 'Folge {episode}',
 	completed: 'Abgeschlossen',
-	nowWatchingHeader: 'LÄUFT GERADE',
-	upcomingNextHeader: 'ALS NÄCHSTES',
+	nowWatchingHeader: 'Läuft gerade',
+	upcomingNextHeader: 'Als Nächstes',
 	nothingPinned: 'Nichts angepinnt.',
 	noUpcoming: 'Nichts anstehend.',
 } satisfies DeepPartial<typeof enWidget>;

@@ -12,7 +12,7 @@ const ui = {
 		typeSelect: 'Select',
 		bold: 'B',
 		italic: 'I',
-		autoTime: 'Auto-populate with remaining watch time from watchlist',
+		autoTime: 'Auto-populate with remaining watch time from Watchlist',
 		deleteColumn: 'Delete this column',
 		deleteConfirm: 'Delete column "{label}"? This will remove all data in this column.',
 		optionColor: 'Option color',

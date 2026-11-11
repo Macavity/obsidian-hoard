@@ -59,7 +59,7 @@ const add = {
 		searchManga: 'Nach Titel oder MAL-ID suchen...',
 		searchFirst: 'Gib zuerst einen Suchbegriff ein.',
 		unknownAuthor: 'Unbekannter Autor',
-		untitled: '(ohne Titel)',
+		untitled: '(Ohne Titel)',
 		bookTitlePlaceholder: 'Buchtitel',
 		author: 'Autor',
 		authorPlaceholder: 'Name des Autors',

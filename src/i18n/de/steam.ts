@@ -14,7 +14,7 @@ const steam = {
 	all: 'Alle',
 	none: 'Keine',
 	appFallback: 'App {id}',
-	neverPlayed: 'nie gespielt',
+	neverPlayed: 'Nie gespielt',
 	syncing: 'Synchronisiere…',
 	starting: 'Starte…',
 	finishing: 'Aktuelle Anfrage wird beendet…',

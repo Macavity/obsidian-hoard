@@ -45,7 +45,7 @@ const dashboard = {
 		episode: 'Ep {n}',
 	},
 	log: {
-		empty: 'No events yet. Actions from watchlist, reading and games will appear here.',
+		empty: 'No events yet. Actions from Watchlist, Reading and Games will appear here.',
 		emptySource: 'No {source} events yet.',
 		dayHeader: '{weekday}, {day} {month} {year}',
 		deleteEvent: 'Delete event',

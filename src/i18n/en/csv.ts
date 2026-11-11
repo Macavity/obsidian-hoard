@@ -34,7 +34,7 @@ const csv = {
 	failed: 'Failed: {done} / {total} imported',
 	map: {
 		title: 'Map your columns',
-		descWatch: 'Match each Hoard field to a column from your CSV, or skip a field to leave it empty.',
+		descWatch: 'Match each Hoard field to a column from your CSV. Select "Skip" to leave a field empty.',
 		descReading: 'Match each {kind} field to a column from your CSV. Select "— skip —" to leave a field empty.',
 		noteWatch: 'Rows with empty fields will be skipped automatically. If you see missing titles, check that your CSV has no empty rows at the top.',
 		noteReading: 'Rows with empty fields will be skipped automatically. If you see missing entries, check that your CSV has no empty rows at the top.',
