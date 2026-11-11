@@ -79,4 +79,46 @@ describe('Steam pick in AddGameModal', () => {
 			title: 'Hades', coverUrl: 'https://img/hades.jpg', externalLink: 'https://store.steampowered.com/app/1145360', platforms: ['PC'],
 		});
 	});
+
+	type Form = {
+		selectResult: (r: GameSearchResult, c: () => boolean) => Promise<void>;
+		apiSource: string; apiId: string; steamAppId: string;
+		fieldTitle: string; fieldDeveloper: string; fieldPublisher: string; fieldStoreUrl: string;
+		fieldSingleplayer: boolean; fieldCoop: boolean; fieldMultiplayer: boolean;
+	};
+	const rich: GameDetailsResult = { ...details, publisher: 'Pub', storeUrl: 'https://store/x', coop: true, multiplayer: true };
+
+	it('keeps the previous identity while the details are still loading', async () => {
+		const { modal, api } = setup();
+		const m = modal as unknown as Form;
+		let release: (d: GameDetailsResult | null) => void = () => {};
+		api.getSteamStoreDetails.mockReturnValueOnce(new Promise((r) => { release = r; }));
+		const pending = m.selectResult(steamRow, () => true);
+		expect(m.apiSource).toBe('');
+		expect(m.steamAppId).toBe('');
+		release(details);
+		await pending;
+		expect(m).toMatchObject({ apiSource: 'steam', apiId: '1145360', steamAppId: '1145360', fieldTitle: 'Hades' });
+	});
+
+	it('ignores a stale failure', async () => {
+		const { modal, api } = setup();
+		const m = modal as unknown as Form;
+		api.getSteamStoreDetails.mockRejectedValueOnce(new Error('x'));
+		await m.selectResult(steamRow, () => false);
+		expect(m).toMatchObject({ apiSource: '', apiId: '', fieldTitle: '' });
+	});
+
+	it('clears detail-only fields when a later pick falls back to its row', async () => {
+		const { modal, api } = setup(rich);
+		const m = modal as unknown as Form;
+		await m.selectResult(steamRow, () => true);
+		expect(m).toMatchObject({ fieldPublisher: 'Pub', fieldStoreUrl: 'https://store/x', fieldCoop: true });
+		api.getSteamStoreDetails.mockResolvedValueOnce(null);
+		await m.selectResult({ ...steamRow, id: 7, title: 'Other' }, () => true);
+		expect(m).toMatchObject({
+			fieldTitle: 'Other', apiId: '7', fieldDeveloper: '', fieldPublisher: '', fieldStoreUrl: '',
+			fieldSingleplayer: false, fieldCoop: false, fieldMultiplayer: false,
+		});
+	});
 });

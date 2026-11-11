@@ -139,7 +139,15 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		return api.getRawgGameDetails(result.id);
 	}
 
-	private applyDetails(full: GameDetailsResult): void {
+	/** Origin of the picked game; set together with its fields so a pending pick never mixes identities. */
+	private applyIdentity(result: GameSearchResult): void {
+		this.apiSource = result.source;
+		this.apiId = String(result.id);
+		this.steamAppId = result.source === 'steam' ? this.apiId : '';
+	}
+
+	private applyDetails(result: GameSearchResult, full: GameDetailsResult): void {
+		this.applyIdentity(result);
 		this.fieldTitle = full.title;
 		this.fieldDeveloper = full.developer;
 		this.fieldPublisher = full.publisher;
@@ -167,29 +175,31 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	}
 
 	protected async selectResult(result: GameSearchResult, isCurrent: () => boolean): Promise<void> {
-		// remember the origin even if the detail fetch fails — the search row identifies the game well
-		// enough to re-fetch its cover later
-		this.apiSource = result.source;
-		this.apiId = String(result.id);
-		this.steamAppId = result.source === 'steam' ? this.apiId : '';
+		let full: GameDetailsResult | null = null;
 		try {
-			const full = await this.fetchDetails(result);
-			if (!isCurrent()) return;
-			if (full) this.applyDetails(full);
-			else this.applySearchRow(result);
+			full = await this.fetchDetails(result);
 		} catch {
-			this.applySearchRow(result);
+			// the search row identifies the game well enough to re-fetch its cover later
 		}
-
+		if (!isCurrent()) return;
+		if (full) this.applyDetails(result, full);
+		else this.applySearchRow(result);
 		this.renderForm();
 	}
 
-	/** Detail fetch failed or came back empty — fall back to what the search row carried. */
+	/** Detail fetch failed or came back empty: what the search row carried, nothing from an earlier pick. */
 	private applySearchRow(result: GameSearchResult): void {
+		this.applyIdentity(result);
 		this.fieldTitle = result.title;
+		this.fieldDeveloper = '';
+		this.fieldPublisher = '';
 		this.fieldReleaseDate = result.releaseDate;
 		this.fieldCoverUrl = result.coverUrl;
 		this.fieldLink = result.url;
+		this.fieldStoreUrl = '';
+		this.fieldSingleplayer = false;
+		this.fieldCoop = false;
+		this.fieldMultiplayer = false;
 		this.fieldPlatforms = this.matchOwnPlatforms(result.platforms);
 	}
 
