@@ -88,8 +88,8 @@ export class AddFromUrlModal extends Modal {
 		const source = effectiveMediaSource(this.plugin.settings, api);
 		if (source === 'tmdb') return api.getTmdbByImdbId(match[0]);
 		if (source === 'omdb') return api.getOmdbByImdbId(match[0]);
-		// Cinemeta is keyed by kind, and an IMDb link doesn't say which: movie first, then series
-		return (await api.getCinemetaDetails(match[0], 'movie')) ?? (await api.getCinemetaDetails(match[0], 'tv'));
+		// Cinemeta is keyed by kind, and an IMDb link doesn't say which: series first, then movie (the movie endpoint answers series ids with a foreign film)
+		return (await api.getCinemetaDetails(match[0], 'tv')) ?? (await api.getCinemetaDetails(match[0], 'movie'));
 	}
 
 	/** TMDB links carry the id + media type outright, so the detail call is direct — but it needs a key */

@@ -25,6 +25,15 @@ describe('PosterService keyless (Cinemeta)', () => {
 		expect(getCinemetaDetails).toHaveBeenCalledWith('tt0903747', 'tv');
 	});
 
+	it('prefers the series record over a foreign movie record when the kind is unknown', async () => {
+		const getCinemetaDetails = vi.fn((_id: string, kind: string) =>
+			Promise.resolve({ posterUrl: kind === 'movie' ? 'https://img/foreign.jpg' : 'https://img/series.jpg' }));
+		const { svc } = setup({ getCinemetaDetails });
+		const url = await svc.enqueue(title({ type: 'Doc', externalLink: 'https://www.imdb.com/title/tt0903747/' }));
+		expect(url).toBe('https://img/series.jpg');
+		expect(getCinemetaDetails.mock.calls[0]).toEqual(['tt0903747', 'tv']);
+	});
+
 	it('searches by title (matching year) without a link', async () => {
 		const searchCinemeta = vi.fn().mockResolvedValue([
 			{ posterUrl: 'https://img/old.jpg', releaseDate: '1999-01-01' },
@@ -50,14 +59,14 @@ describe('PosterService keyless (Cinemeta)', () => {
 		expect(url).toBe('https://img/s.jpg');
 	});
 
-	it('tries movie then series when the kind is unknown', async () => {
+	it('tries series then movie when the kind is unknown', async () => {
 		const searchCinemeta = vi.fn()
 			.mockResolvedValueOnce([])
 			.mockResolvedValueOnce([{ posterUrl: 'https://img/x.jpg', releaseDate: '' }]);
 		const { svc } = setup({ searchCinemeta });
 		const url = await svc.enqueue(title({ type: 'Doc' }));
 		expect(url).toBe('https://img/x.jpg');
-		expect(searchCinemeta.mock.calls.map((c: unknown[]) => c[1] as string)).toEqual(['movie', 'series']);
+		expect(searchCinemeta.mock.calls.map((c: unknown[]) => c[1] as string)).toEqual(['series', 'movie']);
 	});
 
 	it('searches movies for a movie without year', async () => {

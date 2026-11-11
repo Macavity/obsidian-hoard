@@ -73,15 +73,24 @@ describe('AddFromUrlModal', () => {
 		expect(created.calls[0]![4]).toMatchObject({ type: 'TV Show' });
 	});
 
-	it('falls back to Cinemeta without a key, trying movie then series', async () => {
+	it('falls back to Cinemeta without a key, trying series then movie', async () => {
 		const { imdb, imdbBtn, api } = setup('OMDb', false);
 		imdb.value = 'tt0944947';
 		imdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(1));
-		expect(api.getCinemetaDetails).toHaveBeenNthCalledWith(1, 'tt0944947', 'movie');
-		expect(api.getCinemetaDetails).toHaveBeenNthCalledWith(2, 'tt0944947', 'tv');
+		expect(api.getCinemetaDetails).toHaveBeenNthCalledWith(1, 'tt0944947', 'tv');
 		expect(api.getOmdbByImdbId).not.toHaveBeenCalled();
 		expect(created.calls[0]![4]).toMatchObject({ type: 'TV Show' });
+	});
+
+	it('prefers the series record over a foreign movie record for the same id', async () => {
+		const { imdb, imdbBtn, api } = setup('OMDb', false);
+		api.getCinemetaDetails.mockImplementation((_id: string, kind: string) =>
+			Promise.resolve(kind === 'movie' ? result({ title: 'Foreign Film', mediaType: 'movie' }) : result({ title: 'Real Series', mediaType: 'tv' })));
+		imdb.value = 'tt0903747';
+		imdbBtn.click();
+		await vi.waitFor(() => expect(created.opened).toBe(1));
+		expect(created.calls[0]![4]).toMatchObject({ title: 'Real Series' });
 	});
 
 	it('reports not found when the lookup resolves empty', async () => {

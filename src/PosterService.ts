@@ -289,8 +289,11 @@ export class PosterService {
 		const kind = this.resolveMediaKind(title);
 		const imdbId = this.extractImdbId(title.externalLink);
 		if (imdbId) {
-			const hit = await api.getCinemetaDetails(imdbId, kind ?? 'movie');
-			if (hit?.posterUrl) return hit.posterUrl;
+			// unknown kind: series first, the movie endpoint answers series ids with a foreign film
+			for (const k of kind ? [kind] : (['tv', 'movie'] as const)) {
+				const hit = await api.getCinemetaDetails(imdbId, k);
+				if (hit?.posterUrl) return hit.posterUrl;
+			}
 		}
 		return this.searchCinemetaPoster(api, title, kind);
 	}
@@ -406,6 +409,6 @@ export class PosterService {
 }
 
 function cinemetaKinds(kind: 'movie' | 'tv' | null): Array<'movie' | 'series'> {
-	if (kind === null) return ['movie', 'series'];
+	if (kind === null) return ['series', 'movie'];
 	return [kind === 'tv' ? 'series' : 'movie'];
 }
