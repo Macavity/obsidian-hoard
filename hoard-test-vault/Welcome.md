@@ -43,6 +43,10 @@ Root is `Hoard/` (holds `Hoard.base`).
 
 - `Inbox.md`: `#hoard` inline tags outside `Hoard/`; one draft matches a library title
 
+## Widgets
+
+- `Visual widgets.md`: one code block of every widget (`hoard`, `hoard-todo`, `hoard-stat`, `hoard-upcoming`, `hoard-now`, `hoard-now-next`); opened in reading view by the visual-regression catalogue
+
 ## Assets
 
 - `Assets/poster.png`: tiny local image, outside the entry folders
