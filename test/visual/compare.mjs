@@ -11,6 +11,13 @@ import { PNG } from "pngjs";
 const MAX_PROPS = 40;
 
 /**
+ * A custom property that is not Hoard's. It paints nothing by itself, and those of Obsidian and its bundled libraries
+ * follow the system colour scheme; whatever they affect shows up in a standard property.
+ * @param {string} name
+ */
+const isForeignVariable = (name) => name.startsWith("--") && !name.startsWith("--hoard-");
+
+/**
  * @param {Record<string, string>} before
  * @param {Record<string, string>} after
  */
@@ -18,6 +25,7 @@ function changedProps(before, after) {
 	const names = new Set([...Object.keys(before), ...Object.keys(after)]);
 	const props = [];
 	for (const name of names) {
+		if (isForeignVariable(name)) continue;
 		const b = before[name] ?? "";
 		const a = after[name] ?? "";
 		if (a !== b) props.push({ name, before: b, after: a });

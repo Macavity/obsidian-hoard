@@ -27,6 +27,14 @@ describe("visual compare", () => {
 		expect(diffDumps(d, structuredClone(d))).toEqual([]);
 	});
 
+	it("ignores custom properties that are not Hoard's", () => {
+		const out = diffDumps(
+			[el("div[0]", { "--focus-ring-color": "#0060df", "--hoard-bar-width": "10%" })],
+			[el("div[0]", { "--focus-ring-color": "#0df", "--hoard-bar-width": "20%" })],
+		);
+		expect(out).toEqual([{ path: "div[0]", kind: "style", props: [{ name: "--hoard-bar-width", before: "10%", after: "20%" }] }]);
+	});
+
 	it("reports a changed property with both values", () => {
 		const out = diffDumps([el("div[0]", { color: "red", width: "1px" })], [el("div[0]", { color: "blue", width: "1px" })]);
 		expect(out).toEqual([{ path: "div[0]", kind: "style", props: [{ name: "color", before: "red", after: "blue" }] }]);

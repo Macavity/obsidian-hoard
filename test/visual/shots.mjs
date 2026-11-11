@@ -103,6 +103,8 @@ async function restore({ mobile, theme }, failures) {
 	}
 	await attempt("restoring the colour scheme", () => evalJs(`(app.changeTheme(${JSON.stringify(theme)}), 'ok')`));
 	await attempt("clearing the viewport", () => clearViewport());
+	// Obsidian saves the colour scheme with a delay; a reset before that write would leave appearance.json modified
+	await sleep(3000);
 	await attempt("final vault:reset", () => pnpm("vault:reset"));
 }
 

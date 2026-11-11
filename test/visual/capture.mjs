@@ -104,6 +104,8 @@ export const SORT_INDEX_JS = `(() => {
 export async function stabilise(opts = {}) {
 	const metrics = opts.phone ? PHONE : DESKTOP;
 	cdp("Emulation.setDeviceMetricsOverride", metrics);
+	// the system may switch to dark at sunset; styles that follow it must not move with the time of day
+	cdp("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
 	await waitFor(() => evalJs("String(innerWidth)") === String(metrics.width), 8000, 200);
 	await waitFor(() => evalJs(STABILISE_JS) === "ok", 15000, 300);
 	// badges (drafts) count from the metadata cache: wait until every note is in it, then let them redraw
@@ -162,9 +164,10 @@ async function parkMouse() {
 	await sleep(250);
 }
 
-/** Clears the viewport override that stabilise() set. */
+/** Clears the viewport and colour-scheme overrides that stabilise() set. */
 export function clearViewport() {
 	cdp("Emulation.clearDeviceMetricsOverride", {});
+	cdp("Emulation.setEmulatedMedia", { features: [] });
 }
 
 /** Waits for two animation frames (or 150 ms), loaded fonts and a DOM that stopped changing. */
