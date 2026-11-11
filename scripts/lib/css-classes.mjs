@@ -40,3 +40,30 @@ export function checkCssClasses({ css, sources, allowlist }) {
 	const staleAllowlist = allowlist.filter((a) => !classes.has(a.cls) || words.has(a.cls)).map((a) => a.cls).sort();
 	return { unreferenced, staleAllowlist };
 }
+
+/** Short name parts that stay allowed: widely known abbreviations. */
+export const ALLOWED_SHORT = ["btn", "img", "nav", "csv", "api", "id", "url", "th", "td", "tr", "sm", "md", "lg"];
+
+/** `hoard-<block>[__<element>][--<modifier>]`: lowercase letters and digits, single hyphens inside each part. */
+export const BEM_PATTERN = /^hoard-[a-z0-9]+(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
+
+/** Hoard classes only: `is-*` / `has-*` states and Obsidian's own classes are not ours to name. */
+const isHoardName = (n) => n.startsWith("hoard-");
+
+/** Names with a part of three letters or fewer that is not on the allow list, sorted. */
+export function shortTokens(names, allowed = ALLOWED_SHORT) {
+	return names
+		.filter(isHoardName)
+		.filter((n) =>
+			n
+				.slice("hoard-".length)
+				.split(/--|__|-/)
+				.some((p) => p.length <= 3 && !/^\d+$/.test(p) && !allowed.includes(p)),
+		)
+		.sort();
+}
+
+/** Hoard class names that do not follow the BEM pattern, sorted. */
+export function notBem(names) {
+	return names.filter(isHoardName).filter((n) => !BEM_PATTERN.test(n)).sort();
+}

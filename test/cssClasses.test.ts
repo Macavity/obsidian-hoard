@@ -1,6 +1,6 @@
 import process from "process";
 import { describe, it, expect } from "vitest";
-import { checkCssClasses, classesInCss, wordsInStrings } from "../scripts/lib/css-classes.mjs";
+import { BEM_PATTERN, checkCssClasses, classesInCss, shortTokens, wordsInStrings } from "../scripts/lib/css-classes.mjs";
 import { runCheck, unimportedPartials } from "../scripts/check-css-classes.mjs";
 import { bundleStyles } from "../scripts/lib/bundle-styles.mjs";
 import { readFileSync } from "fs";
@@ -32,7 +32,20 @@ describe("css class check", () => {
 	});
 
 	it("passes on the repository", () => {
-		expect(runCheck()).toEqual({ unreferenced: [], staleAllowlist: [], unimported: [] });
+		expect(runCheck()).toMatchObject({ unreferenced: [], staleAllowlist: [], unimported: [] });
+	});
+
+	it("flags short name parts outside the allow list", () => {
+		expect(shortTokens(["hoard-cl-table", "hoard-btn--sm", "hoard-custom-list__td", "hoard-card__pct", "is-active"])).toEqual(["hoard-card__pct", "hoard-cl-table"]);
+	});
+
+	it("accepts BEM names only", () => {
+		for (const ok of ["hoard-card", "hoard-card__title", "hoard-btn--sm", "hoard-trailer-btn__label--muted"]) expect(ok).toMatch(BEM_PATTERN);
+		for (const bad of ["hoard-card__a__b", "hoard-Card", "card", "hoard-card_title", "hoard-card---x"]) expect(bad).not.toMatch(BEM_PATTERN);
+	});
+
+	it("reports naming findings without failing the default check", () => {
+		expect(runCheck()).toMatchObject({ shortTokens: expect.any(Array) as unknown, notBem: expect.any(Array) as unknown });
 	});
 
 	it("bundles the partials in index.css order", () => {
