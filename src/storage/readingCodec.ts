@@ -221,12 +221,10 @@ export function encodeBook(b: Book, columns: readonly ReadingCustomColumn[]): Re
 	}
 	out[R.chaptersRead] = b.chaptersRead | 0;
 	out[R.totalChapters] = b.totalChapters | 0;
-	if (b.googleBooksId) {
-		out[R.googleBooksId] = b.googleBooksId;
-		out[C.externalId] = formatExternalId({ source: 'gbooks', id: b.googleBooksId });
-	} else if (b.openLibraryId) {
-		out[C.externalId] = formatExternalId({ source: 'openlibrary', id: b.openLibraryId });
-	}
+	// lossless for both ids: the Google Books ID has its own property, so Open Library takes the External ID
+	if (b.googleBooksId) out[R.googleBooksId] = b.googleBooksId;
+	if (b.openLibraryId) out[C.externalId] = formatExternalId({ source: 'openlibrary', id: b.openLibraryId });
+	else if (b.googleBooksId) out[C.externalId] = formatExternalId({ source: 'gbooks', id: b.googleBooksId });
 	encodeTail(b, 'book', columns, out);
 	return out;
 }

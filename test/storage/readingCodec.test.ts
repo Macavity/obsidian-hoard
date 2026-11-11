@@ -74,7 +74,15 @@ describe('reading codec', () => {
 		const fm = encodeBook(entry, []);
 		expect(fm['External ID']).toBe('openlibrary:OL1W');
 		expect(fm).not.toHaveProperty('Google Books ID');
-		expect(encodeBook({ ...entry, googleBooksId: 'g' }, [])['External ID']).toBe('gbooks:g');
+	});
+
+	it('keeps both book ids across a roundtrip, Open Library in the External ID', () => {
+		const { entry } = decodeBook('Books/X', { Name: 'X', Status: 'Reading', 'Google Books ID': 'g', 'External ID': 'openlibrary:OL1W', ...base }, []);
+		expect(entry).toMatchObject({ googleBooksId: 'g', openLibraryId: 'OL1W' });
+		const fm = encodeBook(entry, []);
+		expect(fm).toMatchObject({ 'Google Books ID': 'g', 'External ID': 'openlibrary:OL1W' });
+		expect(decodeBook('Books/X', fm, []).entry).toMatchObject({ googleBooksId: 'g', openLibraryId: 'OL1W' });
+		expect(encodeBook({ ...entry, openLibraryId: '' }, [])['External ID']).toBe('gbooks:g');
 	});
 
 	it('round-trips manga with groups, airtime and favorite', () => {
