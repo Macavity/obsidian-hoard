@@ -1,6 +1,6 @@
 // Flows: a fresh install without API keys finds, fills and adds a movie, a show, a book and a game through the real add
 // modals (Cinemeta, Open Library, Steam Store). Each note on disk must carry the source's External ID and a cover.
-import { assert, evalJs, VAULT_PATH, waitFor } from "../../../scripts/lib/cli.mjs";
+import { evalJs, VAULT_PATH, waitFor } from "../../../scripts/lib/cli.mjs";
 import { click, type, waitForSelector } from "../ui.mjs";
 import { findNoteByExternalId } from "../note.mjs";
 import { chooseOption, runCommand } from "./common.mjs";
@@ -36,11 +36,17 @@ async function submit(selector, notePresent) {
 	if (outcome === "duplicate") await click(DUPLICATE_CONTINUE);
 }
 
-async function assertNote(dir, externalId) {
-	const note = await waitFor(() => findNoteByExternalId(VAULT_PATH, dir, externalId), 15000);
-	const cover = note.props.Cover;
-	assert(typeof cover === "string" && cover !== "" && cover !== "none", `${note.path}: Cover is ${JSON.stringify(cover)}`);
-	return note;
+/** The cover arrives after the note is saved (poster queue, cover fetch), so wait for it instead of reading once. */
+function hasCover(note) {
+	const cover = note?.props.Cover;
+	return typeof cover === "string" && cover !== "" && cover !== "none";
+}
+
+function assertNote(dir, externalId) {
+	return waitFor(() => {
+		const found = findNoteByExternalId(VAULT_PATH, dir, externalId);
+		return hasCover(found) ? found : null;
+	}, 15000);
 }
 
 async function addTitle({ kind, query, title, metaIncludes, externalId }) {
