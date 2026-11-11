@@ -8,10 +8,10 @@ const airtime = {
 	hint: 'All titles with a release date in the future will be automatically marked as "{status}" in Watchlist and added here.',
 	searchPlaceholder: 'Search upcoming...',
 	empty: {
-		tracker: 'No titles in Upcoming. Click + add to track airing schedules.',
+		tracker: 'No titles in the upcoming tab. Click + add to track airing schedules.',
 		search: 'No upcoming titles match your search.',
 		history: 'No past releases yet.',
-		maybe: 'No "Maybe" titles yet. Click + add to track something you\'re considering.',
+		maybe: 'Nothing marked as maybe yet. Click + add to track something you\'re considering.',
 	},
 	countdown: {
 		today: 'Today',
@@ -22,7 +22,7 @@ const airtime = {
 		inDays: { one: 'in {count} day', other: 'in {count} days' },
 		inDaysMonths: { one: 'in {days} days ({count} month)', other: 'in {days} days ({count} months)' },
 		daysAgo: { one: '{count} day ago', other: '{count} days ago' },
-		dayUnit: { one: 'day', other: 'days' },
+		dayUnit: { one: 'Day', other: 'Days' },
 	},
 	noDate: 'No date',
 	months: {

@@ -1463,7 +1463,7 @@ export class AirtimeTab {
 				cd.createSpan({ cls: 'hoard-tracker__countdown-word', text: '—' });
 			} else {
 				cd.createSpan({ cls: 'hoard-tracker__countdown-number', text: String(countdown.daysUntil) });
-				cd.createSpan({ cls: 'hoard-tracker__countdown-label', text: t('airtime.countdown.dayUnit', { count: countdown.daysUntil }).toUpperCase() });
+				cd.createSpan({ cls: 'hoard-tracker__countdown-label', text: t('airtime.countdown.dayUnit', { count: countdown.daysUntil }) });
 			}
 		} else {
 			const word = countdown.kind === 'today-before'

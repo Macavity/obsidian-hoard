@@ -26,7 +26,7 @@ const buttons = (c: HTMLElement): HTMLButtonElement[] => qsa<HTMLButtonElement>(
 describe('LogTab render', () => {
 	it('shows the empty state for no entries', () => {
 		const c = mount([]);
-		expect(c.querySelector('.hoard-log__empty')?.textContent).toBe('No events yet. Actions from Watchlist, Reading and Games will appear here.');
+		expect(c.querySelector('.hoard-log__empty')?.textContent).toBe('No events yet. Actions from watchlist, reading and games will appear here.');
 		expect(c.querySelector('.hoard-log__timeline')).toBeNull();
 	});
 

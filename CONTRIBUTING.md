@@ -69,6 +69,23 @@ Run `pnpm check` before you push: typecheck, lint, unit tests and the fallow qua
 
 `pnpm lint` mirrors the Obsidian review bot: every `eslint-disable` needs a `-- reason`, some rules can never be disabled (`scripts/lib/eslint-disables.mjs`), and every class in `src/styles/*.css` must be referenced from `src/` (`scripts/check-css-classes.mjs`).
 
+## Review bot warnings
+
+Obsidian's review bot lints the plugin with `eslint-plugin-obsidianmd` and its default options. Our `eslint.config.mjs` passes a local exception list (`sentenceCaseOptions`) to the sentence-case rules that the bot does not see, so `pnpm lint` stays green while the bot may still report warnings.
+
+`pnpm lint:bot` runs the unmodified `recommendedWithLocalesEn` config over `src/` and prints the warning count per rule (information only, exit code 0; `--list` adds every flagged text). `test/eslintConfig.test.ts` fails when an `ignoreRegex` entry no longer covers any bot warning. Rule of thumb: rewrite a text so it is sentence case; add an exception only for the classes below.
+
+Remaining after the rewrite: 101 warnings (95 `sentence-case-locale-module`, 6 `sentence-case`), down from 174.
+
+| Group | Warnings | Why it stays |
+|---|---|---|
+| Proper names, services, acronyms (Hoard, Steam, TMDB, RAWG, IGDB, Twitch, Jikan, Tenrai, MAL, Google Books, TV, TSV, ISBN, UTC, JST) and Steam's and Google's own UI wording | 67 | The rule only knows its default brands. Listed in `brands` / `ignoreWords`. |
+| Format placeholders and examples (URL, `0h`, `#hoard`, season mask `Season Name: N`) | 11 | The text a user types must match letter for letter. |
+| Label values equal to stored values (`TV Show`, `Korean TV Show`, `Plan to Read`) | 3 | `labels.ts` keys are the stored values; the display text of these three is kept identical. |
+| Lowercase captions under a value, units after a number, link fragment, literal field name (`eps`, `pages`, `chapters`, `left`, `watched`, `of`, `today`, `add your first book`, `Missing id field.`) | 20 | The text is composed in code around a number, another element or a sentence, so it cannot start with a capital letter without changing the layout. |
+
+Upper case used as design is written in sentence case and uppercased in CSS (`text-transform: uppercase`), for example the widget headers and the airtime countdown label.
+
 ## Pull requests
 
 - Keep changes focused; one topic per PR.

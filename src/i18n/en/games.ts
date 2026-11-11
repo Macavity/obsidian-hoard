@@ -50,7 +50,7 @@ const games = {
 	noMatchesQuery: 'No matches for "{query}".',
 	noMatchesFilters: 'No games match the current filters.',
 	customizeRows: 'Customize rows',
-	customizeHint: 'Reorder the sections or switch them off. "By genre" and "By status" are the grouped grid sections; only one can be on at a time, and with both off the games show as one flat grid.',
+	customizeHint: 'Reorder the sections or switch them off. By genre and by status are the grouped grid sections; only one can be on at a time, and with both off the games show as one flat grid.',
 	deleteSelected: 'Delete selected',
 	deleteSelectedConfirm: {
 		one: 'Delete {count} selected item? Deleted games\' note files will be moved to the trash; deleting a group returns its games to the main list.',
@@ -68,7 +68,7 @@ const games = {
 		deleteGroupConfirm: 'Delete group "{name}"? All games inside will be returned to the main list.',
 	},
 	notices: {
-		coverFetchFailed: 'Could not fetch a cover; check the game\'s title and your settings → API → Games setup.',
+		coverFetchFailed: 'Could not fetch a cover; check the game\'s title and your settings → API → games setup.',
 		coverRefreshed: 'Cover refreshed.',
 	},
 } as const;

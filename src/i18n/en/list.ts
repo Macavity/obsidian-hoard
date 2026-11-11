@@ -12,7 +12,7 @@ const list = {
 	},
 	empty: {
 		favorites: 'No favorites yet; mark a title as favorite to see it here.',
-		recommended: 'Nothing to recommend; add titles to "Plan to watch" or "Watching".',
+		recommended: 'Nothing to recommend; add titles with the status plan to watch or watching.',
 		recentlyAdded: 'Nothing here yet; added titles will show up in this row.',
 		recentlyWatched: 'Nothing watched yet; episodes you tick or titles you complete will show up here.',
 		recentlyReleased: 'No released titles yet; titles with a past release date show up here.',
@@ -25,7 +25,7 @@ const list = {
 	rows: {
 		customize: 'Customize rows',
 		hint: 'Reorder the sections or switch them off.',
-		watchlistHint: 'Reorder the sections or switch them off. "By type" and "By status" are the grouped grid sections; only one can be on at a time, and with both off the titles show as one flat grid.',
+		watchlistHint: 'Reorder the sections or switch them off. By type and by status are the grouped grid sections; only one can be on at a time, and with both off the titles show as one flat grid.',
 		moveUp: 'Move up',
 		moveDown: 'Move down',
 		selectAllIn: 'Select all in {label}',
