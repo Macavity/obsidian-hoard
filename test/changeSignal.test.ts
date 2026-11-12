@@ -36,6 +36,8 @@ describe('change signal', () => {
 		focus(otherDocument());
 		off();
 		emitDataChanged();
+		// also straight on the main document: a remover that looked at the focused window would miss it
+		document.dispatchEvent(new CustomEvent('hoard-data-changed'));
 		expect(heard).not.toHaveBeenCalled();
 	});
 
