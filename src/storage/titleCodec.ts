@@ -133,8 +133,8 @@ function identityOf(r: Reader, fm: Record<string, unknown>, link: string): Exter
 	return link ? externalIdFromLink(link) : null;
 }
 
-export function decodeTitle(id: string, fm: Record<string, unknown>, cache: EntryCache | undefined): Decoded<HoardTitle> {
-	const r = new Reader(fm);
+export function titleFromProperties(id: string, properties: Record<string, unknown>, cache: EntryCache | undefined): Decoded<HoardTitle> {
+	const r = new Reader(properties);
 	const c = cache ?? {};
 	const status = r.str(C.status) ?? 'Plan to watch';
 	const externalLink = r.str(C.url) ?? '';
@@ -194,7 +194,7 @@ export function decodeTitle(id: string, fm: Record<string, unknown>, cache: Entr
 	if (c.anilistId !== undefined) title.anilistId = c.anilistId;
 
 	// identity from externalId (fallback: link) wins over cached ids
-	const ext = identityOf(r, fm, externalLink);
+	const ext = identityOf(r, properties, externalLink);
 	if (ext) {
 		const n = Number(ext.id);
 		if (ext.source === 'tmdb' && ext.kind && !isNaN(n)) {
@@ -311,7 +311,7 @@ function identityFor(t: HoardTitle): ExternalId | null {
 }
 
 /** Frontmatter fields for a title; keys are the frozen property names. `notes` is not included. */
-export function encodeTitle(t: HoardTitle, progress: number, seasonsPending = false): Record<string, unknown> {
+export function titleToProperties(t: HoardTitle, progress: number, seasonsPending = false): Record<string, unknown> {
 	const out: Record<string, unknown> = {};
 	out[C.name] = t.title;
 	out[C.type] = t.type;
@@ -378,14 +378,14 @@ export function encodeTitle(t: HoardTitle, progress: number, seasonsPending = fa
 	return out;
 }
 
-/** Cache keys splitCache owns; everything else in a cache entry (apiCheck, airing, …) is kept on sync. */
+/** Cache keys titleToCache owns; everything else in a cache entry (apiCheck, airing, …) is kept on sync. */
 export const TITLE_CACHE_KEYS = [
 	'posterUrl', 'trailerUrl', 'director', 'cast', 'studio', 'communityRating', 'communityVotes', 'communitySource',
 	'communityRatingLastFetched', 'collectionId', 'tmdbId', 'tmdbMediaType', 'malId', 'anilistId', 'seasons',
 ] as const satisfies readonly (keyof EntryCache)[];
 
 /** API-derived fields that live in data.json (posters only as the 'none' marker); seasons only when not overridden in the note. */
-export function splitCache(t: HoardTitle): EntryCache {
+export function titleToCache(t: HoardTitle): EntryCache {
 	const c: EntryCache = {};
 	if (t.posterUrl === 'none') c.posterUrl = t.posterUrl;
 	if (t.trailerUrl !== undefined) c.trailerUrl = t.trailerUrl;

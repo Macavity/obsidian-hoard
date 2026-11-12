@@ -14,7 +14,7 @@ import { renameTargetFree, updateFrontMatter } from './storage/noteWrite';
 import type { ApiCheckResult, EntryCache, Notify } from './storage/storageTypes';
 import type { SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
-import { TITLE_CACHE_KEYS, decodeTitle, encodeTitle, isMovie, seasonsPending, splitCache } from './storage/titleCodec';
+import { TITLE_CACHE_KEYS, titleFromProperties, titleToProperties, isMovie, seasonsPending, titleToCache } from './storage/titleCodec';
 import { externalIdFromLink } from './storage/externalId';
 import { decodeBook, decodeManga, encodeAirtime } from './storage/readingCodec';
 import { decodeGame } from './storage/gameCodec';
@@ -33,7 +33,7 @@ export interface DataStores {
 
 const AIRTIME_KEYS: readonly string[] = Object.values(AIRTIME_PROPS);
 
-/** Every property encodeTitle can emit; the full rewrite deletes the ones it omits. */
+/** Every property titleToProperties can emit; the full rewrite deletes the ones it omits. */
 const TITLE_KEYS: readonly string[] = [
 	...Object.values(COMMON_PROPS),
 	...Object.values(TITLE_PROPS),
@@ -1452,7 +1452,7 @@ export class DataManager {
 	async rewriteFrontmatterIfExists(title: HoardTitle): Promise<boolean> {
 		const file = this.fileOf(title.id);
 		if (!file) return false;
-		const out = encodeTitle(title, this.getProgress(title), this.seasonsPending(title));
+		const out = titleToProperties(title, this.getProgress(title), this.seasonsPending(title));
 		const keep = new Set(this.index.invalidFields(title.id));
 		if (!(TITLE_PROPS.watchedEpisodes in out)) {
 			keep.add(TITLE_PROPS.watchedEpisodes);
@@ -1518,7 +1518,7 @@ export class DataManager {
 		if (!fetchable && title.seasons.length > 0) title.seasonsOverride = true;
 		const path = this.freePath(layout.notePath('title', title.title, title.type));
 		await this.ensureFolder(this.parentOf(path));
-		const fm = encodeTitle(title, this.getProgress(title), this.seasonsPending(title));
+		const fm = titleToProperties(title, this.getProgress(title), this.seasonsPending(title));
 		const notes = title.notes ?? '';
 		title.id = layout.idFromPath(path);
 		this.notes.set(title.id, notes);
@@ -1562,8 +1562,8 @@ export class DataManager {
 		const seasonList = (x: HoardTitle): string[] => x.seasons.map((s) => `${s.name}: ${s.episodes}`);
 		if (src && t.seasons.length > 0 && !sameJson(seasonList(src), seasonList(t))) t.seasonsOverride = true;
 		const pending = this.seasonsPending(t);
-		const before = src ? encodeTitle(src, this.getProgress(src), pending) : {};
-		const after = encodeTitle(t, this.getProgress(t), pending);
+		const before = src ? titleToProperties(src, this.getProgress(src), pending) : {};
+		const after = titleToProperties(t, this.getProgress(t), pending);
 		const changed = changedKeys(before, after);
 		if (changed.length > 0) {
 			const ok = await this.processFrontMatter(file, t, (raw) => {
@@ -1618,7 +1618,7 @@ export class DataManager {
 	private afterWrite(t: HoardTitle, fm: Record<string, unknown>, background = false): void {
 		const fresh = this.basedOnStored(t);
 		if (fresh) this.syncCache(t);
-		const stored = decodeTitle(t.id, fm, this.local.getCache(t.id)).entry;
+		const stored = titleFromProperties(t.id, fm, this.local.getCache(t.id)).entry;
 		this.index.applyLocal({ kind: 'title', entry: stored }, { background });
 		if (!fresh) return;
 		this.views.set(t.id, { src: stored, view: t });
@@ -1633,7 +1633,7 @@ export class DataManager {
 		const prev = this.local.getCache(t.id) ?? {};
 		const next: EntryCache = { ...prev };
 		for (const key of TITLE_CACHE_KEYS) delete next[key];
-		Object.assign(next, splitCache(t));
+		Object.assign(next, titleToCache(t));
 		if (!next.seasons && prev.seasons) next.seasons = prev.seasons;
 		if (sameJson(next, prev)) return;
 		this.local.data.cache[t.id] = next;

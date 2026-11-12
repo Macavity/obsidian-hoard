@@ -3,7 +3,7 @@ import type { App, EventRef, TAbstractFile } from 'obsidian';
 import type { Book, Game, Manga, HoardTitle, ReadingCustomColumn } from '../types';
 import type { LocalStore } from './LocalStore';
 import type { VaultLayout } from './VaultLayout';
-import { decodeTitle } from './titleCodec';
+import { titleFromProperties } from './titleCodec';
 import { decodeBook, decodeManga } from './readingCodec';
 import { decodeGame } from './gameCodec';
 
@@ -179,7 +179,7 @@ export class EntryIndex {
 		try {
 			switch (c.kind) {
 				case 'title': {
-					const d = decodeTitle(c.id, fm, this.local.getCache(c.id));
+					const d = titleFromProperties(c.id, fm, this.local.getCache(c.id));
 					return { value: { kind: 'title', entry: d.entry }, invalid: d.invalidFields };
 				}
 				case 'book': {

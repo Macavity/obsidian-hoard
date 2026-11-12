@@ -54,7 +54,7 @@ note; on vault `delete`/`rename` it does drop or re-key the entry's cache in `da
 change that only alters unreadable fields is not emitted), and `rebuild()` re-scans after a root
 or type-name change. Changes are batched 150 ms and emitted as a set of ids.
 
-Codecs are pure: `decodeTitle(id, properties, cache)` / `encodeTitle`, `decodeBook`/`encodeBook`,
+Codecs are pure: `titleFromProperties(id, properties, cache)` / `titleToProperties`, `decodeBook`/`encodeBook`,
 `decodeManga`/`encodeManga`, `decodeGame`/`encodeGame`. Each returns `invalidFields` for values of the
 wrong type instead of failing; those properties are left untouched on write. Property names come
 only from [properties.ts](../../src/storage/properties.ts) ([property names](../concepts/properties.md)).
@@ -98,7 +98,7 @@ taken, lost edit, unreadable shared block) is a `ManagerNotice` code passed to t
 
 ## Where to change what
 
-- A new note property for titles: `encodeTitle`/`decodeTitle` in
+- A new note property for titles: `titleToProperties`/`titleFromProperties` in
   [titleCodec.ts](../../src/storage/titleCodec.ts), `HoardTitle` in `types.ts`, and `TITLE_CACHE_KEYS`
   if it is API data. Reading and games: their codecs; cache merge does not exist there.
 - A new entry kind: `EntryKind`, `FOLDERS` and `classify` in `VaultLayout`, a codec, an `EntryIndex`

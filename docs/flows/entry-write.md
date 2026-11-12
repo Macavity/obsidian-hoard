@@ -29,7 +29,7 @@ sequenceDiagram
   UI->>DM: updateTitle(copy)
   DM->>DM: logChanges (history), writeTitle
   DM->>V: renameFile if title/type changed
-  DM->>C: encodeTitle(baseline), encodeTitle(copy)
+  DM->>C: titleToProperties(baseline), titleToProperties(copy)
   DM->>V: processFrontMatter: set/delete only changed keys
   V-->>DM: callback → afterWrite
   DM->>L: syncCache (API fields)

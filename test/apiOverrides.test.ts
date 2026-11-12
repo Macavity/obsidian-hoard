@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
-import { decodeTitle, encodeTitle } from '../src/storage/titleCodec';
+import { titleFromProperties, titleToProperties } from '../src/storage/titleCodec';
 import { getCommunityRating, getDisplayTrailer, getTitleCredits } from '../src/types';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 
@@ -11,12 +11,12 @@ const API_KEYS = ['Director', 'Cast', 'Studio', 'Trailer', 'Community Rating', '
 
 describe('API values live in the cache, note values override (E9)', () => {
 	it('title codec: cache values are never encoded', () => {
-		const { entry } = decodeTitle('Movie/A', { Name: 'A', Type: 'Movie' }, {
+		const { entry } = titleFromProperties('Movie/A', { Name: 'A', Type: 'Movie' }, {
 			director: ['D'], cast: ['C'], studio: ['S'], trailerUrl: 'https://t',
 			communityRating: 7, communityVotes: 10, communitySource: 'tmdb',
 		});
 		expect(getTitleCredits(entry, 'director')).toEqual(['D']);
-		const out = encodeTitle(entry, 0);
+		const out = titleToProperties(entry, 0);
 		for (const k of API_KEYS) expect(out, k).not.toHaveProperty(k);
 	});
 
@@ -25,7 +25,7 @@ describe('API values live in the cache, note values override (E9)', () => {
 			Name: 'A', Type: 'Movie', Director: ['Mine'], Cast: ['X', 'Y'], Studio: 'Studio',
 			Trailer: 'https://mytrailer', 'Community Rating': 9, 'Community Votes': 1, 'Community Source': 'imdb',
 		};
-		const { entry, invalidFields } = decodeTitle('Movie/A', fm, {
+		const { entry, invalidFields } = titleFromProperties('Movie/A', fm, {
 			director: ['D'], trailerUrl: 'https://t', communityRating: 7, communityVotes: 10, communitySource: 'tmdb',
 		});
 		expect(invalidFields).toEqual([]);
@@ -35,7 +35,7 @@ describe('API values live in the cache, note values override (E9)', () => {
 		expect(getCommunityRating(entry)).toEqual({ rating: 9, votes: 1, source: 'imdb' });
 		// the API values stay where they were
 		expect(entry.director).toEqual(['D']);
-		const out = encodeTitle(entry, 0);
+		const out = titleToProperties(entry, 0);
 		expect(out).toMatchObject({ Director: ['Mine'], Cast: ['X', 'Y'], Studio: ['Studio'], Trailer: 'https://mytrailer', 'Community Rating': 9, 'Community Votes': 1, 'Community Source': 'imdb' });
 	});
 

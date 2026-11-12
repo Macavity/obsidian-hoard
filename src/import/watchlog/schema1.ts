@@ -3,7 +3,7 @@ import type { Book, EntryAirtime, GamesData, Manga, ReadingCustomColumn, Reading
 import type { HistoryEntry } from '../../HistoryManager';
 import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
 import type { EntryCache, EntryKind, Fm } from '../../storage/storageTypes';
-import { encodeTitle, splitCache } from '../../storage/titleCodec';
+import { titleToProperties, titleToCache } from '../../storage/titleCodec';
 import { encodeBook, encodeManga } from '../../storage/readingCodec';
 import { encodeGame } from '../../storage/gameCodec';
 import { externalIdFromLink } from '../../storage/externalId';
@@ -282,11 +282,11 @@ class Schema1Migration {
 		// the poster is a note field (E12): WatchLog's manual one wins over the fetched one
 		const { manualPosterUrl, ...entry } = title;
 		if (manualPosterUrl?.trim()) entry.posterUrl = manualPosterUrl;
-		const fm = encodeTitle(entry, progressOf(entry));
+		const fm = titleToProperties(entry, progressOf(entry));
 		// a note value the user set (manual trailer, overrides) is never stale, even where it equals the API's
 		const apiValues = watchLogApiValues(entry);
 		for (const k of Object.keys(apiValues)) if (k in fm && sameValue(fm[k], apiValues[k])) delete apiValues[k];
-		const cache = splitCache(entry);
+		const cache = titleToCache(entry);
 		if (Object.keys(cache).length > 0) this.cache[entry.id] = cache;
 		await this.put('title', path, entry.title, fm, `## Notes\n\n${entry.notes}\n`, apiValues, entry.type);
 	}
