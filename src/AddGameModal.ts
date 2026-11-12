@@ -3,7 +3,8 @@ import type HoardPlugin from './main';
 import type { GameDataManager } from './GameDataManager';
 import { rawgResizedCover, steamAppIdFromUrl, type GameDetailsResult, type GameSearchResult } from './ApiService';
 import { effectiveGameSource } from './apiSources';
-import { Game, GameGroup, GAME_AUTO_STATUS } from './types';
+import { newGame } from './entryFactories';
+import { GameGroup, GAME_AUTO_STATUS } from './types';
 import { renderSearchResultRow } from './SearchThumbnail';
 import { t } from './i18n';
 import { gameStatusLabel, priorityLabel } from './i18n/labels';
@@ -337,8 +338,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		});
 		if (blocked) return;
 
-		const now = new Date().toISOString();
-		const game: Game = {
+		const game = newGame({
 			id: this.gameData.generateGameId(titleName),
 			title: titleName,
 			developer: this.fieldDeveloper.trim(),
@@ -346,13 +346,6 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 			type: this.fieldGenre,
 			status: this.fieldStatus,
 			priority: this.fieldPriority,
-			favorite: false,
-			wishlist: false,
-			rating: 0,
-			progress: 0,
-			playtimeMinutes: 0,
-			achievementsEarned: 0,
-			achievementsTotal: 0,
 			platforms: [...this.fieldPlatforms],
 			singleplayer: this.fieldSingleplayer,
 			coop: this.fieldCoop,
@@ -363,16 +356,11 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 			// seeded from the store link when it's a Steam page, so a later Steam sync matches exactly instead
 			// of guessing by title
 			steamAppId: this.steamAppId || steamAppIdFromUrl(this.fieldStoreUrl.trim()),
-			lastPlayed: null,
 			storeUrl: this.fieldStoreUrl.trim(),
 			externalLink: this.fieldLink.trim(),
-			vaultPage: '',
 			releaseDate: this.fieldReleaseDate || null,
 			dateStarted: this.fieldDateStarted || null,
-			dateFinished: null,
-			dateAdded: now,
-			dateModified: now,
-		};
+		});
 
 		await this.gameData.addGame(game);
 

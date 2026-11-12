@@ -13,6 +13,7 @@ source:
   - src/CommunityRating.ts
   - src/MaybeAddModal.ts
   - src/storage/titleCodec.ts
+  - src/entryFactories.ts
 source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
@@ -37,6 +38,7 @@ here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API client
 | TMDB collections: resolve, count missing parts, batch-add | [CollectionModal.ts](../../src/CollectionModal.ts) |
 | Manual credits, movie "Mark as watched" | `AddCreditModal.ts`, `MarkWatchedButton.ts` |
 | Note ↔ `HoardTitle`, cache split | [titleCodec.ts](../../src/storage/titleCodec.ts) |
+| Defaults of a new title (add, collection, CSV, Maybe); a Completed title has every episode ticked | `newTitle`, `completedEpisodes` in [entryFactories.ts](../../src/entryFactories.ts) |
 
 ## Rules worth knowing
 

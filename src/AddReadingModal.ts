@@ -1,6 +1,7 @@
 import { App, FuzzySuggestModal, Modal, Notice, TFile } from 'obsidian';
 import type HoardPlugin from './main';
 import type { ReadingDataManager } from './ReadingDataManager';
+import { newBook, newManga } from './entryFactories';
 import type { BookSearchResult, MangaSearchResult } from './ApiService';
 import { apiErrorMessage } from './ApiService';
 import { renderSearchResultRow } from './SearchThumbnail';
@@ -667,17 +668,31 @@ export class AddReadingModal extends Modal {
 			};
 			await this.readingData.updateBook(updated);
 		} else {
-			const now = new Date().toISOString();
-			const book: Book = {
+			await this.readingData.addBook(newBook({
 				id: this.readingData.generateBookId(title),
 				title,
 				...this.bookFormFields(),
-				dateAdded: now,
-				dateModified: now,
-				customFields: {},
-			};
-			await this.readingData.addBook(book);
+			}));
 		}
+	}
+
+	private mangaFormFields(): Omit<Manga, 'id' | 'title' | 'dateAdded' | 'dateModified' | 'customFields'> {
+		const s = this.state;
+		return {
+			author: s.author.trim(),
+			status: s.status,
+			rating: s.rating,
+			chaptersRead: s.chaptersRead,
+			totalChapters: s.totalChapters,
+			volumesRead: s.volumesRead,
+			totalVolumes: s.totalVolumes,
+			coverUrl: s.coverUrl.trim(),
+			malId: s.malId.trim(),
+			vaultPage: s.vaultPage,
+			dateStarted: s.dateStarted,
+			dateFinished: s.dateFinished,
+			releaseDate: s.releaseDate,
+		};
 	}
 
 	private async saveManga(title: string): Promise<void> {
@@ -690,44 +705,15 @@ export class AddReadingModal extends Modal {
 			const updated: Manga = {
 				...existing,
 				title,
-				author: this.state.author.trim(),
-				status: this.state.status,
-				rating: this.state.rating,
-				chaptersRead: this.state.chaptersRead,
-				totalChapters: this.state.totalChapters,
-				volumesRead: this.state.volumesRead,
-				totalVolumes: this.state.totalVolumes,
-				coverUrl: this.state.coverUrl.trim(),
-				malId: this.state.malId.trim(),
-				vaultPage: this.state.vaultPage,
-				dateStarted: this.state.dateStarted,
-				dateFinished: this.state.dateFinished,
-				releaseDate: this.state.releaseDate,
+				...this.mangaFormFields(),
 			};
 			await this.readingData.updateManga(updated);
 		} else {
-			const now = new Date().toISOString();
-			const manga: Manga = {
+			await this.readingData.addManga(newManga({
 				id: this.readingData.generateMangaId(title),
 				title,
-				author: this.state.author.trim(),
-				status: this.state.status,
-				rating: this.state.rating,
-				chaptersRead: this.state.chaptersRead,
-				totalChapters: this.state.totalChapters,
-				volumesRead: this.state.volumesRead,
-				totalVolumes: this.state.totalVolumes,
-				coverUrl: this.state.coverUrl.trim(),
-				malId: this.state.malId.trim(),
-				vaultPage: this.state.vaultPage,
-				dateStarted: this.state.dateStarted,
-				dateFinished: this.state.dateFinished,
-				releaseDate: this.state.releaseDate,
-				dateAdded: now,
-				dateModified: now,
-				customFields: {},
-			};
-			await this.readingData.addManga(manga);
+				...this.mangaFormFields(),
+			}));
 		}
 	}
 }

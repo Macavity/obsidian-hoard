@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SteamSyncModal } from '../src/SteamSyncModal';
 import type { SteamOwnedGame } from '../src/ApiService';
 import { steamLibraryCover } from '../src/steamStoreApi';
@@ -170,5 +170,63 @@ describe('SteamSyncModal run', () => {
 		const run = (modal as unknown as { run(): Promise<void> }).run.bind(modal);
 		await Promise.all([run(), run()]);
 		expect(updates).toHaveLength(1);
+	});
+});
+
+describe('SteamSyncModal imported game', () => {
+	const NOW = '2026-03-04T05:06:07.000Z';
+	beforeEach(() => {
+		// without fake timers this mocks Date only, so vi.waitFor does not move the clock
+		vi.setSystemTime(NOW);
+	});
+	afterEach(() => { vi.useRealTimers(); });
+
+	async function importAll(opts: Opts, achievements = true): Promise<Game[]> {
+		const { modal, added } = setup(opts);
+		await openPlan(modal);
+		if (!achievements) {
+			const box = modal.contentEl.querySelector<HTMLInputElement>('.hoard-steam-sync__option input')!;
+			box.checked = false;
+			box.dispatchEvent(new Event('change'));
+		}
+		clickByText(modal.contentEl, 'button', 'All');
+		clickByText(modal.contentEl, 'button', 'Sync');
+		await vi.waitFor(() => expect(modal.contentEl.querySelector('h2')!.textContent).toBe('Sync complete'));
+		return added;
+	}
+
+	it('builds the complete game from library and storefront data', async () => {
+		const added = await importAll({
+			library: [{ appId: '20', name: 'Portal', playtimeMinutes: 120, lastPlayed: '2026-01-02T00:00:00.000Z' }],
+			details: { '20': portalDetails },
+		});
+		expect(added).toStrictEqual([{
+			id: 'g-Portal (store)', title: 'Portal (store)', developer: 'Valve', publisher: 'Valve', type: 'rpg', status: 'Backlog',
+			priority: '', favorite: false, wishlist: false, rating: 0, progress: 0, playtimeMinutes: 120,
+			achievementsEarned: 3, achievementsTotal: 10, platforms: [], singleplayer: true, coop: true, multiplayer: false,
+			coverUrl: 'https://img.test/portal.jpg', apiSource: '', apiId: '', steamAppId: '20', lastPlayed: '2026-01-02T00:00:00.000Z',
+			storeUrl: 'https://store.test/portal', externalLink: '', vaultPage: '', releaseDate: '2007-10-10',
+			dateStarted: null, dateFinished: null, dateAdded: NOW, dateModified: NOW,
+		}]);
+	});
+
+	it('builds the complete game from library data alone', async () => {
+		const added = await importAll({ library: [owned('30', '', 45)] }, false);
+		expect(added).toStrictEqual([{
+			id: 'g-App 30', title: 'App 30', developer: '', publisher: '', type: 'Action', status: 'Backlog',
+			priority: '', favorite: false, wishlist: false, rating: 0, progress: 0, playtimeMinutes: 45,
+			achievementsEarned: 0, achievementsTotal: 0, platforms: [], singleplayer: false, coop: false, multiplayer: false,
+			coverUrl: 'https://cdn.cloudflare.steamstatic.com/steam/apps/30/library_600x900.jpg', apiSource: '', apiId: '',
+			steamAppId: '30', lastPlayed: null, storeUrl: 'https://store.steampowered.com/app/30/', externalLink: '', vaultPage: '',
+			releaseDate: null, dateStarted: null, dateFinished: null, dateAdded: NOW, dateModified: NOW,
+		}]);
+	});
+
+	it('keeps an empty storefront cover and a missing release date', async () => {
+		const added = await importAll({
+			library: [owned('20', 'Portal')],
+			details: { '20': { ...portalDetails, coverUrl: '', storeUrl: '', releaseDate: null } },
+		});
+		expect(added[0]).toMatchObject({ coverUrl: '', storeUrl: '', releaseDate: null });
 	});
 });

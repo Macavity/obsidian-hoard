@@ -3,6 +3,8 @@ import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardGroup, Season } from './types';
 import { getApiGroupForType, todayIso } from './types';
+import { completedEpisodes, newTitle } from './entryFactories';
+import { nonEmpty } from './storage/sharedHelpers';
 import { t } from './i18n';
 import { priorityLabel, statusLabel } from './i18n/labels';
 import { renderSearchResultRow } from './SearchThumbnail';
@@ -226,44 +228,34 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		});
 		if (blocked) return;
 
-		const entry: HoardTitle = {
+		// added as Completed: every episode is ticked, and the finish date set when the setting asks for it
+		const allEpisodes = completedEpisodes(this.fieldStatus, this.media.episodes);
+		const entry = newTitle({
 			id: this.dataManager.generateId(titleName),
 			title: titleName,
 			type: this.selectedType,
 			status: this.fieldStatus,
 			priority: this.fieldPriority,
-			review: '',
 			rating: this.fieldRating,
-			notes: '',
 			dateStarted: this.fieldDateStarted || null,
-			dateFinished: null,
-			dateAdded: new Date().toISOString(),
-			dateModified: new Date().toISOString(),
+			dateFinished: allEpisodes && this.plugin.settings.setFinishDateAutomatically ? todayIso() : null,
 			totalEpisodes: this.media.episodes,
 			episodeDuration: this.media.duration,
 			releaseDate: this.media.releaseDate || null,
 			externalLink: this.media.link,
 			seasons: this.fieldSeasons,
-			watchedEpisodes: [],
+			watchedEpisodes: allEpisodes,
 			favorite: false,
 			posterUrl: this.fieldPosterUrl,
 			trailerUrl: this.fieldTrailerUrl,
 			manualTrailerUrl: '',
 			// empty stays absent (= unfetched) so the detail modal's lazy backfill runs
-			...(this.fieldDirector.length > 0 ? { director: this.fieldDirector } : {}),
-			...(this.fieldCast.length > 0 ? { cast: this.fieldCast } : {}),
-			...(this.fieldStudio.length > 0 ? { studio: this.fieldStudio } : {}),
-			...(this.fieldMalId !== null ? { malId: this.fieldMalId } : {}),
-			...(this.fieldAnilistId !== null ? { anilistId: this.fieldAnilistId } : {}),
-		};
-
-		// auto-complete episodes when adding with Completed status
-		if (entry.status === 'Completed' && entry.totalEpisodes > 0) {
-			entry.watchedEpisodes = Array.from({ length: entry.totalEpisodes }, (_, i) => i + 1);
-			if (this.plugin.settings.setFinishDateAutomatically) {
-				entry.dateFinished = todayIso();
-			}
-		}
+			director: nonEmpty(this.fieldDirector),
+			cast: nonEmpty(this.fieldCast),
+			studio: nonEmpty(this.fieldStudio),
+			malId: this.fieldMalId ?? undefined,
+			anilistId: this.fieldAnilistId ?? undefined,
+		});
 
 		await this.dataManager.addTitle(entry);
 

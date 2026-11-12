@@ -5,6 +5,7 @@ import type { HistoryManager } from './HistoryManager';
 import { formatHistoryDate } from './HistoryManager';
 import { pruneManualCredits, normalizeManualCredits, isReleaseDateFuture, todayIso, GAME_AUTO_STATUS } from './types';
 import type { CreditsField } from './types';
+import { newTitle } from './entryFactories';
 import type { AnyEntry, EntryIndex } from './storage/EntryIndex';
 import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBaseline } from './storage/baseline';
 import type { ApiOutcome } from './ApiService';
@@ -1112,27 +1113,16 @@ export class DataManager {
 
 	/** Creates the Maybe note; `title.id` is rewritten to its path. */
 	async addMaybeTitle(title: MaybeTitle): Promise<void> {
-		const note: HoardTitle = {
+		const note = newTitle({
 			id: title.id,
 			title: title.title,
 			type: title.type,
-			status: 'Plan to watch',
-			priority: '',
-			review: '',
-			rating: 0,
-			notes: '',
-			dateStarted: null,
-			dateFinished: null,
-			dateAdded: title.dateAdded,
-			dateModified: title.dateAdded,
 			totalEpisodes: title.totalEpisodes,
 			episodeDuration: title.episodeDuration,
 			releaseDate: title.releaseDate,
 			externalLink: title.externalLink,
-			seasons: [],
-			watchedEpisodes: [],
 			maybe: true,
-		};
+		}, title.dateAdded);
 		await this.createNote(note);
 		title.id = note.id;
 		this.notifyListeners();

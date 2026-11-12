@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReadingCsvModal } from '../src/ReadingCsvModal';
 import type { Book, Manga } from '../src/types';
 import type { ReadingCsvKind } from '../src/ReadingCsvChoiceModal';
@@ -126,5 +126,76 @@ describe('ReadingCsvModal manga import', () => {
 			status: 'Completed', rating: 5, externalLink: 'https://m.test',
 			dateStarted: '2024-01-02', dateFinished: '2024-02-03', releaseDate: '1988-12-06',
 		});
+	});
+});
+
+describe('ReadingCsvModal complete entries', () => {
+	const NOW = '2026-03-04T05:06:07.000Z';
+	beforeEach(() => {
+		// without fake timers this mocks Date only, so vi.waitFor does not move the clock
+		vi.setSystemTime(NOW);
+	});
+	afterEach(() => { vi.useRealTimers(); });
+
+	it('builds the complete book for a title-only row', async () => {
+		const { modal, books } = setup('book', 'Reading');
+		await importCsv(modal, 'Title\nDune');
+		await vi.waitFor(() => expect(books).toHaveLength(1));
+		expect(books[0]).toStrictEqual([{
+			id: 'book-Dune', title: 'Dune', author: '', status: 'Reading', rating: 0, progressUnit: 'pages',
+			pagesRead: 0, totalPages: 0, wordsRead: 0, totalWords: 0, chaptersRead: 0, totalChapters: 0,
+			coverUrl: '', googleBooksId: '', openLibraryId: '', externalLink: '', vaultPage: '',
+			dateStarted: null, dateFinished: null, releaseDate: null, dateAdded: NOW, dateModified: NOW, customFields: {},
+		}]);
+	});
+
+	it('builds the complete book for a fully mapped row', async () => {
+		const { modal, books } = setup('book');
+		await importCsv(modal, [
+			'Title,Author,Status,Rating,Pages Read,Total Pages,Words Read,Total Words,Chapters Read,Total Chapters,Started,Finished,Release Date,Link,Google Books ID,Open Library ID',
+			'Dune,Herbert,Completed,4.5,10,500,2500,125000,2,40,2024-01-02,2024-02-03,1965-08-01,https://x.test,gb1,OL1W',
+		].join('\n'));
+		await vi.waitFor(() => expect(books).toHaveLength(1));
+		expect(books[0]).toStrictEqual([{
+			id: 'book-Dune', title: 'Dune', author: 'Herbert', status: 'Completed', rating: 4.5, progressUnit: 'words',
+			pagesRead: 10, totalPages: 500, wordsRead: 2500, totalWords: 125000, chaptersRead: 2, totalChapters: 40,
+			coverUrl: '', googleBooksId: 'gb1', openLibraryId: 'OL1W', externalLink: 'https://x.test', vaultPage: '',
+			dateStarted: '2024-01-02', dateFinished: '2024-02-03', releaseDate: '1965-08-01',
+			dateAdded: NOW, dateModified: NOW, customFields: {},
+		}]);
+	});
+
+	it('builds the complete manga for a title-only row', async () => {
+		const { modal, manga } = setup('manga');
+		await importCsv(modal, 'Title\nAkira');
+		await vi.waitFor(() => expect(manga).toHaveLength(1));
+		expect(manga[0]).toStrictEqual([{
+			id: 'manga-Akira', title: 'Akira', author: '', status: 'Plan to Read', rating: 0,
+			chaptersRead: 0, totalChapters: 0, volumesRead: 0, totalVolumes: 0, coverUrl: '', malId: '',
+			externalLink: '', vaultPage: '', dateStarted: null, dateFinished: null, releaseDate: null,
+			dateAdded: NOW, dateModified: NOW, customFields: {},
+		}]);
+	});
+
+	it('builds the complete manga for a fully mapped row', async () => {
+		const { modal, manga } = setup('manga', 'Reading');
+		await importCsv(modal, [
+			'Title,Author,Status,Rating,Chapters Read,Total Chapters,Volumes Read,Total Volumes,MAL ID,Link,Started,Finished,Release Date',
+			'Akira,Otomo,Completed,5,120,120,6,6,42,https://m.test,2024-01-02,2024-02-03,1988-12-06',
+		].join('\n'));
+		await vi.waitFor(() => expect(manga).toHaveLength(1));
+		expect(manga[0]).toStrictEqual([{
+			id: 'manga-Akira', title: 'Akira', author: 'Otomo', status: 'Completed', rating: 5,
+			chaptersRead: 120, totalChapters: 120, volumesRead: 6, totalVolumes: 6, coverUrl: '', malId: '42',
+			externalLink: 'https://m.test', vaultPage: '', dateStarted: '2024-01-02', dateFinished: '2024-02-03',
+			releaseDate: '1988-12-06', dateAdded: NOW, dateModified: NOW, customFields: {},
+		}]);
+	});
+
+	it('uses the default status for an empty status cell', async () => {
+		const { modal, books } = setup('book', 'Reading');
+		await importCsv(modal, 'Title,Status,Author\nDune,,Herbert');
+		await vi.waitFor(() => expect(books).toHaveLength(1));
+		expect(books[0]![0]).toMatchObject({ status: 'Reading', author: 'Herbert' });
 	});
 });

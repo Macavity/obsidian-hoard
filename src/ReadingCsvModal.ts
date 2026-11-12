@@ -4,6 +4,7 @@ import { t } from './i18n';
 import { readingStatusLabel } from './i18n/labels';
 import type HoardPlugin from './main';
 import type { ReadingDataManager } from './ReadingDataManager';
+import { newBook, newManga } from './entryFactories';
 import type { Book, Manga, ReadingStatus } from './types';
 import { READING_STATUSES, SELECTABLE_READING_STATUSES } from './types';
 import type { ReadingCsvKind } from './ReadingCsvChoiceModal';
@@ -186,52 +187,49 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 
 	// Import
 
-	/** Fields books and manga share, defaulted for a CSV row that left them out. */
+	/**
+	 * What books and manga both take from a CSV row. A column the row left out stays undefined and
+	 * gets the default of a new entry; an empty status gets the configured one.
+	 */
 	private commonFields(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus) {
-		const now = new Date().toISOString();
 		return {
 			title: entry.title!.trim(),
-			author: entry.author ?? '',
-			status: (entry.status) || defaultStatus,
-			rating: entry.rating ?? 0,
-			chaptersRead: entry.chaptersRead ?? 0,
-			totalChapters: entry.totalChapters ?? 0,
-			coverUrl: '',
+			author: entry.author,
+			status: entry.status || defaultStatus,
+			rating: entry.rating,
+			chaptersRead: entry.chaptersRead,
+			totalChapters: entry.totalChapters,
 			externalLink: entry.externalLink ?? '',
-			vaultPage: '',
-			dateStarted: entry.dateStarted ?? null,
-			dateFinished: entry.dateFinished ?? null,
-			releaseDate: entry.releaseDate ?? null,
-			dateAdded: now,
-			dateModified: now,
-			customFields: {},
+			dateStarted: entry.dateStarted,
+			dateFinished: entry.dateFinished,
+			releaseDate: entry.releaseDate,
 		};
 	}
 
 	private buildBook(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus): Book {
 		const common = this.commonFields(entry, defaultStatus);
-		return {
+		return newBook({
 			...common,
 			id: this.plugin.readingDataManager.generateBookId(common.title),
 			progressUnit: bookProgressUnit(entry),
-			pagesRead: entry.pagesRead ?? 0,
-			totalPages: entry.totalPages ?? 0,
-			wordsRead: entry.wordsRead ?? 0,
-			totalWords: entry.totalWords ?? 0,
-			googleBooksId: entry.googleBooksId ?? '',
-			openLibraryId: entry.openLibraryId ?? '',
-		};
+			pagesRead: entry.pagesRead,
+			totalPages: entry.totalPages,
+			wordsRead: entry.wordsRead,
+			totalWords: entry.totalWords,
+			googleBooksId: entry.googleBooksId,
+			openLibraryId: entry.openLibraryId,
+		});
 	}
 
 	private buildManga(entry: Partial<Book & Manga>, defaultStatus: ReadingStatus): Manga {
 		const common = this.commonFields(entry, defaultStatus);
-		return {
+		return newManga({
 			...common,
 			id: this.plugin.readingDataManager.generateMangaId(common.title),
-			volumesRead: entry.volumesRead ?? 0,
-			totalVolumes: entry.totalVolumes ?? 0,
-			malId: entry.malId ?? '',
-		};
+			volumesRead: entry.volumesRead,
+			totalVolumes: entry.totalVolumes,
+			malId: entry.malId,
+		});
 	}
 
 	protected async doImport(): Promise<void> {

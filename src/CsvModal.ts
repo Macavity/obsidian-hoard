@@ -7,6 +7,8 @@ import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { HoardTitle } from './types';
 import { getTitleCredits, normalizeManualCredits } from './types';
+import { completedEpisodes, newTitle } from './entryFactories';
+import { nonEmpty } from './storage/sharedHelpers';
 
 /** studio list ⇄ one CSV cell; semicolons, since studio names contain commas */
 const STUDIO_SEP = '; ';
@@ -80,33 +82,26 @@ function randomAutoColor(theme: string): string {
 
 /** Complete title from a mapped CSV entry; a Completed status marks all episodes watched. */
 export function buildImportedTitle(entry: Partial<HoardTitle>, id: string, defaultType: string | undefined): HoardTitle {
-	const titleName = entry.title!.trim();
-	const result: HoardTitle = {
+	const status = entry.status || 'Plan to watch';
+	// a column the CSV did not map arrives as undefined and takes the default of a new title
+	return newTitle({
 		id,
-		title: titleName,
+		title: entry.title!.trim(),
 		type: entry.type?.trim() || defaultType || 'Anime',
-		status: entry.status || 'Plan to watch',
+		status,
 		priority: entry.priority || 'Medium',
-		review: '',
-		rating: entry.rating ?? 0,
-		notes: entry.notes ?? '',
-		dateStarted: entry.dateStarted ?? null,
-		dateFinished: entry.dateFinished ?? null,
-		dateAdded: new Date().toISOString(),
-		dateModified: new Date().toISOString(),
-		totalEpisodes: entry.totalEpisodes ?? 0,
-		episodeDuration: entry.episodeDuration ?? 0,
-		releaseDate: entry.releaseDate ?? null,
-		externalLink: entry.externalLink ?? '',
-		seasons: [],
-		watchedEpisodes: [],
+		rating: entry.rating,
+		notes: entry.notes,
+		dateStarted: entry.dateStarted,
+		dateFinished: entry.dateFinished,
+		totalEpisodes: entry.totalEpisodes,
+		episodeDuration: entry.episodeDuration,
+		releaseDate: entry.releaseDate,
+		externalLink: entry.externalLink,
+		watchedEpisodes: completedEpisodes(status, entry.totalEpisodes ?? 0),
 		favorite: false,
-	};
-	if (entry.manualStudio?.length) result.manualStudio = entry.manualStudio;
-	if (result.status === 'Completed' && result.totalEpisodes > 0) {
-		result.watchedEpisodes = Array.from({ length: result.totalEpisodes }, (_, k) => k + 1);
-	}
-	return result;
+		manualStudio: nonEmpty(entry.manualStudio),
+	});
 }
 
 /** Type names the import must create: unknown entry types plus those the value map marks for creation. */

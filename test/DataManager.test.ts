@@ -270,6 +270,17 @@ describe('DataManager on vault storage', () => {
 		expect(entries.find((e) => e.titleId === 'Games/Hades')).toMatchObject({ source: 'game', schedule: { recurrence: 'once', releaseDate: '2099-02-01' } });
 	});
 
+	it('writes a maybe title with the dates of the maybe entry and no favorite flag', async () => {
+		const { dm, f } = await setupDataManager({});
+		await dm.addMaybeTitle({ id: dm.generateMaybeId('B'), title: 'B', type: 'Movie', releaseDate: '2099-01-01', externalLink: 'https://b.test', totalEpisodes: 1, episodeDuration: 120, dateAdded: '2026-01-01T00:00:00.000Z' });
+		expect(f.files.get('W/Movie/B.md')!.split('\n---\n')[0]!.split('\n')).toEqual([
+			'---', 'Name: B', 'Type: Movie', 'Status: Plan to watch', 'Priority: ""', 'Rating: 0', 'Progress: 0', 'Total Episodes: 1',
+			'Runtime: 120', 'Date Started: null', 'Date Finished: null', 'Date Added: 2026-01-01T00:00:00.000Z',
+			'Date Modified: 2026-01-01T00:00:00.000Z', 'Release Date: 2099-01-01', 'URL: https://b.test', 'Maybe: true',
+		]);
+		expect(dm.getMaybeTitles()).toStrictEqual([{ id: 'Movie/B', title: 'B', type: 'Movie', releaseDate: '2099-01-01', externalLink: 'https://b.test', totalEpisodes: 1, episodeDuration: 120, dateAdded: '2026-01-01T00:00:00.000Z' }]);
+	});
+
 	it('adds a maybe title as a note and adopts it without a second note', async () => {
 		const { dm, f } = await setupDataManager({});
 		await dm.addMaybeTitle({ id: dm.generateMaybeId('B'), title: 'B', type: 'Movie', releaseDate: '2099-01-01', externalLink: '', totalEpisodes: 1, episodeDuration: 120, dateAdded: '2026-01-01' });

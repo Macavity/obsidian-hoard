@@ -14,6 +14,14 @@ export function optional(key: string, value: unknown): Fm {
 	return value ? { [key]: value } : {};
 }
 
+/** Drops keys whose value is undefined, so an optional field is absent instead of present-and-undefined. */
+export function defined<T extends object>(o: T): { [K in keyof T]?: Exclude<T[K], undefined> } {
+	return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as { [K in keyof T]?: Exclude<T[K], undefined> };
+}
+
+/** The list when it has entries, else undefined: an empty list is written as an absent field. */
+export const nonEmpty = <T>(v: T[] | undefined): T[] | undefined => (v && v.length > 0 ? v : undefined);
+
 export function slugify(input: string): string {
 	return input
 		.toLowerCase()
