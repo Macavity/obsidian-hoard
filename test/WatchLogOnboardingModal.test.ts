@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Notice as RealNotice, type App, type TFile } from 'obsidian';
 import { WatchLogOnboardingModal, type WatchLogImporter } from '../src/WatchLogOnboardingModal';
 import type { ForkSource, OriginalSource } from '../src/import/watchlog/detect';
@@ -65,6 +65,22 @@ describe('WatchLogOnboardingModal', () => {
 		m.containerEl.addEventListener('click', () => { reached = true; });
 		m.containerEl.click();
 		expect(reached).toBe(false);
+	});
+	it('a button of another window still gets its click (wizard opened in the settings window)', () => {
+		// Obsidian opens a modal in the active window; in the settings window its elements belong to that
+		// window, so they are no instance of the Node this code sees. happy-dom shares one Node between
+		// windows, hence the stub.
+		const imp = fakeImporter();
+		const m = new WatchLogOnboardingModal(app, imp); m.open();
+		const button = find(m, 'decline')!;
+		vi.stubGlobal('Node', class {});
+		try {
+			expect(button instanceof Node).toBe(false);
+			button.click();
+		} finally {
+			vi.unstubAllGlobals();
+		}
+		expect(imp.calls).toEqual(['fork:declined']);
 	});
 	it('review link opens file, cleanup runs only selected', async () => {
 		const imp = fakeImporter();

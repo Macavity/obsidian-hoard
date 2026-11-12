@@ -68,8 +68,10 @@ export class WatchLogOnboardingModal extends Modal {
 	onOpen(): void {
 		this.modalEl.addClass('hoard-onboarding');
 		// A click outside the dialog must not close it; swallow it before Obsidian's backdrop handler.
+		// No `instanceof Node`: Obsidian opens the modal in the active window, and in another one (the
+		// settings window) the target is not an instance of this window's Node.
 		this.containerEl.addEventListener('click', (e) => {
-			if (!(e.target instanceof Node) || !this.modalEl.contains(e.target)) {
+			if (!this.modalEl.contains(e.target as Node | null)) {
 				e.stopImmediatePropagation();
 				e.preventDefault();
 			}
