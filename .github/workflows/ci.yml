@@ -20,6 +20,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Full history: the attribution check reads every commit of the PR.
+          fetch-depth: 0
+      # GitHub lists every Co-authored-by name as a contributor of the repository, so a commit
+      # that names an AI assistant as co-author, author or committer must not reach main.
+      - name: No AI attribution in commits
+        if: github.event_name == 'pull_request'
+        env:
+          RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+        run: |
+          trailers=$(git log -i -E --grep='^Co-authored-by:.*(claude|anthropic)' --format='%h %s' "$RANGE")
+          authors=$(git log --format='%h %s (%ae, %ce)' "$RANGE" | grep -i 'anthropic\.com' || true)
+          if [ -n "$trailers$authors" ]; then
+            echo "::error::These commits carry AI attribution. Rewrite them without the Co-authored-by line and under your own name, then force-push the branch."
+            printf '%s\n' "$trailers" "$authors" | sed '/^$/d'
+            exit 1
+          fi
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
