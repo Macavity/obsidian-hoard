@@ -1,7 +1,8 @@
 import { TFile, type App } from 'obsidian';
 import type { YamlIO } from '../../storage/storageTypes';
 import type { ImportReport } from './report';
-import { isRecord, type Fm } from './schema1Types';
+import { isRecord } from './schema1Types';
+import type { Fm } from '../../storage/storageTypes';
 
 const FM_RE = /^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(\r?\n|$)/;
 

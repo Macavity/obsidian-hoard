@@ -13,7 +13,7 @@ import type { VaultLayout } from './storage/VaultLayout';
 import { FOLDERS } from './storage/VaultLayout';
 import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from './storage/properties';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from './storage/readingCodec';
-import type { Fm } from './storage/readingCodec';
+import type { Fm } from './storage/storageTypes';
 import {
 	Book,
 	Manga,
