@@ -15,7 +15,7 @@ During development, `pnpm dev` rebuilds `main.js` on every change (with inline s
 
 ## What the build does
 
-- `tsc -noEmit -skipLibCheck`: type check only, no output.
+- `tsc -skipLibCheck`: type check only, no output (`noEmit` is set in `tsconfig.json`, which fallow's type-aware analysis also reads).
 - `node esbuild.config.mjs build`: bundles `src/main.ts` into `main.js` at the repo root.
 - `main.js` is gitignored; releases attach it as an asset.
 

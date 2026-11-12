@@ -4,6 +4,7 @@ title: UI kit
 description: How HoardView hosts tabs, which shared building blocks tabs and modals compose, the CSS conventions, and the UI boundary towards storage.
 source:
   - src/HoardView.ts
+  - src/ui/TabInstance.ts
   - src/ui/TabToolbar.ts
   - src/ui/TabFilters.ts
   - src/ui/SearchFormModal.ts
@@ -22,7 +23,7 @@ source:
   - src/ui/IconButton.ts
   - src/styles/icon-button.css
   - src/styles/index.css
-source_commit: 52470cc0fb7bcae43faf4c81a9543ecacb5ed178
+source_commit: c2139714f49e30567e3dfe03abd65ca70cbbd056
 ---
 
 # UI kit
@@ -50,7 +51,9 @@ flowchart TD
 ## HoardView and the TABS registry
 
 [HoardView.ts](../../src/HoardView.ts) holds `TABS` in tab-bar order; a `TabDefinition` has
-`create(ctx)` returning `{ render, destroy? }`, an optional content class and an optional badge.
+`create(ctx)` returning a [TabInstance](../../src/ui/TabInstance.ts) (`render`, optional `destroy`),
+an optional content class and an optional badge. Every tab class declares `implements TabInstance`;
+`destroy` runs on tab switch and on view close.
 A **tab switch recreates** the instance (state lost); a **data change re-renders the same
 instance** in place via `dataManager.onChange`, so filters and expanded rows survive. Badges are
 computed without the tab open and refresh on `data-change` (Upcoming) or `metadata-resolved`
