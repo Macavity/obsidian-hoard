@@ -206,7 +206,8 @@
   border: 1px solid rgb(255 255 255 / 5%);
 }
 
-/* height pinned by the virtual grid; the modifier keeps a poster inside a pinned cell out of it */
+/* height pinned outside a virtual grid (rows strips); inside one the grid's own three-class rule wins and
+   reads --hoard-card-height. The modifier keeps a poster inside a pinned cell out of it. */
 .hoard-card.hoard-card--pinned {
   height: var(--hoard-card-pinned-height, auto);
 }

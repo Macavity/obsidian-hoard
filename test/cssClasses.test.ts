@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { BEM_PATTERN, checkCssClasses, classesInCss, shortTokens, wordsInStrings } from "../scripts/lib/css-classes.mjs";
 import { runCheck, unimportedPartials } from "../scripts/check-css-classes.mjs";
 import { bundleStyles } from "../scripts/lib/bundle-styles.mjs";
+import stylelintConfig from "../stylelint.config.mjs";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -58,9 +59,18 @@ describe("css class check", () => {
 
 describe("stylelint config", () => {
 	it("keeps the import notation the bundler parses", () => {
-		const cfg = JSON.parse(readFileSync(join(process.cwd(), ".stylelintrc.json"), "utf8")) as { rules: Record<string, unknown> };
-		expect(cfg.rules["import-notation"]).toBe("string");
-		expect(cfg.rules["no-descending-specificity"]).toBeNull();
+		const rules = (stylelintConfig as { rules: Record<string, unknown> }).rules;
+		expect(rules["import-notation"]).toBe("string");
+		expect(rules["no-descending-specificity"]).toBeNull();
 		expect(bundleStyles(join(process.cwd(), "src", "styles", "index.css"))).not.toMatch(/^@import/m);
+	});
+
+	it("judges Hoard classes like the class check and lets foreign ones pass", () => {
+		const [pattern] = (stylelintConfig as { rules: Record<string, unknown> }).rules["selector-class-pattern"] as [string, unknown];
+		const re = new RegExp(pattern);
+		for (const name of ["hoard-card", "hoard-card__title", "hoard-btn--sm", "hoard-card__a__b", "hoard-Card", "hoard-card_title"]) {
+			expect(re.test(name), name).toBe(BEM_PATTERN.test(name));
+		}
+		for (const foreign of ["is-active", "modal-content", "theme-dark"]) expect(foreign).toMatch(re);
 	});
 });

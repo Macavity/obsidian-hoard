@@ -157,6 +157,13 @@ export default defineConfig([
       "no-restricted-syntax": ["error", {
         selector: "MemberExpression[property.name='style']",
         message: "Use CSS classes or setCssProps with custom properties.",
+      }, {
+        // a plain key (`top: …`) is an inline style by another name; computed keys hold `--hoard-…` constants
+        selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[computed=false][key.type='Identifier']",
+        message: "setCssProps takes custom properties only (keys starting with --).",
+      }, {
+        selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[key.type='Literal']:not([key.value=/^--/])",
+        message: "setCssProps takes custom properties only (keys starting with --).",
       }],
     },
   },

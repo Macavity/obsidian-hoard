@@ -7,8 +7,7 @@ source:
   - scripts/lib/css-classes.mjs
   - scripts/check-css-classes.mjs
   - eslint.config.mjs
-  - .stylelintrc.json
-  - test/inlineStyles.test.ts
+  - stylelint.config.mjs
 source_commit: 3b7732ed494809373939844a8840d9f69a697287
 ---
 
@@ -30,8 +29,8 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
   are never renamed. Toggles set from code use `is-hidden` (`display: none`), `is-invisible`
   (`visibility: hidden`, keeps its space) and `is-done`; each has a rule scoped to its element
   (`.hoard-reading-columns__add-options.is-hidden`), never a global one.
-- **No inline styles**: `src/` has no `element.style` access (ESLint `no-restricted-syntax`,
-  `test/inlineStyles.test.ts`). A computed value is set with `el.setCssProps({ '--hoard-<block>-<property>': v })`
+- **No inline styles**: `src/` has no `element.style` access (ESLint `no-restricted-syntax`, which
+  also rejects a `setCssProps` key that is not a custom property). A computed value is set with `el.setCssProps({ '--hoard-<block>-<property>': v })`
   and read by the element's rule as `property: var(--hoard-…, <fallback>)`; the fallback is what the
   element showed before the variable existed. A rule that reads a variable must not catch elements that
   never set it and relied on Obsidian's default (the clear swatch of the colour picker is excluded for
@@ -42,7 +41,7 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
   `shortTokens` reports every other part of three letters or fewer. Custom properties
   (`--hoard-<block>-<name>`) follow the same rules.
 - **Check**: `scripts/check-css-classes.mjs` (part of `pnpm lint`) fails on any class that `shortTokens` or
-  `notBem` reports; stylelint's `selector-class-pattern` enforces the same pattern in the stylesheets.
+  `notBem` reports; stylelint's `selector-class-pattern` enforces the same pattern in the stylesheets (`stylelint.config.mjs` derives it from `BEM_PATTERN`).
   Container names are not classes and stay plain kebab-case (`hoard-list-table`).
 - **Protected strings**: `hoard-view` is both the CSS class and the view type, so it keeps its name.
   Code-block languages, event names, element ids and secret ids that start with `hoard-` are no classes.
