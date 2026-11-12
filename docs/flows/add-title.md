@@ -10,6 +10,7 @@ source:
   - src/apiSources.ts
   - src/LibraryIndex.ts
   - src/DataManager.ts
+  - src/entryFactories.ts
 source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 ---
 
@@ -62,8 +63,10 @@ sequenceDiagram
 5. **Submit**: `addTitle` requires a name, then `blockDuplicate`
    ([ui/DuplicateGuard.ts](../../src/ui/DuplicateGuard.ts)) warns on a same-name title with
    Continue/Cancel (Continue lets the next attempt pass once). "To be released" is not selectable;
-   it follows the release date. A `Completed` add marks all episodes watched and may set the
-   finish date.
+   it follows the release date. The entry comes from `newTitle`
+   ([entryFactories.ts](../../src/entryFactories.ts)), which owns the defaults of a new title; the
+   modal passes only its form fields. A `Completed` add marks all episodes watched
+   (`completedEpisodes`) and may set the finish date.
 6. **Write**: `DataManager.addTitle` creates the note (or takes over a
    [Maybe note](../concepts/maybe-title.md)), the id becomes the note path, history logs "added",
    and the view re-renders ([entry write](entry-write.md)). The type used is remembered as

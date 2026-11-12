@@ -12,6 +12,7 @@ source:
   - src/SteamSyncModal.ts
   - src/ApiService.ts
   - src/coverRefresh.ts
+  - src/entryFactories.ts
 source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 ---
 
@@ -85,6 +86,7 @@ to a smaller size for display.
 | Property format, playtime, achievements | `gameCodec.ts`; `formatTime`, `parsePlaytimeInput` in `types.ts` |
 | Default statuses, genres, platforms | `defaultGamesSettings()` in `types.ts` |
 | Release status and Upcoming | `applyReleaseStatus`, `syncUpcoming` in the manager |
-| Steam matching and import defaults | `matchAgainstLibrary`, `buildGame` in `SteamSyncModal.ts` |
+| Defaults of a new game | `newGame` in [entryFactories.ts](../../src/entryFactories.ts); the WatchLog import keeps its own |
+| Steam matching, and what an imported game takes from library and storefront | `matchAgainstLibrary`, `buildGame`, `storefrontFields` in `SteamSyncModal.ts` |
 | Steam, RAWG, IGDB requests | `ApiService.ts`; Steam Store mapping and `steamLibraryCover` in `steamStoreApi.ts` |
 | Recommended and Recently played shelves | `getRecommendedGames`, `getRecentlyPlayedGames` in `GamesTab.ts` |

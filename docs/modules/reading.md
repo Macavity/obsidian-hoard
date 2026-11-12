@@ -16,6 +16,7 @@ source:
   - src/csv/csvCore.ts
   - src/coverRefresh.ts
   - src/csv/CsvModalBase.ts
+  - src/entryFactories.ts
 source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 ---
 
@@ -88,7 +89,8 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
 
 | Change | Place |
 |---|---|
-| Property names, defaults, validation | `readingCodec.ts` |
+| Property names, defaults when reading a note, validation | `readingCodec.ts` |
+| Defaults of a new book or manga | `newBook`, `newManga` in [entryFactories.ts](../../src/entryFactories.ts); the WatchLog import keeps its own |
 | Status list and colours | `READING_STATUSES`, `DEFAULT_READING_STATUS_COLORS` in `types.ts`, `readingColors.ts` |
 | Release and Upcoming rules | `applyReleaseStatus`, `syncUpcoming` in the manager |
 | Auto-complete | `applyAutoComplete` in `ReadingDetailModal.ts` |
