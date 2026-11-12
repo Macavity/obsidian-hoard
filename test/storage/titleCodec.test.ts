@@ -1,20 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { titleFromProperties, titleToProperties, titleToCache } from '../../src/storage/titleCodec';
 import { ALL_PROPERTY_NAMES } from '../../src/storage/properties';
-import type { HoardTitle } from '../../src/types';
+import { fullTitle } from './titleFixtures';
 const seasons = [{ name: 'Season 1', episodes: 8, offset: 0 }, { name: 'Season 2', episodes: 8, offset: 8 }];
-const fullTitle = (): HoardTitle => ({
-  id: 'TV Show/Dark', title: 'Dark', type: 'TV Show', status: 'Watching', priority: 'High', review: 'Great', rating: 4,
-  notes: '', dateStarted: '2026-01-02', dateFinished: null, dateAdded: '2026-01-01T00:00:00Z', dateModified: '2026-01-03T00:00:00Z',
-  totalEpisodes: 12, episodeDuration: 55, releaseDate: '2017-12-01', externalLink: 'https://www.themoviedb.org/tv/70523',
-  seasons: [{ name: 'Season 1', episodes: 8, offset: 0, skippedEpisodes: [3] }, { name: 'Season 2', episodes: 4, offset: 8, skippedEpisodes: [] }],
-  seasonsOverride: true, watchedEpisodes: [1, 2, 9], tmdbId: 70523, tmdbMediaType: 'tv', malId: 5, anilistId: 6,
-  posterUrl: 'https://img.example/p.jpg', manualTrailerUrl: 'https://youtu.be/x',
-  overrides: { director: ['D'], cast: ['C'], studio: ['S'], communityRating: 8.1, communityVotes: 100, communitySource: 'tmdb' },
-  manualDirector: ['MD'], manualCast: ['MC'], manualStudio: ['MS'], pinned: true, favorite: true,
-  dateFavorited: '2026-01-04T00:00:00Z', maybe: true, groups: ['G'],
-  airtime: { recurrence: 'weekly', day: 3, time: '18:00', season: 2, episode: 4, acknowledged: '2026-10-01' },
-});
 
 describe('titleCodec', () => {
   it('writes only frozen property names and reads them back', () => {
