@@ -1,3 +1,4 @@
+import type { TabInstance } from './ui/TabInstance';
 import { App, Modal, Notice } from 'obsidian';
 import { t } from './i18n';
 import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from './i18n/labels';
@@ -254,7 +255,7 @@ function openExternalLink(link: string, noLinkKey: 'airtime.notices.noLink' | 'a
 
 // AirtimeTab
 
-export class AirtimeTab {
+export class AirtimeTab implements TabInstance {
 	private container: HTMLElement;
 	private plugin: HoardPlugin;
 	private dataManager: DataManager;

@@ -1,3 +1,4 @@
+import type { TabInstance } from './ui/TabInstance';
 import { ItemView, Platform, setIcon, WorkspaceLeaf } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import type HoardPlugin from './main';
@@ -21,12 +22,6 @@ interface TabContext {
 	plugin: HoardPlugin;
 	dataManager: DataManager;
 	setBadge: (count: number) => void;
-}
-
-/** A live tab instance; recreated on every switch to its tab, re-rendered in place on data changes. */
-interface TabInstance {
-	render(): void | Promise<void>;
-	destroy?(): void;
 }
 
 interface TabBadge {

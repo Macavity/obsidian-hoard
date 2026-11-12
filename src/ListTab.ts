@@ -1,3 +1,4 @@
+import type { TabInstance } from './ui/TabInstance';
 import { setIcon, setTooltip } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
@@ -47,7 +48,7 @@ const itemKey = (item: DisplayItem): string => (item.kind === 'group' ? groupKey
 
 
 
-export class ListTab {
+export class ListTab implements TabInstance {
 	private container: HTMLElement;
 	private plugin: HoardPlugin;
 	private dataManager: DataManager;

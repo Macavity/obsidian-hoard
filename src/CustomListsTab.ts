@@ -1,3 +1,4 @@
+import type { TabInstance } from './ui/TabInstance';
 import { App, Component, MarkdownRenderer, Modal, Notice, Platform, TFile, normalizePath, Setting, type EventRef, type TAbstractFile } from 'obsidian';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
@@ -656,7 +657,7 @@ class ListNameModal extends Modal {
 
 // CustomListsTab
 
-export class CustomListsTab {
+export class CustomListsTab implements TabInstance {
 	private container: HTMLElement;
 	private plugin: HoardPlugin;
 	private dataManager: DataManager;

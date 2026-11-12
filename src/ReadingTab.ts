@@ -1,3 +1,4 @@
+import type { TabInstance } from './ui/TabInstance';
 import { Notice } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { readingStatusLabel } from './i18n/labels';
@@ -116,7 +117,7 @@ function selectValueOf(item: Book | Manga, colId: string): string {
 	return v === undefined || v === null ? '' : String(v);
 }
 
-export class ReadingTab {
+export class ReadingTab implements TabInstance {
 	// session-persistent state: survives tab switches and view rebuilds within the same plugin load,
 	// resets only on unload
 	private static sessionSubTab: SubTab | null = null;
