@@ -1,4 +1,4 @@
-import type { AirtimeRecurrence, EntryAirtime, Season, TitleOverrides, HoardTitle } from '../types';
+import type { AirtimeRecurrence, Season, TitleOverrides, HoardTitle } from '../types';
 import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId } from './storageTypes';
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
 import { externalIdFromLink, formatExternalId, parseExternalId } from './externalId';
@@ -133,27 +133,32 @@ function identityOf(r: Reader, fm: Record<string, unknown>, link: string): Exter
 	return link ? externalIdFromLink(link) : null;
 }
 
-export function titleFromProperties(id: string, properties: Record<string, unknown>, cache: EntryCache | undefined): Decoded<HoardTitle> {
-	const r = new Reader(properties);
-	const c = cache ?? {};
-	const status = r.str(C.status) ?? 'Plan to watch';
-	const externalLink = r.str(C.url) ?? '';
+/** Drops keys whose value is undefined, so an optional field is absent instead of present-and-undefined. */
+function defined<T extends object>(o: T): { [K in keyof T]?: Exclude<T[K], undefined> } {
+	return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as { [K in keyof T]?: Exclude<T[K], undefined> };
+}
 
-	// seasons: note override wins over cache
-	let seasons: Season[] = [];
-	let seasonsOverride = false;
-	const seasonLines = r.list(T.seasons);
-	if (seasonLines && seasonLines.length > 0) {
-		seasons = parseSeasonLines(seasonLines) ?? [];
-		seasonsOverride = seasons.length > 0;
-		if (!seasonsOverride) r.invalid.push(T.seasons);
+const isRecurrence = (v: string): v is AirtimeRecurrence => (RECURRENCES as readonly string[]).includes(v);
+
+/** Every non-optional key of HoardTitle. */
+type RequiredTitle = { [K in keyof HoardTitle as undefined extends HoardTitle[K] ? never : K]: HoardTitle[K] };
+
+/** Seasons: lines in the note win over the cache; unreadable lines are reported and the cache is used. */
+function decodeSeasons(r: Reader, c: EntryCache): { seasons: Season[]; seasonsOverride: boolean } {
+	const lines = r.list(T.seasons);
+	if (lines && lines.length > 0) {
+		const fromNote = parseSeasonLines(lines) ?? [];
+		if (fromNote.length > 0) return { seasons: fromNote, seasonsOverride: true };
+		r.invalid.push(T.seasons);
 	}
-	if (!seasonsOverride) seasons = (c.seasons ?? []).map((s) => ({ ...s, skippedEpisodes: [] }));
+	// copies: the decoded title never shares season objects with the cache
+	return { seasons: (c.seasons ?? []).map((s) => ({ ...s, skippedEpisodes: [] })), seasonsOverride: false };
+}
 
-	const total = r.num(T.totalEpisodes) ?? seasons.reduce((n, s) => n + s.episodes, 0);
-	const movie = isMovie(seasons, total);
-
-	const title: HoardTitle = {
+/** The fields every title has, read from the note with their defaults. */
+function coreFields(r: Reader, id: string, status: string, externalLink: string, seasons: Season[]): RequiredTitle {
+	const totalEpisodes = r.num(T.totalEpisodes) ?? seasons.reduce((n, s) => n + s.episodes, 0);
+	return {
 		id,
 		title: r.str(C.name) ?? id.split('/').pop() ?? id,
 		type: r.str(C.type) ?? 'TV Show',
@@ -167,133 +172,151 @@ export function titleFromProperties(id: string, properties: Record<string, unkno
 		dateFinished: r.date(C.dateFinished),
 		dateAdded: r.str(C.dateAdded) ?? '',
 		dateModified: r.str(C.dateModified) ?? '',
-		totalEpisodes: total,
+		totalEpisodes,
 		episodeDuration: r.num(T.runtime) ?? 0,
 		releaseDate: r.date(C.releaseDate),
 		externalLink,
 		seasons,
 		watchedEpisodes: [],
 	};
-	if (seasonsOverride) title.seasonsOverride = true;
+}
 
-	// cache fields
-	// the note's `Cover` wins (set below); the cache only marks 'none' (the API has no poster)
-	if (c.posterUrl === 'none') title.posterUrl = 'none';
-	if (c.trailerUrl !== undefined) title.trailerUrl = c.trailerUrl;
-	if (c.director) title.director = c.director;
-	if (c.cast) title.cast = c.cast;
-	if (c.studio) title.studio = c.studio;
-	if (c.communityRating !== undefined) title.communityRating = c.communityRating;
-	if (c.communityVotes !== undefined) title.communityVotes = c.communityVotes;
-	if (c.communitySource !== undefined) title.communitySource = c.communitySource as HoardTitle['communitySource'];
-	if (c.communityRatingLastFetched !== undefined) title.communityRatingLastFetched = c.communityRatingLastFetched;
-	if (c.collectionId !== undefined) title.collectionId = c.collectionId;
-	if (c.tmdbId !== undefined) title.tmdbId = c.tmdbId;
-	if (c.tmdbMediaType !== undefined) title.tmdbMediaType = c.tmdbMediaType;
-	if (c.malId !== undefined) title.malId = c.malId;
-	if (c.anilistId !== undefined) title.anilistId = c.anilistId;
+/** API data from the cache. Of the poster only the 'none' marker lives there; the note's `Cover` wins later. */
+function cachedApiFields(c: EntryCache): Partial<HoardTitle> {
+	return defined({
+		posterUrl: c.posterUrl === 'none' ? 'none' : undefined,
+		trailerUrl: c.trailerUrl,
+		director: c.director || undefined,
+		cast: c.cast || undefined,
+		studio: c.studio || undefined,
+		communityRating: c.communityRating,
+		communityVotes: c.communityVotes,
+		communitySource: c.communitySource,
+		communityRatingLastFetched: c.communityRatingLastFetched,
+		collectionId: c.collectionId,
+		tmdbId: c.tmdbId,
+		tmdbMediaType: c.tmdbMediaType,
+		malId: c.malId,
+		anilistId: c.anilistId,
+	});
+}
 
-	// identity from externalId (fallback: link) wins over cached ids
-	const ext = identityOf(r, properties, externalLink);
-	if (ext) {
-		const n = Number(ext.id);
-		if (ext.source === 'tmdb' && ext.kind && !isNaN(n)) {
-			title.tmdbId = n;
-			title.tmdbMediaType = ext.kind === 'movie' ? 'movie' : 'tv';
-		} else if (ext.source === 'mal' && !isNaN(n)) title.malId = n;
-		else if (ext.source === 'anilist' && !isNaN(n)) title.anilistId = n;
-		else if (ext.source === 'imdb' && !externalLink) title.externalLink = `https://www.imdb.com/title/${ext.id}`;
+type IdentityFields = Partial<Pick<HoardTitle, 'tmdbId' | 'tmdbMediaType' | 'malId' | 'anilistId' | 'externalLink'>>;
+
+/** API ids from the note's identity (External ID, else the URL); they win over cached ids. */
+function identityFields(ext: ExternalId | null, externalLink: string): IdentityFields {
+	if (!ext) return {};
+	// an IMDb id is no API id: it only supplies the link a note without URL lacks
+	if (ext.source === 'imdb') return externalLink ? {} : { externalLink: `https://www.imdb.com/title/${ext.id}` };
+	const n = Number(ext.id);
+	if (isNaN(n)) return {};
+	if (ext.source === 'tmdb') return ext.kind ? { tmdbId: n, tmdbMediaType: ext.kind === 'movie' ? 'movie' : 'tv' } : {};
+	if (ext.source === 'mal') return { malId: n };
+	if (ext.source === 'anilist') return { anilistId: n };
+	return {};
+}
+
+type WatchedFields = Pick<HoardTitle, 'watchedEpisodes'> & Partial<Pick<HoardTitle, 'unmappedWatched'>>;
+type SkippedFields = Pick<HoardTitle, 'seasons'> & Partial<Pick<HoardTitle, 'unmappedSkipped'>>;
+
+function watchedFields(r: Reader, mapping: Season[]): WatchedFields {
+	const text = r.str(T.watchedEpisodes);
+	if (!text?.trim()) return { watchedEpisodes: [] };
+	const refs = parseEpisodeRange(text, mapping);
+	if (!refs) {
+		r.invalid.push(T.watchedEpisodes);
+		return { watchedEpisodes: [] };
 	}
+	return { watchedEpisodes: toAbsolute(refs, mapping), ...defined({ unmappedWatched: nonEmpty(outsideSeasons(refs, mapping)) }) };
+}
 
-	// progress: movies are carried by status; without seasons an implicit S01 unless a refill is pending
-	if (movie) {
-		if (status === 'Completed') title.watchedEpisodes = [1];
-	} else {
-		// a pending refill maps nothing: every ref stays unmapped and the note's text untouched
-		const mapping = seasonsPending(title, c.apiCheck?.seasons?.result) ? seasons : mappingSeasons(title);
-		const implicit = mapping !== seasons;
-		const watchedText = r.str(T.watchedEpisodes);
-		if (watchedText?.trim()) {
-			const refs = parseEpisodeRange(watchedText, mapping);
-			if (refs) {
-				title.watchedEpisodes = toAbsolute(refs, mapping);
-				const unmapped = outsideSeasons(refs, mapping);
-				if (unmapped.length > 0) title.unmappedWatched = unmapped;
-			} else r.invalid.push(T.watchedEpisodes);
-		}
-		const skippedText = r.str(T.skippedEpisodes);
-		if (skippedText?.trim()) {
-			const refs = parseEpisodeRange(skippedText, mapping);
-			if (!refs) r.invalid.push(T.skippedEpisodes);
-			else {
-				// the implicit season is not stored on the title: its skips ride along unmapped
-				const unmapped = implicit ? refs : outsideSeasons(refs, seasons);
-				if (unmapped.length > 0) title.unmappedSkipped = unmapped;
-				if (!implicit) {
-					for (const ref of refs) {
-						const season = seasons[ref.season - 1];
-						if (season && ref.episode <= season.episodes) season.skippedEpisodes = [...(season.skippedEpisodes ?? []), ref.episode];
-					}
-				}
-			}
-		}
+/** `seasons` with the skipped episodes of `refs` added; seasons without a new skip are returned as they are. */
+function withSkipped(seasons: Season[], refs: EpisodeRef[]): Season[] {
+	return seasons.map((season, i) => {
+		const added = refs.filter((ref) => ref.season === i + 1 && ref.episode <= season.episodes).map((ref) => ref.episode);
+		return added.length > 0 ? { ...season, skippedEpisodes: [...(season.skippedEpisodes ?? []), ...added] } : season;
+	});
+}
+
+function skippedFields(r: Reader, seasons: Season[], mapping: Season[]): SkippedFields {
+	const text = r.str(T.skippedEpisodes);
+	if (!text?.trim()) return { seasons };
+	const refs = parseEpisodeRange(text, mapping);
+	if (!refs) {
+		r.invalid.push(T.skippedEpisodes);
+		return { seasons };
 	}
+	// the implicit season is not stored on the title: its skips ride along unmapped
+	if (mapping !== seasons) return { seasons, ...defined({ unmappedSkipped: nonEmpty(refs) }) };
+	return { seasons: withSkipped(seasons, refs), ...defined({ unmappedSkipped: nonEmpty(outsideSeasons(refs, seasons)) }) };
+}
 
-	if (r.bool(T.pinned)) title.pinned = true;
-	const favorite = r.bool(C.favorite);
-	if (favorite !== undefined) title.favorite = favorite;
-	const dateFavorited = r.str(C.dateFavorited);
-	if (dateFavorited) title.dateFavorited = dateFavorited;
-	if (r.bool(T.maybe)) title.maybe = true;
-	const groups = nonEmpty(r.list(C.groups));
-	if (groups) title.groups = groups;
+/** Progress: movies are carried by status; a series maps its episode ranges onto the seasons. */
+function progressFields(r: Reader, t: HoardTitle, seasonsCheck: ApiCheckResult | undefined): WatchedFields & SkippedFields {
+	if (isMovie(t.seasons, t.totalEpisodes)) return { watchedEpisodes: t.status === 'Completed' ? [1] : [], seasons: t.seasons };
+	// a pending refill maps nothing: every ref stays unmapped and the note's text untouched.
+	// without seasons an implicit S01 is used, unless a refill is pending
+	const mapping = seasonsPending(t, seasonsCheck) ? t.seasons : mappingSeasons(t);
+	return { ...watchedFields(r, mapping), ...skippedFields(r, t.seasons, mapping) };
+}
 
-	// the poster is a plain note field (E12); other API fields in the note are user overrides (E9)
-	const poster = r.str(C.cover);
-	if (poster) title.posterUrl = poster;
-	const manualTrailer = r.str(T.trailer);
-	if (manualTrailer) title.manualTrailerUrl = manualTrailer;
-	const overrides: TitleOverrides = {};
-	for (const { field, prop } of CREDIT_FIELDS) {
-		const names = nonEmpty(r.list(prop));
-		if (names) overrides[field] = names;
+/** API fields the user set in the note; they win over the cached values and are written back (E9). */
+function overridesOf(r: Reader): TitleOverrides | undefined {
+	const overrides: TitleOverrides = defined({
+		director: nonEmpty(r.list(T.director)),
+		cast: nonEmpty(r.list(T.cast)),
+		studio: nonEmpty(r.list(T.studio)),
+		communityRating: r.num(T.communityRating),
+		communityVotes: r.num(T.communityVotes),
+		communitySource: r.str(T.communitySource) || undefined,
+	});
+	return Object.keys(overrides).length > 0 ? overrides : undefined;
+}
+
+/** What the user set in the note beyond the core fields. The poster is a plain note field (E12). */
+function userFields(r: Reader): Partial<HoardTitle> {
+	return defined({
+		pinned: r.bool(T.pinned) || undefined,
+		favorite: r.bool(C.favorite),
+		dateFavorited: r.str(C.dateFavorited) || undefined,
+		maybe: r.bool(T.maybe) || undefined,
+		groups: nonEmpty(r.list(C.groups)),
+		posterUrl: r.str(C.cover) || undefined,
+		manualTrailerUrl: r.str(T.trailer) || undefined,
+		overrides: overridesOf(r),
+		manualDirector: nonEmpty(r.list(T.addedDirector)),
+		manualCast: nonEmpty(r.list(T.addedCast)),
+		manualStudio: nonEmpty(r.list(T.addedStudio)),
+	});
+}
+
+/** The manual schedule; an unknown recurrence is reported and sets none. */
+function airtimeField(r: Reader): Partial<Pick<HoardTitle, 'airtime'>> {
+	const recurrence = r.str(A.recurrence);
+	if (recurrence === undefined) return {};
+	if (!isRecurrence(recurrence)) {
+		r.invalid.push(A.recurrence);
+		return {};
 	}
-	const communityRating = r.num(T.communityRating);
-	if (communityRating !== undefined) overrides.communityRating = communityRating;
-	const communityVotes = r.num(T.communityVotes);
-	if (communityVotes !== undefined) overrides.communityVotes = communityVotes;
-	const communitySource = r.str(T.communitySource);
-	if (communitySource) overrides.communitySource = communitySource as TitleOverrides['communitySource'];
-	if (Object.keys(overrides).length > 0) title.overrides = overrides;
+	const rest = defined({ day: r.num(A.day), time: r.str(A.time), season: r.num(A.season), episode: r.num(A.episode), acknowledged: r.str(A.acknowledged) });
+	return { airtime: { recurrence, ...rest } };
+}
 
-	// user-added credits
-	const manualDirector = nonEmpty(r.list(T.addedDirector));
-	if (manualDirector) title.manualDirector = manualDirector;
-	const manualCast = nonEmpty(r.list(T.addedCast));
-	if (manualCast) title.manualCast = manualCast;
-	const manualStudio = nonEmpty(r.list(T.addedStudio));
-	if (manualStudio) title.manualStudio = manualStudio;
-
-	// airtime
-	const rec = r.str(A.recurrence);
-	if (rec !== undefined) {
-		if ((RECURRENCES as string[]).includes(rec)) {
-			const airtime: EntryAirtime = { recurrence: rec as AirtimeRecurrence };
-			const day = r.num(A.day);
-			if (day !== undefined) airtime.day = day;
-			const time = r.str(A.time);
-			if (time !== undefined) airtime.time = time;
-			const season = r.num(A.season);
-			if (season !== undefined) airtime.season = season;
-			const episode = r.num(A.episode);
-			if (episode !== undefined) airtime.episode = episode;
-			const ack = r.str(A.acknowledged);
-			if (ack !== undefined) airtime.acknowledged = ack;
-			title.airtime = airtime;
-		} else r.invalid.push(A.recurrence);
-	}
-
-	return { entry: title, invalidFields: [...new Set(r.invalid)] };
+/** A title from its note's properties and its cache entry. The note wins wherever both carry a field. */
+export function titleFromProperties(id: string, properties: Record<string, unknown>, cache: EntryCache | undefined): Decoded<HoardTitle> {
+	const r = new Reader(properties);
+	const c = cache ?? {};
+	const status = r.str(C.status) ?? 'Plan to watch';
+	const externalLink = r.str(C.url) ?? '';
+	const { seasons, seasonsOverride } = decodeSeasons(r, c);
+	const base: HoardTitle = {
+		...coreFields(r, id, status, externalLink, seasons),
+		...defined({ seasonsOverride: seasonsOverride || undefined }),
+		...cachedApiFields(c),
+		...identityFields(identityOf(r, properties, externalLink), externalLink),
+	};
+	const entry: HoardTitle = { ...base, ...progressFields(r, base, c.apiCheck?.seasons?.result), ...userFields(r), ...airtimeField(r) };
+	return { entry, invalidFields: [...new Set(r.invalid)] };
 }
 
 /** Primary identity for `externalId`: API ids first (anime prefers MAL/AniList), then the link. */
