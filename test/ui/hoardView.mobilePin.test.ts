@@ -27,9 +27,10 @@ const HEIGHT_VAR = '--hoard-view-pinned-tab-height';
 async function open(mobile: boolean) {
 	(Platform as { isMobile: boolean }).isMobile = mobile;
 	// the obsidian mock ignores registerDomEvent; the real one adds the listener
-	vi.spyOn(HoardView.prototype as never, 'registerDomEvent').mockImplementation(((el: HTMLElement, type: string, cb: EventListener) => {
-		el.addEventListener(type, cb);
-	}) as never);
+	const register = vi.spyOn(HoardView.prototype, 'registerDomEvent') as unknown as {
+		mockImplementation(fn: (el: HTMLElement, type: string, cb: EventListener) => void): void;
+	};
+	register.mockImplementation((el, type, cb) => el.addEventListener(type, cb));
 	const plugin = {
 		settings: { colorTheme: 'default' },
 		app: { metadataCache: { on: () => ({}) } },
