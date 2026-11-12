@@ -1,15 +1,11 @@
-import type { AirtimeRecurrence, Season, TitleOverrides, HoardTitle } from '../types';
-import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId } from './storageTypes';
+import type { AirtimeRecurrence, EntryAirtime, Season, TitleOverrides, HoardTitle } from '../types';
+import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId, Fm } from './storageTypes';
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
 import { externalIdFromLink, formatExternalId, parseExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, TITLE_PROPS as T } from './properties';
+import { optional } from './sharedHelpers';
 
 const RECURRENCES: readonly AirtimeRecurrence[] = ['once', 'daily', 'weekly', 'monthly'];
-const CREDIT_FIELDS = [
-	{ field: 'director', prop: T.director },
-	{ field: 'cast', prop: T.cast },
-	{ field: 'studio', prop: T.studio },
-] as const;
 
 /** Movie = a single "Movie" season, or no seasons and exactly one episode. */
 export function isMovie(seasons: Season[], totalEpisodes: number): boolean {
@@ -333,72 +329,103 @@ function identityFor(t: HoardTitle): ExternalId | null {
 	return t.externalLink ? externalIdFromLink(t.externalLink) : null;
 }
 
-/** Frontmatter fields for a title; keys are the frozen property names. `notes` is not included. */
-export function titleToProperties(t: HoardTitle, progress: number, seasonsPending = false): Record<string, unknown> {
-	const out: Record<string, unknown> = {};
-	out[C.name] = t.title;
-	out[C.type] = t.type;
-	out[C.status] = t.status;
-	out[T.priority] = t.priority;
-	if (t.review) out[T.review] = t.review;
-	out[C.rating] = t.rating;
-	out[T.progress] = progress;
-	out[T.totalEpisodes] = t.totalEpisodes;
-	out[T.runtime] = t.episodeDuration;
-	out[C.dateStarted] = t.dateStarted;
-	out[C.dateFinished] = t.dateFinished;
-	out[C.dateAdded] = t.dateAdded;
-	out[C.dateModified] = t.dateModified;
-	if (t.releaseDate) out[C.releaseDate] = t.releaseDate;
-	if (t.malId !== undefined) out[T.malId] = t.malId;
-	if (t.anilistId !== undefined) out[T.anilistId] = t.anilistId;
-	// API values live in the cache; only the user's overrides are written (E9)
-	const o = t.overrides;
-	if (o?.communityRating !== undefined) out[T.communityRating] = o.communityRating;
-	if (o?.communityVotes !== undefined) out[T.communityVotes] = o.communityVotes;
-	if (o?.communitySource) out[T.communitySource] = o.communitySource;
-	for (const { field, prop } of CREDIT_FIELDS) {
-		const names = o?.[field];
-		if (names && names.length > 0) out[prop] = names;
-	}
-	if (t.posterUrl && t.posterUrl !== 'none') out[C.cover] = t.posterUrl;
-	if (t.manualTrailerUrl?.trim()) out[T.trailer] = t.manualTrailerUrl;
-	if (t.externalLink) out[C.url] = t.externalLink;
-	if (t.pinned) out[T.pinned] = true;
-	if (t.favorite) out[C.favorite] = true;
-	if (t.dateFavorited) out[C.dateFavorited] = t.dateFavorited;
+/** The properties every title note has, plus the ones written once they carry a value. */
+function coreProps(t: HoardTitle, progress: number): Fm {
+	return {
+		[C.name]: t.title,
+		[C.type]: t.type,
+		[C.status]: t.status,
+		[T.priority]: t.priority,
+		...optional(T.review, t.review),
+		[C.rating]: t.rating,
+		[T.progress]: progress,
+		[T.totalEpisodes]: t.totalEpisodes,
+		[T.runtime]: t.episodeDuration,
+		[C.dateStarted]: t.dateStarted,
+		[C.dateFinished]: t.dateFinished,
+		[C.dateAdded]: t.dateAdded,
+		[C.dateModified]: t.dateModified,
+		...optional(C.releaseDate, t.releaseDate),
+		...defined({ [T.malId]: t.malId, [T.anilistId]: t.anilistId }),
+	};
+}
 
-	const ext = identityFor(t);
-	if (ext) out[C.externalId] = formatExternalId(ext);
-	if (t.groups && t.groups.length > 0) out[C.groups] = t.groups;
-	if (t.maybe) out[T.maybe] = true;
+/** API values live in the cache; only the user's overrides are written (E9). */
+function overrideProps(o: TitleOverrides | undefined): Fm {
+	return {
+		...defined({ [T.communityRating]: o?.communityRating, [T.communityVotes]: o?.communityVotes }),
+		...optional(T.communitySource, o?.communitySource),
+		...optional(T.director, nonEmpty(o?.director)),
+		...optional(T.cast, nonEmpty(o?.cast)),
+		...optional(T.studio, nonEmpty(o?.studio)),
+	};
+}
 
-	// progress: movies are carried by status; while a season refill is pending the note's text is left alone
+/** Links, flags and the identity of the note. A poster of 'none' is a cache marker and stays out. */
+function linkAndFlagProps(t: HoardTitle): Fm {
+	const identity = identityFor(t);
+	return {
+		...optional(C.cover, t.posterUrl !== 'none' && t.posterUrl),
+		...optional(T.trailer, t.manualTrailerUrl?.trim() && t.manualTrailerUrl),
+		...optional(C.url, t.externalLink),
+		...optional(T.pinned, t.pinned),
+		...optional(C.favorite, t.favorite),
+		...optional(C.dateFavorited, t.dateFavorited),
+		...optional(C.externalId, identity && formatExternalId(identity)),
+		...optional(C.groups, nonEmpty(t.groups)),
+		...optional(T.maybe, t.maybe),
+	};
+}
+
+/** Watched and skipped episodes as ranges over `mapping`; refs outside the known seasons ride along unchanged. */
+function episodeProps(t: HoardTitle, mapping: Season[]): Fm {
+	const skipped: EpisodeRef[] = [
+		...(t.unmappedSkipped ?? []),
+		...t.seasons.flatMap((s, i) => (s.skippedEpisodes ?? []).map((episode) => ({ season: i + 1, episode }))),
+	];
+	return {
+		[T.watchedEpisodes]: formatEpisodeRange([...fromAbsolute(t.watchedEpisodes, mapping), ...(t.unmappedWatched ?? [])]),
+		...optional(T.skippedEpisodes, skipped.length > 0 && formatEpisodeRange(skipped)),
+	};
+}
+
+/** Progress: movies are carried by status; while a season refill is pending the note's text is left alone. */
+function progressProps(t: HoardTitle, refillPending: boolean): Fm {
 	const mapping = mappingSeasons(t);
-	if (!isMovie(t.seasons, t.totalEpisodes) && !seasonsPending && mapping.length > 0) {
-		out[T.watchedEpisodes] = formatEpisodeRange([...fromAbsolute(t.watchedEpisodes, mapping), ...(t.unmappedWatched ?? [])]);
-		const skipped: EpisodeRef[] = [...(t.unmappedSkipped ?? [])];
-		t.seasons.forEach((s, i) => {
-			for (const episode of s.skippedEpisodes ?? []) skipped.push({ season: i + 1, episode });
-		});
-		if (skipped.length > 0) out[T.skippedEpisodes] = formatEpisodeRange(skipped);
-	}
-	if (t.seasonsOverride) out[T.seasons] = t.seasons.map((s) => `${s.name}: ${s.episodes}`);
+	const mapped = !isMovie(t.seasons, t.totalEpisodes) && !refillPending && mapping.length > 0;
+	return {
+		...(mapped ? episodeProps(t, mapping) : {}),
+		...optional(T.seasons, t.seasonsOverride && t.seasons.map((s) => `${s.name}: ${s.episodes}`)),
+	};
+}
 
-	if (t.manualDirector?.length) out[T.addedDirector] = t.manualDirector;
-	if (t.manualCast?.length) out[T.addedCast] = t.manualCast;
-	if (t.manualStudio?.length) out[T.addedStudio] = t.manualStudio;
+function addedCreditProps(t: HoardTitle): Fm {
+	return {
+		...optional(T.addedDirector, nonEmpty(t.manualDirector)),
+		...optional(T.addedCast, nonEmpty(t.manualCast)),
+		...optional(T.addedStudio, nonEmpty(t.manualStudio)),
+	};
+}
 
-	const a = t.airtime;
-	if (a) {
-		out[A.recurrence] = a.recurrence;
-		if (a.day !== undefined) out[A.day] = a.day;
-		if (a.time !== undefined) out[A.time] = a.time;
-		if (a.season !== undefined) out[A.season] = a.season;
-		if (a.episode !== undefined) out[A.episode] = a.episode;
-		if (a.acknowledged !== undefined) out[A.acknowledged] = a.acknowledged;
-	}
-	return out;
+/** Unlike `airtimeProps` in readingCodec.ts, an empty time or acknowledgement is a value here and is written. */
+function titleAirtimeProps(a: EntryAirtime | undefined): Fm {
+	if (!a) return {};
+	return {
+		[A.recurrence]: a.recurrence,
+		...defined({ [A.day]: a.day, [A.time]: a.time, [A.season]: a.season, [A.episode]: a.episode, [A.acknowledged]: a.acknowledged }),
+	};
+}
+
+/** The properties of a title's note; keys are the frozen property names. `notes` is not included. */
+export function titleToProperties(t: HoardTitle, progress: number, seasonsPending = false): Record<string, unknown> {
+	return {
+		...coreProps(t, progress),
+		...overrideProps(t.overrides),
+		...linkAndFlagProps(t),
+		...progressProps(t, seasonsPending),
+		...addedCreditProps(t),
+		...titleAirtimeProps(t.airtime),
+	};
 }
 
 /** Cache keys titleToCache owns; everything else in a cache entry (apiCheck, airing, …) is kept on sync. */
@@ -409,23 +436,22 @@ export const TITLE_CACHE_KEYS = [
 
 /** API-derived fields that live in data.json (posters only as the 'none' marker); seasons only when not overridden in the note. */
 export function titleToCache(t: HoardTitle): EntryCache {
-	const c: EntryCache = {};
-	if (t.posterUrl === 'none') c.posterUrl = t.posterUrl;
-	if (t.trailerUrl !== undefined) c.trailerUrl = t.trailerUrl;
-	if (t.director) c.director = t.director;
-	if (t.cast) c.cast = t.cast;
-	if (t.studio) c.studio = t.studio;
-	if (t.communityRating !== undefined) c.communityRating = t.communityRating;
-	if (t.communityVotes !== undefined) c.communityVotes = t.communityVotes;
-	if (t.communitySource) c.communitySource = t.communitySource;
-	if (t.communityRatingLastFetched !== undefined) c.communityRatingLastFetched = t.communityRatingLastFetched;
-	if (t.collectionId !== undefined) c.collectionId = t.collectionId;
-	if (t.tmdbId !== undefined) c.tmdbId = t.tmdbId;
-	if (t.tmdbMediaType) c.tmdbMediaType = t.tmdbMediaType;
-	if (t.malId !== undefined) c.malId = t.malId;
-	if (t.anilistId !== undefined) c.anilistId = t.anilistId;
-	if (!t.seasonsOverride && t.seasons.length > 0) {
-		c.seasons = t.seasons.map((s) => ({ name: s.name, episodes: s.episodes, offset: s.offset }));
-	}
-	return c;
+	const cachedSeasons = !t.seasonsOverride && t.seasons.length > 0;
+	return defined({
+		posterUrl: t.posterUrl === 'none' ? t.posterUrl : undefined,
+		trailerUrl: t.trailerUrl,
+		director: t.director || undefined,
+		cast: t.cast || undefined,
+		studio: t.studio || undefined,
+		communityRating: t.communityRating,
+		communityVotes: t.communityVotes,
+		communitySource: t.communitySource || undefined,
+		communityRatingLastFetched: t.communityRatingLastFetched,
+		collectionId: t.collectionId,
+		tmdbId: t.tmdbId,
+		tmdbMediaType: t.tmdbMediaType || undefined,
+		malId: t.malId,
+		anilistId: t.anilistId,
+		seasons: cachedSeasons ? t.seasons.map((s) => ({ name: s.name, episodes: s.episodes, offset: s.offset })) : undefined,
+	});
 }

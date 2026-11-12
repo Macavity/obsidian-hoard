@@ -4,6 +4,7 @@ import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { FmReader, airtimeProps, decodeAirtime } from './readingCodec';
 import { COMMON_PROPS as C, GAME_PROPS as G } from './properties';
+import { optional } from './sharedHelpers';
 
 const PLAYTIME_RE = /^(?:(\d{1,3}(?:,\d{3})+|\d+)h)?(?: ?(\d+)m)?$/;
 
@@ -93,11 +94,6 @@ export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Gam
 	if (!entry.groups?.length) delete entry.groups;
 	if (!entry.airtime) delete entry.airtime;
 	return { entry, invalidFields: r.invalidFields };
-}
-
-/** `{ key: value }` when the value is set, else `{}`: optional properties stay out of the note. */
-function optional(key: string, value: unknown): Fm {
-	return value ? { [key]: value } : {};
 }
 
 function identityProps(g: Game): Fm {
