@@ -19,6 +19,8 @@ Two things feed the Upcoming tab:
    monthly`), `Airtime Day`, `Airtime Time`, `Airtime Season`, `Airtime Episode`, `Airtime Acknowledged`.
    Decoded into `EntryAirtime` by the codecs (titles in [titleCodec](../../src/storage/titleCodec.ts),
    reading and games via `decodeAirtime` in [readingCodec](../../src/storage/readingCodec.ts)).
+   The two disagree on empty values: a title keeps an empty `Airtime Time` as a value and reports
+   an empty `Airtime Recurrence` as invalid; reading and games read both as not set.
    A `once` schedule keeps its date in the note's `Release Date`.
 2. **A derived card** for any entry whose status is "To be released" with a release date; no
    airtime keys exist for it.
