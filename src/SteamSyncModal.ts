@@ -3,7 +3,8 @@ import type HoardPlugin from './main';
 import type { GameDataManager } from './GameDataManager';
 import { Game, SteamSyncUpdate, GAME_AUTO_STATUS, formatTime } from './types';
 import { t } from './i18n';
-import { steamAppIdFromUrl, type SteamOwnedGame, type SteamFailureReason } from './ApiService';
+import { steamAppIdFromUrl, type SteamAppDetails, type SteamOwnedGame, type SteamFailureReason } from './ApiService';
+import { newGame } from './entryFactories';
 import { steamLibraryCover } from './steamStoreApi';
 
 /**
@@ -314,11 +315,10 @@ export class SteamSyncModal extends Modal {
 	 */
 	private buildGame(
 		steam: SteamOwnedGame,
-		details: Awaited<ReturnType<HoardPlugin['apiService']['getSteamAppDetails']>>,
+		details: SteamAppDetails | null,
 		achievements: { earned: number; total: number } | null,
 	): Game {
 		const settings = this.gameData.getSettings();
-		const now = new Date().toISOString();
 		const title = details?.name || steam.name || `App ${steam.appId}`;
 
 		// genre: the first storefront genre matching a configured one, else the configured default — never
@@ -332,39 +332,20 @@ export class SteamSyncModal extends Modal {
 			?? settings.statuses[0]?.name
 			?? '';
 
-		return {
+		// library data first; what the storefront and the achievements call returned lies over it
+		return newGame({
 			id: this.gameData.generateGameId(title),
 			title,
-			developer: details?.developer ?? '',
-			publisher: details?.publisher ?? '',
 			type: genre,
 			status,
-			priority: '',
-			favorite: false,
-			wishlist: false,
-			rating: 0,
-			progress: 0,
 			playtimeMinutes: steam.playtimeMinutes,
-			achievementsEarned: achievements?.earned ?? 0,
-			achievementsTotal: achievements?.total ?? 0,
-			platforms: [],
-			singleplayer: details?.singleplayer ?? false,
-			coop: details?.coop ?? false,
-			multiplayer: details?.multiplayer ?? false,
-			coverUrl: details?.coverUrl ?? steamLibraryCover(steam.appId),
-			apiSource: '',
-			apiId: '',
 			steamAppId: steam.appId,
 			lastPlayed: steam.lastPlayed,
-			storeUrl: details?.storeUrl ?? `https://store.steampowered.com/app/${steam.appId}/`,
-			externalLink: '',
-			vaultPage: '',
-			releaseDate: details?.releaseDate ?? null,
-			dateStarted: null,
-			dateFinished: null,
-			dateAdded: now,
-			dateModified: now,
-		};
+			coverUrl: steamLibraryCover(steam.appId),
+			storeUrl: `https://store.steampowered.com/app/${steam.appId}/`,
+			...(details && storefrontFields(details)),
+			...(achievements && { achievementsEarned: achievements.earned, achievementsTotal: achievements.total }),
+		});
 	}
 
 	private renderDone(updated: number, imported: number, cancelled: boolean): void {
@@ -404,6 +385,20 @@ export class SteamSyncModal extends Modal {
  * Match key for titles: case-folded, trademark noise and punctuation stripped, whitespace collapsed.
  * Deliberately conservative — it must not fold a series together (Portal / Portal 2 stay apart).
  */
+/** What the storefront knows about an app and the library entry does not. */
+function storefrontFields(d: SteamAppDetails): Partial<Game> {
+	return {
+		developer: d.developer,
+		publisher: d.publisher,
+		singleplayer: d.singleplayer,
+		coop: d.coop,
+		multiplayer: d.multiplayer,
+		coverUrl: d.coverUrl,
+		storeUrl: d.storeUrl,
+		releaseDate: d.releaseDate,
+	};
+}
+
 function normalizeTitle(raw: string): string {
 	return raw
 		.toLowerCase()
