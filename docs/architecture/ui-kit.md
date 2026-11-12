@@ -88,7 +88,9 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.import
 - **Search language** (`searchItems` in [SearchQuery.ts](../../src/SearchQuery.ts)): Fuse index
   over declared fields; bare tokens fuzzy and ANDed, `"quoted"` exact, `field:value` scoped (an
   unknown prefix stays text, so `Re:Zero` works), `field:>n` and friends numeric, `a | b` ORs,
-  `-token` excludes. Empty query returns null, meaning "no search".
+  `-token` excludes. Empty query returns null, meaning "no search". The query is lexed, then turned
+  into tokens; `matches` picks one matcher per token: a comparison only on a named field that has a
+  number (`title:2049` and a bare `>2020` are searched as text), a phrase when quoted, else fuzzy.
 - **Text helpers**: all display text goes through `t()` ([i18n](i18n.md)); shared renderers live in
   `ui/`: `typeBadge`, `choiceGrid` (add choosers), `detailShared` (favourite button, editable title,
   group header, episode-grid text), `detailFrame` (what all three detail modals build alike:

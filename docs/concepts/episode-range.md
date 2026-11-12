@@ -5,6 +5,7 @@ description: The S01E01-E12 notation in watched and skipped properties, and how 
 source:
   - src/storage/episodeRange.ts
   - src/storage/titleCodec.ts
+  - src/storage/seasonText.ts
   - src/types.ts
 source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
@@ -27,6 +28,10 @@ all seasons**; the two forms are converted by [episodeRange.ts](../../src/storag
 `mappingSeasons` in [titleCodec.ts](../../src/storage/titleCodec.ts): the title's seasons, else one
 implicit "Season 1" of `totalEpisodes`. Seasons come from the note (`Seasons` lines `Name: N`,
 optional `(skip spec)`, sets `seasonsOverride`) or from the [entry cache](entry-cache.md) (API).
+That line format is read in one place, [seasonText.ts](../../src/storage/seasonText.ts), for the note
+and for the edit form's seasons box. The bounds differ on purpose: the codec rejects all seasons of
+a note when a count exceeds `MAX_EPISODE` or a skipped episode lies beyond its season; the edit form
+applies none.
 
 - A **movie** (one season named "Movie", or no seasons and exactly one episode) carries no
   `Watched Episodes` text; `status: Completed` means episode 1 watched.
