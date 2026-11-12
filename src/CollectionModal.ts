@@ -4,6 +4,8 @@ import { App, Modal, Notice } from 'obsidian';
 import { t } from './i18n';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
+import { newTitle } from './entryFactories';
+import { nonEmpty } from './storage/sharedHelpers';
 import type {
 	HoardTitle,
 	HoardGroup,
@@ -406,26 +408,17 @@ export class CollectionModal extends Modal {
 			}
 			takenIds.add(id);
 
-			const now = new Date().toISOString();
-			entries.push({
+			entries.push(newTitle({
 				id,
 				title: detail.title,
 				type: this.movieType,
 				status,
 				priority,
-				review: '',
-				rating: 0,
-				notes: '',
-				dateStarted: null,
-				dateFinished: null,
-				dateAdded: now,
-				dateModified: now,
 				totalEpisodes: detail.episodes,
 				episodeDuration: detail.episodeDuration,
 				releaseDate: detail.releaseDate || null,
 				externalLink: detail.url,
 				seasons: detail.seasons,
-				watchedEpisodes: [],
 				favorite: false,
 				posterUrl: '',
 				trailerUrl: detail.trailerUrl ?? '',
@@ -433,9 +426,9 @@ export class CollectionModal extends Modal {
 				// both ids known — skips the ladder forever
 				tmdbId: part.id,
 				collectionId: this.collection.id,
-				...(detail.director && detail.director.length > 0 ? { director: detail.director } : {}),
-				...(detail.cast && detail.cast.length > 0 ? { cast: detail.cast } : {}),
-			});
+				director: nonEmpty(detail.director),
+				cast: nonEmpty(detail.cast),
+			}));
 		}
 
 		if (entries.length > 0) {

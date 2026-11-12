@@ -15,6 +15,7 @@ import {
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardGroup, Season } from './types';
+import { completedEpisodes } from './entryFactories';
 
 /** Parses "5,8,33-37,42" into a sorted unique flat array of numbers. */
 function parseSkipSpec(spec: string): number[] {
@@ -300,14 +301,11 @@ export class EditTitleModal extends Modal {
 			episodeDuration: this.fieldDuration,
 			externalLink: this.fieldLink,
 			seasons,
+			// keep an already-Completed title fully ticked when its episode count changes here
+			watchedEpisodes: completedEpisodes(this.original.status, this.fieldEpisodes) ?? this.original.watchedEpisodes,
 			posterUrl: this.fieldPosterUrl.trim() || (this.original.posterUrl === 'none' ? 'none' : ''),
 			manualTrailerUrl: this.fieldTrailerUrl.trim(),
 		};
-
-		// keep an already-Completed title fully ticked when its episode count changes here
-		if (updated.status === 'Completed' && updated.totalEpisodes > 0) {
-			updated.watchedEpisodes = Array.from({ length: updated.totalEpisodes }, (_, i) => i + 1);
-		}
 
 		await this.dataManager.updateTitle(updated);
 
