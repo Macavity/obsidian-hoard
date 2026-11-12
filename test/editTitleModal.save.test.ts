@@ -86,8 +86,9 @@ describe('EditTitleModal seasons text', () => {
 		expect(await skippedFor('S1: 12 (3-x)')).toEqual([]);
 	});
 
-	it('reads a skip entry with more than one dash as its first number', async () => {
-		expect(await skippedFor('S1: 12 (1-2-3)')).toEqual([1]);
+	it('ignores a skip entry with more than one dash, as the note codec does', async () => {
+		expect(await skippedFor('S1: 12 (1-2-3)')).toEqual([]);
+		expect(await skippedFor('S1: 12 (1-2-3,7)')).toEqual([7]);
 	});
 
 	it('shows the seasons of the title as text, runs of skipped episodes collapsed', () => {

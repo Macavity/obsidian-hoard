@@ -3,6 +3,7 @@ import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId, Fm } 
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
 import { externalIdFromLink, formatExternalId, parseExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, TITLE_PROPS as T } from './properties';
+import { parseSeasonLine, seasonsOf } from './seasonText';
 import { defined, nonEmpty, optional } from './sharedHelpers';
 
 const RECURRENCES: readonly AirtimeRecurrence[] = ['once', 'daily', 'weekly', 'monthly'];
@@ -31,42 +32,13 @@ function mappingSeasons(t: HoardTitle): Season[] {
 }
 
 /**
- * Parses "Name: N" lines (optional " (skip_spec)") into seasons; offsets are cumulative. null when a
- * count or skipped episode is out of bounds.
+ * Seasons from the lines of the Seasons property. null when a count exceeds the episode limit or a
+ * skipped episode lies beyond its season; a line that is not "Name: N" is skipped.
  */
 function parseSeasonLines(lines: string[]): Season[] | null {
-	const seasons: Season[] = [];
-	let offset = 0;
-	for (const line of lines) {
-		const m = line.trim().match(/^(.+?):\s*(\d+)(?:\s*\(([^)]+)\))?/);
-		if (!m || !m[1] || !m[2]) continue;
-		const episodes = parseInt(m[2], 10);
-		if (episodes > MAX_EPISODE) return null;
-		const skippedEpisodes = m[3] ? parseSkipSpec(m[3], episodes) : [];
-		if (!skippedEpisodes) return null;
-		seasons.push({ name: m[1].trim(), episodes, offset, skippedEpisodes });
-		offset += episodes;
-	}
-	return seasons;
-}
-
-/** "5,8,33-37" -> [5, 8, 33..37]; null when a number exceeds the season's `episodes`. */
-function parseSkipSpec(spec: string, episodes: number): number[] | null {
-	const out: number[] = [];
-	for (const part of spec.split(',').map((s) => s.trim()).filter(Boolean)) {
-		const bits = part.split('-');
-		if (bits.length === 2) {
-			const from = parseInt(bits[0] ?? '', 10);
-			const to = parseInt(bits[1] ?? '', 10);
-			if (to > episodes) return null;
-			if (!isNaN(from) && !isNaN(to) && from <= to) for (let i = from; i <= to; i++) out.push(i);
-		} else if (bits.length === 1) {
-			const n = parseInt(part, 10);
-			if (n > episodes) return null;
-			if (!isNaN(n)) out.push(n);
-		}
-	}
-	return [...new Set(out)].sort((x, y) => x - y);
+	const read = lines.map(parseSeasonLine).filter((l) => l !== null);
+	const outOfBounds = read.some((l) => l.episodes > MAX_EPISODE || l.skipped.some((r) => r.to > l.episodes));
+	return outOfBounds ? null : seasonsOf(read);
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
