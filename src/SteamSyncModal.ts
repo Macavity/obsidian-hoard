@@ -381,10 +381,6 @@ export class SteamSyncModal extends Modal {
 	}
 }
 
-/**
- * Match key for titles: case-folded, trademark noise and punctuation stripped, whitespace collapsed.
- * Deliberately conservative — it must not fold a series together (Portal / Portal 2 stay apart).
- */
 /** What the storefront knows about an app and the library entry does not. */
 function storefrontFields(d: SteamAppDetails): Partial<Game> {
 	return {
@@ -399,6 +395,10 @@ function storefrontFields(d: SteamAppDetails): Partial<Game> {
 	};
 }
 
+/**
+ * Match key for titles: case-folded, trademark noise and punctuation stripped, whitespace collapsed.
+ * Deliberately conservative — it must not fold a series together (Portal / Portal 2 stay apart).
+ */
 function normalizeTitle(raw: string): string {
 	return raw
 		.toLowerCase()
