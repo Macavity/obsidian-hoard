@@ -83,45 +83,64 @@ function parseCompare(raw: string): Comparison | null {
 	return { op: (m[1] as Comparator) ?? '=', value: Number(m[2]) };
 }
 
-/**
- * Splits a raw query into tokens. Unknown `field:` prefixes are NOT treated as fields — "Re:Zero"
- * must stay a plain search, so the prefix only counts when it names a real field.
- */
-function parseQuery<T>(query: string, fields: SearchFieldSpec<T>[]): Token[] {
-	const canonical = new Map<string, string>();
-	for (const f of fields) {
-		canonical.set(f.name.toLowerCase(), f.name);
-		for (const a of f.aliases ?? []) canonical.set(a.toLowerCase(), f.name);
-	}
+/** One piece of the query as written, before it means anything. */
+interface Lexeme {
+	negated: boolean;
+	/** The word before a `:`, whether or not it names a field. */
+	prefix: string | undefined;
+	text: string;
+	quoted: boolean;
+}
 
+function lex(query: string): Lexeme[] {
+	return [...spaceOutPipes(query).matchAll(TOKEN_RE)].map((m) => ({
+		negated: m[1] === '-',
+		prefix: m[2],
+		text: m[3] ?? m[4] ?? '',
+		quoted: m[3] !== undefined,
+	}));
+}
+
+const isPipe = (l: Lexeme): boolean => !l.quoted && l.prefix === undefined && l.text === '|';
+
+/** Lower-cased name or alias of each field, mapped to the field's canonical name. */
+function fieldNames<T>(fields: SearchFieldSpec<T>[]): Map<string, string> {
+	return new Map(fields.flatMap((f) => [f.name, ...(f.aliases ?? [])].map((n): [string, string] => [n.toLowerCase(), f.name])));
+}
+
+/**
+ * The token a lexeme stands for, or null when it leaves nothing to search for. A prefix counts as a
+ * field only when it names one: "Re:Zero" must stay a plain search, so an unknown prefix is text.
+ */
+function toToken(lexeme: Lexeme, names: Map<string, string>, alternate: boolean): Token | null {
+	const field = lexeme.prefix ? names.get(lexeme.prefix.toLowerCase()) ?? null : null;
+	const text = lexeme.prefix && !field ? `${lexeme.prefix}:${lexeme.text}` : lexeme.text;
+	if (!text) return null;
+	return {
+		negated: lexeme.negated,
+		field,
+		text,
+		exact: lexeme.quoted,
+		compare: lexeme.quoted ? null : parseCompare(text),
+		alternate,
+	};
+}
+
+/** Splits a raw query into tokens. A bare `|` is no token: it marks the next one as an alternative. */
+function parseQuery<T>(query: string, fields: SearchFieldSpec<T>[]): Token[] {
+	const names = fieldNames(fields);
 	const tokens: Token[] = [];
-	TOKEN_RE.lastIndex = 0;
-	let m: RegExpExecArray | null;
-	// a bare `|` does not become a token — it flags the next one as an alternative
-	let pendingOr = false;
-	while ((m = TOKEN_RE.exec(spaceOutPipes(query))) !== null) {
-		const prefix = m[2];
-		const quoted = m[3];
-		const bare = m[4];
-		const field = prefix ? canonical.get(prefix.toLowerCase()) ?? null : null;
-		// unknown prefix — fold it back into the text so "Re:Zero" still searches
-		let text = quoted !== undefined ? quoted : bare ?? '';
-		if (prefix && !field) text = `${prefix}:${text}`;
-		if (!text) continue;
-		if (quoted === undefined && text === '|') {
-			// dangling leading `|` has nothing to join
-			pendingOr = tokens.length > 0;
+	let alternate = false;
+	for (const lexeme of lex(query)) {
+		if (isPipe(lexeme)) {
+			// a leading `|` has nothing to join
+			alternate = tokens.length > 0;
 			continue;
 		}
-		tokens.push({
-			negated: m[1] === '-',
-			field,
-			text,
-			exact: quoted !== undefined,
-			compare: quoted !== undefined ? null : parseCompare(text),
-			alternate: pendingOr,
-		});
-		pendingOr = false;
+		const token = toToken(lexeme, names, alternate);
+		if (!token) continue;
+		tokens.push(token);
+		alternate = false;
 	}
 	return tokens;
 }
