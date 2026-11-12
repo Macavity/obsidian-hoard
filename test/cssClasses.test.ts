@@ -4,7 +4,8 @@ import { BEM_PATTERN, checkCssClasses, classesInCss, shortTokens, wordsInStrings
 import { runCheck, unimportedPartials } from "../scripts/check-css-classes.mjs";
 import { bundleStyles } from "../scripts/lib/bundle-styles.mjs";
 import stylelintConfig from "../stylelint.config.mjs";
-import { readFileSync } from "fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 
 describe("css class check", () => {
@@ -72,5 +73,36 @@ describe("stylelint config", () => {
 			expect(re.test(name), name).toBe(BEM_PATTERN.test(name));
 		}
 		for (const foreign of ["is-active", "modal-content", "theme-dark"]) expect(foreign).toMatch(re);
+	});
+});
+
+describe("bundleStyles line endings", () => {
+	const dirWith = (files: Record<string, string>): string => {
+		const dir = mkdtempSync(join(tmpdir(), "hoard-css-"));
+		for (const [name, text] of Object.entries(files)) {
+			mkdirSync(join(dir, name, ".."), { recursive: true });
+			writeFileSync(join(dir, name), text);
+		}
+		return dir;
+	};
+
+	it("inlines CRLF imports without line-ending residue", () => {
+		const dir = dirWith({ "index.css": '@import "a.css";\r\n@import "b.css";\r\n', "a.css": ".a{}\r\n", "b.css": ".b{}\r\n" });
+		expect(bundleStyles(join(dir, "index.css"))).toBe(".a{}\r\n.b{}\r\n");
+	});
+
+	it("inlines a last import that has no trailing newline", () => {
+		const dir = dirWith({ "index.css": '@import "a.css";\r\n@import "b.css";', "a.css": ".a{}\r\n", "b.css": ".b{}\r\n" });
+		expect(bundleStyles(join(dir, "index.css"))).toBe(".a{}\r\n.b{}\r\n");
+	});
+
+	it("inlines nested CRLF imports", () => {
+		const dir = dirWith({ "index.css": '@import "sub/c.css";\r\n', "sub/c.css": '@import "d.css";\r\n.c{}\r\n', "sub/d.css": ".d{}\r\n" });
+		expect(bundleStyles(join(dir, "index.css"))).toBe(".d{}\r\n.c{}\r\n");
+	});
+
+	it("keeps LF input byte-identical", () => {
+		const dir = dirWith({ "index.css": '@import "a.css";\n@import "b.css";\n', "a.css": ".a{}\n", "b.css": ".b{}\n" });
+		expect(bundleStyles(join(dir, "index.css"))).toBe(".a{}\n.b{}\n");
 	});
 });
