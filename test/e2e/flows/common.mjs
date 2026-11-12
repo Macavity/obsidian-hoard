@@ -1,6 +1,6 @@
 // Shared helpers of the click flows. Everything that performs an action goes through test/e2e/ui.mjs; evalJs only reads.
 import { assert, evalJs, obs, waitFor } from "../../../scripts/lib/cli.mjs";
-import { click, waitForSelector } from "../ui.mjs";
+import { click, press, waitForSelector } from "../ui.mjs";
 
 const cdp = (method, params) => obs("dev:cdp", { method, params: JSON.stringify(params) });
 
@@ -50,19 +50,25 @@ export function typeAheadPrefix(label, others) {
 }
 
 /**
- * Picks an option of a native `<select>` by value, by type-ahead: clicking focuses the select (the native popup does not
- * open under CDP), then the shortest unique prefix of the option's label is typed key by key.
+ * Picks an option of a native `<select>` by value, by type-ahead: a click focuses the select, then the shortest unique
+ * prefix of the option's label is typed key by key. What the click does beyond focusing depends on the platform. Under
+ * CDP the native popup stays closed on macOS and typing changes the value at once. On Windows the popup opens, typing only
+ * highlights the option and Enter commits it. So Enter follows only while the value is still the old one: on a closed
+ * select it would go to the modal instead. A select that already holds the value is left alone, as there is nothing to
+ * commit and the popup would stay open.
  */
 export async function chooseOption(selector, value) {
+	const current = () => evalJs(`document.querySelector(${JSON.stringify(selector)}).value`);
 	const labels = JSON.parse(evalJs(`JSON.stringify([...document.querySelector(${JSON.stringify(selector)}).options].map((o) => [o.value, o.text]))`));
 	const label = labels.find(([v]) => v === value)?.[1];
 	assert(label !== undefined, `option ${value} missing in ${selector}`);
+	if (current() === value) return;
 	const prefix = typeAheadPrefix(label, labels.filter(([v]) => v !== value).map(([, t]) => t));
 	await click(selector);
 	for (const ch of prefix) {
 		cdp("Input.dispatchKeyEvent", { type: "keyDown", key: ch, text: ch, unmodifiedText: ch });
 		cdp("Input.dispatchKeyEvent", { type: "keyUp", key: ch });
 	}
-	const got = evalJs(`document.querySelector(${JSON.stringify(selector)}).value`);
-	assert(got === value, `${selector}: expected ${value}, got ${got}`);
+	if (current() !== value) await press("Enter");
+	assert(current() === value, `${selector}: expected ${value}, got ${current()}`);
 }

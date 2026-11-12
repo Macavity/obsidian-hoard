@@ -7,7 +7,7 @@
 import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assert, ensureVault, evalJs, obs, screenshot, waitFor } from "./lib/cli.mjs";
+import { assert, ensureVault, evalJs, obs, screenshot, waitFor, warnIfHidden } from "./lib/cli.mjs";
 
 const OUT = process.env.MOBILE_SMOKE_OUT ?? join(tmpdir(), "hoard-view--mobile");
 const PHONE_WIDTH = 360; // a small Android phone; iPhones start at 375
@@ -18,6 +18,7 @@ const json = (code) => JSON.parse(evalJs(`JSON.stringify(${code})`));
 const cdp = (method, params) => obs("dev:cdp", { method, params: JSON.stringify(params) });
 
 ensureVault();
+warnIfHidden();
 mkdirSync(OUT, { recursive: true });
 
 /** `dev:mobile` reloads the app; until it is back, every CLI command answers "Command … not found". */

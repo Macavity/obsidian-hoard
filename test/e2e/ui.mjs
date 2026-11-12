@@ -53,16 +53,32 @@ async function settledPoint(selector) {
 	return p;
 }
 
+/**
+ * Moves the pointer onto the element and returns where it ended up. Hover handlers repaint on mousemove, and the repaint
+ * can move the element out from under the pointer (a label that changes width re-wraps its row), so the point is read
+ * again after each move and followed, as a hand would.
+ */
+async function hover(selector) {
+	let p = await settledPoint(selector);
+	for (let i = 0; i < 3; i++) {
+		cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: p.x, y: p.y });
+		// a press right behind the move can hit-test against the pre-hover layout
+		await sleep(80);
+		const next = point(selector);
+		if (next.x === p.x && next.y === p.y) break;
+		p = next;
+	}
+	return p;
+}
+
 /** Clicks the centre of the element; throws if it is missing, hidden or covered. Leaves no hover state behind. */
 export async function click(selector) {
-	const { x, y } = await settledPoint(selector);
 	if (INPUT_MODE === "dom") {
+		await settledPoint(selector);
 		evalJs(`document.querySelector(${JSON.stringify(selector)}).click()`);
 		return;
 	}
-	cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
-	// hover handlers repaint on mousemove; a press right behind it can hit-test against the pre-hover layout
-	await sleep(80);
+	const { x, y } = await hover(selector);
 	cdp("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
 	cdp("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
 	cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 0 });

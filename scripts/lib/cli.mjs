@@ -20,6 +20,23 @@ function mainCheckout() {
 	}
 }
 
+/**
+ * File and arguments that start `pnpm <args>`. On Windows pnpm is the batch file `pnpm.cmd`, which cannot be spawned
+ * directly, so it runs through cmd.exe. cmd.exe parses its command line again, hence only plain words are let through.
+ */
+export function pnpmCommand(args, platform = process.platform) {
+	if (platform !== "win32") return ["pnpm", args];
+	const odd = args.find((a) => !/^[\w:.=-]+$/.test(a));
+	if (odd !== undefined) throw new Error(`pnpm: argument ${JSON.stringify(odd)} is not a plain word`);
+	return ["cmd.exe", ["/d", "/c", "pnpm", ...args]];
+}
+
+/** Runs `pnpm <args>` in this checkout, output passed through. Throws when it exits non-zero. */
+export function pnpm(...args) {
+	const [file, argv] = pnpmCommand(args);
+	execFileSync(file, argv, { cwd: REPO, stdio: "inherit" });
+}
+
 const CLI_TIMEOUT_MS = 30000;
 
 function run(args) {
@@ -27,6 +44,7 @@ function run(args) {
 		return execFileSync("obsidian", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: CLI_TIMEOUT_MS, killSignal: "SIGKILL" });
 	} catch (e) {
 		if (e?.code === "ETIMEDOUT" || e?.killed) return afterTimeout(args, e);
+		if (e?.code === "ENOENT") throw new Error("The `obsidian` command is not on PATH: enable the command line interface in Obsidian's settings (General), then open a new terminal.");
 		throw e;
 	}
 }
@@ -75,6 +93,13 @@ export function screenshot(path) {
 			console.warn(`screenshot ${path} failed once, retrying: ${e.message}`);
 		}
 	}
+}
+
+/** Warns when the Obsidian window is minimised or fully covered: Chromium then stops painting it, so clicks miss, native
+ * popups stay shut and screenshots fail. Nothing can bring the window forward on every platform, hence only a warning. */
+export function warnIfHidden() {
+	if (evalJs("document.visibilityState") === "visible") return;
+	console.warn("The hoard-test-vault window is minimised or covered by another window. Keep it visible, or expect timeouts and missed clicks.");
 }
 
 export function assert(cond, msg) {
