@@ -23,17 +23,18 @@ jobs:
         with:
           # Full history: the attribution check reads every commit of the PR.
           fetch-depth: 0
-      # GitHub lists every Co-authored-by name as a contributor of the repository, so a commit
-      # that names an AI assistant as co-author, author or committer must not reach main.
-      - name: No AI attribution in commits
+      # GitHub lists every Co-authored-by name as a contributor of the repository, so no commit
+      # with such a line may reach main, whoever it names. An AI assistant as author or committer
+      # is refused for the same reason.
+      - name: No co-author attribution in commits
         if: github.event_name == 'pull_request'
         env:
           RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
         run: |
-          trailers=$(git log -i -E --grep='^Co-authored-by:.*(claude|anthropic)' --format='%h %s' "$RANGE")
+          trailers=$(git log -i -E --grep='^Co-authored-by:' --format='%h %s' "$RANGE")
           authors=$(git log --format='%h %s (%ae, %ce)' "$RANGE" | grep -i 'anthropic\.com' || true)
           if [ -n "$trailers$authors" ]; then
-            echo "::error::These commits carry AI attribution. Rewrite them without the Co-authored-by line and under your own name, then force-push the branch."
+            echo "::error::These commits carry a Co-authored-by line or an AI assistant as author. Rewrite them without the line and under your own name, then force-push the branch."
             printf '%s\n' "$trailers" "$authors" | sed '/^$/d'
             exit 1
           fi
