@@ -3,7 +3,7 @@ import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId, Fm } 
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
 import { externalIdFromLink, formatExternalId, parseExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, TITLE_PROPS as T } from './properties';
-import { optional } from './sharedHelpers';
+import { defined, nonEmpty, optional } from './sharedHelpers';
 
 const RECURRENCES: readonly AirtimeRecurrence[] = ['once', 'daily', 'weekly', 'monthly'];
 
@@ -116,8 +116,6 @@ class Reader {
 	}
 }
 
-const nonEmpty = <T>(v: T[] | undefined): T[] | undefined => (v && v.length > 0 ? v : undefined);
-
 function identityOf(r: Reader, fm: Record<string, unknown>, link: string): ExternalId | null {
 	const rawId = fm[C.externalId];
 	const idText = typeof rawId === 'string' ? rawId : undefined;
@@ -127,11 +125,6 @@ function identityOf(r: Reader, fm: Record<string, unknown>, link: string): Exter
 		r.invalid.push(C.externalId);
 	}
 	return link ? externalIdFromLink(link) : null;
-}
-
-/** Drops keys whose value is undefined, so an optional field is absent instead of present-and-undefined. */
-function defined<T extends object>(o: T): { [K in keyof T]?: Exclude<T[K], undefined> } {
-	return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as { [K in keyof T]?: Exclude<T[K], undefined> };
 }
 
 const isRecurrence = (v: string): v is AirtimeRecurrence => (RECURRENCES as readonly string[]).includes(v);
