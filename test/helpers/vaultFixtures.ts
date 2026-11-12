@@ -4,7 +4,7 @@ import { join, relative, resolve, sep } from "node:path";
 import { parse } from "yaml";
 import { COMMON_PROPS } from "../../src/storage/properties";
 import { VaultLayout } from "../../src/storage/VaultLayout";
-import { decodeTitle } from "../../src/storage/titleCodec";
+import { titleFromProperties } from "../../src/storage/titleCodec";
 import { decodeBook, decodeManga } from "../../src/storage/readingCodec";
 import { decodeGame } from "../../src/storage/gameCodec";
 import { parseHistoryLine } from "../../src/storage/historyLine";
@@ -83,7 +83,7 @@ function decodeEntry(c: NonNullable<ReturnType<VaultLayout["classify"]>>, path: 
 	}
 	if (COMMON_PROPS.externalId in fm) out.withExternalId.push(path);
 	try {
-		if (c.kind === "title") out.titles.push(decodeTitle(c.id, fm, undefined).entry);
+		if (c.kind === "title") out.titles.push(titleFromProperties(c.id, fm, undefined).entry);
 		else if (c.kind === "book") out.books.push(decodeBook(c.id, fm, []).entry);
 		else if (c.kind === "manga") out.manga.push(decodeManga(c.id, fm, []).entry);
 		else out.games.push(decodeGame(c.id, fm).entry);

@@ -35,7 +35,8 @@ export interface HoardTitle {
 	collectionId?: number;
 	communityRating?: number;
 	communityVotes?: number;
-	communitySource?: '' | 'imdb' | 'mal' | 'anilist' | 'tmdb';
+	/** `imdb`, `mal`, `anilist`, `tmdb` from the APIs; a note may name any other source */
+	communitySource?: string;
 	communityRatingLastFetched?: string;
 	pinned?: boolean;
 	/** backfilled to false for titles predating the field */

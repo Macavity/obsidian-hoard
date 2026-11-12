@@ -26,10 +26,10 @@ only keeps the marker `'none'` for "the API has no poster".
 
 ## How note and cache merge
 
-- `decodeTitle(id, properties, cache)` builds the in-memory title: note values win, cache fills
+- `titleFromProperties(id, properties, cache)` builds the in-memory title: note values win, cache fills
   the rest. `External ID` in the note wins over cached ids. A `Seasons` list in the note sets
   `seasonsOverride` and beats cached seasons.
-- `splitCache(title)` is the inverse for the cache side; `TITLE_CACHE_KEYS` names the keys it owns.
+- `titleToCache(title)` is the inverse for the cache side; `TITLE_CACHE_KEYS` names the keys it owns.
   `DataManager.syncCache` replaces those keys and keeps everything else (`apiCheck`, `airing`,
   refilled seasons the title does not carry).
 - Reading and game entries have no decoder-side cache merge: their codecs read the note only. The

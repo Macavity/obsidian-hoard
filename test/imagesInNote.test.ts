@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
-import { decodeTitle, encodeTitle, splitCache } from '../src/storage/titleCodec';
+import { titleFromProperties, titleToProperties, titleToCache } from '../src/storage/titleCodec';
 import { decodeBook, encodeBook } from '../src/storage/readingCodec';
 import { decodeGame, encodeGame } from '../src/storage/gameCodec';
 import { getDisplayPoster } from '../src/types';
@@ -13,20 +13,20 @@ const fmOf = (src: string | undefined): Record<string, unknown> =>
 
 describe('images are note fields (E12)', () => {
 	it('title codec: poster round-trips; none is never written', () => {
-		const fromNote = decodeTitle('Movie/A', { Name: 'A', Cover: 'https://mine' }, { posterUrl: 'https://cache' }).entry;
+		const fromNote = titleFromProperties('Movie/A', { Name: 'A', Cover: 'https://mine' }, { posterUrl: 'https://cache' }).entry;
 		expect(fromNote.posterUrl).toBe('https://mine');
-		expect(encodeTitle(fromNote, 0).Cover).toBe('https://mine');
-		expect(decodeTitle('Movie/A', { Name: 'A' }, { posterUrl: 'https://cache' }).entry.posterUrl).toBeUndefined();
-		const none = decodeTitle('Movie/A', { Name: 'A' }, { posterUrl: 'none' }).entry;
+		expect(titleToProperties(fromNote, 0).Cover).toBe('https://mine');
+		expect(titleFromProperties('Movie/A', { Name: 'A' }, { posterUrl: 'https://cache' }).entry.posterUrl).toBeUndefined();
+		const none = titleFromProperties('Movie/A', { Name: 'A' }, { posterUrl: 'none' }).entry;
 		expect(none.posterUrl).toBe('none');
-		expect(encodeTitle(none, 0)).not.toHaveProperty('Cover');
-		expect(encodeTitle(makeTitle({ posterUrl: 'https://p' }), 0).Cover).toBe('https://p');
+		expect(titleToProperties(none, 0)).not.toHaveProperty('Cover');
+		expect(titleToProperties(makeTitle({ posterUrl: 'https://p' }), 0).Cover).toBe('https://p');
 		expect(getDisplayPoster(fromNote)).toBe('https://mine');
 	});
 
 	it('title cache keeps only the none marker', () => {
-		expect(splitCache(makeTitle({ posterUrl: 'https://p' }))).not.toHaveProperty('posterUrl');
-		expect(splitCache(makeTitle({ posterUrl: 'none' })).posterUrl).toBe('none');
+		expect(titleToCache(makeTitle({ posterUrl: 'https://p' }))).not.toHaveProperty('posterUrl');
+		expect(titleToCache(makeTitle({ posterUrl: 'none' })).posterUrl).toBe('none');
 	});
 
 	it('reading and game codecs: Cover is always encoded', () => {

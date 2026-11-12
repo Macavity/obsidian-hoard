@@ -71,8 +71,8 @@ unchanged. Names and rules: [properties](../concepts/properties.md).
 ## Schema-1 converter
 
 `importWatchLogData` ([schema1.ts](../../src/import/watchlog/schema1.ts)) turns a WatchLog schema-1
-`data.json` into notes with the normal codecs (`encodeTitle`, `encodeBook`, `encodeManga`,
-`encodeGame`, `splitCache`), so converted notes look like ones the plugin wrote. Order: normalize,
+`data.json` into notes with the normal codecs (`titleToProperties`, `encodeBook`, `encodeManga`,
+`encodeGame`, `titleToCache`), so converted notes look like ones the plugin wrote. Order: normalize,
 titles, Maybe titles (as `maybe: true`; one already in the library is reported), books, manga, games,
 history, base (last), cache merge, then device-local settings filled only where empty. Secrets never
 go into vault files (shared keys are whitelisted by the base store). `NoteWriter`

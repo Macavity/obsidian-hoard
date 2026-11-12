@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { importFork } from '../../../src/import/watchlog/importFork';
 import { setupFork } from './setupFork';
 import { snapshot } from './helpers';
-import { decodeTitle } from '../../../src/storage/titleCodec';
+import { titleFromProperties } from '../../../src/storage/titleCodec';
 import { parse } from 'yaml';
 
 const fmOf = (content: string | undefined): Record<string, unknown> =>
@@ -107,7 +107,7 @@ describe('importFork', () => {
 			expect(report.review).toEqual([]);
 			expect(f.files.get('WatchLog/Movie/Heat.md')).toBe(src0);
 			expect(content).toMatch(/---\nbody$/);
-			expect(decodeTitle('x', fm, undefined).entry.title).toBe('Heat');
+			expect(titleFromProperties('x', fm, undefined).entry.title).toBe('Heat');
 		});
 
 		it('reports a key it could not rename', async () => {

@@ -54,9 +54,11 @@ note; on vault `delete`/`rename` it does drop or re-key the entry's cache in `da
 change that only alters unreadable fields is not emitted), and `rebuild()` re-scans after a root
 or type-name change. Changes are batched 150 ms and emitted as a set of ids.
 
-Codecs are pure: `decodeTitle(id, properties, cache)` / `encodeTitle`, `decodeBook`/`encodeBook`,
+Codecs are pure: `titleFromProperties(id, properties, cache)` / `titleToProperties`, `decodeBook`/`encodeBook`,
 `decodeManga`/`encodeManga`, `decodeGame`/`encodeGame`. Each returns `invalidFields` for values of the
-wrong type instead of failing; those properties are left untouched on write. Property names come
+wrong type instead of failing; those properties are left untouched on write. The title codec builds
+its result as one expression composed from parts and assigns nothing afterwards; the order of the
+parts in `titleToProperties` is the order of properties in a new note. Property names come
 only from [properties.ts](../../src/storage/properties.ts) ([property names](../concepts/properties.md)).
 The book and manga codecs also take that kind's custom columns, because a custom value's key is
 `Custom <column name>`; `EntryIndex.setColumns` re-decodes reading notes when a column name changes.
@@ -98,9 +100,10 @@ taken, lost edit, unreadable shared block) is a `ManagerNotice` code passed to t
 
 ## Where to change what
 
-- A new note property for titles: `encodeTitle`/`decodeTitle` in
-  [titleCodec.ts](../../src/storage/titleCodec.ts), `HoardTitle` in `types.ts`, and `TITLE_CACHE_KEYS`
-  if it is API data. Reading and games: their codecs; cache merge does not exist there.
+- A new note property for titles: the matching part of `titleFromProperties` and of
+  `titleToProperties` in [titleCodec.ts](../../src/storage/titleCodec.ts) (`coreFields`/`coreProps`,
+  `userFields`/`linkAndFlagProps`, …), `HoardTitle` in `types.ts`, and `TITLE_CACHE_KEYS` with
+  `cachedApiFields`/`titleToCache` if it is API data. Reading and games: their codecs; cache merge does not exist there.
 - A new entry kind: `EntryKind`, `FOLDERS` and `classify` in `VaultLayout`, a codec, an `EntryIndex`
   case, a manager.
 - A new secret setting: `SECRET_SETTINGS` / `SecretKey` in `SecretStore.ts`.
