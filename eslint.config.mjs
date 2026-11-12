@@ -147,6 +147,8 @@ export default defineConfig([
     rules: {
       "obsidianmd/no-nodejs-modules": "off",
       "obsidianmd/rule-custom-message": "off",
+      // tooling names `.obsidian` as a path pattern, it never resolves a vault's config folder
+      "obsidianmd/hardcoded-config-path": "off",
       "no-console": "off"
     }
   },

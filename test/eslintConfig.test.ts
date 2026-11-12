@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sentenceCaseWithoutExceptions } from "../scripts/bot-lint.mjs";
+import { sentenceCaseWithoutExceptions } from "./lint/bot-lint.mjs";
 import { sentenceCaseOptions } from "../eslint.config.mjs";
 
 describe("sentence-case exceptions", () => {

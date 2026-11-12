@@ -15,7 +15,7 @@
 		"quality:audit": "fallow audit",
 		"check": "pnpm typecheck && pnpm lint && pnpm test && pnpm quality",
 		"lint": "node scripts/lint-wrapper.mjs",
-		"lint:bot": "node scripts/bot-lint.mjs",
+		"lint:bot": "node test/lint/bot-lint.mjs",
 		"lint:fix": "node scripts/lint-wrapper.mjs --fix",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"vault:link": "node scripts/vault-link.mjs",
