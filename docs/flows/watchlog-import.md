@@ -14,7 +14,7 @@ source:
   - src/WatchLogReport.ts
   - src/main.ts
   - src/import/watchlog/registerTypes.ts
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+source_commit: 984cd98823843329233c66feb977c16f3efba70d
 ---
 
 # WatchLog import
@@ -56,6 +56,11 @@ flowchart TD
   settings (API keys reach the `ApiService` there, via `loadSettings`; keys the import put into `data.json` are moved by `LocalStore` into secret storage on its next save) **before** the placeholder ends, so views render
   with the imported settings; if it fails, a Notice asks for a restart. Startup re-detects the root
   afterwards in any case. A wizard failure is logged and never blocks the start.
+- The wizard is an Obsidian `Modal`, and Obsidian opens a modal in the **active window**. Enabled from
+  the settings window (its own window since Obsidian 1.15), Hoard shows the wizard there, and its
+  elements are no instance of the main window's `Node` / `HTMLElement`. Wizard code therefore never
+  tests an element or event target with `instanceof`; the outside-click guard in `onOpen` asks
+  `modalEl.contains(target)`. An `instanceof Node` there once swallowed every button click.
 - The settings entry (`openWatchLogImport('found' | 'cleanup')`) ignores earlier decisions, stops the
   index, runs the wizard and rebuilds the index afterwards. The cleanup entry appears only when a kind is
   recorded as imported and starts at the cleanup step for those kinds.
