@@ -14,7 +14,7 @@ import { RowsCustomizeModal } from './RowsCustomizeModal';
 import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from './VirtualGrid';
 import { VirtualScroller } from './VirtualScroller';
 import { LazyCardObserver } from './LazyCardObserver';
-import { buildPosterCard, POSTER_CARD_TEXT_H } from './PosterCard';
+import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from './PosterCard';
 import { renderShelf, renderShelfTitle, type ShelfSelect } from './RowsView';
 import { renderSearchBox, openRenameGroupPrompt, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, type SortFields } from './ui/TabToolbar';
 import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from './ui/ActionBar';
@@ -1269,11 +1269,7 @@ export class GamesTab {
 	}
 
 	private applyCoverToCard(card: HTMLElement, url: string): void {
-		const img = card.querySelector<HTMLImageElement>('.hoard-card__poster');
-		if (!img) return;
-		img.onload = () => { card.addClass('has-poster'); };
-		img.onerror = () => { card.removeClass('has-poster'); };
-		img.src = rawgResizedCover(url);
+		loadCardPoster(card, rawgResizedCover(url), () => { card.removeClass('has-poster'); });
 	}
 
 	/** ⋮ menu action: re-fetch this game's cover even when it already has one. */

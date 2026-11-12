@@ -14,6 +14,7 @@ import { pinModalFooter } from './StickyModal';
 import { t } from './i18n';
 import { gameStatusLabel, priorityLabel } from './i18n/labels';
 import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader } from './ui/detailShared';
+import { createFavoriteButton, markDetailRoot } from './ui/detailFrame';
 
 /**
  * Game detail/edit modal: cover + title/developer header, Type / Priority / Status pill dropdowns
@@ -169,11 +170,7 @@ export class GameDetailModal extends Modal {
 
 		// favorite heart, centered between Delete and Save by the footer's space-between layout. Edits the
 		// draft — persists on Save like everything else here.
-		const favBtn = footer.createEl('button', {
-			cls: 'hoard-detail__favorite-btn',
-			attr: { type: 'button' },
-		});
-		setIcon(favBtn, 'heart');
+		const favBtn = createFavoriteButton(footer);
 		const paintFav = (): void => {
 			paintFavoriteButton(favBtn, this.draft.favorite);
 		};
@@ -891,11 +888,7 @@ export class GameGroupDetailModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-detail');
+		markDetailRoot(this.modalEl, this.contentEl, this.plugin.settings.colorTheme);
 		this.renderAll();
 	}
 

@@ -15,12 +15,14 @@ import { renderTagPill } from './StatusDropdown';
 import { renderStarRating } from './StarRating';
 import { CollectionModal, resolveCollection, countMissing } from './CollectionModal';
 import { pinModalFooter } from './StickyModal';
-import { renderEpisodeGrid } from './ui/EpisodeGrid';
+import { createSeasonHeader, renderEpisodeGrid } from './ui/EpisodeGrid';
 import type { TmdbCollectionDetail } from './types';
 import { t } from './i18n';
 import { effectiveMediaSource } from './apiSources';
 import { createIconButton } from './ui/IconButton';
 import { paintFavoriteButton, renderGroupDetailHeader, episodeGridText } from './ui/detailShared';
+import { createFavoriteButton, markDetailRoot } from './ui/detailFrame';
+import { createPosterPlaceholder } from './PosterCard';
 import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
 
 // titles whose credits backfill is in flight — de-dupes rapid modal re-opens
@@ -68,13 +70,7 @@ export class TitleDetailModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
-		// theme vars are scoped to `.hoard-view` / `.hoard-view[data-theme=…]` — mark the content root with both
-		// so episode boxes, stars and progress bars pick up the active theme
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-detail');
+		markDetailRoot(this.modalEl, this.contentEl, this.plugin.settings.colorTheme);
 		this.mobile = Platform.isMobile;
 		this.contentEl.toggleClass('hoard-detail--mobile', this.mobile);
 		this.renderAll();
@@ -574,12 +570,9 @@ export class TitleDetailModal extends Modal {
 		}
 		entry.seasons.forEach((season, seasonIdx) => {
 			let isCollapsed = this.collapsedSeasons.has(seasonIdx);
-			const seasonWrap = this.episodesSectionEl!.createDiv({ cls: 'hoard-accordion__season-wrap' });
-			const seasonHeader = seasonWrap.createDiv({ cls: 'hoard-accordion__season-header' });
-			const badge = seasonHeader.createSpan({ cls: 'hoard-accordion__season-badge' });
-			badge.textContent = season.name;
-			const palette = this.plugin.settings.seasonPalette;
-			badge.setCssProps({ '--hoard-accordion-season-color': palette[seasonIdx % palette.length] ?? '#888780' });
+			const { seasonWrap, seasonHeader } = createSeasonHeader(
+				this.episodesSectionEl!, season.name, seasonIdx, this.plugin.settings.seasonPalette,
+			);
 			const skipCount = (season.skippedEpisodes ?? []).length;
 			seasonHeader.createSpan({
 				cls: 'hoard-accordion__season-episode-count',
@@ -989,11 +982,7 @@ export class TitleDetailModal extends Modal {
 		});
 
 		// favorite heart, centered by the footer's space-between. Updates in place, no re-render.
-		const favBtn = footer.createEl('button', {
-			cls: 'hoard-detail__favorite-btn',
-			attr: { type: 'button' },
-		});
-		setIcon(favBtn, 'heart');
+		const favBtn = createFavoriteButton(footer);
 		const paintFav = (): void => {
 			const fav = !!this.title.favorite;
 			paintFavoriteButton(favBtn, fav);
@@ -1301,11 +1290,7 @@ export class GroupDetailModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-detail');
+		markDetailRoot(this.modalEl, this.contentEl, this.plugin.settings.colorTheme);
 		this.renderAll();
 	}
 
@@ -1376,10 +1361,7 @@ function buildTitleCardElement(
 	const card = tmp.createDiv({ cls: 'hoard-card' });
 	card.dataset.titleId = title.id;
 
-	const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
-	placeholder.setCssProps({ '--hoard-card-placeholder-color': typeColor });
-	const letter = (title.title.trim().charAt(0) || '?').toUpperCase();
-	placeholder.createSpan({ text: letter });
+	const placeholder = createPosterPlaceholder(card, title.title, typeColor);
 
 	const img = card.createEl('img', { cls: 'hoard-card__poster' });
 	img.alt = title.title;

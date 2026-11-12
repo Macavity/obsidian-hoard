@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Platform, TFile, setIcon } from 'obsidian';
+import { App, Modal, Notice, Platform, TFile } from 'obsidian';
 import type HoardPlugin from './main';
 import type { ReadingDataManager } from './ReadingDataManager';
 import {
@@ -20,6 +20,7 @@ import { ReadingManageColumnsModal } from './ReadingManageColumnsModal';
 import { pinModalFooter } from './StickyModal';
 import { t } from './i18n';
 import { paintFavoriteButton, renderEditableTitle } from './ui/detailShared';
+import { createFavoriteButton, markDetailRoot, mobileRowClass } from './ui/detailFrame';
 import { readingStatusLabel } from './i18n/labels';
 
 interface ParsedQuote {
@@ -142,11 +143,7 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-detail');
+		markDetailRoot(this.modalEl, this.contentEl, this.plugin.settings.colorTheme);
 		this.contentEl.addClass('hoard-reading-detail');
 		this.renderAll();
 	}
@@ -278,7 +275,7 @@ export class ReadingDetailModal extends Modal {
 		const authorWrap = info.createDiv({ cls: 'hoard-reading-detail__author-wrap' });
 		this.renderAuthorDisplay(authorWrap);
 
-		const meta = info.createDiv({ cls: 'hoard-reading-detail__meta-row' });
+		const meta = info.createDiv({ cls: mobileRowClass('hoard-reading-detail__meta-row', 'hoard-reading-detail__meta-row--mobile') });
 
 		const statusWrap = meta.createSpan({ cls: 'hoard-reading-detail__status-wrap' });
 		this.renderStatusBadge(statusWrap);
@@ -301,7 +298,7 @@ export class ReadingDetailModal extends Modal {
 
 		// external link + vault page share one row; each keeps its own container so the two
 		// rebuild-in-place renderers stay independent
-		const links = info.createDiv({ cls: 'hoard-reading-detail__links-row' });
+		const links = info.createDiv({ cls: mobileRowClass('hoard-reading-detail__links-row', 'hoard-reading-detail__links-row--mobile') });
 
 		const actions = links.createDiv({ cls: 'hoard-reading-detail__actions' });
 		this.renderExternalLinkActions(actions);
@@ -1136,11 +1133,7 @@ export class ReadingDetailModal extends Modal {
 
 		// favorite heart, centered by the footer's space-between (the Watchlist/Games spot). Persists
 		// immediately — this modal saves field-by-field, unlike the Games draft.
-		const favBtn = footer.createEl('button', {
-			cls: 'hoard-detail__favorite-btn',
-			attr: { type: 'button' },
-		});
-		setIcon(favBtn, 'heart');
+		const favBtn = createFavoriteButton(footer);
 		const paintFav = (): void => {
 			const fav = this.getItem()?.favorite === true;
 			paintFavoriteButton(favBtn, fav);

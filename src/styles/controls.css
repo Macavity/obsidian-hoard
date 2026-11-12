@@ -87,19 +87,22 @@ button.hoard-segmented__btn.is-active {
   color: var(--text-normal);
 }
 
-.hoard-mode-pill__segment--solo.is-active {
-  background: rgb(229 72 77 / 18%);
-  color: #E5484D;
+/* active segment: tint and text in the colour of its mode */
+.hoard-mode-pill__segment.is-active {
+  background: rgb(var(--hoard-mode-pill-accent) / 18%);
+  color: rgb(var(--hoard-mode-pill-accent));
 }
 
-.hoard-mode-pill__segment--coop.is-active {
-  background: rgb(45 168 115 / 18%);
-  color: #2DA873;
+.hoard-mode-pill__segment--solo {
+  --hoard-mode-pill-accent: 229 72 77;
 }
 
-.hoard-mode-pill__segment--multi.is-active {
-  background: rgb(74 137 220 / 18%);
-  color: #4A89DC;
+.hoard-mode-pill__segment--coop {
+  --hoard-mode-pill-accent: 45 168 115;
+}
+
+.hoard-mode-pill__segment--multi {
+  --hoard-mode-pill-accent: 74 137 220;
 }
 
 /* Modes row in the game detail modal — sits under the rating row. */
@@ -184,7 +187,7 @@ input.hoard-settings__count-input {
 }
 
 .hoard-search-picker__missing-api-icon {
-  font-size: 16px;
+  font-size: 1rem;
   opacity: 0.7;
 }
 

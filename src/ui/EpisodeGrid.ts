@@ -100,3 +100,17 @@ export function renderEpisodeGrid(parent: HTMLElement, opts: EpisodeGridOptions)
 		});
 	}
 }
+
+/** Wrap, header and coloured name badge of one season; the caller fills in the rest of the header. */
+export function createSeasonHeader(
+	parent: HTMLElement,
+	name: string,
+	index: number,
+	palette: string[],
+): { seasonWrap: HTMLElement; seasonHeader: HTMLElement } {
+	const seasonWrap = parent.createDiv({ cls: 'hoard-accordion__season-wrap' });
+	const seasonHeader = seasonWrap.createDiv({ cls: 'hoard-accordion__season-header' });
+	const badge = seasonHeader.createSpan({ cls: 'hoard-accordion__season-badge', text: name });
+	badge.setCssProps({ '--hoard-accordion-season-color': palette[index % palette.length] ?? '#888780' });
+	return { seasonWrap, seasonHeader };
+}

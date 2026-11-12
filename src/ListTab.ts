@@ -15,7 +15,7 @@ import { AddFromUrlModal } from './AddFromUrlModal';
 import { AddTitleChoiceModal } from './AddTitleChoiceModal';
 import { renderSearchBox, openRenameGroupPrompt, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, renderViewDropdown, type SortFields } from './ui/TabToolbar';
 import { renderTypeBadge } from './ui/typeBadge';
-import { renderEpisodeGrid } from './ui/EpisodeGrid';
+import { createSeasonHeader, renderEpisodeGrid } from './ui/EpisodeGrid';
 import { createIconButton } from './ui/IconButton';
 import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from './ui/ActionBar';
 import { renderGroupCard } from './ui/GroupCard';
@@ -30,7 +30,7 @@ import { renderStarRating, ratingColor } from './StarRating';
 import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from './VirtualGrid';
 import { VirtualScroller } from './VirtualScroller';
 import { LazyCardObserver } from './LazyCardObserver';
-import { buildPosterCard, POSTER_CARD_TEXT_H } from './PosterCard';
+import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from './PosterCard';
 import { renderShelf, renderShelfTitle, type ShelfSelect } from './RowsView';
 import { RowsCustomizeModal } from './RowsCustomizeModal';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from './ui/TabFilters';
@@ -738,18 +738,12 @@ export class ListTab {
 	}
 
 	private applyPosterToCard(card: HTMLElement, url: string): void {
-		const img = card.querySelector<HTMLImageElement>('.hoard-card__poster');
-		if (!img) return;
-		img.onload = () => {
-			card.addClass('has-poster');
-		};
-		img.onerror = () => {
+		loadCardPoster(card, url, () => {
 			const titleId = card.dataset.titleId;
 			if (titleId) {
 				void this.dataManager.updatePosterUrl(titleId, 'none');
 			}
-		};
-		img.src = url;
+		});
 	}
 
 	/** Tear down the poster observer and the PosterService queue. */
@@ -2186,13 +2180,9 @@ export class ListTab {
 
 		title.seasons.forEach((season, seasonIdx) => {
 			let isCollapsed = this.collapsedSeasons.has(seasonIdx);
-			const seasonWrap = parent.createDiv({ cls: 'hoard-accordion__season-wrap' });
-
-			const seasonHeader = seasonWrap.createDiv({ cls: 'hoard-accordion__season-header' });
-			const badge = seasonHeader.createSpan({ cls: 'hoard-accordion__season-badge' });
-			badge.textContent = season.name;
-			const palette = this.plugin.settings.seasonPalette;
-			badge.setCssProps({ '--hoard-accordion-season-color': palette[seasonIdx % palette.length] ?? '#888780' });
+			const { seasonWrap, seasonHeader } = createSeasonHeader(
+				parent, season.name, seasonIdx, this.plugin.settings.seasonPalette,
+			);
 			seasonHeader.createSpan({ cls: 'hoard-accordion__season-episode-count', text: ListTab.seasonCountText(season) });
 			const chevron = seasonHeader.createSpan({
 				cls: `hoard-chevron${isCollapsed ? '' : ' is-open'}`,

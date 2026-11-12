@@ -144,10 +144,7 @@ export function buildPosterCard(
 	// Fractional pixel widths per card made flex-wrap overflow and shift the grid a slot per scroll.
 	if (spec.cardHeight !== undefined) pinCardHeight(cell, card, spec.cardHeight);
 
-	const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
-	placeholder.setCssProps({ '--hoard-card-placeholder-color': spec.placeholderColor });
-	const letter = (spec.title.trim().charAt(0) || '?').toUpperCase();
-	placeholder.createSpan({ text: letter });
+	createPosterPlaceholder(card, spec.title, spec.placeholderColor);
 
 	const img = card.createEl('img', { cls: 'hoard-card__poster' });
 	img.alt = spec.title;
@@ -241,4 +238,21 @@ export function buildPosterCard(
 	// card — selection styling lives there
 	(cell ?? card).addEventListener('click', () => spec.onClick(card));
 	return card;
+}
+
+/** The letter tile a card shows until, or instead of, its poster image. */
+export function createPosterPlaceholder(card: HTMLElement, title: string, color: string): HTMLElement {
+	const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
+	placeholder.setCssProps({ '--hoard-card-placeholder-color': color });
+	placeholder.createSpan({ text: (title.trim().charAt(0) || '?').toUpperCase() });
+	return placeholder;
+}
+
+/** Points the card's poster image at `url`: the card is marked once it loads, `onError` handles a broken image. */
+export function loadCardPoster(card: HTMLElement, url: string, onError: () => void): void {
+	const img = card.querySelector<HTMLImageElement>('.hoard-card__poster');
+	if (!img) return;
+	img.onload = () => { card.addClass('has-poster'); };
+	img.onerror = onError;
+	img.src = url;
 }
