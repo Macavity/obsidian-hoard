@@ -218,6 +218,30 @@ describe('editing a watchlist schedule', () => {
 		expect(lastForm().hint('recurring')).toBe(t('airtime.modal.hintRecurring'));
 	});
 
+	describe('time note', () => {
+		const timeNote = (): ((time: string) => string) => {
+			const e = entry({ schedule: { recurrence: 'weekly', dayOfWeek: 2, releaseTime: '20:00' }, currentSeason: 1, currentEpisode: 4 });
+			const { priv } = makeTab(newWorld({ titles: [title()], entries: [e] }));
+			priv.openEditWatchSchedule(e, 'single');
+			return cap.forms[cap.forms.length - 1]!.opts.timeNote;
+		};
+
+		it('shows the entered local time in Japan time', () => {
+			const now = new Date();
+			const inJapan = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 30)
+				.toLocaleTimeString('en-GB', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });
+			expect(timeNote()('20:30')).toBe(t('airtime.modal.timeNote', { time: inJapan }));
+		});
+
+		it('shows a dash for a time that is not HH:MM', () => {
+			expect(timeNote()('8pm')).toBe(t('airtime.modal.timeNote', { time: '—' }));
+		});
+
+		it('says so when no time is entered', () => {
+			expect(timeNote()('')).toBe(t('airtime.modal.timeNoteEmpty'));
+		});
+	});
+
 	it('does nothing for an orphaned entry', () => {
 		const e = entry({ titleId: 'gone' });
 		makeTab(newWorld({ entries: [e] })).priv.openEditWatchSchedule(e);
