@@ -148,6 +148,7 @@ import { apiErrorMessage, apiErrorShort } from './ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from './jikanBase';
 import { getDecision } from './import/watchlog/onboardingState';
 import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from './backup';
+import { emitDataChanged } from './changeSignal';
 
 /** Chip for the MyAnimeList endpoint field: default, custom, or rejected and falling back. */
 function jikanEndpointStatus(raw: string): ChipStatus {
@@ -452,7 +453,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						this.plugin.settings.dashboardCardStyle = v as 'circles' | 'rectangles';
 						await this.plugin.saveSettings();
-						activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+						emitDataChanged();
 					}),
 			);
 
@@ -560,7 +561,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						this.plugin.settings.showHintBanners = v;
 						await this.plugin.saveSettings();
-						activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+						emitDataChanged();
 					}),
 			);
 
@@ -736,7 +737,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 					void (async () => {
 						await restoreBackup(this.plugin.backupManagers(), result.backup);
 						await this.plugin.loadSettings();
-						activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+						emitDataChanged();
 						new Notice(t('settings.backup.restore.done'));
 					})();
 				}).open();
@@ -1884,7 +1885,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 	/** Re-render open Hoard views + widgets so a display-setting edit shows immediately. */
 	private refreshOpenViews(): void {
-		activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+		emitDataChanged();
 		const leaves = this.plugin.app.workspace.getLeavesOfType('hoard-view');
 		for (const leaf of leaves) {
 			if (leaf.view instanceof HoardView) leaf.view.refreshUI();
@@ -2131,7 +2132,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 					for (const c of allCards) c.removeClass('is-selected');
 					card.addClass('is-selected');
 					onPicked?.(theme.label);
-					activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+					emitDataChanged();
 					const leaves = this.plugin.app.workspace.getLeavesOfType('hoard-view');
 					for (const leaf of leaves) {
 						if (leaf.view instanceof HoardView) {
@@ -2404,7 +2405,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						this.plugin.settings.episodeNumbering = v as 'absolute' | 'per-season';
 						await this.plugin.saveSettings();
-						activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+						emitDataChanged();
 					}),
 			);
 
@@ -2437,7 +2438,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 						if (isNaN(n) || n < 1) return;
 						this.plugin.settings.dashboardTopCredits = n;
 						await this.plugin.saveSettings();
-						activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+						emitDataChanged();
 					},
 				);
 			});

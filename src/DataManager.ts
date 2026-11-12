@@ -21,6 +21,7 @@ import { decodeGame } from './storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
 import { changedKeys, sameJson } from './storage/sharedHelpers';
+import { emitDataChanged } from './changeSignal';
 
 export interface DataStores {
 	index: EntryIndex;
@@ -1232,7 +1233,7 @@ export class DataManager {
 		for (const listener of this.changeListeners) {
 			listener();
 		}
-		activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+		emitDataChanged();
 	}
 
 	// Season collapse persistence (device-local UI state)

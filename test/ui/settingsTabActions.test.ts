@@ -118,6 +118,25 @@ describe('theme picker', () => {
 		document.removeEventListener('hoard-data-changed', changed);
 	});
 
+	it('refreshes the main window when the click happens in the settings window', async () => {
+		const { priv } = makeTab({ app: { workspace: { getLeavesOfType: () => [] } } });
+		const changed = vi.fn();
+		document.addEventListener('hoard-data-changed', changed);
+		// Obsidian 1.15: the settings live in their own window, which has the focus during the click
+		vi.stubGlobal('activeDocument', document.implementation.createHTMLDocument('settings'));
+		try {
+			const el = document.createElement('div');
+			const onPicked = vi.fn();
+			priv.renderThemePicker(el, onPicked);
+			qa(el, '.hoard-theme-picker__card')[2]!.click();
+			await until(() => onPicked.mock.calls.length === 2);
+		} finally {
+			vi.stubGlobal('activeDocument', document);
+			document.removeEventListener('hoard-data-changed', changed);
+		}
+		expect(changed).toHaveBeenCalled();
+	});
+
 	it('works without a picked-callback', async () => {
 		const { priv, plugin } = makeTab({ app: { workspace: { getLeavesOfType: () => [] } } });
 		const el = document.createElement('div');
