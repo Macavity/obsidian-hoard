@@ -34,6 +34,10 @@ proto.createEl ??= createEl;
 proto.createDiv ??= function (this: Node, o?: Opts) { return createEl.call(this, "div", o); };
 proto.createSpan ??= function (this: Node, o?: Opts) { return createEl.call(this, "span", o); };
 proto.instanceOf ??= function (this: Node, type: abstract new (...a: never[]) => unknown) { return this instanceof type; };
+// Obsidian's `node.win`: the window the node lives in
+if (!("win" in proto)) {
+	Object.defineProperty(proto, "win", { configurable: true, get(this: Node) { return this.ownerDocument?.defaultView ?? window; } });
+}
 proto.addClass ??= function (this: Element, ...c: string[]) { this.classList.add(...c); };
 proto.removeClass ??= function (this: Element, ...c: string[]) { this.classList.remove(...c); };
 proto.removeClasses ??= function (this: Element, c: string[]) { this.classList.remove(...c); };
