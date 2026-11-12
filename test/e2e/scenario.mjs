@@ -1,9 +1,8 @@
 // Scenario runner: swaps the registered test vault's content and WatchLog plugin data for an isolated scenario, then restores them.
-import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { REPO, VAULT_PATH } from "../../scripts/lib/cli.mjs";
+import { REPO, VAULT_PATH, pnpm } from "../../scripts/lib/cli.mjs";
 import { withPluginDisabled } from "../../scripts/lib/plugin-toggle.mjs";
 import { pluginDataDir, writeSeed } from "../../scripts/lib/seed.mjs";
 import { waitForVaultIndex } from "../../scripts/lib/vault-index.mjs";
@@ -26,7 +25,7 @@ export function scenarioDir(name) {
 }
 
 function runVaultReset() {
-	execFileSync("pnpm", ["vault:reset"], { cwd: REPO, stdio: "inherit" });
+	pnpm("vault:reset");
 }
 
 const watchlogDir = (vault) => join(vault, ".obsidian", "plugins", "watchlog");

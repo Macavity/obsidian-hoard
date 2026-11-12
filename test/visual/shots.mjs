@@ -3,17 +3,15 @@
 // Default: style dumps of light-desktop only, which leaves the Obsidian window in the background.
 // --screenshots adds a PNG per state and brings the window to the front for each one.
 // Obsidian must be running with hoard-test-vault open (see CONTRIBUTING.md, Testing).
-import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { parseArgs } from "node:util";
-import { ensureVault, evalJs, obs, waitFor } from "../../scripts/lib/cli.mjs";
+import { ensureVault, evalJs, obs, pnpm, waitFor } from "../../scripts/lib/cli.mjs";
 import { capture, clearViewport, stabilise } from "./capture.mjs";
 import { STATES } from "./states.mjs";
 
 const ALL_VARIANTS = ["light-desktop", "dark-desktop", "light-phone", "dark-phone"];
-const pnpm = (...a) => execFileSync("pnpm", a, { stdio: "inherit" });
 const outRoot = () => resolve(process.env.VISUAL_OUT ?? join(tmpdir(), "hoard-visual"));
 const messageOf = (e) => (e instanceof Error ? e.message : String(e));
 
