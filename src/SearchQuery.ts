@@ -22,7 +22,26 @@ export interface SearchConfig<T> {
 	fields: SearchFieldSpec<T>[];
 }
 
+type TextField<T> = SearchFieldSpec<T> & { text: (item: T) => string[] };
+type NumberField<T> = SearchFieldSpec<T> & { number: (item: T) => number | null };
+
+const hasText = <T>(f: SearchFieldSpec<T>): f is TextField<T> => f.text !== undefined;
+const hasNumber = <T>(f: SearchFieldSpec<T>): f is NumberField<T> => f.number !== undefined;
+
 type Comparator = '>' | '>=' | '<' | '<=' | '=';
+
+const COMPARE: Record<Comparator, (n: number, value: number) => boolean> = {
+	'>': (n, value) => n > value,
+	'>=': (n, value) => n >= value,
+	'<': (n, value) => n < value,
+	'<=': (n, value) => n <= value,
+	'=': (n, value) => n === value,
+};
+
+interface Comparison {
+	op: Comparator;
+	value: number;
+}
 
 interface Token {
 	negated: boolean;
@@ -32,7 +51,7 @@ interface Token {
 	/** Quoted — exact substring, never fuzzy. */
 	exact: boolean;
 	/** Set when the value parsed as a numeric comparison. */
-	compare: { op: Comparator; value: number } | null;
+	compare: Comparison | null;
 	/** Followed a `|` — ORs into the previous token instead of ANDing. */
 	alternate: boolean;
 }
@@ -58,7 +77,7 @@ function spaceOutPipes(query: string): string {
 	return out;
 }
 
-function parseCompare(raw: string): { op: Comparator; value: number } | null {
+function parseCompare(raw: string): Comparison | null {
 	const m = COMPARE_RE.exec(raw.trim());
 	if (!m) return null;
 	return { op: (m[1] as Comparator) ?? '=', value: Number(m[2]) };
@@ -107,9 +126,95 @@ function parseQuery<T>(query: string, fields: SearchFieldSpec<T>[]): Token[] {
 	return tokens;
 }
 
-/** Field names a token is allowed to consult. */
-function scopeOf<T>(token: Token, fields: SearchFieldSpec<T>[]): SearchFieldSpec<T>[] {
-	return token.field ? fields.filter((f) => f.name === token.field) : fields;
+/** One record of the fuzzy index: the item's id and the text of each text field under its name. */
+type SearchRecord = { __id: string } & Record<string, unknown>;
+
+/** What one search runs against: the items by id and one fuzzy index over their text, reused by every token. */
+interface SearchIndex<T> {
+	fields: SearchFieldSpec<T>[];
+	byId: Map<string, T>;
+	fuse: Fuse<SearchRecord>;
+}
+
+function buildIndex<T>(items: T[], config: SearchConfig<T>): SearchIndex<T> {
+	const textFields = config.fields.filter(hasText);
+	const records = items.map((item): SearchRecord => ({
+		...Object.fromEntries(textFields.map((f) => [f.name, f.text(item)])),
+		__id: config.id(item),
+	}));
+	return {
+		fields: config.fields,
+		byId: new Map(items.map((item) => [config.id(item), item])),
+		fuse: new Fuse(records, {
+			keys: textFields.map((f) => ({ name: f.name, weight: f.weight ?? 0.1 })),
+			threshold: FUZZ_THRESHOLD,
+			ignoreLocation: true,
+			includeMatches: true,
+		}),
+	};
+}
+
+function idsWhere<T>(index: SearchIndex<T>, test: (item: T) => boolean): Set<string> {
+	return new Set([...index.byId].filter(([, item]) => test(item)).map(([id]) => id));
+}
+
+/** `field:>n`: items whose number on one of the fields satisfies the comparison. No fuzz; a missing number never matches. */
+function numericMatches<T>(index: SearchIndex<T>, { op, value }: Comparison, fields: NumberField<T>[]): Set<string> {
+	const holds = COMPARE[op];
+	return idsWhere(index, (item) => fields.some((f) => {
+		const n = f.number(item);
+		return n !== null && holds(n, value);
+	}));
+}
+
+/** `"phrase"`: items with the phrase as a substring of one of the fields, ignoring case. */
+function exactMatches<T>(index: SearchIndex<T>, phrase: string, fields: TextField<T>[]): Set<string> {
+	const needle = phrase.toLowerCase();
+	return idsWhere(index, (item) => fields.some((f) => f.text(item).some((v) => v.toLowerCase().includes(needle))));
+}
+
+/** A bare word: fuzzy over the index. With `fields`, only a hit inside one of them counts. */
+function fuzzyMatches<T>(index: SearchIndex<T>, word: string, fields: SearchFieldSpec<T>[] | null): Set<string> {
+	const results = index.fuse.search(word);
+	const allowed = fields && new Set(fields.map((f) => f.name));
+	const kept = allowed
+		? results.filter((r) => (r.matches ?? []).some((m) => m.key && allowed.has(m.key)))
+		: results;
+	return new Set(kept.map((r) => r.item.__id));
+}
+
+/**
+ * Ids matching one token, ignoring its negation. The kind of token picks the matcher: a comparison
+ * on a named field that has numbers, else a quoted phrase, else a fuzzy word.
+ */
+function matches<T>(index: SearchIndex<T>, token: Token): Set<string> {
+	const scope = token.field ? index.fields.filter((f) => f.name === token.field) : index.fields;
+	const numeric = scope.filter(hasNumber);
+	if (token.compare && token.field && numeric.length > 0) return numericMatches(index, token.compare, numeric);
+	if (token.exact) return exactMatches(index, token.text, scope.filter(hasText));
+	return fuzzyMatches(index, token.text, token.field ? scope : null);
+}
+
+/** `|` chains folded into groups: the tokens of a group are alternatives. */
+function alternatives(tokens: Token[]): Token[][] {
+	const groups: Token[][] = [];
+	for (const token of tokens) {
+		const last = groups[groups.length - 1];
+		if (token.alternate && last) last.push(token);
+		else groups.push([token]);
+	}
+	return groups;
+}
+
+/** Ids every group matches, a group matching what any of its tokens matches. No group at all means everything. */
+function matchingEvery<T>(index: SearchIndex<T>, groups: Token[][]): Set<string> {
+	let found: Set<string> | null = null;
+	for (const group of groups) {
+		const any = new Set(group.flatMap((token) => [...matches(index, token)]));
+		found = found === null ? any : new Set([...found].filter((id) => any.has(id)));
+		if (found.size === 0) break;
+	}
+	return found ?? new Set(index.byId.keys());
 }
 
 /**
@@ -131,98 +236,13 @@ export function searchItems<T>(items: T[], config: SearchConfig<T>, query: strin
 	const tokens = parseQuery(trimmed, config.fields);
 	if (tokens.length === 0) return null;
 
-	const textFields = config.fields.filter((f) => f.text);
-	const records = items.map((item) => {
-		const rec: Record<string, unknown> = { __id: config.id(item) };
-		for (const f of textFields) rec[f.name] = f.text!(item);
-		return rec;
-	});
-
-	// one index, reused by every token
-	const fuse = new Fuse(records, {
-		keys: textFields.map((f) => ({ name: f.name, weight: f.weight ?? 0.1 })),
-		threshold: FUZZ_THRESHOLD,
-		ignoreLocation: true,
-		includeMatches: true,
-	});
-
-	const byId = new Map<string, T>();
-	for (const item of items) byId.set(config.id(item), item);
-
-	/** Ids matching one token, ignoring its negation. */
-	const hits = (token: Token): Set<string> => {
-		const scope = scopeOf(token, config.fields);
-		const out = new Set<string>();
-
-		// numeric comparison — no fuzz, only fields exposing a number
-		if (token.compare && token.field) {
-			const numeric = scope.filter((f) => f.number);
-			if (numeric.length > 0) {
-				const { op, value } = token.compare;
-				for (const [id, item] of byId) {
-					for (const f of numeric) {
-						const n = f.number!(item);
-						if (n === null) continue;
-						const ok =
-							op === '>' ? n > value :
-							op === '>=' ? n >= value :
-							op === '<' ? n < value :
-							op === '<=' ? n <= value :
-							n === value;
-						if (ok) { out.add(id); break; }
-					}
-				}
-				return out;
-			}
-		}
-
-		// quoted — exact substring over the scoped fields
-		if (token.exact) {
-			const needle = token.text.toLowerCase();
-			for (const [id, item] of byId) {
-				for (const f of scope) {
-					if (!f.text) continue;
-					if (f.text(item).some((v) => v.toLowerCase().includes(needle))) { out.add(id); break; }
-				}
-			}
-			return out;
-		}
-
-		// bare — fuzzy, restricted to the scoped fields when one was named
-		const allowed = token.field ? new Set(scope.map((f) => f.name)) : null;
-		for (const r of fuse.search(token.text)) {
-			const id = (r.item as { __id: string }).__id;
-			if (!allowed) { out.add(id); continue; }
-			if ((r.matches ?? []).some((mm) => mm.key && allowed.has(mm.key))) out.add(id);
-		}
-		return out;
-	};
-
-	const positive = tokens.filter((t) => !t.negated);
-	const negative = tokens.filter((t) => t.negated);
-
-	// `|` chains fold into one group; groups are ANDed, tokens inside a group are ORed
-	const groups: Token[][] = [];
-	for (const token of positive) {
-		const last = groups[groups.length - 1];
-		if (token.alternate && last) last.push(token);
-		else groups.push([token]);
-	}
-
-	let acc: Set<string> | null = null;
-	for (const group of groups) {
-		const h = new Set<string>();
-		for (const token of group) for (const id of hits(token)) h.add(id);
-		acc = acc === null ? h : new Set([...acc].filter((id) => h.has(id)));
-		if (acc.size === 0) break;
-	}
+	const index = buildIndex(items, config);
 	// a query of only exclusions starts from everything
-	if (acc === null) acc = new Set(byId.keys());
-
-	for (const token of negative) {
-		for (const id of hits(token)) acc.delete(id);
+	const found = matchingEvery(index, alternatives(tokens.filter((t) => !t.negated)));
+	for (const token of tokens.filter((t) => t.negated)) {
+		for (const id of matches(index, token)) found.delete(id);
 	}
-	return acc;
+	return found;
 }
 
 /** Year from an ISO-ish date string, or null. */
