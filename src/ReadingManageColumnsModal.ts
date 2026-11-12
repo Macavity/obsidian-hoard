@@ -8,7 +8,6 @@ import { ConfirmModal } from './ConfirmModal';
 import { openColorPicker } from './ColorPicker';
 import { attachCardDrag, renderTypeSelect, type DragState } from './ui/ColumnsEditor';
 
-
 export class ReadingManageColumnsModal extends Modal {
 	private plugin: HoardPlugin;
 	private readingData: ReadingDataManager;

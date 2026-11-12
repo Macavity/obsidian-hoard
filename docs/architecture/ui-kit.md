@@ -52,8 +52,8 @@ flowchart TD
 
 [HoardView.ts](../../src/HoardView.ts) holds `TABS` in tab-bar order; a `TabDefinition` has
 `create(ctx)` returning a [TabInstance](../../src/ui/TabInstance.ts) (`render`, optional `destroy`),
-an optional content class and an optional badge. Every tab class declares `implements TabInstance`;
-`destroy` runs on tab switch and on view close.
+an optional content class and an optional badge. `HoardView` calls `destroy` whenever it drops the
+active instance: on a tab switch, on a UI rebuild (`refreshUI` from the settings) and on view close.
 A **tab switch recreates** the instance (state lost); a **data change re-renders the same
 instance** in place via `dataManager.onChange`, so filters and expanded rows survive. Badges are
 computed without the tab open and refresh on `data-change` (Upcoming) or `metadata-resolved`
