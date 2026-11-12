@@ -5,6 +5,7 @@ import type { HoardTitle, HoardGroup, TagDefinition } from './types';
 import { formatTime, getThemedColor, formatDateDisplay, formatShortDateDisplay } from './types';
 import { t } from './i18n';
 import { statusLabel, typeLabel } from './i18n/labels';
+import { onDataChanged } from './changeSignal';
 
 export interface NextRelease { titleName: string; type: string; releaseDate: string; daysUntil: number }
 
@@ -57,7 +58,6 @@ export class WidgetRenderer {
 	private widgetMiniRegistry = new Map<HTMLElement, boolean>();
 	/** Generic re-render hooks for non-todo widgets (stats, upcoming, now-watching, now-next). */
 	private widgetRerender = new Map<HTMLElement, () => void>();
-	private dataChangedListener: EventListener;
 
 	constructor(plugin: HoardPlugin, dataManager: DataManager) {
 		this.plugin = plugin;
@@ -79,13 +79,8 @@ export class WidgetRenderer {
 		}
 
 		// re-render all active widgets on data change (list → widget sync)
-		this.dataChangedListener = () => this.onDataChanged();
-		activeDocument.addEventListener('hoard-data-changed', this.dataChangedListener);
-
-		// clean up the listener on plugin unload
-		plugin.register(() => {
-			activeDocument.removeEventListener('hoard-data-changed', this.dataChangedListener);
-		});
+		// the returned remover cleans the listener up on plugin unload
+		plugin.register(onDataChanged(() => this.onDataChanged()));
 	}
 
 	/** Theme vars are keyed off data-theme (theme.css); widgets live in notes, outside the themed view. */
@@ -94,7 +89,7 @@ export class WidgetRenderer {
 		if (colorTheme !== 'default') el.setAttribute('data-theme', colorTheme);
 	}
 
-	/** Called by the `hoard-data-changed` DOM event. Re-renders all live widgets. */
+	/** Runs on the change signal (`onDataChanged`). Re-renders all live widgets. */
 	private onDataChanged(): void {
 		const stale: HTMLElement[] = [];
 

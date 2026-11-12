@@ -176,17 +176,18 @@ export class Modal {
 	titleEl: HTMLElement;
 	contentEl: HTMLElement;
 	constructor(public app: unknown) {
-		this.modalEl = document.createElement("div");
+		// like Obsidian: the container holds the modal, so a click inside bubbles through the container
+		this.modalEl = this.containerEl.appendChild(document.createElement("div"));
 		this.titleEl = this.modalEl.appendChild(document.createElement("div"));
 		this.contentEl = this.modalEl.appendChild(document.createElement("div"));
 	}
 	open(): void {
-		document.body.appendChild(this.modalEl);
+		document.body.appendChild(this.containerEl);
 		this.onOpen();
 	}
 	close(): void {
 		this.onClose();
-		this.modalEl.remove();
+		this.containerEl.remove();
 	}
 	onOpen(): void {}
 	onClose(): void {}

@@ -8,6 +8,7 @@ source:
   - src/DataManager.ts
   - src/storage/EntryIndex.ts
   - src/WidgetRenderer.ts
+  - src/changeSignal.ts
 source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
@@ -61,8 +62,12 @@ flowchart TD
 
 ## The change signal
 
-Every manager ends a user write with `notifyListeners()`: its own `onChange` listeners run, then the
-DOM event `hoard-data-changed` is dispatched on `activeDocument`. Consumers: `HoardView`
+Every manager ends a user write with `notifyListeners()`, which runs its own `onChange` listeners.
+`DataManager` then also calls `emitDataChanged()` ([changeSignal.ts](../../src/changeSignal.ts)),
+which dispatches the DOM event `hoard-data-changed` on the **main window's** document (the reading
+and game managers do not); `main.ts` and the settings tab emit it too. Listen with `onDataChanged`. Never
+`activeDocument` for it: that is the window with the focus (the settings window since Obsidian 1.15,
+a popout), so a change made there would miss listeners added at load. Consumers: `HoardView`
 re-renders the active tab in place (state survives), `WidgetRenderer` re-renders live widgets, the
 status bar recounts. External changes (sync, hand edits) arrive through `EntryIndex.onChange`
 (debounced 150 ms) and end in the same notify.
@@ -78,3 +83,8 @@ status bar recounts. External changes (sync, hand edits) arrive through `EntryIn
   [i18n](i18n.md).
 - Mobile: `Platform.isMobile` toggles `hoard-view--mobile` on the view; card size is per device class
   (`getCardMinWidth`), card text placement is per tab (`isCardTextUnder`), both in `main.ts`.
+- Windows: app-wide state uses the plugin's own window (`window.document`): the change signal and
+  body custom properties such as the card size (`applyCardSizeCssVar`), which Obsidian copies from
+  the main body into its other windows, never back (host behaviour, checked against Obsidian
+  1.15.0). `activeDocument` is for UI that belongs to the
+  window the user is in (popovers, pickers, their outside-click listeners).

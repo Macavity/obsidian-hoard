@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Notice as RealNotice, type App, type TFile } from 'obsidian';
 import { WatchLogOnboardingModal, type WatchLogImporter } from '../src/WatchLogOnboardingModal';
 import type { ForkSource, OriginalSource } from '../src/import/watchlog/detect';
@@ -65,6 +65,84 @@ describe('WatchLogOnboardingModal', () => {
 		m.containerEl.addEventListener('click', () => { reached = true; });
 		m.containerEl.click();
 		expect(reached).toBe(false);
+	});
+	it('a button of another window still gets its click (wizard opened in the settings window)', () => {
+		// Obsidian opens a modal in the active window; in the settings window its elements belong to that
+		// window, so they are no instance of the Node this code sees. happy-dom shares one Node between
+		// windows, hence the stub.
+		const imp = fakeImporter();
+		const m = new WatchLogOnboardingModal(app, imp); m.open();
+		const button = find(m, 'decline')!;
+		for (const name of ['Node', 'Element', 'HTMLElement']) vi.stubGlobal(name, class {});
+		try {
+			expect(button instanceof Node).toBe(false);
+			expect(button instanceof HTMLElement).toBe(false);
+			button.click();
+		} finally {
+			vi.unstubAllGlobals();
+		}
+		expect(imp.calls).toEqual(['fork:declined']);
+	});
+	describe('its window (the settings window) is closed while it is busy', () => {
+		/** Opens the wizard in a window of its own; `closeWindow` does what Obsidian does when that window goes away. */
+		function inOtherWindow(imp: WatchLogImporter, opts?: ConstructorParameters<typeof WatchLogOnboardingModal>[2]) {
+			const win = new EventTarget();
+			const m = new WatchLogOnboardingModal(app, imp, opts);
+			Object.defineProperty(m.containerEl, 'win', { value: win });
+			m.open();
+			const finished = vi.fn();
+			void m.finished.then(finished);
+			const closeWindow = (): void => { win.dispatchEvent(new Event('pagehide')); m.close(); };
+			return { m, finished, closeWindow };
+		}
+
+		it('ends after the import with a notice instead of waiting for a click nobody can make', async () => {
+			Notice.shown.length = 0;
+			let release!: () => void;
+			const imp = fakeImporter({ run: () => new Promise((r) => { release = () => r({ created: 2, filled: 0, errors: [], review: [] }); }) });
+			const { m, finished, closeWindow } = inOtherWindow(imp);
+			click(m, 'import');
+			closeWindow();
+			expect(finished).not.toHaveBeenCalled();
+			release(); await flush();
+			expect(finished).toHaveBeenCalled();
+			expect(imp.calls).toContain('fork:imported');
+			expect(Notice.shown.join('\n')).toContain('2 created');
+			expect(Notice.shown.join('\n')).toContain('clean up later');
+		});
+
+		it('names the retry when the import had errors', async () => {
+			Notice.shown.length = 0;
+			let release!: () => void;
+			const imp = fakeImporter({ run: () => new Promise((r) => { release = () => r({ created: 0, filled: 0, errors: ['boom'], review: [] }); }) });
+			const { m, finished, closeWindow } = inOtherWindow(imp);
+			click(m, 'import');
+			closeWindow();
+			release(); await flush();
+			expect(finished).toHaveBeenCalled();
+			expect(Notice.shown.join('\n')).toContain('Try again');
+		});
+
+		it('ends after the cleanup with its result', async () => {
+			Notice.shown.length = 0;
+			let release!: () => void;
+			const imp = fakeImporter({ cleanup: () => new Promise((r) => { release = () => r({ done: 1, errors: ['locked'] }); }) });
+			const { m, finished, closeWindow } = inOtherWindow(imp, { startAt: 'cleanup', imported: ['fork'] });
+			await flush();
+			click(m, 'cleanup-run');
+			closeWindow();
+			release(); await flush();
+			expect(finished).toHaveBeenCalled();
+			expect(Notice.shown.join('\n')).toContain('1 cleanup step done.');
+			expect(Notice.shown.join('\n')).toContain('1 error during cleanup.');
+		});
+
+		it('still shows the result when the window stays open', async () => {
+			const { m, finished } = inOtherWindow(fakeImporter());
+			click(m, 'import'); await flush();
+			expect(m.step).toBe('result');
+			expect(finished).not.toHaveBeenCalled();
+		});
 	});
 	it('review link opens file, cleanup runs only selected', async () => {
 		const imp = fakeImporter();

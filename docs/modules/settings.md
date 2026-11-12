@@ -71,4 +71,6 @@ are colour-only.
 4. Synced across devices? Add the key to `SHARED_SETTING_KEYS` (or `NESTED_SHARED_KEYS` for
    reading/games). Never a secret. Default is device-local. A new key or credential goes into
    `SECRET_SETTINGS` ([SecretStore.ts](../../src/storage/SecretStore.ts)) instead.
-5. Needs a live effect? Dispatch `hoard-data-changed` as neighbouring settings do.
+5. Needs a live effect? Call `emitDataChanged()` as neighbouring settings do. Not a dispatch on
+   `activeDocument`: the settings tab runs in its own window since Obsidian 1.15
+   ([overview](../architecture/overview.md#the-change-signal)).

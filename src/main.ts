@@ -33,6 +33,7 @@ import { createImporter } from './import/watchlog/importer';
 import { getDecision, pendingSources } from './import/watchlog/onboardingState';
 import { composeSettings, persistSettings } from './settingsSplit';
 import { resolveJikanEndpoint } from './jikanBase';
+import { emitDataChanged, onDataChanged } from './changeSignal';
 
 /** Root folder created on a fresh install (no `.base` with a `hoard:` key found). */
 const DEFAULT_ROOT = 'Hoard';
@@ -112,7 +113,7 @@ export default class HoardPlugin extends Plugin {
 		this.maybeShowSecretsNotice();
 		// the card-size CSS var must be live before any view or modal renders a grid
 		this.applyCardSizeCssVar();
-		this.register(() => activeDocument.body.setCssProps({ '--hoard-card-minimum-width': '' }));
+		this.register(() => window.document.body.setCssProps({ '--hoard-card-minimum-width': '' }));
 
 		this.apiService = new ApiService(
 			this.settings.omdbApiKey,
@@ -202,10 +203,8 @@ export default class HoardPlugin extends Plugin {
 
 		this.setupStatusBar();
 		// keep the status bar in sync with data edits (no new timer: the 60s airtime interval drives the
-		// time-based refresh). 'hoard-data-changed' is a custom event, so register the listener directly.
-		const statusBarListener = (): void => this.updateStatusBar();
-		activeDocument.addEventListener('hoard-data-changed', statusBarListener);
-		this.register(() => activeDocument.removeEventListener('hoard-data-changed', statusBarListener));
+		// time-based refresh).
+		this.register(onDataChanged(() => this.updateStatusBar()));
 	}
 
 	/** Renders a manager notice in the active language. */
@@ -348,7 +347,7 @@ export default class HoardPlugin extends Plugin {
 		} finally {
 			await this.index.rebuild();
 			this.index.start();
-			activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+			emitDataChanged();
 		}
 	}
 
@@ -363,7 +362,7 @@ export default class HoardPlugin extends Plugin {
 			await this.applySharedSettings();
 			await this.shared.ensureFilter();
 			await this.index.rebuild();
-			activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+			emitDataChanged();
 		} catch (e) {
 			console.error('[Hoard] could not adopt the synced base', e);
 		}
@@ -375,7 +374,7 @@ export default class HoardPlugin extends Plugin {
 		const changed = this.typeNamesKey !== null && key !== this.typeNamesKey;
 		this.typeNamesKey = key;
 		if (!changed || !this.indexReady) return;
-		void this.index.rebuild().then(() => activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed')));
+		void this.index.rebuild().then(() => emitDataChanged());
 	}
 
 	/** Everything backup export and restore need. */
@@ -409,7 +408,7 @@ export default class HoardPlugin extends Plugin {
 	private async applySharedSettings(): Promise<void> {
 		await this.loadSettings();
 		this.applyCardSizeCssVar();
-		activeDocument.dispatchEvent(new CustomEvent('hoard-data-changed'));
+		emitDataChanged();
 	}
 
 	private startAirtimeScheduler(): void {
@@ -491,9 +490,11 @@ export default class HoardPlugin extends Plugin {
 	/**
 	 * Publish the resolved card size as a body-level CSS var, so the plain-CSS grids (detail-modal
 	 * member grids, non-virtual fallbacks) track the setting too. Called on load and on every change.
+	 * Always the main window's body, not `activeDocument`: Obsidian copies the main body's custom
+	 * properties into its other windows (settings, popouts), never back.
 	 */
 	applyCardSizeCssVar(): void {
-		activeDocument.body.setCssProps({ '--hoard-card-minimum-width': `${this.getCardMinWidth()}px` });
+		window.document.body.setCssProps({ '--hoard-card-minimum-width': `${this.getCardMinWidth()}px` });
 	}
 
 	/** Keys do not sync between devices: tell a migrated device once that its keychain is empty. */

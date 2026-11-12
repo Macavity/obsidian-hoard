@@ -33,6 +33,21 @@ describe('resolveDefaultAddType', () => {
 	});
 });
 
+describe('applyCardSizeCssVar', () => {
+	it('writes to the main window, also while the settings window has the focus', () => {
+		// Obsidian mirrors the main body's custom properties into its other windows, not the other way round
+		const settingsWindow = document.implementation.createHTMLDocument('settings');
+		vi.stubGlobal('activeDocument', settingsWindow);
+		try {
+			plugin({ settings: { cardSize: 3, cardSizeMobile: 3 } }).applyCardSizeCssVar();
+		} finally {
+			vi.unstubAllGlobals();
+		}
+		expect(document.body.style.getPropertyValue('--hoard-card-minimum-width')).toMatch(/^\d+px$/);
+		expect(settingsWindow.body.style.getPropertyValue('--hoard-card-minimum-width')).toBe('');
+	});
+});
+
 describe('activateView', () => {
 	it('reveals an existing view and switches its tab', async () => {
 		const view = Object.assign(Object.create(HoardView.prototype) as HoardView, { setActiveTab: vi.fn() });
