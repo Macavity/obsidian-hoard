@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildImportedTitle, missingTypeNames } from '../src/CsvModal';
 import { mapImportRows } from '../src/csv/CsvModalBase';
 
@@ -57,5 +57,49 @@ describe('mapImportRows', () => {
 	it('yields an empty raw rating when no rating column is mapped', () => {
 		const rows = mapImportRows([headers, ['A', 'Great']], headers, { title: 'Title' }, build, () => false);
 		expect(rows[0]?.rawRating).toBe('');
+	});
+});
+
+describe('buildImportedTitle complete entries', () => {
+	const NOW = '2026-03-04T05:06:07.000Z';
+	beforeEach(() => {
+		// without fake timers this mocks Date only
+		vi.setSystemTime(NOW);
+	});
+	afterEach(() => { vi.useRealTimers(); });
+
+	it('builds the complete title for a bare entry', () => {
+		expect(buildImportedTitle({ title: '  Foo ' }, 'id1', undefined)).toStrictEqual({
+			id: 'id1', title: 'Foo', type: 'Anime', status: 'Plan to watch', priority: 'Medium', review: '', rating: 0, notes: '',
+			dateStarted: null, dateFinished: null, dateAdded: NOW, dateModified: NOW, totalEpisodes: 0, episodeDuration: 0,
+			releaseDate: null, externalLink: '', seasons: [], watchedEpisodes: [], favorite: false,
+		});
+	});
+
+	it('builds the complete title for a fully mapped entry', () => {
+		const built = buildImportedTitle({
+			title: 'Dark', type: ' TV Show ', status: 'Completed', priority: 'High', rating: 4.5, notes: 'n', dateStarted: '2026-01-01',
+			dateFinished: '2026-01-09', totalEpisodes: 2, episodeDuration: 50, releaseDate: '2017-12-01', externalLink: 'https://d.test',
+			manualStudio: ['W&B'],
+		}, 'TV Show/Dark', 'Movie');
+		expect(built).toStrictEqual({
+			id: 'TV Show/Dark', title: 'Dark', type: 'TV Show', status: 'Completed', priority: 'High', review: '', rating: 4.5, notes: 'n',
+			dateStarted: '2026-01-01', dateFinished: '2026-01-09', dateAdded: NOW, dateModified: NOW, totalEpisodes: 2, episodeDuration: 50,
+			releaseDate: '2017-12-01', externalLink: 'https://d.test', seasons: [], watchedEpisodes: [1, 2], favorite: false,
+			manualStudio: ['W&B'],
+		});
+	});
+
+	it('falls back for an empty type, status and priority and ignores an empty studio list', () => {
+		const built = buildImportedTitle({ title: 'A', type: '  ', status: '', priority: '', manualStudio: [] }, 'i', 'Series');
+		expect(built).toMatchObject({ type: 'Series', status: 'Plan to watch', priority: 'Medium' });
+		expect(Object.keys(built)).not.toContain('manualStudio');
+	});
+
+	it('ignores fields of the entry that the import does not map', () => {
+		const built = buildImportedTitle({ title: 'A', review: 'r', favorite: true, posterUrl: 'p', maybe: true }, 'i', undefined);
+		expect(built).toMatchObject({ review: '', favorite: false });
+		expect(Object.keys(built)).not.toContain('posterUrl');
+		expect(Object.keys(built)).not.toContain('maybe');
 	});
 });
