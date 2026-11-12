@@ -28,7 +28,8 @@ is picked, so `theme.css` themes `.hoard-widget` outside the view; it applies on
 
 - Every rendered container is registered: todo widgets in `widgetRegistry` (element → title id)
   plus `widgetMiniRegistry`, every other kind as a re-render closure in `widgetRerender`.
-- The renderer listens to `hoard-data-changed` on `activeDocument` and re-renders all registered
+- The renderer listens through `onDataChanged` (the `hoard-data-changed` signal on the main window,
+  [overview](../architecture/overview.md#the-change-signal)) and re-renders all registered
   widgets; elements no longer connected to the DOM are dropped lazily, a missing title too.
 - `cleanup()` on unload clears the registries; the listener is removed through `plugin.register`.
 - Helpers exported for other views: `groupProgress`, `findNextRelease`.
