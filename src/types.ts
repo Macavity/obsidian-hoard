@@ -1436,19 +1436,19 @@ export interface AnimeSearchResult {
 
 // AniList API shapes
 
-interface AniListTitle {
+export interface AniListTitle {
 	romaji?: string | null;
 	english?: string | null;
 	native?: string | null;
 }
 
-interface AniListDate {
+export interface AniListDate {
 	year?: number | null;
 	month?: number | null;
 	day?: number | null;
 }
 
-interface AniListCoverImage {
+export interface AniListCoverImage {
 	large?: string | null;
 	medium?: string | null;
 }
@@ -1651,7 +1651,7 @@ export interface TmdbCollectionDetail {
 	parts?: TmdbCollectionPart[];
 }
 
-interface TmdbTvSeason {
+export interface TmdbTvSeason {
 	season_number: number;
 	name: string;
 	episode_count: number;

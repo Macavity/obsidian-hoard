@@ -1140,7 +1140,7 @@ export function renderCreditsRefreshButton(
 // Credits rows (shared)
 
 /** Handlers the credits rows accept; each is optional and gates its own control. */
-interface CreditsRowHandlers {
+export interface CreditsRowHandlers {
 	/** Enables the name → person-filter click. */
 	onPersonClick?: (name: string) => void;
 	/** Enables the leading `+`, which opens the add modal for that field. */

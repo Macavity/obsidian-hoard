@@ -7,7 +7,7 @@ Source: this repo's package.json and esbuild.config.mjs
 After any code change, run:
 
 ```bash
-pnpm build   # tsc --noEmit (type check) + esbuild production build → main.js
+pnpm build   # tsc (type check only) + esbuild production build → main.js
 pnpm lint    # must pass with zero warnings
 ```
 
@@ -15,7 +15,7 @@ During development, `pnpm dev` rebuilds `main.js` on every change (with inline s
 
 ## What the build does
 
-- `tsc -noEmit -skipLibCheck`: type check only, no output.
+- `tsc`: type check only, no output. `noEmit` and `skipLibCheck` are set in `tsconfig.json`, so the CLI, editors and fallow's type-aware analysis check the same program.
 - `node esbuild.config.mjs build`: bundles `src/main.ts` into `main.js` at the repo root.
 - `main.js` is gitignored; releases attach it as an asset.
 

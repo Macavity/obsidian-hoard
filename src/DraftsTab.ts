@@ -1,3 +1,4 @@
+import type { TabInstance } from './ui/TabInstance';
 import Fuse from 'fuse.js';
 import type { EventRef } from 'obsidian';
 import { createIconButton } from './ui/IconButton';
@@ -33,7 +34,7 @@ interface LiveDraftEntry {
 	added: boolean;
 }
 
-export class DraftsTab {
+export class DraftsTab implements TabInstance {
 	private plugin: HoardPlugin;
 	private dataManager: DataManager;
 	private containerEl: HTMLElement;

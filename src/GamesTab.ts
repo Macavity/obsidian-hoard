@@ -1,3 +1,4 @@
+import type { TabInstance } from './ui/TabInstance';
 import { Notice, TFile } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { gameStatusLabel } from './i18n/labels';
@@ -43,7 +44,7 @@ type GameDisplayItem =
  * grids, and the flat "All games" fallback, all on the shared card infrastructure. + Add opens
  * AddGameModal; a card click opens GameDetailModal, or toggles selection in Select mode.
  */
-export class GamesTab {
+export class GamesTab implements TabInstance {
 	private container: HTMLElement;
 	private plugin: HoardPlugin;
 	private gameData: GameDataManager;

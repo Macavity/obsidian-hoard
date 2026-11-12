@@ -15,7 +15,7 @@ Source: https://github.com/obsidianmd/obsidian-sample-plugin, this repo's packag
 ```bash
 pnpm install
 pnpm dev        # watch build, inline source maps
-pnpm build      # tsc --noEmit + production build
+pnpm build      # tsc (type check only) + production build
 pnpm lint       # eslint + checks for eslint-disable comments
 pnpm lint:fix
 ```

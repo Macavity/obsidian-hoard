@@ -59,8 +59,6 @@ export interface IdMaps {
 	group: Map<string, string>;
 }
 
-export type Fm = Record<string, unknown>;
-
 export const WISHLIST = 'Wishlist';
 /** Settings dropped by Hoard (the folders are central). */
 export const REMOVED_SETTINGS = ['rootFolder', 'customListsFolder'];

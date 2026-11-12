@@ -13,6 +13,7 @@ import type { VaultLayout } from './storage/VaultLayout';
 import { FOLDERS } from './storage/VaultLayout';
 import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from './storage/properties';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from './storage/readingCodec';
+import type { Fm } from './storage/storageTypes';
 import {
 	Book,
 	Manga,
@@ -29,8 +30,7 @@ import { changedKeys, slugify } from './storage/sharedHelpers';
 
 export type ReadingKind = 'book' | 'manga';
 
-type Item = Book | Manga;
-type Fm = Record<string, unknown>;
+export type ReadingItem = Book | Manga;
 
 /** Keys both kinds can emit; the full rewrite deletes the ones the encoder omits. */
 const COMMON_KEYS: readonly string[] = [
@@ -51,7 +51,7 @@ const KIND_KEYS: Record<ReadingKind, readonly string[]> = {
 	],
 };
 
-const encodeWith = (kind: ReadingKind, item: Item, columns: readonly ReadingCustomColumn[]): Fm =>
+const encodeWith = (kind: ReadingKind, item: ReadingItem, columns: readonly ReadingCustomColumn[]): Fm =>
 	kind === 'book' ? encodeBook(item as Book, columns) : encodeManga(item as Manga, columns);
 
 /**
@@ -82,7 +82,7 @@ export class ReadingDataManager {
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from:
 	// the baseline a write diffs against, so only fields the user changed reach the note.
-	private views: Map<string, { src: Item; view: Item }> = new Map();
+	private views: Map<string, { src: ReadingItem; view: ReadingItem }> = new Map();
 	// ids changed via the *Silent updaters, written on the next saveAndNotify()
 	private dirty: Set<string> = new Set();
 
@@ -280,7 +280,7 @@ export class ReadingDataManager {
 		this.readShared();
 		const layout = this.layout();
 		for (const [kind, list] of [['book', books], ['manga', manga]] as const) {
-			for (const item of list as Item[]) {
+			for (const item of list as ReadingItem[]) {
 				if (this.app.vault.getAbstractFileByPath(layout.notePath(kind, item.title))) continue;
 				await this.createNote(kind, { ...item });
 			}
@@ -332,7 +332,7 @@ export class ReadingDataManager {
 	 * Forces "To be released" when the release date is in the future and reverts to "Plan to Read"
 	 * once it passes or is cleared. Returns true if the status changed.
 	 */
-	private applyReleaseStatus(item: Item): boolean {
+	private applyReleaseStatus(item: ReadingItem): boolean {
 		const future = isReleaseDateFuture(item.releaseDate);
 		if (future) {
 			if (item.status !== 'To be released') {
@@ -350,7 +350,7 @@ export class ReadingDataManager {
 	 * Mirrors the watchlist auto-add: a reading item with a future release date joins the shared
 	 * Upcoming tracker and leaves once the date passes or is cleared.
 	 */
-	private async syncUpcoming(item: Item, kind: ReadingKind): Promise<void> {
+	private async syncUpcoming(item: ReadingItem, kind: ReadingKind): Promise<void> {
 		const dm = this.plugin.dataManager;
 		if (!dm) return;
 		if (isReleaseDateFuture(item.releaseDate)) {
@@ -368,7 +368,7 @@ export class ReadingDataManager {
 	}
 
 	/** UI copy of an index entry: stable while the entry is unchanged, full vault path, release status applied. */
-	private viewOf(src: Item): Item {
+	private viewOf(src: ReadingItem): ReadingItem {
 		const slot = this.views.get(src.id);
 		if (slot && slot.src === src) return slot.view;
 		const view = {
@@ -508,7 +508,7 @@ export class ReadingDataManager {
 
 	// Shared update/remove flows
 
-	private async updateItem(kind: ReadingKind, updated: Item, label: string): Promise<void> {
+	private async updateItem(kind: ReadingKind, updated: ReadingItem, label: string): Promise<void> {
 		const src = this.sourceOf(kind, updated.id);
 		if (!src) return;
 		updated.dateModified = new Date().toISOString();
@@ -539,7 +539,7 @@ export class ReadingDataManager {
 		if (oldReleaseDate !== updated.releaseDate) await this.syncUpcoming(updated, kind);
 	}
 
-	private updateSilent(updated: Item): void {
+	private updateSilent(updated: ReadingItem): void {
 		const id = updated.id;
 		const slot = this.views.get(id);
 		const src = getBaseline(updated) ?? slot?.src ?? this.sourceOf(this.kindOf(id) ?? 'book', id);
@@ -565,7 +565,7 @@ export class ReadingDataManager {
 	}
 
 	private async removeBatch(kind: ReadingKind, ids: string[], label: string): Promise<void> {
-		const items = ids.map((id) => (kind === 'book' ? this.getBook(id) : this.getManga(id))).filter((x): x is Item => !!x);
+		const items = ids.map((id) => (kind === 'book' ? this.getBook(id) : this.getManga(id))).filter((x): x is ReadingItem => !!x);
 		for (const id of ids) await this.deleteNote(id).catch(() => {});
 		this.notifyListeners();
 		for (const id of ids) await this.plugin.dataManager?.removeReadingAirtimeEntries(id);
@@ -578,7 +578,7 @@ export class ReadingDataManager {
 	}
 
 	/** Index entry (the stored state) for an id, or the baseline of an existing view. */
-	private sourceOf(kind: ReadingKind, id: string): Item | undefined {
+	private sourceOf(kind: ReadingKind, id: string): ReadingItem | undefined {
 		const e = this.index.get(id);
 		return e?.kind === kind ? e.entry : this.views.get(id)?.src;
 	}
@@ -593,7 +593,7 @@ export class ReadingDataManager {
 		return this.mangaColumns;
 	}
 
-	private encode(kind: ReadingKind, item: Item): Fm {
+	private encode(kind: ReadingKind, item: ReadingItem): Fm {
 		return encodeWith(kind, item, this.columnsFor(kind));
 	}
 
@@ -634,7 +634,7 @@ export class ReadingDataManager {
 	}
 
 	private async moveCustomKey(kind: ReadingKind, from: string, to: string): Promise<ColumnMoveResult> {
-		const items: Item[] = kind === 'book' ? this.index.books() : this.index.manga();
+		const items: ReadingItem[] = kind === 'book' ? this.index.books() : this.index.manga();
 		let moved = 0;
 		let skipped = 0;
 		for (const item of items) {
@@ -725,7 +725,7 @@ export class ReadingDataManager {
 	/** Path of the note for `title`: the existing entry's note when there is one, else the path a new one gets. */
 	noteFilePath(kind: ReadingKind, title: string): string {
 		const layout = this.layout();
-		const list: Item[] = kind === 'book' ? this.index.books() : this.index.manga();
+		const list: ReadingItem[] = kind === 'book' ? this.index.books() : this.index.manga();
 		const hit = list.find((e) => e.title === title);
 		return hit ? layout.pathFromId(hit.id) : layout.notePath(kind, title);
 	}
@@ -762,7 +762,7 @@ export class ReadingDataManager {
 	}
 
 	/** True when `item` was made from the stored state of its note (or nothing is stored yet). */
-	private basedOnStored(item: Item): boolean {
+	private basedOnStored(item: ReadingItem): boolean {
 		const current = this.index.get(item.id);
 		if (current?.kind !== 'book' && current?.kind !== 'manga') return true;
 		const base = getBaseline(item) ?? this.views.get(item.id)?.src;
@@ -773,7 +773,7 @@ export class ReadingDataManager {
 	 * Cache + optimistic index update after an own write. `item` becomes the UI's copy only when it was
 	 * made from the stored state; for a stale copy the next read builds a fresh one.
 	 */
-	private afterWrite(kind: ReadingKind, item: Item, fm: Fm, background = false): void {
+	private afterWrite(kind: ReadingKind, item: ReadingItem, fm: Fm, background = false): void {
 		const fresh = this.basedOnStored(item);
 		const stored = kind === 'book' ? decodeBook(item.id, fm, this.bookColumns).entry : decodeManga(item.id, fm, this.mangaColumns).entry;
 		this.index.applyLocal(kind === 'book'
@@ -793,7 +793,7 @@ export class ReadingDataManager {
 	private async processFrontMatter(
 		file: TFile,
 		kind: ReadingKind,
-		item: Item,
+		item: ReadingItem,
 		fn: (fm: Fm) => void,
 		background = false,
 	): Promise<boolean> {
@@ -804,7 +804,7 @@ export class ReadingDataManager {
 	}
 
 	/** Creates the note for a new entry; the entry's id becomes the note path. */
-	private async createNote(kind: ReadingKind, item: Item): Promise<void> {
+	private async createNote(kind: ReadingKind, item: ReadingItem): Promise<void> {
 		const layout = this.layout();
 		const path = this.freePath(layout.notePath(kind, item.title));
 		await this.ensureFolder(this.parentOf(path));
@@ -826,7 +826,7 @@ export class ReadingDataManager {
 	 * keys whose encoded value differs from the stored state (so unreadable or foreign fields stay
 	 * untouched unless this edit changes exactly that field). Creates the note when missing.
 	 */
-	private async writeItem(kind: ReadingKind, item: Item): Promise<void> {
+	private async writeItem(kind: ReadingKind, item: ReadingItem): Promise<void> {
 		let file = this.fileOf(item.id);
 		if (!file) {
 			await this.createNote(kind, item);
@@ -875,18 +875,18 @@ export class ReadingDataManager {
 	}
 
 	/** Writes (creates or updates) the note file. Returns its path. */
-	async writeReadingNote(kind: ReadingKind, item: Item): Promise<string> {
+	async writeReadingNote(kind: ReadingKind, item: ReadingItem): Promise<string> {
 		await this.writeItem(kind, item);
 		return this.layout().pathFromId(item.id);
 	}
 
-	async ensureReadingNote(kind: ReadingKind, item: Item): Promise<string> {
+	async ensureReadingNote(kind: ReadingKind, item: ReadingItem): Promise<string> {
 		if (this.fileOf(item.id)) return this.layout().pathFromId(item.id);
 		return this.writeReadingNote(kind, item);
 	}
 
 	/** Creates the note file only if missing; true when one was created. */
-	async createReadingNoteIfMissing(kind: ReadingKind, item: Item): Promise<boolean> {
+	async createReadingNoteIfMissing(kind: ReadingKind, item: ReadingItem): Promise<boolean> {
 		if (this.fileOf(item.id)) return false;
 		await this.createNote(kind, item);
 		return true;
@@ -897,7 +897,7 @@ export class ReadingDataManager {
 	 * encoder omits are removed, except fields the decoder could not read. Does NOT create the file
 	 * when missing — returns false. Used by the bulk "Rewrite all frontmatter" action.
 	 */
-	async rewriteFrontmatterIfExists(kind: ReadingKind, item: Item): Promise<boolean> {
+	async rewriteFrontmatterIfExists(kind: ReadingKind, item: ReadingItem): Promise<boolean> {
 		const file = this.fileOf(item.id);
 		if (!file) return false;
 		const out = this.encode(kind, item);
@@ -917,7 +917,7 @@ export class ReadingDataManager {
 		});
 	}
 
-	async readReadingNote(_kind: ReadingKind, item: Item): Promise<string | null> {
+	async readReadingNote(_kind: ReadingKind, item: ReadingItem): Promise<string | null> {
 		const file = this.fileOf(item.id);
 		return file ? this.app.vault.read(file) : null;
 	}
@@ -925,7 +925,7 @@ export class ReadingDataManager {
 	/** Appends a `> [!quote]` callout to the ## Quotes section, creating it if missing. */
 	async appendQuote(
 		kind: ReadingKind,
-		item: Item,
+		item: ReadingItem,
 		text: string,
 		reference: string,
 	): Promise<void> {

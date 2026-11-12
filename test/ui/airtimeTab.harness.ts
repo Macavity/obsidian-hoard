@@ -10,7 +10,7 @@ export interface Captures {
 	finders: { items: { source: string; kind?: string; id: string; title: string; typeLabel: string }[]; onPick: (i: unknown) => void }[];
 	readingModals: unknown[][];
 	gameModals: unknown[][];
-	forms: { form: unknown; opts: { onSave: () => Promise<void>; hint: (m: string) => string } }[];
+	forms: { form: unknown; opts: { onSave: () => Promise<void>; hint: (m: string) => string; timeNote: (time: string) => string } }[];
 }
 
 export interface World {

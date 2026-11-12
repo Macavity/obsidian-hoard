@@ -1,3 +1,4 @@
+import type { TabInstance } from './ui/TabInstance';
 import type HoardPlugin from './main';
 import { t, type TranslationKey } from './i18n';
 import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from './i18n/labels';
@@ -57,7 +58,7 @@ function statTypeLabel(type: string): string {
 	return typeLabel(type);
 }
 
-export class DashboardTab {
+export class DashboardTab implements TabInstance {
 	private container: HTMLElement;
 	private plugin: HoardPlugin;
 	private dataManager: DataManager;

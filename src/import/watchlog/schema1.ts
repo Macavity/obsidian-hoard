@@ -2,7 +2,7 @@ import { normalizePath, type DataAdapter } from 'obsidian';
 import type { Book, EntryAirtime, GamesData, Manga, ReadingCustomColumn, ReadingData } from '../../types';
 import type { HistoryEntry } from '../../HistoryManager';
 import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
-import type { EntryCache, EntryKind } from '../../storage/storageTypes';
+import type { EntryCache, EntryKind, Fm } from '../../storage/storageTypes';
 import { encodeTitle, splitCache } from '../../storage/titleCodec';
 import { encodeBook, encodeManga } from '../../storage/readingCodec';
 import { encodeGame } from '../../storage/gameCodec';
@@ -14,7 +14,7 @@ import {
 } from './schema1Normalize';
 import {
 	REMOVED_SETTINGS, WISHLIST, isRecord,
-	type Fm, type IdMaps, type ImportContext, type ImportHooks, type WatchLogData, type WatchLogTitle,
+	type IdMaps, type ImportContext, type ImportHooks, type WatchLogData, type WatchLogTitle,
 } from './schema1Types';
 import { emptyImportReport, type ImportReport } from './report';
 

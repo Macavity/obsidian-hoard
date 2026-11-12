@@ -25,7 +25,7 @@ type LookupOutcome =
 	| { kind: 'books'; results: BookSearchResult[] }
 	| { kind: 'manga'; results: MangaSearchResult[] };
 
-interface ReadingFormState {
+export interface ReadingFormState {
 	title: string;
 	author: string;
 	status: ReadingStatus;

@@ -5,7 +5,7 @@ import { AddReadingModal } from './AddReadingModal';
 import { AddGameModal } from './AddGameModal';
 import { DraftChoiceModal } from './DraftChoiceModal';
 
-interface AddRouteOptions {
+export interface AddRouteOptions {
 	plugin: HoardPlugin;
 	dataManager: DataManager;
 	/** Prefills the search box and the title field of whichever Add modal is picked. */
