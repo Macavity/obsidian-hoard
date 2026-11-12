@@ -57,6 +57,7 @@
     gap: 1px;
   }
 
+  /* fallow-ignore-next-line css-duplicate-block -- same stack as the 3-segment card below; container queries cannot share a block */
   .hoard-dashboard__unified--4 .hoard-dashboard__segment--time {
     flex-direction: row;
     align-items: baseline;

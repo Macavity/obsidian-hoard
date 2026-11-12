@@ -214,7 +214,7 @@
 
 .hoard-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
+  box-shadow: var(--hoard-card-hover-shadow, 0 4px 12px rgb(0 0 0 / 30%));
 }
 
 /* selected card: border only, drawn as the ::after below */
