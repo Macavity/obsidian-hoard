@@ -7,8 +7,8 @@
 	"scripts": {
 		"preinstall": "node scripts/npm-proxy.mjs",
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -skipLibCheck && node esbuild.config.mjs build",
-		"typecheck": "tsc -skipLibCheck",
+		"build": "tsc && node esbuild.config.mjs build",
+		"typecheck": "tsc",
 		"test": "vitest run --coverage",
 		"test:watch": "vitest",
 		"quality": "fallow",
