@@ -3,6 +3,9 @@ import type { Season, DraftPersistState, SavedFilterPreset, RecommendedDaily } f
 /** The four kinds of library entry, each backed by one note. */
 export type EntryKind = 'title' | 'book' | 'manga' | 'game';
 
+/** A note's properties as read from or written to its YAML block. */
+export type Fm = Record<string, unknown>;
+
 /** One episode in S/E notation (both 1-based). */
 export interface EpisodeRef {
 	season: number;

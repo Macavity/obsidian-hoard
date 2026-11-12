@@ -1,11 +1,9 @@
 import { formatTime } from '../types';
 import type { Game } from '../types';
-import type { Decoded } from './storageTypes';
+import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { FmReader, airtimeProps, decodeAirtime } from './readingCodec';
 import { COMMON_PROPS as C, GAME_PROPS as G } from './properties';
-
-type Fm = Record<string, unknown>;
 
 const PLAYTIME_RE = /^(?:(\d{1,3}(?:,\d{3})+|\d+)h)?(?: ?(\d+)m)?$/;
 

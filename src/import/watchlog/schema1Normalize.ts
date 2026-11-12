@@ -6,7 +6,8 @@ import type {
 	ReadingCustomColumn, TagDefinition,
 } from '../../types';
 import { TITLE_PROPS } from '../../storage/properties';
-import { WISHLIST, isRecord, type Fm, type WatchLogTitle } from './schema1Types';
+import { WISHLIST, isRecord, type WatchLogTitle } from './schema1Types';
+import type { Fm } from '../../storage/storageTypes';
 
 // WatchLog's load-time corrections, applied once while converting its data.
 

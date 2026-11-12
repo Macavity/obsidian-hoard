@@ -1,12 +1,10 @@
 import { READING_STATUSES } from '../types';
 import type { Book, Manga, EntryAirtime, AirtimeRecurrence, ReadingCustomColumn, ReadingStatus } from '../types';
-import type { Decoded } from './storageTypes';
+import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, READING_PROPS as R, customFieldKey } from './properties';
 
 type Columns = readonly ReadingCustomColumn[];
-
-export type Fm = Record<string, unknown>;
 
 /** Typed frontmatter reader; a present value of the wrong type is recorded and replaced by the fallback. */
 export class FmReader {
