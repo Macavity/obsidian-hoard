@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CollectionModal } from '../src/CollectionModal';
-import type { HoardTitle, MediaSearchResult, TmdbCollectionDetail } from '../src/types';
+import type { HoardGroup, HoardTitle, MediaSearchResult, TmdbCollectionDetail } from '../src/types';
 
 const NOW = '2026-03-04T05:06:07.000Z';
 
@@ -22,16 +22,23 @@ interface Opts {
 	details: Record<string, MediaSearchResult | null>;
 	statuses?: { name: string }[];
 	priorities?: { name: string }[];
-	existing?: { id: string }[];
+	existing?: Partial<HoardTitle>[];
+	groups?: HoardGroup[];
 }
 
 function setup(opts: Opts) {
 	const batches: HoardTitle[][] = [];
+	const groupCalls: { op: string; group: HoardGroup }[] = [];
+	const recordGroup = (op: string) => (group: HoardGroup) => { groupCalls.push({ op, group: structuredClone(group) }); return Promise.resolve(); };
 	const dataManager = {
 		getTitles: () => opts.existing ?? [],
 		generateId: (title: string) => `Movie/${title}`,
 		addTitleBatch: (entries: HoardTitle[]) => { batches.push(structuredClone(entries)); return Promise.resolve(); },
 		notifyChange: () => {},
+		getGroups: () => opts.groups ?? [],
+		generateGroupId: (name: string) => `grp-${name}`,
+		addGroup: recordGroup('addGroup'),
+		updateGroup: recordGroup('updateGroup'),
 	};
 	const plugin = {
 		dataManager,
@@ -42,11 +49,13 @@ function setup(opts: Opts) {
 		apiService: { getTmdbMovieDetails: (id: string) => Promise.resolve(opts.details[id] ?? null) },
 	};
 	const modal = new CollectionModal({} as never, plugin as never, collection, 'Movie', () => {});
-	const internals = modal as unknown as { selected: Set<number>; addSelected: () => Promise<void> };
+	const internals = modal as unknown as { selected: Set<number>; createGroup: boolean; addSelected: () => Promise<void> };
 	return {
 		batches,
-		add: async (ids: number[]): Promise<void> => {
+		groupCalls,
+		add: async (ids: number[], createGroup = false): Promise<void> => {
 			internals.selected = new Set(ids);
+			internals.createGroup = createGroup;
 			await internals.addSelected();
 		},
 	};
@@ -107,5 +116,38 @@ describe('CollectionModal add selected', () => {
 		const { batches, add } = setup({ details: { '1': null, '2': detail({ title: 'Dune: Part Two' }) } });
 		await add([1, 2]);
 		expect(batches[0]!.map((t) => t.title)).toEqual(['Dune: Part Two']);
+	});
+});
+
+describe('CollectionModal collection group', () => {
+	const owned = { id: 'Movie/Dune', title: 'Dune', releaseDate: '2021-10-22' };
+	const partTwo = { '2': detail({ title: 'Dune: Part Two' }) };
+
+	it('groups the added titles with the parts already in the library', async () => {
+		const { groupCalls, add } = setup({ details: partTwo, existing: [owned] });
+		await add([2], true);
+		expect(groupCalls).toStrictEqual([{
+			op: 'addGroup',
+			group: { id: 'grp-Dune Collection', name: 'Dune Collection', titleIds: ['Movie/Dune: Part Two', 'Movie/Dune'], dateAdded: NOW },
+		}]);
+	});
+
+	it('tops up a group of the same name without repeating a member', async () => {
+		const group = { id: 'g1', name: 'Dune Collection', titleIds: ['Movie/Dune'], dateAdded: '2025-01-01T00:00:00.000Z' };
+		const { groupCalls, add } = setup({ details: partTwo, existing: [owned], groups: [group] });
+		await add([2], true);
+		expect(groupCalls).toStrictEqual([{
+			op: 'updateGroup',
+			group: { ...group, titleIds: ['Movie/Dune', 'Movie/Dune: Part Two'] },
+		}]);
+	});
+
+	it('leaves groups alone when the option is off or nothing could be added', async () => {
+		const off = setup({ details: partTwo, existing: [owned] });
+		await off.add([2]);
+		expect(off.groupCalls).toEqual([]);
+		const failed = setup({ details: { '2': null }, existing: [owned] });
+		await failed.add([2], true);
+		expect(failed.groupCalls).toEqual([]);
 	});
 });
