@@ -55,3 +55,60 @@ describe('baseFile', () => {
 		expect(base.hasTopLevelKey(other, 'other')).toBe(true);
 	});
 });
+
+describe('inFolder filter line', () => {
+	const find = base.findInFolderPath;
+
+	it('needs a top-level "filters:" key with nothing after it', () => {
+		expect(find('views:\n  - type: table\n')).toBeNull();
+		expect(find('filters: {}\n  and:\n    - file.inFolder("X")\n')).toBeNull();
+		expect(find('  filters:\n    and:\n      - file.inFolder("X")\n')).toBeNull();
+	});
+
+	it('finds the line as a later item and skips blank lines', () => {
+		expect(find('filters:\n  and:\n    - status != "x"\n    - file.inFolder("Second")\n')).toBe('Second');
+		expect(find('filters:\n\n  and:\n\n    - a\n\n    - file.inFolder("Blank")\n')).toBe('Blank');
+	});
+
+	it('finds an "and:" that sits deeper inside the filters block', () => {
+		expect(find('filters:\n  or:\n    and:\n      - file.inFolder("Deep")\n')).toBe('Deep');
+	});
+
+	it('stops at the next top-level key', () => {
+		expect(find('filters:\n  or:\n    - a\nviews:\n  and:\n    - file.inFolder("V")\n')).toBeNull();
+	});
+
+	it('stops when the indentation returns to the level of "and:"', () => {
+		expect(find('filters:\n  and:\n    - a\n  not:\n    - file.inFolder("N")\n')).toBeNull();
+		expect(find('filters:\n  and:\nviews:\n    - file.inFolder("N")\n')).toBeNull();
+	});
+
+	it('takes only items at the indentation of the first item', () => {
+		expect(find('filters:\n  and:\n    - or:\n        - file.inFolder("Inner")\n    - a\n')).toBeNull();
+		expect(find('filters:\n  and:\n      - a\n    - file.inFolder("Outer")\n')).toBeNull();
+		expect(find('filters:\n  and:\n    - or:\n        - b\n    - file.inFolder("Sibling")\n')).toBe('Sibling');
+	});
+
+	it('accepts trailing spaces and Windows line ends', () => {
+		expect(find('filters:\n  and:\n    - file.inFolder("T")  \n')).toBe('T');
+		expect(find('filters:\r\n  and:\r\n    - file.inFolder("W")\r\n')).toBe('W');
+	});
+
+	it('does not take a line that only contains the call', () => {
+		expect(find('filters:\n  and:\n    - file.inFolder("A") && x\n')).toBeNull();
+		expect(find('filters:\n  and:\n    - "file.inFolder("A")"\n')).toBeNull();
+	});
+
+	it('escapes quotes and backslashes in the path and reads them back', () => {
+		const out = base.replaceInFolderPath(src, 'A "B"\\C')!;
+		expect(out).toContain('    - file.inFolder("A \\"B\\"\\\\C")\n');
+		expect(find(out)).toBe('A "B"\\C');
+	});
+
+	it('leaves every other byte alone when replacing', () => {
+		expect(base.replaceInFolderPath(src, 'Media/Hoard')).toBe(src.replace('Journal/Hoard', 'Media/Hoard'));
+		expect(base.replaceInFolderPath('filters:\r\n  and:\r\n    - file.inFolder("W")  \r\nx: 1\r\n', 'Z'))
+			.toBe('filters:\r\n  and:\r\n    - file.inFolder("Z")  \r\nx: 1\r\n');
+		expect(base.replaceInFolderPath('views:\n  - type: table\n', 'Z')).toBeNull();
+	});
+});
