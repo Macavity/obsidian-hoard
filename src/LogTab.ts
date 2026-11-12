@@ -1,3 +1,4 @@
+import type { TabInstance } from './ui/TabInstance';
 import { t, type TranslationKey } from './i18n';
 import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from './i18n/labels';
 import { dayName, monthName } from './ui/dateNames';
@@ -127,7 +128,7 @@ interface VirtualRow {
 const ROW_HEIGHT = 32;
 const HEADER_HEIGHT = 40;
 
-export class LogTab {
+export class LogTab implements TabInstance {
 	private container: HTMLElement;
 	private plugin: HoardPlugin;
 	private sourceFilter: SourceFilter = 'all';
