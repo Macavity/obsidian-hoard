@@ -60,7 +60,7 @@ export function deriveBorderColor(color: string): string {
 	return normalizeHex(color);
 }
 
-interface ColorPickerOptions {
+export interface ColorPickerOptions {
 	/** Element the palette is positioned beneath. */
 	anchor: HTMLElement;
 	/** Element the palette is appended to (positioned `fixed`, so any container works). */

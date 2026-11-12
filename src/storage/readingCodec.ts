@@ -6,7 +6,7 @@ import { AIRTIME_PROPS as A, COMMON_PROPS as C, READING_PROPS as R, customFieldK
 
 type Columns = readonly ReadingCustomColumn[];
 
-type Fm = Record<string, unknown>;
+export type Fm = Record<string, unknown>;
 
 /** Typed frontmatter reader; a present value of the wrong type is recorded and replaced by the fallback. */
 export class FmReader {
