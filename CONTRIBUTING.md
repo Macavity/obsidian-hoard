@@ -74,12 +74,10 @@ Run `pnpm check` before you push: typecheck, lint, unit tests and the fallow qua
 Obsidian's plugin directory lints every submitted plugin with `eslint-plugin-obsidianmd`. Its adjustments to the recommended config are documented in the plugin's [configuration page](https://github.com/obsidianmd/eslint-plugin/blob/master/docs/configuration.md#community-plugin-scanner-configuration). What matters here:
 
 - It skips `**/i18n/**`, `**/scripts/**`, `**/test/**`, `**/docs/**` and all `.mjs` files, so locale texts and tooling are never linted.
-- It switches the three sentence-case rules off. Sentence case is our own convention, enforced by `pnpm lint` with the exceptions in `eslint.config.mjs` (`sentenceCaseOptions`); `test/eslintConfig.test.ts` fails when an `ignoreRegex` entry no longer covers any text.
+- It switches the three sentence-case rules off. We have them off as well: casing of UI text is a writing convention, described under "Adding or changing a string" in [docs/architecture/i18n.md](docs/architecture/i18n.md).
 - For newly submitted plugins `no-static-styles-assignment`, `settings-tab/no-manual-html-headings`, `platform`, `no-unsupported-api` and a few more are errors.
 
 `pnpm lint:bot` applies that documented configuration to the tracked sources and prints the findings per rule and level (information only, exit code 0; `--list` adds file and line). It is a reading of the documentation with the plugin version installed here, not the scanner itself, so it can lag behind. Current result: no error, one warning (`settings-tab/prefer-setting-definitions`, the declarative settings API, tracked separately).
-
-Sentence-case exceptions that stay, by reason: proper names, services and acronyms; names of things in the interface written as they are shown there (tabs, statuses, types, buttons, fields, settings paths, quoted labels); format placeholders and examples; label values equal to stored values; lowercase captions and units composed in code around a number. Upper case used as design is written in sentence case and uppercased in CSS (`text-transform: uppercase`).
 
 ## Pull requests
 

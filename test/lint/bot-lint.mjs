@@ -4,7 +4,6 @@
 // The scanner itself is not public, so this is a reading of that page, applied to the
 // plugin version installed here; it can lag behind the scanner.
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { ESLint } from "eslint";
 import tsparser from "@typescript-eslint/parser";
 import obsidianmd from "eslint-plugin-obsidianmd";
@@ -56,8 +55,6 @@ const RECOMMENDATION = new Set([
 	"obsidianmd/prefer-abstract-input-suggest",
 ]);
 
-const SENTENCE_CASE_RULES = new Set(["obsidianmd/ui/sentence-case", "obsidianmd/ui/sentence-case-locale-module"]);
-
 /** How the scanner files a finding of `ruleId`. */
 export function scannerLevel(ruleId) {
 	if (ERROR_ALWAYS.has(ruleId) || ERROR_NEWEST.has(ruleId)) return "error";
@@ -94,38 +91,6 @@ export async function scannerFindings() {
 			.filter((m) => m.ruleId)
 			.map((m) => ({ ruleId: m.ruleId, level: scannerLevel(m.ruleId), file: result.filePath, line: m.line, message: m.message })),
 	);
-}
-
-/** The string value a message points at: the source between its start and end, evaluated. */
-export function flaggedText(source, m) {
-	const offset = (line, column) => source.split("\n").slice(0, line - 1).reduce((n, l) => n + l.length + 1, 0) + column - 1;
-	const raw = source.slice(offset(m.line, m.column), offset(m.endLine ?? m.line, m.endColumn ?? m.column));
-	const literal = raw.replace(/^[\w$]+\s*:\s*/, ""); // locale entries are `key: 'text'`
-	try {
-		return String(new Function(`return (${literal})`)());
-	} catch {
-		return literal;
-	}
-}
-
-/**
- * Texts the sentence-case rules flag in src/ when they run without the exceptions of eslint.config.mjs.
- * The scanner does not run these rules; this only tells whether an exception still covers a text.
- * @returns {Promise<{ ruleId: string, text: string, file: string, line: number }[]>}
- */
-export async function sentenceCaseWithoutExceptions() {
-	const eslint = new ESLint({
-		cwd: process.cwd(),
-		overrideConfigFile: true,
-		overrideConfig: [...withFiles(obsidianmd.configs.recommendedWithLocalesEn), parserConfig],
-	});
-	const results = await eslint.lintFiles(["src/**/*.ts"]);
-	return results.flatMap((result) => {
-		const source = readFileSync(result.filePath, "utf8");
-		return result.messages
-			.filter((m) => m.ruleId && SENTENCE_CASE_RULES.has(m.ruleId))
-			.map((m) => ({ ruleId: m.ruleId, text: flaggedText(source, m), file: result.filePath, line: m.line }));
-	});
 }
 
 if (process.argv[1]?.endsWith("bot-lint.mjs")) {
