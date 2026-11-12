@@ -39,6 +39,8 @@ export class WatchLogOnboardingModal extends Modal {
 	private resolveFinished!: () => void;
 	private current: WizardStep = 'found';
 	private cleanupRunning = false;
+	/** The window the wizard sits in was closed (only ever another one than the main window). */
+	private windowGone = false;
 	private selected = new Set<WatchLogSourceKind>();
 	private reports: Partial<Record<WatchLogSourceKind, ImportReport>> = {};
 	private clean = new Set<WatchLogSourceKind>();
@@ -76,6 +78,10 @@ export class WatchLogOnboardingModal extends Modal {
 				e.preventDefault();
 			}
 		}, true);
+		// Obsidian closes a modal when its window goes away, which close() refuses while a run is busy.
+		// The window is gone all the same: remember it, so the run can end the wizard (afterRun).
+		const win = this.containerEl.win;
+		if (win !== window) win.addEventListener('pagehide', () => { this.windowGone = true; }, { once: true });
 		if (this.opts.startAt === 'cleanup') void this.enterCleanup();
 		else this.render();
 	}
@@ -130,6 +136,20 @@ export class WatchLogOnboardingModal extends Modal {
 	private go(step: WizardStep): void {
 		this.current = step;
 		this.render();
+	}
+
+	/**
+	 * Shows `step` once a run is over. With the wizard's window closed meanwhile nobody can see or
+	 * click it: the outcome goes into a notice and the wizard ends, so Hoard's start is not left waiting.
+	 */
+	private afterRun(step: WizardStep, summary: () => string[]): void {
+		if (!this.windowGone) {
+			this.go(step);
+			return;
+		}
+		this.current = step;
+		new Notice([t('onboarding.title'), ...summary()].join('\n'), 0);
+		this.close();
 	}
 
 	// ---- step 1: found ----
@@ -222,7 +242,16 @@ export class WatchLogOnboardingModal extends Modal {
 				this.clean.delete(kind);
 			}
 		}
-		this.go('result');
+		this.afterRun('result', () => this.importSummary());
+	}
+
+	/** The result step in short: counts per source, then what is left to do. */
+	private importSummary(): string[] {
+		const lines = KIND_ORDER.flatMap((kind) => {
+			const report = this.reports[kind];
+			return report ? [`${PLUGIN_NAME[kind]}: ${reportStats(report)}`] : [];
+		});
+		return [...lines, t(this.failed().length > 0 ? 'onboarding.result.retryHint' : 'onboarding.done.skipped')];
 	}
 
 	// ---- step 3: result ----
@@ -378,7 +407,13 @@ export class WatchLogOnboardingModal extends Modal {
 		} finally {
 			this.cleanupRunning = false;
 		}
-		this.go('done');
+		this.afterRun('done', () => this.cleanupSummary());
+	}
+
+	private cleanupSummary(): string[] {
+		const res = this.cleanupResult ?? { done: 0, errors: [] };
+		const done = t('onboarding.done.cleanupDone', { count: res.done });
+		return res.errors.length > 0 ? [done, t('onboarding.done.cleanupErrors', { count: res.errors.length })] : [done];
 	}
 
 	// ---- step 5: done ----
