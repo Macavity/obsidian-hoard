@@ -12,6 +12,11 @@ The release workflow takes the section of the released version from this file as
 - Colours, sizes and positions the plugin computes are set through CSS custom properties (`--hoard-…`) instead of inline styles, so snippets and themes can override them.
 - Standalone labels are written in sentence case in English and German ("Show less", "Never played"); help texts name tabs, statuses and buttons the way the interface shows them.
 
+### Fixed
+
+- The WatchLog import wizard reacts again when Hoard is enabled from Obsidian's settings window (a window of its own since Obsidian 1.15); its buttons did nothing there. Closing that window while an import or cleanup runs no longer leaves Hoard waiting: the outcome appears as a notice.
+- Changes made in Hoard's settings reach the main window again on Obsidian 1.15: widgets and the status bar refresh, and a new card size applies right away.
+
 ## [0.2.0] - 2026-11-11
 
 ### Added

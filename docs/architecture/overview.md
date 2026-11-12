@@ -62,9 +62,10 @@ flowchart TD
 
 ## The change signal
 
-Every manager ends a user write with `notifyListeners()`: its own `onChange` listeners run, then
-`emitDataChanged()` ([changeSignal.ts](../../src/changeSignal.ts)) dispatches the DOM event
-`hoard-data-changed` on the **main window's** document; listen with `onDataChanged`. Never
+Every manager ends a user write with `notifyListeners()`, which runs its own `onChange` listeners.
+`DataManager` then also calls `emitDataChanged()` ([changeSignal.ts](../../src/changeSignal.ts)),
+which dispatches the DOM event `hoard-data-changed` on the **main window's** document (the reading
+and game managers do not); `main.ts` and the settings tab emit it too. Listen with `onDataChanged`. Never
 `activeDocument` for it: that is the window with the focus (the settings window since Obsidian 1.15,
 a popout), so a change made there would miss listeners added at load. Consumers: `HoardView`
 re-renders the active tab in place (state survives), `WidgetRenderer` re-renders live widgets, the
@@ -84,5 +85,6 @@ status bar recounts. External changes (sync, hand edits) arrive through `EntryIn
   (`getCardMinWidth`), card text placement is per tab (`isCardTextUnder`), both in `main.ts`.
 - Windows: app-wide state uses the plugin's own window (`window.document`): the change signal and
   body custom properties such as the card size (`applyCardSizeCssVar`), which Obsidian copies from
-  the main body into its other windows, never back. `activeDocument` is for UI that belongs to the
+  the main body into its other windows, never back (host behaviour, checked against Obsidian
+  1.15.0). `activeDocument` is for UI that belongs to the
   window the user is in (popovers, pickers, their outside-click listeners).
