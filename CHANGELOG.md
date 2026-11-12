@@ -4,13 +4,13 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 The release workflow takes the section of the released version from this file as the GitHub release notes. Without a section the release only carries the compare link.
 
-## [Unreleased]
+## [0.3.0] - 2026-11-12
 
 ### Changed
 
-- All CSS classes and custom properties of the plugin have new names (`hoard-<block>__<element>--<modifier>`, abbreviations spelled out). CSS snippets and themes that target Hoard's classes need the new names; `docs/architecture/css-blocks.md` lists the blocks.
-- Colours, sizes and positions the plugin computes are set through CSS custom properties (`--hoard-…`) instead of inline styles, so snippets and themes can override them.
 - Standalone labels are written in sentence case in English and German ("Show less", "Never played"); help texts name tabs, statuses and buttons the way the interface shows them.
+- English texts say "properties" instead of "frontmatter", for example the setting "Rewrite all note properties".
+- The notes field in a title's detail view grows with its content and no longer has a drag handle.
 
 ### Fixed
 
@@ -61,5 +61,6 @@ The release workflow takes the section of the released version from this file as
 - Tab bars are flat and no longer show a horizontal scrollbar.
 - The trailer control in the detail view is a single button: play when a trailer is known, fetch otherwise. It no longer sits as a second refresh icon next to the rating refresh.
 
+[0.3.0]: https://github.com/Macavity/obsidian-hoard/releases/tag/0.3.0
 [0.2.0]: https://github.com/Macavity/obsidian-hoard/releases/tag/0.2.0
 [0.1.0]: https://github.com/Macavity/obsidian-hoard/releases/tag/0.1.0
