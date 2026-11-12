@@ -23,6 +23,8 @@ Test vault setup (once):
 2. `pnpm vault:open`, confirm "Open folder as vault" in Obsidian, turn off Restricted mode and make sure `hoard` is enabled.
 3. `pnpm dev` in one terminal; `pnpm reload` after each rebuild.
 
+Windows: the `obsidian` command exists once the command line interface is enabled in Obsidian's settings (General), and only in terminals opened after that. Nothing brings the Obsidian window to the front there, so keep it visible and uncovered yourself.
+
 CLI calls time out after 30 s; keep the hoard-test-vault window visible while running `pnpm smoke`, otherwise Chromium throttling causes timeouts. If Obsidian hangs, run `obsidian vault="hoard-test-vault" reload` and `pnpm vault:reset`.
 
 `pnpm vault:reset` disables `hoard` and removes any modal left open. It then restores `hoard-test-vault/` to `HEAD`, removes untracked files and, from a worktree, mirrors the result into the registered vault (the plugin symlink, themes, `workspace*.json`, cache and `.trash` stay). It writes the seed `scripts/fixtures/hoard-data.json` as `data.json` into the folder the plugin symlink points to (possibly another worktree's `dist/`), waits until Obsidian's index matches the disk and enables `hoard` again. The seed declines both WatchLog imports, so the onboarding wizard stays closed. To try the wizard by hand, remove `ui.watchlogImport` from that `data.json` and run `pnpm reload`.
