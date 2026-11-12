@@ -8,9 +8,9 @@ const shown = (Notice as unknown as { shown: string[] }).shown;
 const PATH = 'W/CustomLists/Backlog.md';
 const qa = (root: ParentNode, sel: string): HTMLElement[] => Array.from(root.querySelectorAll<HTMLElement>(sel));
 const cell = (container: HTMLElement, rowIdx: number, col: string): HTMLElement =>
-	qa(container, '.hoard-cl-tr-body')[rowIdx]!.querySelector<HTMLElement>(`[data-wl-col="${col}"]`)!;
+	qa(container, '.hoard-custom-list-table__tr--body')[rowIdx]!.querySelector<HTMLElement>(`[data-wl-col="${col}"]`)!;
 const rowNames = (container: HTMLElement): string[] =>
-	qa(container, '.hoard-cl-td-name').map((e) => e.textContent ?? '');
+	qa(container, '.hoard-custom-list-table__td--name').map((e) => e.textContent ?? '');
 
 /** The file as another device would leave it: one row renamed, one row added. */
 function foreignContent(content: string): string {
@@ -22,7 +22,7 @@ function foreignContent(content: string): string {
 
 function commitCell(container: HTMLElement, rowIdx: number, col: string, value: string): void {
 	cell(container, rowIdx, col).click();
-	const input = container.querySelector<HTMLInputElement>('.hoard-cl-cell-input')!;
+	const input = container.querySelector<HTMLInputElement>('.hoard-custom-list-table__cell-input')!;
 	input.value = value;
 	input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true, bubbles: true }));
 }
@@ -73,7 +73,7 @@ describe('custom list foreign edits', () => {
 		const file = f.app.vault.getAbstractFileByPath(PATH) as TFile;
 		await f.app.vault.modify(file, foreignContent(f.files.get(PATH)!));
 		await new Promise((r) => setTimeout(r, 20));
-		expect(container.querySelector('.hoard-cl-cell-input')).not.toBeNull();
+		expect(container.querySelector('.hoard-custom-list-table__cell-input')).not.toBeNull();
 	});
 
 	it('keeps foreign sections and the notes when saving the table', async () => {
@@ -151,7 +151,7 @@ describe('notes modal', () => {
 		ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', ctrlKey: true, cancelable: true }));
 		expect(ta.value).toBe('***word***');
 
-		qa(document.body, '.hoard-modal-btn-row .hoard-btn-primary')[0]!.click();
+		qa(document.body, '.hoard-modal__btn-row .hoard-btn--primary')[0]!.click();
 		await until(() => f.files.get(PATH)!.includes('## Notes\n***word***'));
 	});
 });
@@ -178,7 +178,7 @@ describe('review follow-ups', () => {
 		const good = f.files.get(PATH)!;
 		f.files.set(PATH, good.replace('"rows": [', '"rows": [ {'));
 		commitCell(container, 0, 'col_1', '7'); // refused: the note does not parse
-		await until(() => container.querySelector('.hoard-cl-td-name') === null);
+		await until(() => container.querySelector('.hoard-custom-list-table__td--name') === null);
 
 		await f.app.vault.modify(file, good);
 		await until(() => rowNames(container).includes('Alpha'));
@@ -192,7 +192,7 @@ describe('review follow-ups', () => {
 		const ta = document.body.querySelector<HTMLTextAreaElement>('textarea')!;
 		f.files.set(PATH, f.files.get(PATH)!.replace('## Notes\nx', '## Notes\nfrom phone'));
 		ta.value = 'long prose';
-		qa(document.body, '.hoard-modal-btn-row .hoard-btn-primary')[0]!.click();
+		qa(document.body, '.hoard-modal__btn-row .hoard-btn--primary')[0]!.click();
 		await until(() => shown.length > 0);
 		expect(document.body.contains(ta)).toBe(true);
 		expect(ta.value).toBe('long prose');

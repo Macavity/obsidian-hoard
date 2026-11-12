@@ -15,7 +15,7 @@ function build(read: () => Promise<string | null>) {
 	const modal = new ReadingDetailModal({} as never, { settings: {}, apiService: {}, app: {} } as never, readingData as never, 'book', 'b1', vi.fn());
 	const m = modal as unknown as { renderQuotesSection: (i: Book) => void; contentEl: HTMLElement };
 	m.renderQuotesSection(book);
-	const list = () => m.contentEl.querySelector<HTMLElement>('.hoard-reading-quote-list')!;
+	const list = () => m.contentEl.querySelector<HTMLElement>('.hoard-reading-quotes__list')!;
 	return { m, readingData, list };
 }
 
@@ -31,17 +31,17 @@ describe('ReadingDetailModal quotes refresh', () => {
 	it('shows the empty message when the note has no quotes', async () => {
 		const { list } = build(() => Promise.resolve('# Dune\n'));
 		await flush();
-		expect(list().querySelector('.hoard-reading-quote-empty')).not.toBeNull();
+		expect(list().querySelector('.hoard-reading-quotes__empty')).not.toBeNull();
 	});
 
 	it('renders parsed quotes with references', async () => {
 		const note = '## Quotes\n> [!quote] p. 12\n> Fear is the mind-killer.\n\n> [!quote]\n> Second.\n';
 		const { list } = build(() => Promise.resolve(note));
 		await flush();
-		const cards = list().querySelectorAll('.hoard-reading-quote-card');
+		const cards = list().querySelectorAll('.hoard-reading-quotes__card');
 		expect(cards).toHaveLength(2);
-		expect(cards[0]!.querySelector('.hoard-reading-quote-ref')!.textContent).toBe('p. 12');
-		expect(cards[1]!.querySelector('.hoard-reading-quote-ref')).toBeNull();
+		expect(cards[0]!.querySelector('.hoard-reading-quotes__reference')!.textContent).toBe('p. 12');
+		expect(cards[1]!.querySelector('.hoard-reading-quotes__reference')).toBeNull();
 	});
 
 	it('logs and keeps the list empty when reading fails', async () => {
@@ -56,13 +56,13 @@ describe('ReadingDetailModal quotes refresh', () => {
 		let note: string | null = null;
 		const { m, readingData, list } = build(() => Promise.resolve(note));
 		await flush();
-		m.contentEl.querySelector<HTMLElement>('.hoard-reading-detail-quotes-add')!.click();
-		const ta = m.contentEl.querySelector<HTMLTextAreaElement>('.hoard-reading-quote-textarea')!;
+		m.contentEl.querySelector<HTMLElement>('.hoard-reading-quotes__add')!.click();
+		const ta = m.contentEl.querySelector<HTMLTextAreaElement>('.hoard-reading-quotes__textarea')!;
 		ta.value = 'New quote';
 		note = '## Quotes\n> [!quote]\n> New quote\n';
-		m.contentEl.querySelector<HTMLElement>('.hoard-reading-quote-save')!.click();
+		m.contentEl.querySelector<HTMLElement>('.hoard-reading-quotes__save')!.click();
 		await flush();
 		expect(readingData.appendQuote).toHaveBeenCalled();
-		expect(list().querySelector('.hoard-reading-quote-text')!.textContent).toBe('New quote');
+		expect(list().querySelector('.hoard-reading-quotes__text')!.textContent).toBe('New quote');
 	});
 });

@@ -1,56 +1,58 @@
 /* Mobile detail modals */
+
 /* ══ MOBILE DETAIL MODALS ══ */
+
 /* Phone layout for the three detail modals. Placed last so the single-class overrides here beat
    each modal's own rules; see DEVLOG 2026-07-28. */
 
 /* — Watchlist detail modal — */
 
 /* poster + title/rating on top, everything else full width below it */
+
 /* stretch, not the base flex-start: in column direction that would shrink every row to
    fit-content and squeeze the title to three lines.
    nowrap, not the base wrap: column + wrap stretches the flex lines and left ~70px of dead
    space under the poster row. */
-.hoard-detail-mobile .hoard-detail-header {
-  flex-direction: column;
-  flex-wrap: nowrap;
+.hoard-detail--mobile .hoard-detail__header {
+  flex-flow: column nowrap;
   align-items: stretch;
   gap: 14px;
 }
 
-.hoard-detail-mobile .hoard-detail-header-top {
+.hoard-detail--mobile .hoard-detail__header-top {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   gap: 14px;
 }
 
-.hoard-detail-mobile .hoard-detail-cover {
+.hoard-detail--mobile .hoard-detail__cover {
   width: 84px;
   height: auto;
 }
 
-.hoard-detail-mobile .hoard-detail-header-left {
+.hoard-detail--mobile .hoard-detail__header-left {
   gap: 8px;
 }
 
-.hoard-detail-mobile .hoard-detail-title,
-.hoard-detail-mobile .hoard-detail-title-input {
+.hoard-detail--mobile .hoard-detail__title,
+.hoard-detail--mobile .hoard-detail__title-input {
   font-size: 1.2rem;
   line-height: 1.25;
 }
 
-.hoard-detail-mobile .hoard-detail-title-wrap {
+.hoard-detail--mobile .hoard-detail__title-wrap {
   line-height: 1.25;
 }
 
 /* stars, then community rating + trailer on their own line */
-.hoard-detail-rating-stacked {
+.hoard-detail__rating--stacked {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
 }
 
-.hoard-detail-mobile .hoard-star {
+.hoard-detail--mobile .hoard-star-rating__star {
   font-size: 20px;
 }
 
@@ -82,14 +84,14 @@ button.hoard-trailer-btn--labeled:hover {
 }
 
 /* badge row: pills, then square icon buttons */
-.hoard-detail-mobile .hoard-detail-badge-row {
+.hoard-detail--mobile .hoard-detail__badge-row {
   flex-wrap: wrap;
   gap: 6px;
 }
 
 /* in the mobile modal these icon buttons only live in the badge row */
-.hoard-detail-modal.hoard-detail-mobile .hoard-acc-link-icon,
-.hoard-detail-modal.hoard-detail-mobile .hoard-credits-refresh {
+.hoard-detail.hoard-detail--mobile .hoard-accordion__link-icon,
+.hoard-detail.hoard-detail--mobile .hoard-credits__refresh {
   width: 34px;
   height: 30px;
   min-height: 30px;
@@ -101,17 +103,18 @@ button.hoard-trailer-btn--labeled:hover {
   color: var(--text-normal);
   opacity: 1;
   font-size: 15px;
+
   --icon-size: 16px;
 }
 
 /* stats: plain text line, full-width bar, caption under it */
-.hoard-detail-stats-line {
+.hoard-detail__stats-line {
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
 
-.hoard-detail-statline {
+.hoard-detail__statline {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -120,28 +123,28 @@ button.hoard-trailer-btn--labeled:hover {
   color: var(--text-muted);
 }
 
-.hoard-detail-statline-value {
+.hoard-detail__statline-value {
   font-weight: 700;
   color: var(--text-normal);
   margin-right: 4px;
 }
 
-.hoard-detail-stats-line .hoard-acc-progress-wrap {
+.hoard-detail__stats-line .hoard-accordion__progress-wrap {
   width: 100%;
 }
 
-.hoard-detail-progress-label {
+.hoard-detail__progress-label {
   font-size: 11px;
   color: var(--text-muted);
 }
 
 /* studio / director / cast as a label-value grid */
-.hoard-detail-mobile .hoard-detail-credits {
+.hoard-detail--mobile .hoard-detail__credits {
   gap: 8px;
   margin-top: 2px;
 }
 
-.hoard-detail-mobile .hoard-credits-row {
+.hoard-detail--mobile .hoard-credits__row {
   display: grid;
   grid-template-columns: 88px minmax(0, 1fr);
   gap: 10px;
@@ -151,7 +154,7 @@ button.hoard-trailer-btn--labeled:hover {
 
 /* row-reverse parks the + after the label so every label starts at the column edge; nowrap
    stops the + from pushing the text onto its own line */
-.hoard-detail-mobile .hoard-credits-label {
+.hoard-detail--mobile .hoard-credits__label {
   display: flex;
   flex-direction: row-reverse;
   justify-content: flex-end;
@@ -161,24 +164,25 @@ button.hoard-trailer-btn--labeled:hover {
   margin-right: 0;
   color: var(--text-muted);
   white-space: nowrap;
+
   --hoard-credits-label-suffix: '';
 }
 
-.hoard-detail-mobile .hoard-credits-values {
+.hoard-detail--mobile .hoard-credits__values {
   color: var(--text-normal);
 }
 
-.hoard-detail-mobile .hoard-credits-overflow {
+.hoard-detail--mobile .hoard-credits__overflow {
   padding-left: 98px;
 }
 
 /* Mark as Watched becomes the modal's primary action */
-.hoard-detail-mobile .hoard-movie-row {
+.hoard-detail--mobile .hoard-accordion__movie-row {
   display: block;
   padding: 2px 0;
 }
 
-.hoard-detail-mobile .hoard-mark-watched-btn {
+.hoard-detail--mobile .hoard-accordion__mark-watched-btn {
   width: 100%;
   height: auto;
   min-height: 44px;
@@ -190,29 +194,29 @@ button.hoard-trailer-btn--labeled:hover {
   color: var(--text-normal);
 }
 
-.hoard-detail-mobile .hoard-mark-watched-btn.is-watched {
+.hoard-detail--mobile .hoard-accordion__mark-watched-btn.is-watched {
   background: transparent;
 }
 
-.hoard-detail-mobile .hoard-detail-date-row {
+.hoard-detail--mobile .hoard-detail__date-row {
   gap: 10px;
 }
 
 /* 48px cuts "Date started" in half */
-.hoard-detail-mobile .hoard-date-field {
-  --hoard-stars-label-width: 72px;
+.hoard-detail--mobile .hoard-date-picker__field {
+  --hoard-star-rating-stars-label-width: 72px;
 }
 
 /* episode boxes keep their desktop 28px — the mock's oversized grid was rejected */
 
-.is-mobile .hoard-season-badge,
-.is-mobile .hoard-season-ep-count {
+.is-mobile .hoard-accordion__season-badge,
+.is-mobile .hoard-accordion__season-episode-count {
   font-size: 12px;
 }
 
 /* — shared: Obsidian pins mobile buttons to --input-height; the date shortcut stays small — */
 
-.is-mobile .hoard-footer-today-btn {
+.is-mobile .hoard-accordion__footer-today-btn {
   height: auto;
   min-height: 0;
   padding: 3px 9px;
@@ -222,63 +226,64 @@ button.hoard-trailer-btn--labeled:hover {
 
 /* — Reading detail modal — */
 
-.is-mobile .hoard-reading-detail-header {
+.is-mobile .hoard-reading-detail__header {
   gap: 12px;
 }
 
-.is-mobile .hoard-reading-detail-cover {
+.is-mobile .hoard-reading-detail__cover {
   width: 78px;
 }
 
-.is-mobile .hoard-reading-detail-meta-row {
+.is-mobile .hoard-reading-detail__meta-row {
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.is-mobile .hoard-reading-detail-stars-row {
+.is-mobile .hoard-reading-detail__stars-row {
   display: flex;
   align-items: center;
   margin-top: 2px;
 }
 
-.is-mobile .hoard-reading-detail-meta-row .hoard-acc-link-icon {
+.hoard-reading-detail__meta-row.hoard-reading-detail__meta-row--mobile .hoard-accordion__link-icon {
   width: 38px;
   height: 30px;
   min-height: 30px;
   padding: 0;
   border-radius: 8px;
   opacity: 1;
+
   --icon-size: 16px;
 }
 
-.is-mobile .hoard-reading-detail-grid {
+.is-mobile .hoard-reading-detail__grid {
   grid-template-columns: minmax(0, 1fr);
 }
 
 /* — Games detail modal — */
 
-.is-mobile .hoard-game-modal-header {
+.is-mobile .hoard-game-detail__header {
   gap: 12px;
 }
 
-.is-mobile .hoard-game-modal-cover {
+.is-mobile .hoard-game-detail__cover {
   width: 88px;
   height: 124px;
 }
 
-.is-mobile .hoard-game-modal-badges,
-.is-mobile .hoard-game-modal-rating {
+.is-mobile .hoard-game-detail__badges,
+.is-mobile .hoard-game-detail__rating {
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.is-mobile .hoard-game-modal-details {
+.is-mobile .hoard-game-detail__details {
   grid-template-columns: minmax(0, 1fr);
 }
 
 /* — Reading: external link + vault page share one row (desktop + mobile) — */
 
-.hoard-reading-detail-links-row {
+.hoard-reading-detail__links-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -286,16 +291,16 @@ button.hoard-trailer-btn--labeled:hover {
   margin-top: 4px;
 }
 
-.hoard-reading-detail-links-row .hoard-reading-detail-actions,
-.hoard-reading-detail-links-row .hoard-reading-detail-vault-row {
+.hoard-reading-detail__links-row .hoard-reading-detail__actions,
+.hoard-reading-detail__links-row .hoard-reading-detail__vault-row {
   margin-top: 0;
 }
 
 /* — Reading, phone: Obsidian pins buttons and inputs to --input-height and stretches inputs
      to full width; restate the intended size so the row stays compact — */
 
-.is-mobile .hoard-reading-detail-links-row .hoard-btn,
-.is-mobile .hoard-reading-detail-today-btn {
+.hoard-reading-detail__links-row.hoard-reading-detail__links-row--mobile .hoard-btn,
+.is-mobile .hoard-reading-detail__today-btn {
   height: auto;
   min-height: 0;
   padding: 3px 9px;
@@ -303,38 +308,39 @@ button.hoard-trailer-btn--labeled:hover {
   line-height: 1.4;
 }
 
-.is-mobile .hoard-reading-detail-today-btn {
+.is-mobile .hoard-reading-detail__today-btn {
   padding: 2px 7px;
   font-size: 11px;
 }
 
 /* search row, phone: query on its own line, year + Search under it */
-.is-mobile .hoard-search-fields {
+.is-mobile .hoard-search-picker__fields {
   flex-wrap: wrap;
 }
 
-.is-mobile .hoard-modal-input.hoard-search-query {
+.is-mobile .hoard-modal__input.hoard-search-picker__query {
   box-sizing: border-box;
   flex: 1 0 100%;
 }
 
-.is-mobile .hoard-modal-input.hoard-search-year {
+.is-mobile .hoard-modal__input.hoard-search-picker__year {
   box-sizing: border-box;
   flex: 0 0 auto;
   width: 90px;
 }
 
 /* Search button to the right edge; a no-op on desktop, where the flex-grow query takes all free space */
-.hoard-search-fields .hoard-btn {
+.hoard-search-picker__fields .hoard-btn {
   margin-left: auto;
 }
 
 /* needs 3 classes: Obsidian's `.is-mobile input[type=text] { width: 100% }` outweighs 2.
    These date inputs only live in the details section. */
-.is-mobile .hoard-datepicker-input.hoard-reading-detail-date-input {
+.is-mobile .hoard-date-picker__input.hoard-reading-detail__date-input {
   height: auto;
   min-height: 0;
   flex: none;
+
   /* mask is 10 chars + padding + border — no slack */
   width: calc(10ch + 14px);
   max-width: calc(10ch + 14px);
@@ -344,15 +350,15 @@ button.hoard-trailer-btn--labeled:hover {
 
 /* — Games, phone: note · store · wishlist on one line under the rating — */
 
-.hoard-game-modal-actions {
+.hoard-game-detail__actions {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-top: 2px;
 }
 
-.hoard-game-modal-actions .hoard-acc-link-icon,
-.hoard-game-modal-actions .hoard-store-btn {
+.hoard-game-detail__actions .hoard-accordion__link-icon,
+.hoard-game-detail__actions .hoard-store-btn {
   width: 34px;
   height: 30px;
   min-height: 30px;
@@ -361,28 +367,29 @@ button.hoard-trailer-btn--labeled:hover {
   border-radius: 8px;
   background-color: var(--background-modifier-border);
   opacity: 1;
+
   --icon-size: 16px;
 }
 
 /* Modes left the head column — space it like a section so it lines up with Progress */
-.is-mobile .hoard-game-modal-modes {
+.is-mobile .hoard-game-detail__modes {
   margin-top: 18px;
   flex-wrap: wrap;
 }
 
 /* the stat inputs stretch to full width on mobile; restore their intended widths */
-.is-mobile .hoard-game-modal-stat-input {
+.is-mobile .hoard-game-detail__stat-input {
   height: auto;
   min-height: 0;
   flex: none;
   font-size: 13px;
 }
 
-.is-mobile .hoard-game-modal-stat-time {
+.is-mobile .hoard-game-detail__stat-input--time {
   width: 6ch;
 }
 
-.is-mobile .hoard-game-modal-stat-num {
+.is-mobile .hoard-game-detail__stat-input--number {
   width: 5ch;
 }
 

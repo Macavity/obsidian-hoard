@@ -3,7 +3,7 @@ import { t } from '../i18n';
 import { createIconButton } from './IconButton';
 import { renderGroupCollage } from '../CollageUtil';
 import { ConfirmModal } from '../ConfirmModal';
-import { openCardMenu } from '../PosterCard';
+import { openCardMenu, pinCardHeight } from '../PosterCard';
 
 export interface GroupCardOptions<M> {
 	app: App;
@@ -42,14 +42,14 @@ export function groupCountLabel(count: number, unit: GroupUnit): string {
 }
 
 function renderGroupText(textHost: HTMLElement, under: boolean, name: string, label: string, color: string): void {
-	textHost.createSpan({ cls: under ? 'hoard-card-under-title' : 'hoard-card-title', text: name });
-	const badge = textHost.createDiv({ cls: 'hoard-card-meta-row' }).createSpan({ cls: 'hoard-card-type-badge' });
-	badge.style.backgroundColor = color;
+	textHost.createSpan({ cls: under ? 'hoard-card__under-title' : 'hoard-card__title', text: name });
+	const badge = textHost.createDiv({ cls: 'hoard-card__meta-row' }).createSpan({ cls: 'hoard-card__type-badge' });
+	badge.setCssProps({ '--hoard-card-type-color': color });
 	badge.textContent = label;
 }
 
 function renderGroupMenuButton<M>(card: HTMLElement, opts: GroupCardOptions<M>): void {
-	const menuBtn = createIconButton(card, { icon: 'more-vertical', label: t('ui.group.actions'), cls: 'hoard-card-menu-btn' });
+	const menuBtn = createIconButton(card, { icon: 'more-vertical', label: t('ui.group.actions'), cls: 'hoard-card__menu-btn' });
 	menuBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
 		openCardMenu(card, menuBtn, [
@@ -66,17 +66,17 @@ function renderGroupMenuButton<M>(card: HTMLElement, opts: GroupCardOptions<M>):
 export function renderGroupCard<M>(parent: HTMLElement, opts: GroupCardOptions<M>): void {
 	const { group, members, typeColor } = opts;
 	// under mode wraps the collage in a cell with name + count below (see buildPosterCard)
-	const cell = opts.textUnder ? parent.createDiv({ cls: 'hoard-card-cell' }) : null;
+	const cell = opts.textUnder ? parent.createDiv({ cls: 'hoard-card__cell' }) : null;
 	const outer = cell ?? parent;
-	const card = outer.createDiv({ cls: 'hoard-card hoard-card-group' });
+	const card = outer.createDiv({ cls: 'hoard-card hoard-card--group' });
 	card.dataset.groupId = group.id;
-	if (opts.selected) card.addClass('hoard-card-selected');
-	if (opts.cardHeight !== undefined) (cell ?? card).style.height = `${opts.cardHeight}px`;
+	if (opts.selected) card.addClass('hoard-card--selected');
+	if (opts.cardHeight !== undefined) pinCardHeight(cell, card, opts.cardHeight);
 
 	renderGroupCollage(card, members, opts.getCover, { letter: groupLetter(group.name), color: typeColor });
 	const textHost = cell
-		? cell.createDiv({ cls: 'hoard-card-under-info' })
-		: card.createDiv({ cls: 'hoard-card-overlay' });
+		? cell.createDiv({ cls: 'hoard-card__under-info' })
+		: card.createDiv({ cls: 'hoard-card__overlay' });
 	renderGroupText(textHost, !!cell, group.name, groupCountLabel(members.length, opts.unit), typeColor);
 	renderGroupMenuButton(card, opts);
 

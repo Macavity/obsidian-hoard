@@ -10,8 +10,8 @@ import { bodyWithout, changedProps, readNote } from "../note.mjs";
 import { openDetail, waitStable } from "./common.mjs";
 
 const TITLE_ID = "Animation/Spider-Verse";
-const NOTES = ".hoard-detail-modal .hoard-detail-notes-input";
-const STAR = ".hoard-detail-modal .hoard-detail-stars .hoard-star:nth-child(3)";
+const NOTES = ".hoard-detail .hoard-detail__notes-input";
+const STAR = ".hoard-detail .hoard-detail__stars .hoard-star-rating__star:nth-child(3)";
 const MARKER = " Smoke note edit.";
 
 export async function detailEdit() {
@@ -30,7 +30,7 @@ export async function detailEdit() {
 		await waitFor(() => readNote(VAULT_PATH, FIXTURE_DETAIL_TITLE).props.Rating === 3, 10000);
 	} catch (e) {
 		const now = readNote(VAULT_PATH, FIXTURE_DETAIL_TITLE);
-		const ui = evalJs(`JSON.stringify([document.querySelector(".hoard-detail-notes-input")?.value, document.querySelector(".hoard-detail-stars")?.textContent, document.querySelectorAll(".modal-container").length])`);
+		const ui = evalJs(`JSON.stringify([document.querySelector(".hoard-detail__notes-input")?.value, document.querySelector(".hoard-detail__stars")?.textContent, document.querySelectorAll(".modal-container").length])`);
 		throw new Error(`${e.message}; note rating=${now.props.Rating} body=${JSON.stringify(now.body)} ui=${ui}`);
 	}
 

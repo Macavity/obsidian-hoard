@@ -1,7 +1,8 @@
 /* Reading tab */
+
 /* ══ READING TAB ══ */
 
-.hoard-reading-tab {
+.hoard-reading {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -11,7 +12,7 @@
   overflow: hidden;
 }
 
-.hoard-reading-filter-badge {
+.hoard-reading__filter-badge {
   display: inline-block;
   margin-left: 4px;
   padding: 0 5px;
@@ -25,37 +26,37 @@
 }
 
 /* Sub-tab bar */
-.hoard-reading-subtabs {
+.hoard-reading__subtabs {
   display: flex;
   gap: 2px;
   border-bottom: 0.5px solid var(--background-modifier-border);
   margin: 8px -2px 0;
 }
 
-button.hoard-reading-subtab {
+button.hoard-reading__subtab {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
 }
 
-button.hoard-reading-subtab:hover {
+button.hoard-reading__subtab:hover {
   color: var(--text-normal);
 }
 
-button.hoard-reading-subtab.is-active {
+button.hoard-reading__subtab.is-active {
   color: #1D9E75;
   border-bottom-color: #1D9E75;
 }
 
 /* Toolbar */
-.hoard-reading-toolbar {
+.hoard-reading__toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.hoard-reading-search-wrap {
+.hoard-search-box__wrap {
   flex: 1;
   min-width: 0;
   max-width: 240px;
@@ -65,7 +66,7 @@ button.hoard-reading-subtab.is-active {
   gap: 4px;
 }
 
-.hoard-reading-search-input {
+.hoard-search-box__input {
   flex: 1;
   min-width: 0;
   width: 100%;
@@ -78,13 +79,13 @@ button.hoard-reading-subtab.is-active {
   box-sizing: border-box;
 }
 
-.hoard-reading-search-input:focus {
+.hoard-search-box__input:focus {
   outline: none;
   border-color: var(--interactive-accent);
 }
 
 /* clear (X) inside the search box — shown only when the input has text */
-button.hoard-search-clear {
+button.hoard-search-box__clear {
   position: absolute;
   right: 28px;
   top: 50%;
@@ -95,12 +96,12 @@ button.hoard-search-clear {
   border-radius: 4px;
 }
 
-button.hoard-search-clear.is-visible {
+button.hoard-search-box__clear.is-visible {
   display: inline-flex;
 }
 
-.hoard-reading-add-btn {
-  /* color via .hoard-btn-success */
+.hoard-reading-modal__add-btn {
+  /* color via .hoard-btn--success */
   padding: 4px 12px;
   border-radius: 4px;
   cursor: pointer;
@@ -108,27 +109,27 @@ button.hoard-search-clear.is-visible {
   font-weight: 500;
 }
 
-button.hoard-reading-manage-btn {
+button.hoard-reading__manage-btn {
   width: 28px;
   height: 28px;
 }
 
 /* Card grid (placeholder for Phase 2 cards) */
-.hoard-reading-content {
+.hoard-reading__content {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-.hoard-reading-grid {
+.hoard-reading__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--hoard-card-min-width, 160px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--hoard-card-minimum-width, 160px), 1fr));
   gap: 12px;
 }
 
 /* Empty state */
-.hoard-reading-empty {
+.hoard-reading__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -138,27 +139,27 @@ button.hoard-reading-manage-btn {
   color: var(--text-muted);
 }
 
-.hoard-reading-empty-icon {
+.hoard-reading__empty-icon {
   font-size: 2.5rem;
   opacity: 0.6;
 }
 
-.hoard-reading-empty-msg {
+.hoard-reading__empty-message {
   margin: 0;
   font-size: 0.95rem;
 }
 
-.hoard-reading-empty-link {
+.hoard-reading__empty-link {
   color: var(--interactive-accent);
   cursor: pointer;
   text-decoration: underline;
 }
 
-.hoard-reading-empty-link:hover {
+.hoard-reading__empty-link:hover {
   filter: brightness(1.15);
 }
 
-.hoard-reading-empty-search {
+.hoard-reading__empty-search {
   padding: 24px 16px;
   text-align: center;
   color: var(--text-muted);
@@ -181,7 +182,7 @@ button.hoard-reading-manage-btn {
   background: var(--background-modifier-hover);
 }
 
-.hoard-reading-card-cover {
+.hoard-reading-card__cover {
   position: relative;
   width: 100%;
   aspect-ratio: 2 / 3;
@@ -190,14 +191,14 @@ button.hoard-reading-manage-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--background-secondary);
+  background: var(--hoard-reading-card-cover-color, var(--background-secondary));
 }
 
-.hoard-reading-card-cover.is-loading {
+.hoard-reading-card__cover.is-loading {
   animation: hoard-poster-pulse 1.5s ease-in-out infinite;
 }
 
-.hoard-reading-card-cover-img {
+.hoard-reading-card__cover-img {
   /* absolutely fill the 2:3 cover box so a lazy cover causes zero layout shift */
   position: absolute;
   inset: 0;
@@ -207,12 +208,12 @@ button.hoard-reading-manage-btn {
   display: block;
 }
 
-.hoard-reading-card-cover-icon {
+.hoard-reading-card__cover-icon {
   font-size: 2.5rem;
   opacity: 0.75;
 }
 
-.hoard-reading-card-status-badge {
+.hoard-reading-card__status-badge {
   position: absolute;
   top: 6px;
   left: 6px;
@@ -221,9 +222,10 @@ button.hoard-reading-manage-btn {
   padding: 2px 6px;
   border-radius: 3px;
   color: #fff;
+  background-color: var(--hoard-reading-card-status-color, transparent);
 }
 
-.hoard-reading-card-title {
+.hoard-reading-card__title {
   margin-top: 4px;
   font-weight: 600;
   font-size: var(--font-ui-small);
@@ -233,7 +235,7 @@ button.hoard-reading-manage-btn {
   text-overflow: ellipsis;
 }
 
-.hoard-reading-card-author {
+.hoard-reading-card__author {
   font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
@@ -241,7 +243,7 @@ button.hoard-reading-manage-btn {
   text-overflow: ellipsis;
 }
 
-.hoard-reading-card-progress-bar {
+.hoard-reading-card__progress-bar {
   margin-top: 4px;
   width: 100%;
   height: 3px;
@@ -250,13 +252,15 @@ button.hoard-reading-manage-btn {
   overflow: hidden;
 }
 
-.hoard-reading-card-progress-fill {
+.hoard-reading-card__progress-fill {
   height: 100%;
+  width: var(--hoard-reading-card-progress-width, auto);
   border-radius: 2px;
   transition: width 0.2s ease;
+  background-color: var(--hoard-reading-card-progress-color, transparent);
 }
 
-.hoard-reading-card-progress-text {
+.hoard-reading-card__progress-text {
   display: flex;
   gap: 8px;
   font-size: 10.5px;
@@ -266,31 +270,31 @@ button.hoard-reading-manage-btn {
   text-overflow: ellipsis;
 }
 
-.hoard-reading-card-progress-piece {
+.hoard-reading-card__progress-piece {
   white-space: nowrap;
 }
 
 /* Reading cards, text-inside mode — title/author/progress overlay inside the cover
-   (base box shared with .hoard-card-overlay in collections.css) */
-.hoard-reading-card-overlay .hoard-reading-card-title {
+   (base box shared with .hoard-card__overlay in collections.css) */
+.hoard-reading-card__overlay .hoard-reading-card__title {
   margin-top: 0;
   color: #fff;
 }
 
-.hoard-reading-card-overlay .hoard-reading-card-author {
-  color: rgba(255, 255, 255, 0.75);
+.hoard-reading-card__overlay .hoard-reading-card__author {
+  color: rgb(255 255 255 / 75%);
 }
 
-.hoard-reading-card-overlay .hoard-reading-card-progress-bar {
-  background: rgba(255, 255, 255, 0.25);
+.hoard-reading-card__overlay .hoard-reading-card__progress-bar {
+  background: rgb(255 255 255 / 25%);
 }
 
-.hoard-reading-card-overlay .hoard-reading-card-progress-text {
-  color: rgba(255, 255, 255, 0.8);
+.hoard-reading-card__overlay .hoard-reading-card__progress-text {
+  color: rgb(255 255 255 / 80%);
 }
 
 /* Reading virtual scroll */
-.hoard-reading-scroll-container {
+.hoard-reading__scroll-container {
   position: relative;
   width: 100%;
   overflow-y: auto;
@@ -298,36 +302,43 @@ button.hoard-reading-manage-btn {
   min-height: 0;
 }
 
-.hoard-reading-grid.hoard-reading-grid-virtual {
+.hoard-reading__grid.hoard-reading__grid--virtual {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   display: grid;
-  grid-template-columns: repeat(var(--hoard-reading-cols, 1), 1fr);
+  grid-template-columns: repeat(var(--hoard-reading-columns, 1), 1fr);
+
   /* pin rows to the virtual-scroll height, same as the Cards grid */
   grid-auto-rows: var(--hoard-reading-card-height, auto);
   align-content: start;
   gap: 12px;
-  /* inline padding-top, NOT translateY (Chromium CLS pitfall — see VirtualGrid.update) */
+
+  /* padding-top (from VirtualGrid), NOT translateY (Chromium CLS pitfall — see VirtualGrid.update) */
   padding: 0;
+  padding-top: var(--hoard-reading-offset, 0);
   box-sizing: border-box;
 }
 
-.hoard-reading-grid.hoard-reading-grid-virtual .hoard-reading-card {
+.hoard-reading__grid.hoard-reading__grid--virtual .hoard-reading-card {
   width: 100%;
   height: var(--hoard-reading-card-height, auto);
   overflow: hidden;
 }
 
-.hoard-reading-grid.hoard-reading-grid-virtual .hoard-reading-card-cover {
+.hoard-reading__grid.hoard-reading__grid--virtual .hoard-reading-card__cover {
   flex-shrink: 1;
   min-height: 0;
 }
 
-/* in a Rows strip the card takes --hoard-rows-card-width instead of a grid track */
-.hoard-rows-strip .hoard-reading-card {
-  flex: 0 0 var(--hoard-rows-card-width, 160px);
-  width: var(--hoard-rows-card-width, 160px);
+/* in a Rows strip the card takes --hoard-rows-view-card-width instead of a grid track */
+.hoard-rows-view__strip .hoard-reading-card {
+  flex: 0 0 var(--hoard-rows-view-card-width, 160px);
+  width: var(--hoard-rows-view-card-width, 160px);
 }
 
+
+.hoard-btn.hoard-reading__reset-btn.is-hidden {
+  display: none;
+}

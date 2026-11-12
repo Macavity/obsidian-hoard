@@ -134,7 +134,7 @@ describe('ReadingTab.handleCoversVisible', () => {
 		const c = document.createElement('div');
 		if (id) c.dataset.itemId = id;
 		const cover = document.createElement('div');
-		cover.className = 'hoard-reading-card-cover';
+		cover.className = 'hoard-reading-card__cover';
 		c.append(cover);
 		return c;
 	};
@@ -150,12 +150,12 @@ describe('ReadingTab.handleCoversVisible', () => {
 		p.coverFetchFailed.add('b4x');
 		const c1 = card('b1');
 		p.handleCoversVisible([card(), card('missing'), card('b2'), c1, card('b3'), card('b4')]);
-		expect(c1.querySelector('.hoard-reading-card-cover')!.classList.contains('is-loading')).toBe(true);
+		expect(c1.querySelector('.hoard-reading-card__cover')!.classList.contains('is-loading')).toBe(true);
 		await flush();
 		expect(readingData.updateCoverAndSource).toHaveBeenCalledWith('book', 'b1', 'new', 'gid');
 		expect(readingData.updateCoverUrl).toHaveBeenCalledWith('book', 'b3', 'direct');
 		expect(p.coverFetchFailed.has('b4')).toBe(true);
-		expect(c1.querySelector('.hoard-reading-card-cover')!.classList.contains('is-loading')).toBe(false);
+		expect(c1.querySelector('.hoard-reading-card__cover')!.classList.contains('is-loading')).toBe(false);
 		expect(c1.querySelector('img')).not.toBeNull();
 		p.handleCoversVisible([card('b4')]);
 		expect(apiService.getGoogleBookById).toHaveBeenCalledTimes(2);
@@ -198,19 +198,19 @@ describe('ReadingTab.renderReadingActions', () => {
 		const savedBtn = btns[0]!;
 		savedBtn.click();
 		expect(p.savedFilterActive).toBe(true);
-		expect(savedBtn.classList.contains('hoard-btn-preset-active')).toBe(true);
+		expect(savedBtn.classList.contains('hoard-btn--preset-active')).toBe(true);
 		expect(render).toHaveBeenCalled();
-		parent.querySelector<HTMLElement>('.hoard-reading-reset-btn')!.click();
+		parent.querySelector<HTMLElement>('.hoard-reading__reset-btn')!.click();
 		expect(p.savedFilterActive).toBe(false);
 		expect(renderContent).toHaveBeenCalled();
-		const manage = parent.querySelector<HTMLButtonElement>('button.hoard-reading-manage-btn')!;
+		const manage = parent.querySelector<HTMLButtonElement>('button.hoard-reading__manage-btn')!;
 		expect(manage.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(manage.getAttribute('data-icon')).toBe('settings');
 		manage.click();
 		vi.spyOn(p, 'toggleFilterPopover').mockImplementation(() => {});
 		vi.spyOn(p, 'toggleSortPopover').mockImplementation(() => {});
-		parent.querySelector<HTMLElement>('.hoard-reading-filter-btn')!.click();
-		parent.querySelector<HTMLElement>('.hoard-reading-sort-btn')!.click();
+		parent.querySelector<HTMLElement>('.hoard-reading__filter-btn')!.click();
+		parent.querySelector<HTMLElement>('.hoard-reading__sort-btn')!.click();
 	});
 
 	it('has no saved-filter button without a stored filter and shows the delete bar in selection mode', async () => {
@@ -221,8 +221,8 @@ describe('ReadingTab.renderReadingActions', () => {
 		p.selectedIds.add('b1');
 		const parent = document.createElement('div');
 		p.renderReadingActions(parent);
-		expect(parent.querySelector('.hoard-btn-preset-active')).toBeNull();
-		const del = parent.querySelector<HTMLButtonElement>('button.hoard-group-action-btn-delete')!;
+		expect(parent.querySelector('.hoard-btn--preset-active')).toBeNull();
+		const del = parent.querySelector<HTMLButtonElement>('button.hoard-group-header__action-btn--delete')!;
 		expect(del.getAttribute('data-icon')).toBe('x');
 		del.click();
 		await flush();

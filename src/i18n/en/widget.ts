@@ -34,8 +34,8 @@ const widget = {
 	pinToWatch: 'Pin a title to set it as now watching.',
 	episodeShort: 'Ep {episode}',
 	completed: 'Completed',
-	nowWatchingHeader: 'NOW WATCHING',
-	upcomingNextHeader: 'UPCOMING NEXT',
+	nowWatchingHeader: 'Now watching',
+	upcomingNextHeader: 'Upcoming next',
 	nothingPinned: 'Nothing pinned.',
 	noUpcoming: 'No upcoming.',
 } as const;

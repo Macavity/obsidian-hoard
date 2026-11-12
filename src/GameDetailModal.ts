@@ -14,6 +14,7 @@ import { pinModalFooter } from './StickyModal';
 import { t } from './i18n';
 import { gameStatusLabel, priorityLabel } from './i18n/labels';
 import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader } from './ui/detailShared';
+import { createFavoriteButton, markDetailRoot } from './ui/detailFrame';
 
 /**
  * Game detail/edit modal: cover + title/developer header, Type / Priority / Status pill dropdowns
@@ -58,7 +59,7 @@ export class GameDetailModal extends Modal {
 		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
 		this.modalEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.modalEl.addClass('hoard-game-modal');
+		this.modalEl.addClass('hoard-game-detail');
 		this.contentEl.addClass('hoard-view');
 		this.render();
 
@@ -67,7 +68,7 @@ export class GameDetailModal extends Modal {
 		void this.gameData.readGameNotes(this.draft).then((notes) => {
 			this.notesValue = notes ?? '';
 			this.notesLoaded = true;
-			const ta = this.contentEl.querySelector<HTMLTextAreaElement>('.hoard-game-modal-notes');
+			const ta = this.contentEl.querySelector<HTMLTextAreaElement>('.hoard-game-detail__notes');
 			if (ta && ta.value === '') ta.value = this.notesValue;
 		});
 	}
@@ -81,30 +82,30 @@ export class GameDetailModal extends Modal {
 		c.empty();
 
 		// Header: cover + title/developer + badges + rating
-		const header = c.createDiv({ cls: 'hoard-game-modal-header' });
-		this.coverEl = header.createDiv({ cls: 'hoard-game-modal-cover' });
+		const header = c.createDiv({ cls: 'hoard-game-detail__header' });
+		this.coverEl = header.createDiv({ cls: 'hoard-game-detail__cover' });
 		this.renderCover();
 
-		const head = header.createDiv({ cls: 'hoard-game-modal-head' });
+		const head = header.createDiv({ cls: 'hoard-game-detail__head' });
 
 		// click-to-edit title / developer (the Reading detail modal pattern, sharing its classes);
 		// commits into the draft
-		const titleWrap = head.createDiv({ cls: 'hoard-reading-detail-title-wrap' });
+		const titleWrap = head.createDiv({ cls: 'hoard-reading-detail__title-wrap' });
 		this.renderTitleDisplay(titleWrap);
 
-		const devWrap = head.createDiv({ cls: 'hoard-reading-detail-author-wrap' });
+		const devWrap = head.createDiv({ cls: 'hoard-reading-detail__author-wrap' });
 		this.renderDeveloperDisplay(devWrap);
 
-		this.badgeRowEl = head.createDiv({ cls: 'hoard-game-modal-badges' });
+		this.badgeRowEl = head.createDiv({ cls: 'hoard-game-detail__badges' });
 		this.renderBadgeRow();
 
-		this.ratingRowEl = head.createDiv({ cls: 'hoard-game-modal-rating' });
+		this.ratingRowEl = head.createDiv({ cls: 'hoard-game-detail__rating' });
 		this.renderRatingRow();
 
 		// mobile: note · store · wishlist get their own line, and Modes leaves the head column so it
 		// starts under the cover, aligned with Progress
 		if (this.mobile) {
-			this.actionsRowEl = head.createDiv({ cls: 'hoard-game-modal-actions' });
+			this.actionsRowEl = head.createDiv({ cls: 'hoard-game-detail__actions' });
 			this.renderActionsRow();
 			this.renderModesRow(c);
 		} else {
@@ -115,19 +116,19 @@ export class GameDetailModal extends Modal {
 		this.renderProgressSection(c);
 
 		// Platforms
-		const platforms = c.createDiv({ cls: 'hoard-game-modal-section' });
-		platforms.createSpan({ cls: 'hoard-game-modal-label', text: t('detail.game.platforms') });
+		const platforms = c.createDiv({ cls: 'hoard-game-detail__section' });
+		platforms.createSpan({ cls: 'hoard-game-detail__label', text: t('detail.game.platforms') });
 		renderTagChips({
-			wrap: platforms.createDiv({ cls: 'hoard-game-modal-platforms' }),
+			wrap: platforms.createDiv({ cls: 'hoard-game-detail__platforms' }),
 			tags: this.gameData.getSettings().platforms,
 			selected: this.draft.platforms,
 			onToggle: (sel) => { this.draft.platforms = sel; },
 		});
 
 		// Details grid
-		const details = c.createDiv({ cls: 'hoard-game-modal-section hoard-game-modal-details-section' });
-		details.createSpan({ cls: 'hoard-game-modal-label', text: t('detail.details') });
-		const grid = details.createDiv({ cls: 'hoard-game-modal-details' });
+		const details = c.createDiv({ cls: 'hoard-game-detail__section hoard-game-detail__section--details' });
+		details.createSpan({ cls: 'hoard-game-detail__label', text: t('detail.details') });
+		const grid = details.createDiv({ cls: 'hoard-game-detail__details' });
 
 		// publisher pairs with release date and the two progress dates pair with each other, so each row
 		// reads as one thought. Playtime lives in the Progress stat strip.
@@ -144,18 +145,18 @@ export class GameDetailModal extends Modal {
 		this.renderLinksDisclosure(details);
 
 		// Notes
-		const notes = c.createDiv({ cls: 'hoard-game-modal-section' });
-		notes.createSpan({ cls: 'hoard-game-modal-label', text: t('detail.notes') });
+		const notes = c.createDiv({ cls: 'hoard-game-detail__section' });
+		notes.createSpan({ cls: 'hoard-game-detail__label', text: t('detail.notes') });
 		const ta = notes.createEl('textarea', {
-			cls: 'hoard-game-modal-notes',
+			cls: 'hoard-game-detail__notes',
 			attr: { placeholder: t('detail.addNotes'), rows: '3' },
 		});
 		ta.value = this.notesValue;
 		ta.addEventListener('input', () => { this.notesValue = ta.value; });
 
 		// Footer
-		const footer = c.createDiv({ cls: 'hoard-game-modal-footer' });
-		const deleteBtn = footer.createEl('button', { cls: 'hoard-btn hoard-game-modal-delete', text: t('common.delete') });
+		const footer = c.createDiv({ cls: 'hoard-game-detail__footer' });
+		const deleteBtn = footer.createEl('button', { cls: 'hoard-btn hoard-btn--delete', text: t('common.delete') });
 		deleteBtn.addEventListener('click', () => {
 			new ConfirmModal(
 				this.app,
@@ -169,11 +170,7 @@ export class GameDetailModal extends Modal {
 
 		// favorite heart, centered between Delete and Save by the footer's space-between layout. Edits the
 		// draft — persists on Save like everything else here.
-		const favBtn = footer.createEl('button', {
-			cls: 'hoard-detail-fav-btn',
-			attr: { type: 'button' },
-		});
-		setIcon(favBtn, 'heart');
+		const favBtn = createFavoriteButton(footer);
 		const paintFav = (): void => {
 			paintFavoriteButton(favBtn, this.draft.favorite);
 		};
@@ -183,7 +180,7 @@ export class GameDetailModal extends Modal {
 			paintFav();
 		});
 
-		const saveBtn = footer.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('detail.game.saveChanges') });
+		const saveBtn = footer.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('detail.game.saveChanges') });
 		saveBtn.addEventListener('click', () => { void this.save(); });
 
 		pinModalFooter(footer);
@@ -213,10 +210,10 @@ export class GameDetailModal extends Modal {
 			});
 			img.onerror = () => {
 				img.remove();
-				cover.createSpan({ cls: 'hoard-game-modal-cover-hint', text: t('detail.game.coverArt') });
+				cover.createSpan({ cls: 'hoard-game-detail__cover-hint', text: t('detail.game.coverArt') });
 			};
 		} else {
-			cover.createSpan({ cls: 'hoard-game-modal-cover-hint', text: t('detail.game.coverArt') });
+			cover.createSpan({ cls: 'hoard-game-detail__cover-hint', text: t('detail.game.coverArt') });
 		}
 	}
 
@@ -229,7 +226,7 @@ export class GameDetailModal extends Modal {
 	private editTitle(wrap: HTMLElement): void {
 		wrap.empty();
 		const input = wrap.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-detail-title-input',
+			cls: 'hoard-modal__input hoard-reading-detail__title-input',
 			attr: { type: 'text' },
 		});
 		input.value = this.draft.title;
@@ -250,7 +247,7 @@ export class GameDetailModal extends Modal {
 	private renderDeveloperDisplay(wrap: HTMLElement): void {
 		wrap.empty();
 		const devEl = wrap.createDiv({
-			cls: 'hoard-reading-detail-author hoard-reading-detail-editable-text',
+			cls: 'hoard-reading-detail__author hoard-reading-detail__editable-text',
 			text: this.draft.developer || '—',
 		});
 		devEl.title = t('detail.clickToEdit');
@@ -260,7 +257,7 @@ export class GameDetailModal extends Modal {
 	private editDeveloper(wrap: HTMLElement): void {
 		wrap.empty();
 		const input = wrap.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-detail-author-input',
+			cls: 'hoard-modal__input hoard-reading-detail__author-input',
 			attr: { type: 'text' },
 		});
 		input.value = this.draft.developer;
@@ -289,7 +286,7 @@ export class GameDetailModal extends Modal {
 		// the shared detail-modal pill (renderTagPill), so these match the Watchlist / Reading badges. The
 		// auto-managed "To be released" is excluded from the dropdown (it follows the release date) but
 		// still displays when active.
-		const statusWrap = row.createSpan({ cls: 'hoard-reading-detail-status-wrap' });
+		const statusWrap = row.createSpan({ cls: 'hoard-reading-detail__status-wrap' });
 		renderTagPill({
 			wrap: statusWrap,
 			value: this.draft.status,
@@ -304,7 +301,7 @@ export class GameDetailModal extends Modal {
 			onSelect: (v) => { this.draft.status = v; this.renderBadgeRow(); },
 		});
 
-		const typeWrap = row.createSpan({ cls: 'hoard-reading-detail-status-wrap' });
+		const typeWrap = row.createSpan({ cls: 'hoard-reading-detail__status-wrap' });
 		renderTagPill({
 			wrap: typeWrap,
 			value: this.draft.type,
@@ -318,7 +315,7 @@ export class GameDetailModal extends Modal {
 			onSelect: (v) => { this.draft.type = v; this.renderBadgeRow(); },
 		});
 
-		const priorityWrap = row.createSpan({ cls: 'hoard-reading-detail-status-wrap' });
+		const priorityWrap = row.createSpan({ cls: 'hoard-reading-detail__status-wrap' });
 		renderTagPill({
 			wrap: priorityWrap,
 			value: this.draft.priority,
@@ -367,27 +364,27 @@ export class GameDetailModal extends Modal {
 	 * it.
 	 */
 	private renderProgressSection(parent: HTMLElement): void {
-		const section = parent.createDiv({ cls: 'hoard-game-modal-section hoard-game-modal-progress' });
+		const section = parent.createDiv({ cls: 'hoard-game-detail__section hoard-game-detail__section--progress' });
 
 		// the bar picks up the genre colour, the way the type pill does
 		const typeColor = this.gameData.getSettings().types.find((t) => t.name === this.draft.type)?.color;
-		if (typeColor) section.style.setProperty('--hoard-game-progress-color', typeColor);
+		if (typeColor) section.setCssProps({ '--hoard-game-detail-progress-color': typeColor });
 
-		const head = section.createDiv({ cls: 'hoard-game-modal-progress-head' });
-		head.createSpan({ cls: 'hoard-game-modal-label', text: t('detail.progress') });
+		const head = section.createDiv({ cls: 'hoard-game-detail__progress-head' });
+		head.createSpan({ cls: 'hoard-game-detail__label', text: t('detail.progress') });
 
-		const pctWrap = head.createDiv({ cls: 'hoard-game-modal-progress-pct' });
-		const doneIcon = pctWrap.createSpan({ cls: 'hoard-game-modal-progress-done' });
+		const pctWrap = head.createDiv({ cls: 'hoard-game-detail__progress-percent' });
+		const doneIcon = pctWrap.createSpan({ cls: 'hoard-game-detail__progress-done' });
 		setIcon(doneIcon, 'check');
 		const pctInput = pctWrap.createEl('input', {
-			cls: 'hoard-game-modal-progress-input',
+			cls: 'hoard-game-detail__progress-input',
 			attr: { type: 'number', min: '0', max: '100', 'aria-label': t('detail.game.completion') },
 		});
-		pctWrap.createSpan({ cls: 'hoard-game-modal-progress-sign', text: '%' });
+		pctWrap.createSpan({ cls: 'hoard-game-detail__progress-sign', text: '%' });
 
 		// the bar replaces the slider, so it carries the slider's a11y contract
 		const bar = section.createDiv({
-			cls: 'hoard-game-modal-progress-bar',
+			cls: 'hoard-game-detail__progress-bar',
 			attr: {
 				role: 'slider',
 				tabindex: '0',
@@ -396,17 +393,17 @@ export class GameDetailModal extends Modal {
 				'aria-valuemax': '100',
 			},
 		});
-		const fill = bar.createDiv({ cls: 'hoard-game-modal-progress-fill' });
+		const fill = bar.createDiv({ cls: 'hoard-game-detail__progress-fill' });
 
-		const strip = section.createDiv({ cls: 'hoard-game-modal-progress-strip' });
-		const steps = strip.createDiv({ cls: 'hoard-game-modal-step-group' });
+		const strip = section.createDiv({ cls: 'hoard-game-detail__progress-strip' });
+		const steps = strip.createDiv({ cls: 'hoard-game-detail__step-group' });
 
 		// achievements → percentage chip, refreshed by the shared sync below
 		let refreshDerived = (): void => {};
 
 		const sync = (): void => {
 			const p = this.draft.progress;
-			fill.style.width = `${p}%`;
+			fill.setCssProps({ '--hoard-game-detail-progress-width': `${p}%` });
 			bar.setAttr('aria-valuenow', String(p));
 			bar.setAttr('aria-valuetext', `${p}%`);
 			pctWrap.toggleClass('is-complete', p >= 100);
@@ -421,7 +418,7 @@ export class GameDetailModal extends Modal {
 
 		for (const delta of [-5, 5]) {
 			const btn = steps.createEl('button', {
-				cls: 'hoard-game-modal-step',
+				cls: 'hoard-game-detail__step',
 				text: delta > 0 ? `+${delta}` : String(delta),
 				attr: { type: 'button', 'aria-label': t(delta > 0 ? 'detail.game.increase' : 'detail.game.decrease') },
 			});
@@ -429,10 +426,10 @@ export class GameDetailModal extends Modal {
 		}
 
 		// Time played
-		const timeStat = strip.createDiv({ cls: 'hoard-game-modal-stat' });
-		setIcon(timeStat.createSpan({ cls: 'hoard-game-modal-stat-icon' }), 'clock');
+		const timeStat = strip.createDiv({ cls: 'hoard-game-detail__stat' });
+		setIcon(timeStat.createSpan({ cls: 'hoard-game-detail__stat-icon' }), 'clock');
 		const timeInput = timeStat.createEl('input', {
-			cls: 'hoard-game-modal-stat-input hoard-game-modal-stat-time',
+			cls: 'hoard-game-detail__stat-input hoard-game-detail__stat-input--time',
 			attr: {
 				type: 'text',
 				placeholder: '0h',
@@ -450,22 +447,22 @@ export class GameDetailModal extends Modal {
 		timeInput.addEventListener('blur', commitTime);
 
 		// Achievements
-		const achStat = strip.createDiv({ cls: 'hoard-game-modal-stat' });
-		setIcon(achStat.createSpan({ cls: 'hoard-game-modal-stat-icon' }), 'trophy');
+		const achStat = strip.createDiv({ cls: 'hoard-game-detail__stat' });
+		setIcon(achStat.createSpan({ cls: 'hoard-game-detail__stat-icon' }), 'trophy');
 		const earnedInput = achStat.createEl('input', {
-			cls: 'hoard-game-modal-stat-input hoard-game-modal-stat-num',
+			cls: 'hoard-game-detail__stat-input hoard-game-detail__stat-input--number',
 			attr: { type: 'number', min: '0', placeholder: '0', 'aria-label': t('detail.game.achievementsEarned') },
 		});
-		achStat.createSpan({ cls: 'hoard-game-modal-stat-sep', text: '/' });
+		achStat.createSpan({ cls: 'hoard-game-detail__stat-separator', text: '/' });
 		const totalInput = achStat.createEl('input', {
-			cls: 'hoard-game-modal-stat-input hoard-game-modal-stat-num',
+			cls: 'hoard-game-detail__stat-input hoard-game-detail__stat-input--number',
 			attr: { type: 'number', min: '0', placeholder: '—', 'aria-label': t('detail.game.achievementsTotal') },
 		});
 		earnedInput.value = this.draft.achievementsEarned > 0 ? String(this.draft.achievementsEarned) : '';
 		totalInput.value = this.draft.achievementsTotal > 0 ? String(this.draft.achievementsTotal) : '';
 
 		const derived = achStat.createEl('button', {
-			cls: 'hoard-game-modal-derive',
+			cls: 'hoard-game-detail__derive',
 			attr: { type: 'button' },
 		});
 
@@ -506,7 +503,7 @@ export class GameDetailModal extends Modal {
 		const steamAppId = this.draft.steamAppId || steamAppIdFromUrl(this.draft.storeUrl);
 		if (this.plugin.apiService.hasSteamCredentials() && steamAppId !== '') {
 			const steamBtn = strip.createEl('button', {
-				cls: 'hoard-game-modal-steam-pull',
+				cls: 'hoard-game-detail__steam-pull',
 				attr: { type: 'button', title: t('detail.game.steamPull') },
 			});
 			setIcon(steamBtn, 'refresh-cw');
@@ -595,8 +592,8 @@ export class GameDetailModal extends Modal {
 
 	/** Game modes — its own row under the rating (the pill's home since Co-op). */
 	private renderModesRow(parent: HTMLElement): void {
-		const row = parent.createDiv({ cls: 'hoard-game-modal-modes' });
-		row.createSpan({ cls: 'hoard-game-modal-label', text: t('detail.game.modes') });
+		const row = parent.createDiv({ cls: 'hoard-game-detail__modes' });
+		row.createSpan({ cls: 'hoard-game-detail__label', text: t('detail.game.modes') });
 		renderModePill(
 			row,
 			() => ({
@@ -616,7 +613,7 @@ export class GameDetailModal extends Modal {
 		const row = this.ratingRowEl;
 		if (!row) return;
 		row.empty();
-		row.createSpan({ cls: 'hoard-game-modal-label', text: t('list.footer.rating') });
+		row.createSpan({ cls: 'hoard-game-detail__label', text: t('list.footer.rating') });
 		const stars = row.createDiv();
 		renderStarRating(stars, this.draft.rating, {
 			allowHalf: true,
@@ -682,12 +679,12 @@ export class GameDetailModal extends Modal {
 	 * written until Save (see applyGroupChange).
 	 */
 	private renderGroupField(parent: HTMLElement): void {
-		const row = parent.createDiv({ cls: 'hoard-game-modal-group' });
-		row.createEl('label', { cls: 'hoard-game-modal-group-label', text: t('detail.game.group') });
-		const controls = row.createDiv({ cls: 'hoard-game-modal-group-controls' });
+		const row = parent.createDiv({ cls: 'hoard-game-detail__group' });
+		row.createEl('label', { cls: 'hoard-game-detail__group-label', text: t('detail.game.group') });
+		const controls = row.createDiv({ cls: 'hoard-game-detail__group-controls' });
 
-		// not hoard-select-sm — that sets width:auto, which fights the grid column
-		const select = controls.createEl('select', { cls: 'hoard-select' });
+		// not hoard-input__select--sm — that sets width:auto, which fights the grid column
+		const select = controls.createEl('select', { cls: 'hoard-input__select' });
 		select.createEl('option', { text: t('ui.form.none'), value: '' });
 		for (const g of this.gameData.getGroups()) {
 			const opt = select.createEl('option', { text: g.name, value: g.id });
@@ -695,7 +692,7 @@ export class GameDetailModal extends Modal {
 		}
 
 		const newInput = controls.createEl('input', {
-			cls: 'hoard-modal-input hoard-game-modal-group-new',
+			cls: 'hoard-modal__input hoard-game-detail__group-new',
 			attr: { type: 'text', placeholder: t('detail.game.newGroupPlaceholder'), maxlength: '64' },
 		});
 		newInput.value = this.newGroupName;
@@ -764,14 +761,14 @@ export class GameDetailModal extends Modal {
 	 * two grid rows. N counts the non-empty URLs and tracks the draft as you type.
 	 */
 	private renderLinksDisclosure(parent: HTMLElement): void {
-		const wrap = parent.createDiv({ cls: 'hoard-game-modal-links' });
+		const wrap = parent.createDiv({ cls: 'hoard-game-detail__links' });
 		const toggle = wrap.createEl('button', {
-			cls: 'hoard-game-modal-links-toggle',
+			cls: 'hoard-game-detail__links-toggle',
 			attr: { type: 'button', 'aria-expanded': 'false' },
 		});
-		const caret = toggle.createSpan({ cls: 'hoard-game-modal-links-caret', text: '▸' });
-		const summary = toggle.createSpan({ cls: 'hoard-game-modal-links-summary' });
-		const body = wrap.createDiv({ cls: 'hoard-game-modal-links-body' });
+		const caret = toggle.createSpan({ cls: 'hoard-game-detail__links-caret', text: '▸' });
+		const summary = toggle.createSpan({ cls: 'hoard-game-detail__links-summary' });
+		const body = wrap.createDiv({ cls: 'hoard-game-detail__links-body' });
 
 		const paintSummary = (): void => {
 			const filled = [this.draft.storeUrl, this.draft.externalLink, this.draft.coverUrl]
@@ -813,7 +810,7 @@ export class GameDetailModal extends Modal {
 		value: string,
 		onInput: (v: string) => void,
 	): void {
-		const row = parent.createDiv({ cls: 'hoard-game-modal-link-row' });
+		const row = parent.createDiv({ cls: 'hoard-game-detail__link-row' });
 		row.createEl('label', { text: label });
 		const input = row.createEl('input', { attr: { type: 'text', placeholder: 'https://…' } });
 		input.value = value;
@@ -828,7 +825,7 @@ export class GameDetailModal extends Modal {
 		placeholder = '—',
 		extraCls = '',
 	): void {
-		const field = grid.createDiv({ cls: `hoard-game-modal-field ${extraCls}`.trim() });
+		const field = grid.createDiv({ cls: `hoard-game-detail__field ${extraCls}`.trim() });
 		field.createEl('label', { text: label });
 		const input = field.createEl('input', { attr: { type: 'text', placeholder } });
 		input.value = value;
@@ -841,7 +838,7 @@ export class GameDetailModal extends Modal {
 		value: string | null,
 		onInput: (v: string | null) => void,
 	): void {
-		const field = grid.createDiv({ cls: 'hoard-game-modal-field' });
+		const field = grid.createDiv({ cls: 'hoard-game-detail__field' });
 		field.createEl('label', { text: label });
 		// was a native <input type="date">, which paints in the OS locale and ignores the plugin's
 		// date-format setting; the shared picker doesn't
@@ -891,11 +888,7 @@ export class GameGroupDetailModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-detail-modal');
+		markDetailRoot(this.modalEl, this.contentEl, this.plugin.settings.colorTheme);
 		this.renderAll();
 	}
 
@@ -913,7 +906,7 @@ export class GameGroupDetailModal extends Modal {
 			progress: gameGroupProgress(this.members),
 		});
 
-		const grid = this.contentEl.createDiv({ cls: 'hoard-cards-grid hoard-detail-group-grid' });
+		const grid = this.contentEl.createDiv({ cls: 'hoard-card-grid hoard-detail__group-grid' });
 		const settings = this.gameData.getSettings();
 		for (const m of this.members) {
 			const typeColor = settings.types.find((t) => t.name === m.type)?.color ?? '#888780';

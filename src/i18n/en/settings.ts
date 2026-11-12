@@ -95,12 +95,12 @@ const settings = {
 			done: 'Images re-fetched: {updated} updated, {unchanged} unchanged or failed.',
 		},
 		rewrite: {
-			name: 'Rewrite all note frontmatter',
-			desc: 'Rewrites the YAML frontmatter on every existing Watchlist and Reading note, applying newer frontmatter fields to older notes. Body content (the notes and quotes sections) is preserved. Notes without a file on disk are skipped; use Regenerate to create them.',
-			button: 'Rewrite frontmatter',
-			confirm: 'This will rewrite the YAML frontmatter on all existing notes for {titles} watch titles and {reading} reading entries. Body content is preserved; notes without a file on disk are skipped. Continue?',
+			name: 'Rewrite all note properties',
+			desc: 'Rewrites the YAML properties on every existing Watchlist and Reading note, applying newer properties to older notes. Body content (the notes and quotes sections) is preserved. Notes without a file on disk are skipped; use Regenerate to create them.',
+			button: 'Rewrite properties',
+			confirm: 'This will rewrite the YAML properties on all existing notes for {titles} watch titles and {reading} reading entries. Body content is preserved; notes without a file on disk are skipped. Continue?',
 			none: 'No notes to rewrite.',
-			progress: 'Rewriting frontmatter… {done} / {total}',
+			progress: 'Rewriting properties… {done} / {total}',
 			result: { one: '{state}: {count} note rewritten.', other: '{state}: {count} notes rewritten.' },
 			resultSkipped: { one: '{state}: {count} note rewritten, {skipped} skipped (no file).', other: '{state}: {count} notes rewritten, {skipped} skipped (no file).' },
 		},
@@ -120,7 +120,7 @@ const settings = {
 		},
 		statusBar: {
 			name: 'Show Upcoming count in status bar',
-			desc: 'Show a "N due" counter in the status bar when Upcoming entries are due. Click it to open the Upcoming tab. (Desktop only.)',
+			desc: 'Show a "3 due" counter in the status bar when Upcoming entries are due. Click it to open the Upcoming tab. (Desktop only.)',
 		},
 	},
 	tags: {
@@ -167,7 +167,7 @@ const settings = {
 		readingType: {
 			manga: 'Manga',
 			book: 'Book',
-			help: 'The badge colour used for a Book or a Manga wherever its type is shown.',
+			help: 'The badge colour used for a book or a manga wherever its type is shown.',
 		},
 		rating: {
 			label: 'Rating system',
@@ -177,7 +177,7 @@ const settings = {
 		},
 		season: {
 			label: 'Season colors',
-			help: 'Colors cycle through seasons in order (Season 1 = color 1, etc.).',
+			help: 'Colors cycle through seasons in order (season 1 = color 1, etc.).',
 			name: 'Season {number}',
 			add: '+ add color',
 			remove: 'Remove color {number}',
@@ -290,7 +290,7 @@ const settings = {
 		},
 		tmdb: {
 			note: 'Up to 10 cast members (billing order) and all credited directors',
-			help: 'TMDB is used through the API Read Access Token (the long v4 bearer token), not the shorter v3 API key.',
+			help: 'TMDB is used through the API read access token (the long v4 bearer token), not the shorter v3 API key.',
 			field: 'API read access token',
 			placeholder: 'Paste your TMDB token here',
 		},
@@ -339,7 +339,7 @@ const settings = {
 		igdb: {
 			note: 'Search, covers, platforms and trailers',
 			link: 'Register a Twitch app',
-			help: 'IGDB authenticates through Twitch: register an application to get a Client ID and Client Secret. The access token is fetched and refreshed automatically.',
+			help: 'IGDB authenticates through Twitch: register an application to get a client ID and client secret. The access token is fetched and refreshed automatically.',
 			clientId: 'Client ID',
 			clientIdPlaceholder: 'Paste your Twitch client ID here',
 			clientSecret: 'Client secret',
@@ -349,7 +349,7 @@ const settings = {
 			title: 'API routing by type in Watchlist',
 			desc: 'Choose which API group to use for each title type. Anime, Movie, and TV Show are locked to their default APIs.',
 			locked: '{apis} (locked)',
-			notSet: '— Not set —',
+			notSet: '— not set —',
 			anime: 'Anime API (Jikan / AniList)',
 			movie: 'Movie / TV API (OMDb / TMDB)',
 		},
@@ -370,15 +370,15 @@ const settings = {
 			button: 'Restore from backup',
 			invalid: 'Invalid backup file: {error}',
 			errors: {
-				parseJson: 'could not parse JSON.',
-				notObject: 'not an object.',
-				titlesMissing: 'titles are missing.',
-				readingMissing: 'reading data is missing books or manga.',
-				gamesMissing: 'games data is missing games or settings.',
-				sharedMissing: 'shared settings are missing.',
-				historyInvalid: 'activity log is not a list.',
-				localInvalid: 'local settings are invalid.',
-				unsupportedFormat: 'unsupported format.',
+				parseJson: 'Could not parse JSON.',
+				notObject: 'Not an object.',
+				titlesMissing: 'Titles are missing.',
+				readingMissing: 'Reading data is missing books or manga.',
+				gamesMissing: 'Games data is missing games or settings.',
+				sharedMissing: 'Shared settings are missing.',
+				historyInvalid: 'Activity log is not a list.',
+				localInvalid: 'Local settings are invalid.',
+				unsupportedFormat: 'Unsupported format.',
 			},
 			confirm: 'This restores the backup into your vault: missing notes are created, the shared settings, device settings (API keys included) and the activity log are replaced. Existing notes are kept. Continue?',
 			done: 'Backup restored successfully.',
@@ -402,8 +402,8 @@ const settings = {
 		watchlistExportDesc: 'Export selected titles as a CSV file.',
 		watchlistImportDesc: 'Import titles from a CSV file. Duplicates are highlighted before import.',
 		readingSub: 'Move books and manga in and out of the plugin',
-		readingExportDesc: 'Export your Books or Manga library as a CSV file.',
-		readingImportDesc: 'Import Books or Manga from a CSV file, with column mapping and duplicate detection.',
+		readingExportDesc: 'Export your books or manga library as a CSV file.',
+		readingImportDesc: 'Import books or manga from a CSV file, with column mapping and duplicate detection.',
 	},
 	folders: {
 		title: 'Folders',
@@ -464,8 +464,8 @@ const settings = {
 		statTime: 'Time watched & remaining combined (mini).',
 		upcomingNext: 'Next upcoming title with name, type badge, release date, and countdown.',
 		nowWatching: 'Currently pinned title with name, type badge, and progress bar.',
-		statTimeCompletedFull: 'Full-width triple card: Time Watched · Time Remaining · Completed.',
-		nowNext: 'Full-width double card: Now Watching · Up Next.',
+		statTimeCompletedFull: 'Full-width triple card: Time watched · Time remaining · Completed.',
+		nowNext: 'Full-width double card: Now watching · Up next.',
 	},
 	quickInfo: {
 		dashboard: {
@@ -480,7 +480,7 @@ const settings = {
 			},
 			remaining: {
 				heading: 'Time remaining',
-				body: 'Calculated as: episodes remaining × episode duration, summed across all titles with status Watching and Plan to Watch.',
+				body: 'Calculated as: episodes remaining × episode duration, summed across all titles with status Watching and Plan to watch.',
 			},
 			dropped: {
 				heading: 'Dropped',
@@ -498,7 +498,7 @@ const settings = {
 			},
 			pin: {
 				heading: 'Pin to top',
-				body: 'Pinning a title moves it to the top of your Watchlist regardless of sorting. Pinned titles also appear in the Now Watching widget, so you can quickly see what you\'re currently watching inside your notes or Homepage.',
+				body: 'Pinning a title moves it to the top of your Watchlist regardless of sorting. Pinned titles also appear in the "Now watching" widget, so you can quickly see what you\'re currently watching inside your notes or Homepage.',
 			},
 			season: {
 				heading: 'How to add a new season',
@@ -514,7 +514,7 @@ const settings = {
 		},
 		reading: {
 			booksManga: {
-				heading: 'Books vs Manga',
+				heading: 'Books vs manga',
 				body: 'Reading has two independent sub-tabs: Books and Manga. Each keeps its own entries, custom columns, filters, sort order, and saved filter. Set which one opens by default under Settings → Reading.',
 			},
 			statuses: {
@@ -527,7 +527,7 @@ const settings = {
 			},
 			notes: {
 				heading: 'Notes & favorite quotes',
-				body: 'Each entry generates a Markdown note file (under your Reading folder) with frontmatter plus Notes and Quotes sections. Favorite quotes you add from an entry\'s detail view are saved into that note as quote callouts, so they live alongside your own notes.',
+				body: 'Each entry generates a Markdown note file (under your Reading folder) with properties plus Notes and Quotes sections. Favorite quotes you add from an entry\'s detail view are saved into that note as quote callouts, so they live alongside your own notes.',
 			},
 			covers: {
 				heading: 'Covers',

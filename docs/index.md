@@ -66,6 +66,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [API layer](architecture/api-layer.md): which services exist (keyless defaults and keyed upgrades), how the effective source is resolved, how errors and rate limits are handled, and how fetched data reaches cache and notes.
 - [Internationalisation](architecture/i18n.md): how to add a string, why stored values and storage messages are codes not text, and which tests enforce it.
 - [UI kit](architecture/ui-kit.md): how `HoardView` hosts tabs, which shared building blocks (icon buttons included) tabs and modals compose, and the CSS naming rules.
+- [CSS blocks](architecture/css-blocks.md): which BEM block a Hoard class belongs to, which stylesheets hold it, and the naming rules the class check enforces.
 
 # Modules
 

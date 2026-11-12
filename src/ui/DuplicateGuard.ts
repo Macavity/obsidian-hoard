@@ -18,10 +18,10 @@ function showWarning(
 ): void {
 	// a form re-render drops the warning element without clearing the reference
 	if (guard.warningEl?.isConnected) return;
-	const warn = btnRow.createDiv({ cls: 'hoard-duplicate-warning' });
+	const warn = btnRow.createDiv({ cls: 'hoard-modal__duplicate-warning' });
 	guard.warningEl = warn;
 	warn.createSpan({ text });
-	const continueBtn = warn.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('ui.duplicate.continue') });
+	const continueBtn = warn.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('ui.duplicate.continue') });
 	const cancelBtn = warn.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') });
 	continueBtn.addEventListener('click', () => {
 		guard.skip = true;
@@ -51,7 +51,7 @@ export interface DuplicateCheck {
  */
 export function blockDuplicate(contentEl: HTMLElement, guard: DuplicateGuard, check: DuplicateCheck): boolean {
 	if (!guard.skip && check.isDuplicate) {
-		const btnRow = contentEl.querySelector<HTMLElement>('.hoard-modal-btn-row');
+		const btnRow = contentEl.querySelector<HTMLElement>('.hoard-modal__btn-row');
 		if (btnRow) {
 			const key = check.verb === 'Add' ? 'ui.duplicate.addAnyway' : 'ui.duplicate.saveAnyway';
 			showWarning(guard, btnRow, t(key, { name: check.name }), check.retry);

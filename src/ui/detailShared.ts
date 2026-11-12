@@ -12,7 +12,7 @@ export function paintFavoriteButton(btn: HTMLElement, fav: boolean): void {
 export function renderEditableTitle(wrap: HTMLElement, text: string, onEdit: () => void): void {
 	wrap.empty();
 	const el = wrap.createEl('h2', {
-		cls: 'hoard-reading-detail-title hoard-reading-detail-editable-text',
+		cls: 'hoard-reading-detail__title hoard-reading-detail__editable-text',
 		text,
 	});
 	el.title = t('detail.clickToEdit');
@@ -24,17 +24,17 @@ export function renderGroupDetailHeader(
 	parent: HTMLElement,
 	opts: { name: string; countText: string; progress: number },
 ): void {
-	const header = parent.createDiv({ cls: 'hoard-detail-header' });
-	const left = header.createDiv({ cls: 'hoard-detail-header-left' });
-	left.createEl('h2', { cls: 'hoard-detail-title', text: opts.name });
-	left.createDiv({ cls: 'hoard-detail-group-meta', text: opts.countText });
+	const header = parent.createDiv({ cls: 'hoard-detail__header' });
+	const left = header.createDiv({ cls: 'hoard-detail__header-left' });
+	left.createEl('h2', { cls: 'hoard-detail__title', text: opts.name });
+	left.createDiv({ cls: 'hoard-detail__group-meta', text: opts.countText });
 
-	const statsBox = header.createDiv({ cls: 'hoard-detail-stats-box' });
-	const progBlock = statsBox.createDiv({ cls: 'hoard-acc-header-right' });
-	progBlock.createDiv({ cls: 'hoard-acc-percent', text: `${opts.progress}%` });
-	progBlock.createDiv({ cls: 'hoard-acc-progress-label', text: t('list.stat.progress') });
-	const barWrap = progBlock.createDiv({ cls: 'hoard-acc-progress-wrap' });
-	barWrap.createDiv({ cls: 'hoard-progress-bar' }).style.width = `${opts.progress}%`;
+	const statsBox = header.createDiv({ cls: 'hoard-detail__stats-box' });
+	const progBlock = statsBox.createDiv({ cls: 'hoard-accordion__header-right' });
+	progBlock.createDiv({ cls: 'hoard-accordion__percent', text: `${opts.progress}%` });
+	progBlock.createDiv({ cls: 'hoard-accordion__progress-label', text: t('list.stat.progress') });
+	const barWrap = progBlock.createDiv({ cls: 'hoard-accordion__progress-wrap' });
+	barWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({ '--hoard-progress-width': `${opts.progress}%` });
 }
 
 /** Localized fill-button labels and episode tooltip of the shared episode grid. */

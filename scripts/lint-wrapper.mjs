@@ -30,6 +30,17 @@ for (const script of ['scripts/check-eslint-disables.mjs', 'scripts/check-css-cl
 	}
 }
 
+// Stylesheets: stylelint before ESLint, --fix passes through
+try {
+	execSync(`pnpm exec stylelint "src/styles/*.css"${hasFix ? ' --fix' : ''}`, {
+		stdio: 'inherit',
+		shell: true,
+		cwd: join(__dirname, '..')
+	});
+} catch (error) {
+	process.exit(1);
+}
+
 // Detect which package manager to use
 // Check if pnpm is available, otherwise fall back to npx
 let usePnpm = false;

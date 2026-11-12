@@ -17,11 +17,12 @@ source:
   - src/LibraryIndex.ts
   - src/ui/problemText.ts
   - src/ui/detailShared.ts
+  - src/ui/detailFrame.ts
   - src/ui/typeBadge.ts
   - src/ui/IconButton.ts
   - src/styles/icon-button.css
   - src/styles/index.css
-source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
+source_commit: 52470cc0fb7bcae43faf4c81a9543ecacb5ed178
 ---
 
 # UI kit
@@ -78,14 +79,19 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.import
   (not `transform`, to avoid layout shift). `computeGridMetrics` mirrors the CSS columns;
   `cardSizeToMinWidth` maps the card-size step to a pixel width. `LazyCardObserver` fetches a
   poster the first time a card flagged `data-needs-poster` enters the viewport. `buildPosterCard`
-  draws the card; `POSTER_CARD_TEXT_H` must match the CSS.
+  draws the card; `POSTER_CARD_TEXT_H` must match the CSS. A card built elsewhere reuses its parts:
+  `createPosterPlaceholder` (letter tile) and `loadCardPoster` (sets the image, marks the card
+  `has-poster` on load, hands a broken image to the caller).
 - **Search language** (`searchItems` in [SearchQuery.ts](../../src/SearchQuery.ts)): Fuse index
   over declared fields; bare tokens fuzzy and ANDed, `"quoted"` exact, `field:value` scoped (an
   unknown prefix stays text, so `Re:Zero` works), `field:>n` and friends numeric, `a | b` ORs,
   `-token` excludes. Empty query returns null, meaning "no search".
 - **Text helpers**: all display text goes through `t()` ([i18n](i18n.md)); shared renderers live in
   `ui/`: `typeBadge`, `choiceGrid` (add choosers), `detailShared` (favourite button, editable title,
-  group header, episode-grid text), `scheduleText` and `dateNames` (localized dates), `problemText`.
+  group header, episode-grid text), `detailFrame` (what all three detail modals build alike:
+  `markDetailRoot` puts `data-theme`, `hoard-view` and `hoard-detail` on the modal, `createFavoriteButton`
+  the footer heart, `mobileRowClass` a row's `--mobile` modifier), `createSeasonHeader` in `EpisodeGrid`
+  (season wrap, header and palette-coloured badge of the accordion), `scheduleText` and `dateNames` (localized dates), `problemText`.
 - **Form primitives**: rows and cells in `ui/FormCells.ts`, `DatePicker`, `StarRating`,
   `StatusDropdown`, `ConfirmModal`, `StickyModal` (sticky footer in detail modals).
 - **Icon buttons** ([IconButton.ts](../../src/ui/IconButton.ts)): `createIconButton(parent,
@@ -102,9 +108,10 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.import
 - Every class carries the `hoard-` prefix and must appear in full in a source literal, because the
   dead-CSS lint (`pnpm lint`) matches literals; variants go through a spelled-out lookup table
   (see `VARIANT_CLASS` in `IconButton.ts`). See CONTRIBUTING.
-- **Naming**: new or rewritten classes follow BEM, `hoard-<block>__<element>--<modifier>`
-  (`hoard-icon-btn--sm`, `hoard-trailer-btn--fetch`, `hoard-trailer-btn__label`). States stay
-  `is-*` (`is-active`, `is-loading`). Older classes keep their names until a repo-wide rename.
+- **Naming**: every class follows BEM, `hoard-<block>__<element>--<modifier>`, with abbreviations
+  spelled out; states stay `is-*` (`is-active`, `is-loading`). `pnpm lint` enforces it. Blocks, the
+  full rules and the ban on inline styles (computed values go through `--hoard-*` custom properties):
+  [CSS blocks](css-blocks.md).
 - **Beating core button styles**: core's `button:not(.clickable-icon)` outranks a bare
   `.hoard-x`, so button rules are element-qualified (`button.hoard-x`); on tablets
   `.is-tablet button:not(.clickable-icon)` adds 40px side padding and needs an explicit

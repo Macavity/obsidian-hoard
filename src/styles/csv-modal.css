@@ -1,11 +1,12 @@
 /* CSV import/export modal */
+
 /* ══ CSV IMPORT / EXPORT MODAL ══ */
 
-.hoard-csv-modal {
+.hoard-csv {
   min-width: 420px;
 }
 
-.hoard-csv-ctrl-row {
+.hoard-csv__control-row {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -13,13 +14,13 @@
   flex-wrap: wrap;
 }
 
-.hoard-csv-count {
+.hoard-csv__count {
   margin-left: auto;
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.hoard-csv-list {
+.hoard-csv__list {
   max-height: 300px;
   overflow-y: auto;
   border: 0.5px solid var(--background-modifier-border);
@@ -27,7 +28,7 @@
   margin-bottom: 12px;
 }
 
-.hoard-csv-row {
+.hoard-csv__row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -35,23 +36,23 @@
   border-bottom: 0.5px solid var(--background-modifier-border);
 }
 
-.hoard-csv-row:last-child {
+.hoard-csv__row:last-child {
   border-bottom: none;
 }
 
-.hoard-csv-row:hover {
+.hoard-csv__row:hover {
   background: var(--background-modifier-hover);
 }
 
-.hoard-csv-row-dupe {
+.hoard-csv__row--duplicate {
   background: color-mix(in srgb, var(--background-modifier-error) 40%, transparent 60%);
 }
 
-.hoard-csv-row-dupe:hover {
+.hoard-csv__row--duplicate:hover {
   background: color-mix(in srgb, var(--background-modifier-error) 55%, transparent 45%);
 }
 
-.hoard-csv-row-title {
+.hoard-csv__row-title {
   flex: 1;
   font-size: 13px;
   color: var(--text-normal);
@@ -60,13 +61,13 @@
   white-space: nowrap;
 }
 
-.hoard-csv-row-meta {
+.hoard-csv__row-meta {
   font-size: 11px;
   color: var(--text-faint);
   flex-shrink: 0;
 }
 
-.hoard-csv-dupe-badge {
+.hoard-csv__duplicate-badge {
   font-size: 10px;
   padding: 1px 5px;
   border-radius: 3px;
@@ -75,7 +76,7 @@
   flex-shrink: 0;
 }
 
-.hoard-csv-dupe-warning {
+.hoard-csv__duplicate-warning {
   font-size: 12px;
   color: var(--text-muted);
   background: color-mix(in srgb, var(--background-modifier-error) 30%, transparent 70%);
@@ -84,7 +85,7 @@
   margin-bottom: 8px;
 }
 
-.hoard-csv-drop-zone {
+.hoard-csv__drop-zone {
   border: 1.5px dashed var(--background-modifier-border);
   border-radius: 6px;
   padding: 20px;
@@ -92,37 +93,37 @@
   margin-bottom: 12px;
 }
 
-.hoard-csv-drop-label {
+.hoard-csv__drop-label {
   font-size: 13px;
   color: var(--text-muted);
   margin-bottom: 10px;
 }
 
-.hoard-csv-file-input {
+.hoard-csv__file-input {
   display: block;
   margin: 0 auto;
   font-size: 12px;
 }
 
-.hoard-csv-step {
+.hoard-csv__step {
   margin-bottom: 8px;
 }
 
-.hoard-csv-step-title,
-.hoard-settings-card-title {
+.hoard-csv__step-title,
+.hoard-settings__card-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-normal);
   margin-bottom: 4px;
 }
 
-.hoard-csv-step-desc {
+.hoard-csv__step-description {
   font-size: 12px;
   color: var(--text-muted);
   margin-bottom: 8px;
 }
 
-.hoard-csv-info-note {
+.hoard-csv__info-note {
   font-size: 11px;
   color: var(--text-faint);
   background: var(--background-primary-alt);
@@ -132,43 +133,43 @@
   margin-bottom: 12px;
 }
 
-.hoard-csv-map-grid {
+.hoard-csv__map-grid {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 14px;
 }
 
-.hoard-csv-map-row {
+.hoard-csv__map-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.hoard-csv-map-label {
+.hoard-csv__map-label {
   font-size: 12px;
   color: var(--text-muted);
   width: 70px;
   flex-shrink: 0;
 }
 
-.hoard-csv-map-select {
+.hoard-csv__map-select {
   flex: 1;
 }
 
-.hoard-csv-preview-btn {
+.hoard-csv__preview-btn {
   display: block;
   margin-left: auto;
 }
 
-.hoard-csv-btn-row {
+.hoard-csv__btn-row {
   flex-direction: row;
   justify-content: flex-end;
 }
 
 /* Value mapping step */
 
-.hoard-csv-valmap-section-title {
+.hoard-csv__value-map-section-title {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -177,18 +178,18 @@
   margin: 12px 0 6px;
 }
 
-.hoard-csv-valmap-section-title:first-of-type {
+.hoard-csv__value-map-section-title:first-of-type {
   margin-top: 4px;
 }
 
-.hoard-csv-valmap-row {
+.hoard-csv__value-map-row {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
 }
 
-.hoard-csv-valmap-orig {
+.hoard-csv__value-map-original {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-normal);
@@ -198,17 +199,17 @@
   white-space: nowrap;
 }
 
-.hoard-csv-valmap-arrow {
+.hoard-csv__value-map-arrow {
   font-size: 12px;
   color: var(--text-faint);
   flex-shrink: 0;
 }
 
-.hoard-csv-valmap-select {
+.hoard-csv__value-map-select {
   flex: 1;
 }
 
-.hoard-csv-valmap-btn-row {
+.hoard-csv__value-map-btn-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -218,7 +219,7 @@
 
 /* Import progress bar */
 
-.hoard-csv-bg-note {
+.hoard-csv__background-note {
   font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
@@ -227,7 +228,7 @@
   flex-basis: 100%;
 }
 
-.hoard-csv-progress-wrap {
+.hoard-csv__progress-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -236,7 +237,7 @@
   flex-wrap: wrap;
 }
 
-.hoard-csv-progress-track {
+.hoard-csv__progress-track {
   flex: 1;
   height: 6px;
   background: var(--background-modifier-border);
@@ -245,15 +246,15 @@
   min-width: 0;
 }
 
-.hoard-csv-progress-fill {
+.hoard-csv__progress-fill {
   height: 100%;
   background: var(--interactive-accent);
   border-radius: 3px;
-  width: 0%;
+  width: var(--hoard-csv-progress-width, 0%);
   transition: width 0.1s ease;
 }
 
-.hoard-csv-progress-text {
+.hoard-csv__progress-text {
   font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
@@ -263,18 +264,18 @@
 
 /* Settings regenerate progress bar */
 
-.hoard-regen-progress-wrap {
+.hoard-csv__regenerate-progress-wrap {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   padding: 0 2px;
 }
 
 /* Header import progress bar */
 
-.hoard-header-import-progress {
+.hoard-import__header-progress {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -283,7 +284,7 @@
   max-width: 240px;
 }
 
-.hoard-header-import-track {
+.hoard-import__header-track {
   flex: 1;
   height: 4px;
   background: var(--background-modifier-border);
@@ -292,15 +293,15 @@
   min-width: 40px;
 }
 
-.hoard-header-import-fill {
+.hoard-import__header-fill {
   height: 100%;
   background: var(--interactive-accent);
   border-radius: 2px;
   transition: width 0.15s ease;
-  width: 0%;
+  width: var(--hoard-import-header-fill-width, 0%);
 }
 
-.hoard-header-import-text {
+.hoard-import__header-text {
   font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;

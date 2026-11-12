@@ -12,9 +12,9 @@ export function runCommand(id) {
 /** Clicks the watchlist tab button (2nd tab) after opening the panel. */
 async function openWatchlist() {
 	runCommand("hoard:open-panel");
-	await waitForSelector(".hoard-tab-btn");
-	await click(".hoard-tab-btn:nth-child(2)");
-	await waitFor(() => evalJs(`String(document.querySelector(".hoard-tab-btn.is-active") === document.querySelector(".hoard-tab-btn:nth-child(2)"))`) === "true", 10000);
+	await waitForSelector(".hoard-tab-bar__btn");
+	await click(".hoard-tab-bar__btn:nth-child(2)");
+	await waitFor(() => evalJs(`String(document.querySelector(".hoard-tab-bar__btn.is-active") === document.querySelector(".hoard-tab-bar__btn:nth-child(2)"))`) === "true", 10000);
 }
 
 /** Waits until the element's box stays put across two polls (modal open animation, async re-render). */
@@ -37,8 +37,8 @@ export async function openDetail(titleId) {
 	await openWatchlist();
 	await waitForSelector(`[data-title-id="${titleId}"]`);
 	await click(`[data-title-id="${titleId}"]`);
-	await waitForSelector(".hoard-detail-modal");
-	await waitStable(".modal:has(.hoard-detail-modal)");
+	await waitForSelector(".hoard-detail");
+	await waitStable(".modal:has(.hoard-detail)");
 }
 
 /** Shortest prefix of `label` that no other label starts with (case-insensitive); the whole label if none is unique. */

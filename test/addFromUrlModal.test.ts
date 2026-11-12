@@ -31,7 +31,7 @@ function setup(activeApi: 'TMDB' | 'OMDb' = 'TMDB', hasKey = true) {
 	modal.open();
 	const inputs = Array.from(modal.contentEl.querySelectorAll<HTMLInputElement>('input'));
 	const buttons = Array.from(modal.contentEl.querySelectorAll<HTMLButtonElement>('button'));
-	const error = (): HTMLElement => modal.contentEl.querySelector<HTMLElement>('.hoard-modal-error')!;
+	const error = (): HTMLElement => modal.contentEl.querySelector<HTMLElement>('.hoard-modal__error')!;
 	return { modal, api, imdb: inputs[0]!, tmdb: inputs[1]!, imdbBtn: buttons[0]!, tmdbBtn: buttons[1]!, error };
 }
 

@@ -1,4 +1,5 @@
 /* Tablet icon buttons */
+
 /* ══ TABLET ICON BUTTONS ══ */
 
 /* Core ships `.is-tablet button:not(.clickable-icon) { padding: 4px 20px }`.
@@ -8,12 +9,12 @@
    Phones and desktop never load that rule; only tablets break.
    `.is-tablet button.hoard-x` ties it and wins on source order (plugin styles load after
    app.css). Values copied from each button's own rule. */
-.is-tablet button.hoard-editcol-card-toggle,
-.is-tablet button.hoard-editcol-opt-color-dot,
-.is-tablet button.hoard-reading-col-color-dot,
-.is-tablet button.hoard-reading-col-palette-swatch,
-.is-tablet button.hoard-toolbar-add-btn,
-.is-tablet button.hoard-toolbar-toggle-btn {
+.is-tablet button.hoard-edit-columns__card-toggle,
+.is-tablet button.hoard-edit-columns__option-color-dot,
+.is-tablet button.hoard-color-picker__dot,
+.is-tablet button.hoard-color-picker__palette-swatch,
+.is-tablet button.hoard-toolbar__add-btn--icon-only,
+.is-tablet button.hoard-toolbar__toggle-btn {
   padding: 0;
 }
 
@@ -24,6 +25,6 @@
 }
 
 /* ...except in the game modal's action row, which keeps the square icon box */
-.hoard-game-modal-actions button.hoard-store-btn {
+.hoard-game-detail__actions button.hoard-store-btn {
   padding: 0;
 }

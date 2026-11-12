@@ -66,7 +66,7 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	onOpen(): void {
-		this.modalEl.addClass('hoard-onboarding-modal');
+		this.modalEl.addClass('hoard-onboarding');
 		// A click outside the dialog must not close it; swallow it before Obsidian's backdrop handler.
 		this.containerEl.addEventListener('click', (e) => {
 			if (!(e.target instanceof Node) || !this.modalEl.contains(e.target)) {
@@ -97,7 +97,7 @@ export class WatchLogOnboardingModal extends Modal {
 		this.progressText = null;
 		this.progressBar = null;
 		this.renderHeader(contentEl);
-		const body = contentEl.createDiv({ cls: 'hoard-onboarding-body' });
+		const body = contentEl.createDiv({ cls: 'hoard-onboarding__body' });
 		const renderers: Record<WizardStep, (el: HTMLElement) => void> = {
 			found: (el) => this.renderFound(el),
 			import: (el) => this.renderImport(el),
@@ -109,17 +109,17 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	private renderHeader(el: HTMLElement): void {
-		el.createEl('h2', { cls: 'hoard-onboarding-title', text: t('onboarding.title') });
-		const nav = el.createDiv({ cls: 'hoard-onboarding-steps' });
+		el.createEl('h2', { cls: 'hoard-onboarding__title', text: t('onboarding.title') });
+		const nav = el.createDiv({ cls: 'hoard-onboarding__steps' });
 		const at = STEPS.indexOf(this.current);
 		STEPS.forEach((s, i) => {
-			const cls = ['hoard-onboarding-step', i < at ? 'is-done' : '', i === at ? 'is-active' : ''].filter(Boolean).join(' ');
+			const cls = ['hoard-onboarding__step', i < at ? 'is-done' : '', i === at ? 'is-active' : ''].filter(Boolean).join(' ');
 			nav.createSpan({ cls, text: t(`onboarding.steps.${s}`) });
 		});
 	}
 
 	private button(row: HTMLElement, action: string, label: string, opts: { primary?: boolean; disabled?: boolean } = {}): HTMLButtonElement {
-		const btn = row.createEl('button', { cls: opts.primary ? 'hoard-btn hoard-btn-primary' : 'hoard-btn', text: label });
+		const btn = row.createEl('button', { cls: opts.primary ? 'hoard-btn hoard-btn--primary' : 'hoard-btn', text: label });
 		btn.setAttribute('data-action', action);
 		btn.disabled = opts.disabled === true;
 		return btn;
@@ -135,7 +135,7 @@ export class WatchLogOnboardingModal extends Modal {
 	private renderFound(el: HTMLElement): void {
 		if (this.shown.length === 0) {
 			el.createEl('p', { text: t('onboarding.none') });
-			this.button(el.createDiv({ cls: 'hoard-modal-btn-row' }), 'close', t('onboarding.buttons.close')).addEventListener('click', () => this.close());
+			this.button(el.createDiv({ cls: 'hoard-modal__btn-row' }), 'close', t('onboarding.buttons.close')).addEventListener('click', () => this.close());
 			return;
 		}
 		el.createEl('p', { text: t('onboarding.found.intro') });
@@ -151,7 +151,7 @@ export class WatchLogOnboardingModal extends Modal {
 	private renderSourceRow(el: HTMLElement, kind: WatchLogSourceKind): void {
 		const source = this.importer.sources[kind];
 		if (!source) return;
-		const label = el.createEl('label', { cls: 'hoard-onboarding-source' });
+		const label = el.createEl('label', { cls: 'hoard-onboarding__source' });
 		const box = label.createEl('input', { attr: { type: 'checkbox' } });
 		box.setAttribute('data-source', kind);
 		box.checked = this.selected.has(kind);
@@ -159,8 +159,8 @@ export class WatchLogOnboardingModal extends Modal {
 			if (box.checked) this.selected.add(kind); else this.selected.delete(kind);
 			this.syncImportButton(el);
 		});
-		label.createSpan({ cls: 'hoard-onboarding-source-name', text: PLUGIN_NAME[kind] });
-		label.createSpan({ cls: 'hoard-onboarding-source-counts', text: this.countsText(source.counts) });
+		label.createSpan({ cls: 'hoard-onboarding__source-name', text: PLUGIN_NAME[kind] });
+		label.createSpan({ cls: 'hoard-onboarding__source-counts', text: this.countsText(source.counts) });
 	}
 
 	private syncImportButton(el: HTMLElement): void {
@@ -170,7 +170,7 @@ export class WatchLogOnboardingModal extends Modal {
 
 	private renderFoundHints(el: HTMLElement): void {
 		const { original, fork, hoardData } = { ...this.importer.sources, hoardData: this.importer.sources.hoardHasData };
-		const hint = (text: string): void => { el.createEl('p', { cls: 'hoard-onboarding-hint', text }); };
+		const hint = (text: string): void => { el.createEl('p', { cls: 'hoard-onboarding__hint', text }); };
 		if (original && fork) hint(t('onboarding.found.forkHint'));
 		if (hoardData) hint(t('onboarding.found.hoardData'));
 		for (const kind of this.shown) {
@@ -179,7 +179,7 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	private renderFoundButtons(el: HTMLElement): void {
-		const row = el.createDiv({ cls: 'hoard-modal-btn-row' });
+		const row = el.createDiv({ cls: 'hoard-modal__btn-row' });
 		this.button(row, 'decline', t('onboarding.buttons.decline')).addEventListener('click', () => {
 			for (const kind of this.shown) this.importer.decide(kind, 'declined');
 			this.close();
@@ -193,8 +193,8 @@ export class WatchLogOnboardingModal extends Modal {
 
 	private renderImport(el: HTMLElement): void {
 		el.createEl('p', { text: t('onboarding.running') });
-		this.progressBar = el.createEl('progress', { cls: 'hoard-onboarding-progress' });
-		this.progressText = el.createDiv({ cls: 'hoard-onboarding-progress-text' });
+		this.progressBar = el.createEl('progress', { cls: 'hoard-onboarding__progress' });
+		this.progressText = el.createDiv({ cls: 'hoard-onboarding__progress-text' });
 	}
 
 	private onProgress: Progress = (phase: ImportPhase, done: number, total: number) => {
@@ -240,14 +240,14 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	private renderSourceResult(el: HTMLElement, kind: WatchLogSourceKind, report: ImportReport, start: number): number {
-		const section = el.createDiv({ cls: 'hoard-onboarding-result' });
+		const section = el.createDiv({ cls: 'hoard-onboarding__result' });
 		section.createEl('h3', { text: PLUGIN_NAME[kind] });
-		section.createDiv({ cls: 'hoard-onboarding-stats', text: reportStats(report) });
+		section.createDiv({ cls: 'hoard-onboarding__stats', text: reportStats(report) });
 		// per-file errors show below as review items
-		for (const err of generalErrors(report)) section.createDiv({ cls: 'hoard-onboarding-error', text: err });
+		for (const err of generalErrors(report)) section.createDiv({ cls: 'hoard-onboarding__error', text: err });
 		if (report.errors.length > 0) {
-			section.createEl('p', { cls: 'hoard-onboarding-hint', text: t('onboarding.result.retryHint') });
-			section.createEl('p', { cls: 'hoard-onboarding-hint', text: t('onboarding.result.cleanupLocked') });
+			section.createEl('p', { cls: 'hoard-onboarding__hint', text: t('onboarding.result.retryHint') });
+			section.createEl('p', { cls: 'hoard-onboarding__hint', text: t('onboarding.result.cleanupLocked') });
 		}
 		return this.renderReview(section, report.review, start);
 	}
@@ -259,7 +259,7 @@ export class WatchLogOnboardingModal extends Modal {
 		for (const reason of REASONS) {
 			const group = items.map((item, i) => ({ item, i: start + i })).filter(({ item }) => item.reason === reason);
 			if (group.length === 0) continue;
-			el.createDiv({ cls: 'hoard-onboarding-reason', text: reasonLabel(reason) });
+			el.createDiv({ cls: 'hoard-onboarding__reason', text: reasonLabel(reason) });
 			for (const { item, i } of group) this.renderReviewLink(el, item, i);
 		}
 		index += items.length;
@@ -267,17 +267,17 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	private renderReviewLink(el: HTMLElement, item: ReviewItem, i: number): void {
-		const row = el.createDiv({ cls: 'hoard-onboarding-review-row' });
-		const link = row.createEl('button', { cls: 'hoard-onboarding-review-link', text: item.path });
+		const row = el.createDiv({ cls: 'hoard-onboarding__review-row' });
+		const link = row.createEl('button', { cls: 'hoard-onboarding__review-link', text: item.path });
 		link.setAttribute('data-action', `review-link-${i}`);
 		link.addEventListener('click', () => this.importer.openFile(item.path));
 		const detail = reviewDetail(item);
-		if (detail) row.createSpan({ cls: 'hoard-onboarding-review-detail', text: detail });
+		if (detail) row.createSpan({ cls: 'hoard-onboarding__review-detail', text: detail });
 	}
 
 	private renderResultButtons(el: HTMLElement): void {
-		if (this.savedPath) el.createDiv({ cls: 'hoard-onboarding-hint', text: t('onboarding.result.reportSaved', { path: this.savedPath }) });
-		const row = el.createDiv({ cls: 'hoard-modal-btn-row' });
+		if (this.savedPath) el.createDiv({ cls: 'hoard-onboarding__hint', text: t('onboarding.result.reportSaved', { path: this.savedPath }) });
+		const row = el.createDiv({ cls: 'hoard-modal__btn-row' });
 		this.button(row, 'report', t('onboarding.buttons.report')).addEventListener('click', () => { void this.saveReport(); });
 		if (this.failed().length > 0) {
 			this.button(row, 'retry', t('onboarding.buttons.retry')).addEventListener('click', () => { void this.runImport(this.failed()); });
@@ -316,7 +316,7 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	private renderCleanup(el: HTMLElement): void {
-		const row = el.createDiv({ cls: 'hoard-modal-btn-row' });
+		const row = el.createDiv({ cls: 'hoard-modal__btn-row' });
 		if (this.plan.length === 0) {
 			el.createEl('p', { text: t('onboarding.cleanup.none') });
 			el.appendChild(row);
@@ -333,24 +333,24 @@ export class WatchLogOnboardingModal extends Modal {
 	}
 
 	private renderCleanupItem(el: HTMLElement, item: CleanupItem): void {
-		const wrap = el.createDiv({ cls: 'hoard-onboarding-cleanup-item' });
-		const label = wrap.createEl('label', { cls: 'hoard-onboarding-source' });
+		const wrap = el.createDiv({ cls: 'hoard-onboarding__cleanup-item' });
+		const label = wrap.createEl('label', { cls: 'hoard-onboarding__source' });
 		const box = label.createEl('input', { attr: { type: 'checkbox' } });
 		box.setAttribute('data-cleanup', item.id);
 		box.checked = this.picked.has(item.id);
 		box.addEventListener('change', () => {
 			if (box.checked) this.picked.add(item.id); else this.picked.delete(item.id);
 		});
-		label.createSpan({ cls: 'hoard-onboarding-source-name', text: t(`onboarding.cleanup.items.${CLEANUP_LABEL[item.id]}`) });
-		label.createSpan({ cls: 'hoard-onboarding-source-counts', text: t('onboarding.cleanup.files', { count: item.paths.length }) });
+		label.createSpan({ cls: 'hoard-onboarding__source-name', text: t(`onboarding.cleanup.items.${CLEANUP_LABEL[item.id]}`) });
+		label.createSpan({ cls: 'hoard-onboarding__source-counts', text: t('onboarding.cleanup.files', { count: item.paths.length }) });
 		this.renderCleanupWarnings(wrap, item);
-		const details = wrap.createEl('details', { cls: 'hoard-onboarding-paths' });
+		const details = wrap.createEl('details', { cls: 'hoard-onboarding__paths' });
 		details.createEl('summary', { text: t('onboarding.cleanup.files', { count: item.paths.length }) });
-		for (const path of item.paths) details.createDiv({ cls: 'hoard-onboarding-path', text: path });
+		for (const path of item.paths) details.createDiv({ cls: 'hoard-onboarding__path', text: path });
 	}
 
 	private renderCleanupWarnings(wrap: HTMLElement, item: CleanupItem): void {
-		const warn = (text: string): void => { wrap.createDiv({ cls: 'hoard-onboarding-warning', text }); };
+		const warn = (text: string): void => { wrap.createDiv({ cls: 'hoard-onboarding__warning', text }); };
 		if (item.id === 'widgets') warn(t('onboarding.cleanup.widgetsWarning'));
 		const enabledKind = item.id === 'original-notes' ? 'original' : item.id === 'fork-notes' ? 'fork' : null;
 		if (enabledKind && this.importer.sources[enabledKind]?.pluginEnabled) {
@@ -387,13 +387,13 @@ export class WatchLogOnboardingModal extends Modal {
 			el.createEl('p', { text: t('onboarding.done.cleanupDone', { count: res.done }) });
 			if (res.errors.length > 0) {
 				el.createEl('p', { text: t('onboarding.done.cleanupErrors', { count: res.errors.length }) });
-				for (const err of res.errors) el.createDiv({ cls: 'hoard-onboarding-error', text: err });
+				for (const err of res.errors) el.createDiv({ cls: 'hoard-onboarding__error', text: err });
 			}
 		} else {
 			el.createEl('p', { text: t('onboarding.done.skipped') });
 		}
-		el.createEl('p', { cls: 'hoard-onboarding-hint', text: t('onboarding.done.uninstall') });
-		this.button(el.createDiv({ cls: 'hoard-modal-btn-row' }), 'close', t('onboarding.buttons.close'), { primary: true })
+		el.createEl('p', { cls: 'hoard-onboarding__hint', text: t('onboarding.done.uninstall') });
+		this.button(el.createDiv({ cls: 'hoard-modal__btn-row' }), 'close', t('onboarding.buttons.close'), { primary: true })
 			.addEventListener('click', () => this.close());
 	}
 }

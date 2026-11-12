@@ -24,6 +24,16 @@ export interface CardMenuContext {
 }
 
 /**
+ * Pin the height of a card, or of its cell in text-under mode. The modifier class (not the variable alone)
+ * selects the element, so the poster inside a pinned cell does not inherit the height.
+ */
+export function pinCardHeight(cell: HTMLElement | null, card: HTMLElement, height: number): void {
+	const pinned = cell ?? card;
+	pinned.addClass(cell ? 'hoard-card__cell--pinned' : 'hoard-card--pinned');
+	pinned.setCssProps({ '--hoard-card-pinned-height': `${height}px` });
+}
+
+/**
  * Open a card's ⋮ menu: closes any other open menu, right-aligns near the container's right edge,
  * and dismisses on any outside click (registered on the card's own document, so popouts work).
  */
@@ -70,7 +80,7 @@ export function openCardMenu(
 
 /**
  * Height (px) of the text block under a poster card in text-under mode — title + type/year +
- * progress bar. Grid metrics add this to the poster height; must match .hoard-card-under-info in
+ * progress bar. Grid metrics add this to the poster height; must match .hoard-card__under-info in
  * styles.css.
  */
 export const POSTER_CARD_TEXT_H = 54;
@@ -99,7 +109,7 @@ export interface PosterCardSpec {
 	progressRatio?: number;
 	/**
 	 * Card text placement (the cardTextStyle setting): true renders name + type/year + progress in a
-	 * block under the poster inside a `hoard-card-cell` wrapper, instead of the bottom overlay. The status
+	 * block under the poster inside a `hoard-card__cell` wrapper, instead of the bottom overlay. The status
 	 * badge and ⋮ menu stay on the poster either way; `cardHeight` is then the whole cell.
 	 */
 	textUnder?: boolean;
@@ -123,25 +133,20 @@ export function buildPosterCard(
 ): HTMLElement {
 	// text-under mode wraps the poster in a cell (the Upcoming tracker-cell pattern): the cell carries
 	// the total height, the poster keeps its 2:3 ratio via CSS, and the text block fills the rest
-	const cell = spec.textUnder ? parent.createDiv({ cls: 'hoard-card-cell' }) : null;
+	const cell = spec.textUnder ? parent.createDiv({ cls: 'hoard-card__cell' }) : null;
 	const card = (cell ?? parent).createDiv({ cls: 'hoard-card' });
 	for (const [key, value] of Object.entries(spec.dataset ?? {})) {
 		card.dataset[key] = value;
 	}
 	// cards built while scrolling during selection mode must show their state
-	if (spec.selected) card.addClass('hoard-card-selected');
+	if (spec.selected) card.addClass('hoard-card--selected');
 	// width is distributed by the parent CSS grid (1fr columns) — do NOT set an explicit width here.
 	// Fractional pixel widths per card made flex-wrap overflow and shift the grid a slot per scroll.
-	if (spec.cardHeight !== undefined) {
-		(cell ?? card).style.height = `${spec.cardHeight}px`;
-	}
+	if (spec.cardHeight !== undefined) pinCardHeight(cell, card, spec.cardHeight);
 
-	const placeholder = card.createDiv({ cls: 'hoard-card-poster-placeholder' });
-	placeholder.style.backgroundColor = spec.placeholderColor;
-	const letter = (spec.title.trim().charAt(0) || '?').toUpperCase();
-	placeholder.createSpan({ text: letter });
+	createPosterPlaceholder(card, spec.title, spec.placeholderColor);
 
-	const img = card.createEl('img', { cls: 'hoard-card-poster' });
+	const img = card.createEl('img', { cls: 'hoard-card__poster' });
 	img.alt = spec.title;
 	// decode off the main thread — the letter placeholder covers the extra frame, and a synchronous
 	// decode of a large cover janks the scroll
@@ -173,47 +178,47 @@ export function buildPosterCard(
 
 	if (spec.statusLabel) {
 		const statusBadge = card.createSpan({
-			cls: 'hoard-card-status-badge',
+			cls: 'hoard-card__status-badge',
 			text: spec.statusLabel,
 		});
-		if (spec.statusColor) statusBadge.style.backgroundColor = spec.statusColor;
+		if (spec.statusColor) statusBadge.setCssProps({ '--hoard-card-status-color': spec.statusColor });
 	}
 
 	// name + type/year + progress live either in the classic bottom overlay (inside mode) or in the
 	// under-info block below the poster (under mode)
 	const textHost = cell
-		? cell.createDiv({ cls: 'hoard-card-under-info' })
-		: card.createDiv({ cls: 'hoard-card-overlay' });
+		? cell.createDiv({ cls: 'hoard-card__under-info' })
+		: card.createDiv({ cls: 'hoard-card__overlay' });
 	textHost.createSpan({
-		cls: cell ? 'hoard-card-under-title' : 'hoard-card-title',
+		cls: cell ? 'hoard-card__under-title' : 'hoard-card__title',
 		text: spec.title,
 	});
 	if (spec.typeLabel) {
-		const metaRow = textHost.createDiv({ cls: 'hoard-card-meta-row' });
+		const metaRow = textHost.createDiv({ cls: 'hoard-card__meta-row' });
 		const typeBadge = metaRow.createSpan({
-			cls: 'hoard-card-type-badge',
+			cls: 'hoard-card__type-badge',
 			text: spec.typeLabel,
 		});
-		if (spec.typeColor) typeBadge.style.backgroundColor = spec.typeColor;
+		if (spec.typeColor) typeBadge.setCssProps({ '--hoard-card-type-color': spec.typeColor });
 		if (spec.year) {
 			metaRow.createSpan({
-				cls: cell ? 'hoard-card-under-year' : 'hoard-card-year',
+				cls: cell ? 'hoard-card__under-year' : 'hoard-card__year',
 				text: spec.year,
 			});
 		}
 	}
 
 	if (spec.flag) {
-		const flag = card.createSpan({ cls: 'hoard-card-flag-badge' });
+		const flag = card.createSpan({ cls: 'hoard-card__flag-badge' });
 		flag.setAttr('aria-label', spec.flag.label);
 		flag.title = spec.flag.label;
 		setIcon(flag, spec.flag.icon);
 	}
 
 	if (spec.progressRatio !== undefined) {
-		const bar = textHost.createDiv({ cls: 'hoard-card-progress-bar' });
-		const fill = bar.createDiv({ cls: 'hoard-card-progress-fill' });
-		fill.style.width = `${Math.max(0, Math.min(1, spec.progressRatio)) * 100}%`;
+		const bar = textHost.createDiv({ cls: 'hoard-card__progress-bar' });
+		const fill = bar.createDiv({ cls: 'hoard-card__progress-fill' });
+		fill.setCssProps({ '--hoard-card-progress-width': `${Math.max(0, Math.min(1, spec.progressRatio)) * 100}%` });
 	}
 
 	const menuItems = spec.menuItems;
@@ -221,7 +226,7 @@ export function buildPosterCard(
 		const menuBtn = createIconButton(card, {
 			icon: 'more-vertical',
 			label: spec.menuAriaLabel ?? t('list.card.moreActions'),
-			cls: 'hoard-card-menu-btn',
+			cls: 'hoard-card__menu-btn',
 		});
 		menuBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -233,4 +238,21 @@ export function buildPosterCard(
 	// card — selection styling lives there
 	(cell ?? card).addEventListener('click', () => spec.onClick(card));
 	return card;
+}
+
+/** The letter tile a card shows until, or instead of, its poster image. */
+export function createPosterPlaceholder(card: HTMLElement, title: string, color: string): HTMLElement {
+	const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
+	placeholder.setCssProps({ '--hoard-card-placeholder-color': color });
+	placeholder.createSpan({ text: (title.trim().charAt(0) || '?').toUpperCase() });
+	return placeholder;
+}
+
+/** Points the card's poster image at `url`: the card is marked once it loads, `onError` handles a broken image. */
+export function loadCardPoster(card: HTMLElement, url: string, onError: () => void): void {
+	const img = card.querySelector<HTMLImageElement>('.hoard-card__poster');
+	if (!img) return;
+	img.onload = () => { card.addClass('has-poster'); };
+	img.onerror = onError;
+	img.src = url;
 }

@@ -73,35 +73,37 @@ describe('DashboardTab cards', () => {
 
 	it('renders rings: unified card, type rings and reading rings', () => {
 		const c = render({ titles, books, manga });
-		expect(c.querySelector('.hoard-dash-unified')).not.toBeNull();
-		expect(c.querySelector('.hoard-dash-unified-bordered')).toBeNull();
-		expect(c.querySelectorAll('.hoard-ring-item').length).toBe(1 + 2 + 2);
-		expect(c.querySelector('.hoard-dash-unified-4')).toBeNull();
-		expect(texts(c, '.hoard-ring-label')).toEqual(expect.arrayContaining(['Anime', 'Movie']));
-		expect(texts(c, '.hoard-ring-label').length).toBe(5);
+		expect(c.querySelector('.hoard-dashboard__unified')).not.toBeNull();
+		expect(c.querySelector('.hoard-dashboard__unified--bordered')).toBeNull();
+		expect(c.querySelectorAll('.hoard-stat-ring__item').length).toBe(1 + 2 + 2);
+		expect(c.querySelector('.hoard-dashboard__unified--4')).toBeNull();
+		expect(texts(c, '.hoard-stat-ring__label')).toEqual(expect.arrayContaining(['Anime', 'Movie']));
+		expect(texts(c, '.hoard-stat-ring__label').length).toBe(5);
+		expect(qsa(c, '.hoard-stat-ring__arc').every((a) => a.style.getPropertyValue('--hoard-stat-ring-color') !== '')).toBe(true);
 	});
 
 	it('renders rectangles with a bordered unified card and a bar width', () => {
 		const c = render({ titles, books, manga, cardStyle: 'rectangles' });
-		expect(c.querySelector('.hoard-dash-unified-bordered')).not.toBeNull();
-		expect(c.querySelectorAll('.hoard-rect-item').length).toBe(2 + 2);
-		const bars = qsa(c, '.hoard-rect-bar').map((b) => b.style.width);
+		expect(c.querySelector('.hoard-dashboard__unified--bordered')).not.toBeNull();
+		expect(c.querySelectorAll('.hoard-stat-rect__item').length).toBe(2 + 2);
+		const bars = qsa(c, '.hoard-stat-rect__bar').map((b) => b.style.getPropertyValue('--hoard-stat-rect-bar-width'));
 		expect(bars).toContain('50%');
+		expect(qsa(c, '.hoard-stat-rect__bar').every((b) => b.style.getPropertyValue('--hoard-stat-rect-bar-color') !== '')).toBe(true);
 	});
 
 	it('adds a fourth segment only when games have playtime', () => {
 		const games = [{ id: 'g', status: 'Finished', type: 'RPG', playtimeMinutes: 90 }] as unknown as Game[];
 		const withGames = render({ titles, games });
-		expect(withGames.querySelector('.hoard-dash-unified-4')).not.toBeNull();
-		expect(withGames.querySelectorAll('.hoard-dash-seg-time').length).toBe(3);
-		expect(render({ titles }).querySelectorAll('.hoard-dash-seg-time').length).toBe(2);
+		expect(withGames.querySelector('.hoard-dashboard__unified--4')).not.toBeNull();
+		expect(withGames.querySelectorAll('.hoard-dashboard__segment--time').length).toBe(3);
+		expect(render({ titles }).querySelectorAll('.hoard-dashboard__segment--time').length).toBe(2);
 	});
 
 	it('shows 0% for empty libraries', () => {
 		const c = render();
-		expect(texts(c, '.hoard-ring-percent-text').every((x) => x === '0%')).toBe(true);
+		expect(texts(c, '.hoard-stat-ring__percent-text').every((x) => x === '0%')).toBe(true);
 		const r = render({ cardStyle: 'rectangles' });
-		expect(texts(r, '.hoard-rect-value').every((x) => x === '0%')).toBe(true);
+		expect(texts(r, '.hoard-stat-rect__value').every((x) => x === '0%')).toBe(true);
 	});
 });
 
@@ -119,17 +121,17 @@ describe('DashboardTab suggestions and stats', () => {
 				title({ id: 'd', title: 'Runtime', status: 'Plan to watch', type: 'Movie', totalEpisodes: 0, episodeDuration: 90 }),
 			],
 		});
-		const picks = texts(c, '.hoard-suggestion-title');
+		const picks = texts(c, '.hoard-suggestions__title');
 		expect(picks[0]).toBe('Short');
 		expect(picks[1]).toBe('Runtime');
-		expect(c.querySelectorAll('.hoard-suggestion-empty').length).toBe(1);
-		const shuffle = c.querySelector<HTMLElement>('.hoard-suggestion-shuffle')!;
+		expect(c.querySelectorAll('.hoard-suggestions__title--empty').length).toBe(1);
+		const shuffle = c.querySelector<HTMLElement>('.hoard-suggestions__shuffle')!;
 		expect(shuffle.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(shuffle.getAttribute('data-icon')).toBe('shuffle');
 		expect(shuffle.getAttribute('aria-label')).toBe(t('dashboard.suggestions.pickAnother'));
 		expect(shuffle.hasAttribute('title')).toBe(false);
 		shuffle.click();
-		const randomEl = c.querySelectorAll('.hoard-suggestion-title')[3]!;
+		const randomEl = c.querySelectorAll('.hoard-suggestions__title')[3]!;
 		expect(['Long', 'Short', 'Unknown', 'Runtime']).toContain(randomEl.textContent);
 	});
 
@@ -137,7 +139,7 @@ describe('DashboardTab suggestions and stats', () => {
 		const c = render({
 			titles: [title({ title: 'Only', status: 'Plan to watch', totalEpisodes: 0, episodeDuration: 0 })],
 		});
-		expect(texts(c, '.hoard-suggestion-title')[0]).toBe('Only');
+		expect(texts(c, '.hoard-suggestions__title')[0]).toBe('Only');
 	});
 
 	it('groups release years by decade and toggles to single years sorted by count then label', () => {
@@ -150,15 +152,15 @@ describe('DashboardTab suggestions and stats', () => {
 			],
 		});
 		const byYear = qsa(c, '.hoard-stats-card').find(
-			(k) => k.querySelector('.hoard-stats-card-title')?.textContent === 'By year',
+			(k) => k.querySelector('.hoard-stats-card__title')?.textContent === 'By year',
 		)!;
-		expect(texts(byYear, '.hoard-metric-label')).toEqual(['2010s']);
-		expect(texts(byYear, '.hoard-metric-value')).toEqual(['4']);
-		byYear.querySelector<HTMLElement>('.hoard-stat-toggle')!.click();
-		expect(texts(byYear, '.hoard-metric-label')).toEqual(['2012', '2011', '2019']);
+		expect(texts(byYear, '.hoard-dashboard__metric-label')).toEqual(['2010s']);
+		expect(texts(byYear, '.hoard-dashboard__metric-value')).toEqual(['4']);
+		byYear.querySelector<HTMLElement>('.hoard-stats-card__toggle')!.click();
+		expect(texts(byYear, '.hoard-dashboard__metric-label')).toEqual(['2012', '2011', '2019']);
 	});
 
 	it('shows the empty state for a bare library', () => {
-		expect(render().querySelector('.hoard-stats-grid .hoard-empty-state')).not.toBeNull();
+		expect(render().querySelector('.hoard-dashboard__stats-grid .hoard-dashboard__empty-state')).not.toBeNull();
 	});
 });

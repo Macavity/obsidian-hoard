@@ -79,7 +79,7 @@ describe('DraftsTab dismiss button', () => {
 		(tab as unknown as { renderUI: (e: unknown[]) => void }).renderUI([
 			{ titleKey: 'new one', titleDisplay: 'New One', sources: ['Note'], firstSeen: '2026-01-01', added: false },
 		]);
-		const btn = qsa<HTMLButtonElement>(root, 'button.hoard-drafts-dismiss')[0]!;
+		const btn = qsa<HTMLButtonElement>(root, 'button.hoard-drafts__dismiss')[0]!;
 		expect(btn.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(btn.getAttribute('data-icon')).toBe('x');
 		btn.click();

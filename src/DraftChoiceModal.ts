@@ -21,10 +21,10 @@ export class DraftChoiceModal extends Modal {
 	onOpen(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.addClass('hoard-draft-choice-modal');
+		contentEl.addClass('hoard-draft-choice');
 
 		this.titleEl.setText(this.heading);
-		contentEl.createDiv({ cls: 'hoard-draft-choice-subtitle', text: this.draftText });
+		contentEl.createDiv({ cls: 'hoard-draft-choice__subtitle', text: this.draftText });
 
 		renderChoiceGrid<DraftAddChoice>(
 			contentEl,

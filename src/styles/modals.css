@@ -1,4 +1,5 @@
 /* Shared modals */
+
 /* ══ MODALS ══ */
 
 .hoard-add-modal {
@@ -8,13 +9,13 @@
   padding: 4px 0;
 }
 
-.hoard-modal-row {
+.hoard-modal__row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.hoard-modal-label {
+.hoard-modal__label {
   font-size: 12px;
   color: var(--text-muted);
   width: 110px;
@@ -22,39 +23,39 @@
 }
 
 /* Add-from-URL: source name only, so the 110px form label is far too wide */
-.hoard-url-row-label {
+.hoard-modal__url-row-label {
   width: 40px;
 }
 
 /* two fields per row, fixed-width inputs in two columns */
-.hoard-modal-pair-cell {
+.hoard-modal__pair-cell {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.hoard-modal-pair-cell-right {
+.hoard-modal__pair-cell--right {
   margin-left: auto;
 }
 
 /* 110px label lines its input up with the full-width one */
-.hoard-modal-pair-cell-right .hoard-modal-label {
+.hoard-modal__pair-cell--right .hoard-modal__label {
   width: auto;
 }
 
-.hoard-modal-pair-cell .hoard-modal-input,
-.hoard-modal-pair-cell .hoard-select {
+.hoard-modal__pair-cell .hoard-modal__input,
+.hoard-modal__pair-cell .hoard-input__select {
   flex: 0 0 auto;
   width: 110px;
   min-width: 0;
 }
 
-.hoard-modal-pair-cell .hoard-modal-input[type='number'] {
+.hoard-modal__pair-cell .hoard-modal__input[type='number'] {
   box-sizing: border-box;
   width: 50px;
 }
 
-.hoard-modal-input {
+.hoard-modal__input {
   flex: 1;
   padding: 5px 8px;
   border: 0.5px solid var(--background-modifier-border);
@@ -64,13 +65,13 @@
   font-size: var(--font-ui-small);
 }
 
-.hoard-modal-input-sm {
+.hoard-modal__input--sm {
   max-width: 80px;
   flex: unset;
 }
 
 /* add-flow search: query, year and button share a wrapper so mobile can stack them */
-.hoard-search-fields {
+.hoard-search-picker__fields {
   flex: 1;
   display: flex;
   align-items: center;
@@ -79,33 +80,33 @@
 }
 
 /* add-flow search: optional YYYY filter beside the query */
-.hoard-search-year {
+.hoard-search-picker__year {
   flex: 0 0 auto;
   width: 60px;
   min-width: 0;
   text-align: center;
 }
 
-.hoard-modal-input:focus {
+.hoard-modal__input:focus {
   outline: none;
   border-color: var(--interactive-accent);
 }
 
-.hoard-modal-info {
+.hoard-modal__info {
   font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
 }
 
-.hoard-modal-error {
+.hoard-modal__error {
   font-size: 11px;
   color: var(--text-error);
   font-style: italic;
 }
 
 /* doubled class outranks Obsidian's input[type=…] rules */
-.hoard-input-error.hoard-input-error,
-.hoard-input-error.hoard-input-error:focus {
+.hoard-input--error.hoard-input--error,
+.hoard-input--error.hoard-input--error:focus {
   border-color: var(--text-error);
 }
 
@@ -114,7 +115,7 @@
   width: 100%;
 }
 
-.hoard-modal-textarea {
+.hoard-modal__textarea {
   flex: 1;
   width: 100%;
   padding: 5px 8px;
@@ -128,19 +129,19 @@
   box-sizing: border-box;
 }
 
-.hoard-modal-textarea:focus {
+.hoard-modal__textarea:focus {
   outline: none;
   border-color: var(--interactive-accent);
 }
 
-.hoard-modal-input-stack {
+.hoard-modal__input-stack {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.hoard-modal-results {
+.hoard-modal__results {
   max-height: 400px;
   overflow-y: auto;
   border: 0.5px solid var(--background-modifier-border);
@@ -149,8 +150,9 @@
 }
 
 /* add-flow search: 3 posters per row, text beneath */
-.hoard-modal-results.hoard-results-grid {
+.hoard-modal__results.hoard-search-picker__results-grid {
   display: grid;
+
   /* minmax(0,1fr) so long meta can't widen the column */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
@@ -159,13 +161,13 @@
 }
 
 /* Loading / no-API / empty messages span the whole grid width. */
-.hoard-results-grid > .hoard-modal-loading,
-.hoard-results-grid > .hoard-modal-no-api {
+.hoard-search-picker__results-grid > .hoard-modal__loading,
+.hoard-search-picker__results-grid > .hoard-search-picker__missing-api {
   grid-column: 1 / -1;
 }
 
 /* 9 results per page; empty when there is only one page */
-.hoard-result-pager {
+.hoard-search-picker__result-pager {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -173,41 +175,41 @@
   margin-top: 6px;
 }
 
-.hoard-result-pager-info {
+.hoard-search-picker__result-pager-info {
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.hoard-result-pager-btn {
+.hoard-search-picker__result-pager-btn {
   padding: 2px 10px;
   line-height: 1.2;
 }
 
-.hoard-result-pager-btn:disabled {
+.hoard-search-picker__result-pager-btn:disabled {
   opacity: 0.4;
   cursor: default;
 }
 
 /* text-only rows: maybe-add modal + autofill dropdown */
-.hoard-result-item {
+.hoard-search-picker__result-item {
   padding: 7px 10px;
   cursor: pointer;
   border-bottom: 0.5px solid var(--background-modifier-border);
   transition: background 0.1s;
 }
 
-.hoard-result-item:last-child {
+.hoard-search-picker__result-item:last-child {
   border-bottom: none;
 }
 
-.hoard-result-item:hover,
-.hoard-result-item.is-selected,
-.hoard-result-item.hoard-result-item-focused {
+.hoard-search-picker__result-item:hover,
+.hoard-search-picker__result-item.is-selected,
+.hoard-search-picker__result-item.hoard-search-picker__result-item--focused {
   background: var(--background-modifier-hover);
 }
 
 /* Card — add-flow search results. */
-.hoard-result-card {
+.hoard-search-picker__result-card {
   display: flex;
   flex-direction: column;
   cursor: pointer;
@@ -217,19 +219,19 @@
   transition: background 0.1s, border-color 0.1s;
 }
 
-.hoard-result-card:hover,
-.hoard-result-card.is-selected {
+.hoard-search-picker__result-card:hover,
+.hoard-search-picker__result-card.is-selected {
   background: var(--background-modifier-hover);
   border-color: var(--background-modifier-border);
 }
 
-.hoard-result-card .hoard-result-text {
+.hoard-search-picker__result-card .hoard-search-picker__result-text {
   min-width: 0;
   margin-top: 6px;
 }
 
 /* cover: full card width, 2:3 */
-.hoard-result-thumb {
+.hoard-search-picker__result-thumb {
   position: relative;
   width: 100%;
   aspect-ratio: 2 / 3;
@@ -241,13 +243,13 @@
   justify-content: center;
 }
 
-.hoard-result-thumb-icon {
+.hoard-search-picker__result-thumb-icon {
   font-size: 28px;
   opacity: 0.6;
   line-height: 1;
 }
 
-.hoard-result-thumb-img {
+.hoard-search-picker__result-thumb-img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -256,16 +258,16 @@
 }
 
 /* already-in-library marker */
-.hoard-result-card.is-in-library .hoard-result-thumb-img,
-.hoard-result-card.is-in-library .hoard-result-thumb-icon {
+.hoard-search-picker__result-card.is-in-library .hoard-search-picker__result-thumb-img,
+.hoard-search-picker__result-card.is-in-library .hoard-search-picker__result-thumb-icon {
   opacity: 0.45;
 }
 
-.hoard-result-card.is-in-library .hoard-result-title {
+.hoard-search-picker__result-card.is-in-library .hoard-search-picker__result-title {
   color: var(--text-muted);
 }
 
-.hoard-result-owned-badge {
+.hoard-search-picker__result-owned-badge {
   position: absolute;
   top: 4px;
   left: 4px;
@@ -286,22 +288,22 @@
   text-overflow: ellipsis;
 }
 
-.hoard-result-owned-check {
+.hoard-search-picker__result-owned-check {
   flex-shrink: 0;
 }
 
-.hoard-result-title {
+.hoard-search-picker__result-title {
   font-weight: 500;
   font-size: var(--font-ui-small);
 }
 
-.hoard-result-meta {
+.hoard-search-picker__result-meta {
   font-size: 11px;
   color: var(--text-muted);
 }
 
 /* clamp title to 2 lines, ellipsis the meta */
-.hoard-result-card .hoard-result-title {
+.hoard-search-picker__result-card .hoard-search-picker__result-title {
   line-height: 1.25;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -309,14 +311,14 @@
   overflow: hidden;
 }
 
-.hoard-result-card .hoard-result-meta {
+.hoard-search-picker__result-card .hoard-search-picker__result-meta {
   margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.hoard-modal-loading {
+.hoard-modal__loading {
   padding: 10px;
   text-align: center;
   color: var(--text-muted);
@@ -324,7 +326,7 @@
   font-size: var(--font-ui-small);
 }
 
-.hoard-modal-form {
+.hoard-modal__form {
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -333,7 +335,7 @@
   border-top: 0.5px solid var(--background-modifier-border);
 }
 
-.hoard-modal-btn-row {
+.hoard-modal__btn-row {
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
@@ -342,7 +344,7 @@
   gap: 8px;
 }
 
-.hoard-duplicate-warning {
+.hoard-modal__duplicate-warning {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -380,45 +382,45 @@
 }
 
 /* Custom Lists import modal */
-.hoard-import-textarea {
+.hoard-import__textarea {
   min-height: 140px;
   margin: 8px 0;
   font-family: var(--font-monospace);
 }
 
-.hoard-import-header-toggle {
+.hoard-import__header-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
   margin: 4px 0 10px;
 }
 
-.hoard-import-header-toggle label {
+.hoard-import__header-toggle label {
   font-size: var(--font-ui-small);
   color: var(--text-muted);
   cursor: pointer;
 }
 
-.hoard-import-header-checkbox {
+.hoard-import__header-checkbox {
   cursor: pointer;
 }
 
-.hoard-import-preview {
+.hoard-import__preview {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 8px;
 }
 
-.hoard-import-counts {
+.hoard-import__counts {
   font-size: var(--font-ui-small);
   color: var(--text-muted);
 }
 
 /* amber notice banner, shared by import, Custom Lists drafts and the Drafts tab */
-.hoard-import-banner,
-.hoard-cl-draft-banner,
-.hoard-drafts-notice {
+.hoard-import__banner,
+.hoard-custom-lists__draft-banner,
+.hoard-drafts__notice {
   padding: 6px 10px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--background-secondary) 80%, #BA7517 20%);
@@ -427,11 +429,11 @@
   color: var(--text-muted);
 }
 
-.hoard-import-banner {
+.hoard-import__banner {
   line-height: 1.5;
 }
 
-.hoard-import-banner-error {
+.hoard-import__banner-error {
   padding: 6px 10px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--background-modifier-error) 50%, transparent 50%);
@@ -441,14 +443,14 @@
   line-height: 1.5;
 }
 
-.hoard-btn-primary {
-  /* green color scheme — matches .hoard-btn-success */
+.hoard-btn--primary {
+  /* green color scheme — matches .hoard-btn--success */
   background: transparent;
   color: var(--color-green);
   border-color: var(--color-green);
 }
 
-.hoard-btn-primary:hover {
+.hoard-btn--primary:hover {
   background: var(--color-green);
   color: var(--text-on-accent);
   border-color: var(--color-green);

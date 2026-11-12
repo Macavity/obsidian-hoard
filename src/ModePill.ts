@@ -13,9 +13,9 @@ export interface GameModes {
 }
 
 const SEGMENTS: Array<{ key: keyof GameModes; cls: string; icon: string }> = [
-	{ key: 'singleplayer', cls: 'hoard-mode-pill-solo', icon: 'user' },
-	{ key: 'coop', cls: 'hoard-mode-pill-coop', icon: 'users' },
-	{ key: 'multiplayer', cls: 'hoard-mode-pill-multi', icon: 'globe' },
+	{ key: 'singleplayer', cls: 'hoard-mode-pill__segment--solo', icon: 'user' },
+	{ key: 'coop', cls: 'hoard-mode-pill__segment--coop', icon: 'users' },
+	{ key: 'multiplayer', cls: 'hoard-mode-pill__segment--multi', icon: 'globe' },
 ];
 
 export function renderModePill(
@@ -28,12 +28,12 @@ export function renderModePill(
 
 	for (const seg of SEGMENTS) {
 		const btn = pill.createEl('button', {
-			cls: `hoard-mode-pill-seg ${seg.cls}`,
+			cls: `hoard-mode-pill__segment ${seg.cls}`,
 			attr: { type: 'button', title: t(`list.mode.${seg.key}.title`), 'aria-label': t(`list.mode.${seg.key}.toggle`) },
 		});
-		const icon = btn.createSpan({ cls: 'hoard-mode-pill-icon' });
+		const icon = btn.createSpan({ cls: 'hoard-mode-pill__icon' });
 		setIcon(icon, seg.icon);
-		btn.createSpan({ cls: 'hoard-mode-pill-label', text: t(`list.mode.${seg.key}.label`) });
+		btn.createSpan({ cls: 'hoard-mode-pill__label', text: t(`list.mode.${seg.key}.label`) });
 
 		const sync = (): void => {
 			const on = get()[seg.key];

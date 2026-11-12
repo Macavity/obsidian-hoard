@@ -20,10 +20,10 @@ function open(stored: RowsShelfLayoutEntry[]) {
 	};
 	const modal = new RowsCustomizeModal({} as never, { settings: {} } as never, config);
 	modal.open();
-	const rows = (): HTMLElement[] => Array.from(modal.contentEl.querySelectorAll<HTMLElement>('.hoard-rows-customize-row'));
-	const names = (): string[] => rows().map((r) => r.querySelector('.hoard-rows-customize-name')!.textContent ?? '');
+	const rows = (): HTMLElement[] => Array.from(modal.contentEl.querySelectorAll<HTMLElement>('.hoard-rows-customize__row'));
+	const names = (): string[] => rows().map((r) => r.querySelector('.hoard-rows-customize__name')!.textContent ?? '');
 	const toggle = (i: number): void => {
-		const controls = rows()[i]!.querySelector('.hoard-rows-customize-controls')!;
+		const controls = rows()[i]!.querySelector('.hoard-rows-customize__controls')!;
 		(controls.lastElementChild as HTMLElement).click();
 	};
 	return { modal, config, rows, names, toggle, layout: () => layout };
@@ -38,7 +38,7 @@ const stored = (): RowsShelfLayoutEntry[] => [
 describe('RowsCustomizeModal', () => {
 	it('builds framed move buttons, disabled at the ends', () => {
 		const { rows } = open(stored());
-		const [up, down] = Array.from(rows()[0]!.querySelectorAll<HTMLButtonElement>('button.hoard-rows-customize-move'));
+		const [up, down] = Array.from(rows()[0]!.querySelectorAll<HTMLButtonElement>('button.hoard-rows-customize__move'));
 		expect(up!.classList.contains('hoard-icon-btn--framed')).toBe(true);
 		expect(up!.getAttribute('data-icon')).toBe('chevron-up');
 		expect(down!.getAttribute('data-icon')).toBe('chevron-down');

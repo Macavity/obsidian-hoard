@@ -1,7 +1,7 @@
 const notices = {
 	manager: {
 		editLost: 'An edit of "{id}" was not saved: its note can no longer be read.',
-		invalidYaml: 'Could not update "{file}": its frontmatter is not valid YAML.',
+		invalidYaml: 'Could not update "{file}": its properties are not valid YAML.',
 		renameTargetExists: '"{target}" already exists; the note keeps its old file name.',
 		apiKeyNeeded: 'API key needed to load episodes',
 		episodesLoading: 'Episodes of "{title}" are still loading.',
@@ -14,11 +14,11 @@ const notices = {
 		tmdbTokenRequired: 'TMDB token required; add one in Settings → API.',
 		keyRequired: '{service} API key required; add one in Settings → API.',
 		auth: {
-			tmdb: 'TMDB rejected this credential. Settings → API needs the API Read Access Token (v4), a long string starting "eyJ", not the 32-character v3 API key.',
+			tmdb: 'TMDB rejected this credential. Settings → API needs the API read access token (v4), a long string starting "eyJ", not the 32-character v3 API key.',
 			omdb: 'OMDb rejected the key. If it is new, click the activation link OMDb emailed you; keys do not work until activated.',
 			googleBooks: 'Google rejected this key; check it was copied in full.',
 			rawg: 'RAWG rejected the key; it may be invalid, or suspended for exceeding the monthly quota.',
-			twitch: 'Twitch rejected the Client ID or Secret; re-check both in Settings → API → Games.',
+			twitch: 'Twitch rejected the client ID or secret; re-check both in Settings → API → Games.',
 			igdb: 'IGDB rejected the request; the credentials work, the query did not.',
 			other: '{service} rejected your credentials.',
 		},

@@ -26,17 +26,17 @@ export function renderGroupCollage<T>(
 	}
 
 	if (covers.length === 0) {
-		const placeholder = parent.createDiv({ cls: 'hoard-card-poster-placeholder' });
-		placeholder.style.backgroundColor = fallback.color;
+		const placeholder = parent.createDiv({ cls: 'hoard-card__poster-placeholder' });
+		placeholder.setCssProps({ '--hoard-card-placeholder-color': fallback.color });
 		placeholder.createSpan({ text: fallback.letter });
 		return placeholder;
 	}
 
-	const collage = parent.createDiv({ cls: 'hoard-card-collage' });
+	const collage = parent.createDiv({ cls: 'hoard-card__collage' });
 	for (const url of covers) {
-		const strip = collage.createDiv({ cls: 'hoard-card-collage-strip' });
+		const strip = collage.createDiv({ cls: 'hoard-card__collage-strip' });
 		// escape double quotes so a URL can't break out of the CSS url("…")
-		strip.style.backgroundImage = `url("${url.replace(/"/g, '%22')}")`;
+		strip.setCssProps({ '--hoard-card-collage-image': `url("${url.replace(/"/g, '%22')}")` });
 	}
 	return collage;
 }

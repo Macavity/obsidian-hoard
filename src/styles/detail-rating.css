@@ -1,11 +1,12 @@
 /* Detail rating, trailer, store and wishlist controls */
+
 /* release year in the List expanded row */
-.hoard-row-year {
+.hoard-list__row-year {
   font-size: 0.7rem;
   color: var(--text-muted);
 }
 
-.hoard-card-status-badge {
+.hoard-card__status-badge {
   position: absolute;
   top: 6px;
   left: 6px;
@@ -13,60 +14,61 @@
   padding: 2px 6px;
   border-radius: 3px;
   color: #fff;
+  background-color: var(--hoard-card-status-color, transparent);
 }
 
 /* wishlist marker, parked left of the ⋮ so the menu never covers it */
-.hoard-card-flag-badge {
+.hoard-card__flag-badge {
   position: absolute;
   top: 4px;
   right: 32px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 50%);
   color: #EAB308;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.hoard-card-flag-badge .svg-icon {
+.hoard-card__flag-badge .svg-icon {
   width: 14px;
   height: 14px;
 }
 
 /* icon button as a dark round overlay in the poster / cover corner; element-qualified to outrank the base */
-button.hoard-card-menu-btn,
-button.hoard-reading-card-menu-btn {
+button.hoard-card__menu-btn,
+button.hoard-reading-card__menu-btn {
   position: absolute;
   top: 4px;
   right: 4px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 50%);
   color: #fff;
   opacity: 0;
   transition: opacity 0.15s;
 }
 
-button.hoard-card-menu-btn:hover,
-button.hoard-reading-card-menu-btn:hover {
-  background: rgba(0, 0, 0, 0.7);
+button.hoard-card__menu-btn:hover,
+button.hoard-reading-card__menu-btn:hover {
+  background: rgb(0 0 0 / 70%);
   color: #fff;
 }
 
-.hoard-card:hover .hoard-card-menu-btn,
-button.hoard-card-menu-btn:focus-visible {
+.hoard-card:hover .hoard-card__menu-btn,
+button.hoard-card__menu-btn:focus-visible {
   opacity: 1;
 }
 
-.is-mobile .hoard-card-menu-btn {
+.is-mobile .hoard-card__menu-btn {
   opacity: 1;
 }
 
 /* Community rating */
-.hoard-rating-divider {
+.hoard-star-rating__divider {
   display: inline-block;
   width: 1px;
   height: 18px;
@@ -75,13 +77,13 @@ button.hoard-card-menu-btn:focus-visible {
   vertical-align: middle;
 }
 
-.hoard-community-badge {
+.hoard-community-rating__badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.hoard-community-source {
+.hoard-community-rating__source {
   font-size: 11px;
   font-weight: 500;
   padding: 2px 6px;
@@ -89,23 +91,23 @@ button.hoard-card-menu-btn:focus-visible {
   line-height: 1.2;
 }
 
-.hoard-community-source--imdb    { background-color: #F5C518; color: #000000; }
-.hoard-community-source--mal     { background-color: #2E51A2; color: #FFFFFF; }
-.hoard-community-source--anilist { background-color: #3DB4F2; color: #FFFFFF; }
-.hoard-community-source--tmdb    { background-color: #01B4E4; color: #FFFFFF; }
+.hoard-community-rating__source--imdb    { background-color: #F5C518; color: #000; }
+.hoard-community-rating__source--mal     { background-color: #2E51A2; color: #FFF; }
+.hoard-community-rating__source--anilist { background-color: #3DB4F2; color: #FFF; }
+.hoard-community-rating__source--tmdb    { background-color: #01B4E4; color: #FFF; }
 
-.hoard-community-score {
+.hoard-community-rating__score {
   font-size: 15px;
   font-weight: 500;
   color: var(--text-normal);
 }
 
-.hoard-community-votes {
+.hoard-community-rating__votes {
   font-size: 12px;
   color: var(--text-faint);
 }
 
-.hoard-community-empty {
+.hoard-community-rating__empty {
   font-size: 12px;
   color: var(--text-faint);
   opacity: 0.6;
@@ -113,7 +115,7 @@ button.hoard-card-menu-btn:focus-visible {
 }
 
 /* Trailer control at the tail of the rating row (rating badge → refresh → trailer). */
-.hoard-trailer-control {
+.hoard-trailer-btn__control {
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
@@ -129,7 +131,7 @@ button.hoard-trailer-btn {
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  color: #FF0000; /* Permanent red, not hover-only. */
+  color: #F00; /* Permanent red, not hover-only. */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -140,7 +142,7 @@ button.hoard-trailer-btn {
 }
 
 button.hoard-trailer-btn:hover {
-  color: #CC0000; /* Discreet darker-red + subtle wash so it still reads as clickable. */
+  color: #C00; /* Discreet darker-red + subtle wash so it still reads as clickable. */
   background: var(--background-modifier-hover);
 }
 
@@ -183,6 +185,7 @@ button.hoard-trailer-btn.is-loading {
   box-shadow: none;
   height: 22px;
   width: 28px;
+
   --icon-size: 20px;
 }
 

@@ -100,7 +100,7 @@ describe('maybe list ordering', () => {
 			{ id: 'd1', title: 'Dated soon', type: 'Anime', releaseDate: isoOffset(2), dateAdded: '2026-01-05' },
 		];
 		(tab as unknown as Priv).renderMaybe();
-		const titles = Array.from(container.querySelectorAll('.hoard-maybe-card-title')).map((e) => e.textContent);
+		const titles = Array.from(container.querySelectorAll('.hoard-maybe-card__title')).map((e) => e.textContent);
 		expect(titles).toEqual(['Dated soon', 'Dated late', 'Undated early', 'Undated late']);
 	});
 });
@@ -112,9 +112,9 @@ describe('handleTrackerCardsVisible', () => {
 		const card = document.createElement('div');
 		card.className = 'hoard-card';
 		const img = document.createElement('img');
-		img.className = 'hoard-card-poster';
+		img.className = 'hoard-card__poster';
 		const ph = document.createElement('div');
-		ph.className = 'hoard-card-poster-placeholder';
+		ph.className = 'hoard-card__poster-placeholder';
 		card.append(img, ph);
 		c.append(card);
 		return c;
@@ -131,12 +131,12 @@ describe('handleTrackerCardsVisible', () => {
 		const noId = cell();
 		(tab as unknown as Priv).handleTrackerCardsVisible([noId, unknownTitle, skipped, fetched]);
 		expect(enqueue).toHaveBeenCalledTimes(1);
-		expect(fetched.querySelector('.hoard-card-poster-placeholder')!.classList.contains('is-loading')).toBe(true);
+		expect(fetched.querySelector('.hoard-card__poster-placeholder')!.classList.contains('is-loading')).toBe(true);
 		await Promise.resolve();
 		await Promise.resolve();
-		const img = fetched.querySelector<HTMLImageElement>('.hoard-card-poster')!;
+		const img = fetched.querySelector<HTMLImageElement>('.hoard-card__poster')!;
 		expect(img.src).toContain('img/1.png');
-		expect(fetched.querySelector('.hoard-card-poster-placeholder')!.classList.contains('is-loading')).toBe(false);
+		expect(fetched.querySelector('.hoard-card__poster-placeholder')!.classList.contains('is-loading')).toBe(false);
 		img.onload!(new Event('load'));
 		expect(fetched.querySelector('.hoard-card')!.classList.contains('has-poster')).toBe(true);
 		img.onerror!(new Event('error'));
@@ -150,8 +150,8 @@ describe('handleTrackerCardsVisible', () => {
 		(tab as unknown as Priv).handleTrackerCardsVisible([c]);
 		await Promise.resolve();
 		await Promise.resolve();
-		expect(c.querySelector('.hoard-card-poster-placeholder')!.classList.contains('is-loading')).toBe(false);
-		expect(c.querySelector<HTMLImageElement>('.hoard-card-poster')!.getAttribute('src')).toBeNull();
+		expect(c.querySelector('.hoard-card__poster-placeholder')!.classList.contains('is-loading')).toBe(false);
+		expect(c.querySelector<HTMLImageElement>('.hoard-card__poster')!.getAttribute('src')).toBeNull();
 	});
 });
 

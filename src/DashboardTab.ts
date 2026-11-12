@@ -131,7 +131,7 @@ export class DashboardTab {
 		mangaAgg: ReadingAggregate,
 	): void {
 		const isRect = this.plugin.settings.dashboardCardStyle === 'rectangles';
-		const grid = this.container.createDiv({ cls: 'hoard-rings-grid' });
+		const grid = this.container.createDiv({ cls: 'hoard-dashboard__rings-grid' });
 
 		// unified Total / Time card, anchored at the top (full width)
 		const totalStats = this.statsFor(allTitles);
@@ -157,14 +157,14 @@ export class DashboardTab {
 			const percent =
 				stats.total === 0 ? 0 : Math.round((stats.watched / stats.total) * 100);
 			if (isRect) {
-				const item = grid.createDiv({ cls: 'hoard-rect-item' });
+				const item = grid.createDiv({ cls: 'hoard-stat-rect__item' });
 				this.fillRect(item, typeLabel(type.name), type.color, percent, stats);
 				// reserve the sublabel line so type cards match the taller Books/Manga cards
-				item.createDiv({ cls: 'hoard-rect-subline', text: ' ' });
+				item.createDiv({ cls: 'hoard-stat-rect__subline', text: ' ' });
 			} else {
-				const item = grid.createDiv({ cls: 'hoard-ring-item' });
+				const item = grid.createDiv({ cls: 'hoard-stat-ring__item' });
 				this.fillRing(item, typeLabel(type.name), type.color, percent, stats);
-				item.createDiv({ cls: 'hoard-ring-subtitle hoard-ring-subline', text: ' ' });
+				item.createDiv({ cls: 'hoard-stat-ring__subtitle hoard-stat-ring__subline', text: ' ' });
 			}
 		}
 
@@ -185,19 +185,19 @@ export class DashboardTab {
 		timePlayedStr: string | null,
 	): void {
 		// rect cards carry an outer border; ring cards don't — match the active style
-		const cls = isRect ? 'hoard-dash-unified hoard-dash-unified-bordered' : 'hoard-dash-unified';
+		const cls = isRect ? 'hoard-dashboard__unified hoard-dashboard__unified--bordered' : 'hoard-dashboard__unified';
 		const card = grid.createDiv({
-			cls: timePlayedStr ? `${cls} hoard-dash-unified-4` : cls,
+			cls: timePlayedStr ? `${cls} hoard-dashboard__unified--4` : cls,
 		});
 
 		// segment 1 — Total. Ring content is centered; rect content stretches so its bar spans the segment.
-		const seg1 = card.createDiv({ cls: isRect ? 'hoard-dash-seg' : 'hoard-dash-seg hoard-dash-seg-center' });
+		const seg1 = card.createDiv({ cls: isRect ? 'hoard-dashboard__segment' : 'hoard-dashboard__segment hoard-dashboard__segment--center' });
 		if (isRect) {
 			// rect content goes straight into the segment, so its border is the card's
 			this.fillRect(seg1, t('dashboard.cards.total'), '#7F77DD', totalPercent, totalStats);
 		} else {
 			// rings are borderless; wrap so the accent ring matches type cards
-			this.fillRing(seg1.createDiv({ cls: 'hoard-ring-item' }), t('dashboard.cards.total'), '#7F77DD', totalPercent, totalStats);
+			this.fillRing(seg1.createDiv({ cls: 'hoard-stat-ring__item' }), t('dashboard.cards.total'), '#7F77DD', totalPercent, totalStats);
 		}
 
 		// segments 2 & 3 — Time Watched / Remaining: label + value, no bar
@@ -207,9 +207,9 @@ export class DashboardTab {
 	}
 
 	private renderTimeSegment(card: HTMLElement, label: string, value: string): void {
-		const seg = card.createDiv({ cls: 'hoard-dash-seg hoard-dash-seg-center hoard-dash-seg-time' });
-		seg.createDiv({ cls: 'hoard-dash-seg-label', text: label });
-		seg.createDiv({ cls: 'hoard-dash-seg-value', text: value });
+		const seg = card.createDiv({ cls: 'hoard-dashboard__segment hoard-dashboard__segment--center hoard-dashboard__segment--time' });
+		seg.createDiv({ cls: 'hoard-dashboard__segment-label', text: label });
+		seg.createDiv({ cls: 'hoard-dashboard__segment-value', text: value });
 	}
 
 	// Reading cards (Books / Manga)
@@ -264,38 +264,34 @@ export class DashboardTab {
 		const left = t('dashboard.cards.left', { count: agg.left });
 
 		if (isRect) {
-			const item = grid.createDiv({ cls: 'hoard-rect-item' });
+			const item = grid.createDiv({ cls: 'hoard-stat-rect__item' });
 			this.fillRectBody(item, displayLabel, left, color, percent);
-			item.createDiv({ cls: 'hoard-rect-subline', text: subline });
+			item.createDiv({ cls: 'hoard-stat-rect__subline', text: subline });
 		} else {
-			const item = grid.createDiv({ cls: 'hoard-ring-item' });
-			const svg = this.makeRingSvg(percent, color, `${percent}%`, '', true);
+			const item = grid.createDiv({ cls: 'hoard-stat-ring__item' });
+			const svg = this.makeRingSvg(percent, color, `${percent}%`, '');
 			item.appendChild(svg);
-			item.createDiv({ cls: 'hoard-ring-label', text: displayLabel });
-			item.createDiv({ cls: 'hoard-ring-subtitle', text: left });
-			item.createDiv({ cls: 'hoard-ring-subtitle hoard-ring-subline', text: subline });
+			item.createDiv({ cls: 'hoard-stat-ring__label', text: displayLabel });
+			item.createDiv({ cls: 'hoard-stat-ring__subtitle', text: left });
+			item.createDiv({ cls: 'hoard-stat-ring__subtitle hoard-stat-ring__subline', text: subline });
 		}
 	}
 
 	// Shared card content builders
 
-	/**
-	 * Builds the progress-ring SVG. With `themeStroke` the arc colour is applied inline, so CSS vars
-	 * resolve.
-	 */
+	/** Builds the progress-ring SVG. The arc colour goes through a CSS variable, so theme vars resolve. */
 	private makeRingSvg(
 		percent: number,
 		color: string,
 		centerText: string,
 		subText: string,
-		themeStroke = false,
 	): SVGSVGElement {
 		const svgNS = 'http://www.w3.org/2000/svg';
 		const svg = activeDocument.createElementNS(svgNS, 'svg');
 		svg.setAttribute('viewBox', '0 0 120 120');
 		svg.setAttribute('width', '110');
 		svg.setAttribute('height', '110');
-		svg.addClass('hoard-ring-svg');
+		svg.addClass('hoard-stat-ring__svg');
 
 		const bgCircle = activeDocument.createElementNS(svgNS, 'circle');
 		bgCircle.setAttribute('cx', '60');
@@ -303,7 +299,7 @@ export class DashboardTab {
 		bgCircle.setAttribute('r', '45');
 		bgCircle.setAttribute('fill', 'none');
 		bgCircle.setAttribute('stroke-width', '10');
-		bgCircle.addClass('hoard-ring-track');
+		bgCircle.addClass('hoard-stat-ring__track');
 		svg.appendChild(bgCircle);
 
 		const arc = activeDocument.createElementNS(svgNS, 'circle');
@@ -311,14 +307,13 @@ export class DashboardTab {
 		arc.setAttribute('cy', '60');
 		arc.setAttribute('r', '45');
 		arc.setAttribute('fill', 'none');
-		if (themeStroke) arc.style.stroke = color;
-		else arc.setAttribute('stroke', color);
+		arc.setCssProps({ '--hoard-stat-ring-color': color });
 		arc.setAttribute('stroke-width', '10');
 		arc.setAttribute('stroke-linecap', 'round');
 		arc.setAttribute('stroke-dasharray', String(RING_CIRCUMFERENCE));
 		arc.setAttribute('stroke-dashoffset', String(RING_CIRCUMFERENCE * (1 - percent / 100)));
 		arc.setAttribute('transform', 'rotate(-90 60 60)');
-		arc.addClass('hoard-ring-arc');
+		arc.addClass('hoard-stat-ring__arc');
 		svg.appendChild(arc);
 
 		const text = activeDocument.createElementNS(svgNS, 'text');
@@ -326,7 +321,7 @@ export class DashboardTab {
 		text.setAttribute('y', subText ? '55' : '60');
 		text.setAttribute('text-anchor', 'middle');
 		text.setAttribute('dominant-baseline', 'middle');
-		text.addClass('hoard-ring-percent-text');
+		text.addClass('hoard-stat-ring__percent-text');
 		text.textContent = centerText;
 		svg.appendChild(text);
 
@@ -335,7 +330,7 @@ export class DashboardTab {
 			sub.setAttribute('x', '60');
 			sub.setAttribute('y', '72');
 			sub.setAttribute('text-anchor', 'middle');
-			sub.addClass('hoard-ring-sub-text');
+			sub.addClass('hoard-stat-ring__subtext');
 			sub.textContent = subText;
 			svg.appendChild(sub);
 		}
@@ -352,9 +347,9 @@ export class DashboardTab {
 	): void {
 		const svg = this.makeRingSvg(percent, color, `${percent}%`, `${stats.watched}/${stats.total}`);
 		item.appendChild(svg);
-		item.createDiv({ cls: 'hoard-ring-label', text: label });
+		item.createDiv({ cls: 'hoard-stat-ring__label', text: label });
 		const unwatched = stats.total - stats.watched;
-		item.createDiv({ cls: 'hoard-ring-subtitle', text: t('dashboard.cards.unwatched', { count: unwatched }) });
+		item.createDiv({ cls: 'hoard-stat-ring__subtitle', text: t('dashboard.cards.unwatched', { count: unwatched }) });
 	}
 
 	private fillRect(
@@ -370,14 +365,13 @@ export class DashboardTab {
 
 	/** Rect card body: label + "left" text, percent value and the coloured bar. */
 	private fillRectBody(item: HTMLElement, label: string, left: string, color: string, percent: number): void {
-		const topRow = item.createDiv({ cls: 'hoard-rect-top' });
-		topRow.createSpan({ cls: 'hoard-rect-label', text: label });
-		topRow.createSpan({ cls: 'hoard-rect-unwatched', text: left });
-		item.createDiv({ cls: 'hoard-rect-value', text: `${percent}%` });
-		const barWrap = item.createDiv({ cls: 'hoard-rect-bar-wrap' });
-		const bar = barWrap.createDiv({ cls: 'hoard-rect-bar' });
-		bar.style.width = `${percent}%`;
-		bar.style.backgroundColor = color;
+		const topRow = item.createDiv({ cls: 'hoard-stat-rect__top' });
+		topRow.createSpan({ cls: 'hoard-stat-rect__label', text: label });
+		topRow.createSpan({ cls: 'hoard-stat-rect__unwatched', text: left });
+		item.createDiv({ cls: 'hoard-stat-rect__value', text: `${percent}%` });
+		const barWrap = item.createDiv({ cls: 'hoard-stat-rect__bar-wrap' });
+		const bar = barWrap.createDiv({ cls: 'hoard-stat-rect__bar' });
+		bar.setCssProps({ '--hoard-stat-rect-bar-width': `${percent}%`, '--hoard-stat-rect-bar-color': color });
 	}
 
 	// More statistics
@@ -388,12 +382,12 @@ export class DashboardTab {
 		manga: Manga[],
 		games: Game[],
 	): void {
-		const inner = this.renderAccordion(this.container, t('dashboard.stats.title'), 'hoard-more-stats');
+		const inner = this.renderAccordion(this.container, t('dashboard.stats.title'), 'hoard-dashboard__more-stats');
 
 		// pinned library counts — repainted with the panel so they follow the source filter
-		const pinned = inner.createDiv({ cls: 'hoard-summary-metrics hoard-more-stats-pinned' });
-		const filterBar = inner.createDiv({ cls: 'hoard-stats-filter-bar' });
-		const grid = inner.createDiv({ cls: 'hoard-stats-grid' });
+		const pinned = inner.createDiv({ cls: 'hoard-dashboard__summary-metrics hoard-dashboard__more-stats-pinned' });
+		const filterBar = inner.createDiv({ cls: 'hoard-dashboard__stats-filter-bar' });
+		const grid = inner.createDiv({ cls: 'hoard-dashboard__stats-grid' });
 
 		// repaint only this panel; a full re-render would rebuild the accordion and snap it shut
 		const paint = (): void => {
@@ -410,7 +404,7 @@ export class DashboardTab {
 		const allActive = active.size === STAT_SOURCES.length;
 
 		const allBtn = bar.createEl('button', {
-			cls: `hoard-stats-filter-btn${allActive ? ' is-active' : ''}`,
+			cls: `hoard-dashboard__stats-filter-btn${allActive ? ' is-active' : ''}`,
 			text: t('ui.toolbar.all'),
 		});
 		allBtn.addEventListener('click', () => {
@@ -422,7 +416,7 @@ export class DashboardTab {
 		for (const src of STAT_SOURCES) {
 			const isActive = active.has(src.value);
 			const btn = bar.createEl('button', {
-				cls: `hoard-stats-filter-btn${isActive && !allActive ? ' is-active' : ''}`,
+				cls: `hoard-dashboard__stats-filter-btn${isActive && !allActive ? ' is-active' : ''}`,
 				text: t(src.labelKey),
 			});
 			btn.addEventListener('click', () => {
@@ -497,7 +491,7 @@ export class DashboardTab {
 		this.renderCountSection(grid, t('dashboard.stats.topStudios'), this.countCredits(watch, 'studio'), topN);
 
 		if (grid.childElementCount === 0) {
-			grid.createDiv({ cls: 'hoard-empty-state', text: t('dashboard.stats.empty') });
+			grid.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('dashboard.stats.empty') });
 		}
 	}
 
@@ -507,19 +501,19 @@ export class DashboardTab {
 		label: string,
 	): { card: HTMLElement; header: HTMLElement } {
 		const card = parent.createDiv({ cls: 'hoard-stats-card' });
-		const header = card.createDiv({ cls: 'hoard-stats-card-header' });
-		header.createDiv({ cls: 'hoard-stats-card-title', text: label });
+		const header = card.createDiv({ cls: 'hoard-stats-card__header' });
+		header.createDiv({ cls: 'hoard-stats-card__title', text: label });
 		return { card, header };
 	}
 
 	/** Builds a collapsed accordion (header + animated body) and returns the body. */
 	private renderAccordion(parent: HTMLElement, label: string, cls: string): HTMLElement {
 		const section = parent.createDiv({ cls: `hoard-accordion ${cls}` });
-		const header = section.createEl('button', { cls: 'hoard-accordion-header' });
-		header.createSpan({ cls: 'hoard-accordion-title', text: label });
-		header.createSpan({ cls: 'hoard-accordion-chevron', text: '›' });
-		const body = section.createDiv({ cls: 'hoard-accordion-body' });
-		const inner = body.createDiv({ cls: 'hoard-accordion-inner' });
+		const header = section.createEl('button', { cls: 'hoard-accordion__header' });
+		header.createSpan({ cls: 'hoard-accordion__title', text: label });
+		header.createSpan({ cls: 'hoard-accordion__chevron', text: '›' });
+		const body = section.createDiv({ cls: 'hoard-accordion__body' });
+		const inner = body.createDiv({ cls: 'hoard-accordion__inner' });
 		header.addEventListener('click', () => {
 			section.toggleClass('is-open', !section.hasClass('is-open'));
 		});
@@ -590,14 +584,14 @@ export class DashboardTab {
 		let rows = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 		if (limit !== undefined) rows = rows.slice(0, limit);
 		if (rows.length === 0) {
-			parent.createDiv({ cls: 'hoard-empty-state', text: t('dashboard.stats.noData') });
+			parent.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('dashboard.stats.noData') });
 			return;
 		}
-		const list = parent.createDiv({ cls: 'hoard-stat-list' });
+		const list = parent.createDiv({ cls: 'hoard-stats-card__list' });
 		for (const [label, n] of rows) {
-			const row = list.createDiv({ cls: 'hoard-stat-row' });
-			row.createSpan({ cls: 'hoard-metric-label', text: labelOf ? labelOf(label) : label });
-			row.createSpan({ cls: 'hoard-metric-value', text: format(n) });
+			const row = list.createDiv({ cls: 'hoard-stats-card__row' });
+			row.createSpan({ cls: 'hoard-dashboard__metric-label', text: labelOf ? labelOf(label) : label });
+			row.createSpan({ cls: 'hoard-dashboard__metric-value', text: format(n) });
 		}
 	}
 
@@ -612,7 +606,7 @@ export class DashboardTab {
 		}
 
 		let grouping: 'decade' | 'year' = 'decade';
-		const toggle = header.createEl('button', { cls: 'hoard-stat-toggle' });
+		const toggle = header.createEl('button', { cls: 'hoard-stats-card__toggle' });
 		const listWrap = card.createDiv();
 		const renderList = () => {
 			listWrap.empty();
@@ -643,9 +637,9 @@ export class DashboardTab {
 	}
 
 	private renderMetricRow(parent: HTMLElement, label: string, value: string): void {
-		const row = parent.createDiv({ cls: 'hoard-metric-row' });
-		row.createSpan({ cls: 'hoard-metric-label', text: label });
-		row.createSpan({ cls: 'hoard-metric-value', text: value });
+		const row = parent.createDiv({ cls: 'hoard-dashboard__metric-row' });
+		row.createSpan({ cls: 'hoard-dashboard__metric-label', text: label });
+		row.createSpan({ cls: 'hoard-dashboard__metric-value', text: value });
 	}
 
 	// Suggestions
@@ -654,9 +648,9 @@ export class DashboardTab {
 		if (planTitles.length === 0) return;
 
 		const section = this.container.createDiv({ cls: 'hoard-suggestions' });
-		section.createDiv({ cls: 'hoard-section-title', text: t('dashboard.suggestions.title') });
+		section.createDiv({ cls: 'hoard-dashboard__section-title', text: t('dashboard.suggestions.title') });
 
-		const grid = section.createDiv({ cls: 'hoard-suggestions-grid' });
+		const grid = section.createDiv({ cls: 'hoard-suggestions__grid' });
 
 		const shortestByType = (typeName: string): string | null => {
 			const candidates = planTitles
@@ -679,26 +673,26 @@ export class DashboardTab {
 		const fixedTypes = ['Anime', 'Movie', 'TV Show'];
 		for (const typeName of fixedTypes) {
 			const pick = shortestByType(typeName);
-			const card = grid.createDiv({ cls: 'hoard-suggestion-card' });
-			card.createDiv({ cls: 'hoard-suggestion-label', text: t('dashboard.suggestions.shortest', { type: typeLabel(typeName) }) });
+			const card = grid.createDiv({ cls: 'hoard-suggestions__card' });
+			card.createDiv({ cls: 'hoard-suggestions__label', text: t('dashboard.suggestions.shortest', { type: typeLabel(typeName) }) });
 			card.createDiv({
-				cls: `hoard-suggestion-title${pick ? '' : ' hoard-suggestion-empty'}`,
+				cls: `hoard-suggestions__title${pick ? '' : ' hoard-suggestions__title--empty'}`,
 				text: pick ?? t('dashboard.suggestions.nothingPlanned'),
 			});
 		}
 
-		const randomCard = grid.createDiv({ cls: 'hoard-suggestion-card' });
-		const randomHeader = randomCard.createDiv({ cls: 'hoard-suggestion-random-header' });
-		randomHeader.createDiv({ cls: 'hoard-suggestion-label', text: t('dashboard.suggestions.random') });
+		const randomCard = grid.createDiv({ cls: 'hoard-suggestions__card' });
+		const randomHeader = randomCard.createDiv({ cls: 'hoard-suggestions__random-header' });
+		randomHeader.createDiv({ cls: 'hoard-suggestions__label', text: t('dashboard.suggestions.random') });
 		const shuffleBtn = createIconButton(randomHeader, {
 			icon: 'shuffle',
 			label: t('dashboard.suggestions.pickAnother'),
-			cls: 'hoard-suggestion-shuffle',
+			cls: 'hoard-suggestions__shuffle',
 		});
 
 		const getRandomTitle = (): string =>
 			planTitles[Math.floor(Math.random() * planTitles.length)]?.title ?? '';
-		const randomTitleEl = randomCard.createDiv({ cls: 'hoard-suggestion-title', text: getRandomTitle() });
+		const randomTitleEl = randomCard.createDiv({ cls: 'hoard-suggestions__title', text: getRandomTitle() });
 
 		shuffleBtn.addEventListener('click', () => {
 			randomTitleEl.textContent = getRandomTitle();
@@ -720,11 +714,11 @@ export class DashboardTab {
 	}
 
 	private renderRecentSection(titleKey: TranslationKey, emptyKey: TranslationKey, recent: HoardTitle[]): void {
-		const section = this.container.createDiv({ cls: 'hoard-recently-watched' });
-		section.createDiv({ cls: 'hoard-section-title', text: t(titleKey) });
+		const section = this.container.createDiv({ cls: 'hoard-recent__watched' });
+		section.createDiv({ cls: 'hoard-dashboard__section-title', text: t(titleKey) });
 
 		if (recent.length === 0) {
-			section.createDiv({ cls: 'hoard-empty-state', text: t(emptyKey) });
+			section.createDiv({ cls: 'hoard-dashboard__empty-state', text: t(emptyKey) });
 			return;
 		}
 
@@ -732,11 +726,11 @@ export class DashboardTab {
 	}
 
 	private renderRecentItem(section: HTMLElement, title: HoardTitle): void {
-		const item = section.createDiv({ cls: 'hoard-rw-item' });
-		item.createDiv({ cls: 'hoard-rw-title', text: title.title });
-		renderTypeBadge(item.createDiv({ cls: 'hoard-rw-col-badge' }), title.type, this.plugin.settings);
-		item.createDiv({ cls: 'hoard-rw-col-ep', text: this.recentEpisodeText(title) });
-		item.createDiv({ cls: 'hoard-rw-col-pct', text: this.recentProgressText(title) });
+		const item = section.createDiv({ cls: 'hoard-recent__item' });
+		item.createDiv({ cls: 'hoard-recent__title', text: title.title });
+		renderTypeBadge(item.createDiv({ cls: 'hoard-recent__column-badge' }), title.type, this.plugin.settings);
+		item.createDiv({ cls: 'hoard-recent__column-episode', text: this.recentEpisodeText(title) });
+		item.createDiv({ cls: 'hoard-recent__column-percent', text: this.recentProgressText(title) });
 	}
 
 	/** Next unwatched episode, "✓" when all are watched, empty for movies. */

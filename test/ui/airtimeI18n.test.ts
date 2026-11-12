@@ -58,7 +58,7 @@ describe('mobile toolbar i18n', () => {
 			expanded: false,
 			onToggleChange: () => {},
 		});
-		const toggle = controls.children.find((c) => c.classes.has('hoard-toolbar-toggle-btn'))!;
+		const toggle = controls.children.find((c) => c.classes.has('hoard-toolbar__toggle-btn'))!;
 		expect(toggle.attr['aria-label']).toBe('Filter und Aktionen anzeigen');
 	});
 });

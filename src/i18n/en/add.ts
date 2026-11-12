@@ -57,7 +57,7 @@ const add = {
 		searchManga: 'Search by title or MAL ID...',
 		searchFirst: 'Enter a search term first.',
 		unknownAuthor: 'Unknown author',
-		untitled: '(untitled)',
+		untitled: '(Untitled)',
 		bookTitlePlaceholder: 'Book title',
 		author: 'Author',
 		authorPlaceholder: 'Author name',

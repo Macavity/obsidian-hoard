@@ -4,8 +4,8 @@ import { El } from '../helpers/fakeEl';
 
 function setup() {
 	const content = new El('root');
-	const form = content.createDiv({ cls: 'hoard-modal-form' });
-	const btnRow = form.createDiv({ cls: 'hoard-modal-btn-row' });
+	const form = content.createDiv({ cls: 'hoard-modal__form' });
+	const btnRow = form.createDiv({ cls: 'hoard-modal__btn-row' });
 	const guard = createDuplicateGuard();
 	const retry = vi.fn();
 	const check = (isDuplicate = true) =>
@@ -25,8 +25,8 @@ describe('blockDuplicate', () => {
 		const { btnRow, guard, retry, check } = setup();
 		expect(check()).toBe(true);
 		expect(check()).toBe(true);
-		expect(btnRow.findAll('hoard-duplicate-warning')).toHaveLength(1);
-		const warn = btnRow.find('hoard-duplicate-warning')!;
+		expect(btnRow.findAll('hoard-modal__duplicate-warning')).toHaveLength(1);
+		const warn = btnRow.find('hoard-modal__duplicate-warning')!;
 		expect(warn.children[0]!.text).toBe('"Dune" already exists. Add anyway?');
 		warn.children[1]!.fire('click'); // Continue
 		expect(retry).toHaveBeenCalledTimes(1);
@@ -39,16 +39,16 @@ describe('blockDuplicate', () => {
 		const { form, check } = setup();
 		expect(check()).toBe(true);
 		form.empty(); // a re-render drops the button row and the warning
-		const btnRow = form.createDiv({ cls: 'hoard-modal-btn-row' });
+		const btnRow = form.createDiv({ cls: 'hoard-modal__btn-row' });
 		expect(check()).toBe(true);
-		expect(btnRow.findAll('hoard-duplicate-warning')).toHaveLength(1);
+		expect(btnRow.findAll('hoard-modal__duplicate-warning')).toHaveLength(1);
 	});
 
 	it('Cancel removes the warning without skipping', () => {
 		const { btnRow, guard, check } = setup();
 		check();
-		btnRow.find('hoard-duplicate-warning')!.children[2]!.fire('click');
-		expect(btnRow.findAll('hoard-duplicate-warning')).toHaveLength(0);
+		btnRow.find('hoard-modal__duplicate-warning')!.children[2]!.fire('click');
+		expect(btnRow.findAll('hoard-modal__duplicate-warning')).toHaveLength(0);
 		expect(guard.skip).toBe(false);
 	});
 });

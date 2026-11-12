@@ -80,14 +80,14 @@ const TABS: TabDefinition[] = [
 		name: 'reading',
 		label: 'app.tabs.reading',
 		icon: 'book-open',
-		cls: 'hoard-reading-tab',
+		cls: 'hoard-reading',
 		create: (ctx) => new ReadingTab(ctx.containerEl, ctx.plugin, ctx.plugin.readingDataManager),
 	},
 	{
 		name: 'games',
 		label: 'app.tabs.games',
 		icon: 'gamepad-2',
-		cls: 'hoard-games-tab',
+		cls: 'hoard-games',
 		create: (ctx) => new GamesTab(ctx.containerEl, ctx.plugin, ctx.plugin.gameDataManager),
 	},
 	{
@@ -111,7 +111,7 @@ const TABS: TabDefinition[] = [
 		name: 'log',
 		label: 'app.tabs.log',
 		icon: 'history',
-		cls: 'hoard-log-tab',
+		cls: 'hoard-log',
 		create: (ctx) => new LogTab(ctx.containerEl, ctx.plugin),
 	},
 ];
@@ -167,11 +167,11 @@ export class HoardView extends ItemView {
 		}
 	}
 
-	// Mobile keyboard layout fix. When the keyboard opens, this WebView freezes .hoard-tab-content at its
+	// Mobile keyboard layout fix. When the keyboard opens, this WebView freezes .hoard-view__tab-content at its
 	// content height instead of distributing .hoard-view's free space via flex-grow, leaving the tab the
 	// wrong size until a reflow forces it. Fix: observe .hoard-view and, on every settle (keyboard
 	// open/close, rotation, split resize), imperatively set an explicit px height (+ flex:none
-	// !important) on the *current* .hoard-tab-content — re-queried in the callback so it survives
+	// !important) on the *current* .hoard-view__tab-content — re-queried in the callback so it survives
 	// tab-content rebuilds.
 	private setupTabContentSizer(): void {
 		// never run more than one observer (onOpen could run again)
@@ -197,16 +197,16 @@ export class HoardView extends ItemView {
 
 	// Mobile keyboard fix — edit pin. On short lists (notably Custom Lists) inline-editing a cell opens
 	// the keyboard, but some resize readings during that window momentarily report the FULL
-	// no-keyboard height; honouring them re-expands .hoard-tab-content and exposes a dark band under the
+	// no-keyboard height; honouring them re-expands .hoard-view__tab-content and exposes a dark band under the
 	// content. Fix: while an editor inside the scroller is focused, pin to the SMALLEST clientHeight
 	// observed and ignore any larger reading. Release is guaranteed on focusout (after a grace window,
 	// so cell-to-cell navigation doesn't flicker), with a safety net in applyTabContentHeight().
 
-	/** True when `target` is an input/textarea/contenteditable inside .hoard-tab-content. */
+	/** True when `target` is an input/textarea/contenteditable inside .hoard-view__tab-content. */
 	private isEditorInScroller(target: EventTarget | null): boolean {
 		const node = target as HTMLElement | null;
 		if (!node || typeof node.tagName !== 'string') return false;
-		const tabContent = this.contentEl.querySelector(':scope > .hoard-tab-content');
+		const tabContent = this.contentEl.querySelector(':scope > .hoard-view__tab-content');
 		if (!tabContent || !tabContent.contains(node)) return false;
 		const tag = node.tagName.toLowerCase();
 		return tag === 'input' || tag === 'textarea' || node.isContentEditable === true;
@@ -244,9 +244,9 @@ export class HoardView extends ItemView {
 		if (!this.editPinActive) return;
 		this.editPinActive = false;
 		this.smallestEditHeight = -1;
-		const tabContent = this.contentEl.querySelector<HTMLElement>(':scope > .hoard-tab-content');
+		const tabContent = this.contentEl.querySelector<HTMLElement>(':scope > .hoard-view__tab-content');
 		// remove the pinned height and let the observer re-assert the full height now the keyboard closed
-		tabContent?.removeClass('hoard-tab-content-pinned');
+		tabContent?.removeClass('hoard-view__tab-content--pinned');
 		this.lastAppliedTabHeight = -1;
 		this.applyTabContentHeight();
 	}
@@ -255,7 +255,7 @@ export class HoardView extends ItemView {
 		const viewContent = this.contentEl;
 		if (!viewContent) return;
 		const tabBar = viewContent.querySelector<HTMLElement>(':scope > .hoard-tab-bar');
-		const tabContent = viewContent.querySelector<HTMLElement>(':scope > .hoard-tab-content');
+		const tabContent = viewContent.querySelector<HTMLElement>(':scope > .hoard-view__tab-content');
 		if (!tabContent) return;
 
 		const viewClientHeight = viewContent.clientHeight;
@@ -287,14 +287,14 @@ export class HoardView extends ItemView {
 
 		// the pinned class sets an explicit px height (via CSS variable) + flex:none, beating the
 		// `flex: 1 1 0%` base rule this WebView fails to distribute. min-height:0 / overflow-y stay intact.
-		tabContent.addClass('hoard-tab-content-pinned');
-		tabContent.setCssProps({ '--hoard-pinned-tab-height': `${target}px` });
+		tabContent.addClass('hoard-view__tab-content--pinned');
+		tabContent.setCssProps({ '--hoard-view-pinned-tab-height': `${target}px` });
 	}
 
 	/** Called after tab content changes on mobile to re-apply the height. */
 	refreshMobileLayout(): void {
 		if (!Platform.isMobile || !this.mobileResizeObserver) return;
-		// a tab switch recreates .hoard-tab-content with no inline height; force a re-apply even when the
+		// a tab switch recreates .hoard-view__tab-content with no inline height; force a re-apply even when the
 		// hoard-view height itself hasn't changed
 		this.lastAppliedTabHeight = -1;
 		this.applyTabContentHeight();
@@ -320,11 +320,11 @@ export class HoardView extends ItemView {
 		}
 		this.editPinActive = false;
 		this.smallestEditHeight = -1;
-		// clear the explicit sizing the mobile keyboard fix applied to hoard-tab-content
-		const tabContent = this.contentEl.querySelector<HTMLElement>('.hoard-tab-content');
+		// clear the explicit sizing the mobile keyboard fix applied to hoard-view__tab-content
+		const tabContent = this.contentEl.querySelector<HTMLElement>('.hoard-view__tab-content');
 		if (tabContent) {
-			tabContent.removeClass('hoard-tab-content-pinned');
-			tabContent.style.removeProperty('--hoard-pinned-tab-height');
+			tabContent.removeClass('hoard-view__tab-content--pinned');
+			tabContent.setCssProps({ '--hoard-view-pinned-tab-height': '' });
 		}
 		this.destroyActiveTab();
 	}
@@ -359,7 +359,7 @@ export class HoardView extends ItemView {
 		// mobile gets icon-only tabs and the container-responsive dashboard grid; desktop keeps text
 		// labels and the fixed 3-column layout. Toggled via this class so styling keys off Platform.isMobile,
 		// not a viewport media query.
-		root.toggleClass('hoard-mobile', Platform.isMobile);
+		root.toggleClass('hoard-view--mobile', Platform.isMobile);
 		this.applyColorTheme(root);
 
 		const tabBar = root.createDiv({ cls: 'hoard-tab-bar' });
@@ -370,7 +370,7 @@ export class HoardView extends ItemView {
 			btn.addEventListener('click', () => this.setActiveTab(def.name));
 		}
 
-		this.tabContentEl = root.createDiv({ cls: 'hoard-tab-content' });
+		this.tabContentEl = root.createDiv({ cls: 'hoard-view__tab-content' });
 		this.renderTabContent();
 
 		this.updateBadges('data-change');
@@ -390,10 +390,10 @@ export class HoardView extends ItemView {
 	 */
 	private makeTabBtn(tabBar: HTMLElement, tab: TabName, label: string, icon: string): HTMLButtonElement {
 		const btn = tabBar.createEl('button', {
-			cls: `hoard-tab-btn${this.activeTab === tab ? ' is-active' : ''}`,
+			cls: `hoard-tab-bar__btn${this.activeTab === tab ? ' is-active' : ''}`,
 		});
 		if (Platform.isMobile) {
-			btn.addClass('hoard-tab-btn-icon');
+			btn.addClass('hoard-tab-bar__btn--icon');
 			setIcon(btn, icon);
 			btn.setAttribute('aria-label', label);
 		} else {
@@ -409,7 +409,7 @@ export class HoardView extends ItemView {
 	private setTabBadge(btn: HTMLButtonElement | null, label: string, count: number): void {
 		if (!btn) return;
 		if (Platform.isMobile) {
-			btn.toggleClass('hoard-tab-has-badge', count > 0);
+			btn.toggleClass('hoard-tab-bar__btn--has-badge', count > 0);
 		} else {
 			btn.textContent = count > 0 ? `${label} (${count})` : label;
 		}
@@ -492,8 +492,6 @@ export class HoardView extends ItemView {
 			if (Date.now() - renderTime > 300) return;
 			const computed = window.getComputedStyle(el).overflow;
 			if (computed === 'hidden') {
-				// strip any inline override so the class rule below wins without !important
-				el.style.removeProperty('overflow');
 				el.addClass('hoard-force-overflow-auto');
 			}
 		});

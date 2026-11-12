@@ -118,9 +118,9 @@ describe('GamesTab.handleCoversVisible', () => {
 		const c = document.createElement('div');
 		if (id) c.dataset.gameId = id;
 		const img = document.createElement('img');
-		img.className = 'hoard-card-poster';
+		img.className = 'hoard-card__poster';
 		const ph = document.createElement('div');
-		ph.className = 'hoard-card-poster-placeholder';
+		ph.className = 'hoard-card__poster-placeholder';
 		c.append(img, ph);
 		return c;
 	};
@@ -134,13 +134,13 @@ describe('GamesTab.handleCoversVisible', () => {
 					: { url: '', source: '', apiId: '' }));
 		const ca = card('a');
 		p.handleCoversVisible([card(), card('missing'), card('has'), ca, card('b'), card('c')]);
-		expect(ca.querySelector('.hoard-card-poster-placeholder')!.classList.contains('is-loading')).toBe(true);
+		expect(ca.querySelector('.hoard-card__poster-placeholder')!.classList.contains('is-loading')).toBe(true);
 		await flush();
 		expect(resolve).toHaveBeenCalledTimes(3);
 		expect(gameData.updateCoverAndSource).toHaveBeenCalledWith('a', 'https://img/a.jpg', 'rawg', '7');
 		expect(gameData.updateCoverUrl).toHaveBeenCalledWith('b', 'https://img/b.jpg');
 		expect(p.coverFetchFailed.has('c')).toBe(true);
-		const img = ca.querySelector<HTMLImageElement>('.hoard-card-poster')!;
+		const img = ca.querySelector<HTMLImageElement>('.hoard-card__poster')!;
 		img.onload!(new Event('load'));
 		expect(ca.classList.contains('has-poster')).toBe(true);
 		img.onerror!(new Event('error'));

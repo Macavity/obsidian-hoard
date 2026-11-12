@@ -1,4 +1,5 @@
 /* Custom lists tab */
+
 /* ══ CUSTOM LISTS TAB (v0.8.0) ══ */
 
 .hoard-custom-lists {
@@ -10,7 +11,7 @@
 }
 
 /* Empty state */
-.hoard-cl-empty-state {
+.hoard-custom-lists__empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -19,13 +20,13 @@
   padding: 40px 20px;
 }
 
-.hoard-cl-empty-text {
+.hoard-custom-lists__empty-text {
   font-size: 14px;
   color: var(--text-muted);
 }
 
 /* Sub-tab bar */
-.hoard-cl-sub-tabs {
+.hoard-custom-lists__subtabs {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -35,7 +36,7 @@
   flex-wrap: wrap;
 }
 
-.hoard-cl-sub-tab {
+.hoard-custom-lists__subtab {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -52,50 +53,51 @@
   margin-bottom: -0.5px;
 }
 
-.hoard-cl-sub-tab:hover {
+.hoard-custom-lists__subtab:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.hoard-cl-sub-tab.is-active {
+.hoard-custom-lists__subtab.is-active {
   background: var(--background-primary);
   color: var(--text-normal);
   font-weight: 600;
   border-bottom: 0.5px solid var(--background-primary);
 }
 
-.hoard-cl-sub-tab-name {
+.hoard-custom-lists__subtab-name {
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  color: var(--hoard-custom-lists-subtab-color, inherit);
 }
 
 /* sm icon button in the list tab, revealed on hover */
-.hoard-cl-sub-tab-del {
+.hoard-custom-lists__subtab-delete {
   opacity: 0;
   transition: opacity 0.12s, color 0.12s;
 }
 
-.hoard-cl-sub-tab:hover .hoard-cl-sub-tab-del,
-.hoard-cl-sub-tab-del:focus-visible {
+.hoard-custom-lists__subtab:hover .hoard-custom-lists__subtab-delete,
+.hoard-custom-lists__subtab-delete:focus-visible {
   opacity: 1;
 }
 
-button.hoard-cl-sub-tab-del:hover {
+button.hoard-custom-lists__subtab-delete:hover {
   color: var(--text-error);
 }
 
-/* icon button; its colours come from .hoard-btn-success. The tablet selector keeps the
+/* icon button; its colours come from .hoard-btn--success. The tablet selector keeps the
    padding against the base's tablet reset. */
-button.hoard-cl-sub-tab-add,
-.is-tablet button.hoard-cl-sub-tab-add {
+button.hoard-custom-lists__subtab-add,
+.is-tablet button.hoard-custom-lists__subtab-add {
   width: auto;
   padding: 3px 10px;
 }
 
-.hoard-cl-sub-tab-rename {
+.hoard-custom-lists__subtab-rename {
   max-width: 100px;
   padding: 1px 4px;
   border: 0.5px solid var(--interactive-accent);
@@ -106,12 +108,12 @@ button.hoard-cl-sub-tab-add,
   font-weight: 600;
 }
 
-.hoard-cl-sub-tab-rename:focus {
+.hoard-custom-lists__subtab-rename:focus {
   outline: none;
 }
 
 /* List view */
-.hoard-cl-list-view {
+.hoard-custom-lists__list-view {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -120,7 +122,7 @@ button.hoard-cl-sub-tab-add,
 }
 
 /* Header */
-.hoard-cl-header {
+.hoard-custom-lists__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -128,13 +130,13 @@ button.hoard-cl-sub-tab-add,
   gap: 8px;
 }
 
-.hoard-cl-count {
+.hoard-custom-lists__count {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-muted);
 }
 
-.hoard-cl-toolbar {
+.hoard-custom-lists__toolbar {
   display: flex;
   gap: 4px;
   align-items: center;
@@ -142,63 +144,66 @@ button.hoard-cl-sub-tab-add,
 }
 
 /* Draft banner */
-.hoard-cl-draft-banner {
+.hoard-custom-lists__draft-banner {
   margin: 6px 0;
   flex-shrink: 0;
 }
 
 /* Table */
-.hoard-cl-table-wrap {
+.hoard-custom-lists__table-wrap {
   flex: 1;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
   min-height: 0;
 }
 
-.hoard-cl-table {
+.hoard-custom-list-table {
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 6px;
   overflow: hidden;
   width: 100%;
 }
 
-.hoard-cl-thead {
+.hoard-custom-list-table__thead {
   background: var(--background-secondary);
   border-bottom: 0.5px solid var(--background-modifier-border);
 }
 
 /* Column resize (Excel-style) */
+
 /* resizable: explicit widths, no flex, horizontal scroll */
-.hoard-cl-table-resizable {
+.hoard-custom-list-table--resizable {
   width: max-content;
   min-width: 100%;
+
   /* the wrap owns the h-scroll so the sticky cell clamps to the viewport edge */
   overflow: visible;
 }
 
-.hoard-cl-table-resizable .hoard-cl-tr {
+.hoard-custom-list-table--resizable .hoard-custom-list-table__tr {
   min-width: 100%;
 }
 
-.hoard-cl-table-resizable .hoard-cl-th.hoard-cl-col-fixed,
-.hoard-cl-table-resizable .hoard-cl-td.hoard-cl-col-fixed {
-  flex: 0 0 var(--hoard-cl-cw);
+.hoard-custom-list-table--resizable .hoard-custom-list-table__th.hoard-custom-list-table__column-fixed,
+.hoard-custom-list-table--resizable .hoard-custom-list-table__td.hoard-custom-list-table__column-fixed {
+  flex: 0 0 var(--hoard-custom-list-table-column-width);
 }
 
 /* Sticky row actions (resizable mode only) */
+
 /* pin actions to the visible right edge; opaque bg matches the row */
-.hoard-cl-table-resizable .hoard-cl-td-actions {
+.hoard-custom-list-table--resizable .hoard-custom-list-table__td--actions {
   /* margin-left:auto pins right when the table fits, resolves to 0 when it overflows */
   margin-left: auto;
   position: sticky;
   right: 0;
   z-index: 1;
   background-color: var(--background-primary);
-  /* the row's hover / checked tint, layered over the opaque bg (set on .hoard-cl-tr-body) */
-  background-image: var(--hoard-cl-row-tint, none);
+
+  /* the row's hover / checked tint, layered over the opaque bg (set on .hoard-custom-list-table__tr--body) */
+  background-image: var(--hoard-custom-list-table-row-tint, none);
 }
 
-.hoard-cl-table-resizable .hoard-cl-th-actions {
+.hoard-custom-list-table--resizable .hoard-custom-list-table__th--actions {
   margin-left: auto;
   position: sticky;
   right: 0;
@@ -206,11 +211,11 @@ button.hoard-cl-sub-tab-add,
   background-color: var(--background-secondary);
 }
 
-.hoard-cl-th-resizable {
+.hoard-custom-list-table__th--resizable {
   position: relative;
 }
 
-.hoard-cl-col-resize {
+.hoard-custom-list-table__column-resize {
   position: absolute;
   top: 0;
   right: 0;
@@ -221,7 +226,7 @@ button.hoard-cl-sub-tab-add,
 }
 
 /* quiet separator; brighter + thicker on hover to signal resize */
-.hoard-cl-col-resize::after {
+.hoard-custom-list-table__column-resize::after {
   content: '';
   position: absolute;
   top: 0;
@@ -232,26 +237,26 @@ button.hoard-cl-sub-tab-add,
   transition: background 0.12s, width 0.12s;
 }
 
-.hoard-cl-col-resize:hover::after {
+.hoard-custom-list-table__column-resize:hover::after {
   width: 2px;
   background: var(--interactive-accent);
 }
 
-body.hoard-cl-col-resizing {
+body.hoard-custom-list-table__column-resizing {
   cursor: col-resize;
   user-select: none;
 }
 
-.hoard-cl-tr {
+.hoard-custom-list-table__tr {
   display: flex;
   align-items: stretch;
 }
 
-.hoard-cl-tr-header {
+.hoard-custom-list-table__tr--header {
   padding: 4px 6px;
 }
 
-.hoard-cl-tr-body {
+.hoard-custom-list-table__tr--body {
   padding: 3px 6px;
   border-bottom: 0.5px solid var(--background-modifier-border);
   transition: background 0.1s;
@@ -259,26 +264,27 @@ body.hoard-cl-col-resizing {
   align-items: center;
 }
 
-.hoard-cl-tr-body:last-child {
+.hoard-custom-list-table__tr--body:last-child {
   border-bottom: none;
 }
 
-.hoard-cl-tr-body:hover {
+.hoard-custom-list-table__tr--body:hover {
   background: var(--background-modifier-hover);
-  --hoard-cl-row-tint: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover));
+
+  --hoard-custom-list-table-row-tint: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover));
 }
 
-.hoard-cl-tr-body:hover .hoard-cl-row-action,
-.hoard-cl-row-action:focus-visible {
+.hoard-custom-list-table__tr--body:hover .hoard-custom-list-table__row-action,
+.hoard-custom-list-table__row-action:focus-visible {
   opacity: 1;
 }
 
 /* no hover on touch — row actions would sit invisible but tappable */
-.is-mobile .hoard-cl-row-action {
+.is-mobile .hoard-custom-list-table__row-action {
   opacity: 1;
 }
 
-.hoard-cl-th {
+.hoard-custom-list-table__th {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
@@ -291,27 +297,27 @@ body.hoard-cl-col-resizing {
 }
 
 /* sm icon button next to the column label */
-.hoard-cl-autotime-refresh {
+.hoard-custom-list-table__autotime-refresh {
   margin-left: 4px;
   vertical-align: -3px;
   opacity: 0.6;
   transition: opacity 0.15s;
 }
 
-.hoard-cl-autotime-refresh:hover {
+.hoard-custom-list-table__autotime-refresh:hover {
   opacity: 1;
 }
 
-.hoard-cl-th-num {
+.hoard-custom-list-table__th--number {
   flex: 0 0 28px;
   text-align: center;
 }
 
-.hoard-cl-th-actions {
+.hoard-custom-list-table__th--actions {
   flex: 0 0 86px;
 }
 
-.hoard-cl-td {
+.hoard-custom-list-table__td {
   font-size: var(--font-ui-small);
   padding: 2px 6px;
   flex: 1;
@@ -322,7 +328,7 @@ body.hoard-cl-col-resizing {
   overflow: hidden;
 }
 
-.hoard-cl-td-num {
+.hoard-custom-list-table__td--number {
   flex: 0 0 28px;
   font-size: 11px;
   color: var(--text-faint);
@@ -331,11 +337,11 @@ body.hoard-cl-col-resizing {
   cursor: default;
 }
 
-.hoard-cl-td-name {
+.hoard-custom-list-table__td--name {
   font-weight: 500;
 }
 
-.hoard-cl-td-actions {
+.hoard-custom-list-table__td--actions {
   flex: 0 0 86px;
   display: flex;
   align-items: center;
@@ -346,7 +352,7 @@ body.hoard-cl-col-resizing {
 }
 
 /* Row actions: icon buttons revealed on row hover; element-qualified to outrank the base */
-button.hoard-cl-row-action {
+button.hoard-custom-list-table__row-action {
   width: 20px;
   height: 20px;
   border-radius: 3px;
@@ -354,39 +360,39 @@ button.hoard-cl-row-action {
   transition: opacity 0.12s, background 0.12s, color 0.12s;
 }
 
-button.hoard-cl-drag-handle {
+button.hoard-custom-list-table__row-action--drag-handle {
   cursor: grab;
 }
 
-button.hoard-cl-add-btn:hover {
+button.hoard-custom-list-table__row-action--add:hover {
   color: var(--text-on-accent);
   background: var(--color-green);
 }
 
-button.hoard-cl-dup-btn:hover {
+button.hoard-custom-list-table__row-action--duplicate:hover {
   color: var(--interactive-accent);
 }
 
-button.hoard-cl-row-del:hover {
+button.hoard-custom-list-table__row-action--delete:hover {
   color: var(--text-on-accent);
   background: #E24B4A;
 }
 
 /* Drag state */
-.hoard-cl-dragging {
+.hoard-custom-lists__dragging {
   opacity: 0.4;
 }
 
 /* element+state beats each target's own border rule */
-.hoard-cl-sub-tab.hoard-cl-drag-over,
-.hoard-cl-tr-body.hoard-cl-drag-over,
-.hoard-editcol-card.hoard-cl-drag-over,
-.hoard-reading-col-card.hoard-cl-drag-over {
+.hoard-custom-lists__subtab.hoard-custom-lists__drag-over,
+.hoard-custom-list-table__tr--body.hoard-custom-lists__drag-over,
+.hoard-edit-columns__card.hoard-custom-lists__drag-over,
+.hoard-reading-columns__card.hoard-custom-lists__drag-over {
   border-top: 2px solid var(--interactive-accent);
 }
 
 /* Cell content */
-.hoard-cl-cell-text {
+.hoard-custom-list-table__cell-text {
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -394,28 +400,28 @@ button.hoard-cl-row-del:hover {
   max-width: 100%;
 }
 
-.hoard-cl-cell-empty {
+.hoard-custom-list-table__cell-empty {
   color: var(--text-faint);
   font-style: italic;
 }
 
-.hoard-cl-dup-name {
+.hoard-custom-list-table__cell-text--duplicate {
   color: #E24B4A;
 }
 
 /* Editing state */
-.hoard-cl-editing {
+.hoard-custom-list-table__td--editing {
   overflow: visible;
   z-index: 10;
   position: relative;
 }
 
-/* Cell scope outranks the .hoard-cl-td base padding. */
-.hoard-cl-td.hoard-cl-editing {
+/* Cell scope outranks the .hoard-custom-list-table__td base padding. */
+.hoard-custom-list-table__td.hoard-custom-list-table__td--editing {
   padding: 0 4px;
 }
 
-.hoard-cl-cell-input {
+.hoard-custom-list-table__cell-input {
   width: 100%;
   padding: 2px 5px;
   border: 0.5px solid var(--interactive-accent);
@@ -428,53 +434,56 @@ button.hoard-cl-row-del:hover {
 }
 
 /* Autofill dropdown */
-.hoard-cl-autofill-wrap {
+.hoard-custom-list-table__autofill-wrap {
   position: relative;
   width: 100%;
 }
 
-.hoard-cl-autofill-wrap .hoard-cl-cell-input {
+.hoard-custom-list-table__autofill-wrap .hoard-custom-list-table__cell-input {
   width: 100%;
 }
 
-.hoard-cl-autofill-dropdown {
-  /* position/top/left/width are set inline via JS (fixed, body-level) */
+.hoard-custom-list-table__autofill-dropdown {
+  /* position is fixed (body-level); top/left/width come from the anchoring input via JS */
+  top: var(--hoard-custom-list-table-autofill-top, auto);
+  left: var(--hoard-custom-list-table-autofill-left, auto);
+  width: var(--hoard-custom-list-table-autofill-width, auto);
   max-height: 180px;
   overflow-y: auto;
   background: var(--background-primary);
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 5px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
   z-index: 9999;
 }
 
 /* Select badge (neutral, no color) */
-.hoard-cl-select-badge {
+.hoard-custom-list-table__select-badge {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 500;
-  background: var(--background-secondary);
-  border: 0.5px solid var(--background-modifier-border);
-  color: var(--text-normal);
+  background: var(--hoard-custom-list-table-badge-fill, var(--background-secondary));
+  border: 0.5px solid var(--hoard-custom-list-table-badge-border, var(--background-modifier-border));
+  color: var(--hoard-custom-list-table-badge-border, var(--text-normal));
   white-space: nowrap;
 }
 
 /* Add row footer */
-.hoard-cl-add-row {
+.hoard-custom-list-table__add-row {
   padding: 6px 2px;
   border-top: 0.5px solid var(--background-modifier-border);
 }
 
 /* Sort panel */
-.hoard-cl-sort-panel {
+.hoard-custom-lists__sort-panel {
   min-width: 200px;
   padding: 6px 0;
 }
 
 /* a long column name truncates in the select so the panel stays inside a phone-width tab */
-.hoard-cl-sort-panel .hoard-select {
+.hoard-custom-lists__sort-panel .hoard-input__select {
   max-width: 180px;
 }
 

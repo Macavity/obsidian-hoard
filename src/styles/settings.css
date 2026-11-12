@@ -1,7 +1,8 @@
 /* Settings tab */
+
 /* ══ SETTINGS ══ */
 
-.hoard-settings-nav {
+.hoard-settings__nav {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
@@ -10,20 +11,20 @@
   padding-bottom: 0;
 }
 
-button.hoard-settings-nav-btn {
+button.hoard-settings__nav-btn {
   padding: 6px 16px;
 }
 
-button.hoard-settings-nav-btn:hover {
+button.hoard-settings__nav-btn:hover {
   color: var(--text-normal);
 }
 
 /* Mobile/tablet: icon-only nav — 9 text labels overflow the pane */
-.hoard-settings-mobile .hoard-settings-nav {
+.hoard-settings--mobile .hoard-settings__nav {
   gap: 0;
 }
 
-button.hoard-settings-nav-btn-icon {
+button.hoard-settings__nav-btn--icon {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
@@ -32,17 +33,17 @@ button.hoard-settings-nav-btn-icon {
   padding: 8px 0;
 }
 
-button.hoard-settings-nav-btn-icon .svg-icon {
+button.hoard-settings__nav-btn--icon .svg-icon {
   width: 20px;
   height: 20px;
 }
 
-button.hoard-settings-nav-btn.is-active {
+button.hoard-settings__nav-btn.is-active {
   color: var(--text-accent);
   border-bottom-color: var(--text-accent);
 }
 
-.hoard-settings-section-title {
+.hoard-settings__section-title {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
@@ -51,7 +52,7 @@ button.hoard-settings-nav-btn.is-active {
   margin: 14px 0 8px;
 }
 
-.hoard-settings-info {
+.hoard-settings__info {
   font-size: var(--font-ui-small);
   color: var(--text-muted);
   background: var(--background-secondary);
@@ -61,22 +62,23 @@ button.hoard-settings-nav-btn.is-active {
   border-left: 3px solid var(--interactive-accent);
 }
 
-.hoard-status-error {
+.hoard-steam-sync__status--error {
   color: #E24B4A;
   font-weight: 600;
 }
 
-/* API page: groups & provider cards — accent is an "R, G, B" triple in --hoard-sg-accent, spent
+/* API page: groups & provider cards — accent is an "R, G, B" triple in --hoard-settings-group-accent, spent
    on the header only */
-.hoard-sg-page {
+.hoard-settings-group__page {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding-top: 6px;
 }
 
-.hoard-sg {
-  --hoard-sg-accent: 74, 137, 220;
+.hoard-settings-group {
+  --hoard-settings-group-accent: 74, 137, 220;
+
   border: 1px solid var(--background-modifier-border);
   border-radius: 10px;
   overflow: hidden;
@@ -84,77 +86,78 @@ button.hoard-settings-nav-btn.is-active {
 }
 
 /* watchlist = movies blue, reading = books yellow */
-.hoard-sg--movies,
-.hoard-sg--watchlist { --hoard-sg-accent: 74, 137, 220; }
-.hoard-sg--anime { --hoard-sg-accent: 45, 168, 115; }
-.hoard-sg--books,
-.hoard-sg--reading { --hoard-sg-accent: 214, 158, 46; }
-.hoard-sg--games { --hoard-sg-accent: 229, 72, 77; }
-.hoard-sg--theme { --hoard-sg-accent: 139, 92, 246; }
-.hoard-sg--cards { --hoard-sg-accent: 45, 168, 115; }
-.hoard-sg--shared { --hoard-sg-accent: 138, 143, 158; }
+.hoard-settings-group--movies,
+.hoard-settings-group--watchlist { --hoard-settings-group-accent: 74, 137, 220; }
+.hoard-settings-group--anime { --hoard-settings-group-accent: 45, 168, 115; }
+
+.hoard-settings-group--books,
+.hoard-settings-group--reading { --hoard-settings-group-accent: 214, 158, 46; }
+.hoard-settings-group--games { --hoard-settings-group-accent: 229, 72, 77; }
+.hoard-settings-group--theme { --hoard-settings-group-accent: 139, 92, 246; }
+.hoard-settings-group--cards { --hoard-settings-group-accent: 45, 168, 115; }
+.hoard-settings-group--shared { --hoard-settings-group-accent: 138, 143, 158; }
 
 /* Per-tab "Main" accents: one colour per settings page. */
-.hoard-sg--general { --hoard-sg-accent: 38, 166, 154; }
-.hoard-sg--drafts { --hoard-sg-accent: 196, 86, 170; }
-.hoard-sg--lists { --hoard-sg-accent: 32, 156, 190; }
+.hoard-settings-group--general { --hoard-settings-group-accent: 38, 166, 154; }
+.hoard-settings-group--drafts { --hoard-settings-group-accent: 196, 86, 170; }
+.hoard-settings-group--lists { --hoard-settings-group-accent: 32, 156, 190; }
 
 /* utility accents: green CSV, orange folders, purple tree, slate backup */
-.hoard-sg--csv { --hoard-sg-accent: 45, 168, 115; }
-.hoard-sg--folders { --hoard-sg-accent: 216, 128, 62; }
-.hoard-sg--subfolders { --hoard-sg-accent: 139, 92, 246; }
-.hoard-sg--backup { --hoard-sg-accent: 108, 122, 145; }
+.hoard-settings-group--csv { --hoard-settings-group-accent: 45, 168, 115; }
+.hoard-settings-group--folders { --hoard-settings-group-accent: 216, 128, 62; }
+.hoard-settings-group--subfolders { --hoard-settings-group-accent: 139, 92, 246; }
+.hoard-settings-group--backup { --hoard-settings-group-accent: 108, 122, 145; }
 
-.hoard-sg-head {
+.hoard-settings-group__head {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
   background: linear-gradient(
     90deg,
-    rgba(var(--hoard-sg-accent), 0.16),
-    rgba(var(--hoard-sg-accent), 0.03)
+    rgb(var(--hoard-settings-group-accent), 0.16),
+    rgb(var(--hoard-settings-group-accent), 0.03)
   );
-  border-bottom: 1px solid rgba(var(--hoard-sg-accent), 0.28);
+  border-bottom: 1px solid rgb(var(--hoard-settings-group-accent), 0.28);
 }
 
-.hoard-sg-icon {
+.hoard-settings-group__icon {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  color: rgb(var(--hoard-sg-accent));
-  background: rgba(var(--hoard-sg-accent), 0.16);
-  border: 1px solid rgba(var(--hoard-sg-accent), 0.28);
+  color: rgb(var(--hoard-settings-group-accent));
+  background: rgb(var(--hoard-settings-group-accent), 0.16);
+  border: 1px solid rgb(var(--hoard-settings-group-accent), 0.28);
 }
 
-.hoard-sg-icon .svg-icon {
+.hoard-settings-group__icon .svg-icon {
   width: 16px;
   height: 16px;
 }
 
-.hoard-sg-titles {
+.hoard-settings-group__titles {
   min-width: 0;
 }
 
-.hoard-sg-title {
+.hoard-settings-group__title {
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgb(var(--hoard-sg-accent));
+  color: rgb(var(--hoard-settings-group-accent));
 }
 
-.hoard-sg-sub {
+.hoard-settings-group__subtitle {
   font-size: 11.5px;
   color: var(--text-muted);
   margin-top: 1px;
 }
 
 /* Status chips (group header + per provider) */
-.hoard-sg-chip {
+.hoard-settings-group__chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -167,38 +170,41 @@ button.hoard-settings-nav-btn.is-active {
   color: var(--text-muted);
 }
 
-.hoard-sg-head .hoard-sg-chip {
+.hoard-settings-group__head .hoard-settings-group__chip {
   margin-left: auto;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
 }
 
-.hoard-sg-chip-dot {
+.hoard-settings-group__chip-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: currentColor;
+  background: currentcolor;
   flex: 0 0 auto;
 }
 
-.hoard-sg-chip.is-ok { color: #1D9E75; }
-.hoard-sg-chip.is-warn { color: #D89A2B; }
-.hoard-sg-chip.is-error { color: #E24B4A; }
-.hoard-sg-chip.is-idle { color: var(--text-muted); }
-.hoard-sg-chip.is-pending { color: var(--text-muted); }
-.hoard-sg-chip.is-pending .hoard-sg-chip-dot {
+.hoard-settings-group__chip.is-ok { color: #1D9E75; }
+.hoard-settings-group__chip.is-warn { color: #D89A2B; }
+.hoard-settings-group__chip.is-error { color: #E24B4A; }
+.hoard-settings-group__chip.is-idle { color: var(--text-muted); }
+.hoard-settings-group__chip.is-pending { color: var(--text-muted); }
+
+.hoard-settings-group__chip.is-pending .hoard-settings-group__chip-dot {
   animation: hoard-sg-pulse 1s ease-in-out infinite;
 }
-.hoard-sg-chip.is-idle .hoard-sg-chip-dot {
+
+.hoard-settings-group__chip.is-idle .hoard-settings-group__chip-dot {
   background: none;
-  box-shadow: inset 0 0 0 1.5px currentColor;
+  box-shadow: inset 0 0 0 1.5px currentcolor;
 }
 
 /* neutral read-out; a dot would imply a state */
-.hoard-sg-chip.is-count {
+.hoard-settings-group__chip.is-count {
   color: var(--text-muted);
 }
-.hoard-sg-chip.is-count .hoard-sg-chip-dot {
+
+.hoard-settings-group__chip.is-count .hoard-settings-group__chip-dot {
   display: none;
 }
 
@@ -207,7 +213,7 @@ button.hoard-settings-nav-btn.is-active {
   50% { opacity: 1; }
 }
 
-.hoard-sg-body {
+.hoard-settings-group__body {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -216,111 +222,111 @@ button.hoard-settings-nav-btn.is-active {
 
 /* Bodies of bare Obsidian `Setting` rows — those bring their own padding + separator, so the
    group border is the frame */
-.hoard-sg-body--rows {
+.hoard-settings-group__body--rows {
   gap: 0;
   padding: 4px 14px 12px;
 }
 
-.hoard-sg-body--rows > .setting-item {
+.hoard-settings-group__body--rows > .setting-item {
   padding: 11px 0;
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.hoard-sg-body--rows > .setting-item:first-child {
+.hoard-settings-group__body--rows > .setting-item:first-child {
   border-top: none;
 }
 
-.hoard-sg-body--rows > .setting-item:last-child {
+.hoard-settings-group__body--rows > .setting-item:last-child {
   padding-bottom: 0;
 }
 
-.hoard-sg-body--rows .setting-item-name {
+.hoard-settings-group__body--rows .setting-item-name {
   font-size: 13.5px;
   font-weight: 600;
 }
 
-.hoard-sg-body--rows .setting-item-description {
+.hoard-settings-group__body--rows .setting-item-description {
   font-size: 11.5px;
   line-height: 1.45;
 }
 
 /* non-Setting children still need spacing */
-.hoard-sg-body--rows > .hoard-regen-progress-wrap {
+.hoard-settings-group__body--rows > .hoard-csv__regenerate-progress-wrap {
   margin: 10px 0 0;
 }
 
 /* group padding is the margin; the last rule would double the border */
-.hoard-sg-body > .hoard-folder-list {
+.hoard-settings-group__body > .hoard-folder-list {
   margin: 0;
 }
 
 /* the folder list only lives in a group body */
-.hoard-folder-list > .hoard-folder-row:last-child {
+.hoard-folder-list > .hoard-folder-list__row:last-child {
   border-bottom: none;
 }
 
 /* Sub-card inside a group (Customize lists) */
-.hoard-sg-card {
+.hoard-settings-group__card {
   border: 1px solid var(--background-modifier-border);
   border-radius: 9px;
   padding: 10px 12px 11px;
   background: var(--background-secondary);
 }
 
-.hoard-sg-card-head {
+.hoard-settings-group__card-head {
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 24px;
 }
 
-.hoard-sg-card-label {
+.hoard-settings-group__card-label {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text-normal);
 }
 
-.hoard-sg-card-tools,
-.hoard-api-actions {
+.hoard-settings-group__card-tools,
+.hoard-api-provider__actions {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-left: auto;
 }
 
-.hoard-sg-card-body {
+.hoard-settings-group__card-body {
   margin-top: 9px;
 }
 
-.hoard-sg-card-body > *:last-child {
+.hoard-settings-group__card-body > *:last-child {
   margin-bottom: 0;
 }
 
 /* keep the +add row compact (tag lists always sit in a sub-card) */
-.hoard-tag-add-row .hoard-modal-input {
+.hoard-tag-editor__add-row .hoard-modal__input {
   flex: 0 1 200px;
   min-width: 0;
 }
 
 /* help panel sits between head and body here */
-.hoard-sg-help--card {
+.hoard-settings-group__help--card {
   margin-top: 9px;
 }
 
 /* Segmented "Active API" picker */
-.hoard-sg-seg-row {
+.hoard-settings-group__segment-row {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.hoard-sg-seg-label {
+.hoard-settings-group__segment-label {
   font-size: 13px;
   color: var(--text-normal);
 }
 
-.hoard-sg-seg {
+.hoard-settings-group__segment {
   display: inline-flex;
   gap: 2px;
   margin-left: auto;
@@ -330,7 +336,7 @@ button.hoard-settings-nav-btn.is-active {
   border: 1px solid var(--background-modifier-border);
 }
 
-button.hoard-sg-seg-btn {
+button.hoard-settings-group__segment-btn {
   padding: 4px 14px;
   height: auto;
   border: none;
@@ -342,14 +348,14 @@ button.hoard-sg-seg-btn {
   cursor: pointer;
 }
 
-button.hoard-sg-seg-btn:hover {
+button.hoard-settings-group__segment-btn:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
 }
 
-button.hoard-sg-seg-btn.is-active {
-  background: rgba(var(--hoard-sg-accent), 0.14);
-  color: rgb(var(--hoard-sg-accent));
+button.hoard-settings-group__segment-btn.is-active {
+  background: rgb(var(--hoard-settings-group-accent), 0.14);
+  color: rgb(var(--hoard-settings-group-accent));
   font-weight: 600;
 }
 
@@ -371,13 +377,13 @@ button.hoard-sg-seg-btn.is-active {
   opacity: 1;
 }
 
-.hoard-api-provider-head {
+.hoard-api-provider__head {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.hoard-api-provider-avatar {
+.hoard-api-provider__avatar {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -386,28 +392,28 @@ button.hoard-sg-seg-btn.is-active {
   border-radius: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: rgb(var(--hoard-sg-accent));
-  background: rgba(var(--hoard-sg-accent), 0.14);
-  border: 1px solid rgba(var(--hoard-sg-accent), 0.25);
+  color: rgb(var(--hoard-settings-group-accent));
+  background: rgb(var(--hoard-settings-group-accent), 0.14);
+  border: 1px solid rgb(var(--hoard-settings-group-accent), 0.25);
 }
 
-.hoard-api-provider-names {
+.hoard-api-provider__names {
   min-width: 0;
 }
 
-.hoard-api-provider-name {
+.hoard-api-provider__name {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text-normal);
 }
 
-.hoard-api-provider-note {
+.hoard-api-provider__note {
   font-size: 11.5px;
   color: var(--text-muted);
   margin-top: 1px;
 }
 
-.hoard-api-provider-state {
+.hoard-api-provider__state {
   margin-left: auto;
   flex: 0 0 auto;
   padding: 2px 8px;
@@ -420,46 +426,46 @@ button.hoard-sg-seg-btn.is-active {
   border: 1px solid var(--background-modifier-border);
 }
 
-.hoard-api-provider-state:empty {
+.hoard-api-provider__state:empty {
   display: none;
 }
 
-.hoard-api-provider-state.is-active {
-  color: rgb(var(--hoard-sg-accent));
-  background: rgba(var(--hoard-sg-accent), 0.12);
-  border-color: rgba(var(--hoard-sg-accent), 0.35);
+.hoard-api-provider__state.is-active {
+  color: rgb(var(--hoard-settings-group-accent));
+  background: rgb(var(--hoard-settings-group-accent), 0.12);
+  border-color: rgb(var(--hoard-settings-group-accent), 0.35);
 }
 
 /* Credential fields */
-.hoard-api-field {
+.hoard-api-provider__field {
   margin-top: 10px;
 }
 
-.hoard-api-field-label {
+.hoard-api-provider__field-label {
   font-size: 11.5px;
   color: var(--text-muted);
   margin-bottom: 4px;
 }
 
-.hoard-api-field-row {
+.hoard-api-provider__field-row {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 /* width of the reveal button + its gap */
-.hoard-api-field-row--plain {
+.hoard-api-provider__field-row--plain {
   padding-right: 34px;
 }
 
-input.hoard-api-input {
+input.hoard-api-provider__input {
   flex: 1 1 auto;
   min-width: 0;
   font-family: var(--font-monospace);
   font-size: 12px;
 }
 
-button.hoard-sg-icon-btn {
+button.hoard-settings-group__icon-btn {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -474,30 +480,30 @@ button.hoard-sg-icon-btn {
   cursor: pointer;
 }
 
-button.hoard-sg-icon-btn:hover {
+button.hoard-settings-group__icon-btn:hover {
   color: var(--text-normal);
   background: var(--background-modifier-hover);
 }
 
-button.hoard-sg-icon-btn .svg-icon {
+button.hoard-settings-group__icon-btn .svg-icon {
   width: 15px;
   height: 15px;
 }
 
-button.hoard-sg-help-btn {
+button.hoard-settings-group__help-btn {
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
 }
 
-button.hoard-sg-help-btn.is-active {
-  color: rgb(var(--hoard-sg-accent));
-  border-color: rgba(var(--hoard-sg-accent), 0.4);
-  background: rgba(var(--hoard-sg-accent), 0.1);
+button.hoard-settings-group__help-btn.is-active {
+  color: rgb(var(--hoard-settings-group-accent));
+  border-color: rgb(var(--hoard-settings-group-accent), 0.4);
+  background: rgb(var(--hoard-settings-group-accent), 0.1);
 }
 
 /* Provider footer */
-.hoard-api-provider-foot {
+.hoard-api-provider__footer {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -505,7 +511,7 @@ button.hoard-sg-help-btn.is-active {
   margin-top: 10px;
 }
 
-.hoard-api-link {
+.hoard-api-provider__link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -516,22 +522,22 @@ button.hoard-sg-help-btn.is-active {
   border-radius: 6px;
 }
 
-.hoard-api-link:hover {
+.hoard-api-provider__link:hover {
   color: var(--text-accent);
   background: var(--background-modifier-hover);
   text-decoration: none;
 }
 
-.hoard-api-link-icon {
+.hoard-api-provider__link-icon {
   display: inline-flex;
 }
 
-.hoard-api-link-icon .svg-icon {
+.hoard-api-provider__link-icon .svg-icon {
   width: 12px;
   height: 12px;
 }
 
-button.hoard-api-test {
+button.hoard-api-provider__test {
   padding: 4px 12px;
   height: auto;
   font-size: 12px;
@@ -539,24 +545,24 @@ button.hoard-api-test {
   cursor: pointer;
 }
 
-.hoard-sg-help {
+.hoard-settings-group__help {
   display: none;
   margin-top: 10px;
   padding: 8px 10px;
   border-radius: 0 6px 6px 0;
-  border-left: 2px solid rgba(var(--hoard-sg-accent), 0.5);
+  border-left: 2px solid rgb(var(--hoard-settings-group-accent), 0.5);
   background: var(--background-primary);
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-muted);
 }
 
-.hoard-sg-help.is-open {
+.hoard-settings-group__help.is-open {
   display: block;
 }
 
 /* group-level footnote */
-.hoard-sg-note {
+.hoard-settings-group__note {
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-faint);
@@ -564,7 +570,7 @@ button.hoard-api-test {
 }
 
 /* Full cause of a failed Test — the chip only has room for the short label */
-.hoard-api-diagnosis {
+.hoard-api-provider__diagnosis {
   margin-top: 8px;
   padding: 8px 10px;
   border-radius: 6px;
@@ -576,7 +582,7 @@ button.hoard-api-test {
 }
 
 /* Steam sync row, hanging off its provider card */
-.hoard-api-action {
+.hoard-api-provider__action {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -585,31 +591,31 @@ button.hoard-api-test {
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.hoard-api-presets {
+.hoard-api-provider__presets {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
 }
 
-.hoard-api-action-texts {
+.hoard-api-provider__action-texts {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.hoard-api-action-title {
+.hoard-api-provider__action-title {
   font-size: 13px;
   color: var(--text-normal);
 }
 
-.hoard-api-action-desc {
+.hoard-api-provider__action-description {
   font-size: 11.5px;
   line-height: 1.4;
   color: var(--text-muted);
   margin-top: 1px;
 }
 
-button.hoard-api-action-btn {
+button.hoard-api-provider__action-btn {
   flex: 0 0 auto;
   padding: 5px 12px;
   height: auto;
@@ -618,12 +624,12 @@ button.hoard-api-action-btn {
   cursor: pointer;
 }
 
-.hoard-sg-page .hoard-settings-card {
+.hoard-settings-group__page .hoard-settings__card {
   margin-top: 0;
 }
 
 /* Tag sections */
-.hoard-tags-list {
+.hoard-tag-editor__tags-list {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -631,7 +637,7 @@ button.hoard-api-action-btn {
   min-height: 24px;
 }
 
-.hoard-tag-pill {
+.hoard-tag-editor__pill {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -642,28 +648,29 @@ button.hoard-api-action-btn {
   font-size: 12px;
 }
 
-.hoard-tag-dot-wrap {
+.hoard-tag-editor__dot-wrap {
   position: relative;
   display: inline-flex;
   cursor: pointer;
 }
 
 /* the hidden native picker takes keyboard focus, so the dot shows it */
-.hoard-tag-dot-wrap:hover .hoard-tag-dot,
-.hoard-tag-dot-wrap:focus-within .hoard-tag-dot {
+.hoard-tag-editor__dot-wrap:hover .hoard-tag-editor__dot,
+.hoard-tag-editor__dot-wrap:focus-within .hoard-tag-editor__dot {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 1px;
 }
 
-.hoard-tag-dot {
+.hoard-tag-editor__dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+  background-color: var(--hoard-tag-editor-dot-color, transparent);
 }
 
-.hoard-tag-color-picker {
+.hoard-tag-editor__color-picker {
   position: absolute;
   width: 0;
   height: 0;
@@ -672,14 +679,14 @@ button.hoard-api-action-btn {
 }
 
 /* Season color palette */
-.hoard-season-colors-list {
+.hoard-tag-editor__season-colors-list {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 8px;
 }
 
-.hoard-season-color-pill {
+.hoard-tag-editor__season-color-pill {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -689,31 +696,31 @@ button.hoard-api-action-btn {
   font-size: 12px;
 }
 
-.hoard-season-color-label {
+.hoard-tag-editor__season-color-label {
   color: var(--text-muted);
   font-size: 11px;
 }
 
-.hoard-tag-name {
+.hoard-tag-editor__name {
   color: var(--text-normal);
 }
 
 /* sm icon button at the end of a tag pill */
-.hoard-tag-del {
+.hoard-tag-editor__delete {
   margin-left: 2px;
 }
 
-button.hoard-tag-del:hover {
+button.hoard-tag-editor__delete:hover {
   color: var(--text-error);
 }
 
-.hoard-tag-add-row {
+.hoard-tag-editor__add-row {
   display: flex;
   gap: 6px;
   align-items: center;
 }
 
-.hoard-color-input {
+.hoard-color-picker__input {
   width: 36px;
   height: 28px;
   border: 0.5px solid var(--background-modifier-border);
@@ -728,7 +735,7 @@ button.hoard-tag-del:hover {
   margin: 8px 0;
 }
 
-.hoard-folder-row {
+.hoard-folder-list__row {
   display: flex;
   gap: 10px;
   padding: 5px 0;
@@ -736,7 +743,7 @@ button.hoard-tag-del:hover {
   font-size: var(--font-ui-small);
 }
 
-.hoard-folder-type {
+.hoard-folder-list__type {
   font-weight: 500;
   width: 100px;
   flex-shrink: 0;
@@ -744,7 +751,7 @@ button.hoard-tag-del:hover {
 }
 
 /* long unbroken names wrap instead of overflowing a narrow settings pane */
-.hoard-folder-path {
+.hoard-folder-list__path {
   min-width: 0;
   color: var(--text-muted);
   font-family: var(--font-monospace);

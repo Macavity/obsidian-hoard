@@ -202,23 +202,23 @@ export class ReadingTab {
 
 	render(): void {
 		this.container.empty();
-		this.container.addClass('hoard-reading-tab');
+		this.container.addClass('hoard-reading');
 		this.renderSubTabs();
 		this.renderToolbar();
-		this.contentEl = this.container.createDiv({ cls: 'hoard-reading-content' });
+		this.contentEl = this.container.createDiv({ cls: 'hoard-reading__content' });
 		this.renderContent();
 	}
 
 	private renderSubTabs(): void {
-		const bar = this.container.createDiv({ cls: 'hoard-reading-subtabs' });
+		const bar = this.container.createDiv({ cls: 'hoard-reading__subtabs' });
 
 		const booksBtn = bar.createEl('button', {
-			cls: `hoard-reading-subtab${this.activeSubTab === 'books' ? ' is-active' : ''}`,
+			cls: `hoard-reading__subtab${this.activeSubTab === 'books' ? ' is-active' : ''}`,
 			text: t('reading.tabs.books'),
 		});
 
 		const mangaBtn = bar.createEl('button', {
-			cls: `hoard-reading-subtab${this.activeSubTab === 'manga' ? ' is-active' : ''}`,
+			cls: `hoard-reading__subtab${this.activeSubTab === 'manga' ? ' is-active' : ''}`,
 			text: t('reading.tabs.manga'),
 		});
 
@@ -238,7 +238,7 @@ export class ReadingTab {
 	}
 
 	private renderToolbar(): void {
-		const toolbar = this.container.createDiv({ cls: 'hoard-reading-toolbar' });
+		const toolbar = this.container.createDiv({ cls: 'hoard-reading__toolbar' });
 
 		// on mobile the search input and the action buttons crossfade inside one slot behind a toggle
 		// (shared with the Watchlist toolbar); desktop renders both inline
@@ -269,7 +269,7 @@ export class ReadingTab {
 		if (savedFilter) {
 			this.savedFilterActive = this.filtersMatchSaved(savedFilter);
 			const savedBtn = parent.createEl('button', {
-				cls: `hoard-btn hoard-btn-sm${this.savedFilterActive ? ' hoard-btn-preset-active' : ''}`,
+				cls: `hoard-btn hoard-btn--sm${this.savedFilterActive ? ' hoard-btn--preset-active' : ''}`,
 				text: t('ui.toolbar.savedFilter'),
 			});
 			this.savedFilterBtnEl = savedBtn;
@@ -280,7 +280,7 @@ export class ReadingTab {
 					customExclude: {},
 				};
 				this.savedFilterActive = true;
-				savedBtn.addClass('hoard-btn-preset-active');
+				savedBtn.addClass('hoard-btn--preset-active');
 				this.refreshFilterButtonBadge();
 				this.render();
 			});
@@ -289,7 +289,7 @@ export class ReadingTab {
 		}
 
 		this.filterBtn = parent.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-reading-filter-btn',
+			cls: 'hoard-btn hoard-btn--sm hoard-reading__filter-btn',
 			text: t('reading.toolbar.filter'),
 		});
 		this.refreshFilterButtonBadge();
@@ -299,7 +299,7 @@ export class ReadingTab {
 		});
 
 		this.resetBtn = parent.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-reading-reset-btn',
+			cls: 'hoard-btn hoard-btn--sm hoard-reading__reset-btn',
 			text: t('reading.toolbar.reset'),
 		});
 		this.resetBtn.addEventListener('click', () => {
@@ -313,7 +313,7 @@ export class ReadingTab {
 		this.refreshFilterButtonBadge();
 
 		this.sortBtn = parent.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-reading-sort-btn',
+			cls: 'hoard-btn hoard-btn--sm hoard-reading__sort-btn',
 			text: t('reading.toolbar.sort'),
 		});
 		this.sortBtn.addEventListener('click', (e) => {
@@ -348,18 +348,18 @@ export class ReadingTab {
 			},
 		});
 
-		const right = parent.createDiv({ cls: 'hoard-reading-toolbar-right' });
+		const right = parent.createDiv({ cls: 'hoard-reading__toolbar-right' });
 		const manageBtn = createIconButton(right, {
 			icon: 'settings',
 			label: t('reading.toolbar.manageColumns'),
-			cls: 'hoard-reading-manage-btn',
+			cls: 'hoard-reading__manage-btn',
 		});
 		manageBtn.addEventListener('click', () => this.openManageColumns());
 	}
 
 	private renderReadingAddButton(parent: HTMLElement): HTMLButtonElement {
 		const addBtn = parent.createEl('button', {
-			cls: 'hoard-reading-add-btn hoard-btn-success',
+			cls: 'hoard-reading-modal__add-btn hoard-btn--success',
 			text: `+ ${t(this.activeSubTab === 'books' ? 'reading.toolbar.addBook' : 'reading.toolbar.addManga')}`,
 		});
 		addBtn.addEventListener('click', () => this.openAddModal());
@@ -367,12 +367,12 @@ export class ReadingTab {
 	}
 
 	private renderSelectionActionBar(parent: HTMLElement): void {
-		const bar = parent.createDiv({ cls: 'hoard-reading-action-bar' });
+		const bar = parent.createDiv({ cls: 'hoard-reading__action-bar' });
 
 		const deleteBtn = createIconButton(bar, {
 			icon: 'x',
 			label: t('reading.toolbar.deleteSelected'),
-			cls: 'hoard-group-action-btn hoard-group-action-btn-delete hoard-btn-danger',
+			cls: 'hoard-group-header__action-btn hoard-group-header__action-btn--delete hoard-btn--danger',
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -396,7 +396,7 @@ export class ReadingTab {
 			).open();
 		});
 
-		const statusSelect = bar.createEl('select', { cls: 'hoard-select hoard-select-sm' });
+		const statusSelect = bar.createEl('select', { cls: 'hoard-input__select hoard-input__select--sm' });
 		statusSelect.createEl('option', { text: t('ui.actionBar.status'), value: '' });
 		for (const s of SELECTABLE_READING_STATUSES) {
 			statusSelect.createEl('option', { text: readingStatusLabel(s), value: s });
@@ -434,10 +434,10 @@ export class ReadingTab {
 		this.filterBtn.empty();
 		this.filterBtn.createSpan({ text: t('reading.toolbar.filter') });
 		if (count > 0) {
-			this.filterBtn.createSpan({ cls: 'hoard-reading-filter-badge', text: String(count) });
+			this.filterBtn.createSpan({ cls: 'hoard-reading__filter-badge', text: String(count) });
 		}
 		if (this.resetBtn) {
-			this.resetBtn.style.display = count > 0 ? '' : 'none';
+			this.resetBtn.toggleClass('is-hidden', count === 0);
 		}
 	}
 
@@ -454,13 +454,13 @@ export class ReadingTab {
 
 	private openPopoverAt(anchor: HTMLElement, cls: string, build: (el: HTMLElement) => void): void {
 		this.closePopover();
-		// hoard-popover-anchored pins via top/left (right: auto) instead of the right-anchored default
-		const pop = this.container.createDiv({ cls: `${cls} hoard-popover-anchored` });
+		// hoard-popover--anchored pins via top/left (right: auto) instead of the right-anchored default
+		const pop = this.container.createDiv({ cls: `${cls} hoard-popover--anchored` });
 		const rect = anchor.getBoundingClientRect();
 		const parentRect = this.container.getBoundingClientRect();
 		pop.setCssProps({
-			top: `${rect.bottom - parentRect.top + 4}px`,
-			left: `${rect.left - parentRect.left}px`,
+			'--hoard-popover-top': `${rect.bottom - parentRect.top + 4}px`,
+			'--hoard-popover-left': `${rect.left - parentRect.left}px`,
 		});
 		build(pop);
 		this.openPopover = pop;
@@ -488,7 +488,7 @@ export class ReadingTab {
 		}
 		this.sortBtn?.removeClass('is-popover-open');
 		this.filterBtn?.addClass('is-popover-open');
-		this.openPopoverAt(this.filterBtn!, 'hoard-dropdown hoard-filters-panel', (el) => this.buildFilterPopover(el));
+		this.openPopoverAt(this.filterBtn!, 'hoard-popover hoard-filter-panel', (el) => this.buildFilterPopover(el));
 	}
 
 	private toggleSortPopover(): void {
@@ -499,7 +499,7 @@ export class ReadingTab {
 		}
 		this.filterBtn?.removeClass('is-popover-open');
 		this.sortBtn?.addClass('is-popover-open');
-		this.openPopoverAt(this.sortBtn!, 'hoard-dropdown hoard-sorting-panel', (el) => this.buildSortPopover(el));
+		this.openPopoverAt(this.sortBtn!, 'hoard-popover hoard-sort-panel', (el) => this.buildSortPopover(el));
 	}
 
 	// Saved filter (single, Watchlist-style)
@@ -522,7 +522,7 @@ export class ReadingTab {
 	private deactivateSavedFilter(): void {
 		if (this.savedFilterActive) {
 			this.savedFilterActive = false;
-			this.savedFilterBtnEl?.removeClass('hoard-btn-preset-active');
+			this.savedFilterBtnEl?.removeClass('hoard-btn--preset-active');
 		}
 	}
 
@@ -554,14 +554,14 @@ export class ReadingTab {
 		label: string,
 		build: (content: HTMLElement) => void,
 	): void {
-		const section = el.createDiv({ cls: 'hoard-filter-section' });
-		const header = section.createDiv({ cls: 'hoard-filter-section-header' });
-		header.createSpan({ cls: 'hoard-filter-label', text: label });
+		const section = el.createDiv({ cls: 'hoard-filter-panel__section' });
+		const header = section.createDiv({ cls: 'hoard-filter-panel__section-header' });
+		header.createSpan({ cls: 'hoard-filter-panel__label', text: label });
 		const chevron = header.createSpan({
-			cls: 'hoard-filter-chevron',
+			cls: 'hoard-filter-panel__chevron',
 			text: (collapsed[id] ?? true) ? '▼' : '▲',
 		});
-		const content = section.createDiv({ cls: 'hoard-filter-section-content' });
+		const content = section.createDiv({ cls: 'hoard-filter-panel__section-content' });
 		content.toggleClass('hoard-hidden', collapsed[id] ?? true);
 		header.addEventListener('click', (ev) => {
 			ev.stopPropagation();
@@ -590,7 +590,7 @@ export class ReadingTab {
 		};
 
 		for (const opt of options) {
-			const row = content.createDiv({ cls: 'hoard-filter-checkbox-row' });
+			const row = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
 			const cb = row.createEl('input', { attr: { type: 'checkbox' } });
 			cb.checked = !excludeSet.has(opt);
 			row.createSpan({ text: labelOf(opt) });
@@ -624,7 +624,7 @@ export class ReadingTab {
 	private addHasValueBody(content: HTMLElement, excludeSet: Set<string>): SectionController {
 		const entries: Array<{ key: string; cb: HTMLInputElement }> = [];
 		for (const [key, label] of [[HAS_VALUE, t('reading.filters.hasValue')], [NO_VALUE, t('reading.filters.noValue')]] as const) {
-			const row = content.createDiv({ cls: 'hoard-filter-checkbox-row' });
+			const row = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
 			const cb = row.createEl('input', { attr: { type: 'checkbox' } });
 			cb.checked = !excludeSet.has(key);
 			row.createSpan({ text: label });
@@ -652,14 +652,14 @@ export class ReadingTab {
 		const controllers: SectionController[] = [];
 
 		// ── Global buttons row (Select all / Deselect all / Save-or-Delete) ──
-		const globalRow = el.createDiv({ cls: 'hoard-filter-global-btns' });
+		const globalRow = el.createDiv({ cls: 'hoard-filter-panel__global-btns' });
 
-		const selectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('reading.filters.selectAll') });
+		const selectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('reading.filters.selectAll') });
 		selectAllBtn.addEventListener('click', (ev) => {
 			ev.stopPropagation();
 			for (const c of controllers) c.selectAll();
 		});
-		const deselectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('ui.toolbar.deselectAll') });
+		const deselectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('ui.toolbar.deselectAll') });
 		deselectAllBtn.addEventListener('click', (ev) => {
 			ev.stopPropagation();
 			for (const c of controllers) c.deselectAll();
@@ -670,7 +670,7 @@ export class ReadingTab {
 		// re-render so the external "Saved filter" button appears/disappears.
 		const hasSavedFilter = this.getSavedFilter() !== null;
 		const saveDeleteBtn = globalRow.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm',
+			cls: 'hoard-btn hoard-btn--sm',
 			text: hasSavedFilter ? t('common.delete') : t('common.save'),
 		});
 		saveDeleteBtn.addEventListener('click', (ev) => {
@@ -711,7 +711,7 @@ export class ReadingTab {
 			];
 			const groupName = `hoard-reading-rating-${Date.now()}`;
 			for (const opt of ratingOpts) {
-				const row = content.createDiv({ cls: 'hoard-filter-checkbox-row' });
+				const row = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
 				const radio = row.createEl('input', { attr: { type: 'radio', name: groupName } });
 				radio.checked = draft.ratingMode === opt.key;
 				row.createSpan({ text: opt.label });
@@ -735,9 +735,9 @@ export class ReadingTab {
 		}
 
 		// ── Apply — commits the staged draft to live state and re-renders ──
-		const applyWrap = el.createDiv({ cls: 'hoard-filter-apply-wrap' });
+		const applyWrap = el.createDiv({ cls: 'hoard-filter-panel__apply-wrap' });
 		const applyBtn = applyWrap.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-filter-apply-btn',
+			cls: 'hoard-btn hoard-btn--sm hoard-filter-panel__apply-btn',
 			text: t('reading.filters.apply'),
 		});
 		applyBtn.addEventListener('click', (ev) => {
@@ -788,7 +788,7 @@ export class ReadingTab {
 			}
 
 			const dirBtn = row.createEl('button', {
-				cls: 'hoard-btn hoard-btn-sm hoard-sort-dir-btn',
+				cls: 'hoard-btn hoard-btn--sm hoard-btn--sort-direction',
 				text: currentDir === 'asc' ? '↑' : '↓',
 			});
 			dirBtn.title = currentDir === 'asc'
@@ -974,7 +974,7 @@ export class ReadingTab {
 		if (filtering && visible.length === 0) {
 			const q = this.searchQuery.trim();
 			this.contentEl.createDiv({
-				cls: 'hoard-reading-empty-search',
+				cls: 'hoard-reading__empty-search',
 				text: q ? t('reading.noMatchesQuery', { query: q }) : t('reading.noMatchesFilters'),
 			});
 			return;
@@ -983,7 +983,7 @@ export class ReadingTab {
 		const visibleIds = new Set(visible.map((i) => i.id));
 		const itemVisible = (it: Book | Manga): boolean => !filtering || visibleIds.has(it.id);
 
-		const scroll = this.contentEl.createDiv({ cls: 'hoard-reading-scroll-container' });
+		const scroll = this.contentEl.createDiv({ cls: 'hoard-reading__scroll-container' });
 		// One metrics source for the grids AND the shelf card width; the eager
 		// call publishes it before the shelf cards render (a late scrollbar is
 		// caught by the scroller's ResizeObserver re-running metrics).
@@ -1100,12 +1100,12 @@ export class ReadingTab {
 	 */
 	private renderResultsCount(titleCount: number): void {
 		if (!this.contentEl) return;
-		const countEl = this.contentEl.createDiv({ cls: 'hoard-results-count hoard-results-count-rows' });
+		const countEl = this.contentEl.createDiv({ cls: 'hoard-toolbar__results-count hoard-toolbar__results-count--rows' });
 		countEl.textContent = t('ui.group.countTitle', { count: titleCount });
 		const gearBtn = createIconButton(countEl, {
 			icon: 'settings',
 			label: t('reading.customizeRows'),
-			cls: 'hoard-rows-customize-btn',
+			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
 			new RowsCustomizeModal(this.plugin.app, this.plugin, {
@@ -1174,8 +1174,8 @@ export class ReadingTab {
 	/** One virtualised Reading grid over `bucket`, registered as a section on
 	 *  the shared scroller (the grouped grids and the flat grid both use it). */
 	private addReadingGridSection(parent: HTMLElement, bucket: Array<Book | Manga>, isBooks: boolean): void {
-		const spacer = parent.createDiv({ cls: 'hoard-rows-bytype-spacer' });
-		const grid = spacer.createDiv({ cls: 'hoard-reading-grid hoard-reading-grid-virtual' });
+		const spacer = parent.createDiv({ cls: 'hoard-rows-view__grouped-spacer' });
+		const grid = spacer.createDiv({ cls: 'hoard-reading__grid hoard-reading__grid--virtual' });
 		const vgrid = new VirtualGrid(
 			spacer,
 			grid,
@@ -1192,7 +1192,7 @@ export class ReadingTab {
 				removeItem: (el) => this.coverObserver?.unobserveAndRemove(el),
 			},
 			// The Reading grid's stylesheet reads its own CSS variables.
-			{ colsVar: '--hoard-reading-cols', cardHeightVar: '--hoard-reading-card-height' },
+			{ colsVar: '--hoard-reading-columns', cardHeightVar: '--hoard-reading-card-height', offsetVar: '--hoard-reading-offset' },
 		);
 		this.vsScroller?.addSection(vgrid, spacer);
 	}
@@ -1206,8 +1206,8 @@ export class ReadingTab {
 		filtering: boolean,
 		isBooks: boolean,
 	): void {
-		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
-		section.createDiv({ cls: 'hoard-rows-bytype-title', text: t('reading.shelves.byStatus') });
+		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
+		section.createDiv({ cls: 'hoard-rows-view__grouped-title', text: t('reading.shelves.byStatus') });
 
 		let rendered = 0;
 		for (const status of READING_STATUSES) {
@@ -1223,7 +1223,7 @@ export class ReadingTab {
 				return;
 			}
 			section.createDiv({
-				cls: 'hoard-rows-shelf-empty',
+				cls: 'hoard-rows-view__shelf-empty',
 				text: t('reading.shelves.emptyByStatus'),
 			});
 		}
@@ -1239,7 +1239,7 @@ export class ReadingTab {
 		isBooks: boolean,
 	): void {
 		if (sortedItems.length === 0) return;
-		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
+		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
 		if (titled) renderShelfTitle(section, t(isBooks ? 'reading.shelves.allBooks' : 'reading.shelves.allManga'), sortedItems.length, this.shelfSelect(sortedItems));
 		this.addReadingGridSection(section, sortedItems, isBooks);
 	}
@@ -1257,7 +1257,7 @@ export class ReadingTab {
 			// Skip if it vanished, already has a cover, or failed earlier this session.
 			if (!item || item.coverUrl || this.coverFetchFailed.has(id)) continue;
 
-			const cover = card.querySelector('.hoard-reading-card-cover');
+			const cover = card.querySelector('.hoard-reading-card__cover');
 			cover?.addClass('is-loading');
 			void this.resolveCover(kind, item).then(({ url, sourceId }) => {
 				cover?.removeClass('is-loading');
@@ -1309,15 +1309,15 @@ export class ReadingTab {
 	}
 
 	private applyCoverToCard(card: HTMLElement, url: string, alt: string): void {
-		const cover = card.querySelector<HTMLElement>('.hoard-reading-card-cover');
+		const cover = card.querySelector<HTMLElement>('.hoard-reading-card__cover');
 		if (!cover) return;
-		const icon = cover.querySelector('.hoard-reading-card-cover-icon');
+		const icon = cover.querySelector('.hoard-reading-card__cover-icon');
 		const img = createEl('img');
-		img.className = 'hoard-reading-card-cover-img';
+		img.className = 'hoard-reading-card__cover-img';
 		img.alt = alt;
 		img.loading = 'lazy';
 		img.onload = () => {
-			cover.style.removeProperty('background-color');
+			cover.setCssProps({ '--hoard-reading-card-cover-color': '' });
 			icon?.remove();
 		};
 		img.onerror = () => { img.remove(); };
@@ -1332,7 +1332,7 @@ export class ReadingTab {
 		const label = t(unit === 'words' ? 'reading.card.units.words' : 'reading.card.units.pages');
 		const progress = total > 0 ? Math.min(100, Math.round((read / total) * 100)) : 0;
 		this.renderProgressBar(textHost, progress, book.status);
-		const text = textHost.createDiv({ cls: 'hoard-reading-card-progress-text' });
+		const text = textHost.createDiv({ cls: 'hoard-reading-card__progress-text' });
 		if (total > 0) {
 			text.textContent = `${formatCount(read)} / ${formatCount(total)} ${label}`;
 		} else if (read > 0) {
@@ -1349,15 +1349,15 @@ export class ReadingTab {
 			? Math.min(100, Math.round((manga.chaptersRead / manga.totalChapters) * 100))
 			: 0;
 		this.renderProgressBar(textHost, progress, manga.status);
-		const text = textHost.createDiv({ cls: 'hoard-reading-card-progress-text' });
+		const text = textHost.createDiv({ cls: 'hoard-reading-card__progress-text' });
 		const chPart = manga.totalChapters > 0
 			? t('reading.card.chapters', { read: manga.chaptersRead, total: manga.totalChapters })
 			: manga.chaptersRead > 0 ? t('reading.card.chaptersRead', { read: manga.chaptersRead }) : '';
 		const volPart = manga.totalVolumes > 0
 			? t('reading.card.volumes', { read: manga.volumesRead, total: manga.totalVolumes })
 			: manga.volumesRead > 0 ? t('reading.card.volumesRead', { read: manga.volumesRead }) : '';
-		if (chPart) text.createSpan({ cls: 'hoard-reading-card-progress-piece', text: chPart });
-		if (volPart) text.createSpan({ cls: 'hoard-reading-card-progress-piece', text: volPart });
+		if (chPart) text.createSpan({ cls: 'hoard-reading-card__progress-piece', text: chPart });
+		if (volPart) text.createSpan({ cls: 'hoard-reading-card__progress-piece', text: volPart });
 		if (!chPart && !volPart) text.textContent = t('reading.card.noProgress');
 		this.bindCardClick(card, 'manga', manga.id);
 	}
@@ -1414,16 +1414,16 @@ export class ReadingTab {
 		const card = grid.createDiv({ cls: 'hoard-reading-card' });
 		if (!this.plugin.isCardTextUnder('reading')) card.addClass('is-text-inside');
 
-		const cover = card.createDiv({ cls: 'hoard-reading-card-cover' });
+		const cover = card.createDiv({ cls: 'hoard-reading-card__cover' });
 		if (item.coverUrl) {
 			cover.createEl('img', {
-				cls: 'hoard-reading-card-cover-img',
+				cls: 'hoard-reading-card__cover-img',
 				attr: { src: item.coverUrl, alt: item.title, loading: 'lazy' },
 			});
 		} else {
-			cover.style.backgroundColor = coverFallbackColor(item.id);
+			cover.setCssProps({ '--hoard-reading-card-cover-color': coverFallbackColor(item.id) });
 			cover.createSpan({
-				cls: 'hoard-reading-card-cover-icon',
+				cls: 'hoard-reading-card__cover-icon',
 				text: fallbackIcon,
 			});
 			// Flag cards with a missing cover for lazy re-fetch when they scroll into view.
@@ -1436,13 +1436,15 @@ export class ReadingTab {
 			}
 		}
 
-		const statusBadge = cover.createSpan({ cls: 'hoard-reading-card-status-badge', text: readingStatusLabel(item.status) });
-		statusBadge.style.backgroundColor = readingStatusColor(item.status, this.readingData.getSettings().statusColors);
+		const statusBadge = cover.createSpan({ cls: 'hoard-reading-card__status-badge', text: readingStatusLabel(item.status) });
+		statusBadge.setCssProps({
+			'--hoard-reading-card-status-color': readingStatusColor(item.status, this.readingData.getSettings().statusColors),
+		});
 
 		const menuBtn = createIconButton(card, {
 			icon: 'more-vertical',
 			label: t('reading.card.moreActions'),
-			cls: 'hoard-reading-card-menu-btn',
+			cls: 'hoard-reading-card__menu-btn',
 		});
 		menuBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -1451,12 +1453,12 @@ export class ReadingTab {
 
 		const textHost = this.plugin.isCardTextUnder('reading')
 			? card
-			: cover.createDiv({ cls: 'hoard-reading-card-overlay' });
+			: cover.createDiv({ cls: 'hoard-reading-card__overlay' });
 
-		const title = textHost.createDiv({ cls: 'hoard-reading-card-title', text: item.title });
+		const title = textHost.createDiv({ cls: 'hoard-reading-card__title', text: item.title });
 		title.title = item.title;
 		const author = textHost.createDiv({
-			cls: 'hoard-reading-card-author',
+			cls: 'hoard-reading-card__author',
 			text: item.author || '—',
 		});
 		author.title = item.author || '';
@@ -1532,21 +1534,23 @@ export class ReadingTab {
 	}
 
 	private renderProgressBar(card: HTMLElement, percent: number, status: ReadingStatus): void {
-		const bar = card.createDiv({ cls: 'hoard-reading-card-progress-bar' });
-		const fill = bar.createDiv({ cls: 'hoard-reading-card-progress-fill' });
-		fill.style.width = `${percent}%`;
-		fill.style.backgroundColor = readingStatusColor(status, this.readingData.getSettings().statusColors);
+		const bar = card.createDiv({ cls: 'hoard-reading-card__progress-bar' });
+		const fill = bar.createDiv({ cls: 'hoard-reading-card__progress-fill' });
+		fill.setCssProps({
+			'--hoard-reading-card-progress-width': `${percent}%`,
+			'--hoard-reading-card-progress-color': readingStatusColor(status, this.readingData.getSettings().statusColors),
+		});
 	}
 
 	private renderEmptyState(): void {
 		if (!this.contentEl) return;
-		const empty = this.contentEl.createDiv({ cls: 'hoard-reading-empty' });
+		const empty = this.contentEl.createDiv({ cls: 'hoard-reading__empty' });
 		const isBooks = this.activeSubTab === 'books';
-		empty.createSpan({ cls: 'hoard-reading-empty-icon', text: isBooks ? '📖' : '📓' });
-		const msg = empty.createDiv({ cls: 'hoard-reading-empty-msg' });
+		empty.createSpan({ cls: 'hoard-reading__empty-icon', text: isBooks ? '📖' : '📓' });
+		const msg = empty.createDiv({ cls: 'hoard-reading__empty-message' });
 		msg.createSpan({ text: t(isBooks ? 'reading.empty.noBooks' : 'reading.empty.noManga') });
 		const link = msg.createEl('a', {
-			cls: 'hoard-reading-empty-link',
+			cls: 'hoard-reading__empty-link',
 			text: t(isBooks ? 'reading.empty.linkBook' : 'reading.empty.linkManga'),
 		});
 		link.addEventListener('click', (e) => {

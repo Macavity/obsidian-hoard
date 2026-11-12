@@ -22,7 +22,7 @@ const airtime = {
 		inDays: { one: 'in {count} day', other: 'in {count} days' },
 		inDaysMonths: { one: 'in {days} days ({count} month)', other: 'in {days} days ({count} months)' },
 		daysAgo: { one: '{count} day ago', other: '{count} days ago' },
-		dayUnit: { one: 'day', other: 'days' },
+		dayUnit: { one: 'Day', other: 'Days' },
 	},
 	noDate: 'No date',
 	months: {

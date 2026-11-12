@@ -1,35 +1,34 @@
 /* Edit columns modal */
+
 /* ══ EDIT COLUMNS MODAL (v0.8.0) ══ */
 
-.hoard-editcol-modal {
+.hoard-edit-columns__modal {
   --dialog-width: 820px;
 }
 
-.hoard-editcols-modal {
+.hoard-edit-columns {
   min-width: 90%;
   width: calc(100% - 40px);
   max-width: calc(100% - 40px);
 }
 
-.hoard-editcols-list {
+.hoard-edit-columns__list {
   margin-bottom: 10px;
   max-height: 460px;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
 }
 
 /* Horizontal card layout for Edit Columns */
 
-.hoard-editcol-card-grid {
+.hoard-edit-columns__card-grid {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-flow: row wrap;
   align-items: flex-start;
   gap: 8px;
   padding: 4px;
 }
 
-.hoard-editcol-card {
+.hoard-edit-columns__card {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -43,15 +42,15 @@
   box-sizing: border-box;
 }
 
-.hoard-editcol-card.hoard-cl-dragging {
+.hoard-edit-columns__card.hoard-custom-lists__dragging {
   opacity: 0.5;
 }
 
-.hoard-editcol-card.hoard-cl-drag-over {
+.hoard-edit-columns__card.hoard-custom-lists__drag-over {
   border-left: 2px solid var(--interactive-accent);
 }
 
-.hoard-editcol-card-handle {
+.hoard-edit-columns__card-handle {
   cursor: grab;
   color: var(--text-faint);
   font-size: 11px;
@@ -60,17 +59,17 @@
   line-height: 1;
 }
 
-.hoard-editcol-card-handle:hover {
+.hoard-edit-columns__card-handle:hover {
   color: var(--text-muted);
 }
 
-.hoard-editcol-card-handle .svg-icon {
+.hoard-edit-columns__card-handle .svg-icon {
   width: 12px;
   height: 12px;
 }
 
-.hoard-editcol-card-name,
-.hoard-editcol-card-type {
+.hoard-edit-columns__card-name,
+.hoard-edit-columns__card-type {
   width: 100%;
   box-sizing: border-box;
   font-size: 12px;
@@ -78,11 +77,11 @@
   padding: 2px 6px;
 }
 
-.hoard-editcol-card-name-wrap {
+.hoard-edit-columns__card-name-wrap {
   width: 100%;
 }
 
-.hoard-editcol-card-name-label {
+.hoard-edit-columns__card-name-label {
   width: 100%;
   padding: 2px 6px;
   border: 0.5px solid var(--background-modifier-border);
@@ -94,7 +93,7 @@
   box-sizing: border-box;
 }
 
-.hoard-editcol-card-type-locked {
+.hoard-edit-columns__card-type-locked {
   width: 100%;
   padding: 3px 6px;
   border: 0.5px dashed var(--background-modifier-border);
@@ -106,13 +105,13 @@
   box-sizing: border-box;
 }
 
-.hoard-editcol-card-toggles {
+.hoard-edit-columns__card-toggles {
   display: flex;
   gap: 4px;
   justify-content: center;
 }
 
-.hoard-editcol-card-toggle {
+.hoard-edit-columns__card-toggle {
   flex: 0 0 22px;
   width: 22px;
   height: 22px;
@@ -124,20 +123,20 @@
 }
 
 /* icon button in the column card header */
-.hoard-editcol-card-del {
+.hoard-edit-columns__card-delete {
   align-self: center;
 }
 
-button.hoard-editcol-card-del:hover {
+button.hoard-edit-columns__card-delete:hover {
   color: var(--text-error);
 }
 
-.hoard-editcol-card-spacer {
+.hoard-edit-columns__card-spacer {
   flex: 1;
   min-height: 4px;
 }
 
-.hoard-editcol-card-opts {
+.hoard-edit-columns__card-options {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -146,13 +145,13 @@ button.hoard-editcol-card-del:hover {
   margin-top: 2px;
 }
 
-.hoard-editcol-card-opt-row {
+.hoard-edit-columns__card-option-row {
   display: flex;
   gap: 4px;
   align-items: center;
 }
 
-.hoard-editcol-card-opt-input {
+.hoard-edit-columns__card-option-input {
   flex: 1;
   min-width: 0;
   font-size: 11px;
@@ -161,41 +160,41 @@ button.hoard-editcol-card-del:hover {
 }
 
 /* sm icon button after an option input */
-.hoard-editcol-card-opt-del {
+.hoard-edit-columns__card-option-delete {
   flex: 0 0 auto;
 }
 
-button.hoard-editcol-card-opt-del:hover {
+button.hoard-edit-columns__card-option-delete:hover {
   color: var(--text-error);
 }
 
-.hoard-editcol-card-opt-add {
+.hoard-edit-columns__card-option-add {
   font-size: 11px;
   padding: 1px 4px;
   height: 22px;
 }
 
 /* Auto card (# and Name) — sized individually via data-auto attr */
-.hoard-editcol-card.hoard-editcol-card-auto {
+.hoard-edit-columns__card.hoard-edit-columns__card--auto {
   opacity: 0.5;
   pointer-events: none;
   background: var(--background-modifier-hover);
 }
 
-.hoard-editcol-card.hoard-editcol-card-auto[data-auto="#"] {
+.hoard-edit-columns__card.hoard-edit-columns__card--auto[data-auto="#"] {
   width: 40px;
   flex: 0 0 40px;
   padding: 4px;
 }
 
-.hoard-editcol-card.hoard-editcol-card-auto[data-auto="Name"] {
+.hoard-edit-columns__card.hoard-edit-columns__card--auto[data-auto="Name"] {
   width: 70px;
   flex: 0 0 70px;
   padding: 4px 6px;
 }
 
 /* Add-column card */
-.hoard-editcol-card.hoard-editcol-card-add {
+.hoard-edit-columns__card.hoard-edit-columns__card--add {
   width: 80px;
   flex: 0 0 80px;
   border: 1px dashed var(--background-modifier-border);
@@ -208,17 +207,17 @@ button.hoard-editcol-card-opt-del:hover {
   padding: 6px;
 }
 
-.hoard-editcol-card.hoard-editcol-card-add:hover {
+.hoard-edit-columns__card.hoard-edit-columns__card--add:hover {
   border-color: var(--interactive-accent);
   color: var(--text-normal);
 }
 
-.hoard-editcol-card-add-label {
+.hoard-edit-columns__card-add-label {
   font-size: 12px;
   text-align: center;
 }
 
-.hoard-cl-name-error {
+.hoard-edit-columns__name-error {
   font-size: 12px;
   color: var(--text-error);
   margin: -4px 0 6px;
@@ -226,23 +225,23 @@ button.hoard-editcol-card-opt-del:hover {
 
 /* Notes modal */
 
-.hoard-notes-modal {
+.hoard-notes-editor {
   display: flex;
   flex-direction: column;
 }
 
-.hoard-notes-mode-bar {
+.hoard-notes-editor__mode-bar {
   display: flex;
   gap: 6px;
   margin-bottom: 10px;
 }
 
-.hoard-notes-edit-area {
+.hoard-notes-editor__edit-area {
   display: flex;
   flex-direction: column;
 }
 
-.hoard-modal-textarea.hoard-notes-textarea {
+.hoard-modal__textarea.hoard-notes-editor__textarea {
   width: 100%;
   min-height: 220px;
   resize: vertical;
@@ -257,7 +256,7 @@ button.hoard-editcol-card-opt-del:hover {
   margin-bottom: 12px;
 }
 
-.hoard-notes-preview-area {
+.hoard-notes-editor__preview-area {
   min-height: 160px;
   max-height: 420px;
   overflow-y: auto;
@@ -272,31 +271,31 @@ button.hoard-editcol-card-opt-del:hover {
 
 /* Edit Columns modal — mobile responsive */
 
-@media (max-width: 720px) {
-  .hoard-editcols-modal {
+@media (width <= 720px) {
+  .hoard-edit-columns {
     min-width: unset;
     width: calc(100% - 16px);
     max-width: calc(100% - 16px);
   }
 
-  .hoard-editcols-list {
+  .hoard-edit-columns__list {
     max-height: 260px;
   }
 }
 
 /* Clear filters button */
 
-.hoard-btn-clear-filters {
+.hoard-btn--clear-filters {
   color: var(--text-muted);
 }
 
-.hoard-btn-clear-filters:hover {
+.hoard-btn--clear-filters:hover {
   color: var(--text-normal);
 }
 
 /* Filter active dot */
 
-.hoard-filter-dot {
+.hoard-filter-panel__dot {
   display: inline-block;
   width: 6px;
   height: 6px;

@@ -9,7 +9,7 @@
  * - No wrapper element is inserted: the input is created directly in the caller's parent with the
  *   caller's own classes, and the popover renders into `activeDocument.body` as a fixed-position
  *   layer — so the ~12 existing call sites' layouts and CSS stay valid.
- * - Invalid typed text never reaches `onChange`: the field is marked `hoard-input-error` and the last
+ * - Invalid typed text never reaches `onChange`: the field is marked `hoard-input--error` and the last
  *   committed value is kept, so a typo can no longer write a non-ISO string into the data.
  */
 
@@ -87,7 +87,7 @@ export function createDatePicker(cfg: DatePickerConfig): DatePickerHandle {
 	const passthrough = !value && cfg.value ? cfg.value : '';
 
 	const input = cfg.parent.createEl('input', {
-		cls: `hoard-datepicker-input${cfg.inputCls ? ` ${cfg.inputCls}` : ''}`,
+		cls: `hoard-date-picker__input${cfg.inputCls ? ` ${cfg.inputCls}` : ''}`,
 		attr: {
 			type: 'text',
 			placeholder: dateFormatMask(),
@@ -115,7 +115,7 @@ export function createDatePicker(cfg: DatePickerConfig): DatePickerHandle {
 	const commit = (iso: string | null, silent = false): void => {
 		value = iso;
 		renderText();
-		input.removeClass('hoard-input-error');
+		input.removeClass('hoard-input--error');
 		input.title = cfg.title ?? '';
 		if (!silent) cfg.onChange(iso);
 	};
@@ -139,26 +139,26 @@ export function createDatePicker(cfg: DatePickerConfig): DatePickerHandle {
 			? rect.top - 4 - height
 			: below;
 		const left = Math.max(8, Math.min(rect.left, vw - width - 8));
-		el.setCssProps({ '--hoard-dp-top': `${top}px`, '--hoard-dp-left': `${left}px` });
+		el.setCssProps({ '--hoard-date-picker-top': `${top}px`, '--hoard-date-picker-left': `${left}px` });
 	};
 
 	const buildGrid = (body: HTMLElement): void => {
 		body.empty();
 
-		const head = body.createDiv({ cls: 'hoard-datepicker-head' });
+		const head = body.createDiv({ cls: 'hoard-date-picker__head' });
 		const prev = createIconButton(head, {
 			icon: 'chevron-left',
 			label: t('misc.datePicker.previousMonth'),
-			cls: 'hoard-datepicker-nav',
+			cls: 'hoard-date-picker__nav',
 		});
 		head.createSpan({
-			cls: 'hoard-datepicker-month',
+			cls: 'hoard-date-picker__month',
 			text: `${t(MONTH_NAMES[viewMonth]!)} ${viewYear}`,
 		});
 		const next = createIconButton(head, {
 			icon: 'chevron-right',
 			label: t('misc.datePicker.nextMonth'),
-			cls: 'hoard-datepicker-nav',
+			cls: 'hoard-date-picker__nav',
 		});
 
 		prev.addEventListener('click', (ev) => {
@@ -176,21 +176,21 @@ export function createDatePicker(cfg: DatePickerConfig): DatePickerHandle {
 
 		const monday = weekStartsMonday();
 		const names = monday ? WEEKDAYS_MON : WEEKDAYS_SUN;
-		const dow = body.createDiv({ cls: 'hoard-datepicker-dow' });
+		const dow = body.createDiv({ cls: 'hoard-date-picker__weekday' });
 		for (const n of names) dow.createSpan({ text: t(n) });
 
-		const grid = body.createDiv({ cls: 'hoard-datepicker-grid' });
+		const grid = body.createDiv({ cls: 'hoard-date-picker__grid' });
 		const first = new Date(viewYear, viewMonth, 1);
 		// getDay() is 0=Sunday; shift by one when weeks start on Monday
 		const lead = monday ? (first.getDay() + 6) % 7 : first.getDay();
 		const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-		for (let i = 0; i < lead; i++) grid.createSpan({ cls: 'hoard-datepicker-pad' });
+		for (let i = 0; i < lead; i++) grid.createSpan({ cls: 'hoard-date-picker__padding' });
 
 		const today = todayIso();
 		for (let d = 1; d <= daysInMonth; d++) {
 			const iso = isoOf(viewYear, viewMonth, d);
 			const cell = grid.createEl('button', {
-				cls: 'hoard-datepicker-day',
+				cls: 'hoard-date-picker__day',
 				text: String(d),
 			});
 			if (iso === today) cell.addClass('is-today');
@@ -203,9 +203,9 @@ export function createDatePicker(cfg: DatePickerConfig): DatePickerHandle {
 			});
 		}
 
-		const foot = body.createDiv({ cls: 'hoard-datepicker-foot' });
-		const todayBtn = foot.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('misc.datePicker.today') });
-		const clearBtn = foot.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('misc.datePicker.clear') });
+		const foot = body.createDiv({ cls: 'hoard-date-picker__footer' });
+		const todayBtn = foot.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('misc.datePicker.today') });
+		const clearBtn = foot.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('misc.datePicker.clear') });
 		todayBtn.addEventListener('click', (ev) => {
 			ev.stopPropagation();
 			closePanel();
@@ -225,7 +225,7 @@ export function createDatePicker(cfg: DatePickerConfig): DatePickerHandle {
 		viewYear = parseInt(base.slice(0, 4), 10);
 		viewMonth = parseInt(base.slice(5, 7), 10) - 1;
 
-		const el = activeDocument.body.createDiv({ cls: 'hoard-datepicker-panel' });
+		const el = activeDocument.body.createDiv({ cls: 'hoard-date-picker__panel' });
 		panel = el;
 		if (cfg.stopClickPropagation) {
 			el.addEventListener('click', (ev) => ev.stopPropagation());
@@ -273,7 +273,7 @@ export function createDatePicker(cfg: DatePickerConfig): DatePickerHandle {
 		if (!raw) { commit(null); return; }
 		const parsed = parse(raw);
 		if (!parsed) {
-			input.addClass('hoard-input-error');
+			input.addClass('hoard-input--error');
 			input.title = t('misc.datePicker.formatHint', { format: dateFormatMask() });
 			return;
 		}

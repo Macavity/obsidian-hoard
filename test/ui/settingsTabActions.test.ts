@@ -84,9 +84,9 @@ describe('theme picker', () => {
 		const onPicked = vi.fn();
 		priv.renderThemePicker(el, onPicked);
 		expect(onPicked).toHaveBeenCalledWith('Nightfall');
-		const cards = qa(el, '.hoard-theme-card');
+		const cards = qa(el, '.hoard-theme-picker__card');
 		expect(cards.map((c) => c.classList.contains('is-selected'))).toEqual([false, true, false]);
-		expect(qa(cards[0]!, '.hoard-theme-swatch')).toHaveLength(5);
+		expect(qa(cards[0]!, '.hoard-theme-picker__swatch')).toHaveLength(5);
 	});
 
 	it('falls back to the default theme when none is stored', () => {
@@ -107,7 +107,7 @@ describe('theme picker', () => {
 		const el = document.createElement('div');
 		const onPicked = vi.fn();
 		priv.renderThemePicker(el, onPicked);
-		const cards = qa(el, '.hoard-theme-card');
+		const cards = qa(el, '.hoard-theme-picker__card');
 		cards[2]!.click();
 		await until(() => onPicked.mock.calls.length === 2);
 		expect(plugin.settings.colorTheme).toBe('bluez');
@@ -122,14 +122,14 @@ describe('theme picker', () => {
 		const { priv, plugin } = makeTab({ app: { workspace: { getLeavesOfType: () => [] } } });
 		const el = document.createElement('div');
 		priv.renderThemePicker(el);
-		qa(el, '.hoard-theme-card')[1]!.click();
+		qa(el, '.hoard-theme-picker__card')[1]!.click();
 		await until(() => plugin.settings.colorTheme === 'nightfall');
 	});
 });
 
 describe('tag lists', () => {
 	const pills = (el: HTMLElement): string[] =>
-		qa(el, '.hoard-tag-pill').map((p) => (q(p, '.hoard-tag-name-input') as HTMLInputElement | null)?.value ?? q(p, '.hoard-tag-name').textContent ?? '');
+		qa(el, '.hoard-tag-editor__pill').map((p) => (q(p, '.hoard-tag-editor__name-input') as HTMLInputElement | null)?.value ?? q(p, '.hoard-tag-editor__name').textContent ?? '');
 
 	it('renders locked built-in types read-only and custom types editable', () => {
 		const { priv, plugin } = makeTab();
@@ -137,12 +137,12 @@ describe('tag lists', () => {
 		const el = document.createElement('div');
 		const onChanged = vi.fn();
 		priv.renderTagSection(el, 'Types', 'types', onChanged);
-		const rendered = qa(el, '.hoard-tag-pill');
+		const rendered = qa(el, '.hoard-tag-editor__pill');
 		expect(rendered).toHaveLength(2);
-		expect(q(rendered[0]!, '.hoard-tag-name').textContent).toBe('Movie');
-		expect(rendered[0]!.querySelector('.hoard-tag-del')).toBeNull();
-		expect(q(rendered[1]!, '.hoard-tag-name').textContent).toBe('Docs');
-		expect(rendered[1]!.querySelector('.hoard-tag-del')).not.toBeNull();
+		expect(q(rendered[0]!, '.hoard-tag-editor__name').textContent).toBe('Movie');
+		expect(rendered[0]!.querySelector('.hoard-tag-editor__delete')).toBeNull();
+		expect(q(rendered[1]!, '.hoard-tag-editor__name').textContent).toBe('Docs');
+		expect(rendered[1]!.querySelector('.hoard-tag-editor__delete')).not.toBeNull();
 		expect(onChanged).toHaveBeenCalledTimes(1);
 	});
 
@@ -150,23 +150,23 @@ describe('tag lists', () => {
 		const { priv } = makeTab();
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Statuses', 'statuses');
-		expect(qa(el, '.hoard-tag-pill').length).toBeGreaterThan(0);
-		expect(el.querySelector('.hoard-tag-name-input')).toBeNull();
-		expect(el.querySelector('.hoard-tag-del')).toBeNull();
-		expect(el.querySelector('.hoard-tag-add-row')).toBeNull();
-		expect(el.querySelector('.hoard-sg-help-btn')).not.toBeNull();
+		expect(qa(el, '.hoard-tag-editor__pill').length).toBeGreaterThan(0);
+		expect(el.querySelector('.hoard-tag-editor__name-input')).toBeNull();
+		expect(el.querySelector('.hoard-tag-editor__delete')).toBeNull();
+		expect(el.querySelector('.hoard-tag-editor__add-row')).toBeNull();
+		expect(el.querySelector('.hoard-settings-group__help-btn')).not.toBeNull();
 	});
 
 	it('recolors an entry through the picker and persists it', async () => {
 		const { priv, plugin } = makeTab();
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Priority', 'priorities');
-		const pill = qa(el, '.hoard-tag-pill')[0]!;
-		const picker = q(pill, '.hoard-tag-color-picker') as HTMLInputElement;
+		const pill = qa(el, '.hoard-tag-editor__pill')[0]!;
+		const picker = q(pill, '.hoard-tag-editor__color-picker') as HTMLInputElement;
 		picker.value = '#123456';
 		picker.dispatchEvent(new Event('change'));
 		await until(() => plugin.settings.priorities[0]!.color === '#123456');
-		expect(q(pill, '.hoard-tag-dot').style.backgroundColor).not.toBe('');
+		expect(q(pill, '.hoard-tag-editor__dot').style.getPropertyValue('--hoard-tag-editor-dot-color')).not.toBe('');
 		expect(plugin.saveSettings).toHaveBeenCalled();
 	});
 
@@ -174,10 +174,10 @@ describe('tag lists', () => {
 		const { priv } = makeTab();
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Priority', 'priorities');
-		const pill = qa(el, '.hoard-tag-pill')[0]!;
-		const picker = q(pill, '.hoard-tag-color-picker');
+		const pill = qa(el, '.hoard-tag-editor__pill')[0]!;
+		const picker = q(pill, '.hoard-tag-editor__color-picker');
 		const click = vi.spyOn(picker, 'click');
-		q(pill, '.hoard-tag-dot').click();
+		q(pill, '.hoard-tag-editor__dot').click();
 		expect(click).toHaveBeenCalled();
 	});
 
@@ -185,11 +185,11 @@ describe('tag lists', () => {
 		const { priv, plugin } = makeTab();
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Priority', 'priorities');
-		const input = q(el, '.hoard-tag-add-row input[type=text]') as HTMLInputElement;
-		const color = q(el, '.hoard-tag-add-row .hoard-color-input') as HTMLInputElement;
+		const input = q(el, '.hoard-tag-editor__add-row input[type=text]') as HTMLInputElement;
+		const color = q(el, '.hoard-tag-editor__add-row .hoard-color-picker__input') as HTMLInputElement;
 		input.value = 'Urgent';
 		color.value = '#ff0000';
-		q(el, '.hoard-tag-add-row button').click();
+		q(el, '.hoard-tag-editor__add-row button').click();
 		await until(() => input.value === '');
 		expect(plugin.settings.priorities.at(-1)).toEqual({ name: 'Urgent', color: '#ff0000' });
 		expect(pills(el)).toContain('Urgent');
@@ -199,15 +199,15 @@ describe('tag lists', () => {
 		const { priv, plugin } = makeTab();
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Types', 'types');
-		const input = q(el, '.hoard-tag-add-row input[type=text]') as HTMLInputElement;
+		const input = q(el, '.hoard-tag-editor__add-row input[type=text]') as HTMLInputElement;
 		const before = plugin.settings.types.length;
-		q(el, '.hoard-tag-add-row button').click();
+		q(el, '.hoard-tag-editor__add-row button').click();
 		input.value = 'movie';
-		q(el, '.hoard-tag-add-row button').click();
+		q(el, '.hoard-tag-editor__add-row button').click();
 		await until(() => shown.length === 1);
 		expect(shown[0]).toContain('movie');
 		input.value = 'Bad/Name';
-		q(el, '.hoard-tag-add-row button').click();
+		q(el, '.hoard-tag-editor__add-row button').click();
 		await until(() => shown.length === 2);
 		expect(plugin.settings.types).toHaveLength(before);
 	});
@@ -217,10 +217,10 @@ describe('tag lists', () => {
 		plugin.settings.types = [{ name: 'Docs', color: '#222222' }];
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Types', 'types');
-		q(el, '.hoard-tag-del').click();
+		q(el, '.hoard-tag-editor__delete').click();
 		await until(() => shown.length === 1);
 		expect(plugin.settings.types).toEqual([]);
-		expect(el.querySelector('.hoard-tag-pill')).toBeNull();
+		expect(el.querySelector('.hoard-tag-editor__pill')).toBeNull();
 	});
 
 	describe('rename', () => {
@@ -236,7 +236,7 @@ describe('tag lists', () => {
 			(priv as unknown as { renderTagListSection(p: HTMLElement, cfg: unknown): void }).renderTagListSection(el, {
 				label: 'Genres', getList: () => list, setColor: () => Promise.resolve(), rename, validateName, onChanged,
 			});
-			const input = q(el, '.hoard-tag-name-input') as HTMLInputElement;
+			const input = q(el, '.hoard-tag-editor__name-input') as HTMLInputElement;
 			return { el, input, rename, onChanged };
 		};
 
@@ -278,7 +278,7 @@ describe('tag lists', () => {
 			await until(() => onChanged.mock.calls.length === 2);
 			expect(rename).toHaveBeenCalledTimes(1);
 			expect(rename).toHaveBeenCalledWith('Docs', 'Reels');
-			expect((q(el, '.hoard-tag-name-input') as HTMLInputElement).value).toBe('Reels');
+			expect((q(el, '.hoard-tag-editor__name-input') as HTMLInputElement).value).toBe('Reels');
 		});
 	});
 });
@@ -297,32 +297,32 @@ describe('card settings', () => {
 	it('shows the unanimous style in the chip and marks the matching tile', () => {
 		const { el, setChip } = setup();
 		expect(setChip).toHaveBeenLastCalledWith('Text under · 160 px');
-		const tiles = qa(el, '.hoard-card-style-option');
+		const tiles = qa(el, '.hoard-card-style__option');
 		expect(tiles.map((x) => x.classList.contains('is-active'))).toEqual([true, false]);
-		expect(qa(el, '.hoard-card-style-tab-row')).toHaveLength(4);
+		expect(qa(el, '.hoard-card-style__tab-row')).toHaveLength(4);
 	});
 
 	it('applies a tile style to every tab and persists it', async () => {
 		const { el, plugin, setChip, notifyChange } = setup();
-		qa(el, '.hoard-card-style-option')[1]!.click();
+		qa(el, '.hoard-card-style__option')[1]!.click();
 		expect(Object.values(plugin.settings.cardTextStyles)).toEqual(['inside', 'inside', 'inside', 'inside']);
 		expect(setChip).toHaveBeenLastCalledWith('Text inside · 160 px');
-		expect(qa(el, '.hoard-card-style-option').map((x) => x.classList.contains('is-active'))).toEqual([false, true]);
+		expect(qa(el, '.hoard-card-style__option').map((x) => x.classList.contains('is-active'))).toEqual([false, true]);
 		await until(() => notifyChange.mock.calls.length === 1);
 		expect(plugin.saveSettings).toHaveBeenCalled();
 	});
 
 	it('changes one tab and reports a mixed chip; a repeated click is a no-op', async () => {
 		const { el, plugin, setChip, notifyChange } = setup();
-		const row = qa(el, '.hoard-card-style-tab-row')[1]!;
-		const [under, inside] = qa(row, '.hoard-card-style-tab-btn') as [HTMLElement, HTMLElement];
+		const row = qa(el, '.hoard-card-style__tab-row')[1]!;
+		const [under, inside] = qa(row, '.hoard-card-style__tab-btn') as [HTMLElement, HTMLElement];
 		under.click();
 		expect(notifyChange).not.toHaveBeenCalled();
 		inside.click();
 		expect(plugin.settings.cardTextStyles.games).toBe('inside');
 		expect(setChip).toHaveBeenLastCalledWith('Mixed · 160 px');
 		expect(inside.classList.contains('is-active')).toBe(true);
-		expect(qa(el, '.hoard-card-style-option').some((x) => x.classList.contains('is-active'))).toBe(false);
+		expect(qa(el, '.hoard-card-style__option').some((x) => x.classList.contains('is-active'))).toBe(false);
 		await until(() => notifyChange.mock.calls.length === 1);
 	});
 
@@ -335,7 +335,7 @@ describe('card settings', () => {
 		await until(() => applyCardSizeCssVar.mock.calls.length === 1);
 		expect(plugin.settings.cardSize).toBe(2);
 		expect(notifyChange).toHaveBeenCalled();
-		expect(q(el, '.hoard-card-size-value').textContent).toContain('px');
+		expect(q(el, '.hoard-card-size__value').textContent).toContain('px');
 		expect(setChip.mock.calls.length).toBeGreaterThan(1);
 		sliders[1]!.value = '-1';
 		sliders[1]!.dispatchEvent(new Event('input'));
@@ -419,7 +419,7 @@ describe('regenerate notes', () => {
 			[true, false, true, true],
 		);
 		await priv.runRegenerate(wrap, fill, text);
-		expect(fill.style.width).toBe('100%');
+		expect(fill.style.getPropertyValue('--hoard-csv-progress-width')).toBe('100%');
 		expect(text.textContent).toContain('3');
 		expect(plugin.dataManager).toBeDefined();
 		expect((plugin as unknown as { readingDataManager: { createReadingNoteIfMissing: ReturnType<typeof vi.fn> } })

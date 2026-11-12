@@ -1,29 +1,31 @@
 /* Search help button and tips modal */
+
 /* Search help ("?") button, at the right end of every search bar */
+
 /* element-qualified: plain .class loses to core's button:not(.clickable-icon) */
-button.hoard-search-help-btn {
+button.hoard-search-help__btn {
   color: var(--text-faint);
 }
 
-button.hoard-search-help-btn .svg-icon {
+button.hoard-search-help__btn .svg-icon {
   width: 15px;
   height: 15px;
 }
 
 /* Search tips modal */
-.hoard-search-help-intro {
+.hoard-search-help__intro {
   color: var(--text-muted);
   font-size: 12px;
   margin-bottom: 10px;
 }
 
-.hoard-search-help-list {
+.hoard-search-help__list {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.hoard-search-help-row {
+.hoard-search-help__row {
   display: flex;
   align-items: baseline;
   gap: 10px;
@@ -32,30 +34,30 @@ button.hoard-search-help-btn .svg-icon {
   background: var(--background-modifier-hover);
 }
 
-.hoard-search-help-query {
+.hoard-search-help__query {
   flex: 0 0 auto;
   font-family: var(--font-monospace);
   font-size: 12px;
   white-space: nowrap;
 }
 
-.hoard-search-help-says {
+.hoard-search-help__says {
   font-size: 11px;
   color: var(--text-muted);
   line-height: 1.35;
 }
 
 /* syntax colours: field prefix / operator / value */
-.hoard-shq-f { color: var(--color-blue); font-weight: 600; }
-.hoard-shq-o { color: var(--color-orange); font-weight: 600; }
-.hoard-shq-v { color: var(--color-green); }
-.hoard-shq-p { color: var(--text-faint); }
+.hoard-search-help__query-field { color: var(--color-blue); font-weight: 600; }
+.hoard-search-help__query-operator { color: var(--color-orange); font-weight: 600; }
+.hoard-search-help__query-value { color: var(--color-green); }
+.hoard-search-help__query-punctuation { color: var(--text-faint); }
 
-.hoard-search-help-fields {
+.hoard-search-help__fields {
   margin-top: 12px;
 }
 
-.hoard-search-help-fields-title {
+.hoard-search-help__fields-title {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -65,13 +67,13 @@ button.hoard-search-help-btn .svg-icon {
   margin-bottom: 4px;
 }
 
-.hoard-search-help-chips {
+.hoard-search-help__chips {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.hoard-search-help-chip {
+.hoard-search-help__chip {
   font-family: var(--font-monospace);
   font-size: 11px;
   padding: 1px 6px;
@@ -79,7 +81,7 @@ button.hoard-search-help-btn .svg-icon {
   background: var(--background-modifier-hover);
 }
 
-.hoard-search-help-note {
+.hoard-search-help__note {
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid var(--background-modifier-border);

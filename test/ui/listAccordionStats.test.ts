@@ -22,13 +22,13 @@ const el = (parent: HTMLElement, tag: string, cls: string): HTMLElement => {
 function buildDom(): Dom {
 	const root = document.createElement('div');
 	const acc = el(root, 'div', 'hoard-accordion');
-	const right = el(acc, 'div', 'hoard-acc-header-right');
-	const progress = el(right, 'span', 'hoard-acc-percent');
-	const bar = el(right, 'div', 'hoard-progress-bar');
-	const stats = [0, 1, 2].map(() => el(el(acc, 'div', 'hoard-acc-stat-block'), 'span', 'hoard-acc-percent'));
+	const right = el(acc, 'div', 'hoard-accordion__header-right');
+	const progress = el(right, 'span', 'hoard-accordion__percent');
+	const bar = el(right, 'div', 'hoard-progress__bar');
+	const stats = [0, 1, 2].map(() => el(el(acc, 'div', 'hoard-accordion__stat-block'), 'span', 'hoard-accordion__percent'));
 	const season = el(acc, 'div', 'hoard-season');
-	const countEl = el(el(season, 'div', 'hoard-season-header'), 'span', 'hoard-season-ep-count');
-	const box = el(el(season, 'div', 'hoard-episode-grid'), 'div', 'hoard-episode-box');
+	const countEl = el(el(season, 'div', 'hoard-accordion__season-header'), 'span', 'hoard-accordion__season-episode-count');
+	const box = el(el(season, 'div', 'hoard-accordion__episode-grid'), 'div', 'hoard-accordion__episode-box');
 	return { root, box, stats, progress, bar, countEl };
 }
 
@@ -57,7 +57,7 @@ describe('ListTab.updateAccordionStats', () => {
 		expect(d.stats[1]!.textContent).toBe(formatTime(dm.calcTimeWatched(title)));
 		expect(d.stats[2]!.textContent).toBe(`2 / ${dm.getEffectiveTotal(title)}`);
 		expect(d.progress.textContent).toBe(`${dm.getProgress(title)}%`);
-		expect(d.bar.style.width).toBe(`${dm.getProgress(title)}%`);
+		expect(d.bar.style.getPropertyValue('--hoard-progress-width')).toBe(`${dm.getProgress(title)}%`);
 		expect(d.countEl.textContent).toBe('');
 	});
 
@@ -75,7 +75,7 @@ describe('ListTab.updateAccordionStats', () => {
 
 	it('tolerates missing stat elements and season wrapper', async () => {
 		const { update } = await setup();
-		const box = el(el(document.createElement('div'), 'div', 'hoard-accordion'), 'div', 'hoard-episode-box');
+		const box = el(el(document.createElement('div'), 'div', 'hoard-accordion'), 'div', 'hoard-accordion__episode-box');
 		expect(() => update(box, { name: 'S1', episodes: 2, offset: 0 })).not.toThrow();
 	});
 });

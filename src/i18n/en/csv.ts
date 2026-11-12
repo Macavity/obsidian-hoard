@@ -23,8 +23,8 @@ const csv = {
 	back: '← back',
 	preview: 'Preview →',
 	createType: '+ create new type',
-	duplicate: 'duplicate',
-	noTitle: '(no title)',
+	duplicate: 'Duplicate',
+	noTitle: '(No title)',
 	duplicates: {
 		one: '{count} duplicate found (highlighted). These are deselected by default.',
 		other: '{count} duplicates found (highlighted). These are deselected by default.',

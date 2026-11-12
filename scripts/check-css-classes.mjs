@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from "fs";
 import { basename, join, dirname } from "path";
 import { fileURLToPath } from "url";
 import process from "process";
-import { checkCssClasses } from "./lib/css-classes.mjs";
+import { checkCssClasses, classesInCss, notBem, shortTokens } from "./lib/css-classes.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -40,21 +40,27 @@ export function unimportedPartials(indexCss, partials) {
 
 export function runCheck() {
 	const files = stylesheetFiles();
+	const css = files.map((p) => readFileSync(p, "utf8")).join("\n");
+	const names = [...classesInCss(css)];
 	return {
 		...checkCssClasses({
-			css: files.map((p) => readFileSync(p, "utf8")).join("\n"),
+			css,
 			sources: sourceFiles().map((p) => readFileSync(p, "utf8")),
 			allowlist: OBSIDIAN_CLASSES,
 		}),
 		unimported: unimportedPartials(readFileSync(join(root, "src", "styles", "index.css"), "utf8"), files.map((p) => basename(p))),
+		shortTokens: shortTokens(names),
+		notBem: notBem(names),
 	};
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-	const { unreferenced, staleAllowlist, unimported } = runCheck();
+	const { unreferenced, staleAllowlist, unimported, shortTokens: short, notBem: nonBem } = runCheck();
 	if (unreferenced.length) console.error(`Dead CSS: no source references ${unreferenced.map((c) => `.${c}`).join(", ")}`);
 	if (staleAllowlist.length) console.error(`Stale OBSIDIAN_CLASSES entries in scripts/check-css-classes.mjs: ${staleAllowlist.join(", ")}`);
 	if (unimported.length) console.error(`Not imported by src/styles/index.css: ${unimported.join(", ")}`);
-	if (unreferenced.length || staleAllowlist.length || unimported.length) process.exit(1);
+	if (short.length) console.error(`Abbreviated name parts (spell them out or extend ALLOWED_SHORT): ${short.map((c) => `.${c}`).join(", ")}`);
+	if (nonBem.length) console.error(`Not hoard-<block>[__<element>][--<modifier>]: ${nonBem.map((c) => `.${c}`).join(", ")}`);
+	if (unreferenced.length || staleAllowlist.length || unimported.length || short.length || nonBem.length) process.exit(1);
 	console.log("✓ Every CSS class is referenced");
 }

@@ -1,27 +1,28 @@
 /* Reading custom fields and favorite quotes */
+
 /* Reading custom fields */
-.hoard-reading-detail-custom-heading,
-.hoard-reading-detail-quotes-heading {
+.hoard-reading-custom-fields__heading,
+.hoard-reading-quotes__heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
 }
 
-.hoard-reading-detail-custom-manage {
+.hoard-reading-custom-fields__manage {
   font-size: 12px;
   color: var(--interactive-accent);
   cursor: pointer;
   text-decoration: underline;
 }
 
-.hoard-reading-detail-custom-empty {
+.hoard-reading-custom-fields__empty {
   font-size: 12px;
   color: var(--text-muted);
   padding: 4px 0;
 }
 
-.hoard-reading-custom-table {
+.hoard-reading-custom-fields__table {
   display: flex;
   flex-direction: column;
   border: 0.5px solid var(--background-modifier-border);
@@ -29,7 +30,7 @@
   overflow: hidden;
 }
 
-.hoard-reading-custom-row {
+.hoard-reading-custom-fields__row {
   display: grid;
   grid-template-columns: 140px 1fr;
   align-items: center;
@@ -37,15 +38,15 @@
   border-top: 0.5px solid var(--background-modifier-border);
 }
 
-.hoard-reading-custom-row:first-child {
+.hoard-reading-custom-fields__row:first-child {
   border-top: none;
 }
 
-.hoard-reading-custom-table.is-border-mode .hoard-reading-custom-row {
+.hoard-reading-custom-fields__table.is-border-mode .hoard-reading-custom-fields__row {
   border-top: none;
 }
 
-.hoard-reading-custom-label {
+.hoard-reading-custom-fields__label {
   background: var(--background-secondary);
   border-top-left-radius: 6px;
   border-bottom-left-radius: 6px;
@@ -55,7 +56,7 @@
   font-weight: 500;
 }
 
-.hoard-reading-custom-value {
+.hoard-reading-custom-fields__value {
   border-top-right-radius: 6px;
   border-bottom-right-radius: 6px;
   padding: 4px 10px;
@@ -63,25 +64,25 @@
   color: var(--text-normal);
 }
 
-/* fill mode: --hoard-field-bg per column (only set in fill mode, so border mode keeps the default bg) */
-.hoard-reading-custom-table .hoard-reading-custom-label {
-  background: var(--hoard-field-bg, var(--background-secondary));
+/* fill mode: --hoard-reading-custom-fields-background per column (only set in fill mode, so border mode keeps the default bg) */
+.hoard-reading-custom-fields__table .hoard-reading-custom-fields__label {
+  background: var(--hoard-reading-custom-fields-background, var(--background-secondary));
   color: #1e1e1e;
 }
 
-/* border mode: --hoard-field-border per column; keeps the base label's muted text */
-.hoard-reading-custom-table.is-border-mode .hoard-reading-custom-label {
-  border: 1.5px solid var(--hoard-field-border, var(--background-modifier-border));
+/* border mode: --hoard-reading-custom-fields-border per column; keeps the base label's muted text */
+.hoard-reading-custom-fields__table.is-border-mode .hoard-reading-custom-fields__label {
+  border: 1.5px solid var(--hoard-reading-custom-fields-border, var(--background-modifier-border));
   box-sizing: border-box;
   color: var(--text-muted);
 }
 
-.hoard-reading-custom-table.is-border-mode .hoard-reading-custom-value {
+.hoard-reading-custom-fields__table.is-border-mode .hoard-reading-custom-fields__value {
   border: 0.5px solid var(--background-modifier-border);
   box-sizing: border-box;
 }
 
-.hoard-reading-custom-display {
+.hoard-reading-custom-fields__display {
   display: inline-block;
   min-height: 22px;
   padding: 2px 4px;
@@ -89,61 +90,61 @@
   border-radius: 3px;
 }
 
-.hoard-reading-custom-display:hover {
+.hoard-reading-custom-fields__display:hover {
   background: var(--background-modifier-hover);
 }
 
-.hoard-reading-custom-display.is-placeholder {
+.hoard-reading-custom-fields__display.is-placeholder {
   color: var(--text-faint);
 }
 
-.hoard-reading-custom-input {
+.hoard-reading-custom-fields__input {
   width: 100%;
   font-size: 13px;
 }
 
 /* Reading favorite quotes */
-.hoard-reading-detail-quotes {
+.hoard-reading-quotes {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.hoard-reading-detail-quotes-add {
+.hoard-reading-quotes__add {
   font-size: 12px;
 }
 
-.hoard-reading-quote-empty {
+.hoard-reading-quotes__empty {
   font-size: 12px;
   color: var(--text-muted);
   padding: 6px 0;
 }
 
-.hoard-reading-quote-list {
+.hoard-reading-quotes__list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.hoard-reading-quote-card {
+.hoard-reading-quotes__card {
   background: var(--background-secondary);
   border-left: 3px solid var(--interactive-accent);
   border-radius: 0 4px 4px 0;
   padding: 8px 12px;
 }
 
-.hoard-reading-quote-text {
+.hoard-reading-quotes__text {
   font-size: 13px;
   line-height: 1.5;
   color: var(--text-normal);
   white-space: pre-wrap;
 }
 
-.hoard-reading-quote-form-host {
+.hoard-reading-quotes__form-host {
   margin-top: 4px;
 }
 
-.hoard-reading-quote-form {
+.hoard-reading-quotes__form {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -153,19 +154,19 @@
   border: 0.5px solid var(--background-modifier-border);
 }
 
-.hoard-reading-quote-textarea {
+.hoard-reading-quotes__textarea {
   width: 100%;
   resize: vertical;
   min-height: 60px;
   font-family: inherit;
 }
 
-.hoard-reading-quote-ref-input {
+.hoard-reading-quotes__reference-input {
   width: 100%;
   max-width: 240px;
 }
 
-.hoard-reading-quote-form-actions {
+.hoard-reading-quotes__form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 6px;

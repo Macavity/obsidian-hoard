@@ -61,16 +61,16 @@ export function isScheduleValid(state: ScheduleFormState): boolean {
 }
 
 function makeRow(parent: HTMLElement, label: string): HTMLElement {
-	const row = parent.createDiv({ cls: 'hoard-modal-row' });
-	row.createSpan({ cls: 'hoard-modal-label', text: label });
+	const row = parent.createDiv({ cls: 'hoard-modal__row' });
+	row.createSpan({ cls: 'hoard-modal__label', text: label });
 	return row;
 }
 
 function renderModeToggle(parent: HTMLElement, state: ScheduleFormState, options: ScheduleFormOptions): void {
-	const modeRow = parent.createDiv({ cls: 'hoard-schedule-mode-row' });
+	const modeRow = parent.createDiv({ cls: 'hoard-schedule__mode-row' });
 	const makeModeBtn = (label: string, value: ScheduleMode): void => {
 		const btn = modeRow.createEl('button', {
-			cls: `hoard-btn hoard-btn-sm hoard-schedule-mode-btn${state.mode === value ? ' is-active' : ''}`,
+			cls: `hoard-btn hoard-btn--sm hoard-schedule__mode-btn${state.mode === value ? ' is-active' : ''}`,
 			text: label,
 		});
 		btn.addEventListener('click', () => {
@@ -88,7 +88,7 @@ function renderDateRow(parent: HTMLElement, state: ScheduleFormState, options: S
 	const dateRow = makeRow(parent, t('ui.schedule.releaseDate'));
 	createDatePicker({
 		parent: dateRow,
-		inputCls: 'hoard-modal-input hoard-date-input',
+		inputCls: 'hoard-modal__input hoard-date-picker__input--compact',
 		value: state.releaseDate || null,
 		lenient: true,
 		onChange: (iso) => {
@@ -101,14 +101,14 @@ function renderDateRow(parent: HTMLElement, state: ScheduleFormState, options: S
 
 /** Native time input + optional note label (e.g. live JST converter). */
 function renderTimeRow(parent: HTMLElement, state: ScheduleFormState, options: ScheduleFormOptions): void {
-	const row = parent.createDiv({ cls: 'hoard-modal-row hoard-modal-row-mt' });
-	row.createSpan({ cls: 'hoard-modal-label', text: t('ui.schedule.timeOptional') });
+	const row = parent.createDiv({ cls: 'hoard-modal__row hoard-modal__row--margin-top' });
+	row.createSpan({ cls: 'hoard-modal__label', text: t('ui.schedule.timeOptional') });
 	const inp = row.createEl('input', {
-		cls: 'hoard-modal-input hoard-time-input',
+		cls: 'hoard-modal__input hoard-schedule__time-input',
 		attr: { type: 'time' },
 	});
 	inp.value = state.releaseTime;
-	const note = options.timeNote ? row.createSpan({ cls: 'hoard-jst-clock' }) : null;
+	const note = options.timeNote ? row.createSpan({ cls: 'hoard-schedule__jst-clock' }) : null;
 	const updateNote = (): void => {
 		if (note && options.timeNote) note.textContent = options.timeNote(state.releaseTime);
 	};
@@ -122,7 +122,7 @@ function renderTimeRow(parent: HTMLElement, state: ScheduleFormState, options: S
 
 function renderWeekdayRow(parent: HTMLElement, state: ScheduleFormState, options: ScheduleFormOptions): void {
 	const r = makeRow(parent, t('ui.schedule.dayOfWeek'));
-	const daySelect = r.createEl('select', { cls: 'hoard-select' });
+	const daySelect = r.createEl('select', { cls: 'hoard-input__select' });
 	dayNames().forEach((d, i) => {
 		const opt = daySelect.createEl('option', { text: d, value: String(i) });
 		if (i === state.dayOfWeek) opt.selected = true;
@@ -136,7 +136,7 @@ function renderWeekdayRow(parent: HTMLElement, state: ScheduleFormState, options
 function renderMonthdayRow(parent: HTMLElement, state: ScheduleFormState, options: ScheduleFormOptions): void {
 	const r = makeRow(parent, t('ui.schedule.dayOfMonth'));
 	const inp = r.createEl('input', {
-		cls: 'hoard-modal-input hoard-modal-input-sm',
+		cls: 'hoard-modal__input hoard-modal__input--sm',
 		attr: { type: 'number', min: '1', max: '31', placeholder: '1' },
 	});
 	inp.value = String(state.dayOfMonth);
@@ -150,7 +150,7 @@ function renderMonthdayRow(parent: HTMLElement, state: ScheduleFormState, option
 /** Cadence select + its one extra field (+ time). */
 function renderRecurringFields(parent: HTMLElement, state: ScheduleFormState, options: ScheduleFormOptions): void {
 	const recRow = makeRow(parent, options.recurrenceLabel ?? '');
-	const recSelect = recRow.createEl('select', { cls: 'hoard-select' });
+	const recSelect = recRow.createEl('select', { cls: 'hoard-input__select' });
 	for (const { value, label } of options.recurrenceOptions ?? []) {
 		const opt = recSelect.createEl('option', { text: label, value });
 		if (value === state.recurrence) opt.selected = true;
@@ -198,27 +198,27 @@ function renderScheduleForm(
 
 	// the save side-effects, stated instead of silent
 	parent.createDiv({
-		cls: 'hoard-modal-info hoard-schedule-hint',
+		cls: 'hoard-modal__info hoard-schedule__hint',
 		text: options.hint(state.mode),
 	});
 }
 
 /** One compact row: Label [cur] of [total] · Label [cur] of [total] */
 export function renderCounterRow(parent: HTMLElement, groups: CounterGroup[]): void {
-	const progRow = parent.createDiv({ cls: 'hoard-modal-row hoard-schedule-progress-row' });
+	const progRow = parent.createDiv({ cls: 'hoard-modal__row hoard-schedule__progress-row' });
 	const makeNum = (field: CounterField): void => {
 		const inp = progRow.createEl('input', {
-			cls: 'hoard-modal-input hoard-schedule-num',
+			cls: 'hoard-modal__input hoard-schedule__number',
 			attr: { type: 'number', min: String(field.min ?? 0), placeholder: '—', 'aria-label': field.aria },
 		});
 		if (field.value !== null) inp.value = String(field.value);
 		inp.addEventListener('input', () => field.onInput(parseInt(inp.value, 10) || null));
 	};
 	groups.forEach((group, i) => {
-		if (i > 0) progRow.createSpan({ cls: 'hoard-schedule-progress-sep hoard-schedule-progress-dot', text: '·' });
-		progRow.createSpan({ cls: 'hoard-modal-label', text: group.label });
+		if (i > 0) progRow.createSpan({ cls: 'hoard-schedule__progress-separator hoard-schedule__progress-separator--dot', text: '·' });
+		progRow.createSpan({ cls: 'hoard-modal__label', text: group.label });
 		makeNum(group.current);
-		progRow.createSpan({ cls: 'hoard-schedule-progress-sep', text: t('ui.schedule.of') });
+		progRow.createSpan({ cls: 'hoard-schedule__progress-separator', text: t('ui.schedule.of') });
 		makeNum(group.total);
 	});
 }
@@ -235,11 +235,11 @@ interface SaveRowOptions {
  * with isValid (already applied once).
  */
 function renderSaveRow(parent: HTMLElement, options: SaveRowOptions): () => void {
-	const btnRow = parent.createDiv({ cls: 'hoard-modal-btn-row' });
-	const cancelBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-mr', text: t('common.cancel') });
+	const btnRow = parent.createDiv({ cls: 'hoard-modal__btn-row' });
+	const cancelBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--margin-right', text: t('common.cancel') });
 	cancelBtn.addEventListener('click', options.onCancel);
 
-	const saveBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('common.save') });
+	const saveBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('common.save') });
 	saveBtn.addEventListener('click', () => {
 		if (!options.isValid()) return;
 		void options.onSave();

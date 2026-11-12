@@ -54,10 +54,10 @@ function setup(opts: Opts = {}) {
 
 async function openPlan(modal: SteamSyncModal): Promise<void> {
 	modal.open();
-	await vi.waitFor(() => expect(modal.contentEl.querySelector('.hoard-steam-summary')).not.toBeNull());
+	await vi.waitFor(() => expect(modal.contentEl.querySelector('.hoard-steam-sync__summary')).not.toBeNull());
 }
 
-const status = (m: SteamSyncModal): string => m.contentEl.querySelector('.hoard-steam-status')!.textContent ?? '';
+const status = (m: SteamSyncModal): string => m.contentEl.querySelector('.hoard-steam-sync__status')!.textContent ?? '';
 
 beforeEach(() => { shownNotices.length = 0; });
 
@@ -70,7 +70,7 @@ describe('SteamSyncModal run', () => {
 		});
 		await openPlan(modal);
 		// unmatched rows are listed by playtime; only ticked ones import
-		const boxes = modal.contentEl.querySelectorAll<HTMLInputElement>('.hoard-steam-row input');
+		const boxes = modal.contentEl.querySelectorAll<HTMLInputElement>('.hoard-steam-sync__row input');
 		expect(boxes).toHaveLength(3);
 		for (const b of [boxes[0]!, boxes[2]!]) { b.checked = true; b.dispatchEvent(new Event('change')); }
 		clickByText(modal.contentEl, 'button', 'Sync');
@@ -104,7 +104,7 @@ describe('SteamSyncModal run', () => {
 		});
 		await openPlan(modal);
 		// title tier of the match: trademark noise and case are ignored
-		const achBox = modal.contentEl.querySelector<HTMLInputElement>('.hoard-steam-option input')!;
+		const achBox = modal.contentEl.querySelector<HTMLInputElement>('.hoard-steam-sync__option input')!;
 		achBox.checked = false;
 		achBox.dispatchEvent(new Event('change'));
 		clickByText(modal.contentEl, 'button', 'All');

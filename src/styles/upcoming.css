@@ -1,9 +1,11 @@
 /* Upcoming history and maybe cards */
+
 /* Feature 2: Upcoming History sub-tab */
-.hoard-airtime-history-card {
+.hoard-airtime__card--history {
   opacity: 0.92;
 }
-.hoard-airtime-history-right {
+
+.hoard-airtime__card-right--history {
   flex-direction: row;
   align-items: center;
   gap: 4px;
@@ -23,12 +25,12 @@
   min-height: 0;
 }
 
-.hoard-maybe-card.hoard-airtime-card-aired {
+.hoard-maybe-card.hoard-airtime__card--aired {
   border-color: var(--color-orange);
   background: color-mix(in srgb, var(--color-orange) 6%, var(--background-secondary));
 }
 
-.hoard-maybe-card-left {
+.hoard-maybe-card__left {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -37,7 +39,7 @@
   overflow: hidden;
 }
 
-.hoard-maybe-card-title {
+.hoard-maybe-card__title {
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;

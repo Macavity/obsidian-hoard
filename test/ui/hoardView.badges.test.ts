@@ -46,7 +46,7 @@ async function open() {
 	const dm = { onChange: () => {}, offChange: () => {} };
 	const view = new HoardView(new WorkspaceLeaf(), plugin as never, dm as never);
 	await view.onOpen();
-	const tabs = (): HTMLButtonElement[] => qsa<HTMLButtonElement>(view.contentEl, '.hoard-tab-btn');
+	const tabs = (): HTMLButtonElement[] => qsa<HTMLButtonElement>(view.contentEl, '.hoard-tab-bar__btn');
 	const label = (name: string): string | undefined => tabs().find((b) => b.textContent?.startsWith(name))?.textContent ?? undefined;
 	return { view, tabs, label, fireResolved: () => resolved() };
 }
@@ -82,7 +82,7 @@ describe('HoardView tab badges', () => {
 		try {
 			const { tabs } = await open();
 			await Promise.resolve();
-			const flagged = tabs().filter((b) => b.classList.contains('hoard-tab-has-badge'));
+			const flagged = tabs().filter((b) => b.classList.contains('hoard-tab-bar__btn--has-badge'));
 			expect(flagged).toHaveLength(2);
 			expect(flagged.every((b) => b.getAttribute('aria-label') !== null)).toBe(true);
 		} finally {

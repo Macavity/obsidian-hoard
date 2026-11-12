@@ -18,47 +18,47 @@ describe('ListTab rows view', () => {
 	it('renders the groups shelf with one card per group and a count line', async () => {
 		const { tab, container } = await setupListTab(files(), {}, 'rows');
 		tab.render();
-		expect(q(container, '.hoard-results-count').textContent).toContain('3 titles');
-		expect(q(container, '.hoard-results-count').textContent).toContain('1 group');
-		const strip = qa(container, '.hoard-rows-strip');
+		expect(q(container, '.hoard-toolbar__results-count').textContent).toContain('3 titles');
+		expect(q(container, '.hoard-toolbar__results-count').textContent).toContain('1 group');
+		const strip = qa(container, '.hoard-rows-view__strip');
 		expect(strip.length).toBeGreaterThan(0);
-		expect(qa(container, '.hoard-card-group')).toHaveLength(1);
+		expect(qa(container, '.hoard-card--group')).toHaveLength(1);
 	});
 
 	it('renders the empty groups shelf message when there are no groups', async () => {
 		const { tab, container } = await setupListTab({ 'W/Movie/A.md': movieNote('A') }, {}, 'rows');
 		tab.render();
-		expect(q(container, '.hoard-rows-shelf-empty')).not.toBeNull();
-		expect(qa(container, '.hoard-card-group')).toHaveLength(0);
+		expect(q(container, '.hoard-rows-view__shelf-empty')).not.toBeNull();
+		expect(qa(container, '.hoard-card--group')).toHaveLength(0);
 	});
 
 	it('hides the groups shelf while a search matches nothing in it', async () => {
 		const { tab, container } = await setupListTab(files(), {}, 'rows');
 		tab.searchQuery = 'zzzz';
 		tab.render();
-		expect(qa(container, '.hoard-card-group')).toHaveLength(0);
-		expect(container.querySelector('.hoard-rows-shelf-empty')).toBeNull();
+		expect(qa(container, '.hoard-card--group')).toHaveLength(0);
+		expect(container.querySelector('.hoard-rows-view__shelf-empty')).toBeNull();
 	});
 
 	it('keeps the group under a search that matches a member or the name', async () => {
 		const { tab, container } = await setupListTab(files(), {}, 'rows');
 		tab.searchQuery = 'saga';
 		tab.render();
-		expect(qa(container, '.hoard-card-group')).toHaveLength(1);
+		expect(qa(container, '.hoard-card--group')).toHaveLength(1);
 	});
 
 	it('drops groups excluded by group filter or without a passing member', async () => {
 		const { tab, container } = await setupListTab(files(), {}, 'rows');
 		tab.filterGroupExclude = new Set(['Saga']);
 		tab.render();
-		expect(qa(container, '.hoard-card-group')).toHaveLength(0);
+		expect(qa(container, '.hoard-card--group')).toHaveLength(0);
 		tab.filterGroupExclude = new Set();
 		tab.filterStatusExclude = new Set(['Watching', 'Plan to watch']);
 		tab.render();
-		expect(qa(container, '.hoard-card-group')).toHaveLength(0);
+		expect(qa(container, '.hoard-card--group')).toHaveLength(0);
 		tab.filterStatusExclude = new Set(['Completed']);
 		tab.render();
-		expect(qa(container, '.hoard-card-group')).toHaveLength(1);
+		expect(qa(container, '.hoard-card--group')).toHaveLength(1);
 	});
 
 	it('renders by-type buckets in settings order, with typed titles', async () => {
@@ -66,9 +66,9 @@ describe('ListTab rows view', () => {
 			rowsLayout: only('byType'),
 		}, 'rows');
 		tab.render();
-		expect(q(container, '.hoard-rows-bytype-title').textContent).toBe('By type');
-		expect(qa(container, '.hoard-rows-bytype-spacer')).toHaveLength(2);
-		expect(container.querySelector('.hoard-rows-shelf-empty')).toBeNull();
+		expect(q(container, '.hoard-rows-view__grouped-title').textContent).toBe('By type');
+		expect(qa(container, '.hoard-rows-view__grouped-spacer')).toHaveLength(2);
+		expect(container.querySelector('.hoard-rows-view__shelf-empty')).toBeNull();
 	});
 
 	it('renders by-status buckets', async () => {
@@ -76,8 +76,8 @@ describe('ListTab rows view', () => {
 			rowsLayout: only('byStatus'),
 		}, 'rows');
 		tab.render();
-		expect(q(container, '.hoard-rows-bytype-title').textContent).toBe('By status');
-		expect(qa(container, '.hoard-rows-bytype-spacer').length).toBeGreaterThanOrEqual(2);
+		expect(q(container, '.hoard-rows-view__grouped-title').textContent).toBe('By status');
+		expect(qa(container, '.hoard-rows-view__grouped-spacer').length).toBeGreaterThanOrEqual(2);
 	});
 
 	it('shows the empty grid message without titles', async () => {
@@ -85,7 +85,7 @@ describe('ListTab rows view', () => {
 			rowsLayout: only('byType'),
 		}, 'rows');
 		tab.render();
-		expect(q(container, '.hoard-rows-bytype .hoard-rows-shelf-empty')).not.toBeNull();
+		expect(q(container, '.hoard-rows-view__grouped .hoard-rows-view__shelf-empty')).not.toBeNull();
 	});
 
 	it('removes the grid section when filtering leaves it empty', async () => {
@@ -94,13 +94,13 @@ describe('ListTab rows view', () => {
 		}, 'rows');
 		tab.searchQuery = 'zzzz';
 		tab.render();
-		expect(container.querySelector('.hoard-rows-bytype')).toBeNull();
+		expect(container.querySelector('.hoard-rows-view__grouped')).toBeNull();
 	});
 
 	it('opens the customize modal from the gear button', async () => {
 		const { tab, container } = await setupListTab(files(), {}, 'rows');
 		tab.render();
-		q(container, '.hoard-rows-customize-btn').click();
+		q(container, '.hoard-rows-customize__btn').click();
 		expect(document.body.textContent).toContain(en.list.rows.watchlistHint);
 	});
 });

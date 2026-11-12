@@ -18,25 +18,25 @@ describe('renderCommunityRating', () => {
 
 	it('shows source, score and votes when a rating is known', () => {
 		const el = render(makeTitle({ id: 'a', communitySource: 'imdb', communityRating: 7.84, communityVotes: 1200 }));
-		expect(el.querySelector('.hoard-community-source--imdb')!.textContent).toBe('IMDb');
-		expect(el.querySelector('.hoard-community-score')!.textContent).toBe('7.8');
-		expect(el.querySelector('.hoard-community-votes')).not.toBeNull();
-		expect(el.querySelector('.hoard-community-empty')).toBeNull();
+		expect(el.querySelector('.hoard-community-rating__source--imdb')!.textContent).toBe('IMDb');
+		expect(el.querySelector('.hoard-community-rating__score')!.textContent).toBe('7.8');
+		expect(el.querySelector('.hoard-community-rating__votes')).not.toBeNull();
+		expect(el.querySelector('.hoard-community-rating__empty')).toBeNull();
 	});
 
 	it('shows AniList as a percentage and skips missing votes', () => {
 		const el = render(makeTitle({ id: 'a', communitySource: 'anilist', communityRating: 81.4 }));
-		expect(el.querySelector('.hoard-community-score')!.textContent).toBe('81%');
-		expect(el.querySelector('.hoard-community-votes')).toBeNull();
+		expect(el.querySelector('.hoard-community-rating__score')!.textContent).toBe('81%');
+		expect(el.querySelector('.hoard-community-rating__votes')).toBeNull();
 	});
 
 	it('shows the empty hint without a rating', () => {
 		const el = render(makeTitle({ id: 'a' }));
-		expect(el.querySelector('.hoard-community-empty')!.textContent).toBe(t('detail.community.empty'));
+		expect(el.querySelector('.hoard-community-rating__empty')!.textContent).toBe(t('detail.community.empty'));
 	});
 
 	it('builds the refresh as a framed shared icon button', () => {
-		const btn = render(makeTitle({ id: 'a' })).querySelector('button.hoard-community-refresh')!;
+		const btn = render(makeTitle({ id: 'a' })).querySelector('button.hoard-community-rating__refresh')!;
 		expect(btn.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(btn.classList.contains('hoard-icon-btn--framed')).toBe(true);
 		expect(btn.getAttribute('data-icon')).toBe('refresh-cw');

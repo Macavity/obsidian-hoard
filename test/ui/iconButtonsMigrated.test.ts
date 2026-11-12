@@ -12,7 +12,7 @@ describe('migrated icon buttons', () => {
 		const onChange = vi.fn();
 		const onCommit = vi.fn();
 		const input = renderSearchBox(parent, { value: 'abc', placeholder: 'p', onChange, onCommit });
-		const clear = parent.querySelector<HTMLButtonElement>('button.hoard-search-clear')!;
+		const clear = parent.querySelector<HTMLButtonElement>('button.hoard-search-box__clear')!;
 		expect(clear.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(clear.getAttribute('data-icon')).toBe('x');
 		expect(clear.getAttribute('aria-label')).toBeTruthy();
@@ -32,7 +32,7 @@ describe('migrated icon buttons', () => {
 	it('selection action bar delete is an x icon button', () => {
 		const parent = document.createElement('div');
 		const bar = renderActionBar(parent, {} as never, { title: 'Delete', selected: new Set(['a']), message: () => 'm', onConfirm: () => Promise.resolve() });
-		const btn = bar.querySelector<HTMLButtonElement>('button.hoard-group-action-btn-delete')!;
+		const btn = bar.querySelector<HTMLButtonElement>('button.hoard-group-header__action-btn--delete')!;
 		expect(btn.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(btn.getAttribute('data-icon')).toBe('x');
 		expect(btn.getAttribute('aria-label')).toBe('Delete');
@@ -43,7 +43,7 @@ describe('migrated icon buttons', () => {
 		document.body.appendChild(parent);
 		const handle = createDatePicker({ parent, value: '2024-02-15', onChange: vi.fn() });
 		handle.inputEl.click();
-		const navs = Array.from(document.body.querySelectorAll<HTMLElement>('button.hoard-datepicker-nav'));
+		const navs = Array.from(document.body.querySelectorAll<HTMLElement>('button.hoard-date-picker__nav'));
 		expect(navs.map((n) => n.getAttribute('data-icon'))).toEqual(['chevron-left', 'chevron-right']);
 		expect(navs.every((n) => n.classList.contains('hoard-icon-btn'))).toBe(true);
 		document.body.replaceChildren();

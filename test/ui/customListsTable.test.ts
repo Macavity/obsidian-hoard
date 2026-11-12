@@ -8,59 +8,59 @@ const qa = (root: ParentNode, sel: string): HTMLElement[] => Array.from(root.que
 describe('custom list table', () => {
 	it('renders header, count and one body row per list row', async () => {
 		const { container } = await setupCustomLists([makeList()]);
-		expect(q(container, '.hoard-cl-tr-header').textContent).toContain('Score');
-		expect(qa(container, '.hoard-cl-tr-body')).toHaveLength(2);
+		expect(q(container, '.hoard-custom-list-table__tr--header').textContent).toContain('Score');
+		expect(qa(container, '.hoard-custom-list-table__tr--body')).toHaveLength(2);
 		expect(container.textContent).toContain('2 titles');
-		expect(qa(container, '.hoard-cl-td-name').map((e) => e.textContent)).toEqual(['Alpha', 'Beta']);
-		expect(qa(container, '.hoard-cl-add-btn')).toHaveLength(2);
+		expect(qa(container, '.hoard-custom-list-table__td--name').map((e) => e.textContent)).toEqual(['Alpha', 'Beta']);
+		expect(qa(container, '.hoard-custom-list-table__row-action--add')).toHaveLength(2);
 	});
 
 	it('omits the library button for unnamed rows', async () => {
 		const { container } = await setupCustomLists([makeList({ rows: [{ id: 'row_1', name: '' }] })]);
-		expect(container.querySelector('.hoard-cl-add-btn')).toBeNull();
+		expect(container.querySelector('.hoard-custom-list-table__row-action--add')).toBeNull();
 	});
 
 	it('ticks a row and persists it', async () => {
 		const { container, stored } = await setupCustomLists([makeList()]);
-		q(container, '.hoard-cl-td-tick .hoard-cl-tick-btn').click();
+		q(container, '.hoard-custom-list-table__td--tick .hoard-custom-list-table__tick-btn').click();
 		await until(() => stored('Backlog').rows[0]!.checked === true);
-		await until(() => q(container, '.hoard-cl-tr-body').classList.contains('hoard-cl-tr-checked'));
+		await until(() => q(container, '.hoard-custom-list-table__tr--body').classList.contains('hoard-custom-list-table__tr--checked'));
 	});
 
 	it('checks and unchecks all visible rows through the header button', async () => {
 		const { container, stored } = await setupCustomLists([makeList()]);
-		q(container, '.hoard-cl-th-tick .hoard-cl-tick-btn').click();
+		q(container, '.hoard-custom-list-table__th--tick .hoard-custom-list-table__tick-btn').click();
 		await until(() => stored('Backlog').rows.every((r) => r.checked === true));
-		await until(() => q(container, '.hoard-cl-th-tick .hoard-cl-tick-btn').classList.contains('is-checked'));
-		q(container, '.hoard-cl-th-tick .hoard-cl-tick-btn').click();
+		await until(() => q(container, '.hoard-custom-list-table__th--tick .hoard-custom-list-table__tick-btn').classList.contains('is-checked'));
+		q(container, '.hoard-custom-list-table__th--tick .hoard-custom-list-table__tick-btn').click();
 		await until(() => stored('Backlog').rows.every((r) => r.checked === false));
 	});
 
 	it('duplicates a row right below the original', async () => {
 		const { container, stored } = await setupCustomLists([makeList()]);
-		q(container, '.hoard-cl-dup-btn').click();
+		q(container, '.hoard-custom-list-table__row-action--duplicate').click();
 		await until(() => stored('Backlog').rows.length === 3);
 		expect(stored('Backlog').rows.map((r) => r.name)).toEqual(['Alpha', 'Alpha', 'Beta']);
 	});
 
 	it('deletes a row', async () => {
 		const { container, stored } = await setupCustomLists([makeList()]);
-		q(container, '.hoard-cl-row-del').click();
+		q(container, '.hoard-custom-list-table__row-action--delete').click();
 		await until(() => stored('Backlog').rows.length === 1);
 		expect(stored('Backlog').rows[0]!.name).toBe('Beta');
 	});
 
 	it('moves a dragged row before the row it is dropped on', async () => {
 		const { container, stored } = await setupCustomLists([makeList()]);
-		const [first, second] = qa(container, '.hoard-cl-tr-body') as [HTMLElement, HTMLElement];
-		q(second, '.hoard-cl-drag-handle').dispatchEvent(new Event('mousedown'));
+		const [first, second] = qa(container, '.hoard-custom-list-table__tr--body') as [HTMLElement, HTMLElement];
+		q(second, '.hoard-custom-list-table__row-action--drag-handle').dispatchEvent(new Event('mousedown'));
 		expect(second.getAttribute('draggable')).toBe('true');
 		second.dispatchEvent(new Event('dragstart'));
-		expect(second.classList.contains('hoard-cl-dragging')).toBe(true);
+		expect(second.classList.contains('hoard-custom-lists__dragging')).toBe(true);
 		first.dispatchEvent(new Event('dragover'));
-		expect(first.classList.contains('hoard-cl-drag-over')).toBe(true);
+		expect(first.classList.contains('hoard-custom-lists__drag-over')).toBe(true);
 		first.dispatchEvent(new Event('dragleave'));
-		expect(first.classList.contains('hoard-cl-drag-over')).toBe(false);
+		expect(first.classList.contains('hoard-custom-lists__drag-over')).toBe(false);
 		first.dispatchEvent(new Event('drop'));
 		second.dispatchEvent(new Event('dragend'));
 		expect(second.getAttribute('draggable')).toBe('false');
@@ -69,7 +69,7 @@ describe('custom list table', () => {
 
 	it('ignores a drop onto the dragged row', async () => {
 		const { container, stored } = await setupCustomLists([makeList()]);
-		const first = q(container, '.hoard-cl-tr-body');
+		const first = q(container, '.hoard-custom-list-table__tr--body');
 		first.dispatchEvent(new Event('dragstart'));
 		first.dispatchEvent(new Event('drop'));
 		expect(stored('Backlog').rows[0]!.name).toBe('Alpha');
@@ -84,7 +84,7 @@ describe('custom list table', () => {
 			rows: [{ id: 'row_1', name: 'Known' }, { id: 'row_2', name: 'Missing' }, { id: 'row_3', name: '  ' }],
 		});
 		const { container, stored } = await setupCustomLists([list], [{ id: 'k', title: 'Known' }]);
-		q(container, '.hoard-cl-autotime-refresh').click();
+		q(container, '.hoard-custom-list-table__autotime-refresh').click();
 		await until(() => stored('Backlog').rows[0]!.col_1 === 42);
 		const rows = stored('Backlog').rows;
 		expect(rows[1]!.col_1).toBe('Not found');
@@ -93,12 +93,12 @@ describe('custom list table', () => {
 
 	it('pins column widths on grab, applies the drag and persists on release', async () => {
 		const { container, stored } = await setupCustomLists([makeList()]);
-		const handle = q(container, '.hoard-cl-th[data-wl-col="col_1"] .hoard-cl-col-resize');
+		const handle = q(container, '.hoard-custom-list-table__th[data-wl-col="col_1"] .hoard-custom-list-table__column-resize');
 		handle.dispatchEvent(new MouseEvent('mousedown', { clientX: 10, bubbles: true }));
-		expect(document.body.classList.contains('hoard-cl-col-resizing')).toBe(true);
+		expect(document.body.classList.contains('hoard-custom-list-table__column-resizing')).toBe(true);
 		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 60 }));
 		document.dispatchEvent(new MouseEvent('mouseup'));
-		expect(document.body.classList.contains('hoard-cl-col-resizing')).toBe(false);
+		expect(document.body.classList.contains('hoard-custom-list-table__column-resizing')).toBe(false);
 		await until(() => stored('Backlog').columns.find((c) => c.id === 'col_1')?.width === 190);
 		expect(stored('Backlog').columns.find((c) => c.id === 'col_2')?.width).toBe(140);
 		expect(stored('Backlog').nameWidth).toBe(140);
@@ -114,16 +114,16 @@ describe('custom list icon buttons', () => {
 			expect(el.classList.contains('hoard-icon-btn')).toBe(true);
 			return el.getAttribute('data-icon');
 		};
-		expect(icon('.hoard-cl-drag-handle')).toBe('grip-vertical');
-		expect(icon('.hoard-cl-add-btn')).toBe('plus');
-		expect(icon('.hoard-cl-dup-btn')).toBe('copy');
-		expect(icon('.hoard-cl-row-del')).toBe('x');
-		expect(icon('.hoard-cl-sub-tab-del')).toBe('x');
-		expect(icon('.hoard-cl-sub-tab-add')).toBe('plus');
-		expect(q(container, '.hoard-cl-sub-tab-del').getAttribute('aria-label')).toBe('Delete list "Backlog"');
+		expect(icon('.hoard-custom-list-table__row-action--drag-handle')).toBe('grip-vertical');
+		expect(icon('.hoard-custom-list-table__row-action--add')).toBe('plus');
+		expect(icon('.hoard-custom-list-table__row-action--duplicate')).toBe('copy');
+		expect(icon('.hoard-custom-list-table__row-action--delete')).toBe('x');
+		expect(icon('.hoard-custom-lists__subtab-delete')).toBe('x');
+		expect(icon('.hoard-custom-lists__subtab-add')).toBe('plus');
+		expect(q(container, '.hoard-custom-lists__subtab-delete').getAttribute('aria-label')).toBe('Delete list "Backlog"');
 		// mouse-only grip: no tab stop without a keyboard action behind it
-		expect(q(container, '.hoard-cl-drag-handle').getAttribute('tabindex')).toBe('-1');
-		expect(q(container, '.hoard-cl-drag-handle').getAttribute('aria-hidden')).toBe('true');
+		expect(q(container, '.hoard-custom-list-table__row-action--drag-handle').getAttribute('tabindex')).toBe('-1');
+		expect(q(container, '.hoard-custom-list-table__row-action--drag-handle').getAttribute('aria-hidden')).toBe('true');
 	});
 
 	it('renders the autotime refresh as a small icon button', async () => {
@@ -134,7 +134,7 @@ describe('custom list icon buttons', () => {
 			],
 		});
 		const { container } = await setupCustomLists([list]);
-		const btn = q(container, '.hoard-cl-autotime-refresh');
+		const btn = q(container, '.hoard-custom-list-table__autotime-refresh');
 		expect(btn.classList.contains('hoard-icon-btn--sm')).toBe(true);
 		expect(btn.getAttribute('data-icon')).toBe('refresh-cw');
 	});
@@ -143,9 +143,9 @@ describe('custom list icon buttons', () => {
 describe('custom list tab reordering', () => {
 	it('moves a dragged list tab to the tab it is dropped on and saves the order', async () => {
 		const { container, plugin } = await setupCustomLists([makeList({ name: 'Alpha' }), makeList({ name: 'Beta' })]);
-		const tabNames = (): string[] => qa(container, '.hoard-cl-sub-tab-name').map((s) => s.textContent ?? '');
+		const tabNames = (): string[] => qa(container, '.hoard-custom-lists__subtab-name').map((s) => s.textContent ?? '');
 		expect(tabNames()).toEqual(['Alpha', 'Beta']);
-		const [alpha, beta] = qa(container, '.hoard-cl-sub-tab') as [HTMLElement, HTMLElement];
+		const [alpha, beta] = qa(container, '.hoard-custom-lists__subtab') as [HTMLElement, HTMLElement];
 		beta.dispatchEvent(new Event('dragstart'));
 		// dropping a tab on itself is a no-op
 		beta.dispatchEvent(new Event('drop'));

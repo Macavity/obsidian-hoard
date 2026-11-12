@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../src/CollageUtil', () => ({ renderGroupCollage: vi.fn() }));
 vi.mock('../../src/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
-vi.mock('../../src/PosterCard', () => ({ openCardMenu: vi.fn() }));
+vi.mock('../../src/PosterCard', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../src/PosterCard')>()),
+	openCardMenu: vi.fn(),
+}));
 
 import { groupCountLabel, groupLetter, renderGroupCard, type GroupCardOptions } from '../../src/ui/GroupCard';
 import { renderGroupCollage } from '../../src/CollageUtil';
@@ -22,6 +25,7 @@ class El {
 		for (const c of (opts.cls ?? '').split(' ').filter(Boolean)) this.classes.add(c);
 		this.text = opts.text ?? '';
 	}
+	setCssProps(props: Record<string, string>): void { Object.assign(this.style, props); }
 	createDiv(opts?: { cls?: string }): El { return this.createEl('div', opts); }
 	createSpan(opts?: { cls?: string; text?: string }): El { return this.createEl('span', opts); }
 	createEl(tag: string, opts?: { cls?: string; text?: string }): El {
@@ -84,15 +88,21 @@ describe('renderGroupCard', () => {
 		const parent = new El();
 		renderGroupCard(parent as unknown as HTMLElement, opts({ selected: true }));
 		const card = parent.children[0]!;
-		expect(card.classes.has('hoard-card-group')).toBe(true);
-		expect(card.classes.has('hoard-card-selected')).toBe(true);
+		expect(card.classes.has('hoard-card--group')).toBe(true);
+		expect(card.classes.has('hoard-card--selected')).toBe(true);
 		expect(card.dataset.groupId).toBe('g1');
-		expect(card.find('hoard-card-overlay')).toBeDefined();
-		expect(card.find('hoard-card-title')!.text).toBe('zelda');
-		const badge = card.find('hoard-card-type-badge')!;
+		expect(card.find('hoard-card__overlay')).toBeDefined();
+		expect(card.find('hoard-card__title')!.text).toBe('zelda');
+		const badge = card.find('hoard-card__type-badge')!;
 		expect(badge.textContent).toBe('2 games');
-		expect(badge.style.backgroundColor).toBe('#123456');
+		expect(badge.style['--hoard-card-type-color']).toBe('#123456');
 		expect(vi.mocked(renderGroupCollage)).toHaveBeenCalled();
+	});
+
+	it('no type colour: the badge variable stays empty', () => {
+		const parent = new El();
+		renderGroupCard(parent as unknown as HTMLElement, opts({ typeColor: '' }));
+		expect(parent.children[0]!.find('hoard-card__type-badge')!.style['--hoard-card-type-color']).toBe('');
 	});
 
 	it('under mode: wraps in a cell, pins the height on the cell, click is on the cell', () => {
@@ -100,9 +110,10 @@ describe('renderGroupCard', () => {
 		const o = opts({ textUnder: true, cardHeight: 200 });
 		renderGroupCard(parent as unknown as HTMLElement, o);
 		const cell = parent.children[0]!;
-		expect(cell.classes.has('hoard-card-cell')).toBe(true);
-		expect(cell.style.height).toBe('200px');
-		expect(cell.find('hoard-card-under-title')!.text).toBe('zelda');
+		expect(cell.classes.has('hoard-card__cell')).toBe(true);
+		expect(cell.style['--hoard-card-pinned-height']).toBe('200px');
+		expect(cell.classes.has('hoard-card__cell--pinned')).toBe(true);
+		expect(cell.find('hoard-card__under-title')!.text).toBe('zelda');
 		cell.fire('click');
 		expect(o.onActivate).toHaveBeenCalledWith(cell.children[0]);
 	});
@@ -113,7 +124,7 @@ describe('renderGroupCard', () => {
 		renderGroupCard(parent as unknown as HTMLElement, o);
 		const card = parent.children[0]!;
 		const stop = vi.fn();
-		const menuBtn = card.find('hoard-card-menu-btn')!;
+		const menuBtn = card.find('hoard-card__menu-btn')!;
 		expect(menuBtn.classes.has('hoard-icon-btn')).toBe(true);
 		expect(menuBtn.attrs['data-icon']).toBe('more-vertical');
 		menuBtn.fire('click', { stopPropagation: stop });

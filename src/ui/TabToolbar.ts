@@ -18,9 +18,9 @@ export interface SearchBoxOptions {
 
 /** Compact inline search with a clear button that shows only while there is text. */
 export function renderSearchBox(parent: HTMLElement, opts: SearchBoxOptions): HTMLInputElement {
-	const searchWrap = parent.createDiv({ cls: 'hoard-reading-search-wrap' });
+	const searchWrap = parent.createDiv({ cls: 'hoard-search-box__wrap' });
 	const input = searchWrap.createEl('input', {
-		cls: 'hoard-reading-search-input',
+		cls: 'hoard-search-box__input',
 		attr: { type: 'text', placeholder: opts.placeholder },
 	});
 	input.value = opts.value;
@@ -28,7 +28,7 @@ export function renderSearchBox(parent: HTMLElement, opts: SearchBoxOptions): HT
 	const clearBtn = createIconButton(searchWrap, {
 		icon: 'x',
 		label: t('ui.toolbar.clearSearch'),
-		cls: 'hoard-search-clear',
+		cls: 'hoard-search-box__clear',
 	});
 	const syncClear = () => clearBtn.toggleClass('is-visible', input.value.length > 0);
 	syncClear();
@@ -58,14 +58,14 @@ export function openRenameGroupPrompt(app: App, current: string, onSave: (name: 
 		cls: 'hoard-input',
 		attr: { type: 'text', value: current, placeholder: t('ui.toolbar.groupName') },
 	});
-	const btnRow = modal.contentEl.createDiv({ cls: 'hoard-modal-btn-row' });
+	const btnRow = modal.contentEl.createDiv({ cls: 'hoard-modal__btn-row' });
 	const submit = (): void => {
 		const newName = input.value.trim();
 		if (newName && newName !== current) onSave(newName);
 		modal.close();
 	};
 	btnRow
-		.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('common.save') })
+		.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('common.save') })
 		.addEventListener('click', submit);
 	btnRow
 		.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') })
@@ -81,7 +81,7 @@ export function openRenameGroupPrompt(app: App, current: string, onSave: (name: 
 	}, 0);
 }
 
-/** Applies/removes hoard-card-selected on every rendered card; `idOf` reads the selection id off a card. */
+/** Applies/removes hoard-card--selected on every rendered card; `idOf` reads the selection id off a card. */
 export function syncSelectionClasses(
 	container: HTMLElement,
 	selected: Set<string>,
@@ -89,7 +89,7 @@ export function syncSelectionClasses(
 ): void {
 	container.querySelectorAll<HTMLElement>('.hoard-card').forEach((card) => {
 		const id = idOf(card);
-		card.classList.toggle('hoard-card-selected', !!id && selected.has(id));
+		card.classList.toggle('hoard-card--selected', !!id && selected.has(id));
 	});
 }
 
@@ -111,7 +111,7 @@ export function toggleCardSelected(
 	const now = selected.has(id);
 	container
 		.querySelectorAll<HTMLElement>(cardSelector)
-		.forEach((el) => el.classList.toggle('hoard-card-selected', now));
+		.forEach((el) => el.classList.toggle('hoard-card--selected', now));
 	return now;
 }
 
@@ -148,7 +148,7 @@ function renderSavedFilterButton(
 	onClick: () => void,
 ): HTMLButtonElement {
 	const btn = parent.createEl('button', {
-		cls: `hoard-btn hoard-btn-sm${active ? ' hoard-btn-preset-active' : ''}`,
+		cls: `hoard-btn hoard-btn--sm${active ? ' hoard-btn--preset-active' : ''}`,
 		text: t('ui.toolbar.savedFilter'),
 	});
 	btn.addEventListener('click', onClick);
@@ -166,7 +166,7 @@ export interface SelectionButtonsOptions {
 /** The All/None button of selection mode: selects all visible, or clears when something is selected. */
 export function renderSelectAllButton(parent: HTMLElement, hasSelection: boolean, onClick: () => void): HTMLButtonElement {
 	const btn = parent.createEl('button', {
-		cls: 'hoard-btn hoard-btn-sm',
+		cls: 'hoard-btn hoard-btn--sm',
 		text: hasSelection ? t('common.none') : t('ui.toolbar.all'),
 	});
 	btn.title = hasSelection ? t('ui.toolbar.deselectAll') : t('ui.toolbar.selectAllVisible');
@@ -179,7 +179,7 @@ export function renderSelectionButtons(parent: HTMLElement, opts: SelectionButto
 	if (opts.selectionMode) renderSelectAllButton(parent, opts.hasSelection, opts.onToggleAll);
 	// in selection mode the button is the way out: red Cancel
 	const selBtn = parent.createEl('button', {
-		cls: `hoard-btn hoard-btn-sm${opts.selectionMode ? ' hoard-btn-cancel' : ''}`,
+		cls: `hoard-btn hoard-btn--sm${opts.selectionMode ? ' hoard-btn--cancel' : ''}`,
 		text: opts.selectionMode ? t('common.cancel') : t('ui.toolbar.select'),
 	});
 	selBtn.addEventListener('click', opts.onToggleMode);
@@ -212,8 +212,8 @@ export function renderToolbarCore(controls: HTMLElement, opts: ToolbarCoreOption
 
 /** The green "+ add" button in its wrapper, far right on the toolbar row. */
 export function renderAddButton(parent: HTMLElement, onClick: () => void): HTMLButtonElement {
-	const wrap = parent.createDiv({ cls: 'hoard-add-btn-wrap' });
-	const btn = wrap.createEl('button', { cls: 'hoard-add-btn hoard-btn-success', text: t('ui.toolbar.add') });
+	const wrap = parent.createDiv({ cls: 'hoard-toolbar__add-btn-wrap' });
+	const btn = wrap.createEl('button', { cls: 'hoard-toolbar__add-btn hoard-btn--success', text: t('ui.toolbar.add') });
 	btn.addEventListener('click', (e) => {
 		e.stopPropagation();
 		onClick();
@@ -263,8 +263,8 @@ export function applySortState(f: SortFields, primary: SortState, secondary: Sor
 
 /** The "Sorting ▼" button; clicking toggles the shared sort popover under it. */
 export function renderSortingDropdown(parent: HTMLElement, fields: SortFields, opts: SortingDropdownOptions): void {
-	const wrap = parent.createDiv({ cls: 'hoard-add-btn-wrap' });
-	const btn = wrap.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('ui.toolbar.sorting') });
+	const wrap = parent.createDiv({ cls: 'hoard-toolbar__add-btn-wrap' });
+	const btn = wrap.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('ui.toolbar.sorting') });
 	btn.addEventListener('click', (e) => {
 		e.stopPropagation();
 		toggleSortPopover({
@@ -301,24 +301,24 @@ export interface ViewDropdownOptions<K extends string> {
 
 /** The icon-only view button with its Cards/List popover. */
 export function renderViewDropdown<K extends string>(parent: HTMLElement, opts: ViewDropdownOptions<K>): void {
-	const wrap = parent.createDiv({ cls: 'hoard-add-btn-wrap' });
-	const btn = wrap.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-view-btn' });
+	const wrap = parent.createDiv({ cls: 'hoard-toolbar__add-btn-wrap' });
+	const btn = wrap.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-view-switch__btn' });
 	setIcon(btn, opts.options.find((o) => o.key === opts.current)?.icon ?? 'list');
 	btn.title = t('ui.toolbar.view');
 
 	btn.addEventListener('click', (e) => {
 		e.stopPropagation();
-		const existing = wrap.querySelector('.hoard-dropdown');
+		const existing = wrap.querySelector('.hoard-popover');
 		if (existing) { existing.remove(); return; }
 
-		const panel = wrap.createDiv({ cls: 'hoard-dropdown hoard-view-panel' });
+		const panel = wrap.createDiv({ cls: 'hoard-popover hoard-view-switch__panel' });
 		for (const opt of opts.options) {
 			const active = opts.current === opt.key;
-			const row = panel.createDiv({ cls: `hoard-view-option-row${active ? ' is-active' : ''}` });
-			setIcon(row.createSpan({ cls: 'hoard-view-option-icon' }), opt.icon);
-			row.createSpan({ cls: 'hoard-view-option-label', text: opt.label });
+			const row = panel.createDiv({ cls: `hoard-view-switch__option-row${active ? ' is-active' : ''}` });
+			setIcon(row.createSpan({ cls: 'hoard-view-switch__option-icon' }), opt.icon);
+			row.createSpan({ cls: 'hoard-view-switch__option-label', text: opt.label });
 			if (active) {
-				setIcon(row.createSpan({ cls: 'hoard-view-option-check' }), 'check');
+				setIcon(row.createSpan({ cls: 'hoard-view-switch__option-check' }), 'check');
 			}
 			row.addEventListener('click', (ev) => {
 				ev.stopPropagation();

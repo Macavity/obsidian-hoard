@@ -143,18 +143,18 @@ describe('tracker header', () => {
 		const w = newWorld({ titles: [title()], entries: [entry(), entry({ id: 'e2', titleId: 'gone' })] });
 		const { container, tab } = makeTab(w);
 		tab.render();
-		expect(container.querySelector('.hoard-list-count')?.textContent).toBe('1');
+		expect(container.querySelector('.hoard-list__count')?.textContent).toBe('1');
 		expect(container.querySelector('.hoard-action-bar')).toBeNull();
-		const select = qsa<HTMLButtonElement>(container, '.hoard-header-controls-right button')[0]!;
+		const select = qsa<HTMLButtonElement>(container, '.hoard-toolbar__controls-right button')[0]!;
 		select.click();
 		expect(tab.selectionMode).toBe(true);
-		expect(container.querySelector('.hoard-airtime-select-cb')).not.toBeNull();
+		expect(container.querySelector('.hoard-airtime__select-checkbox')).not.toBeNull();
 	});
 
 	it('hides the count when nothing resolves', () => {
 		const { container, tab } = makeTab(newWorld({ entries: [entry()] }));
 		tab.render();
-		expect(container.querySelector('.hoard-list-count')).toBeNull();
+		expect(container.querySelector('.hoard-list__count')).toBeNull();
 	});
 
 	it('select-all picks every entry, then clears; selected items show the action bar', async () => {
@@ -162,7 +162,7 @@ describe('tracker header', () => {
 		const { container, tab, calls } = makeTab(w);
 		tab.selectionMode = true;
 		tab.render();
-		const selectAll = (): HTMLElement => container.querySelector<HTMLElement>('.hoard-header-controls > :first-child')!;
+		const selectAll = (): HTMLElement => container.querySelector<HTMLElement>('.hoard-toolbar__controls > :first-child')!;
 		selectAll().click();
 		expect([...tab.selectedItems]).toEqual(['e1', 'e2']);
 		expect(container.querySelector('.hoard-action-bar')).not.toBeNull();
@@ -181,20 +181,20 @@ describe('tracker header', () => {
 		tab.selectionMode = true;
 		tab.selectedItems.add('e1');
 		tab.render();
-		container.querySelector<HTMLElement>('.hoard-header-controls > :nth-child(2)')!.click();
+		container.querySelector<HTMLElement>('.hoard-toolbar__controls > :nth-child(2)')!.click();
 		expect(tab.selectedItems.size).toBe(0);
 	});
 
 	it('add button opens the add flow without bubbling', () => {
 		const { container, tab } = makeTab(newWorld());
 		tab.render();
-		container.querySelector<HTMLElement>('.hoard-add-btn')!.click();
+		container.querySelector<HTMLElement>('.hoard-toolbar__add-btn')!.click();
 		expect(Notice.shown).toEqual([t('airtime.notices.noTitles')]);
 	});
 });
 
 describe('tick flow', () => {
-	const tickBtn = (c: HTMLElement): HTMLButtonElement => c.querySelector<HTMLButtonElement>('.hoard-airtime-action-btn-tick')!;
+	const tickBtn = (c: HTMLElement): HTMLButtonElement => c.querySelector<HTMLButtonElement>('.hoard-airtime__action-btn--tick')!;
 
 	it('final episode: final wording, removes the entry', async () => {
 		const w = newWorld({ titles: [title({ totalEpisodes: 12 })], entries: [entry({ currentEpisode: 12 })] });
@@ -233,7 +233,7 @@ describe('tick flow', () => {
 		});
 		const { container, tab } = makeTab(w);
 		tab.render();
-		const [final, mid] = qsa<HTMLButtonElement>(container, '.hoard-airtime-action-btn-tick');
+		const [final, mid] = qsa<HTMLButtonElement>(container, '.hoard-airtime__action-btn--tick');
 		expect(final!.getAttribute('aria-label')).toBe(t('airtime.actions.finalChapter'));
 		expect(mid!.getAttribute('aria-label')).toBe(t('airtime.actions.markChapter'));
 		mid!.click();

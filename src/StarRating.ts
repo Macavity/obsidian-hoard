@@ -51,21 +51,21 @@ export function renderStarRating(
 	container.empty();
 	container.addClass('hoard-star-rating');
 
-	const starsWrap = container.createSpan({ cls: 'hoard-star-rating-stars' });
+	const starsWrap = container.createSpan({ cls: 'hoard-star-rating__stars' });
 	const stars: HTMLElement[] = [];
 	for (let i = 1; i <= 5; i++) {
-		stars.push(starsWrap.createSpan({ cls: 'hoard-star', text: '★' }));
+		stars.push(starsWrap.createSpan({ cls: 'hoard-star-rating__star', text: '★' }));
 	}
 
 	const labelEl = options.showLabel
-		? container.createSpan({ cls: 'hoard-star-rating-label' })
+		? container.createSpan({ cls: 'hoard-star-rating__label' })
 		: null;
 
 	const paint = (value: number): void => {
 		// every filled star takes the current value's tier colour, so the whole row recolours as the tier
 		// changes on hover
 		const color = ratingColor(value, options.tiers);
-		container.style.setProperty('--hoard-rating-color', color || 'var(--text-faint)');
+		container.setCssProps({ '--hoard-star-rating-color': color || 'var(--text-faint)' });
 		stars.forEach((star, idx) => {
 			const i = idx + 1;
 			star.toggleClass('is-active', value >= i);
@@ -74,7 +74,7 @@ export function renderStarRating(
 		if (labelEl) {
 			labelEl.textContent = ratingLabel(value, options.tiers);
 			labelEl.toggleClass('is-unrated', ratingTierIndex(value) === 0);
-			labelEl.style.color = ratingColor(value, options.tiers) || '';
+			labelEl.setCssProps({ '--hoard-star-rating-label-color': color || '' });
 		}
 	};
 	paint(currentValue);

@@ -1,12 +1,13 @@
 /* Filters dropdown panel */
+
 /* ══ FILTERS DROPDOWN PANEL ══ */
 
-.hoard-filters-panel {
+.hoard-filter-panel {
   min-width: 240px;
   padding: 8px 0;
 }
 
-.hoard-filter-global-btns {
+.hoard-filter-panel__global-btns {
   display: flex;
   gap: 6px;
   padding: 4px 12px 8px;
@@ -14,12 +15,12 @@
   margin-bottom: 4px;
 }
 
-.hoard-filter-section {
+.hoard-filter-panel__section {
   padding: 0;
 }
 
 /* collapsible section header */
-.hoard-filter-section-header {
+.hoard-filter-panel__section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -28,37 +29,37 @@
   user-select: none;
 }
 
-.hoard-filter-section-header:hover {
+.hoard-filter-panel__section-header:hover {
   background: var(--background-modifier-hover);
 }
 
-.hoard-filter-section-header .hoard-filter-label {
+.hoard-filter-panel__section-header .hoard-filter-panel__label {
   margin-bottom: 0;
   width: auto;
 }
 
-.hoard-filter-chevron {
+.hoard-filter-panel__chevron {
   font-size: 10px;
   color: var(--text-muted);
 }
 
-.hoard-filter-section-content {
+.hoard-filter-panel__section-content {
   display: block;
   padding: 2px 12px 6px;
 }
 
 /* Wrapper around the Apply button at the bottom of the filter popover. */
-.hoard-filter-apply-wrap {
+.hoard-filter-panel__apply-wrap {
   padding: 6px 12px 2px;
 }
 
-.hoard-filter-section .hoard-filter-label {
+.hoard-filter-panel__section .hoard-filter-panel__label {
   display: block;
   margin-bottom: 4px;
   width: auto;
 }
 
-.hoard-filter-checkbox-row {
+.hoard-filter-panel__checkbox-row {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -67,51 +68,51 @@
   cursor: pointer;
 }
 
-.hoard-filter-checkbox-row input[type="checkbox"] {
+.hoard-filter-panel__checkbox-row input[type="checkbox"] {
   margin: 0;
   cursor: pointer;
 }
 
 /* standalone row, so it needs the padding sections provide */
-.hoard-filter-favorites-row {
+.hoard-filter-panel__checkbox-row--favorites {
   padding: 2px 12px 4px;
 }
 
-.hoard-favorites-filter {
+.hoard-filter-panel__favorites-filter {
   color: var(--text-error);
   font-size: 11px;
 }
 
 /* Games "🎁 Wishlist" standalone filter row — the Favorites-row treatment. */
-.hoard-wishlist-filter {
+.hoard-filter-panel__wishlist-filter {
   color: #EAB308;
   font-size: 11px;
 }
 
-.hoard-sorting-panel {
+.hoard-sort-panel {
   min-width: 200px;
   padding: 8px 0;
 }
 
 /* ListTab — View popover (Cards / List switcher) */
-.hoard-view-btn {
+.hoard-view-switch__btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 3px 6px;
-  border: 0.5px solid rgba(var(--color-blue-rgb), 0.65);
+  border: 0.5px solid rgb(var(--color-blue-rgb), 0.65);
 }
 
-.hoard-view-btn svg {
+.hoard-view-switch__btn svg {
   width: 16px;
   height: 16px;
 }
 
-.hoard-view-panel {
+.hoard-view-switch__panel {
   min-width: 190px;
 }
 
-.hoard-view-option-row {
+.hoard-view-switch__option-row {
   /* fixed grid + trailing check so the rows align */
   display: grid;
   grid-template-columns: 14px 1fr auto;
@@ -123,61 +124,61 @@
   color: var(--text-normal);
 }
 
-.hoard-view-option-row:hover {
+.hoard-view-switch__option-row:hover {
   background: var(--background-modifier-hover);
 }
 
-.hoard-view-option-row.is-active {
+.hoard-view-switch__option-row.is-active {
   color: var(--text-accent);
 }
 
-.hoard-view-option-label {
+.hoard-view-switch__option-label {
   grid-column: 2;
   white-space: nowrap;
 }
 
-.hoard-view-option-icon,
-.hoard-view-option-check {
+.hoard-view-switch__option-icon,
+.hoard-view-switch__option-check {
   display: flex;
   align-items: center;
   color: var(--text-muted);
 }
 
-.hoard-view-option-icon svg,
-.hoard-view-option-check svg {
+.hoard-view-switch__option-icon svg,
+.hoard-view-switch__option-check svg {
   width: 14px;
   height: 14px;
 }
 
-.hoard-view-option-row.is-active .hoard-view-option-icon,
-.hoard-view-option-check {
+.hoard-view-switch__option-row.is-active .hoard-view-switch__option-icon,
+.hoard-view-switch__option-check {
   color: var(--text-accent);
 }
 
-.hoard-view-option-icon {
+.hoard-view-switch__option-icon {
   grid-column: 1;
 }
 
-.hoard-view-option-check {
+.hoard-view-switch__option-check {
   grid-column: 3;
   justify-self: end;
 }
 
 /* Rows customize modal (RowsCustomizeModal) */
 
-.hoard-rows-customize-hint {
+.hoard-rows-customize__hint {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   margin-bottom: 12px;
 }
 
-.hoard-rows-customize-list {
+.hoard-rows-customize__list {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.hoard-rows-customize-row {
+.hoard-rows-customize__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -188,39 +189,39 @@
   background: var(--background-secondary);
 }
 
-.hoard-rows-customize-name {
+.hoard-rows-customize__name {
   font-weight: 500;
   color: var(--text-normal);
 }
 
-.hoard-rows-customize-controls {
+.hoard-rows-customize__controls {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 /* framed icon buttons; the base handles size and hover */
-button.hoard-rows-customize-move:disabled {
+button.hoard-rows-customize__move:disabled {
   opacity: 0.35;
   cursor: default;
   background: none;
 }
 
-.hoard-filter-row {
+.hoard-filter-panel__row {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 4px 12px;
 }
 
-.hoard-filter-label {
+.hoard-filter-panel__label {
   font-size: 11px;
   color: var(--text-muted);
   width: 54px;
   flex-shrink: 0;
 }
 
-.hoard-filter-row .hoard-select {
+.hoard-filter-panel__row .hoard-input__select {
   flex: 1;
   min-width: 0;
 }

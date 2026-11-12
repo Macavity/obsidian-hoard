@@ -164,7 +164,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		renderMediaFields(form, this.media, true);
 
 		// status + priority paired 50/50 (status excludes "To be released" — it follows releaseDate)
-		const statusPriRow = form.createDiv({ cls: 'hoard-modal-row hoard-modal-row-pair' });
+		const statusPriRow = form.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });
 		const statuses = this.plugin.settings.statuses.filter((s) => s.name !== 'To be released');
 		nameSelect(makeCell(statusPriRow, t('add.status')), statuses.map((s) => s.name), this.fieldStatus,
 			(v) => { this.fieldStatus = v; }, false, statusLabel);
@@ -172,7 +172,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 			this.fieldPriority, (v) => { this.fieldPriority = v; }, false, priorityLabel);
 
 		const ratingRow = makeRow(t('add.rating'));
-		const starsWrap = ratingRow.createDiv({ cls: 'hoard-stars' });
+		const starsWrap = ratingRow.createDiv({ cls: 'hoard-star-rating--row' });
 		const paintStars = (): void => {
 			renderStarRating(starsWrap, this.fieldRating, {
 				allowHalf: this.plugin.settings.halfStarRatings ?? false,
@@ -186,7 +186,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		const startRow = makeRow(t('add.dateStarted'));
 		createDatePicker({
 			parent: startRow,
-			inputCls: 'hoard-modal-input',
+			inputCls: 'hoard-modal__input',
 			value: this.fieldDateStarted || null,
 			onChange: (iso) => { this.fieldDateStarted = iso ?? ''; },
 		});
@@ -196,15 +196,15 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		if (this.fieldSeasons.length > 0) {
 			const seasRow = makeRow(t('add.seasons'));
 			seasRow.createSpan({
-				cls: 'hoard-modal-info',
+				cls: 'hoard-modal__info',
 				text: this.fieldSeasons
 					.map((s) => t('add.title.seasonEpisodes', { name: s.name, count: s.episodes }))
 					.join(', '),
 			});
 		}
 
-		const btnRow = form.createDiv({ cls: 'hoard-modal-btn-row' });
-		const addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('add.title.submit') });
+		const btnRow = form.createDiv({ cls: 'hoard-modal__btn-row' });
+		const addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('add.title.submit') });
 		addBtn.addEventListener('click', () => void this.addTitle());
 	}
 

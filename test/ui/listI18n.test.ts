@@ -13,8 +13,8 @@ describe('list i18n', () => {
 		const root = new El('root');
 		renderModePill(root as unknown as HTMLElement, () => ({ singleplayer: false, coop: false, multiplayer: false }), () => {});
 		const pill = root.find('hoard-mode-pill')!;
-		const coop = pill.find('hoard-mode-pill-coop')!;
-		expect(coop.find('hoard-mode-pill-label')!.text).toBe(de.list.mode.coop.label);
+		const coop = pill.find('hoard-mode-pill__segment--coop')!;
+		expect(coop.find('hoard-mode-pill__label')!.text).toBe(de.list.mode.coop.label);
 		expect(coop.attr['aria-label']).toBe(de.list.mode.coop.toggle);
 		expect(de.list.mode.coop.label).not.toBe('Co-op');
 	});
@@ -25,7 +25,7 @@ describe('list i18n', () => {
 		renderShelfTitle(root as unknown as HTMLElement, 'Favoriten', 1, {
 			ids: ['a'], selected: new Set(), onToggle: () => {},
 		});
-		const box = root.find('hoard-shelf-select')!;
+		const box = root.find('hoard-rows-view__shelf-select')!;
 		expect(box.attr['aria-label']).toBe(de.list.rows.selectAllIn.replace('{label}', 'Favoriten'));
 	});
 });

@@ -1,6 +1,7 @@
 /* Status bar counter, Customize cards settings */
+
 /* Status bar: Upcoming "due" counter */
-.hoard-statusbar-upcoming {
+.hoard-statusbar {
   cursor: pointer;
   color: var(--color-orange);
 }
@@ -8,18 +9,19 @@
 /* Cards group (Settings → Customize) */
 
 /* text-placement picker: two mini card previews */
-.hoard-card-style-picker {
+.hoard-card-style__picker {
   display: flex;
   gap: 10px;
 }
 
-.hoard-card-style-option {
+.hoard-card-style__option {
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
   padding: 12px 10px 10px;
+
   /* Obsidian pins button height to --input-height; let the content size the tile */
   height: auto;
   border-radius: 8px;
@@ -29,18 +31,18 @@
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.hoard-card-style-option:hover {
+.hoard-card-style__option:hover {
   background: var(--background-modifier-hover);
 }
 
-/* Selected option glows in the group's green accent (inherited from .hoard-sg--cards). */
-.hoard-card-style-option.is-active {
-  border-color: rgb(var(--hoard-sg-accent));
-  box-shadow: 0 0 0 1px rgb(var(--hoard-sg-accent));
+/* Selected option glows in the group's green accent (inherited from .hoard-settings-group--cards). */
+.hoard-card-style__option.is-active {
+  border-color: rgb(var(--hoard-settings-group-accent));
+  box-shadow: 0 0 0 1px rgb(var(--hoard-settings-group-accent));
 }
 
 /* fixed-height stage so both variants align */
-.hoard-card-style-thumb {
+.hoard-card-style__thumb {
   width: 46px;
   height: 84px;
   flex: 0 0 auto;
@@ -49,7 +51,7 @@
   gap: 5px;
 }
 
-.hoard-card-style-thumb-poster {
+.hoard-card-style__thumb-poster {
   position: relative;
   width: 46px;
   height: 69px;
@@ -58,48 +60,48 @@
   background: linear-gradient(135deg, #6b7280, #3f4450);
 }
 
-.hoard-card-style-thumb.is-inside .hoard-card-style-thumb-poster {
+.hoard-card-style__thumb.is-inside .hoard-card-style__thumb-poster {
   height: 84px;
 }
 
-.hoard-card-style-thumb-lines {
+.hoard-card-style__thumb-lines {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 /* Inside variant: pin the lines to the poster bottom over a scrim. */
-.hoard-card-style-thumb.is-inside .hoard-card-style-thumb-lines {
+.hoard-card-style__thumb.is-inside .hoard-card-style__thumb-lines {
   position: absolute;
   left: 6px;
   right: 6px;
   bottom: 6px;
   padding-top: 14px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  background: linear-gradient(transparent, rgb(0 0 0 / 75%));
 }
 
-.hoard-card-style-thumb-line {
+.hoard-card-style__thumb-line {
   height: 4px;
   border-radius: 2px;
   background: var(--text-muted);
   opacity: 0.85;
 }
 
-.hoard-card-style-thumb.is-inside .hoard-card-style-thumb-line {
+.hoard-card-style__thumb.is-inside .hoard-card-style__thumb-line {
   background: #fff;
 }
 
-.hoard-card-style-thumb-line.is-short {
+.hoard-card-style__thumb-line.is-short {
   width: 62%;
 }
 
-.hoard-card-style-name {
+.hoard-card-style__name {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-normal);
 }
 
-.hoard-card-style-hint {
+.hoard-card-style__hint {
   font-size: 0.72rem;
   color: var(--text-muted);
   text-align: center;
@@ -107,43 +109,43 @@
 }
 
 /* Per-tab rows under the previews: icon · tab name · [Under | Inside]. */
-.hoard-card-style-tabs {
+.hoard-card-style__tabs {
   margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.hoard-card-style-tab-row {
+.hoard-card-style__tab-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.hoard-card-style-tab-icon {
+.hoard-card-style__tab-icon {
   display: flex;
   align-items: center;
   color: var(--text-muted);
 }
 
-.hoard-card-style-tab-icon svg {
+.hoard-card-style__tab-icon svg {
   width: 16px;
   height: 16px;
 }
 
-.hoard-card-style-tab-label {
+.hoard-card-style__tab-label {
   flex: 1 1 auto;
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-normal);
 }
 
-.hoard-card-style-tab-group {
+.hoard-card-style__tab-group {
   display: flex;
   gap: 4px;
 }
 
-.hoard-card-style-tab-btn {
+.hoard-card-style__tab-btn {
   font-size: 11px;
   padding: 3px 12px;
   height: 24px;
@@ -156,54 +158,54 @@
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.hoard-card-style-tab-btn:hover {
+.hoard-card-style__tab-btn:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-/* Active option tinted in the group's green accent (inherited from .hoard-sg--cards). */
-.hoard-card-style-tab-btn.is-active {
-  background: rgba(var(--hoard-sg-accent), 0.16);
-  border-color: rgb(var(--hoard-sg-accent));
+/* Active option tinted in the group's green accent (inherited from .hoard-settings-group--cards). */
+.hoard-card-style__tab-btn.is-active {
+  background: rgb(var(--hoard-settings-group-accent), 0.16);
+  border-color: rgb(var(--hoard-settings-group-accent));
   color: var(--text-normal);
 }
 
 /* Size sliders: icon · label · slider · live "Default · 160 px" read-out. */
-.hoard-card-size-rows {
+.hoard-card-size__rows {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.hoard-card-size-row {
+.hoard-card-size__row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.hoard-card-size-row-icon {
+.hoard-card-size__row-icon {
   display: flex;
   align-items: center;
   color: var(--text-muted);
 }
 
-.hoard-card-size-row-icon svg {
+.hoard-card-size__row-icon svg {
   width: 16px;
   height: 16px;
 }
 
-.hoard-card-size-row-label {
+.hoard-card-size__row-label {
   min-width: 62px;
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-normal);
 }
 
-.hoard-card-size-row input[type='range'] {
+.hoard-card-size__row input[type='range'] {
   flex: 1 1 auto;
 }
 
-.hoard-card-size-value {
+.hoard-card-size__value {
   min-width: 104px;
   text-align: right;
   font-size: 0.78rem;

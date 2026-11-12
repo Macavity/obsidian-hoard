@@ -81,7 +81,7 @@ afterEach(() => {
 });
 
 describe('ReadingTab book card', () => {
-	const progressText = (g: HTMLElement) => g.querySelector('.hoard-reading-card-progress-text')!.textContent;
+	const progressText = (g: HTMLElement) => g.querySelector('.hoard-reading-card__progress-text')!.textContent;
 
 	it('shows read / total with the pages unit', () => {
 		const { tab } = build('books');
@@ -90,7 +90,7 @@ describe('ReadingTab book card', () => {
 		expect(progressText(grid)).toContain('50');
 		expect(progressText(grid)).toContain('200');
 		expect(progressText(grid)).toContain(t('reading.card.units.pages'));
-		expect((grid.querySelector('.hoard-reading-card-progress-fill') as HTMLElement).style.width).toBe('25%');
+		expect((grid.querySelector('.hoard-reading-card__progress-fill') as HTMLElement).style.getPropertyValue('--hoard-reading-card-progress-width')).toBe('25%');
 	});
 
 	it('uses the words unit for a words-mode book', () => {
@@ -113,7 +113,7 @@ describe('ReadingTab book card', () => {
 		const grid = document.createElement('div');
 		tab.renderBookCard(grid, book());
 		expect(progressText(grid)).toBe(t('reading.card.noProgress'));
-		expect(grid.querySelector('.hoard-reading-card-cover-icon')!.textContent).toBe('📖');
+		expect(grid.querySelector('.hoard-reading-card__cover-icon')!.textContent).toBe('📖');
 		expect(grid.querySelector('.hoard-reading-card')!.classList.contains('is-selected')).toBe(false);
 	});
 
@@ -136,7 +136,7 @@ describe('ReadingTab book card', () => {
 });
 
 describe('ReadingTab manga card', () => {
-	const pieces = (g: HTMLElement) => Array.from(g.querySelectorAll('.hoard-reading-card-progress-piece')).map((e) => e.textContent);
+	const pieces = (g: HTMLElement) => Array.from(g.querySelectorAll('.hoard-reading-card__progress-piece')).map((e) => e.textContent);
 
 	it('shows chapters and volumes pieces with totals', () => {
 		const { tab } = build('manga');
@@ -146,7 +146,7 @@ describe('ReadingTab manga card', () => {
 			t('reading.card.chapters', { read: 5, total: 10 }),
 			t('reading.card.volumes', { read: 1, total: 4 }),
 		]);
-		expect((grid.querySelector('.hoard-reading-card-progress-fill') as HTMLElement).style.width).toBe('50%');
+		expect((grid.querySelector('.hoard-reading-card__progress-fill') as HTMLElement).style.getPropertyValue('--hoard-reading-card-progress-width')).toBe('50%');
 	});
 
 	it('shows the read-only pieces when totals are unknown', () => {
@@ -164,17 +164,28 @@ describe('ReadingTab manga card', () => {
 		const grid = document.createElement('div');
 		tab.renderMangaCard(grid, manga());
 		expect(pieces(grid)).toEqual([]);
-		expect(grid.querySelector('.hoard-reading-card-progress-text')!.textContent).toBe(t('reading.card.noProgress'));
+		expect(grid.querySelector('.hoard-reading-card__progress-text')!.textContent).toBe(t('reading.card.noProgress'));
 	});
 
 	it('renders a cover image for a manga with a cover and overlay text when text is inside', () => {
 		const { tab } = build('manga', { textUnder: false });
 		const grid = document.createElement('div');
 		tab.renderMangaCard(grid, manga({ coverUrl: 'http://c/1.jpg', author: '' }));
-		expect(grid.querySelector('.hoard-reading-card-cover-img')!.getAttribute('src')).toBe('http://c/1.jpg');
+		expect(grid.querySelector('.hoard-reading-card__cover-img')!.getAttribute('src')).toBe('http://c/1.jpg');
 		expect(grid.querySelector('.hoard-reading-card')!.classList.contains('is-text-inside')).toBe(true);
-		expect(grid.querySelector('.hoard-reading-card-overlay')).not.toBeNull();
-		expect(grid.querySelector('.hoard-reading-card-author')!.textContent).toBe('—');
+		expect(grid.querySelector('.hoard-reading-card__overlay')).not.toBeNull();
+		expect(grid.querySelector('.hoard-reading-card__author')!.textContent).toBe('—');
+		const style = (sel: string, name: string): string => grid.querySelector<HTMLElement>(sel)!.style.getPropertyValue(name);
+		expect(style('.hoard-reading-card__status-badge', '--hoard-reading-card-status-color')).not.toBe('');
+		// a real cover needs no fallback colour
+		expect(style('.hoard-reading-card__cover', '--hoard-reading-card-cover-color')).toBe('');
+	});
+
+	it('paints the fallback colour on a cover-less card', () => {
+		const { tab } = build('manga', { textUnder: false });
+		const grid = document.createElement('div');
+		tab.renderMangaCard(grid, manga());
+		expect(grid.querySelector<HTMLElement>('.hoard-reading-card__cover')!.style.getPropertyValue('--hoard-reading-card-cover-color')).not.toBe('');
 	});
 });
 
@@ -268,7 +279,7 @@ describe('ReadingTab.refreshCover', () => {
 		const grid = document.createElement('div');
 		container.appendChild(grid);
 		tab.renderBookCard(grid, book());
-		(grid.querySelector('.hoard-reading-card-menu-btn') as HTMLElement).click();
+		(grid.querySelector('.hoard-reading-card__menu-btn') as HTMLElement).click();
 		const items = vi.mocked(openCardMenu).mock.calls[0]![2];
 		expect(items.map((i) => i.label)).toEqual([t('reading.card.refreshCover')]);
 	});
@@ -324,9 +335,9 @@ describe('ReadingTab.renderByStatusSection', () => {
 		const { tab } = build('books');
 		const parent = document.createElement('div');
 		tab.renderByStatusSection(parent, [book({ id: 'a', status: 'Completed' }), book({ id: 'b', status: 'Reading' })], all, false, true);
-		expect(parent.querySelector('.hoard-rows-bytype-title')!.textContent).toBe(t('reading.shelves.byStatus'));
-		expect(parent.querySelectorAll('.hoard-rows-shelf-title')).toHaveLength(2);
-		expect(parent.querySelectorAll('.hoard-rows-bytype-spacer')).toHaveLength(2);
+		expect(parent.querySelector('.hoard-rows-view__grouped-title')!.textContent).toBe(t('reading.shelves.byStatus'));
+		expect(parent.querySelectorAll('.hoard-rows-view__shelf-title')).toHaveLength(2);
+		expect(parent.querySelectorAll('.hoard-rows-view__grouped-spacer')).toHaveLength(2);
 	});
 
 	it('adds a select-all box per bucket in selection mode', () => {
@@ -334,7 +345,7 @@ describe('ReadingTab.renderByStatusSection', () => {
 		tab.selectionMode = true;
 		const parent = document.createElement('div');
 		tab.renderByStatusSection(parent, [manga({ id: 'a' })], all, false, false);
-		expect(parent.querySelector('.hoard-shelf-select')).not.toBeNull();
+		expect(parent.querySelector('.hoard-rows-view__shelf-select')).not.toBeNull();
 	});
 
 	it('shows the empty hint when nothing is there and no filter is active', () => {
@@ -348,6 +359,6 @@ describe('ReadingTab.renderByStatusSection', () => {
 		const { tab } = build('books');
 		const parent = document.createElement('div');
 		tab.renderByStatusSection(parent, [book()], () => false, true, true);
-		expect(parent.querySelector('.hoard-rows-bytype')).toBeNull();
+		expect(parent.querySelector('.hoard-rows-view__grouped')).toBeNull();
 	});
 });

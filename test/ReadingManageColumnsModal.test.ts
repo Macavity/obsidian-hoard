@@ -18,7 +18,7 @@ async function openModal() {
 }
 
 const nameInputs = (el: HTMLElement): HTMLInputElement[] =>
-	Array.from(el.querySelectorAll<HTMLInputElement>('.hoard-editcol-card-name'));
+	Array.from(el.querySelectorAll<HTMLInputElement>('.hoard-edit-columns__card-name'));
 
 describe('manage columns dialog names', () => {
 	beforeEach(() => { shown.length = 0; });
@@ -48,8 +48,8 @@ describe('manage columns dialog names', () => {
 
 	it('rejects adding a column that equals an existing name ignoring case', async () => {
 		const { rdm, el } = await openModal();
-		el.querySelector<HTMLInputElement>('.hoard-reading-add-col-name')!.value = 'YEAR';
-		el.querySelector<HTMLButtonElement>('.hoard-reading-add-col-btn')!.click();
+		el.querySelector<HTMLInputElement>('.hoard-reading-columns__add-name')!.value = 'YEAR';
+		el.querySelector<HTMLButtonElement>('.hoard-reading-columns__add-btn')!.click();
 		await tick();
 		expect(rdm.getBookColumns()).toHaveLength(2);
 		expect(shown).toHaveLength(1);
@@ -57,8 +57,8 @@ describe('manage columns dialog names', () => {
 
 	it('adds a column with a new name', async () => {
 		const { rdm, el } = await openModal();
-		el.querySelector<HTMLInputElement>('.hoard-reading-add-col-name')!.value = 'Series';
-		el.querySelector<HTMLButtonElement>('.hoard-reading-add-col-btn')!.click();
+		el.querySelector<HTMLInputElement>('.hoard-reading-columns__add-name')!.value = 'Series';
+		el.querySelector<HTMLButtonElement>('.hoard-reading-columns__add-btn')!.click();
 		await tick();
 		expect(rdm.getBookColumns().map((c) => c.name)).toEqual(['Format', 'Year', 'Series']);
 	});
@@ -76,10 +76,10 @@ describe('manage columns dialog names', () => {
 		input.value = 'Fmt';
 		input.dispatchEvent(new Event('change'));
 		await tick(20);
-		const controls = () => Array.from(el.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>('.hoard-reading-manage-cols-list input, .hoard-reading-manage-cols-list select, .hoard-reading-manage-cols-list button'));
+		const controls = () => Array.from(el.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>('.hoard-reading-columns__list input, .hoard-reading-columns__list select, .hoard-reading-columns__list button'));
 		expect(controls().every((c) => c.disabled)).toBe(true);
 		// a change that slips through anyway must not be applied
-		const select = el.querySelector<HTMLSelectElement>('.hoard-editcol-card-type')!;
+		const select = el.querySelector<HTMLSelectElement>('.hoard-edit-columns__card-type')!;
 		select.value = 'number';
 		select.dispatchEvent(new Event('change'));
 		await tick(20);
@@ -104,5 +104,24 @@ describe('manage columns dialog names', () => {
 		warn.mockRestore();
 		expect(shown).toContain(t('reading.columns.renamed', { count: 1 }));
 		expect(shown).toContain(t('reading.columns.renamedSkipped', { count: 1 }));
+	});
+});
+
+describe('manage columns option inputs', () => {
+	it('hides the options input of a non-select column without taking its space, and follows the type', async () => {
+		const { el } = await openModal();
+		const [text] = Array.from(el.querySelectorAll<HTMLInputElement>('.hoard-reading-columns__options-input'));
+		expect(text!.classList.contains('is-invisible')).toBe(true);
+		expect(text!.classList.contains('is-hidden')).toBe(false);
+	});
+
+	it('shows the add-row options input only for the select type', async () => {
+		const { el } = await openModal();
+		const opts = el.querySelector<HTMLElement>('.hoard-reading-columns__add-options')!;
+		const type = el.querySelector<HTMLSelectElement>('.hoard-reading-columns__add-type')!;
+		expect(opts.classList.contains('is-hidden')).toBe(true);
+		type.value = 'select';
+		type.dispatchEvent(new Event('change'));
+		expect(opts.classList.contains('is-hidden')).toBe(false);
 	});
 });

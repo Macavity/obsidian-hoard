@@ -17,9 +17,9 @@ export function createSortSelectRow(
 	labelText: string,
 	none?: { selected: boolean },
 ): { row: HTMLElement; sel: HTMLSelectElement } {
-	const row = parent.createDiv({ cls: 'hoard-filter-row' });
-	row.createSpan({ cls: 'hoard-filter-label', text: labelText });
-	const sel = row.createEl('select', { cls: 'hoard-select' });
+	const row = parent.createDiv({ cls: 'hoard-filter-panel__row' });
+	row.createSpan({ cls: 'hoard-filter-panel__label', text: labelText });
+	const sel = row.createEl('select', { cls: 'hoard-input__select' });
 	if (none) {
 		const noneOpt = sel.createEl('option', { text: t('common.none'), value: 'none' });
 		noneOpt.selected = none.selected;
@@ -51,15 +51,15 @@ export interface SortPopoverConfig {
 
 /** Opens the panel inside the wrap, or closes an already-open one (toggle). */
 export function toggleSortPopover(cfg: SortPopoverConfig): void {
-	const existing = cfg.wrap.querySelector('.hoard-dropdown');
+	const existing = cfg.wrap.querySelector('.hoard-popover');
 	if (existing) { existing.remove(); return; }
 
-	const panel = cfg.wrap.createDiv({ cls: 'hoard-dropdown hoard-sorting-panel' });
+	const panel = cfg.wrap.createDiv({ cls: 'hoard-popover hoard-sort-panel' });
 
 	if (window.innerWidth <= 600) {
 		const rect = cfg.anchor.getBoundingClientRect();
-		panel.addClass('hoard-sorting-panel-mobile');
-		panel.style.top = `${rect.bottom + 4}px`;
+		panel.addClass('hoard-sort-panel--mobile');
+		panel.setCssProps({ '--hoard-sort-panel-top': `${rect.bottom + 4}px` });
 	}
 
 	// working copy — committed through onChange on every interaction
@@ -86,7 +86,7 @@ export function toggleSortPopover(cfg: SortPopoverConfig): void {
 		}
 
 		const dirBtn = row.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-sort-dir-btn',
+			cls: 'hoard-btn hoard-btn--sm hoard-btn--sort-direction',
 			text: current.dir === 'asc' ? '↑' : '↓',
 		});
 		dirBtn.title = current.dir === 'asc'

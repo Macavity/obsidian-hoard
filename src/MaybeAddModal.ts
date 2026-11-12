@@ -59,9 +59,9 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 	}
 
 	protected renderResult(host: HTMLElement, result: TitleSearchResult, select: (itemEl: HTMLElement) => void): HTMLElement {
-		const item = host.createDiv({ cls: 'hoard-result-item' });
-		item.createDiv({ cls: 'hoard-result-title', text: result.title });
-		item.createDiv({ cls: 'hoard-result-meta', text: `${episodesLabel(result)} · ${formatDateDisplay(result.releaseDate)}` });
+		const item = host.createDiv({ cls: 'hoard-search-picker__result-item' });
+		item.createDiv({ cls: 'hoard-search-picker__result-title', text: result.title });
+		item.createDiv({ cls: 'hoard-search-picker__result-meta', text: `${episodesLabel(result)} · ${formatDateDisplay(result.releaseDate)}` });
 		item.addEventListener('click', () => select(item));
 		return item;
 	}
@@ -75,8 +75,8 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 		if (!form) return;
 		renderMediaFields(form, this.media, false);
 
-		const btnRow = form.createDiv({ cls: 'hoard-modal-btn-row' });
-		const addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('misc.maybeAdd.submit') });
+		const btnRow = form.createDiv({ cls: 'hoard-modal__btn-row' });
+		const addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('misc.maybeAdd.submit') });
 		addBtn.addEventListener('click', () => void this.addMaybeTitle());
 	}
 

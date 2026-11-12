@@ -15,7 +15,7 @@ import { AddFromUrlModal } from './AddFromUrlModal';
 import { AddTitleChoiceModal } from './AddTitleChoiceModal';
 import { renderSearchBox, openRenameGroupPrompt, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, renderViewDropdown, type SortFields } from './ui/TabToolbar';
 import { renderTypeBadge } from './ui/typeBadge';
-import { renderEpisodeGrid } from './ui/EpisodeGrid';
+import { createSeasonHeader, renderEpisodeGrid } from './ui/EpisodeGrid';
 import { createIconButton } from './ui/IconButton';
 import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from './ui/ActionBar';
 import { renderGroupCard } from './ui/GroupCard';
@@ -30,7 +30,7 @@ import { renderStarRating, ratingColor } from './StarRating';
 import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from './VirtualGrid';
 import { VirtualScroller } from './VirtualScroller';
 import { LazyCardObserver } from './LazyCardObserver';
-import { buildPosterCard, POSTER_CARD_TEXT_H } from './PosterCard';
+import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from './PosterCard';
 import { renderShelf, renderShelfTitle, type ShelfSelect } from './RowsView';
 import { RowsCustomizeModal } from './RowsCustomizeModal';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from './ui/TabFilters';
@@ -257,7 +257,7 @@ export class ListTab {
 	private deactivateSavedFilter(): void {
 		if (this.savedFilterActive) {
 			this.savedFilterActive = false;
-			this.savedFilterBtnEl?.removeClass('hoard-btn-preset-active');
+			this.savedFilterBtnEl?.removeClass('hoard-btn--preset-active');
 		}
 	}
 
@@ -350,11 +350,11 @@ export class ListTab {
 			visibleGroups.length,
 		);
 		// customize-shelves gear, far right on the count line
-		countEl.addClass('hoard-results-count-rows');
+		countEl.addClass('hoard-toolbar__results-count--rows');
 		const gearBtn = createIconButton(countEl, {
 			icon: 'settings',
 			label: t('list.rows.customize'),
-			cls: 'hoard-rows-customize-btn',
+			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
 			new RowsCustomizeModal(this.plugin.app, this.plugin, {
@@ -370,7 +370,7 @@ export class ListTab {
 			}).open();
 		});
 
-		const scroll = this.container.createDiv({ cls: 'hoard-rows-scroll-container' });
+		const scroll = this.container.createDiv({ cls: 'hoard-rows-view__scroll-container' });
 		// one metrics source for the grids AND the shelf width — every call re-publishes it
 		const rowsMetrics = (w: number): GridMetrics => {
 			const m = computeGridMetrics(w, this.plugin.getCardMinWidth());
@@ -511,17 +511,17 @@ export class ListTab {
 		filtering: boolean,
 	): void {
 		if (filtering && groups.length === 0) return;
-		const shelf = parent.createDiv({ cls: 'hoard-rows-shelf' });
+		const shelf = parent.createDiv({ cls: 'hoard-rows-view__shelf' });
 		renderShelfTitle(shelf, t('list.shelves.groups'), groups.length, this.shelfSelect(groups.map((g) => groupKey(g.id))));
 		if (groups.length === 0) {
 			shelf.createDiv({
-				cls: 'hoard-rows-shelf-empty',
+				cls: 'hoard-rows-view__shelf-empty',
 				text: t('list.empty.groups'),
 			});
 			return;
 		}
 		const titleMap = new Map(this.dataManager.getTitles().map((t) => [t.id, t]));
-		const strip = shelf.createDiv({ cls: 'hoard-rows-strip' });
+		const strip = shelf.createDiv({ cls: 'hoard-rows-view__strip' });
 		for (const group of groups) {
 			const members = group.titleIds
 				.map((id) => titleMap.get(id))
@@ -576,8 +576,8 @@ export class ListTab {
 		const defs = byType ? this.plugin.settings.types : this.plugin.settings.statuses;
 		const keyOf = (t: HoardTitle): string => (byType ? t.type : t.status);
 
-		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
-		section.createDiv({ cls: 'hoard-rows-bytype-title', text: byType ? t('list.shelves.byType') : t('list.shelves.byStatus') });
+		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
+		section.createDiv({ cls: 'hoard-rows-view__grouped-title', text: byType ? t('list.shelves.byType') : t('list.shelves.byStatus') });
 
 		const titles = this.dataManager.getTitles();
 		let rendered = 0;
@@ -589,9 +589,9 @@ export class ListTab {
 			if (bucketTitles.length === 0) continue;
 			rendered++;
 			renderShelfTitle(section, byType ? typeLabel(def.name) : statusLabel(def.name), bucketTitles.length, this.shelfSelect(bucketTitles.map((t) => t.id)));
-			const spacer = section.createDiv({ cls: 'hoard-rows-bytype-spacer' });
+			const spacer = section.createDiv({ cls: 'hoard-rows-view__grouped-spacer' });
 			// same classes as the flat grid so the CLS fix applies unchanged
-			const grid = spacer.createDiv({ cls: 'hoard-cards-grid hoard-cards-grid-virtual' });
+			const grid = spacer.createDiv({ cls: 'hoard-card-grid hoard-card-grid--virtual' });
 			const vgrid = new VirtualGrid(spacer, grid, bucketTitles.length, {
 				buildItem: (i, w, h) => {
 					const title = bucketTitles[i];
@@ -612,7 +612,7 @@ export class ListTab {
 				return;
 			}
 			section.createDiv({
-				cls: 'hoard-rows-shelf-empty',
+				cls: 'hoard-rows-view__shelf-empty',
 				text: byType ? t('list.empty.byType') : t('list.empty.byStatus'),
 			});
 		}
@@ -629,13 +629,13 @@ export class ListTab {
 		if (items.length === 0) {
 			// the old Cards empty state — only meaningful when this is the lone section
 			if (!titled) {
-				const empty = parent.createDiv({ cls: 'hoard-cards-empty' });
-				empty.createSpan({ cls: 'hoard-cards-empty-icon', text: '🎬' });
-				empty.createEl('p', { cls: 'hoard-cards-empty-msg', text: t('list.empty.noMatchCards') });
+				const empty = parent.createDiv({ cls: 'hoard-card-grid__empty' });
+				empty.createSpan({ cls: 'hoard-card-grid__empty-icon', text: '🎬' });
+				empty.createEl('p', { cls: 'hoard-card-grid__empty-message', text: t('list.empty.noMatchCards') });
 			}
 			return;
 		}
-		const section = parent.createDiv({ cls: 'hoard-rows-bytype' });
+		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
 		if (titled) renderShelfTitle(section, t('list.shelves.allTitles'), items.length, this.shelfSelect(items.map(itemKey)));
 		const { spacer, vgrid } = mountVirtualCardGrid(section, items.length, {
 			buildItem: (i, w, h) => this.buildCardElement(i, w, h),
@@ -725,7 +725,7 @@ export class ListTab {
 			// skip titles with a poster and resolved ones ('none' = tried, nothing found)
 			if (title.posterUrl) continue;
 
-			const placeholder = card.querySelector('.hoard-card-poster-placeholder');
+			const placeholder = card.querySelector('.hoard-card__poster-placeholder');
 			placeholder?.addClass('is-loading');
 
 			void this.plugin.posterService.enqueue(title).then((url) => {
@@ -738,18 +738,12 @@ export class ListTab {
 	}
 
 	private applyPosterToCard(card: HTMLElement, url: string): void {
-		const img = card.querySelector<HTMLImageElement>('.hoard-card-poster');
-		if (!img) return;
-		img.onload = () => {
-			card.addClass('has-poster');
-		};
-		img.onerror = () => {
+		loadCardPoster(card, url, () => {
 			const titleId = card.dataset.titleId;
 			if (titleId) {
 				void this.dataManager.updatePosterUrl(titleId, 'none');
 			}
-		};
-		img.src = url;
+		});
 	}
 
 	/** Tear down the poster observer and the PosterService queue. */
@@ -835,9 +829,9 @@ export class ListTab {
 		if (!fresh) return;
 		card.dataset.needsPoster = 'true';
 
-		const img = card.querySelector<HTMLImageElement>('.hoard-card-poster');
+		const img = card.querySelector<HTMLImageElement>('.hoard-card__poster');
 		const placeholder = card.querySelector<HTMLElement>(
-			'.hoard-card-poster-placeholder',
+			'.hoard-card__poster-placeholder',
 		);
 		if (img) {
 			img.removeAttribute('src');
@@ -930,17 +924,17 @@ export class ListTab {
 	// Header
 
 	private renderHeader(): void {
-		const header = this.container.createDiv({ cls: 'hoard-list-header' });
+		const header = this.container.createDiv({ cls: 'hoard-list__header' });
 
 		// import progress bar
 		if (this.plugin.importProgress) {
 			const { current, total, cancel } = this.plugin.importProgress;
-			const progWrap = header.createDiv({ cls: 'hoard-header-import-progress' });
-			const track = progWrap.createDiv({ cls: 'hoard-header-import-track' });
-			const fill = track.createDiv({ cls: 'hoard-header-import-fill' });
-			fill.style.width = `${total > 0 ? Math.round((current / total) * 100) : 0}%`;
-			progWrap.createSpan({ cls: 'hoard-header-import-text', text: `${current} / ${total}` });
-			const cancelBtn = progWrap.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('list.cancelImport') });
+			const progWrap = header.createDiv({ cls: 'hoard-import__header-progress' });
+			const track = progWrap.createDiv({ cls: 'hoard-import__header-track' });
+			const fill = track.createDiv({ cls: 'hoard-import__header-fill' });
+			fill.setCssProps({ '--hoard-import-header-fill-width': `${total > 0 ? Math.round((current / total) * 100) : 0}%` });
+			progWrap.createSpan({ cls: 'hoard-import__header-text', text: `${current} / ${total}` });
+			const cancelBtn = progWrap.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('list.cancelImport') });
 			cancelBtn.addEventListener('click', () => cancel());
 		}
 
@@ -992,7 +986,7 @@ export class ListTab {
 		});
 	}
 
-	/** Sync hoard-card-selected across the whole tab (Cards grid, shelves, By-type grids). */
+	/** Sync hoard-card--selected across the whole tab (Cards grid, shelves, By-type grids). */
 	private syncCardSelectionClasses(): void {
 		syncSelectionClasses(this.container, this.selectedItems, (card) => {
 			const groupId = card.dataset.groupId;
@@ -1022,8 +1016,8 @@ export class ListTab {
 		} else {
 			this.selectedItems.delete(id);
 		}
-		row.classList.toggle('hoard-row-selected', nowSelected);
-		const cb = row.querySelector<HTMLInputElement>('.hoard-col-select input');
+		row.classList.toggle('hoard-list__row--selected', nowSelected);
+		const cb = row.querySelector<HTMLInputElement>('.hoard-list__column-select input');
 		if (cb) cb.checked = nowSelected;
 		this.refreshToolbarActions();
 		return nowSelected;
@@ -1071,7 +1065,7 @@ export class ListTab {
 			},
 		});
 
-		const rightGroup = controls.createDiv({ cls: 'hoard-header-controls-right' });
+		const rightGroup = controls.createDiv({ cls: 'hoard-toolbar__controls-right' });
 
 		this.renderViewDropdown(rightGroup);
 	}
@@ -1379,7 +1373,7 @@ export class ListTab {
 			return;
 		}
 		const savedScroll = this._lastScrollTop;
-		const existing = this.container.querySelector('.hoard-table-section');
+		const existing = this.container.querySelector('.hoard-list__table-section');
 		if (existing) existing.remove();
 		this.renderTable(savedScroll);
 	}
@@ -1388,12 +1382,12 @@ export class ListTab {
 		if (this.currentView === 'rows') {
 			// strip rows DOM + any stray table so the two views can't coexist
 			this.container
-				.querySelectorAll('.hoard-cards-empty, .hoard-table-section, .hoard-results-count, .hoard-rows-scroll-container')
+				.querySelectorAll('.hoard-card-grid__empty, .hoard-list__table-section, .hoard-toolbar__results-count, .hoard-rows-view__scroll-container')
 				.forEach((el) => el.remove());
 			this.renderRowsView();
 		} else {
 			const savedScroll = this._lastScrollTop;
-			const existing = this.container.querySelector('.hoard-table-section');
+			const existing = this.container.querySelector('.hoard-list__table-section');
 			if (existing) existing.remove();
 			this.renderTable(savedScroll);
 		}
@@ -1408,7 +1402,7 @@ export class ListTab {
 
 	/** The count line itself; returned so Rows can append its gear. */
 	private renderCountLine(parent: HTMLElement, titleCount: number, groupCount: number): HTMLElement {
-		const countEl = parent.createDiv({ cls: 'hoard-results-count' });
+		const countEl = parent.createDiv({ cls: 'hoard-toolbar__results-count' });
 		const parts: string[] = [];
 		if (titleCount > 0) parts.push(t('ui.group.countTitle', { count: titleCount }));
 		if (groupCount > 0) parts.push(t('list.count.group', { count: groupCount }));
@@ -1422,25 +1416,25 @@ export class ListTab {
 			this.scrollCleanup = null;
 		}
 
-		const section = this.container.createDiv({ cls: 'hoard-table-section' });
+		const section = this.container.createDiv({ cls: 'hoard-list__table-section' });
 		const items = this.getDisplayItems();
 
 		this.renderResultsCount(section, items);
 
-		const tableCls = this.selectionMode ? 'hoard-table hoard-selection-mode' : 'hoard-table';
+		const tableCls = this.selectionMode ? 'hoard-list__table hoard-list__table--selection-mode' : 'hoard-list__table';
 		const table = section.createDiv({ cls: tableCls });
-		const colHeader = table.createDiv({ cls: 'hoard-table-header-row' });
+		const colHeader = table.createDiv({ cls: 'hoard-list__table-header-row' });
 		if (this.selectionMode) {
-			colHeader.createDiv({ cls: 'hoard-col-select-h' });
+			colHeader.createDiv({ cls: 'hoard-list__column-select-header' });
 		}
-		colHeader.createDiv({ cls: 'hoard-col-title-h', text: t('list.columns.title') });
-		colHeader.createDiv({ cls: 'hoard-col-priority-h', text: t('list.columns.priority') });
-		colHeader.createDiv({ cls: 'hoard-col-started-h', text: t('list.columns.started') });
-		colHeader.createDiv({ cls: 'hoard-col-rating-h', text: t('list.columns.rating') });
-		colHeader.createDiv({ cls: 'hoard-col-status-h', text: t('list.columns.status') });
+		colHeader.createDiv({ cls: 'hoard-list__column-title-header', text: t('list.columns.title') });
+		colHeader.createDiv({ cls: 'hoard-list__column-priority-header', text: t('list.columns.priority') });
+		colHeader.createDiv({ cls: 'hoard-list__column-started-header', text: t('list.columns.started') });
+		colHeader.createDiv({ cls: 'hoard-list__column-rating-header', text: t('list.columns.rating') });
+		colHeader.createDiv({ cls: 'hoard-list__column-status-header', text: t('list.columns.status') });
 
 		if (items.length === 0) {
-			table.createDiv({ cls: 'hoard-empty-state', text: t('list.empty.noMatchList') });
+			table.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('list.empty.noMatchList') });
 			return;
 		}
 
@@ -1472,8 +1466,8 @@ export class ListTab {
 			if (expandedIdx !== -1) {
 				const item = items[expandedIdx];
 				if (item?.kind === 'title') {
-					const probe = activeDocument.body.createDiv();
-					probe.style.cssText = `position:absolute;left:-9999px;top:0;width:${table.clientWidth}px;visibility:hidden;`;
+					const probe = activeDocument.body.createDiv({ cls: 'hoard-list__measure-probe' });
+					probe.setCssProps({ '--hoard-list-measure-probe-width': `${table.clientWidth}px` });
 					this.renderRow(probe, item.data);
 					const measured = probe.offsetHeight;
 					probe.remove();
@@ -1487,8 +1481,8 @@ export class ListTab {
 			const item = items[i];
 			if (item?.kind !== 'group') continue;
 			if (!this.expandedGroups.has(item.data.id)) continue;
-			const probe = activeDocument.body.createDiv();
-			probe.style.cssText = `position:absolute;left:-9999px;top:0;width:${table.clientWidth}px;visibility:hidden;`;
+			const probe = activeDocument.body.createDiv({ cls: 'hoard-list__measure-probe' });
+			probe.setCssProps({ '--hoard-list-measure-probe-width': `${table.clientWidth}px` });
 			this.renderGroupRow(probe, item.data, item.members);
 			const measured = probe.offsetHeight;
 			probe.remove();
@@ -1505,8 +1499,8 @@ export class ListTab {
 		}
 
 		// phase 3: fixed-height container, set once — keeps the scroll area stable
-		const virt = table.createDiv({ cls: 'hoard-virt-container' });
-		virt.style.height = `${totalHeight}px`;
+		const virt = table.createDiv({ cls: 'hoard-list__virtual-container' });
+		virt.setCssProps({ '--hoard-list-virtual-height': `${totalHeight}px` });
 
 		// content-top → virt top, computed once outside the scroll handler
 		const scrollEl = this.container;
@@ -1565,8 +1559,8 @@ export class ListTab {
 			for (let i = startIdx; i <= endIdx; i++) {
 				const item = items[i];
 				if (!item) continue;  // guard: items array may be stale on concurrent re-render
-				const rowEl = virt.createDiv({ cls: 'hoard-virt-item' });
-				rowEl.style.top = `${offsets[i] ?? 0}px`;
+				const rowEl = virt.createDiv({ cls: 'hoard-list__virtual-item' });
+				rowEl.setCssProps({ '--hoard-list-virtual-item-top': `${offsets[i] ?? 0}px` });
 				if (item.kind === 'title') {
 					this.renderRow(rowEl, item.data);
 				} else {
@@ -1730,7 +1724,7 @@ export class ListTab {
 	private renderRow(parent: HTMLElement, title: HoardTitle, indented = false): void {
 		const isExpanded = this.expandedId === title.id;
 		const isSelected = this.selectedItems.has(title.id);
-		const classes = ['hoard-row', isExpanded ? 'is-expanded' : '', indented ? 'hoard-row-indented' : '', isSelected ? 'hoard-row-selected' : '']
+		const classes = ['hoard-list__row', isExpanded ? 'is-expanded' : '', indented ? 'hoard-list__row--indented' : '', isSelected ? 'hoard-list__row--selected' : '']
 			.filter(Boolean)
 			.join(' ');
 		const row = parent.createDiv({ cls: classes });
@@ -1740,7 +1734,7 @@ export class ListTab {
 		this.renderTitleCell(row, title);
 		this.renderPriorityCell(row, title.priority);
 
-		const colStarted = row.createDiv({ cls: 'hoard-col-started' });
+		const colStarted = row.createDiv({ cls: 'hoard-list__column-started' });
 		colStarted.textContent = title.dateStarted ? formatDateDisplay(title.dateStarted) : '—';
 
 		this.renderRatingCell(row, title.rating, (r) => `★ ${r}/5`);
@@ -1767,7 +1761,7 @@ export class ListTab {
 	/** Selection checkbox column; only present in selection mode. `id` is a title id or groupKey. */
 	private renderSelectCell(row: HTMLElement, id: string, isSelected: boolean): void {
 		if (!this.selectionMode) return;
-		const cbCol = row.createDiv({ cls: 'hoard-col-select' });
+		const cbCol = row.createDiv({ cls: 'hoard-list__column-select' });
 		const cb = cbCol.createEl('input', { attr: { type: 'checkbox' } });
 		cb.checked = isSelected;
 		cb.addEventListener('click', (e) => e.stopPropagation());
@@ -1777,45 +1771,45 @@ export class ListTab {
 	}
 
 	private renderTitleCell(row: HTMLElement, title: HoardTitle): void {
-		const colTitle = row.createDiv({ cls: 'hoard-col-title' });
-		colTitle.createDiv({ cls: 'hoard-row-title-text', text: title.title });
-		const badgeRow = colTitle.createDiv({ cls: 'hoard-badge-row' });
+		const colTitle = row.createDiv({ cls: 'hoard-list__column-title' });
+		colTitle.createDiv({ cls: 'hoard-list__row-title-text', text: title.title });
+		const badgeRow = colTitle.createDiv({ cls: 'hoard-list__badge-row' });
 		renderTypeBadge(badgeRow, title.type, this.plugin.settings);
 		// release year after the type badge; omitted when unknown
 		const yearMatch = title.releaseDate?.match(/^(\d{4})/);
-		if (yearMatch) badgeRow.createSpan({ cls: 'hoard-row-year', text: yearMatch[1] });
+		if (yearMatch) badgeRow.createSpan({ cls: 'hoard-list__row-year', text: yearMatch[1] });
 		if (isRecentlyReleased(title.releaseDate)) {
-			badgeRow.createSpan({ cls: 'hoard-recently-arrived', text: `· ${t('ui.filters.recentlyArrived')}` });
+			badgeRow.createSpan({ cls: 'hoard-list__recently-arrived', text: `· ${t('ui.filters.recentlyArrived')}` });
 		}
-		const barWrap = colTitle.createDiv({ cls: 'hoard-progress-wrap' });
-		const bar = barWrap.createDiv({ cls: 'hoard-progress-bar' });
-		bar.style.width = `${this.dataManager.getProgress(title)}%`;
+		const barWrap = colTitle.createDiv({ cls: 'hoard-progress__wrap' });
+		const bar = barWrap.createDiv({ cls: 'hoard-progress__bar' });
+		bar.setCssProps({ '--hoard-progress-width': `${this.dataManager.getProgress(title)}%` });
 	}
 
 	private renderPriorityCell(row: HTMLElement, priority: string | null): void {
-		const colPriority = row.createDiv({ cls: 'hoard-col-priority' });
+		const colPriority = row.createDiv({ cls: 'hoard-list__column-priority' });
 		if (!priority) return;
 		const priorityDef = this.getTagDef(priority, this.plugin.settings.priorities);
-		const pBadge = colPriority.createSpan({ cls: 'hoard-priority-badge', text: priorityLabel(priority) });
-		if (priorityDef) pBadge.style.color = priorityDef.color;
+		const pBadge = colPriority.createSpan({ cls: 'hoard-badge__priority', text: priorityLabel(priority) });
+		if (priorityDef) pBadge.setCssProps({ '--hoard-badge-priority-color': priorityDef.color });
 	}
 
 	private renderRatingCell(row: HTMLElement, rating: number, format: (rating: number) => string): void {
-		const colRating = row.createDiv({ cls: 'hoard-col-rating' });
+		const colRating = row.createDiv({ cls: 'hoard-list__column-rating' });
 		if (rating <= 0) {
-			colRating.createSpan({ cls: 'hoard-row-rating hoard-row-rating-empty', text: '—' });
+			colRating.createSpan({ cls: 'hoard-list__row-rating hoard-list__row-rating--empty', text: '—' });
 			return;
 		}
-		const ratingEl = colRating.createSpan({ cls: 'hoard-row-rating', text: format(rating) });
-		ratingEl.style.color = ratingColor(rating, this.plugin.settings.ratingSystem);
+		const ratingEl = colRating.createSpan({ cls: 'hoard-list__row-rating', text: format(rating) });
+		ratingEl.setCssProps({ '--hoard-list-row-rating-color': ratingColor(rating, this.plugin.settings.ratingSystem) });
 	}
 
 	/** Status badge (respects coloredTypeBadges); `fallbackColor` colors a status without a tag definition. */
 	private renderStatusCell(row: HTMLElement, status: string, label: string, fallbackColor?: string): void {
 		const colored = this.plugin.settings.coloredTypeBadges;
-		const colStatus = row.createDiv({ cls: 'hoard-col-status' });
+		const colStatus = row.createDiv({ cls: 'hoard-list__column-status' });
 		const statusBadge = colStatus.createSpan({
-			cls: colored ? 'hoard-badge' : 'hoard-badge-plain',
+			cls: colored ? 'hoard-badge' : 'hoard-badge__plain',
 			text: label,
 			// the narrowest table can cut the label short; the tooltip keeps it readable
 			attr: { title: label },
@@ -1823,13 +1817,13 @@ export class ListTab {
 		if (!colored) return;
 		const statusDef = this.getTagDef(status, this.plugin.settings.statuses);
 		const color = statusDef?.color ?? fallbackColor;
-		if (color) statusBadge.style.backgroundColor = getThemedColor(status, color, this.plugin.settings.colorTheme);
+		if (color) statusBadge.setCssProps({ '--hoard-badge-color': getThemedColor(status, color, this.plugin.settings.colorTheme) });
 	}
 
 	private renderTitlePinCell(row: HTMLElement, title: HoardTitle): void {
-		const colPin = row.createDiv({ cls: 'hoard-col-pin' });
+		const colPin = row.createDiv({ cls: 'hoard-list__column-pin' });
 		const pinIcon = colPin.createSpan({
-			cls: `hoard-pin-icon${title.pinned ? ' is-pinned' : ''}`,
+			cls: `hoard-list__pin-icon${title.pinned ? ' is-pinned' : ''}`,
 			text: '📌',
 		});
 		pinIcon.title = title.pinned ? t('list.unpin') : t('list.pin');
@@ -1867,7 +1861,7 @@ export class ListTab {
 		const isExpanded = this.expandedGroups.has(group.id);
 		const isSelected = this.selectedItems.has(groupKey(group.id));
 		const row = parent.createDiv({
-			cls: `hoard-row hoard-group-row${isExpanded ? ' is-expanded' : ''}${isSelected ? ' hoard-row-selected' : ''}`,
+			cls: `hoard-list__row hoard-list__row--group${isExpanded ? ' is-expanded' : ''}${isSelected ? ' hoard-list__row--selected' : ''}`,
 		});
 
 		const highestPriority = this.getGroupHighestPriority(members);
@@ -1884,7 +1878,7 @@ export class ListTab {
 		this.renderPriorityCell(row, highestPriority);
 
 		// started: earliest among members
-		const colStarted = row.createDiv({ cls: 'hoard-col-started' });
+		const colStarted = row.createDiv({ cls: 'hoard-list__column-started' });
 		const groupStarted = this.getGroupStartedDate(members);
 		colStarted.textContent = groupStarted ? formatDateDisplay(groupStarted) : '—';
 
@@ -1923,7 +1917,7 @@ export class ListTab {
 	}
 
 	private renderGroupTitleCell(row: HTMLElement, group: HoardGroup, members: HoardTitle[]): void {
-		const colTitle = row.createDiv({ cls: 'hoard-col-title' });
+		const colTitle = row.createDiv({ cls: 'hoard-list__column-title' });
 		if (this.renamingGroupId === group.id) {
 			this.renderGroupRenameRow(colTitle, group);
 		} else {
@@ -1935,23 +1929,24 @@ export class ListTab {
 			renderTypeBadge(colTitle, primaryType, this.plugin.settings);
 		}
 
-		const statsEl = colTitle.createDiv({ cls: 'hoard-group-stats' });
+		const statsEl = colTitle.createDiv({ cls: 'hoard-group-header__stats' });
 		const timeWatched = members.reduce((s, t) => s + this.dataManager.calcTimeWatched(t), 0);
 		const timeLeft = members.reduce((s, t) => s + this.dataManager.calcTimeRemaining(t), 0);
 		statsEl.createSpan({ text: t('ui.group.countTitle', { count: members.length }) });
 		statsEl.createSpan({ text: `  ·  ${t('list.stats.watched', { time: formatTime(timeWatched) })}` });
 		statsEl.createSpan({ text: `  ·  ${t('list.stats.left', { time: formatTime(timeLeft) })}` });
 
-		const barWrap = colTitle.createDiv({ cls: 'hoard-progress-wrap' });
-		barWrap.createDiv({ cls: 'hoard-progress-bar' }).style.width =
-			`${this.getGroupProgress(members)}%`;
+		const barWrap = colTitle.createDiv({ cls: 'hoard-progress__wrap' });
+		barWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({
+			'--hoard-progress-width': `${this.getGroupProgress(members)}%`,
+		});
 	}
 
 	/** Name input with save/cancel buttons. */
 	private renderGroupRenameRow(colTitle: HTMLElement, group: HoardGroup): void {
-		const renameRow = colTitle.createDiv({ cls: 'hoard-group-name-row' });
+		const renameRow = colTitle.createDiv({ cls: 'hoard-group-header__name-row' });
 		const nameInput = renameRow.createEl('input', {
-			cls: 'hoard-group-rename-input',
+			cls: 'hoard-group-header__rename-input',
 			attr: { type: 'text', value: group.name },
 		});
 		nameInput.addEventListener('click', (e) => e.stopPropagation());
@@ -1963,12 +1958,12 @@ export class ListTab {
 				this.cancelGroupRename();
 			}
 		});
-		const saveBtn = createIconButton(renameRow, { icon: 'check', label: t('common.save'), cls: 'hoard-group-action-btn' });
+		const saveBtn = createIconButton(renameRow, { icon: 'check', label: t('common.save'), cls: 'hoard-group-header__action-btn' });
 		saveBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			void this.commitGroupRename(group, nameInput.value);
 		});
-		const cancelBtn = createIconButton(renameRow, { icon: 'x', label: t('common.cancel'), cls: 'hoard-group-action-btn' });
+		const cancelBtn = createIconButton(renameRow, { icon: 'x', label: t('common.cancel'), cls: 'hoard-group-header__action-btn' });
 		cancelBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.cancelGroupRename();
@@ -1991,9 +1986,9 @@ export class ListTab {
 
 	/** Group name with rename and delete buttons. */
 	private renderGroupNameRow(colTitle: HTMLElement, group: HoardGroup): void {
-		const nameRow = colTitle.createDiv({ cls: 'hoard-group-name-row' });
-		nameRow.createSpan({ cls: 'hoard-row-title-text hoard-group-name', text: group.name });
-		const renameBtn = createIconButton(nameRow, { icon: 'pencil', label: t('ui.toolbar.renameGroup'), cls: 'hoard-group-action-btn' });
+		const nameRow = colTitle.createDiv({ cls: 'hoard-group-header__name-row' });
+		nameRow.createSpan({ cls: 'hoard-list__row-title-text hoard-group-header__name', text: group.name });
+		const renameBtn = createIconButton(nameRow, { icon: 'pencil', label: t('ui.toolbar.renameGroup'), cls: 'hoard-group-header__action-btn' });
 		renameBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.renamingGroupId = group.id;
@@ -2002,7 +1997,7 @@ export class ListTab {
 		const deleteBtn = createIconButton(nameRow, {
 			icon: 'x',
 			label: t('list.deleteGroupTip'),
-			cls: 'hoard-group-action-btn hoard-group-action-btn-delete hoard-btn-danger',
+			cls: 'hoard-group-header__action-btn hoard-group-header__action-btn--delete hoard-btn--danger',
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -2017,9 +2012,9 @@ export class ListTab {
 
 	private renderGroupPinCell(row: HTMLElement, group: HoardGroup): void {
 		const isGrpPinned = this.pinnedGroupId === group.id;
-		const colGrpPin = row.createDiv({ cls: 'hoard-col-pin' });
+		const colGrpPin = row.createDiv({ cls: 'hoard-list__column-pin' });
 		const grpPinIcon = colGrpPin.createSpan({
-			cls: `hoard-pin-icon${isGrpPinned ? ' is-pinned' : ''}`,
+			cls: `hoard-list__pin-icon${isGrpPinned ? ' is-pinned' : ''}`,
 			text: '📌',
 		});
 		grpPinIcon.title = isGrpPinned ? t('list.unpin') : t('list.pin');
@@ -2096,16 +2091,16 @@ export class ListTab {
 		const accordion = parent.createDiv({ cls: 'hoard-accordion' });
 		accordion.addEventListener('click', (e) => e.stopPropagation());
 
-		const accHeader = accordion.createDiv({ cls: 'hoard-accordion-header' });
-		const accLeft = accHeader.createDiv({ cls: 'hoard-acc-header-left' });
+		const accHeader = accordion.createDiv({ cls: 'hoard-accordion__header' });
+		const accLeft = accHeader.createDiv({ cls: 'hoard-accordion__header-left' });
 		const episodeTotal = title.totalEpisodes > 0 ? ` · ${t('list.epsTotal', { count: title.totalEpisodes })}` : '';
 		const startedStr = title.dateStarted
 			? t('list.started', { date: formatDateDisplay(title.dateStarted) })
 			: t('list.notStarted');
-		const subtitleRow = accLeft.createDiv({ cls: 'hoard-acc-subtitle' });
-		subtitleRow.createSpan({ cls: 'hoard-acc-subtitle-text', text: `${startedStr}${episodeTotal}` });
+		const subtitleRow = accLeft.createDiv({ cls: 'hoard-accordion__subtitle' });
+		subtitleRow.createSpan({ cls: 'hoard-accordion__subtitle-text', text: `${startedStr}${episodeTotal}` });
 		if (title.externalLink) {
-			const linkIcon = subtitleRow.createEl('a', { cls: 'hoard-acc-link-icon' });
+			const linkIcon = subtitleRow.createEl('a', { cls: 'hoard-accordion__link-icon' });
 			setIcon(linkIcon, 'globe');
 			linkIcon.href = title.externalLink;
 			linkIcon.setAttr('aria-label', t('list.openExternalLink'));
@@ -2116,7 +2111,7 @@ export class ListTab {
 		}
 
 		// credits rows; clicking a name filters this view via the search bar
-		const creditsWrap = accLeft.createDiv({ cls: 'hoard-acc-credits' });
+		const creditsWrap = accLeft.createDiv({ cls: 'hoard-accordion__credits' });
 		renderCreditsRefreshButton(creditsWrap, this.plugin, title, () => this.rerenderTable());
 		renderCreditsRows(creditsWrap, title, {
 			onPersonClick: (name) => this.applyPersonSearch(name),
@@ -2142,24 +2137,24 @@ export class ListTab {
 		const timeLeft = this.dataManager.calcTimeRemainingForModal(title);
 		const progress = this.dataManager.getProgress(title);
 
-		const accRightGroup = accHeader.createDiv({ cls: 'hoard-acc-right-group' });
+		const accRightGroup = accHeader.createDiv({ cls: 'hoard-accordion__right-group' });
 
 		const makeStatBlock = (value: string, label: string): void => {
-			const block = accRightGroup.createDiv({ cls: 'hoard-acc-stat-block' });
-			block.createDiv({ cls: 'hoard-acc-percent', text: value });
-			block.createDiv({ cls: 'hoard-acc-progress-label', text: label });
+			const block = accRightGroup.createDiv({ cls: 'hoard-accordion__stat-block' });
+			block.createDiv({ cls: 'hoard-accordion__percent', text: value });
+			block.createDiv({ cls: 'hoard-accordion__progress-label', text: label });
 		};
 		makeStatBlock(formatTime(timeLeft), t('list.stat.left'));
 		makeStatBlock(formatTime(timeWatched), t('list.stat.watched'));
 		makeStatBlock(`${watchedEps} / ${effectiveTotal}`, t('list.stat.episodes'));
 
-		const accRight = accRightGroup.createDiv({ cls: 'hoard-acc-header-right' });
-		accRight.createDiv({ cls: 'hoard-acc-percent', text: `${progress}%` });
-		accRight.createDiv({ cls: 'hoard-acc-progress-label', text: t('list.stat.progress') });
-		const accBarWrap = accRight.createDiv({ cls: 'hoard-acc-progress-wrap' });
-		accBarWrap.createDiv({ cls: 'hoard-progress-bar' }).style.width = `${progress}%`;
+		const accRight = accRightGroup.createDiv({ cls: 'hoard-accordion__header-right' });
+		accRight.createDiv({ cls: 'hoard-accordion__percent', text: `${progress}%` });
+		accRight.createDiv({ cls: 'hoard-accordion__progress-label', text: t('list.stat.progress') });
+		const accBarWrap = accRight.createDiv({ cls: 'hoard-accordion__progress-wrap' });
+		accBarWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({ '--hoard-progress-width': `${progress}%` });
 
-		const accBody = accordion.createDiv({ cls: 'hoard-accordion-body' });
+		const accBody = accordion.createDiv({ cls: 'hoard-accordion__body' });
 		if (isSingleEpisodeTitle(title)) {
 			this.renderSingleEpisodeBody(accBody, title);
 		} else {
@@ -2170,7 +2165,7 @@ export class ListTab {
 	}
 
 	private renderSingleEpisodeBody(parent: HTMLElement, title: HoardTitle): void {
-		const row = parent.createDiv({ cls: 'hoard-movie-row' });
+		const row = parent.createDiv({ cls: 'hoard-accordion__movie-row' });
 		// the shared toggle writes status + watch date; the row just re-renders
 		appendMarkWatchedButton(this.dataManager, row, title.id, () => this.rerenderTable());
 	}
@@ -2185,14 +2180,10 @@ export class ListTab {
 
 		title.seasons.forEach((season, seasonIdx) => {
 			let isCollapsed = this.collapsedSeasons.has(seasonIdx);
-			const seasonWrap = parent.createDiv({ cls: 'hoard-season-wrap' });
-
-			const seasonHeader = seasonWrap.createDiv({ cls: 'hoard-season-header' });
-			const badge = seasonHeader.createSpan({ cls: 'hoard-season-badge' });
-			badge.textContent = season.name;
-			const palette = this.plugin.settings.seasonPalette;
-			badge.style.backgroundColor = palette[seasonIdx % palette.length] ?? '#888780';
-			seasonHeader.createSpan({ cls: 'hoard-season-ep-count', text: ListTab.seasonCountText(season) });
+			const { seasonWrap, seasonHeader } = createSeasonHeader(
+				parent, season.name, seasonIdx, this.plugin.settings.seasonPalette,
+			);
+			seasonHeader.createSpan({ cls: 'hoard-accordion__season-episode-count', text: ListTab.seasonCountText(season) });
 			const chevron = seasonHeader.createSpan({
 				cls: `hoard-chevron${isCollapsed ? '' : ' is-open'}`,
 				text: '›',
@@ -2213,7 +2204,7 @@ export class ListTab {
 					isCollapsed = true;
 					this.collapsedSeasons.add(seasonIdx);
 					chevron.classList.remove('is-open');
-					seasonWrap.querySelector('.hoard-episode-grid')?.remove();
+					seasonWrap.querySelector('.hoard-accordion__episode-grid')?.remove();
 				}
 				if (this.expandedId) {
 					void this.dataManager.persistCollapsedSeasons(this.expandedId, this.collapsedSeasons);
@@ -2268,21 +2259,21 @@ export class ListTab {
 		const effectiveTotal = this.dataManager.getEffectiveTotal(title);
 		const progress = this.dataManager.getProgress(title);
 
-		const statValues = accordion.querySelectorAll<HTMLElement>('.hoard-acc-stat-block .hoard-acc-percent');
+		const statValues = accordion.querySelectorAll<HTMLElement>('.hoard-accordion__stat-block .hoard-accordion__percent');
 		if (statValues[0]) statValues[0].textContent = formatTime(timeLeft);
 		if (statValues[1]) statValues[1].textContent = formatTime(timeWatched);
 		if (statValues[2]) statValues[2].textContent = `${watchedEps} / ${effectiveTotal}`;
 
-		const progressText = accordion.querySelector<HTMLElement>('.hoard-acc-header-right .hoard-acc-percent');
+		const progressText = accordion.querySelector<HTMLElement>('.hoard-accordion__header-right .hoard-accordion__percent');
 		if (progressText) progressText.textContent = `${progress}%`;
-		const progressBar = accordion.querySelector<HTMLElement>('.hoard-acc-header-right .hoard-progress-bar');
-		if (progressBar) progressBar.style.width = `${progress}%`;
+		const progressBar = accordion.querySelector<HTMLElement>('.hoard-accordion__header-right .hoard-progress__bar');
+		if (progressBar) progressBar.setCssProps({ '--hoard-progress-width': `${progress}%` });
 
 		// only changes on skip-toggle, but cheap to refresh either way
 		if (season) {
-			const grid = box.closest('.hoard-episode-grid');
+			const grid = box.closest('.hoard-accordion__episode-grid');
 			const seasonWrap = grid?.parentElement;
-			const countEl = seasonWrap?.querySelector<HTMLElement>('.hoard-season-header .hoard-season-ep-count');
+			const countEl = seasonWrap?.querySelector<HTMLElement>('.hoard-accordion__season-header .hoard-accordion__season-episode-count');
 			if (countEl) {
 				countEl.textContent = ListTab.seasonCountText(season);
 			}
@@ -2300,19 +2291,19 @@ export class ListTab {
 		field: 'dateStarted' | 'dateFinished',
 		autoLabel: boolean,
 	): void {
-		const wrap = parent.createDiv({ cls: 'hoard-date-field' });
+		const wrap = parent.createDiv({ cls: 'hoard-date-picker__field' });
 		wrap.createSpan({
-			cls: `hoard-footer-label${autoLabel ? ' hoard-footer-label-auto' : ''}`,
+			cls: `hoard-accordion__footer-label${autoLabel ? ' hoard-accordion__footer-label--auto' : ''}`,
 			text: label,
 		});
 		const todayBtn = wrap.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-footer-today-btn',
+			cls: 'hoard-btn hoard-btn--sm hoard-accordion__footer-today-btn',
 			text: t('list.footer.today'),
 			attr: { title: t('list.footer.fillToday') },
 		});
 		const picker = createDatePicker({
 			parent: wrap,
-			inputCls: 'hoard-footer-date hoard-date-input',
+			inputCls: 'hoard-accordion__footer-date hoard-date-picker__input--compact',
 			value: title[field],
 			stopClickPropagation: true,
 			onChange: (iso) => {
@@ -2338,11 +2329,11 @@ export class ListTab {
 	}
 
 	private renderAccordionFooter(parent: HTMLElement, title: HoardTitle): void {
-		const footer = parent.createDiv({ cls: 'hoard-accordion-footer' });
+		const footer = parent.createDiv({ cls: 'hoard-accordion__footer' });
 
-		const starsRow = footer.createDiv({ cls: 'hoard-stars-row' });
-		starsRow.createSpan({ cls: 'hoard-stars-label', text: t('list.footer.rating') });
-		const starsWrap = starsRow.createDiv({ cls: 'hoard-stars' });
+		const starsRow = footer.createDiv({ cls: 'hoard-accordion__stars-row' });
+		starsRow.createSpan({ cls: 'hoard-star-rating__stars-label', text: t('list.footer.rating') });
+		const starsWrap = starsRow.createDiv({ cls: 'hoard-star-rating--row' });
 		// star clicks must not bubble up and toggle the accordion
 		starsWrap.addEventListener('click', (e) => e.stopPropagation());
 		renderStarRating(starsWrap, title.rating, {
@@ -2361,7 +2352,7 @@ export class ListTab {
 		});
 
 		const rerenderCommunity = (): void => {
-			const next = starsRow.querySelector('.hoard-rating-divider');
+			const next = starsRow.querySelector('.hoard-star-rating__divider');
 			let n: ChildNode | null = next;
 			while (n) {
 				const toRemove = n;
@@ -2373,9 +2364,9 @@ export class ListTab {
 		renderCommunityRating(starsRow, this.plugin, title.id, rerenderCommunity);
 		maybeAutoRefreshCommunityRating(this.plugin, title.id, rerenderCommunity);
 
-		const notesRow = footer.createDiv({ cls: 'hoard-footer-row' });
+		const notesRow = footer.createDiv({ cls: 'hoard-accordion__footer-row' });
 		const notesInput = notesRow.createEl('input', {
-			cls: 'hoard-notes-input',
+			cls: 'hoard-accordion__notes-input',
 			attr: { type: 'text', placeholder: t('list.footer.addNote') },
 		});
 		notesInput.value = title.notes;
@@ -2391,14 +2382,14 @@ export class ListTab {
 		});
 
 		// started + watched share a row; only the first label keeps the fixed width
-		const dateRow = footer.createDiv({ cls: 'hoard-footer-row hoard-footer-row-pair' });
+		const dateRow = footer.createDiv({ cls: 'hoard-accordion__footer-row hoard-accordion__footer-row--pair' });
 		this.renderFooterDateField(dateRow, title, t('list.footer.dateStarted'), 'dateStarted', false);
 		this.renderFooterDateField(dateRow, title, t('list.footer.dateWatched'), 'dateFinished', true);
 
-		const statusRow = footer.createDiv({ cls: 'hoard-footer-row hoard-footer-row-pair' });
-		const statusField = statusRow.createDiv({ cls: 'hoard-date-field' });
-		statusField.createSpan({ cls: 'hoard-footer-label', text: t('list.footer.status') });
-		const statusSelect = statusField.createEl('select', { cls: 'hoard-select hoard-select-sm' });
+		const statusRow = footer.createDiv({ cls: 'hoard-accordion__footer-row hoard-accordion__footer-row--pair' });
+		const statusField = statusRow.createDiv({ cls: 'hoard-date-picker__field' });
+		statusField.createSpan({ cls: 'hoard-accordion__footer-label', text: t('list.footer.status') });
+		const statusSelect = statusField.createEl('select', { cls: 'hoard-input__select hoard-input__select--sm' });
 		for (const s of this.plugin.settings.statuses) {
 			if (s.name === 'To be released') continue; // auto-managed; not user-selectable here
 			const opt = statusSelect.createEl('option', { text: statusLabel(s.name), value: s.name });
@@ -2415,9 +2406,9 @@ export class ListTab {
 			})();
 		});
 
-		const priField = statusRow.createDiv({ cls: 'hoard-date-field' });
-		priField.createSpan({ cls: 'hoard-footer-label hoard-footer-label-auto', text: t('list.footer.priority') });
-		const prioritySelect = priField.createEl('select', { cls: 'hoard-select hoard-select-sm' });
+		const priField = statusRow.createDiv({ cls: 'hoard-date-picker__field' });
+		priField.createSpan({ cls: 'hoard-accordion__footer-label hoard-accordion__footer-label--auto', text: t('list.footer.priority') });
+		const prioritySelect = priField.createEl('select', { cls: 'hoard-input__select hoard-input__select--sm' });
 		// blank option clears the priority
 		prioritySelect.createEl('option', { text: t('list.footer.noPriority'), value: '' });
 		for (const p of this.plugin.settings.priorities) {
@@ -2435,11 +2426,11 @@ export class ListTab {
 			})();
 		});
 
-		const releaseRow = footer.createDiv({ cls: 'hoard-footer-row' });
-		releaseRow.createSpan({ cls: 'hoard-footer-label', text: t('list.footer.releaseDate') });
+		const releaseRow = footer.createDiv({ cls: 'hoard-accordion__footer-row' });
+		releaseRow.createSpan({ cls: 'hoard-accordion__footer-label', text: t('list.footer.releaseDate') });
 		createDatePicker({
 			parent: releaseRow,
-			inputCls: 'hoard-footer-date hoard-date-input',
+			inputCls: 'hoard-accordion__footer-date hoard-date-picker__input--compact',
 			value: title.releaseDate,
 			lenient: true,
 			stopClickPropagation: true,
@@ -2456,9 +2447,9 @@ export class ListTab {
 			},
 		});
 
-		const actionRow = footer.createDiv({ cls: 'hoard-footer-row hoard-footer-action-row' });
+		const actionRow = footer.createDiv({ cls: 'hoard-accordion__footer-row hoard-accordion__footer-action-row' });
 
-		const deleteBtn = actionRow.createEl('button', { cls: 'hoard-delete-btn hoard-btn-danger', text: t('common.remove') });
+		const deleteBtn = actionRow.createEl('button', { cls: 'hoard-accordion__delete-btn hoard-btn--danger', text: t('common.remove') });
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			new ConfirmModal(this.plugin.app, t('list.removeTitleConfirm', { title: title.title }), () => {
@@ -2469,8 +2460,8 @@ export class ListTab {
 			}).open();
 		});
 
-		const editBtnWrap = actionRow.createDiv({ cls: 'hoard-add-btn-wrap' });
-		const editBtn = editBtnWrap.createEl('button', { cls: 'hoard-edit-btn', text: t('common.edit') });
+		const editBtnWrap = actionRow.createDiv({ cls: 'hoard-toolbar__add-btn-wrap' });
+		const editBtn = editBtnWrap.createEl('button', { cls: 'hoard-accordion__edit-btn', text: t('common.edit') });
 		editBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			const current = this.dataManager.getTitle(title.id);

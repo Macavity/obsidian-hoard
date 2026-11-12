@@ -6,11 +6,11 @@ import { Notice } from 'obsidian';
 /** Opens the modal and feeds `csv` through the file input; resolves once the mapping step is shown. */
 export async function uploadCsv(modal: Modal, csv: string): Promise<void> {
 	modal.open();
-	const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-csv-file-input')!;
+	const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-csv__file-input')!;
 	Object.defineProperty(input, 'files', { value: [new File([csv], 'in.csv', { type: 'text/csv' })] });
 	input.dispatchEvent(new Event('change'));
 	await vi.waitFor(() => {
-		if (!modal.contentEl.querySelector('.hoard-csv-preview-btn')) throw new Error('mapping step not shown');
+		if (!modal.contentEl.querySelector('.hoard-csv__preview-btn')) throw new Error('mapping step not shown');
 	});
 }
 
@@ -22,15 +22,15 @@ export function clickByText(root: HTMLElement, selector: string, text: string): 
 
 /** Mapping step → "Next". */
 export function clickNext(modal: Modal): void {
-	modal.contentEl.querySelector<HTMLElement>('.hoard-csv-preview-btn')!.click();
+	modal.contentEl.querySelector<HTMLElement>('.hoard-csv__preview-btn')!.click();
 }
 
 export function previewTitles(modal: Modal): string[] {
-	return Array.from(modal.contentEl.querySelectorAll('.hoard-csv-row-title')).map((e) => e.textContent ?? '');
+	return Array.from(modal.contentEl.querySelectorAll('.hoard-csv__row-title')).map((e) => e.textContent ?? '');
 }
 
 export function valueSelect(modal: Modal, index: number): HTMLSelectElement {
-	return modal.contentEl.querySelectorAll<HTMLSelectElement>('.hoard-csv-valmap-select')[index]!;
+	return modal.contentEl.querySelectorAll<HTMLSelectElement>('.hoard-csv__value-map-select')[index]!;
 }
 
 /** Messages of every Notice raised so far (the obsidian mock records them). */

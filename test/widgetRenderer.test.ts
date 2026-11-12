@@ -124,24 +124,28 @@ describe('WidgetRenderer', () => {
 		const el = run('hoard', 'id: s');
 		expect(el.classList.contains('hoard-widget')).toBe(true);
 		expect(el.textContent).toContain('Next up: Ep 3');
-		expect(el.querySelector<HTMLElement>('.hoard-progress-bar')!.style.width).toBe('20%');
+		expect(el.querySelector<HTMLElement>('.hoard-progress__bar')!.style.getPropertyValue('--hoard-progress-width')).toBe('20%');
 	});
 
 	it('hoard: task marker strikes the title; a fully watched series says so', () => {
 		const { run } = mountRenderer({ titles: [series({ watchedEpisodes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] })] });
 		const el = run('hoard', 'id: s');
 		expect(el.textContent).toContain('All episodes watched');
-		const cb = el.querySelector<HTMLInputElement>('.hoard-widget-cb')!;
+		const cb = el.querySelector<HTMLInputElement>('.hoard-widget__checkbox')!;
 		cb.checked = true;
 		cb.dispatchEvent(new Event('change'));
-		expect(el.querySelector<HTMLElement>('.hoard-widget-title')!.style.textDecoration).toBe('line-through');
+		const title = el.querySelector<HTMLElement>('.hoard-widget__title')!;
+		expect(title.classList.contains(('is-done'))).toBe(true);
+		cb.checked = false;
+		cb.dispatchEvent(new Event('change'));
+		expect(title.classList.contains(('is-done'))).toBe(false);
 	});
 
 	it('hoard: a movie checkbox writes the watched state and re-renders', async () => {
 		const { run, dm } = mountRenderer({ titles: [movie()] });
 		const el = run('hoard', 'id: m');
 		expect(el.textContent).toContain('Mark as watched');
-		const cb = el.querySelector<HTMLInputElement>('.hoard-widget-next-cb')!;
+		const cb = el.querySelector<HTMLInputElement>('.hoard-widget__next-checkbox')!;
 		cb.checked = true;
 		cb.dispatchEvent(new Event('change'));
 		await Promise.resolve();
@@ -155,13 +159,13 @@ describe('WidgetRenderer', () => {
 		expect(run('hoard-todo', 'show').classList.contains('hoard-widget')).toBe(true);
 		const mini = run('hoard-todo', 'Film\nmini');
 		expect(mini.classList.contains('hoard-widget-minimal')).toBe(true);
-		expect(mini.querySelector<HTMLInputElement>('.hoard-widget-next-cb')!.checked).toBe(true);
-		expect(run('hoard-todo', 'Show\nmini').querySelector('.hoard-widget-next-cb')).not.toBeNull();
+		expect(mini.querySelector<HTMLInputElement>('.hoard-widget__next-checkbox')!.checked).toBe(true);
+		expect(run('hoard-todo', 'Show\nmini').querySelector('.hoard-widget__next-checkbox')).not.toBeNull();
 	});
 
 	it('hoard-todo mini: a finished series shows a disabled, checked box', () => {
 		const { run } = mountRenderer({ titles: [series({ watchedEpisodes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] })] });
-		const cb = run('hoard-todo', 'Show\nmini').querySelector<HTMLInputElement>('.hoard-widget-next-cb')!;
+		const cb = run('hoard-todo', 'Show\nmini').querySelector<HTMLInputElement>('.hoard-widget__next-checkbox')!;
 		expect([cb.checked, cb.disabled]).toEqual([true, true]);
 	});
 
@@ -173,7 +177,7 @@ describe('WidgetRenderer', () => {
 		expect(run('hoard-stat', 'time').textContent).toContain('left');
 		expect(run('hoard-stat', 'time full').textContent).toContain('1 day 1h');
 		expect(run('hoard-stat', 'completed full').textContent).toContain('titles completed');
-		expect(run('hoard-stat', 'time completed full').classList.contains('hoard-wstat-triple')).toBe(true);
+		expect(run('hoard-stat', 'time completed full').classList.contains('hoard-widget-stat--triple')).toBe(true);
 		expect(run('hoard-stat', 'bogus').textContent).toContain('Unknown stat "bogus"');
 	});
 

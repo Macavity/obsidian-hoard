@@ -252,27 +252,27 @@ describe('tracker cards view', () => {
 	it('groups cards by month, keeps undated entries last and shows the group counts', () => {
 		const { container, tab } = makeTab(cardsWorld());
 		tab.render();
-		const titles = qsa(container, '.hoard-tracker-month-title');
+		const titles = qsa(container, '.hoard-tracker__month-title');
 		expect(titles.length).toBeGreaterThanOrEqual(2);
 		expect(titles[titles.length - 1]!.textContent).toBe(`${t('airtime.noDate')}(1)`);
-		expect(qsa(container, '.hoard-tracker-cell')).toHaveLength(3);
+		expect(qsa(container, '.hoard-tracker__cell')).toHaveLength(3);
 	});
 
 	it('shows the empty states instead of a grid', () => {
 		const empty = makeTab(newWorld({ view: 'cards' }));
 		empty.tab.render();
-		expect(empty.container.querySelector('.hoard-empty-state')?.textContent).toBe(t('airtime.empty.tracker'));
-		expect(empty.container.querySelector('.hoard-tracker-scroll')).toBeNull();
+		expect(empty.container.querySelector('.hoard-dashboard__empty-state')?.textContent).toBe(t('airtime.empty.tracker'));
+		expect(empty.container.querySelector('.hoard-tracker__scroll')).toBeNull();
 		const searched = makeTab(cardsWorld());
 		searched.tab.searchQuery = 'zzz';
 		searched.tab.render();
-		expect(searched.container.querySelector('.hoard-empty-state')?.textContent).toBe(t('airtime.empty.search'));
+		expect(searched.container.querySelector('.hoard-dashboard__empty-state')?.textContent).toBe(t('airtime.empty.search'));
 	});
 
 	it('clicking a card opens the edit modal for its source', () => {
 		const { container, tab } = makeTab(cardsWorld());
 		tab.render();
-		qsa(container, '.hoard-tracker-cell')[0]!.click();
+		qsa(container, '.hoard-tracker__cell')[0]!.click();
 		expect(cap.forms).toHaveLength(1);
 	});
 });

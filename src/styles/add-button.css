@@ -1,14 +1,15 @@
 /* Add/Edit dropdown, minimal widget, group action buttons */
+
 /* ══ NEW IN 0.3.0 ══ */
 
 /* +Add / Edit button dropdown */
-.hoard-add-btn-wrap {
+.hoard-toolbar__add-btn-wrap {
   position: relative;
 }
 
 /* popover box shared with the Custom Lists sort panel */
-.hoard-dropdown,
-.hoard-cl-sort-panel {
+.hoard-popover,
+.hoard-custom-lists__sort-panel {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
@@ -16,46 +17,48 @@
   background: var(--background-primary);
   border: 0.5px solid var(--background-modifier-border);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
 }
 
-.hoard-dropdown {
+.hoard-popover {
   min-width: 168px;
   padding: 4px 0;
 }
 
-/* popovers anchored by inline top/left (ReadingTab) */
-.hoard-dropdown.hoard-popover-anchored {
+/* popovers anchored by top/left variables (ReadingTab) */
+.hoard-popover.hoard-popover--anchored {
+  top: var(--hoard-popover-top, calc(100% + 4px));
+  left: var(--hoard-popover-left, auto);
   right: auto;
 }
 
 /* Group header row */
-.hoard-table .hoard-group-row {
+.hoard-list__table .hoard-list__row--group {
     background: transparent;
-    border: 2px solid var(--hoard-group-border-overlay);
-    border-left: 4px solid var(--hoard-accent);
-    border-right: 4px solid var(--hoard-accent);
+    border: 2px solid var(--hoard-view-group-border-overlay);
+    border-left: 4px solid var(--hoard-view-accent);
+    border-right: 4px solid var(--hoard-view-accent);
 }
 
-.hoard-group-name {
+.hoard-group-header__name {
   font-weight: 600;
 }
 
-.hoard-group-stats {
+.hoard-group-header__stats {
   font-size: 11px;
   color: var(--text-muted);
   margin-top: 2px;
 }
 
 /* Indented member rows (inside expanded group) */
-.hoard-row-indented {
+.hoard-list__row--indented {
   padding-left: 24px;
   background: var(--background-primary-alt);
   border-left: 2px solid var(--background-modifier-border);
 }
 
 /* per-title stats: 3 blocks + progress */
-.hoard-acc-right-group {
+.hoard-accordion__right-group {
   display: flex;
   flex-direction: row;
   gap: 20px;
@@ -64,12 +67,12 @@
   background: rgb(0 0 0 / 5%);
   border: 1px solid rgb(255 255 255 / 15%);
   border-radius: 6px;
-  padding: 6px 6px;
+  padding: 6px;
   font-size: 5px;
 }
 
 /* each stat block, centered */
-.hoard-acc-stat-block {
+.hoard-accordion__stat-block {
   flex-shrink: 0;
   text-align: center;
   min-width: 50px;
@@ -82,7 +85,7 @@
   margin: 2px 0;
 }
 
-.hoard-widget-minimal-row {
+.hoard-widget-minimal__row {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -95,14 +98,14 @@
 
 /* ══ GROUP ACTION BUTTONS (rename / delete) ══ */
 
-.hoard-group-name-row {
+.hoard-group-header__name-row {
   display: flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
 }
 
-button.hoard-group-action-btn {
+button.hoard-group-header__action-btn {
   width: 20px;
   height: 20px;
   border: 0.5px solid var(--background-modifier-border);
@@ -110,18 +113,18 @@ button.hoard-group-action-btn {
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
-button.hoard-group-action-btn:hover {
+button.hoard-group-header__action-btn:hover {
   border-color: var(--interactive-accent);
 }
 
-button.hoard-group-action-btn .svg-icon {
+button.hoard-group-header__action-btn .svg-icon {
   width: 12px;
   height: 12px;
 }
 
-/* .hoard-group-action-btn-delete — color via .hoard-btn-danger */
+/* .hoard-group-header__action-btn--delete — color via .hoard-btn--danger */
 
-.hoard-group-rename-input {
+.hoard-group-header__rename-input {
   flex: 1;
   min-width: 0;
   padding: 2px 6px;
@@ -133,7 +136,7 @@ button.hoard-group-action-btn .svg-icon {
   font-weight: 600;
 }
 
-.hoard-group-rename-input:focus {
+.hoard-group-header__rename-input:focus {
   outline: none;
 }
 

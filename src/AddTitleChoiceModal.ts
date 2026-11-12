@@ -19,7 +19,7 @@ export class AddTitleChoiceModal extends Modal {
 	onOpen(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.addClass('hoard-draft-choice-modal');
+		contentEl.addClass('hoard-draft-choice');
 
 		this.titleEl.setText(t('add.choice.title'));
 

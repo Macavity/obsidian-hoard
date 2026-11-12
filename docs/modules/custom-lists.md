@@ -64,7 +64,7 @@ The same idea as the entries' [baseline](../concepts/baseline.md), per list obje
 - The tab listens to vault `modify` for the open list's note and reloads when `isStale` holds,
   or, if no list is shown because the note was corrupt, once `peek` parses it again.
   Own writes move the baseline inside the `process` callback, so they never count as stale. An
-  open cell editor (`.hoard-cl-editing`) blocks the reload; its commit then hits the conflict
+  open cell editor (`.hoard-custom-list-table__td--editing`) blocks the reload; its commit then hits the conflict
   path. `destroy` (view close, tab switch) drops the listener; `render` only tears down the
   inline editor.
 - Rejected: a row-level three-way merge. Row ids are sequential (`row_N`), so two devices adding

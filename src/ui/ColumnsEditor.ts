@@ -40,24 +40,24 @@ export function attachCardDrag(
 	onReorder: (from: number, to: number) => void,
 ): void {
 	// drag-only grip, deliberately not a focusable button
-	const handle = card.createDiv({ cls: 'hoard-editcol-card-handle' });
+	const handle = card.createDiv({ cls: 'hoard-edit-columns__card-handle' });
 	setIcon(handle, 'grip-vertical');
 	handle.title = t('ui.columns.dragToReorder');
 	handle.addEventListener('mousedown', () => card.setAttribute('draggable', 'true'));
 	card.addEventListener('dragstart', (e) => {
 		drag.from = idx;
 		e.dataTransfer?.setData('text/plain', String(idx));
-		card.addClass('hoard-cl-dragging');
+		card.addClass('hoard-custom-lists__dragging');
 	});
 	card.addEventListener('dragend', () => {
-		card.removeClass('hoard-cl-dragging');
+		card.removeClass('hoard-custom-lists__dragging');
 		card.setAttribute('draggable', 'false');
 	});
-	card.addEventListener('dragover', (e) => { e.preventDefault(); card.addClass('hoard-cl-drag-over'); });
-	card.addEventListener('dragleave', () => card.removeClass('hoard-cl-drag-over'));
+	card.addEventListener('dragover', (e) => { e.preventDefault(); card.addClass('hoard-custom-lists__drag-over'); });
+	card.addEventListener('dragleave', () => card.removeClass('hoard-custom-lists__drag-over'));
 	card.addEventListener('drop', (e) => {
 		e.preventDefault();
-		card.removeClass('hoard-cl-drag-over');
+		card.removeClass('hoard-custom-lists__drag-over');
 		const from = drag.from;
 		drag.from = -1;
 		if (from !== idx && from >= 0) onReorder(from, idx);
@@ -66,7 +66,7 @@ export function attachCardDrag(
 
 /** Text / number / select dropdown of a column card. */
 export function renderTypeSelect(card: HTMLElement, current: CustomListColumn['type']): HTMLSelectElement {
-	const typeSelect = card.createEl('select', { cls: 'hoard-select hoard-editcol-card-type' });
+	const typeSelect = card.createEl('select', { cls: 'hoard-input__select hoard-edit-columns__card-type' });
 	const labels = {
 		text: t('ui.columns.typeText'),
 		number: t('ui.columns.typeNumber'),
@@ -144,10 +144,10 @@ export function renderColumnsEditor(
 	opts: ColumnsEditorOptions,
 ): void {
 	host.empty();
-	host.addClass('hoard-editcols-modal');
+	host.addClass('hoard-edit-columns');
 	opts.renderHeader(host);
 
-	const listEl = host.createDiv({ cls: 'hoard-editcols-list' });
+	const listEl = host.createDiv({ cls: 'hoard-edit-columns__list' });
 	const rerenderAll = (): void => renderColumnsEditor(host, state, opts);
 	const renderCols = (): void => {
 		renderColumnList(
@@ -173,7 +173,7 @@ export function renderColumnsEditor(
 	};
 	renderCols();
 
-	renderCancelSave(host.createDiv({ cls: 'hoard-modal-btn-row hoard-editcols-footer' }), {
+	renderCancelSave(host.createDiv({ cls: 'hoard-modal__btn-row hoard-edit-columns__footer' }), {
 		onCancel: opts.onCancel,
 		onSave: () => {
 			const problem = validateColumns(state.cols);
@@ -190,7 +190,7 @@ export function renderCancelSave(
 	handlers: { onCancel: () => void; onSave: () => void },
 ): void {
 	row.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') }).addEventListener('click', () => handlers.onCancel());
-	row.createEl('button', { cls: 'hoard-btn hoard-btn-primary', text: t('common.save') }).addEventListener('click', () => handlers.onSave());
+	row.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('common.save') }).addEventListener('click', () => handlers.onSave());
 }
 
 // Shared column list renderer (used by renderColumnsEditor)
@@ -207,28 +207,28 @@ function renderColumnList(
 	onOptionRename?: (colId: string, oldVal: string, newVal: string) => void,
 ): void {
 	listEl.empty();
-	listEl.addClass('hoard-editcol-card-grid');
+	listEl.addClass('hoard-edit-columns__card-grid');
 	const drag: DragState = { from: -1 };
 
 	// permanent auto-included columns — non-editable, non-deletable, non-draggable
 	const renderAutoCard = (id: string, label: string): void => {
-		const card = listEl.createDiv({ cls: 'hoard-editcol-card hoard-editcol-card-auto' });
+		const card = listEl.createDiv({ cls: 'hoard-edit-columns__card hoard-edit-columns__card--auto' });
 		card.setAttribute('data-auto', id);
-		const nameWrap = card.createDiv({ cls: 'hoard-editcol-card-name-wrap' });
-		nameWrap.createDiv({ cls: 'hoard-editcol-card-name-label', text: label });
-		card.createDiv({ cls: 'hoard-editcol-card-type-locked', text: t('ui.columns.auto') });
-		card.createDiv({ cls: 'hoard-editcol-card-spacer' });
+		const nameWrap = card.createDiv({ cls: 'hoard-edit-columns__card-name-wrap' });
+		nameWrap.createDiv({ cls: 'hoard-edit-columns__card-name-label', text: label });
+		card.createDiv({ cls: 'hoard-edit-columns__card-type-locked', text: t('ui.columns.auto') });
+		card.createDiv({ cls: 'hoard-edit-columns__card-spacer' });
 	};
 	renderAutoCard('#', '#');
 	renderAutoCard('Name', t('ui.columns.autoName'));
 
 	cols.forEach((col, idx) => {
-		const card = listEl.createDiv({ cls: 'hoard-editcol-card' });
+		const card = listEl.createDiv({ cls: 'hoard-edit-columns__card' });
 
 		attachCardDrag(card, idx, drag, onReorder);
 
 		const nameInput = card.createEl('input', {
-			cls: 'hoard-modal-input hoard-editcol-card-name',
+			cls: 'hoard-modal__input hoard-edit-columns__card-name',
 			attr: { type: 'text', placeholder: t('ui.columns.columnName'), value: col.label },
 		});
 		nameInput.addEventListener('input', () => { col.label = nameInput.value; });
@@ -257,9 +257,9 @@ function renderColumnList(
 		});
 
 		if (col.type === 'text' || col.type === 'number') {
-			const toggles = card.createDiv({ cls: 'hoard-editcol-card-toggles' });
+			const toggles = card.createDiv({ cls: 'hoard-edit-columns__card-toggles' });
 			const boldBtn = toggles.createEl('button', {
-				cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-toggle hoard-editcols-bold-btn',
+				cls: 'hoard-btn hoard-btn--sm hoard-edit-columns__card-toggle hoard-edit-columns__bold-btn',
 				text: t('ui.columns.bold'),
 			});
 			setPressed(boldBtn, !!col.bold);
@@ -268,7 +268,7 @@ function renderColumnList(
 				setPressed(boldBtn, !!col.bold);
 			});
 			const italicBtn = toggles.createEl('button', {
-				cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-toggle hoard-editcols-italic-btn',
+				cls: 'hoard-btn hoard-btn--sm hoard-edit-columns__card-toggle hoard-edit-columns__italic-btn',
 				text: t('ui.columns.italic'),
 			});
 			setPressed(italicBtn, !!col.italic);
@@ -279,7 +279,7 @@ function renderColumnList(
 
 			if (col.type === 'number') {
 				const autoTimeBtn = toggles.createEl('button', {
-					cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-toggle hoard-editcols-autotime-btn',
+					cls: 'hoard-btn hoard-btn--sm hoard-edit-columns__card-toggle hoard-edit-columns__autotime-btn',
 					attr: { 'aria-label': t('ui.columns.autoTime') },
 				});
 				setTooltip(autoTimeBtn, t('ui.columns.autoTime'));
@@ -292,7 +292,7 @@ function renderColumnList(
 			}
 		}
 
-		const delBtn = createIconButton(card, { icon: 'x', label: t('ui.columns.deleteColumn'), cls: 'hoard-editcol-card-del' });
+		const delBtn = createIconButton(card, { icon: 'x', label: t('ui.columns.deleteColumn'), cls: 'hoard-edit-columns__card-delete' });
 		delBtn.addEventListener('click', () => {
 			const hasData = existingRows.some(r => {
 				const val = (r as Record<string, unknown>)[col.id];
@@ -308,15 +308,15 @@ function renderColumnList(
 		});
 
 		if (col.type === 'select') {
-			const optsArea = card.createDiv({ cls: 'hoard-editcol-card-opts' });
+			const optsArea = card.createDiv({ cls: 'hoard-edit-columns__card-options' });
 			const renderOpts = (): void => {
 				optsArea.empty();
 				(col.options ?? []).forEach((opt, oi) => {
-					const optRow = optsArea.createDiv({ cls: 'hoard-editcol-card-opt-row' });
+					const optRow = optsArea.createDiv({ cls: 'hoard-edit-columns__card-option-row' });
 
 					// per-option colour dot — reuses the shared picker + derivation helpers
 					const colorDot = optRow.createEl('button', {
-						cls: 'hoard-reading-col-color-dot hoard-editcol-opt-color-dot',
+						cls: 'hoard-color-picker__dot hoard-edit-columns__option-color-dot',
 					});
 					colorDot.title = t('ui.columns.optionColor');
 					const syncDot = (): void => {
@@ -324,7 +324,7 @@ function renderColumnList(
 						if (c) {
 							colorDot.removeClass('is-unset');
 							// colours flow through CSS vars; .is-unset gates whether they apply
-							colorDot.setCssProps({ '--hoard-dot-fill': deriveFillColor(c), '--hoard-dot-border': deriveBorderColor(c) });
+							colorDot.setCssProps({ '--hoard-color-picker-dot-fill': deriveFillColor(c), '--hoard-color-picker-dot-border': deriveBorderColor(c) });
 						} else {
 							colorDot.addClass('is-unset');
 						}
@@ -352,7 +352,7 @@ function renderColumnList(
 					});
 
 					const optInput = optRow.createEl('input', {
-						cls: 'hoard-modal-input hoard-editcol-card-opt-input',
+						cls: 'hoard-modal__input hoard-edit-columns__card-option-input',
 						attr: { type: 'text', value: opt, placeholder: t('ui.columns.optionPlaceholder') },
 					});
 					let prevVal = opt;
@@ -377,7 +377,7 @@ function renderColumnList(
 					const delOpt = createIconButton(optRow, {
 						icon: 'x',
 						label: t('ui.columns.removeOption'),
-						cls: 'hoard-editcol-card-opt-del',
+						cls: 'hoard-edit-columns__card-option-delete',
 						variant: 'sm',
 					});
 					delOpt.addEventListener('click', () => {
@@ -388,7 +388,7 @@ function renderColumnList(
 					});
 				});
 				const addOpt = optsArea.createEl('button', {
-					cls: 'hoard-btn hoard-btn-sm hoard-editcol-card-opt-add',
+					cls: 'hoard-btn hoard-btn--sm hoard-edit-columns__card-option-add',
 					text: t('ui.columns.addOption'),
 				});
 				addOpt.addEventListener('click', () => {
@@ -402,8 +402,8 @@ function renderColumnList(
 	});
 
 	if (onAdd) {
-		const addCard = listEl.createDiv({ cls: 'hoard-editcol-card hoard-editcol-card-add' });
-		addCard.createDiv({ cls: 'hoard-editcol-card-add-label', text: t('ui.columns.addColumn') });
+		const addCard = listEl.createDiv({ cls: 'hoard-edit-columns__card hoard-edit-columns__card--add' });
+		addCard.createDiv({ cls: 'hoard-edit-columns__card-add-label', text: t('ui.columns.addColumn') });
 		addCard.addEventListener('click', () => onAdd());
 	}
 }

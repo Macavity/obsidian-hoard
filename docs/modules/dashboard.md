@@ -39,7 +39,7 @@ the reading aggregates once, then draws cards, "More statistics", suggestions an
 
 ## Mobile
 
-The TypeScript has no platform branch. `HoardView` toggles `hoard-mobile` from `Platform.isMobile`;
+The TypeScript has no platform branch. `HoardView` toggles `hoard-view--mobile` from `Platform.isMobile`;
 in [dashboard.css](../../src/styles/dashboard.css) the desktop grid is a fixed three columns, the mobile grid is `auto-fit` and a
 container-query context (`hoard-dash`) under which the unified card re-flows.
 
@@ -51,4 +51,4 @@ container-query context (`hoard-dash`) under which the unified card re-flows.
 | Reading ring maths | `aggregateBooks`, `aggregateManga`, `bookPageEquivalents` in `types.ts` |
 | Time totals | `calcTimeWatched`, `calcTimeRemaining` in `DataManager.ts` |
 | A new statistic | `renderStatsContent`, extend `StatItem` if needed |
-| Mobile layout | `.hoard-mobile` and `@container hoard-dash` rules in `src/styles/dashboard.css` |
+| Mobile layout | `.hoard-view--mobile` and `@container hoard-dash` rules in `src/styles/dashboard.css` |

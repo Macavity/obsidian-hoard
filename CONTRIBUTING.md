@@ -46,6 +46,10 @@ Failures collect per step; a screenshot of each failed flow or scenario goes to 
 
 A new scenario is a folder `test/e2e/scenarios/<name>/` with a complete `vault/`, an optional `data.json` (Hoard's local data; without it no import decision is stored) and a flow; register it in `test/e2e/steps/scenarios.mjs`.
 
+### Visual regression
+
+`pnpm visual:shots <label> [--only <id-prefix>] [--variants light-desktop,dark-desktop,light-phone,dark-phone] [--screenshots]` deploys like the smoke, then writes a computed-style dump (no class names) of every state of `test/visual/states.mjs` into `$VISUAL_OUT/<label>/<variant>/` (default `<os tmpdir>/hoard-visual`, default variant `light-desktop`). The dump leaves the Obsidian window in the background; `--screenshots` adds a PNG per state and brings the window to the front for each one, so use it with `--only` for the states whose look is meant to change. States marked `foreground` (the widgets note) are captured only with `--screenshots`. `pnpm visual:diff <before> <after> [--notes <file>]` compares two captures, writes `report-<before>-<after>/report.html` and exits 1 when anything changed; the notes file is JSON `{ "<variant>/<id>": { "verdict": "expected" | "open", "reason": "…" } }`. Two captures of unchanged code must differ nowhere. The catalogue roots may only use `hoard-view`, Obsidian's own classes or `data-visual-root`, so they survive a class rename.
+
 Themes: `pnpm vault:theme <label|default>` switches the test vault to a theme from `scripts/themes.json` (downloaded on first use into `hoard-test-vault/.obsidian/themes/`, not versioned). Check any change to `src/styles/` against a few of them, light and dark.
 
 To install the build into a real vault, `pnpm vault:link [vault-name]` copies `dist/` into that vault's plugin folder.
@@ -64,6 +68,16 @@ To install the build into a real vault, `pnpm vault:link [vault-name]` copies `d
 Run `pnpm check` before you push: typecheck, lint, unit tests and the fallow quality analysis in one go. The individual steps (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm quality`) exist for quick iteration.
 
 `pnpm lint` mirrors the Obsidian review bot: every `eslint-disable` needs a `-- reason`, some rules can never be disabled (`scripts/lib/eslint-disables.mjs`), and every class in `src/styles/*.css` must be referenced from `src/` (`scripts/check-css-classes.mjs`).
+
+## Community plugin scanner
+
+Obsidian's plugin directory lints every submitted plugin with `eslint-plugin-obsidianmd`. Its adjustments to the recommended config are documented in the plugin's [configuration page](https://github.com/obsidianmd/eslint-plugin/blob/master/docs/configuration.md#community-plugin-scanner-configuration). What matters here:
+
+- It skips `**/i18n/**`, `**/scripts/**`, `**/test/**`, `**/docs/**` and all `.mjs` files, so locale texts and tooling are never linted.
+- It switches the three sentence-case rules off. We have them off as well: casing of UI text is a writing convention, described under "Adding or changing a string" in [docs/architecture/i18n.md](docs/architecture/i18n.md).
+- For newly submitted plugins `no-static-styles-assignment`, `settings-tab/no-manual-html-headings`, `platform`, `no-unsupported-api` and a few more are errors.
+
+`pnpm lint:bot` applies that documented configuration to the tracked sources and prints the findings per rule and level (information only, exit code 0; `--list` adds file and line). It is a reading of the documentation with the plugin version installed here, not the scanner itself, so it can lag behind. Current result: no error, one warning (`settings-tab/prefer-setting-definitions`, the declarative settings API, tracked separately).
 
 ## Pull requests
 

@@ -297,21 +297,21 @@ export class DraftsTab {
 
 		if (this.plugin.settings.showHintBanners) {
 			el.createDiv({
-				cls: 'hoard-drafts-notice',
+				cls: 'hoard-drafts__notice',
 				text: `⚠ ${t('drafts.hint', { tag })}`,
 			});
 		}
 
-		const countWrap = el.createDiv({ cls: 'hoard-list-title-wrap' });
-		countWrap.createSpan({ cls: 'hoard-list-count', text: String(pendingCount) });
+		const countWrap = el.createDiv({ cls: 'hoard-list__title-wrap' });
+		countWrap.createSpan({ cls: 'hoard-list__count', text: String(pendingCount) });
 		countWrap.createSpan({
-			cls: 'hoard-drafts-count-label',
+			cls: 'hoard-drafts__count-label',
 			text: ` ${t('drafts.pending', { count: pendingCount })}`,
 		});
 
 		if (entries.length === 0) {
 			el.createDiv({
-				cls: 'hoard-drafts-empty',
+				cls: 'hoard-drafts__empty',
 				text: t('drafts.empty', { tag }),
 			});
 			return;
@@ -325,7 +325,7 @@ export class DraftsTab {
 			return a.firstSeen.localeCompare(b.firstSeen);
 		});
 
-		const cards = el.createDiv({ cls: 'hoard-drafts-cards' });
+		const cards = el.createDiv({ cls: 'hoard-drafts__cards' });
 		for (const entry of entries) {
 			this.renderCard(cards, entry, fuzzyCache.get(entry.titleKey) ?? null);
 		}
@@ -335,19 +335,19 @@ export class DraftsTab {
 		const isDuplicate = dupLibrary !== null;
 
 		// dim rows already in a library; style added rows
-		let cls = 'hoard-drafts-card';
-		if (isDuplicate) cls += ' hoard-drafts-card-watchlist';
-		if (entry.added) cls += ' hoard-drafts-card-added';
+		let cls = 'hoard-drafts__card';
+		if (isDuplicate) cls += ' hoard-drafts__card--watchlist';
+		if (entry.added) cls += ' hoard-drafts__card--added';
 
 		const card = cards.createDiv({ cls });
 
-		card.createDiv({ cls: 'hoard-drafts-card-title', text: entry.titleDisplay });
+		card.createDiv({ cls: 'hoard-drafts__card-title', text: entry.titleDisplay });
 
-		const sourceEl = card.createDiv({ cls: 'hoard-drafts-card-source' });
+		const sourceEl = card.createDiv({ cls: 'hoard-drafts__card-source' });
 		if (entry.sources.length > 0) {
 			const primaryNote = entry.sources[0]!;
 			const link = sourceEl.createSpan({
-				cls: 'hoard-drafts-source-link',
+				cls: 'hoard-drafts__source-link',
 				text: `[[${primaryNote}]]`,
 			});
 			link.addEventListener('click', (e) => {
@@ -356,7 +356,7 @@ export class DraftsTab {
 			});
 			if (entry.sources.length > 1) {
 				sourceEl.createSpan({
-					cls: 'hoard-drafts-source-count',
+					cls: 'hoard-drafts__source-count',
 					text: ` (${entry.sources.length})`,
 					attr: { title: entry.sources.join('\n') },
 				});
@@ -364,7 +364,7 @@ export class DraftsTab {
 		}
 
 		// "In <library>" indicator, only when applicable
-		const dupEl = card.createDiv({ cls: 'hoard-drafts-card-dup' });
+		const dupEl = card.createDiv({ cls: 'hoard-drafts__card-duplicate' });
 		if (dupLibrary) {
 			const libraryName = libraryLabel(dupLibrary);
 			dupEl.createSpan({
@@ -377,13 +377,13 @@ export class DraftsTab {
 			});
 		}
 
-		const actions = card.createDiv({ cls: 'hoard-drafts-card-actions' });
+		const actions = card.createDiv({ cls: 'hoard-drafts__card-actions' });
 
 		if (entry.added || isDuplicate) {
-			actions.createSpan({ cls: 'hoard-drafts-added-label', text: t('drafts.added') });
+			actions.createSpan({ cls: 'hoard-drafts__added-label', text: t('drafts.added') });
 		} else {
 			const addBtn = actions.createEl('button', {
-				cls: 'hoard-btn hoard-btn-sm hoard-btn-primary',
+				cls: 'hoard-btn hoard-btn--sm hoard-btn--primary',
 				text: t('common.add'),
 			});
 			addBtn.addEventListener('click', () => this.openAddModal(entry));
@@ -392,7 +392,7 @@ export class DraftsTab {
 		const dismissBtn = createIconButton(actions, {
 			icon: 'x',
 			label: t('drafts.dismiss'),
-			cls: 'hoard-drafts-dismiss',
+			cls: 'hoard-drafts__dismiss',
 		});
 		dismissBtn.addEventListener('click', () => this.dismissEntry(entry.titleKey));
 	}

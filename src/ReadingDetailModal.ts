@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Platform, TFile, setIcon } from 'obsidian';
+import { App, Modal, Notice, Platform, TFile } from 'obsidian';
 import type HoardPlugin from './main';
 import type { ReadingDataManager } from './ReadingDataManager';
 import {
@@ -20,6 +20,7 @@ import { ReadingManageColumnsModal } from './ReadingManageColumnsModal';
 import { pinModalFooter } from './StickyModal';
 import { t } from './i18n';
 import { paintFavoriteButton, renderEditableTitle } from './ui/detailShared';
+import { createFavoriteButton, markDetailRoot, mobileRowClass } from './ui/detailFrame';
 import { readingStatusLabel } from './i18n/labels';
 
 interface ParsedQuote {
@@ -142,11 +143,7 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
-		this.contentEl.addClass('hoard-detail-modal');
+		markDetailRoot(this.modalEl, this.contentEl, this.plugin.settings.colorTheme);
 		this.contentEl.addClass('hoard-reading-detail');
 		this.renderAll();
 	}
@@ -245,42 +242,42 @@ export class ReadingDetailModal extends Modal {
 		this.renderHeader(item);
 		this.renderProgressSection(item);
 		this.renderDetailsSection(item);
-		this.contentEl.createDiv({ cls: 'hoard-reading-modal-divider' });
+		this.contentEl.createDiv({ cls: 'hoard-reading-modal__divider' });
 		this.renderCustomFieldsSection(item);
-		this.contentEl.createDiv({ cls: 'hoard-reading-modal-divider' });
+		this.contentEl.createDiv({ cls: 'hoard-reading-modal__divider' });
 		this.renderQuotesSection(item);
 		this.renderFooter(item);
-		pinModalFooter(this.contentEl.querySelector<HTMLElement>('.hoard-reading-detail-footer'));
+		pinModalFooter(this.contentEl.querySelector<HTMLElement>('.hoard-reading-detail__footer'));
 	}
 
 	private renderHeader(item: Book | Manga): void {
-		const header = this.contentEl.createDiv({ cls: 'hoard-reading-detail-header' });
+		const header = this.contentEl.createDiv({ cls: 'hoard-reading-detail__header' });
 
-		const cover = header.createDiv({ cls: 'hoard-reading-detail-cover' });
+		const cover = header.createDiv({ cls: 'hoard-reading-detail__cover' });
 		if (item.coverUrl) {
 			cover.createEl('img', {
-				cls: 'hoard-reading-detail-cover-img',
+				cls: 'hoard-reading-detail__cover-img',
 				attr: { src: item.coverUrl, alt: item.title },
 			});
 		} else {
-			cover.style.backgroundColor = coverFallbackColor(item.id);
+			cover.setCssProps({ '--hoard-reading-detail-cover-color': coverFallbackColor(item.id) });
 			cover.createSpan({
-				cls: 'hoard-reading-detail-cover-icon',
+				cls: 'hoard-reading-detail__cover-icon',
 				text: this.mode === 'book' ? '📖' : '📓',
 			});
 		}
 
-		const info = header.createDiv({ cls: 'hoard-reading-detail-info' });
+		const info = header.createDiv({ cls: 'hoard-reading-detail__info' });
 
-		const titleWrap = info.createDiv({ cls: 'hoard-reading-detail-title-wrap' });
+		const titleWrap = info.createDiv({ cls: 'hoard-reading-detail__title-wrap' });
 		this.renderTitleDisplay(titleWrap);
 
-		const authorWrap = info.createDiv({ cls: 'hoard-reading-detail-author-wrap' });
+		const authorWrap = info.createDiv({ cls: 'hoard-reading-detail__author-wrap' });
 		this.renderAuthorDisplay(authorWrap);
 
-		const meta = info.createDiv({ cls: 'hoard-reading-detail-meta-row' });
+		const meta = info.createDiv({ cls: mobileRowClass('hoard-reading-detail__meta-row', 'hoard-reading-detail__meta-row--mobile') });
 
-		const statusWrap = meta.createSpan({ cls: 'hoard-reading-detail-status-wrap' });
+		const statusWrap = meta.createSpan({ cls: 'hoard-reading-detail__status-wrap' });
 		this.renderStatusBadge(statusWrap);
 
 		// open this entry's .md note; Reading resolves its own path (Books/Manga have their own folder) and
@@ -294,19 +291,19 @@ export class ReadingDetailModal extends Modal {
 
 		// mobile: status pill + note icon fill the meta row, so the stars take their own line
 		const starsHost = Platform.isMobile
-			? info.createDiv({ cls: 'hoard-reading-detail-stars-row' })
+			? info.createDiv({ cls: 'hoard-reading-detail__stars-row' })
 			: meta;
-		this.starsWrapEl = starsHost.createDiv({ cls: 'hoard-stars hoard-reading-detail-stars' });
+		this.starsWrapEl = starsHost.createDiv({ cls: 'hoard-star-rating--row hoard-reading-detail__stars' });
 		this.renderStars();
 
 		// external link + vault page share one row; each keeps its own container so the two
 		// rebuild-in-place renderers stay independent
-		const links = info.createDiv({ cls: 'hoard-reading-detail-links-row' });
+		const links = info.createDiv({ cls: mobileRowClass('hoard-reading-detail__links-row', 'hoard-reading-detail__links-row--mobile') });
 
-		const actions = links.createDiv({ cls: 'hoard-reading-detail-actions' });
+		const actions = links.createDiv({ cls: 'hoard-reading-detail__actions' });
 		this.renderExternalLinkActions(actions);
 
-		const vaultRow = links.createDiv({ cls: 'hoard-reading-detail-vault-row' });
+		const vaultRow = links.createDiv({ cls: 'hoard-reading-detail__vault-row' });
 		this.renderVaultRow(vaultRow);
 	}
 
@@ -318,7 +315,7 @@ export class ReadingDetailModal extends Modal {
 		wrap.empty();
 		const fresh = this.getItem();
 		const input = wrap.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-detail-title-input',
+			cls: 'hoard-modal__input hoard-reading-detail__title-input',
 			attr: { type: 'text' },
 		});
 		input.value = fresh?.title ?? '';
@@ -351,7 +348,7 @@ export class ReadingDetailModal extends Modal {
 		wrap.empty();
 		const fresh = this.getItem();
 		const authorEl = wrap.createDiv({
-			cls: 'hoard-reading-detail-author hoard-reading-detail-editable-text',
+			cls: 'hoard-reading-detail__author hoard-reading-detail__editable-text',
 			text: fresh?.author || '—',
 		});
 		authorEl.title = t('detail.clickToEdit');
@@ -362,7 +359,7 @@ export class ReadingDetailModal extends Modal {
 		wrap.empty();
 		const fresh = this.getItem();
 		const input = wrap.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-detail-author-input',
+			cls: 'hoard-modal__input hoard-reading-detail__author-input',
 			attr: { type: 'text' },
 		});
 		input.value = fresh?.author ?? '';
@@ -394,8 +391,8 @@ export class ReadingDetailModal extends Modal {
 		wrap.empty();
 		const fresh = this.getItem();
 		const status = fresh?.status ?? 'Plan to Read';
-		const badge = wrap.createSpan({ cls: 'hoard-reading-detail-status', text: readingStatusLabel(status) });
-		badge.style.backgroundColor = readingStatusColor(status, this.readingData.getSettings().statusColors);
+		const badge = wrap.createSpan({ cls: 'hoard-reading-detail__status', text: readingStatusLabel(status) });
+		badge.setCssProps({ '--hoard-reading-detail-status-color': readingStatusColor(status, this.readingData.getSettings().statusColors) });
 		badge.title = t('detail.clickToChangeStatus');
 		badge.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -437,19 +434,19 @@ export class ReadingDetailModal extends Modal {
 		const hasLink = !!item.externalLink;
 
 		const linkBtn = container.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm',
+			cls: 'hoard-btn hoard-btn--sm',
 			text: hasLink ? t('detail.reading.changeLink') : t('detail.reading.externalLink'),
 		});
 		linkBtn.addEventListener('click', () => {
 			container.empty();
-			const inputWrap = container.createDiv({ cls: 'hoard-reading-external-link-wrap' });
+			const inputWrap = container.createDiv({ cls: 'hoard-reading-detail__external-link-wrap' });
 			const inp = inputWrap.createEl('input', {
-				cls: 'hoard-modal-input hoard-reading-external-link-input',
+				cls: 'hoard-modal__input hoard-reading-detail__external-link-input',
 				attr: { type: 'url', placeholder: 'https://…' },
 			});
 			inp.value = item.externalLink ?? '';
-			const saveBtn = inputWrap.createEl('button', { cls: 'hoard-reading-add-btn hoard-btn-success', text: t('common.save') });
-			const cancelBtn = inputWrap.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('common.cancel') });
+			const saveBtn = inputWrap.createEl('button', { cls: 'hoard-reading-modal__add-btn hoard-btn--success', text: t('common.save') });
+			const cancelBtn = inputWrap.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('common.cancel') });
 			const commit = (): void => {
 				const url = inp.value.trim();
 				void (async () => {
@@ -475,7 +472,7 @@ export class ReadingDetailModal extends Modal {
 
 		if (hasLink) {
 			const openBtn = container.createEl('button', {
-				cls: 'hoard-btn hoard-btn-sm',
+				cls: 'hoard-btn hoard-btn--sm',
 				text: t('detail.reading.open'),
 			});
 			openBtn.title = item.externalLink ?? '';
@@ -495,7 +492,7 @@ export class ReadingDetailModal extends Modal {
 
 		// the button carries the "Vault page" wording, so the value beside it is just the state
 		const linkBtn = row.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm',
+			cls: 'hoard-btn hoard-btn--sm',
 			text: t('detail.reading.vaultPage'),
 		});
 		linkBtn.title = item.vaultPage
@@ -510,7 +507,7 @@ export class ReadingDetailModal extends Modal {
 
 		if (item.vaultPage) {
 			const openBtn = row.createEl('button', {
-				cls: 'hoard-btn hoard-btn-sm',
+				cls: 'hoard-btn hoard-btn--sm',
 				text: t('detail.reading.open'),
 			});
 			openBtn.title = t('detail.reading.openVaultPage');
@@ -520,13 +517,13 @@ export class ReadingDetailModal extends Modal {
 		if (item.vaultPage) {
 			const filename = item.vaultPage.split('/').pop() || item.vaultPage;
 			const pathSpan = row.createSpan({
-				cls: 'hoard-reading-detail-vault-path',
+				cls: 'hoard-reading-detail__vault-path',
 				text: filename,
 			});
 			pathSpan.title = item.vaultPage;
 		} else {
 			row.createSpan({
-				cls: 'hoard-reading-detail-vault-empty',
+				cls: 'hoard-reading-detail__vault-empty',
 				text: t('detail.reading.notLinked'),
 			});
 		}
@@ -585,16 +582,16 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	private renderProgressSection(item: Book | Manga): void {
-		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail-progress' });
-		const label = section.createDiv({ cls: 'hoard-reading-section-label' });
+		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail__progress' });
+		const label = section.createDiv({ cls: 'hoard-reading-modal__section-label' });
 		label.createSpan({ text: t('detail.progress') });
 		// only books carry a unit switch, so only they need the taller flex row
 		if (this.mode === 'book') {
-			label.addClass('hoard-reading-section-label-row');
+			label.addClass('hoard-reading-modal__section-label--row');
 			this.renderUnitToggle(label, item as Book);
 		}
 
-		const gaugeRow = section.createDiv({ cls: 'hoard-reading-arc-row' });
+		const gaugeRow = section.createDiv({ cls: 'hoard-reading-detail__arc-row' });
 
 		// rings + controls always render, even when the total is 0
 		if (this.mode === 'book') {
@@ -649,7 +646,7 @@ export class ReadingDetailModal extends Modal {
 				: 'chapters';
 			const secondary = this.mode === 'book' ? 'chapters' : 'volumes';
 			section.createDiv({
-				cls: 'hoard-cl-draft-banner',
+				cls: 'hoard-custom-lists__draft-banner',
 				text: `⚠ ${t('detail.reading.totalHint', { primary: unitLabel(primary), secondary: unitLabel(secondary) })}`,
 			});
 		}
@@ -714,9 +711,9 @@ export class ReadingDetailModal extends Modal {
 		commitTotal: (v: number) => Promise<void>,
 		step = 1,
 	): void {
-		const col = parent.createDiv({ cls: 'hoard-reading-arc-col' });
+		const col = parent.createDiv({ cls: 'hoard-reading-detail__arc-column' });
 		// word counters need wider fields and coarser steps than page/chapter ones
-		if (step > 1) col.addClass('hoard-reading-arc-col-wide');
+		if (step > 1) col.addClass('hoard-reading-detail__arc-column--wide');
 
 		const svgSize = 100;
 		const strokeWidth = 8;
@@ -724,10 +721,10 @@ export class ReadingDetailModal extends Modal {
 		const cx = svgSize / 2;
 		const cy = svgSize / 2;
 
-		const svgWrap = col.createDiv({ cls: 'hoard-reading-arc-svg-wrap' });
+		const svgWrap = col.createDiv({ cls: 'hoard-reading-detail__arc-svg-wrap' });
 		const svg = svgWrap.createSvg('svg');
 		svg.setAttribute('viewBox', `0 0 ${svgSize} ${svgSize}`);
-		svg.setAttribute('class', 'hoard-reading-arc-svg');
+		svg.setAttribute('class', 'hoard-reading-detail__arc-svg');
 
 		const arcLength = Math.PI * radius;
 
@@ -751,7 +748,7 @@ export class ReadingDetailModal extends Modal {
 		pctText.setAttribute('x', String(cx));
 		pctText.setAttribute('y', String(cy + 4));
 		pctText.setAttribute('text-anchor', 'middle');
-		pctText.setAttribute('class', 'hoard-reading-arc-pct');
+		pctText.setAttribute('class', 'hoard-reading-detail__arc-percent');
 
 		const clamp = (n: number): number => {
 			const total = getTotal();
@@ -760,15 +757,15 @@ export class ReadingDetailModal extends Modal {
 			return n;
 		};
 
-		const controls = col.createDiv({ cls: 'hoard-reading-arc-controls' });
-		const decBtn = controls.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-reading-step-btn', text: `−${step}` });
+		const controls = col.createDiv({ cls: 'hoard-reading-detail__arc-controls' });
+		const decBtn = controls.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-reading-detail__step-btn', text: `−${step}` });
 		const input = controls.createEl('input', {
-			cls: 'hoard-modal-input hoard-modal-input-sm hoard-reading-arc-input',
+			cls: 'hoard-modal__input hoard-modal__input--sm hoard-reading-detail__arc-input',
 			attr: { type: 'number', min: '0', max: String(getTotal()), step: String(step) },
 		});
-		const incBtn = controls.createEl('button', { cls: 'hoard-btn hoard-btn-sm hoard-reading-step-btn', text: `+${step}` });
+		const incBtn = controls.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-reading-detail__step-btn', text: `+${step}` });
 
-		const label = col.createDiv({ cls: 'hoard-reading-arc-label' });
+		const label = col.createDiv({ cls: 'hoard-reading-detail__arc-label' });
 
 		const sync = (): void => {
 			const total = getTotal();
@@ -796,7 +793,7 @@ export class ReadingDetailModal extends Modal {
 
 		const renderLabel = (): void => {
 			const numEl = fillOfLabel(() => label.createSpan({
-				cls: 'hoard-reading-arc-total hoard-reading-detail-editable-text',
+				cls: 'hoard-reading-detail__arc-total hoard-reading-detail__editable-text',
 				text: formatCount(getTotal()),
 			}));
 			numEl.title = t('detail.clickToEdit');
@@ -805,7 +802,7 @@ export class ReadingDetailModal extends Modal {
 
 		const editTotal = (): void => {
 			const totalInput = fillOfLabel(() => label.createEl('input', {
-				cls: 'hoard-modal-input hoard-modal-input-sm hoard-reading-arc-total-input',
+				cls: 'hoard-modal__input hoard-modal__input--sm hoard-reading-detail__arc-total-input',
 				attr: { type: 'number', min: '0' },
 			}));
 			totalInput.value = String(getTotal());
@@ -851,10 +848,10 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	private renderDetailsSection(item: Book | Manga): void {
-		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail-details' });
-		section.createDiv({ cls: 'hoard-reading-section-label', text: t('detail.details') });
+		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail__details' });
+		section.createDiv({ cls: 'hoard-reading-modal__section-label', text: t('detail.details') });
 
-		const grid = section.createDiv({ cls: 'hoard-reading-detail-grid' });
+		const grid = section.createDiv({ cls: 'hoard-reading-detail__grid' });
 
 		this.renderIdCell(grid, item);
 
@@ -899,7 +896,7 @@ export class ReadingDetailModal extends Modal {
 	private renderIdCell(grid: HTMLElement, item: Book | Manga): void {
 		const label = this.mode === 'book' ? 'Google Books ID' : 'MAL ID';
 		const value = this.makeDetailCell(grid, label);
-		value.addClass('hoard-reading-detail-id-value');
+		value.addClass('hoard-reading-detail__id-value');
 		this.fillIdValue(value, item);
 	}
 
@@ -927,7 +924,7 @@ export class ReadingDetailModal extends Modal {
 		if (idText) {
 			if (linkUrl) {
 				value.createEl('a', {
-					cls: 'hoard-reading-detail-link',
+					cls: 'hoard-reading-detail__link',
 					text: idText,
 					attr: { href: linkUrl, target: '_blank', rel: 'noopener noreferrer' },
 				});
@@ -939,7 +936,7 @@ export class ReadingDetailModal extends Modal {
 		}
 
 		const editBtn = value.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-reading-detail-id-edit',
+			cls: 'hoard-btn hoard-btn--sm hoard-reading-detail__id-edit',
 			text: '✎',
 			attr: { title: t('detail.reading.editId', { name: this.mode === 'book' ? 'Google Books ID' : 'MAL ID' }) },
 		});
@@ -948,9 +945,9 @@ export class ReadingDetailModal extends Modal {
 
 	private editIdLink(value: HTMLElement, item: Book | Manga): void {
 		value.empty();
-		const wrap = value.createDiv({ cls: 'hoard-reading-external-link-wrap' });
+		const wrap = value.createDiv({ cls: 'hoard-reading-detail__external-link-wrap' });
 		const inp = wrap.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-external-link-input',
+			cls: 'hoard-modal__input hoard-reading-detail__external-link-input',
 			attr: {
 				type: 'text',
 				placeholder: this.mode === 'book'
@@ -959,8 +956,8 @@ export class ReadingDetailModal extends Modal {
 			},
 		});
 		inp.value = this.idText(item);
-		const saveBtn = wrap.createEl('button', { cls: 'hoard-reading-add-btn hoard-btn-success', text: t('common.save') });
-		const cancelBtn = wrap.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('common.cancel') });
+		const saveBtn = wrap.createEl('button', { cls: 'hoard-reading-modal__add-btn hoard-btn--success', text: t('common.save') });
+		const cancelBtn = wrap.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('common.cancel') });
 
 		const restore = (): void => {
 			const fresh = this.getItem();
@@ -1032,20 +1029,20 @@ export class ReadingDetailModal extends Modal {
 	 * its height. Release date drives the auto "To be released" status, so a change re-renders.
 	 */
 	private renderAddedReleaseCell(grid: HTMLElement, item: Book | Manga): void {
-		const cell = grid.createDiv({ cls: 'hoard-reading-detail-cell hoard-reading-detail-cell-pair' });
+		const cell = grid.createDiv({ cls: 'hoard-reading-detail__cell hoard-reading-detail__cell--pair' });
 
-		const added = cell.createDiv({ cls: 'hoard-reading-detail-pair-col' });
-		added.createDiv({ cls: 'hoard-reading-detail-cell-label', text: t('detail.reading.added') });
+		const added = cell.createDiv({ cls: 'hoard-reading-detail__pair-column' });
+		added.createDiv({ cls: 'hoard-reading-detail__cell-label', text: t('detail.reading.added') });
 		added.createDiv({
-			cls: 'hoard-reading-detail-cell-value',
+			cls: 'hoard-reading-detail__cell-value',
 			text: formatDateDisplay(item.dateAdded.slice(0, 10)),
 		});
 
-		const rel = cell.createDiv({ cls: 'hoard-reading-detail-pair-col' });
-		rel.createDiv({ cls: 'hoard-reading-detail-cell-label', text: t('detail.reading.release') });
+		const rel = cell.createDiv({ cls: 'hoard-reading-detail__pair-column' });
+		rel.createDiv({ cls: 'hoard-reading-detail__cell-label', text: t('detail.reading.release') });
 		createDatePicker({
 			parent: rel,
-			inputCls: 'hoard-reading-detail-date-input',
+			inputCls: 'hoard-reading-detail__date-input',
 			value: this.getItem()?.releaseDate ?? null,
 			lenient: true,
 			onChange: (iso) => {
@@ -1066,9 +1063,9 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	private makeDetailCell(parent: HTMLElement, label: string): HTMLElement {
-		const cell = parent.createDiv({ cls: 'hoard-reading-detail-cell' });
-		cell.createDiv({ cls: 'hoard-reading-detail-cell-label', text: label });
-		const value = cell.createDiv({ cls: 'hoard-reading-detail-cell-value' });
+		const cell = parent.createDiv({ cls: 'hoard-reading-detail__cell' });
+		cell.createDiv({ cls: 'hoard-reading-detail__cell-label', text: label });
+		const value = cell.createDiv({ cls: 'hoard-reading-detail__cell-value' });
 		return value;
 	}
 
@@ -1078,18 +1075,18 @@ export class ReadingDetailModal extends Modal {
 		getValue: () => string | null,
 		save: (val: string | null) => Promise<void>,
 	): void {
-		const cell = parent.createDiv({ cls: 'hoard-reading-detail-cell' });
-		cell.createDiv({ cls: 'hoard-reading-detail-cell-label', text: label });
-		const valueArea = cell.createDiv({ cls: 'hoard-reading-detail-cell-date' });
+		const cell = parent.createDiv({ cls: 'hoard-reading-detail__cell' });
+		cell.createDiv({ cls: 'hoard-reading-detail__cell-label', text: label });
+		const valueArea = cell.createDiv({ cls: 'hoard-reading-detail__cell-date' });
 
 		const todayBtn = valueArea.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-reading-detail-today-btn',
+			cls: 'hoard-btn hoard-btn--sm hoard-reading-detail__today-btn',
 			text: t('list.footer.today'),
 			attr: { title: t('list.footer.fillToday') },
 		});
 		const picker = createDatePicker({
 			parent: valueArea,
-			inputCls: 'hoard-reading-detail-date-input',
+			inputCls: 'hoard-reading-detail__date-input',
 			value: getValue(),
 			onChange: (iso) => {
 				refreshTodayBtn();
@@ -1109,11 +1106,11 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	private renderFooter(item: Book | Manga): void {
-		const footer = this.contentEl.createDiv({ cls: 'hoard-reading-detail-footer' });
+		const footer = this.contentEl.createDiv({ cls: 'hoard-reading-detail__footer' });
 
-		const left = footer.createDiv({ cls: 'hoard-reading-detail-footer-left' });
+		const left = footer.createDiv({ cls: 'hoard-reading-detail__footer-left' });
 		const deleteBtn = left.createEl('button', {
-			cls: 'hoard-delete-btn hoard-btn-danger hoard-reading-detail-delete',
+			cls: 'hoard-accordion__delete-btn hoard-btn--danger hoard-reading-detail__delete',
 			text: t('common.delete'),
 		});
 		deleteBtn.addEventListener('click', () => {
@@ -1136,11 +1133,7 @@ export class ReadingDetailModal extends Modal {
 
 		// favorite heart, centered by the footer's space-between (the Watchlist/Games spot). Persists
 		// immediately — this modal saves field-by-field, unlike the Games draft.
-		const favBtn = footer.createEl('button', {
-			cls: 'hoard-detail-fav-btn',
-			attr: { type: 'button' },
-		});
-		setIcon(favBtn, 'heart');
+		const favBtn = createFavoriteButton(footer);
 		const paintFav = (): void => {
 			const fav = this.getItem()?.favorite === true;
 			paintFavoriteButton(favBtn, fav);
@@ -1151,10 +1144,10 @@ export class ReadingDetailModal extends Modal {
 			void this.readingData.setFavorite(this.mode, item.id, !fav).then(paintFav);
 		});
 
-		const right = footer.createDiv({ cls: 'hoard-reading-detail-footer-right' });
+		const right = footer.createDiv({ cls: 'hoard-reading-detail__footer-right' });
 
 		const updateBtn = right.createEl('button', {
-			cls: 'hoard-reading-add-btn hoard-btn-success',
+			cls: 'hoard-reading-modal__add-btn hoard-btn--success',
 			text: t('detail.reading.updateProgress'),
 		});
 		updateBtn.addEventListener('click', () => void this.commitDraft());
@@ -1177,12 +1170,12 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	private renderCustomFieldsSection(item: Book | Manga): void {
-		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail-custom' });
+		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail__custom' });
 
-		const heading = section.createDiv({ cls: 'hoard-reading-detail-custom-heading' });
-		heading.createSpan({ cls: 'hoard-reading-section-label', text: t('detail.reading.customFields') });
+		const heading = section.createDiv({ cls: 'hoard-reading-custom-fields__heading' });
+		heading.createSpan({ cls: 'hoard-reading-modal__section-label', text: t('detail.reading.customFields') });
 		const manageLink = heading.createEl('a', {
-			cls: 'hoard-reading-detail-custom-manage',
+			cls: 'hoard-reading-custom-fields__manage',
 			text: t('detail.reading.manage'),
 		});
 		manageLink.addEventListener('click', (e) => {
@@ -1192,14 +1185,14 @@ export class ReadingDetailModal extends Modal {
 
 		const cols = this.getColumns();
 		if (cols.length === 0) {
-			const empty = section.createDiv({ cls: 'hoard-reading-detail-custom-empty' });
+			const empty = section.createDiv({ cls: 'hoard-reading-custom-fields__empty' });
 			const [before, after] = splitAtSlot(
 				t('detail.reading.noCustomFields', { manage: '{manage}' }),
 				'{manage}',
 			);
 			empty.createSpan({ text: before });
 			const link = empty.createEl('a', {
-				cls: 'hoard-reading-detail-custom-manage',
+				cls: 'hoard-reading-custom-fields__manage',
 				text: t('detail.reading.manage'),
 			});
 			link.addEventListener('click', (e) => {
@@ -1215,8 +1208,8 @@ export class ReadingDetailModal extends Modal {
 			? (settings.bookCustomFieldStyle ?? 'fill')
 			: (settings.mangaCustomFieldStyle ?? 'fill');
 		const tableCls = fieldStyle === 'border'
-			? 'hoard-reading-custom-table is-border-mode'
-			: 'hoard-reading-custom-table';
+			? 'hoard-reading-custom-fields__table is-border-mode'
+			: 'hoard-reading-custom-fields__table';
 		const table = section.createDiv({ cls: tableCls });
 		for (const col of cols) {
 			this.renderCustomFieldRow(table, item, col);
@@ -1224,9 +1217,9 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	private renderCustomFieldRow(parent: HTMLElement, item: Book | Manga, col: ReadingCustomColumn): void {
-		const row = parent.createDiv({ cls: 'hoard-reading-custom-row' });
-		const labelCell = row.createDiv({ cls: 'hoard-reading-custom-label', text: col.name });
-		const valueCell = row.createDiv({ cls: 'hoard-reading-custom-value' });
+		const row = parent.createDiv({ cls: 'hoard-reading-custom-fields__row' });
+		const labelCell = row.createDiv({ cls: 'hoard-reading-custom-fields__label', text: col.name });
+		const valueCell = row.createDiv({ cls: 'hoard-reading-custom-fields__value' });
 
 		const settings = this.readingData.getSettings();
 		const style = this.mode === 'book'
@@ -1237,9 +1230,9 @@ export class ReadingDetailModal extends Modal {
 		// fill/border looks live in CSS keyed off the table's is-border-mode class; only the per-column
 		// colour is dynamic
 		if (style === 'fill') {
-			labelCell.setCssProps({ '--hoard-field-bg': deriveFillColor(color) });
+			labelCell.setCssProps({ '--hoard-reading-custom-fields-background': deriveFillColor(color) });
 		} else {
-			labelCell.setCssProps({ '--hoard-field-border': deriveBorderColor(color) });
+			labelCell.setCssProps({ '--hoard-reading-custom-fields-border': deriveBorderColor(color) });
 		}
 
 		const raw = item.customFields?.[col.id];
@@ -1255,7 +1248,7 @@ export class ReadingDetailModal extends Modal {
 		cell.empty();
 		const hasValue = raw !== undefined && raw !== null && raw !== '';
 		const display = cell.createSpan({
-			cls: `hoard-reading-custom-display${hasValue ? '' : ' is-placeholder'}`,
+			cls: `hoard-reading-custom-fields__display${hasValue ? '' : ' is-placeholder'}`,
 			text: hasValue ? String(raw) : '—',
 		});
 		display.addEventListener('click', () => {
@@ -1271,7 +1264,7 @@ export class ReadingDetailModal extends Modal {
 	): void {
 		cell.empty();
 		if (col.type === 'select') {
-			const select = cell.createEl('select', { cls: 'hoard-select hoard-reading-custom-input' });
+			const select = cell.createEl('select', { cls: 'hoard-input__select hoard-reading-custom-fields__input' });
 			const blank = select.createEl('option', { value: '', text: '—' });
 			if (current === undefined || current === null || current === '') blank.selected = true;
 			for (const opt of col.options) {
@@ -1292,7 +1285,7 @@ export class ReadingDetailModal extends Modal {
 		}
 
 		const input = cell.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-custom-input',
+			cls: 'hoard-modal__input hoard-reading-custom-fields__input',
 			attr: {
 				type: col.type === 'number' ? 'number' : 'text',
 				placeholder: t('detail.reading.enterValue'),
@@ -1340,17 +1333,17 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	private renderQuotesSection(item: Book | Manga): void {
-		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail-quotes' });
+		const section = this.contentEl.createDiv({ cls: 'hoard-reading-quotes' });
 
-		const heading = section.createDiv({ cls: 'hoard-reading-detail-quotes-heading' });
-		heading.createSpan({ cls: 'hoard-reading-section-label', text: t('detail.reading.quotes') });
+		const heading = section.createDiv({ cls: 'hoard-reading-quotes__heading' });
+		heading.createSpan({ cls: 'hoard-reading-modal__section-label', text: t('detail.reading.quotes') });
 		const addBtn = heading.createEl('button', {
-			cls: 'hoard-btn hoard-btn-sm hoard-reading-detail-quotes-add',
+			cls: 'hoard-btn hoard-btn--sm hoard-reading-quotes__add',
 			text: t('detail.reading.addQuote'),
 		});
 
-		const listEl = section.createDiv({ cls: 'hoard-reading-quote-list' });
-		const formHost = section.createDiv({ cls: 'hoard-reading-quote-form-host' });
+		const listEl = section.createDiv({ cls: 'hoard-reading-quotes__list' });
+		const formHost = section.createDiv({ cls: 'hoard-reading-quotes__form-host' });
 
 		const refresh = async (): Promise<void> => {
 			listEl.empty();
@@ -1359,7 +1352,7 @@ export class ReadingDetailModal extends Modal {
 				const quotes = content ? parseQuotesSection(content) : [];
 				if (quotes.length === 0) {
 					listEl.createDiv({
-						cls: 'hoard-reading-quote-empty',
+						cls: 'hoard-reading-quotes__empty',
 						text: t('detail.reading.noQuotes'),
 					});
 				} else {
@@ -1383,10 +1376,10 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	private renderQuoteCard(parent: HTMLElement, q: ParsedQuote): void {
-		const card = parent.createDiv({ cls: 'hoard-reading-quote-card' });
-		card.createDiv({ cls: 'hoard-reading-quote-text', text: q.text });
+		const card = parent.createDiv({ cls: 'hoard-reading-quotes__card' });
+		card.createDiv({ cls: 'hoard-reading-quotes__text', text: q.text });
 		if (q.reference) {
-			card.createDiv({ cls: 'hoard-reading-quote-ref', text: q.reference });
+			card.createDiv({ cls: 'hoard-reading-quotes__reference', text: q.reference });
 		}
 	}
 
@@ -1396,24 +1389,24 @@ export class ReadingDetailModal extends Modal {
 		onSaved: () => Promise<void>,
 	): void {
 		parent.empty();
-		const form = parent.createDiv({ cls: 'hoard-reading-quote-form' });
+		const form = parent.createDiv({ cls: 'hoard-reading-quotes__form' });
 
 		const textarea = form.createEl('textarea', {
-			cls: 'hoard-modal-input hoard-reading-quote-textarea',
+			cls: 'hoard-modal__input hoard-reading-quotes__textarea',
 			attr: { placeholder: t('detail.reading.quotePlaceholder'), rows: '3' },
 		});
 
 		const refInput = form.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-quote-ref-input',
+			cls: 'hoard-modal__input hoard-reading-quotes__reference-input',
 			attr: { type: 'text', placeholder: t('detail.reading.quoteRefPlaceholder') },
 		});
 
-		const actions = form.createDiv({ cls: 'hoard-reading-quote-form-actions' });
-		const cancelBtn = actions.createEl('button', { cls: 'hoard-btn hoard-btn-sm', text: t('common.cancel') });
+		const actions = form.createDiv({ cls: 'hoard-reading-quotes__form-actions' });
+		const cancelBtn = actions.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('common.cancel') });
 		cancelBtn.addEventListener('click', () => parent.empty());
 
 		const saveBtn = actions.createEl('button', {
-			cls: 'hoard-reading-add-btn hoard-btn-success hoard-reading-quote-save',
+			cls: 'hoard-reading-modal__add-btn hoard-btn--success hoard-reading-quotes__save',
 			text: t('detail.reading.saveQuote'),
 		});
 		saveBtn.addEventListener('click', () => {

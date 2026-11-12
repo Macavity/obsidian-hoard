@@ -453,7 +453,7 @@ export class AirtimeTab {
 	}
 
 	private renderInnerTabBar(): void {
-		const bar = this.container.createDiv({ cls: 'hoard-inner-tab-bar' });
+		const bar = this.container.createDiv({ cls: 'hoard-inner-tabs' });
 		const trackerCount = AirtimeTab.getAiredDueCount(this.dataManager, this.readingDataManager, this.gameDataManager);
 		const maybeCount = AirtimeTab.getMaybeDueCount(this.dataManager);
 		const tabs: Array<{ key: 'tracker' | 'history' | 'maybe'; label: string; badge: number }> = [
@@ -464,7 +464,7 @@ export class AirtimeTab {
 		for (const { key, label, badge } of tabs) {
 			const text = badge > 0 ? `${label} (${badge})` : label;
 			const btn = bar.createEl('button', {
-				cls: `hoard-inner-tab-btn${this.currentSubTab === key ? ' is-active' : ''}`,
+				cls: `hoard-inner-tabs__btn${this.currentSubTab === key ? ' is-active' : ''}`,
 				text,
 			});
 			btn.addEventListener('click', () => {
@@ -481,7 +481,7 @@ export class AirtimeTab {
 	private renderTracker(): void {
 		if (this.plugin.settings.showHintBanners) {
 			this.container.createDiv({
-				cls: 'hoard-cl-draft-banner',
+				cls: 'hoard-custom-lists__draft-banner',
 				text: `⚠ ${t('airtime.hint', { status: statusLabel('To be released') })}`,
 			});
 		}
@@ -508,34 +508,34 @@ export class AirtimeTab {
 			.sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''));
 
 		if (pastTitles.length === 0) {
-			this.container.createDiv({ cls: 'hoard-empty-state', text: t('airtime.empty.history') });
+			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.history') });
 			return;
 		}
 
-		const cardsEl = this.container.createDiv({ cls: 'hoard-airtime-cards' });
+		const cardsEl = this.container.createDiv({ cls: 'hoard-airtime__cards' });
 		for (const title of pastTitles) {
 			this.renderHistoryCard(cardsEl, title);
 		}
 	}
 
 	private renderHistoryCard(parent: HTMLElement, title: HoardTitle): void {
-		const card = parent.createDiv({ cls: 'hoard-airtime-card hoard-airtime-history-card' });
+		const card = parent.createDiv({ cls: 'hoard-airtime__card hoard-airtime__card--history' });
 
-		const left = card.createDiv({ cls: 'hoard-airtime-card-left' });
-		left.createDiv({ cls: 'hoard-airtime-card-title', text: title.title });
+		const left = card.createDiv({ cls: 'hoard-airtime__card-left' });
+		left.createDiv({ cls: 'hoard-airtime__card-title', text: title.title });
 
-		const metaRow = left.createDiv({ cls: 'hoard-airtime-card-meta' });
+		const metaRow = left.createDiv({ cls: 'hoard-airtime__card-meta' });
 		renderTypeBadge(metaRow, title.type, this.plugin.settings);
 		if (title.releaseDate) {
-			metaRow.createSpan({ cls: 'hoard-airtime-schedule', text: formatDateDisplay(title.releaseDate) });
+			metaRow.createSpan({ cls: 'hoard-airtime__schedule', text: formatDateDisplay(title.releaseDate) });
 		}
 
-		const right = card.createDiv({ cls: 'hoard-airtime-card-right hoard-airtime-history-right' });
+		const right = card.createDiv({ cls: 'hoard-airtime__card-right hoard-airtime__card-right--history' });
 		if (title.releaseDate) {
-			right.createDiv({ cls: 'hoard-airtime-pill hoard-airtime-pill-aired', text: formatDaysAgo(title.releaseDate) });
+			right.createDiv({ cls: 'hoard-airtime__pill hoard-airtime__pill--aired', text: formatDaysAgo(title.releaseDate) });
 		}
 
-		const globeBtn = createIconButton(right, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime-action-btn' });
+		const globeBtn = createIconButton(right, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime__action-btn' });
 		globeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			openExternalLink(title.externalLink, 'airtime.notices.noLinkTitle');
@@ -544,7 +544,7 @@ export class AirtimeTab {
 		const deleteBtn = createIconButton(right, {
 			icon: 'x',
 			label: t('airtime.actions.removeFromWatchlist'),
-			cls: 'hoard-airtime-action-btn hoard-airtime-action-btn-delete hoard-btn-danger',
+			cls: 'hoard-airtime__action-btn hoard-airtime__action-btn--delete hoard-btn--danger',
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -557,25 +557,25 @@ export class AirtimeTab {
 	private renderMaybe(): void {
 		const maybeTitles = this.dataManager.getMaybeTitles();
 
-		const headerEl = this.container.createDiv({ cls: 'hoard-list-header' });
+		const headerEl = this.container.createDiv({ cls: 'hoard-list__header' });
 		if (maybeTitles.length > 0) {
-			headerEl.createSpan({ cls: 'hoard-list-count', text: String(maybeTitles.length) });
+			headerEl.createSpan({ cls: 'hoard-list__count', text: String(maybeTitles.length) });
 		}
-		const controls = headerEl.createDiv({ cls: 'hoard-header-controls' });
-		const rightGroup = controls.createDiv({ cls: 'hoard-header-controls-right' });
+		const controls = headerEl.createDiv({ cls: 'hoard-toolbar__controls' });
+		const rightGroup = controls.createDiv({ cls: 'hoard-toolbar__controls-right' });
 		renderAddButton(rightGroup, () => {
 			new MaybeAddModal(this.plugin.app, this.plugin, this.dataManager, () => this.render()).open();
 		});
 
 		if (maybeTitles.length === 0) {
-			this.container.createDiv({ cls: 'hoard-empty-state', text: t('airtime.empty.maybe') });
+			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.maybe') });
 			return;
 		}
 
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 
-		const cardsEl = this.container.createDiv({ cls: 'hoard-airtime-cards' });
+		const cardsEl = this.container.createDiv({ cls: 'hoard-airtime__cards' });
 		const sorted = [...maybeTitles].sort((a, b) => {
 			const ra = a.releaseDate ?? '';
 			const rb = b.releaseDate ?? '';
@@ -595,28 +595,28 @@ export class AirtimeTab {
 		const countdown = getDetailedCountdown(schedule, true);
 
 		let cardCls = 'hoard-maybe-card';
-		if (countdown.kind === 'due') cardCls += ' hoard-airtime-card-aired is-due';
+		if (countdown.kind === 'due') cardCls += ' hoard-airtime__card--aired is-due';
 
 		const card = parent.createDiv({ cls: cardCls });
 
-		const left = card.createDiv({ cls: 'hoard-maybe-card-left' });
+		const left = card.createDiv({ cls: 'hoard-maybe-card__left' });
 
-		left.createSpan({ cls: 'hoard-maybe-card-title', text: mt.title });
+		left.createSpan({ cls: 'hoard-maybe-card__title', text: mt.title });
 
 		renderTypeBadge(left, mt.type, this.plugin.settings);
 
 		const pillClsMap: Record<DetailedCountdown['kind'], string> = {
-			'today-before': 'hoard-airtime-pill hoard-airtime-pill-today-series',
-			'future': 'hoard-airtime-pill hoard-airtime-pill-days',
-			'aired': 'hoard-airtime-pill hoard-airtime-pill-aired',
-			'due': 'hoard-airtime-pill hoard-airtime-pill-due',
+			'today-before': 'hoard-airtime__pill hoard-airtime__pill--today-series',
+			'future': 'hoard-airtime__pill hoard-airtime__pill--days',
+			'aired': 'hoard-airtime__pill hoard-airtime__pill--aired',
+			'due': 'hoard-airtime__pill hoard-airtime__pill--due',
 		};
 		const pillCls = countdown.kind === 'future' && countdown.daysUntil === 1
-			? 'hoard-airtime-pill hoard-airtime-pill-tomorrow'
+			? 'hoard-airtime__pill hoard-airtime__pill--tomorrow'
 			: pillClsMap[countdown.kind];
-		const right = card.createDiv({ cls: 'hoard-maybe-card-right' });
+		const right = card.createDiv({ cls: 'hoard-maybe-card__right' });
 		right.createDiv({ cls: pillCls, text: mt.releaseDate ? countdown.label : '—' });
-		const globeBtn = createIconButton(right, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime-action-btn' });
+		const globeBtn = createIconButton(right, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime__action-btn' });
 		globeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			openExternalLink(mt.externalLink, 'airtime.notices.noLink');
@@ -624,7 +624,7 @@ export class AirtimeTab {
 		const deleteBtn = createIconButton(right, {
 			icon: 'x',
 			label: t('airtime.actions.removeFromMaybe'),
-			cls: 'hoard-airtime-action-btn hoard-airtime-action-btn-delete hoard-btn-danger',
+			cls: 'hoard-airtime__action-btn hoard-airtime__action-btn--delete hoard-btn--danger',
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -635,9 +635,9 @@ export class AirtimeTab {
 	}
 
 	private renderSearch(): void {
-		const searchWrap = this.container.createDiv({ cls: 'hoard-search-wrap' });
+		const searchWrap = this.container.createDiv({ cls: 'hoard-search-box' });
 		const input = searchWrap.createEl('input', {
-			cls: 'hoard-search-input',
+			cls: 'hoard-search-box__text-input',
 			attr: { type: 'text', placeholder: t('airtime.searchPlaceholder') },
 		});
 		input.value = this.searchQuery;
@@ -653,13 +653,13 @@ export class AirtimeTab {
 	}
 
 	private rerenderCards(): void {
-		const existing = this.container.querySelector('.hoard-airtime-cards');
-		const emptyState = this.container.querySelector('.hoard-empty-state');
+		const existing = this.container.querySelector('.hoard-airtime__cards');
+		const emptyState = this.container.querySelector('.hoard-dashboard__empty-state');
 		if (existing) existing.remove();
 		if (emptyState) emptyState.remove();
 		if (this.trackerView === 'cards') {
 			this.destroyTrackerVirtual();
-			this.container.querySelector('.hoard-tracker-scroll')?.remove();
+			this.container.querySelector('.hoard-tracker__scroll')?.remove();
 			this.renderTrackerCardsGrid();
 		} else {
 			this.renderCards();
@@ -669,17 +669,17 @@ export class AirtimeTab {
 	// Header
 
 	private renderHeader(): void {
-		const header = this.container.createDiv({ cls: 'hoard-list-header' });
+		const header = this.container.createDiv({ cls: 'hoard-list__header' });
 
 		// only entries that still resolve to a watchlist or reading item
 		const count = this.dataManager.getAirtimeEntries().filter(
 			(e) => this.resolveEntry(e) !== null,
 		).length;
 		if (count > 0) {
-			header.createSpan({ cls: 'hoard-list-count', text: String(count) });
+			header.createSpan({ cls: 'hoard-list__count', text: String(count) });
 		}
 
-		const controls = header.createDiv({ cls: 'hoard-header-controls' });
+		const controls = header.createDiv({ cls: 'hoard-toolbar__controls' });
 
 		// action bar — selection mode with items selected
 		if (this.selectionMode && this.selectedItems.size > 0) {
@@ -699,10 +699,10 @@ export class AirtimeTab {
 			});
 		}
 
-		const rightGroup = controls.createDiv({ cls: 'hoard-header-controls-right' });
+		const rightGroup = controls.createDiv({ cls: 'hoard-toolbar__controls-right' });
 
 		const selBtn = rightGroup.createEl('button', {
-			cls: `hoard-btn hoard-btn-sm${this.selectionMode ? ' is-active' : ''}`,
+			cls: `hoard-btn hoard-btn--sm${this.selectionMode ? ' is-active' : ''}`,
 			text: t('ui.toolbar.select'),
 		});
 		selBtn.addEventListener('click', () => {
@@ -713,8 +713,8 @@ export class AirtimeTab {
 
 		this.renderViewDropdown(rightGroup);
 
-		const addBtnWrap = rightGroup.createDiv({ cls: 'hoard-add-btn-wrap' });
-		const addBtn = addBtnWrap.createEl('button', { cls: 'hoard-add-btn hoard-btn-success', text: t('ui.toolbar.add') });
+		const addBtnWrap = rightGroup.createDiv({ cls: 'hoard-toolbar__add-btn-wrap' });
+		const addBtn = addBtnWrap.createEl('button', { cls: 'hoard-toolbar__add-btn hoard-btn--success', text: t('ui.toolbar.add') });
 		addBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.openAddFlow();
@@ -1053,12 +1053,12 @@ export class AirtimeTab {
 	/** Card data to render, or null after the matching empty state has been shown. */
 	private trackerCardDataOrEmpty(): TrackerCardData[] | null {
 		if (this.dataManager.getAirtimeEntries().length === 0) {
-			this.container.createDiv({ cls: 'hoard-empty-state', text: t('airtime.empty.tracker') });
+			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.tracker') });
 			return null;
 		}
 		const cardData = this.computeTrackerCardData();
 		if (cardData.length === 0) {
-			this.container.createDiv({ cls: 'hoard-empty-state', text: t('airtime.empty.search') });
+			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.search') });
 			return null;
 		}
 		return cardData;
@@ -1068,7 +1068,7 @@ export class AirtimeTab {
 		const cardData = this.trackerCardDataOrEmpty();
 		if (!cardData) return;
 
-		const cardsEl = this.container.createDiv({ cls: 'hoard-airtime-cards' });
+		const cardsEl = this.container.createDiv({ cls: 'hoard-airtime__cards' });
 		for (const { entry, r, countdown } of cardData) {
 			this.renderCard(cardsEl, entry, r, countdown);
 		}
@@ -1094,20 +1094,20 @@ export class AirtimeTab {
 			(isMovie && countdown.kind === 'due') ||
 			(!isMovie && countdown.kind === 'aired');
 
-		let cardCls = 'hoard-airtime-card';
+		let cardCls = 'hoard-airtime__card';
 		if (countdown.kind === 'aired' || countdown.kind === 'due') {
-			cardCls += ' hoard-airtime-card-aired';
+			cardCls += ' hoard-airtime__card--aired';
 		}
 		if (countdown.kind === 'aired') cardCls += ' is-aired';
 		if (countdown.kind === 'due') cardCls += ' is-due';
 		if (this.selectionMode && this.selectedItems.has(entry.id)) {
-			cardCls += ' hoard-row-selected';
+			cardCls += ' hoard-list__row--selected';
 		}
 		const card = parent.createDiv({ cls: cardCls });
 
 		if (this.selectionMode) {
 			const cb = card.createEl('input', { attr: { type: 'checkbox' } });
-			cb.addClass('hoard-airtime-select-cb');
+			cb.addClass('hoard-airtime__select-checkbox');
 			cb.checked = this.selectedItems.has(entry.id);
 			cb.addEventListener('click', (e) => e.stopPropagation());
 			cb.addEventListener('change', () => {
@@ -1123,54 +1123,54 @@ export class AirtimeTab {
 		}
 
 		// left
-		const left = card.createDiv({ cls: 'hoard-airtime-card-left' });
-		left.createDiv({ cls: 'hoard-airtime-card-title', text: r.title });
+		const left = card.createDiv({ cls: 'hoard-airtime__card-left' });
+		left.createDiv({ cls: 'hoard-airtime__card-title', text: r.title });
 
 		// type badge + schedule string; reading entries render plain, watch entries may be colored
-		const metaRow = left.createDiv({ cls: 'hoard-airtime-card-meta' });
+		const metaRow = left.createDiv({ cls: 'hoard-airtime__card-meta' });
 		const typeBadge = metaRow.createSpan({
-			cls: r.typeColor ? 'hoard-badge hoard-badge-sm' : 'hoard-badge-plain',
+			cls: r.typeColor ? 'hoard-badge hoard-badge--sm' : 'hoard-badge__plain',
 			text: r.typeLabel,
 		});
-		if (r.typeColor) typeBadge.style.backgroundColor = r.typeColor;
-		metaRow.createSpan({ cls: 'hoard-airtime-schedule', text: scheduleText(entry.schedule) });
+		if (r.typeColor) typeBadge.setCssProps({ '--hoard-badge-color': r.typeColor });
+		metaRow.createSpan({ cls: 'hoard-airtime__schedule', text: scheduleText(entry.schedule) });
 
 		// progress badge — multi-part titles only (series / manga)
 		if (!isMovie && (entry.currentSeason !== undefined || entry.currentEpisode !== undefined)) {
 			const badgeCls = isFinalEpisode
-				? 'hoard-ep-badge hoard-ep-badge-final'
-				: 'hoard-ep-badge';
+				? 'hoard-badge__episode hoard-badge__episode--final'
+				: 'hoard-badge__episode';
 			left.createDiv({ cls: badgeCls, text: progressBadgeText(entry, r) });
 		}
 
 		// right
-		const right = card.createDiv({ cls: 'hoard-airtime-card-right' });
+		const right = card.createDiv({ cls: 'hoard-airtime__card-right' });
 
 		const pillClsMap: Record<DetailedCountdown['kind'], string> = {
-			'today-before': 'hoard-airtime-pill hoard-airtime-pill-today-series',
-			'future':       'hoard-airtime-pill hoard-airtime-pill-days',
-			'aired':        'hoard-airtime-pill hoard-airtime-pill-aired',
-			'due':          'hoard-airtime-pill hoard-airtime-pill-due',
+			'today-before': 'hoard-airtime__pill hoard-airtime__pill--today-series',
+			'future':       'hoard-airtime__pill hoard-airtime__pill--days',
+			'aired':        'hoard-airtime__pill hoard-airtime__pill--aired',
+			'due':          'hoard-airtime__pill hoard-airtime__pill--due',
 		};
 		// "Tomorrow" within 'future' gets its own style
 		const pillCls =
 			countdown.kind === 'future' && countdown.daysUntil === 1
-				? 'hoard-airtime-pill hoard-airtime-pill-tomorrow'
+				? 'hoard-airtime__pill hoard-airtime__pill--tomorrow'
 				: pillClsMap[countdown.kind];
 		right.createDiv({ cls: pillCls, text: countdown.label });
 
-		const actions = right.createDiv({ cls: 'hoard-airtime-actions' });
+		const actions = right.createDiv({ cls: 'hoard-airtime__actions' });
 
 		// green tick, shown once the airtime/release passes
-		if (showTick) this.renderTickButton(actions, 'hoard-airtime-action-btn hoard-airtime-action-btn-tick', entry, r, isFinalEpisode);
+		if (showTick) this.renderTickButton(actions, 'hoard-airtime__action-btn hoard-airtime__action-btn--tick', entry, r, isFinalEpisode);
 
-		const globeBtn = createIconButton(actions, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime-action-btn' });
+		const globeBtn = createIconButton(actions, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime__action-btn' });
 		globeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			openExternalLink(r.externalLink, 'airtime.notices.noLinkTitle');
 		});
 
-		const editBtn = createIconButton(actions, { icon: 'pencil', label: t('airtime.actions.editSchedule'), cls: 'hoard-airtime-action-btn' });
+		const editBtn = createIconButton(actions, { icon: 'pencil', label: t('airtime.actions.editSchedule'), cls: 'hoard-airtime__action-btn' });
 		editBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			if (r.source === 'reading') {
@@ -1185,7 +1185,7 @@ export class AirtimeTab {
 		const deleteBtn = createIconButton(actions, {
 			icon: 'x',
 			label: t('airtime.actions.removeFromUpcoming'),
-			cls: 'hoard-airtime-action-btn hoard-airtime-action-btn-delete hoard-btn-danger',
+			cls: 'hoard-airtime__action-btn hoard-airtime__action-btn--delete hoard-btn--danger',
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -1254,7 +1254,7 @@ export class AirtimeTab {
 
 	/**
 	 * Extra height under the 2:3 poster for title + release line + episode badge. Must match
-	 * .hoard-tracker-card-info in styles.css.
+	 * .hoard-tracker__card-info in styles.css.
 	 */
 	private static readonly TRACKER_CARD_TEXT_H = 74;
 
@@ -1287,10 +1287,10 @@ export class AirtimeTab {
 			groups[groups.length - 1]!.items.push(d);
 		}
 
-		const scroll = this.container.createDiv({ cls: 'hoard-tracker-scroll' });
+		const scroll = this.container.createDiv({ cls: 'hoard-tracker__scroll' });
 
 		const observer = new LazyCardObserver(
-			'.hoard-tracker-cell[data-needs-poster="true"]',
+			'.hoard-tracker__cell[data-needs-poster="true"]',
 			(cells) => this.handleTrackerCardsVisible(cells),
 		);
 		this.trackerObserver = observer;
@@ -1303,12 +1303,12 @@ export class AirtimeTab {
 		this.trackerScroller = scroller;
 
 		for (const group of groups) {
-			const titleEl = scroll.createDiv({ cls: 'hoard-tracker-month-title' });
+			const titleEl = scroll.createDiv({ cls: 'hoard-tracker__month-title' });
 			titleEl.createSpan({ text: group.label });
-			titleEl.createSpan({ cls: 'hoard-rows-shelf-count', text: `(${group.items.length})` });
+			titleEl.createSpan({ cls: 'hoard-rows-view__shelf-count', text: `(${group.items.length})` });
 
-			const spacer = scroll.createDiv({ cls: 'hoard-tracker-month-spacer' });
-			const grid = spacer.createDiv({ cls: 'hoard-cards-grid hoard-cards-grid-virtual' });
+			const spacer = scroll.createDiv({ cls: 'hoard-tracker__month-spacer' });
+			const grid = spacer.createDiv({ cls: 'hoard-card-grid hoard-card-grid--virtual' });
 			const items = group.items;
 			const vgrid = new VirtualGrid(spacer, grid, items.length, {
 				buildItem: (i, w) => {
@@ -1360,12 +1360,12 @@ export class AirtimeTab {
 			(isMovie && countdown.kind === 'due') ||
 			(!isMovie && countdown.kind === 'aired');
 
-		const cell = createDiv({ cls: 'hoard-tracker-cell' });
+		const cell = createDiv({ cls: 'hoard-tracker__cell' });
 		cell.dataset.entryId = entry.id;
 
 		// poster box (the Watchlist card)
-		const card = cell.createDiv({ cls: 'hoard-card hoard-tracker-card' });
-		if (this.selectionMode && this.selectedItems.has(entry.id)) card.addClass('hoard-card-selected');
+		const card = cell.createDiv({ cls: 'hoard-card hoard-tracker__card' });
+		if (this.selectionMode && this.selectedItems.has(entry.id)) card.addClass('hoard-card--selected');
 
 		// placeholder colour: the type colour regardless of the colored-badges setting
 		let placeholderColor: string;
@@ -1382,12 +1382,12 @@ export class AirtimeTab {
 				? getThemedColor(r.typeName, typeDef.color, this.plugin.settings.colorTheme)
 				: '#888780';
 		}
-		const placeholder = card.createDiv({ cls: 'hoard-card-poster-placeholder' });
-		placeholder.style.backgroundColor = placeholderColor;
+		const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
+		placeholder.setCssProps({ '--hoard-card-placeholder-color': placeholderColor });
 		placeholder.createSpan({ text: (r.title.trim().charAt(0) || '?').toUpperCase() });
 
 		const posterHeight = Math.round(cardWidth * 1.5);
-		const img = card.createEl('img', { cls: 'hoard-card-poster' });
+		const img = card.createEl('img', { cls: 'hoard-card__poster' });
 		img.alt = r.title;
 		img.width = Math.round(cardWidth);
 		img.height = posterHeight;
@@ -1434,52 +1434,52 @@ export class AirtimeTab {
 		// Watchlist overlay). Built before the corner buttons so an overlay paints below them (later
 		// absolute siblings win).
 		const info = this.plugin.isCardTextUnder('upcoming')
-			? cell.createDiv({ cls: 'hoard-tracker-card-info' })
-			: card.createDiv({ cls: 'hoard-card-overlay hoard-tracker-card-overlay' });
-		info.createDiv({ cls: 'hoard-tracker-card-title', text: r.title });
+			? cell.createDiv({ cls: 'hoard-tracker__card-info' })
+			: card.createDiv({ cls: 'hoard-card__overlay hoard-tracker__card-overlay' });
+		info.createDiv({ cls: 'hoard-tracker__card-title', text: r.title });
 		// the same schedule info the List row shows
 		info.createDiv({
-			cls: 'hoard-tracker-card-sub',
+			cls: 'hoard-tracker__card-subtitle',
 			text: trackerSubText(entry.schedule),
 		});
 		if (!isMovie && (entry.currentSeason !== undefined || entry.currentEpisode !== undefined)) {
 			info.createDiv({
-				cls: `${isFinalEpisode ? 'hoard-ep-badge hoard-ep-badge-final' : 'hoard-ep-badge'} hoard-tracker-ep-badge`,
+				cls: `${isFinalEpisode ? 'hoard-badge__episode hoard-badge__episode--final' : 'hoard-badge__episode'} hoard-tracker__episode-badge`,
 				text: progressBadgeText(entry, r),
 			});
 		}
 
 		// type badge — top-left over the poster
 		const typeBadge = card.createSpan({
-			cls: `hoard-tracker-type-badge${r.typeColor ? '' : ' is-plain'}`,
+			cls: `hoard-tracker__type-badge${r.typeColor ? '' : ' is-plain'}`,
 			text: r.typeLabel,
 		});
-		if (r.typeColor) typeBadge.style.backgroundColor = r.typeColor;
+		if (r.typeColor) typeBadge.setCssProps({ '--hoard-tracker-type-color': r.typeColor });
 
 		// countdown badge — top-right: big number + DAYS, or the state word
-		const cd = card.createDiv({ cls: `hoard-tracker-countdown ${COUNTDOWN_KIND_CLASSES[countdown.kind]}` });
+		const cd = card.createDiv({ cls: `hoard-tracker__countdown ${COUNTDOWN_KIND_CLASSES[countdown.kind]}` });
 		if (countdown.kind === 'future') {
 			if (countdown.daysUntil >= 9999) {
-				cd.createSpan({ cls: 'hoard-tracker-countdown-word', text: '—' });
+				cd.createSpan({ cls: 'hoard-tracker__countdown-word', text: '—' });
 			} else {
-				cd.createSpan({ cls: 'hoard-tracker-countdown-num', text: String(countdown.daysUntil) });
-				cd.createSpan({ cls: 'hoard-tracker-countdown-label', text: t('airtime.countdown.dayUnit', { count: countdown.daysUntil }).toUpperCase() });
+				cd.createSpan({ cls: 'hoard-tracker__countdown-number', text: String(countdown.daysUntil) });
+				cd.createSpan({ cls: 'hoard-tracker__countdown-label', text: t('airtime.countdown.dayUnit', { count: countdown.daysUntil }) });
 			}
 		} else {
 			const word = countdown.kind === 'today-before'
 				? t('airtime.countdown.today')
 				: countdown.kind === 'aired' ? t('airtime.countdown.aired') : t('airtime.countdown.due');
-			cd.createSpan({ cls: 'hoard-tracker-countdown-word', text: word.toUpperCase() });
+			cd.createSpan({ cls: 'hoard-tracker__countdown-word', text: word.toUpperCase() });
 		}
 
 		// green tick overlay (same due/aired gate as the List tick button)
-		if (showTick) this.renderTickButton(card, 'hoard-tracker-tick-btn', entry, r, isFinalEpisode);
+		if (showTick) this.renderTickButton(card, 'hoard-tracker__tick-btn', entry, r, isFinalEpisode);
 
 		// ⋮ menu (Remove only) — stacked above the globe, bottom-right
 		const menuBtn = createIconButton(card, {
 			icon: 'more-vertical',
 			label: t('airtime.actions.moreActions'),
-			cls: 'hoard-card-menu-btn hoard-tracker-menu-btn',
+			cls: 'hoard-card__menu-btn hoard-tracker__menu-btn',
 		});
 		menuBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -1490,7 +1490,7 @@ export class AirtimeTab {
 		const globeBtn = createIconButton(card, {
 			icon: 'globe',
 			label: t('airtime.actions.openPage'),
-			cls: 'hoard-card-menu-btn hoard-tracker-globe-btn',
+			cls: 'hoard-card__menu-btn hoard-tracker__globe-btn',
 		});
 		globeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -1543,14 +1543,14 @@ export class AirtimeTab {
 			// same gate as the Watchlist cards: a poster is set, or 'none' means tried, nothing found
 			if (title.posterUrl) continue;
 
-			const placeholder = cell.querySelector('.hoard-card-poster-placeholder');
+			const placeholder = cell.querySelector('.hoard-card__poster-placeholder');
 			placeholder?.addClass('is-loading');
 
 			void this.plugin.posterService.enqueue(title).then((url) => {
 				placeholder?.removeClass('is-loading');
 				if (!url) return;
 				const card = cell.querySelector<HTMLElement>('.hoard-card');
-				const img = cell.querySelector<HTMLImageElement>('.hoard-card-poster');
+				const img = cell.querySelector<HTMLImageElement>('.hoard-card__poster');
 				if (!card || !img) return;
 				img.onload = () => card.addClass('has-poster');
 				img.onerror = () => void this.dataManager.updatePosterUrl(titleId, 'none');

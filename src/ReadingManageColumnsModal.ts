@@ -41,7 +41,7 @@ export class ReadingManageColumnsModal extends Modal {
 		this.contentEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.addClass('hoard-view');
 		this.contentEl.addClass('hoard-reading-modal');
-		this.contentEl.addClass('hoard-reading-manage-cols');
+		this.contentEl.addClass('hoard-reading-columns');
 		this.titleEl.setText(this.title());
 		this.build();
 	}
@@ -58,30 +58,30 @@ export class ReadingManageColumnsModal extends Modal {
 		const c = this.contentEl;
 		c.empty();
 
-		const header = c.createDiv({ cls: 'hoard-reading-modal-header' });
+		const header = c.createDiv({ cls: 'hoard-reading-modal__header' });
 		header.createSpan({
-			cls: 'hoard-reading-modal-header-icon',
+			cls: 'hoard-reading-modal__header-icon',
 			text: this.kind === 'book' ? '📖' : '📓',
 		});
 		header.createSpan({
-			cls: 'hoard-reading-modal-header-title',
+			cls: 'hoard-reading-modal__header-title',
 			text: this.title(),
 		});
 
 		c.createDiv({
-			cls: 'hoard-reading-manage-cols-desc',
+			cls: 'hoard-reading-columns__description',
 			text: t('reading.columns.description'),
 		});
 
 		this.renderStyleToggle(c);
 
-		this.listEl = c.createDiv({ cls: 'hoard-reading-manage-cols-list' });
+		this.listEl = c.createDiv({ cls: 'hoard-reading-columns__list' });
 		this.renderList();
 
-		c.createDiv({ cls: 'hoard-reading-modal-divider' });
+		c.createDiv({ cls: 'hoard-reading-modal__divider' });
 		this.renderAddSection(c);
 
-		const footer = c.createDiv({ cls: 'hoard-reading-modal-footer' });
+		const footer = c.createDiv({ cls: 'hoard-reading-modal__footer' });
 		const closeBtn = footer.createEl('button', { cls: 'hoard-btn', text: t('common.close') });
 		closeBtn.addEventListener('click', () => this.close());
 	}
@@ -92,14 +92,14 @@ export class ReadingManageColumnsModal extends Modal {
 			? (settings.bookCustomFieldStyle ?? 'fill')
 			: (settings.mangaCustomFieldStyle ?? 'fill');
 
-		const row = parent.createDiv({ cls: 'hoard-reading-cols-style-row' });
-		row.createSpan({ cls: 'hoard-reading-cols-style-label', text: t('reading.columns.displayStyle') });
+		const row = parent.createDiv({ cls: 'hoard-reading-columns__style-row' });
+		row.createSpan({ cls: 'hoard-reading-columns__style-label', text: t('reading.columns.displayStyle') });
 
-		this.styleGroupEl = row.createDiv({ cls: 'hoard-reading-cols-style-group' });
+		this.styleGroupEl = row.createDiv({ cls: 'hoard-reading-columns__style-group' });
 
 		for (const opt of ['fill', 'border'] as const) {
 			const btn = this.styleGroupEl.createEl('button', {
-				cls: `hoard-reading-cols-style-btn${currentStyle === opt ? ' is-active' : ''}`,
+				cls: `hoard-reading-columns__style-btn${currentStyle === opt ? ' is-active' : ''}`,
 				text: t(opt === 'fill' ? 'reading.columns.styleFill' : 'reading.columns.styleBorder'),
 			});
 			btn.addEventListener('click', () => {
@@ -107,7 +107,7 @@ export class ReadingManageColumnsModal extends Modal {
 					const key = this.kind === 'book' ? 'bookCustomFieldStyle' : 'mangaCustomFieldStyle';
 					await this.readingData.updateSettings({ [key]: opt });
 					this.onChanged();
-					this.styleGroupEl?.querySelectorAll('.hoard-reading-cols-style-btn').forEach((b) => {
+					this.styleGroupEl?.querySelectorAll('.hoard-reading-columns__style-btn').forEach((b) => {
 						b.removeClass('is-active');
 					});
 					btn.addClass('is-active');
@@ -129,19 +129,19 @@ export class ReadingManageColumnsModal extends Modal {
 
 		if (cols.length === 0) {
 			this.listEl.createDiv({
-				cls: 'hoard-reading-manage-cols-empty',
+				cls: 'hoard-reading-columns__empty',
 				text: t('reading.columns.empty'),
 			});
 			return;
 		}
 
 		cols.forEach((col, idx) => {
-			const card = this.listEl!.createDiv({ cls: 'hoard-editcol-card hoard-reading-col-card' });
+			const card = this.listEl!.createDiv({ cls: 'hoard-edit-columns__card hoard-reading-columns__card' });
 
 			attachCardDrag(card, idx, this.drag, (from, to) => void this.reorder(from, to));
 
 			const nameInput = card.createEl('input', {
-				cls: 'hoard-modal-input hoard-editcol-card-name',
+				cls: 'hoard-modal__input hoard-edit-columns__card-name',
 				attr: { type: 'text', placeholder: t('reading.columns.fieldName') },
 			});
 			nameInput.value = col.name;
@@ -162,8 +162,8 @@ export class ReadingManageColumnsModal extends Modal {
 
 			const typeSelect = renderTypeSelect(card, col.type);
 
-			const colorDot = card.createEl('button', { cls: 'hoard-reading-col-color-dot' });
-			colorDot.style.backgroundColor = col.color ?? DEFAULT_FIELD_COLOR;
+			const colorDot = card.createEl('button', { cls: 'hoard-color-picker__dot' });
+			colorDot.setCssProps({ '--hoard-color-picker-dot-color': col.color ?? DEFAULT_FIELD_COLOR });
 			colorDot.title = t('reading.columns.chooseColor');
 			colorDot.addEventListener('click', (e) => {
 				e.stopPropagation();
@@ -171,11 +171,11 @@ export class ReadingManageColumnsModal extends Modal {
 			});
 
 			const optsInput = card.createEl('input', {
-				cls: 'hoard-modal-input hoard-reading-col-opts-input',
+				cls: 'hoard-modal__input hoard-reading-columns__options-input',
 				attr: { type: 'text', placeholder: t('reading.columns.optionValues') },
 			});
 			optsInput.value = col.options.join(', ');
-			optsInput.style.visibility = col.type === 'select' ? '' : 'hidden';
+			optsInput.toggleClass('is-invisible', col.type !== 'select');
 			optsInput.addEventListener('change', () => {
 				const parsed = optsInput.value
 					.split(',')
@@ -186,11 +186,11 @@ export class ReadingManageColumnsModal extends Modal {
 
 			typeSelect.addEventListener('change', () => {
 				const type = typeSelect.value as ReadingCustomColumn['type'];
-				optsInput.style.visibility = type === 'select' ? '' : 'hidden';
+				optsInput.toggleClass('is-invisible', type !== 'select');
 				void this.updateColumn({ ...col, type });
 			});
 
-			const delBtn = createIconButton(card, { icon: 'x', label: t('reading.columns.deleteField'), cls: 'hoard-editcol-card-del' });
+			const delBtn = createIconButton(card, { icon: 'x', label: t('reading.columns.deleteField'), cls: 'hoard-edit-columns__card-delete' });
 			delBtn.addEventListener('click', () => {
 				new ConfirmModal(
 					this.plugin.app,
@@ -215,17 +215,17 @@ export class ReadingManageColumnsModal extends Modal {
 	}
 
 	private renderAddSection(parent: HTMLElement): void {
-		const wrap = parent.createDiv({ cls: 'hoard-reading-add-col' });
-		wrap.createDiv({ cls: 'hoard-reading-section-label', text: t('reading.columns.addField') });
+		const wrap = parent.createDiv({ cls: 'hoard-reading-columns__add' });
+		wrap.createDiv({ cls: 'hoard-reading-modal__section-label', text: t('reading.columns.addField') });
 
-		const row = wrap.createDiv({ cls: 'hoard-reading-add-col-row' });
+		const row = wrap.createDiv({ cls: 'hoard-reading-columns__add-row' });
 
 		const nameInput = row.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-add-col-name',
+			cls: 'hoard-modal__input hoard-reading-columns__add-name',
 			attr: { type: 'text', placeholder: t('reading.columns.fieldName') },
 		});
 
-		const typeSelect = row.createEl('select', { cls: 'hoard-select hoard-reading-add-col-type' });
+		const typeSelect = row.createEl('select', { cls: 'hoard-input__select hoard-reading-columns__add-type' });
 		const typeLabels = {
 			text: t('ui.columns.typeText'),
 			number: t('ui.columns.typeNumber'),
@@ -236,20 +236,20 @@ export class ReadingManageColumnsModal extends Modal {
 		}
 
 		const optsInput = row.createEl('input', {
-			cls: 'hoard-modal-input hoard-reading-add-col-opts',
+			cls: 'hoard-modal__input hoard-reading-columns__add-options',
 			attr: {
 				type: 'text',
 				placeholder: t('reading.columns.optionsPlaceholder'),
 			},
 		});
 		const refreshOpts = (): void => {
-			optsInput.style.display = typeSelect.value === 'select' ? '' : 'none';
+			optsInput.toggleClass('is-hidden', typeSelect.value !== 'select');
 		};
 		typeSelect.addEventListener('change', refreshOpts);
 		refreshOpts();
 
 		const addBtn = row.createEl('button', {
-			cls: 'hoard-reading-add-btn hoard-btn-success hoard-reading-add-col-btn',
+			cls: 'hoard-reading-modal__add-btn hoard-btn--success hoard-reading-columns__add-btn',
 			text: t('common.add'),
 		});
 		addBtn.addEventListener('click', () => {
@@ -313,7 +313,7 @@ export class ReadingManageColumnsModal extends Modal {
 		this.contentEl
 			.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>('input, select, button')
 			.forEach((el) => {
-				if (!el.closest('.hoard-reading-modal-footer')) el.disabled = locked;
+				if (!el.closest('.hoard-reading-modal__footer')) el.disabled = locked;
 			});
 	}
 

@@ -17,8 +17,8 @@ afterEach(() => {
 
 describe('list tab rename', () => {
 	const startRename = (container: HTMLElement, idx = 0): HTMLInputElement => {
-		qa(container, '.hoard-cl-sub-tab-name')[idx]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-		return q(container, '.hoard-cl-sub-tab-rename') as HTMLInputElement;
+		qa(container, '.hoard-custom-lists__subtab-name')[idx]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+		return q(container, '.hoard-custom-lists__subtab-rename') as HTMLInputElement;
 	};
 
 	it('renames the list on Enter and keeps it active', async () => {
@@ -26,7 +26,7 @@ describe('list tab rename', () => {
 		const input = startRename(container);
 		input.value = 'Later';
 		key(input, 'Enter');
-		await until(() => qa(container, '.hoard-cl-sub-tab-name').some((s) => s.textContent === 'Later'));
+		await until(() => qa(container, '.hoard-custom-lists__subtab-name').some((s) => s.textContent === 'Later'));
 		expect([...f.files.keys()].some((p) => p.endsWith('/Later.md'))).toBe(true);
 	});
 
@@ -38,7 +38,7 @@ describe('list tab rename', () => {
 		input.value = 'Other';
 		key(input, 'Escape');
 		input.dispatchEvent(new Event('blur'));
-		expect(container.querySelector('.hoard-cl-sub-tab-rename')).toBeNull();
+		expect(container.querySelector('.hoard-custom-lists__subtab-rename')).toBeNull();
 		input = startRename(container);
 		input.value = '  ';
 		input.dispatchEvent(new Event('blur'));
@@ -65,16 +65,16 @@ describe('name cell editing', () => {
 		const p = ctx.plugin as unknown as Record<string, unknown>;
 		p.readingDataManager = { getBooks: () => [{ title: 'Aliens Book', status: 'Reading' }], getMangaList: () => [] };
 		p.gameDataManager = { getGames: () => [{ title: 'Alien Isolation', status: 'Playing' }] };
-		const nameCell = (): HTMLElement => qa(ctx.container, '.hoard-cl-tr-body')[0]!.querySelector<HTMLElement>('.hoard-cl-td-name')!;
+		const nameCell = (): HTMLElement => qa(ctx.container, '.hoard-custom-list-table__tr--body')[0]!.querySelector<HTMLElement>('.hoard-custom-list-table__td--name')!;
 		const edit = (): HTMLInputElement => {
 			nameCell().click();
-			return q(ctx.container, '.hoard-cl-cell-input') as HTMLInputElement;
+			return q(ctx.container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		};
 		const type = (input: HTMLInputElement, v: string): void => {
 			input.value = v;
 			input.dispatchEvent(new Event('input'));
 		};
-		const items = (): HTMLElement[] => qa(document.body, '.hoard-cl-autofill-dropdown .hoard-result-item');
+		const items = (): HTMLElement[] => qa(document.body, '.hoard-custom-list-table__autofill-dropdown .hoard-search-picker__result-item');
 		return { ...ctx, edit, type, items };
 	}
 
@@ -82,13 +82,13 @@ describe('name cell editing', () => {
 		const { edit, type, items, stored } = await setup();
 		const input = edit();
 		type(input, 'alien');
-		expect(items().map((i) => i.querySelector('.hoard-result-title')!.textContent)).toEqual(['Alien', 'Aliens Book', 'Alien Isolation']);
+		expect(items().map((i) => i.querySelector('.hoard-search-picker__result-title')!.textContent)).toEqual(['Alien', 'Aliens Book', 'Alien Isolation']);
 		key(input, 'ArrowDown');
 		key(input, 'ArrowDown');
 		key(input, 'ArrowDown');
 		key(input, 'ArrowDown');
 		key(input, 'ArrowUp');
-		expect(items().map((i) => i.classList.contains('hoard-result-item-focused'))).toEqual([false, true, false]);
+		expect(items().map((i) => i.classList.contains('hoard-search-picker__result-item--focused'))).toEqual([false, true, false]);
 		key(input, 'Enter');
 		expect(input.value).toBe('Aliens Book');
 		expect(items()).toHaveLength(0);

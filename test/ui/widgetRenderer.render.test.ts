@@ -60,14 +60,14 @@ afterEach(() => {
 describe('hoard-todo widget', () => {
 	it('reports a missing title name', () => {
 		const { map } = setup({ titles: [] });
-		expect(text(run(map.get('hoard-todo')!, 'mini\n'), '.hoard-widget-error')[0]).toContain('hoard-todo:');
+		expect(text(run(map.get('hoard-todo')!, 'mini\n'), '.hoard-widget__error')[0]).toContain('hoard-todo:');
 	});
 
 	it('reports an unknown title, matching names case-insensitively otherwise', () => {
 		const { map } = setup({ titles: [title({})] });
-		expect(text(run(map.get('hoard-todo')!, 'nope'), '.hoard-widget-error')[0]).toContain('nope');
+		expect(text(run(map.get('hoard-todo')!, 'nope'), '.hoard-widget__error')[0]).toContain('nope');
 		const ok = run(map.get('hoard-todo')!, 'SHOW');
-		expect(ok.querySelector('.hoard-widget-error')).toBeNull();
+		expect(ok.querySelector('.hoard-widget__error')).toBeNull();
 		expect(ok.classList.contains('hoard-widget')).toBe(true);
 	});
 
@@ -80,37 +80,37 @@ describe('hoard-todo widget', () => {
 	it('full widget: badges, progress, started date, next episode', () => {
 		const { map } = setup({ titles: [title({ dateStarted: '2024-05-06' })] });
 		const el = run(map.get('hoard-todo')!, 'Show');
-		expect(text(el, '.hoard-widget-title')).toEqual(['Show']);
-		expect(text(el, '.hoard-widget-percent')).toEqual(['33%']);
+		expect(text(el, '.hoard-widget__title')).toEqual(['Show']);
+		expect(text(el, '.hoard-widget__percent')).toEqual(['33%']);
 		expect(el.querySelectorAll('.hoard-badge').length).toBeGreaterThan(0);
-		expect(text(el, '.hoard-widget-date')[0]).toMatch(/Since|seit/i);
-		expect(text(el, '.hoard-widget-next-label')[0]).toContain('2');
+		expect(text(el, '.hoard-widget__date')[0]).toMatch(/Since|seit/i);
+		expect(text(el, '.hoard-widget__next-label')[0]).toContain('2');
 	});
 
 	it('full widget: uses the added date when not started and strikes the title through on the task box', () => {
 		const { map } = setup({ titles: [title({})] });
 		const el = run(map.get('hoard-todo')!, 'Show');
-		expect(text(el, '.hoard-widget-date')[0]).not.toMatch(/Since/i);
-		const cb = el.querySelector<HTMLInputElement>('.hoard-widget-cb')!;
+		expect(text(el, '.hoard-widget__date')[0]).not.toMatch(/Since/i);
+		const cb = el.querySelector<HTMLInputElement>('.hoard-widget__checkbox')!;
 		cb.checked = true;
 		cb.dispatchEvent(new Event('change'));
-		expect(el.querySelector<HTMLElement>('.hoard-widget-title')!.style.textDecoration).toBe('line-through');
+		expect(el.querySelector<HTMLElement>('.hoard-widget__title')!.classList.contains('is-done')).toBe(true);
 		cb.checked = false;
 		cb.dispatchEvent(new Event('change'));
-		expect(el.querySelector<HTMLElement>('.hoard-widget-title')!.style.textDecoration).toBe('');
+		expect(el.querySelector<HTMLElement>('.hoard-widget__title')!.classList.contains('is-done')).toBe(false);
 	});
 
 	it('full widget: all watched shows the check label and no episode checkbox', () => {
 		const { map } = setup({ titles: [title({})], nextEp: null });
 		const el = run(map.get('hoard-todo')!, 'Show');
-		expect(text(el, '.hoard-widget-next-label')[0]).toContain('✓');
-		expect(el.querySelector('.hoard-widget-next-cb')).toBeNull();
+		expect(text(el, '.hoard-widget__next-label')[0]).toContain('✓');
+		expect(el.querySelector('.hoard-widget__next-checkbox')).toBeNull();
 	});
 
 	it('full widget: ticking the next episode marks it watched', async () => {
 		const { map, marked } = setup({ titles: [title({})] });
 		const el = run(map.get('hoard-todo')!, 'Show');
-		const cb = el.querySelector<HTMLInputElement>('.hoard-widget-next-cb')!;
+		const cb = el.querySelector<HTMLInputElement>('.hoard-widget__next-checkbox')!;
 		cb.checked = true;
 		cb.dispatchEvent(new Event('change'));
 		await Promise.resolve();
@@ -120,15 +120,15 @@ describe('hoard-todo widget', () => {
 	it('full widget: a movie toggles watched state', () => {
 		const { map, marked } = setup({ titles: [title({ type: 'Movie', watchedEpisodes: [1] })] });
 		const el = run(map.get('hoard-todo')!, 'Show');
-		const cb = el.querySelector<HTMLInputElement>('.hoard-widget-next-cb')!;
+		const cb = el.querySelector<HTMLInputElement>('.hoard-widget__next-checkbox')!;
 		expect(cb.checked).toBe(true);
-		expect(text(el, '.hoard-widget-next-label')).toEqual(['Watched']);
+		expect(text(el, '.hoard-widget__next-label')).toEqual(['Watched']);
 		cb.checked = false;
 		cb.dispatchEvent(new Event('change'));
 		expect(marked).toEqual([['t1', 1, false]]);
 		const unwatched = setup({ titles: [title({ type: 'Movie', watchedEpisodes: [] })] });
 		const el2 = run(unwatched.map.get('hoard-todo')!, 'Show');
-		expect(text(el2, '.hoard-widget-next-label')).toEqual(['Mark as watched']);
+		expect(text(el2, '.hoard-widget__next-label')).toEqual(['Mark as watched']);
 	});
 });
 
@@ -143,7 +143,7 @@ describe('hoard-now-next widget', () => {
 	it('shows placeholders without a pin or release', () => {
 		const { map } = setup({ titles: [title({})] });
 		const el = run(map.get('hoard-now-next')!, '');
-		expect(text(el, '.hoard-full-card-sub')).toEqual(['Nothing pinned.', 'No upcoming.']);
+		expect(text(el, '.hoard-widget__full-card-subtitle')).toEqual(['Nothing pinned.', 'No upcoming.']);
 	});
 
 	it('shows a pinned title with its progress and the next release countdown', () => {
@@ -154,9 +154,9 @@ describe('hoard-now-next widget', () => {
 				airtime: [entry('t2', days)],
 			});
 			const el = run(map.get('hoard-now-next')!, '');
-			expect(text(el, '.hoard-full-card-title')).toEqual(['Show', 'Soon']);
-			expect(text(el, '.hoard-full-card-sub')[0]).toBe('33%');
-			expect(text(el, '.hoard-full-card-sub')[1]).toMatch(re);
+			expect(text(el, '.hoard-widget__full-card-title')).toEqual(['Show', 'Soon']);
+			expect(text(el, '.hoard-widget__full-card-subtitle')[0]).toBe('33%');
+			expect(text(el, '.hoard-widget__full-card-subtitle')[1]).toMatch(re);
 		}
 	});
 
@@ -164,7 +164,7 @@ describe('hoard-now-next widget', () => {
 		const group = { id: 'g1', name: 'Marathon', titleIds: ['t1', 'ghost'] } as unknown as HoardGroup;
 		const { map } = setup({ titles: [title({})], groups: [group], pinnedGroupId: 'g1' });
 		const el = run(map.get('hoard-now-next')!, '');
-		expect(text(el, '.hoard-full-card-title')).toEqual(['Marathon']);
-		expect(text(el, '.hoard-full-card-sub')[0]).toContain('25%');
+		expect(text(el, '.hoard-widget__full-card-title')).toEqual(['Marathon']);
+		expect(text(el, '.hoard-widget__full-card-subtitle')[0]).toContain('25%');
 	});
 });

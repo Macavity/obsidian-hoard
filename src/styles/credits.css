@@ -1,13 +1,14 @@
 /* Credits rows and add-credit modal */
+
 /* Credits (director / cast) rows — detail modal + List expanded row */
-.hoard-detail-credits {
+.hoard-detail__credits {
   display: flex;
   flex-direction: column;
   gap: 2px;
   margin-top: 6px;
 }
 
-.hoard-acc-credits {
+.hoard-accordion__credits {
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -15,52 +16,52 @@
 }
 
 /* manual credits re-fetch (framed icon button); sits at the start of the credits column */
-.hoard-credits-refresh {
+.hoard-credits__refresh {
   align-self: flex-start;
 }
 
-.hoard-credits-row {
+.hoard-credits__row {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
   min-width: 0;
 }
 
-.hoard-credits-label {
+.hoard-credits__label {
   font-weight: 600;
   margin-right: 6px;
 }
 
 /* the mobile detail modal drops the colon via --hoard-credits-label-suffix */
-.hoard-credits-label-text::after {
+.hoard-credits__label-text::after {
   content: var(--hoard-credits-label-suffix, ':');
 }
 
-.hoard-credits-name-text.is-clickable {
+.hoard-credits__name-text.is-clickable {
   cursor: pointer;
   color: var(--text-normal);
 }
 
-.hoard-credits-name-text.is-clickable:hover {
+.hoard-credits__name-text.is-clickable:hover {
   color: var(--text-accent, var(--interactive-accent));
   text-decoration: underline;
 }
 
 /* Leading + on each credits row (sm icon button) — opens the add-credit modal for that field. */
-.hoard-credits-add {
+.hoard-credits__add {
   margin-right: 4px;
   vertical-align: -3px;
 }
 
 /* User-added names: a dotted underline marks them apart from fetched credits. */
-.hoard-credits-name.is-manual .hoard-credits-name-text {
+.hoard-credits__name.is-manual .hoard-credits__name-text {
   border-bottom: 1px dotted var(--text-faint);
 }
 
 /* ✕ on a user-added name (sm icon button), revealed on hover so the row stays quiet at rest.
    Collapsed to zero width rather than display: none, which would make it unreachable by
    keyboard; the name list keeps no gap before the comma. */
-button.hoard-credits-name-del {
+button.hoard-credits__name-delete {
   vertical-align: 1px;
   width: 0;
   margin-left: 0;
@@ -68,9 +69,9 @@ button.hoard-credits-name-del {
   overflow: hidden;
 }
 
-/* class-only on purpose: (0,3,0) already outranks button.hoard-credits-name-del */
-.hoard-credits-name:hover .hoard-credits-name-del,
-.hoard-credits-name:focus-within .hoard-credits-name-del {
+/* class-only on purpose: (0,3,0) already outranks button.hoard-credits__name-delete */
+.hoard-credits__name:hover .hoard-credits__name-delete,
+.hoard-credits__name:focus-within .hoard-credits__name-delete {
   width: 16px;
   margin-left: 3px;
   opacity: 1;
@@ -78,19 +79,19 @@ button.hoard-credits-name-del {
 
 /* no hover on touch — the remove control has to be there from the start */
 @media (hover: none) {
-  button.hoard-credits-name-del {
+  button.hoard-credits__name-delete {
     width: 16px;
     margin-left: 3px;
     opacity: 1;
   }
 }
 
-button.hoard-credits-name-del:hover {
+button.hoard-credits__name-delete:hover {
   color: var(--text-error, var(--text-accent));
 }
 
 /* expands in place; a popover would be clipped by the accordion */
-.hoard-credits-more {
+.hoard-credits__more {
   background: none;
   border: none;
   box-shadow: none;
@@ -104,11 +105,11 @@ button.hoard-credits-name-del:hover {
   color: var(--text-accent, var(--interactive-accent));
 }
 
-.hoard-credits-more:hover {
+.hoard-credits__more:hover {
   background-color: var(--background-modifier-hover);
 }
 
-.hoard-credits-overflow {
+.hoard-credits__overflow {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 6px;
@@ -117,7 +118,7 @@ button.hoard-credits-name-del:hover {
   color: var(--text-muted);
 }
 
-.hoard-credits-chip {
+.hoard-credits__chip {
   background: var(--background-secondary);
   border-radius: 4px;
   padding: 1px 6px;
@@ -126,14 +127,14 @@ button.hoard-credits-name-del:hover {
 }
 
 /* Add-credit modal */
-.hoard-credit-panes {
+.hoard-credits__panes {
   display: flex;
   gap: 12px;
   margin: 10px 0;
   align-items: stretch;
 }
 
-.hoard-credit-pane {
+.hoard-credits__pane {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
@@ -141,18 +142,18 @@ button.hoard-credits-name-del:hover {
   gap: 6px;
 }
 
-.hoard-credit-pane-title {
+.hoard-credits__pane-title {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
 }
 
-.hoard-credit-search-input {
+.hoard-credits__search-input {
   width: 100%;
 }
 
-.hoard-credit-results,
-.hoard-credit-staged {
+.hoard-credits__results,
+.hoard-credits__staged {
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   min-height: 180px;
@@ -160,7 +161,7 @@ button.hoard-credits-name-del:hover {
   overflow-y: auto;
 }
 
-.hoard-credit-staged {
+.hoard-credits__staged {
   padding: 6px;
   display: flex;
   flex-direction: column;
@@ -168,31 +169,31 @@ button.hoard-credits-name-del:hover {
   align-content: flex-start;
 }
 
-.hoard-credit-result .hoard-result-meta {
+.hoard-credits__result .hoard-search-picker__result-meta {
   font-size: 11px;
   color: var(--text-faint);
 }
 
-.hoard-credit-result-new .hoard-result-title {
+.hoard-credits__result--new .hoard-search-picker__result-title {
   color: var(--text-accent, var(--interactive-accent));
 }
 
-.hoard-credit-result.is-disabled {
+.hoard-credits__result.is-disabled {
   cursor: default;
   opacity: 0.5;
 }
 
-.hoard-credit-result.is-disabled:hover {
+.hoard-credits__result.is-disabled:hover {
   background: none;
 }
 
-.hoard-credit-hint {
+.hoard-credits__hint {
   padding: 10px;
   font-size: 12px;
   color: var(--text-faint);
 }
 
-.hoard-credit-chip {
+.hoard-credits__staged-chip {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -203,52 +204,51 @@ button.hoard-credits-name-del:hover {
   font-size: 12px;
 }
 
-.hoard-credit-chip-name {
+.hoard-credits__staged-chip-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 /* sm icon button at the end of a staged-name chip */
-.hoard-credit-chip-del {
+.hoard-credits__staged-chip-delete {
   flex: 0 0 auto;
 }
 
-button.hoard-credit-chip-del:hover {
+button.hoard-credits__staged-chip-delete:hover {
   color: var(--text-error, var(--text-accent));
 }
 
 /* Narrow sidebar / mobile: the two panes stack rather than squeeze. */
-@media (max-width: 520px) {
-  .hoard-credit-panes {
+@media (width <= 520px) {
+  .hoard-credits__panes {
     flex-direction: column;
   }
 
-  .hoard-credit-results,
-  .hoard-credit-staged {
+  .hoard-credits__results,
+  .hoard-credits__staged {
     min-height: 120px;
     max-height: 180px;
   }
 }
 
-.hoard-detail-episodes {
+.hoard-detail__episodes {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.hoard-detail-rating,
-.hoard-detail-notes,
-.hoard-detail-date {
+.hoard-detail__rating,
+.hoard-detail__notes,
+.hoard-detail__date {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.hoard-detail-rating {
-  flex-direction: row;
+.hoard-detail__rating {
+  flex-flow: row wrap;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
 }
 

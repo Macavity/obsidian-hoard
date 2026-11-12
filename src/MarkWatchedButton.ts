@@ -32,7 +32,7 @@ export function appendMarkWatchedButton(
 	onChanged: () => void,
 ): HTMLElement {
 	const btn = parent.createEl('button', {
-		cls: 'hoard-mark-watched-btn',
+		cls: 'hoard-accordion__mark-watched-btn',
 		attr: { type: 'button' },
 	});
 
