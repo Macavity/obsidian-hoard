@@ -226,11 +226,31 @@ describe('editing a watchlist schedule', () => {
 			return cap.forms[cap.forms.length - 1]!.opts.timeNote;
 		};
 
-		it('shows the entered local time in Japan time', () => {
-			const now = new Date();
-			const inJapan = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 30)
-				.toLocaleTimeString('en-GB', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });
-			expect(timeNote()('20:30')).toBe(t('airtime.modal.timeNote', { time: inJapan }));
+		/** Runs the machine in `zone` at the instant `isoNow`, so the expected clock time is a literal. */
+		const at = (zone: string, isoNow: string): void => {
+			vi.stubEnv('TZ', zone);
+			vi.useFakeTimers({ toFake: ['Date'] });
+			vi.setSystemTime(new Date(isoNow));
+		};
+
+		afterEach(() => {
+			vi.useRealTimers();
+			vi.unstubAllEnvs();
+		});
+
+		it('shows a New York winter evening as the next morning in Japan', () => {
+			at('America/New_York', '2026-01-15T17:00:00Z');
+			expect(timeNote()('20:30')).toBe(t('airtime.modal.timeNote', { time: '10:30' }));
+		});
+
+		it('follows daylight saving time of the local zone', () => {
+			at('America/New_York', '2026-07-15T16:00:00Z');
+			expect(timeNote()('20:30')).toBe(t('airtime.modal.timeNote', { time: '09:30' }));
+		});
+
+		it('adds nine hours on a machine running in UTC', () => {
+			at('UTC', '2026-01-15T12:00:00Z');
+			expect(timeNote()('20:30')).toBe(t('airtime.modal.timeNote', { time: '05:30' }));
 		});
 
 		it('shows a dash for a time that is not HH:MM', () => {
