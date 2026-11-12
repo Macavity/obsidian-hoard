@@ -146,6 +146,17 @@ describe('HoardView mobile tab height', () => {
 		expect(height()).toBe('260px');
 	});
 
+	it('keeps the held height after a focusout that leaves the editor focused', async () => {
+		const { tabContent, settle, height, editor, focus } = await open(true);
+		const input = editor(tabContent);
+		focus(input);
+		settle(300);
+		input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+		vi.advanceTimersByTime(300);
+		settle(600);
+		expect(height()).toBe('260px');
+	});
+
 	it('returns to the full height once focus has left every editor', async () => {
 		const { tabContent, settle, height, editor, focus } = await open(true);
 		const input = editor(tabContent);

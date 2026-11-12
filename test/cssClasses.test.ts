@@ -1,10 +1,10 @@
 import process from "process";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { BEM_PATTERN, checkCssClasses, classesInCss, shortTokens, wordsInStrings } from "../scripts/lib/css-classes.mjs";
 import { runCheck, unimportedPartials } from "../scripts/check-css-classes.mjs";
 import { bundleStyles } from "../scripts/lib/bundle-styles.mjs";
 import stylelintConfig from "../stylelint.config.mjs";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -77,8 +77,14 @@ describe("stylelint config", () => {
 });
 
 describe("bundleStyles line endings", () => {
+	const made: string[] = [];
+	afterEach(() => {
+		for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true });
+	});
+
 	const dirWith = (files: Record<string, string>): string => {
 		const dir = mkdtempSync(join(tmpdir(), "hoard-css-"));
+		made.push(dir);
 		for (const [name, text] of Object.entries(files)) {
 			mkdirSync(join(dir, name, ".."), { recursive: true });
 			writeFileSync(join(dir, name), text);
