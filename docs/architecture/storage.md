@@ -56,9 +56,9 @@ or type-name change. Changes are batched 150 ms and emitted as a set of ids.
 
 Codecs are pure: `titleFromProperties(id, properties, cache)` / `titleToProperties`, `decodeBook`/`encodeBook`,
 `decodeManga`/`encodeManga`, `decodeGame`/`encodeGame`. Each returns `invalidFields` for values of the
-wrong type instead of failing; those properties are left untouched on write. Each codec builds its
-result as one expression composed from parts and assigns nothing afterwards; for titles the order of
-the parts in `titleToProperties` is the order of properties in a new note. Property names come
+wrong type instead of failing; those properties are left untouched on write. The title codec builds
+its result as one expression composed from parts and assigns nothing afterwards; the order of the
+parts in `titleToProperties` is the order of properties in a new note. Property names come
 only from [properties.ts](../../src/storage/properties.ts) ([property names](../concepts/properties.md)).
 The book and manga codecs also take that kind's custom columns, because a custom value's key is
 `Custom <column name>`; `EntryIndex.setColumns` re-decodes reading notes when a column name changes.
