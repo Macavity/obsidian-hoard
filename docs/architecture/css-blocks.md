@@ -8,7 +8,7 @@ source:
   - scripts/check-css-classes.mjs
   - eslint.config.mjs
   - stylelint.config.mjs
-source_commit: 3b7732ed494809373939844a8840d9f69a697287
+source_commit: 52470cc0fb7bcae43faf4c81a9543ecacb5ed178
 ---
 
 # CSS blocks
@@ -35,6 +35,10 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
   element showed before the variable existed. A rule that reads a variable must not catch elements that
   never set it and relied on Obsidian's default (the clear swatch of the colour picker is excluded for
   that reason). An empty value removes the variable.
+- **Short selectors, no `!important`**: a rule that would need a third compound puts a modifier on its
+  target instead (`.hoard-reading-detail__meta-row--mobile`, set through `mobileRowClass`, rather than
+  `.is-mobile … …`); a rule that must win doubles a class (`.hoard-view__tab-content.hoard-force-overflow-auto`).
+  A value shared by variants is a custom property the modifier sets (`--hoard-mode-pill-accent`).
 - **Abbreviations are spelled out** (`custom-list`, not `cl`; `column`, not `col`). Allowed short parts
   (`ALLOWED_SHORT`): established abbreviations (`btn`, `img`, `nav`, `csv`, `api`, `id`, `url`, `th`, `td`, `tr`,
   `sm`, `md`, `lg`), proper names and formats (`svg`, `mal`, `jst`) and plain words (`row`, `tab`, `bar`, `add`, `log`, …).
