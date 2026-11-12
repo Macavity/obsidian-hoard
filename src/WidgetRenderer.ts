@@ -89,7 +89,7 @@ export class WidgetRenderer {
 		if (colorTheme !== 'default') el.setAttribute('data-theme', colorTheme);
 	}
 
-	/** Called by the `hoard-data-changed` DOM event. Re-renders all live widgets. */
+	/** Runs on the change signal (`onDataChanged`). Re-renders all live widgets. */
 	private onDataChanged(): void {
 		const stale: HTMLElement[] = [];
 

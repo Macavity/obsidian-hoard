@@ -7,6 +7,8 @@
  */
 const EVENT = 'hoard-data-changed';
 
+// `window.document` on purpose: the plugin's own window. The bare `document` global means the same
+// but is what `obsidianmd/prefer-active-doc` rewrites to `activeDocument`.
 const target = (): Document => window.document;
 
 export function emitDataChanged(): void {
