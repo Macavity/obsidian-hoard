@@ -56,11 +56,13 @@ interface Fixture {
 	titles?: HoardTitle[];
 	pinnedGroupId?: string | null;
 	releases?: Array<{ titleId: string; releaseDate: string }>;
+	/** The document that has the focus while the plugin loads; the main one by default. */
+	loadedIn?: Document;
 }
 
 /** Mounts a WidgetRenderer on a fake plugin/data manager; `run` renders one code block. */
 function mountRenderer(fx: Fixture = {}) {
-	vi.stubGlobal('activeDocument', document);
+	vi.stubGlobal('activeDocument', fx.loadedIn ?? document);
 	const handlers = new Map<string, Handler>();
 	const titles = fx.titles ?? [];
 	const plugin = {
@@ -231,5 +233,14 @@ describe('WidgetRenderer', () => {
 		expect(full.textContent).toContain('Renamed');
 		expect(mini.textContent).toContain('Film');
 		expect(stat.textContent).toContain('4 titles');
+	});
+
+	it('re-renders when the plugin was loaded while the settings window had the focus', () => {
+		const settingsWindow = document.implementation.createHTMLDocument('settings');
+		const { run, titles } = mountRenderer({ titles: [series()], loadedIn: settingsWindow });
+		const full = run('hoard', 'id: s');
+		titles[0]!.title = 'Renamed';
+		document.dispatchEvent(new Event('hoard-data-changed'));
+		expect(full.textContent).toContain('Renamed');
 	});
 });
