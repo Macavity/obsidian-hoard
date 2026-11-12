@@ -18,7 +18,7 @@ vi.mock('../../src/DashboardTab', () => ({ DashboardTab: tab('dashboard', false)
 vi.mock('../../src/ListTab', () => ({ ListTab: tab('watchlist', true) }));
 vi.mock('../../src/ReadingTab', () => ({ ReadingTab: tab('reading', true) }));
 vi.mock('../../src/GamesTab', () => ({ GamesTab: tab('games', true) }));
-vi.mock('../../src/CustomListsTab', () => ({ CustomListsTab: tab('custom-lists', false) }));
+vi.mock('../../src/CustomListsTab', () => ({ CustomListsTab: tab('custom-lists', true) }));
 vi.mock('../../src/LogTab', () => ({ LogTab: tab('log', true) }));
 vi.mock('../../src/AirtimeTab', () => ({
 	AirtimeTab: tab('upcoming', true, { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 }),
@@ -50,10 +50,9 @@ describe('HoardView tab teardown', () => {
 		expect(destroyed).toEqual(['watchlist']);
 	});
 
-	it('switches away from a tab without destroy', async () => {
+	it('switches away from a tab without destroy (the dashboard)', async () => {
 		const view = await open();
 		expect(() => view.setActiveTab('custom-lists')).not.toThrow();
-		expect(() => view.setActiveTab('log')).not.toThrow();
 		expect(destroyed).toEqual([]);
 	});
 
