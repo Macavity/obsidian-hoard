@@ -28,7 +28,7 @@ function renderSearchThumbnail(
 }
 
 /** Spec for one add-flow search-result row. */
-interface SearchResultRowSpec {
+export interface SearchResultRowSpec {
 	/** Cover URL; falls back to `fallbackIcon` when absent or on load failure. */
 	thumbUrl: string | undefined;
 	fallbackIcon: string;

@@ -35,7 +35,7 @@ import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, stea
 import { isCreditsNone, normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
 
-type Airing = NonNullable<EntryCache['airing']>;
+export type Airing = NonNullable<EntryCache['airing']>;
 
 const OMDB_BASE = 'https://www.omdbapi.com';
 const TMDB_BASE = 'https://api.themoviedb.org/3';

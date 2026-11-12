@@ -2,18 +2,17 @@ import { App, Modal, Notice } from 'obsidian';
 import { t } from './i18n';
 import { createIconButton } from './ui/IconButton';
 import type HoardPlugin from './main';
-import type { ReadingDataManager } from './ReadingDataManager';
+import type { ReadingDataManager, ReadingKind } from './ReadingDataManager';
 import { ReadingCustomColumn, DEFAULT_FIELD_COLOR } from './types';
 import { ConfirmModal } from './ConfirmModal';
 import { openColorPicker } from './ColorPicker';
 import { attachCardDrag, renderTypeSelect, type DragState } from './ui/ColumnsEditor';
 
-type Kind = 'book' | 'manga';
 
 export class ReadingManageColumnsModal extends Modal {
 	private plugin: HoardPlugin;
 	private readingData: ReadingDataManager;
-	private kind: Kind;
+	private kind: ReadingKind;
 	private onChanged: () => void;
 	private listEl: HTMLElement | null = null;
 	private styleGroupEl: HTMLElement | null = null;
@@ -25,7 +24,7 @@ export class ReadingManageColumnsModal extends Modal {
 		app: App,
 		plugin: HoardPlugin,
 		readingData: ReadingDataManager,
-		kind: Kind,
+		kind: ReadingKind,
 		onChanged: () => void,
 	) {
 		super(app);
