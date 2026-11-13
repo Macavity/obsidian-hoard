@@ -26,7 +26,7 @@ An entry id is **the note path relative to the Hoard root, without `.md`**: `Ani
 
 ## Consequences
 
-- **A title or type change renames the file**, and the id with it. `DataManager.writeTitle` renames
+- **A title or type change renames the file**, and the id with it. The write pipeline (`writeEntry`) renames
   first (unless the target path exists: Notice, old name and id kept, properties still written),
   then calls `moveId` to re-key per-id state; [EntryIndex](../../src/storage/EntryIndex.ts)
   follows vault `rename` events and moves the [entry cache](entry-cache.md) key via

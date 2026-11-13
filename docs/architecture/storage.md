@@ -65,9 +65,11 @@ The book and manga codecs also take that kind's custom columns, because a custom
 
 ## Writing: the managers
 
-A manager encodes the entry, diffs against the [baseline](../concepts/baseline.md) and sets only
-changed keys through `app.fileManager.processFrontMatter`; inside the callback it calls
-`EntryIndex.applyLocal` so the write's own `changed` event finds nothing new. The `## Notes` body
+All three managers write through `writeEntry` in [noteWrite.ts](../../src/storage/noteWrite.ts): it
+encodes the entry, diffs against the [baseline](../concepts/baseline.md) and sets only changed keys
+through `app.fileManager.processFrontMatter`; inside the callback the manager's `afterWrite` calls
+`EntryIndex.applyLocal` so the write's own `changed` event finds nothing new. What differs per
+manager is a set of hooks. The `## Notes` body
 goes through `vault.process` with `replaceNotesSection` ([noteBody.ts](../../src/storage/noteBody.ts)),
 which keeps every other section. Creates use `vault.create` with a `---` block plus `## Notes`;
 deletes use `fileManager.trashFile`. Custom lists and the vault copy of a backup also go through the Vault API (`vault.process` / `vault.create`), not `vault.adapter`. Details in [flows/entry-write](../flows/entry-write.md).
@@ -76,8 +78,8 @@ deletes use `fileManager.trashFile`. Custom lists and the vault copy of a backup
 
 Stores and managers never build user-facing text. A manager failure (unreadable YAML, rename target
 taken, lost edit, unreadable shared block) is a `ManagerNotice` code passed to the injected `Notify`;
-[noteWrite.ts](../../src/storage/noteWrite.ts) holds the shared `updateFrontMatter` /
-`renameTargetFree` helpers the three managers use. `main.ts` renders the code in the active language
+`updateFrontMatter` and `renameTargetFree` in [noteWrite.ts](../../src/storage/noteWrite.ts) are
+where the write pipeline emits them. `main.ts` renders the code in the active language
 ([i18n](i18n.md)).
 
 ## Config and cache
