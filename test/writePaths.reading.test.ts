@@ -66,7 +66,7 @@ describe('reading writes: rename', () => {
 		expect(f.files.get('W/Books/A2.md')).toContain('Author: Y');
 	});
 
-	it('moves a pending id along with the note: the lost silent edit is reported under the new id', async () => {
+	it('drops a pending silent edit when the entry is renamed, and reports it under the new id', async () => {
 		const { rdm, f, notices } = await setupReadingDataManager({ 'W/Books/A.md': BOOK });
 		const b = rdm.getBook('Books/A')!;
 		rdm.updateBookSilent({ ...b, author: 'Y' });

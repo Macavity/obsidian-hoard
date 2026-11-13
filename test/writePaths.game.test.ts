@@ -57,7 +57,7 @@ describe('game writes: rename', () => {
 		expect(f.files.get('W/Games/A2.md')).toContain('Rating: 2');
 	});
 
-	it('moves a pending id along: the flush after a rename reports no lost edit', async () => {
+	it('drops a pending silent edit when the game is renamed, and reports nothing', async () => {
 		const { gdm, f, notices } = await setupGames({ 'W/Games/A.md': GAME });
 		const g = gdm.getGame('Games/A')!;
 		gdm.updateGameSilent({ ...g, rating: 5 });
