@@ -4,6 +4,15 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 The release workflow takes the section of the released version from this file as the GitHub release notes. Without a section the release only carries the compare link.
 
+## [0.3.1] - 2026-11-13
+
+### Fixed
+
+- A type, a status colour or an API mapping changed in the settings is no longer lost on the next start. This happened as long as `Hoard.base` did not hold that setting yet.
+- Hoard starts when a stored setting has the wrong kind of value, for example text where the statuses belong, or a damaged shelf layout; that setting falls back to its default. Before, the plugin failed to load.
+- Renaming a game no longer fails when the folder for its note is missing; Hoard creates the folder first, as it already does for titles, books and manga.
+- In the edit form of a title, a skipped-episodes entry with more than one dash (`1-2-3`) is ignored instead of being read as its first number, the same as when it is read from the note.
+
 ## [0.3.0] - 2026-11-12
 
 ### Changed
