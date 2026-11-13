@@ -8,14 +8,14 @@ const shelves = [
 	{ id: 'byStatus', label: 'By status' },
 ];
 
-function open(stored: RowsShelfLayoutEntry[]) {
+function open(stored: RowsShelfLayoutEntry[], exclusiveGroups: string[][] | null = [['byType', 'byStatus']]) {
 	let layout: RowsShelfLayoutEntry[] = stored;
 	const config: RowsCustomizeConfig = {
 		shelves,
 		getLayout: () => layout,
 		setLayout: (l) => { layout = l; },
 		onChanged: vi.fn(),
-		exclusiveGroups: [['byType', 'byStatus']],
+		...(exclusiveGroups ? { exclusiveGroups } : {}),
 		persist: vi.fn(),
 	};
 	const modal = new RowsCustomizeModal({} as never, { settings: {} } as never, config);
@@ -73,5 +73,49 @@ describe('RowsCustomizeModal', () => {
 		toggle(1);
 		expect(layout().find((e) => e.id === 'byType')!.enabled).toBe(true);
 		expect(config.persist).toHaveBeenCalledTimes(3);
+	});
+	it('rebuilds the list when enabling a shelf switched its rival off', () => {
+		const { toggle, rows, layout } = open(stored());
+		const before = rows()[1];
+		toggle(2);
+		expect(rows()[1]).not.toBe(before);
+		expect(layout().map((e) => e.enabled)).toEqual([true, false, true]);
+	});
+
+	it('persists without a rebuild when the rival is already off', () => {
+		const { toggle, rows, layout, config } = open([
+			{ id: 'a', enabled: true },
+			{ id: 'byType', enabled: false },
+			{ id: 'byStatus', enabled: false },
+		]);
+		const before = rows()[1];
+		toggle(2);
+		expect(rows()[1]).toBe(before);
+		expect(layout().map((e) => e.enabled)).toEqual([true, false, true]);
+		expect(config.persist).toHaveBeenCalledTimes(1);
+		expect(config.onChanged).toHaveBeenCalledTimes(1);
+	});
+
+	it('leaves the rival alone when a shelf is disabled', () => {
+		const { toggle, rows, layout } = open(stored());
+		const before = rows()[2];
+		toggle(1);
+		expect(rows()[2]).toBe(before);
+		expect(layout().map((e) => e.enabled)).toEqual([true, false, false]);
+	});
+
+	it('flips nothing on a toggle when the config names no exclusive groups', () => {
+		const { toggle, layout } = open(stored(), null);
+		toggle(2);
+		expect(layout().map((e) => e.enabled)).toEqual([true, true, true]);
+	});
+
+	it('normalises the stored layout once on open and hands it to the config', () => {
+		const { layout } = open([{ id: 'byStatus', enabled: true }, { id: 'nope', enabled: true }]);
+		expect(layout()).toEqual([
+			{ id: 'byStatus', enabled: true },
+			{ id: 'a', enabled: true },
+			{ id: 'byType', enabled: false },
+		]);
 	});
 });
