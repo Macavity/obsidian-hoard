@@ -31,7 +31,7 @@ optional `(skip spec)`, sets `seasonsOverride`) or from the [entry cache](entry-
 That line format is read in one place, [seasonText.ts](../../src/storage/seasonText.ts), for the note
 and for the edit form's seasons box. The bounds differ on purpose: the codec rejects all seasons of
 a note when a count exceeds `MAX_EPISODE` or a skipped episode lies beyond its season; the edit form
-applies none.
+applies none. In both, a skip entry that is neither a number nor `from-to` (`1-2-3`, `x`) is ignored.
 
 - A **movie** (one season named "Movie", or no seasons and exactly one episode) carries no
   `Watched Episodes` text; `status: Completed` means episode 1 watched.

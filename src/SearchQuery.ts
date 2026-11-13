@@ -101,8 +101,6 @@ function lex(query: string): Lexeme[] {
 	}));
 }
 
-const isPipe = (l: Lexeme): boolean => !l.quoted && l.prefix === undefined && l.text === '|';
-
 /** Lower-cased name or alias of each field, mapped to the field's canonical name. */
 function fieldNames<T>(fields: SearchFieldSpec<T>[]): Map<string, string> {
 	return new Map(fields.flatMap((f) => [f.name, ...(f.aliases ?? [])].map((n): [string, string] => [n.toLowerCase(), f.name])));
@@ -126,19 +124,26 @@ function toToken(lexeme: Lexeme, names: Map<string, string>, alternate: boolean)
 	};
 }
 
+/**
+ * A token that is only an unquoted `|`. Judged on the token, not on the lexeme: after an unterminated
+ * quote pipes are no longer spaced out, so one can arrive glued to a field prefix (`title:|`) and is
+ * still a pipe, while one behind an unknown prefix (`foo:|`) has become text.
+ */
+const isPipe = (token: Token): boolean => !token.exact && token.text === '|';
+
 /** Splits a raw query into tokens. A bare `|` is no token: it marks the next one as an alternative. */
 function parseQuery<T>(query: string, fields: SearchFieldSpec<T>[]): Token[] {
 	const names = fieldNames(fields);
 	const tokens: Token[] = [];
 	let alternate = false;
 	for (const lexeme of lex(query)) {
-		if (isPipe(lexeme)) {
+		const token = toToken(lexeme, names, alternate);
+		if (!token) continue;
+		if (isPipe(token)) {
 			// a leading `|` has nothing to join
 			alternate = tokens.length > 0;
 			continue;
 		}
-		const token = toToken(lexeme, names, alternate);
-		if (!token) continue;
 		tokens.push(token);
 		alternate = false;
 	}

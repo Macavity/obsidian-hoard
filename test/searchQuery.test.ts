@@ -161,6 +161,18 @@ describe('searchItems: alternatives', () => {
 		expect(ids('dune | | arrival')).toEqual(['arrival', 'dune']);
 	});
 
+	it('still reads a pipe glued to a field prefix as a pipe after an unterminated quote', () => {
+		// an open quote stops pipes from being spaced out, so `title:|` arrives as one piece
+		expect(ids('"a title:| rating:>3')).toEqual(['avengers', 'blade', 'dune']);
+		expect(ids('"x title:| dune')).toEqual(['dune']);
+		expect(ids('"a year:| re:')).toEqual(['rezero']);
+		expect(ids('"x dev:| dune')).toEqual(['dune']);
+	});
+
+	it('reads a pipe glued to an unknown prefix as text after an unterminated quote', () => {
+		expect(ids('"x foo:| dune')).toEqual([]);
+	});
+
 	it('ANDs a group of alternatives with the words around it', () => {
 		expect(ids('legendary dune | arrival')).toEqual(['arrival', 'dune']);
 		expect(ids('dune | arrival legendary')).toEqual(['arrival', 'dune']);
