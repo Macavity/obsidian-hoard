@@ -4,7 +4,7 @@ import type { HistoryManager } from './HistoryManager';
 import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
-import { ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import { dropOldId, ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
 import type { EntryWriteHooks } from './storage/noteWrite';
 import { ChangeListeners } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
@@ -597,7 +597,7 @@ export class GameDataManager {
 			return getBaseline(g) ?? this.views.get(g.id)?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
 		},
 		movedPath: (src, g) => (g.title !== src.title ? this.layout().notePath('game', g.title) : null),
-		moveId: (from, to) => this.moveId(from, to),
+		moveId: (from, to) => dropOldId({ index: this.index, views: this.views, dirty: this.dirty }, from, to),
 		prepare: () => (x) => this.encode(x),
 		afterWrite: (g, fm) => this.afterWrite(g, fm),
 		isLiveCopy: (g) => this.views.get(g.id)?.view === g,
@@ -608,13 +608,6 @@ export class GameDataManager {
 		},
 		create: (g) => this.createNote(g),
 	};
-
-	/** Drops what is held under the old id of a renamed note; a pending silent edit follows to the new id. */
-	private moveId(from: string, to: string): void {
-		this.index.removeLocal(from);
-		this.views.delete(from);
-		if (this.dirty.delete(from)) this.dirty.add(to);
-	}
 
 	/** Writes a game to its note through the shared pipeline (`writeEntry`); creates the note when missing. */
 	private async writeGame(g: Game): Promise<void> {

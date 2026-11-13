@@ -6,7 +6,7 @@ import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
 import type { LocalStore } from './storage/LocalStore';
-import { ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import { dropOldId, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
 import type { EntryWriteHooks } from './storage/noteWrite';
 import { ChangeListeners } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
@@ -799,7 +799,7 @@ export class ReadingDataManager {
 		return {
 			baselineOf: (item) => getBaseline(item) ?? this.views.get(item.id)?.src ?? this.sourceOf(kind, item.id),
 			movedPath: (src, item) => (item.title !== src.title ? this.layout().notePath(kind, item.title) : null),
-			moveId: (from, to) => this.moveId(from, to),
+			moveId: (from, to) => dropOldId({ index: this.index, views: this.views, dirty: this.dirty }, from, to),
 			prepare: () => (x) => this.encode(kind, x),
 			afterWrite: (item, fm) => this.afterWrite(kind, item, fm),
 			isLiveCopy: (item) => this.views.get(item.id)?.view === item,
@@ -809,13 +809,6 @@ export class ReadingDataManager {
 			},
 			create: (item) => this.createNote(kind, item),
 		};
-	}
-
-	/** Drops what is held under the old id of a renamed note; a pending silent edit follows to the new id. */
-	private moveId(from: string, to: string): void {
-		this.index.removeLocal(from);
-		this.views.delete(from);
-		if (this.dirty.delete(from)) this.dirty.add(to);
 	}
 
 	/** Writes an entry to its note through the shared pipeline (`writeEntry`); creates the note when missing. */

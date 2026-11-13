@@ -23,7 +23,7 @@ export async function updateFrontMatter(
 }
 
 /** True when `target` is free for a rename; otherwise reports it (the note keeps its old name). */
-export function renameTargetFree(app: App, target: string, notify: Notify): boolean {
+function renameTargetFree(app: App, target: string, notify: Notify): boolean {
 	if (!app.vault.getAbstractFileByPath(target)) return true;
 	notify({ code: 'renameTargetExists', target });
 	return false;
@@ -87,6 +87,21 @@ export function rewriteOwnedKeys(raw: Fm, keys: Iterable<string>, out: Fm, keep:
 			delete raw[key];
 		}
 	}
+}
+
+/**
+ * What a rename re-keys in a manager that holds an index entry, a view and a pending flag per id:
+ * entry and view of the old id are dropped (the next read builds them under the new id), a pending
+ * silent edit follows to the new id.
+ */
+export function dropOldId(
+	held: { index: { removeLocal(id: string): void }; views: Map<string, unknown>; dirty: Set<string> },
+	from: string,
+	to: string,
+): void {
+	held.index.removeLocal(from);
+	held.views.delete(from);
+	if (held.dirty.delete(from)) held.dirty.add(to);
 }
 
 /** What a manager tells the write pipeline about its kind of entry. */

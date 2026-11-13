@@ -4,7 +4,7 @@ import { VaultLayout } from '../../src/storage/VaultLayout';
 import { getBaseline } from '../../src/storage/baseline';
 import type { ManagerNotice } from '../../src/storage/storageTypes';
 import {
-	ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, setChangedKeys, trashNote, writeEntry,
+	dropOldId, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, setChangedKeys, trashNote, writeEntry,
 	type EntryWriteHooks, type NoteIo,
 } from '../../src/storage/noteWrite';
 
@@ -274,5 +274,31 @@ describe('rewriteOwnedKeys', () => {
 		const raw: Record<string, unknown> = {};
 		rewriteOwnedKeys(raw, OWNED, { Rating: 3 }, new Set(['Rating', 'Review']));
 		expect(raw).toEqual({ Rating: 3 });
+	});
+});
+
+describe('dropOldId', () => {
+	const state = (pending: string[]) => {
+		const removed: string[] = [];
+		return {
+			removed,
+			index: { removeLocal: (id: string) => { removed.push(id); } },
+			views: new Map<string, unknown>([['Books/A', 'view of A'], ['Books/C', 'view of C']]),
+			dirty: new Set(pending),
+		};
+	};
+
+	it('drops the index entry and the view of the old id', () => {
+		const s = state([]);
+		dropOldId(s, 'Books/A', 'Books/B');
+		expect(s.removed).toEqual(['Books/A']);
+		expect([...s.views.keys()]).toEqual(['Books/C']);
+		expect([...s.dirty]).toEqual([]);
+	});
+
+	it('moves a pending id to the new id and leaves other pending ids alone', () => {
+		const s = state(['Books/A', 'Books/C']);
+		dropOldId(s, 'Books/A', 'Books/B');
+		expect([...s.dirty].sort()).toEqual(['Books/B', 'Books/C']);
 	});
 });
