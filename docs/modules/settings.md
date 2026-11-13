@@ -66,7 +66,8 @@ are colour-only.
 
 ## Adding a setting
 
-1. `HoardPluginSettings` and `DEFAULT_SETTINGS` in [types.ts](../../src/types.ts).
+1. `HoardPluginSettings` and `DEFAULT_SETTINGS` in [types.ts](../../src/types.ts). The default is
+   not optional: a key without one counts as unknown and passes through unchecked.
 2. Nothing for a value whose kind is all that can be wrong: a stored value of another kind than the
    default's falls back to the default. An entry in `RULES`
    ([settingsNormalize.ts](../../src/settingsNormalize.ts)) only when what the value says must be

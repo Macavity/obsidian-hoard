@@ -37,8 +37,9 @@ the whole object is replaced, so unlisted nested keys do not survive.
   ([settingsSplit.ts](../../src/settingsSplit.ts)). The merged record is cloned and handed to
   `normalizeSettings` ([settingsNormalize.ts](../../src/settingsNormalize.ts)), which runs every known
   key through one rule with a fresh copy of its default to fall back on. A key named in `RULES` has
-  its own rule (date format, the non-empty lists, the five rating tiers, the statuses with their two
-  migrations, the merged filter and card-text records, the rows layout). Every other key keeps a
+  its own rule (date format, watchlist view, the non-empty lists, the five rating tiers, the statuses
+  with their two migrations, the merged list-filter and card-text records, the reading badge
+  colours, the rows layout; the table is the full list). Every other key keeps a
   stored value of its default's kind (boolean, number, text, list, record): a missing value, `null`
   or text where a list belongs gives the default; what a value of the right kind says is not
   checked. Unknown keys pass through, `REMOVED_SETTINGS` are dropped.
