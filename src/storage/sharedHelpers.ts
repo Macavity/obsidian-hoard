@@ -2,6 +2,10 @@ import type { Fm } from './storageTypes';
 
 /** Small helpers shared by the data managers and codecs. */
 
+/** A plain record: an object that is neither null nor a list. */
+export const isRecord = (v: unknown): v is Record<string, unknown> =>
+	typeof v === 'object' && v !== null && !Array.isArray(v);
+
 export const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 /** Keys whose encoded value differs between two frontmatter objects (present in either). */

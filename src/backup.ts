@@ -8,6 +8,7 @@ import { SHARED_SETTING_KEYS, type SharedConfigStore } from './storage/SharedCon
 import type { ImportContext } from './import/watchlog/schema1Types';
 import { withoutCredentials } from './jikanBase';
 import { SECRET_KEYS } from './storage/SecretStore';
+import { isRecord } from './storage/sharedHelpers';
 
 export interface BackupManagers {
 	dataManager: DataManager;
@@ -36,9 +37,6 @@ export interface BackupFile {
 	local: Record<string, unknown>;
 	history: HistoryEntry[];
 }
-
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-	typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** A key restored or imported but not yet moved into secret storage must not reach the file either. */
 function withoutSecretSettings(settings: Record<string, unknown>): Record<string, unknown> {

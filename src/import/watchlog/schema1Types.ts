@@ -60,8 +60,5 @@ export interface IdMaps {
 }
 
 export const WISHLIST = 'Wishlist';
-/** Settings dropped by Hoard (the folders are central). */
-export const REMOVED_SETTINGS = ['rootFolder', 'customListsFolder'];
-
-export const isRecord = (v: unknown): v is Record<string, unknown> =>
-	typeof v === 'object' && v !== null && !Array.isArray(v);
+export { REMOVED_SETTINGS } from '../../settingsNormalize';
+export { isRecord } from '../../storage/sharedHelpers';

@@ -128,6 +128,18 @@ describe('settings split', () => {
 		expect(DEFAULT_SETTINGS.typeApiMapping).toEqual({});
 	});
 
+	it('writes a type added in place when the base already holds types', async () => {
+		const { f, local, shared } = await setup({
+			'W/Hoard.base': `${BARE_BASE}  types:\n    - name: Docu\n      color: "#111111"\n`,
+		});
+		const settings = composeSettings(local.data.settings, shared.get().settings);
+		settings.types.push({ name: 'Probe', color: '#000000' });
+		settings.types[0]!.color = '#ABCDEF';
+		await persistSettings(settings, local, shared);
+		const base = parse(f.files.get('W/Hoard.base')!) as { hoard: { types: { name: string; color: string }[] } };
+		expect(base.hoard.types).toEqual([{ name: 'Docu', color: '#ABCDEF' }, { name: 'Probe', color: '#000000' }]);
+	});
+
 	it('writes a colour changed in place when the base holds no statuses yet', async () => {
 		const { f, local, shared } = await setup({ 'W/Hoard.base': BARE_BASE });
 		const settings = composeSettings(local.data.settings, shared.get().settings);

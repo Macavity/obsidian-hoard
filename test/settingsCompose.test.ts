@@ -102,6 +102,20 @@ describe('composeSettings: precedence', () => {
 	});
 });
 
+describe('composeSettings: independence from the stores', () => {
+	it('hands out copies of the stored lists and records', () => {
+		const local = { seasonPalette: ['#111111'], listFilters: { sort: 'title', typeExclude: ['A'] }, gamesFilters: { sort: 'title' } };
+		const shared = { types: [{ name: 'T', color: '#111111' }], typeApiMapping: { T: 'anime' } };
+		const s = compose(local, shared);
+		expect(s.seasonPalette).not.toBe(local.seasonPalette);
+		expect(s.gamesFilters).not.toBe(local.gamesFilters);
+		expect((s.listFilters as typeof local.listFilters).typeExclude).not.toBe(local.listFilters.typeExclude);
+		expect(s.types).not.toBe(shared.types);
+		expect((s.types as typeof shared.types)[0]).not.toBe(shared.types[0]);
+		expect(s.typeApiMapping).not.toBe(shared.typeApiMapping);
+	});
+});
+
 describe('composeSettings: checked values', () => {
 	it.each(['european', 'american', 'iso'])('keeps the date format %s', (dateFormat) => {
 		expect(compose({ dateFormat }).dateFormat).toBe(dateFormat);
@@ -225,8 +239,8 @@ describe('composeSettings: status migrations', () => {
 	});
 });
 
-describe('composeSettings: stored values of the wrong kind (as today)', () => {
-	it('backfills five keys when they are undefined and leaves any other undefined', () => {
+describe('composeSettings: stored values of the wrong kind', () => {
+	it('gives the default for a value stored as undefined, whatever the key', () => {
 		const s = compose({
 			animeApiSource: undefined, typeApiMapping: undefined, showUpcomingStatusBar: undefined,
 			defaultAddType: undefined, lastAddedType: undefined, colorTheme: undefined, cardSize: undefined,
@@ -236,35 +250,67 @@ describe('composeSettings: stored values of the wrong kind (as today)', () => {
 		expect(s.showUpcomingStatusBar).toBe(true);
 		expect(s.defaultAddType).toBe(LAST_USED_TYPE_SENTINEL);
 		expect(s.lastAddedType).toBe('');
-		expect(s.colorTheme).toBeUndefined();
-		expect(s.cardSize).toBeUndefined();
+		expect(s.colorTheme).toBe('default');
+		expect(s.cardSize).toBe(0);
 	});
 
-	it('leaves null as it is', () => {
+	it('gives the default for null, as an empty key in the base reads', () => {
 		const s = compose({
 			animeApiSource: null, typeApiMapping: null, showUpcomingStatusBar: null,
-			defaultAddType: null, lastAddedType: null, listFilters: null,
+			defaultAddType: null, lastAddedType: null, listFilters: null, gamesFilters: null, autoCreateFolders: null,
 		});
-		for (const key of ['animeApiSource', 'typeApiMapping', 'showUpcomingStatusBar', 'defaultAddType', 'lastAddedType', 'listFilters']) {
-			expect(s[key]).toBeNull();
+		expect(s.animeApiSource).toBe('jikan');
+		expect(s.typeApiMapping).toEqual({});
+		expect(s.showUpcomingStatusBar).toBe(true);
+		expect(s.defaultAddType).toBe(LAST_USED_TYPE_SENTINEL);
+		expect(s.lastAddedType).toBe('');
+		expect(s.listFilters).toEqual(DEFAULT_LIST_FILTERS);
+		expect(s.gamesFilters).toEqual(DEFAULT_SETTINGS.gamesFilters);
+		expect(s.autoCreateFolders).toBe(true);
+	});
+
+	it('gives the default lists for text where a list belongs, and no longer breaks on the statuses', () => {
+		expect(compose({ types: 'abc' }).types).toEqual(DEFAULT_TYPES);
+		expect(compose({ statuses: 'abc' }).statuses).toEqual(DEFAULT_STATUSES);
+		expect(compose({ seasonPalette: { 0: '#111111' } }).seasonPalette).toEqual(DEFAULT_SETTINGS.seasonPalette);
+	});
+
+	it('gives the default for a value of another kind', () => {
+		const s = compose({
+			cardSize: '2', showHintBanners: 'yes', gamesFilters: [], customListTabOrder: {}, draftsVaultTag: 5,
+			typeApiMapping: ['x'], defaultCustomColumns: 'abc', listFilters: 'abc', cardTextStyles: ['inside'],
+		});
+		expect(s.cardSize).toBe(0);
+		expect(s.showHintBanners).toBe(true);
+		expect(s.gamesFilters).toEqual(DEFAULT_SETTINGS.gamesFilters);
+		expect(s.customListTabOrder).toEqual([]);
+		expect(s.draftsVaultTag).toBe('#hoard');
+		expect(s.typeApiMapping).toEqual({});
+		expect(s.defaultCustomColumns).toEqual([]);
+		expect(s.listFilters).toEqual(DEFAULT_LIST_FILTERS);
+		expect(s.cardTextStyles).toEqual(DEFAULT_CARD_TEXT);
+	});
+
+	it('gives the default for a reading type colour that is no text', () => {
+		expect(compose({ readingTypeColors: { manga: 5, book: '#222222' } }).readingTypeColors).toEqual({ manga: '#D4537E', book: '#222222' });
+		expect(compose({ readingTypeColors: ['#111111'] }).readingTypeColors).toEqual(DEFAULT_READING_COLORS);
+	});
+
+	it('checks the kind only: a value of the right kind stays, whatever it says', () => {
+		const s = compose({ colorTheme: 'nope', cardSize: 99, gamesFilters: { sort: 'title' }, activeApi: 'Other', futureKey: null });
+		expect(s.colorTheme).toBe('nope');
+		expect(s.cardSize).toBe(99);
+		expect(s.gamesFilters).toEqual({ sort: 'title' });
+		expect(s.activeApi).toBe('Other');
+		expect(s.futureKey).toBeNull();
+	});
+
+	it('hands out a copy of the default it falls back to', () => {
+		const s = compose({ typeApiMapping: null, gamesFilters: 'abc', customListTabOrder: 5 });
+		for (const key of ['typeApiMapping', 'gamesFilters', 'customListTabOrder'] as const) {
+			expect(s[key]).toEqual(DEFAULT_SETTINGS[key]);
+			expect(s[key]).not.toBe(DEFAULT_SETTINGS[key]);
 		}
-	});
-
-	it('lets text through where a list belongs, and breaks on the statuses', () => {
-		expect(compose({ types: 'abc' }).types).toBe('abc');
-		expect(() => compose({ statuses: 'abc' })).toThrow(TypeError);
-	});
-
-	it('lets a value of another kind through', () => {
-		const s = compose({ cardSize: '2', showHintBanners: 'yes', gamesFilters: [], customListTabOrder: {} });
-		expect(s.cardSize).toBe('2');
-		expect(s.showHintBanners).toBe('yes');
-		expect(s.gamesFilters).toEqual([]);
-		expect(s.customListTabOrder).toEqual({});
-	});
-
-	it('keeps a reading type colour that is no text', () => {
-		expect(compose({ readingTypeColors: { manga: 5, book: '#222222' } }).readingTypeColors).toEqual({ manga: 5, book: '#222222' });
 	});
 });
 

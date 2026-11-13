@@ -1,5 +1,6 @@
 import type { SecretStore } from './SecretStore';
 import type { EntryCache, LocalData } from './storageTypes';
+import { isRecord } from './sharedHelpers';
 
 /** `newer`: data.json from a later plugin version; it is never written by this one. */
 /** `watchlog` / `newer`: data.json is kept as is and nothing is saved this session (the caller warns). */
@@ -13,9 +14,6 @@ export interface DataPlugin {
 const SAVE_DEBOUNCE_MS = 100;
 
 const emptyData = (): LocalData => ({ schemaVersion: 2, settings: {}, cache: {}, ui: {} });
-
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-	typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /**
  * Device-local store behind data.json (settings, cache, UI state).
