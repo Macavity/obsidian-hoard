@@ -5,6 +5,7 @@ description: Which settings sync through Hoard.base, which stay in data.json, wh
 source:
   - src/storage/SharedConfigStore.ts
   - src/settingsSplit.ts
+  - src/settingsNormalize.ts
   - src/storage/LocalStore.ts
   - src/storage/storageTypes.ts
   - src/storage/SecretStore.ts
@@ -32,8 +33,17 @@ the whole object is replaced, so unlisted nested keys do not survive.
 ## Composition and persistence
 
 - `composeSettings(local, shared, secrets)` = `DEFAULT_SETTINGS` ← local ← secrets ← shared (shared
-  wins), except that secret keys found in the base are dropped (`withoutSecrets`), followed by
-  backfills and migrations for older data ([settingsSplit.ts](../../src/settingsSplit.ts)).
+  wins), except that secret keys found in the base are dropped (`withoutSecrets`)
+  ([settingsSplit.ts](../../src/settingsSplit.ts)). The merged record is cloned and handed to
+  `normalizeSettings` ([settingsNormalize.ts](../../src/settingsNormalize.ts)), which runs every known
+  key through one rule with a fresh copy of its default to fall back on. A key named in `RULES` has
+  its own rule (date format, the non-empty lists, the five rating tiers, the statuses with their two
+  migrations, the merged filter and card-text records, the rows layout). Every other key keeps a
+  stored value of its default's kind (boolean, number, text, list, record): a missing value, `null`
+  or text where a list belongs gives the default; what a value of the right kind says is not
+  checked. Unknown keys pass through, `REMOVED_SETTINGS` are dropped.
+- The result shares no list or record with the stores or with `DEFAULT_SETTINGS`. That is what lets
+  callers edit a list in place (`settings.types.push`) and `persistSettings` still see the change.
 - `persistSettings` splits by the whitelist: secret keys go to `SecretStore.write`; a key the storage
   refuses (`write` returns it after a read-back) stays in `data.json` instead of being lost. Other non-shared keys replace `local.data.settings`; for shared
   keys it computes what differs from "defaults + current base" and calls `SharedConfigStore.update`
