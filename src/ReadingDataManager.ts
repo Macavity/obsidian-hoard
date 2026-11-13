@@ -1,4 +1,4 @@
-import { TFile, getFrontMatterInfo, normalizePath, parseYaml, stringifyYaml } from 'obsidian';
+import { TFile, getFrontMatterInfo, parseYaml, stringifyYaml } from 'obsidian';
 import type { App } from 'obsidian';
 import type HoardPlugin from './main';
 import type { HistoryManager } from './HistoryManager';
@@ -6,7 +6,8 @@ import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
 import type { LocalStore } from './storage/LocalStore';
-import { renameTargetFree, updateFrontMatter } from './storage/noteWrite';
+import { ensureFolder, freeNotePath, noteFile, parentOf, renameTargetFree, trashNote, updateFrontMatter } from './storage/noteWrite';
+import { ChangeListeners } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -73,7 +74,7 @@ export class ReadingDataManager {
 	private shared: SharedConfigStore;
 	private layout: () => VaultLayout;
 	private notify: Notify;
-	private changeListeners: Array<() => void> = [];
+	private listeners = new ChangeListeners();
 	private historyManager: HistoryManager | null = null;
 
 	private settings: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
@@ -249,11 +250,11 @@ export class ReadingDataManager {
 	// Listeners
 
 	onChange(listener: () => void): void {
-		this.changeListeners.push(listener);
+		this.listeners.add(listener);
 	}
 
 	offChange(listener: () => void): void {
-		this.changeListeners = this.changeListeners.filter((l) => l !== listener);
+		this.listeners.remove(listener);
 	}
 
 	notifyChange(): void {
@@ -261,9 +262,7 @@ export class ReadingDataManager {
 	}
 
 	private notifyListeners(): void {
-		for (const listener of this.changeListeners) {
-			listener();
-		}
+		this.listeners.emit();
 	}
 
 	/**
@@ -503,7 +502,7 @@ export class ReadingDataManager {
 
 	private predictId(kind: ReadingKind, title: string): string {
 		const layout = this.layout();
-		return layout.idFromPath(this.freePath(layout.notePath(kind, title)));
+		return layout.idFromPath(freeNotePath(this.app, layout.notePath(kind, title)));
 	}
 
 	// Shared update/remove flows
@@ -731,34 +730,7 @@ export class ReadingDataManager {
 	}
 
 	private fileOf(id: string): TFile | null {
-		const f = this.app.vault.getAbstractFileByPath(this.layout().pathFromId(id));
-		return f instanceof TFile ? f : null;
-	}
-
-	/** First free `<name>.md`, `<name> 2.md`, … */
-	private freePath(path: string): string {
-		if (!this.app.vault.getAbstractFileByPath(path)) return path;
-		const base = path.slice(0, -3);
-		let n = 2;
-		while (this.app.vault.getAbstractFileByPath(`${base} ${n}.md`)) n++;
-		return `${base} ${n}.md`;
-	}
-
-	private parentOf(path: string): string {
-		const i = path.lastIndexOf('/');
-		return i < 0 ? '' : path.slice(0, i);
-	}
-
-	private async ensureFolder(path: string): Promise<void> {
-		const normalized = normalizePath(path);
-		if (!normalized || normalized === '/') return;
-		if (!this.app.vault.getAbstractFileByPath(normalized)) {
-			try {
-				await this.app.vault.createFolder(normalized);
-			} catch {
-				// folder may already exist
-			}
-		}
+		return noteFile(this.app, this.layout().pathFromId(id));
 	}
 
 	/** True when `item` was made from the stored state of its note (or nothing is stored yet). */
@@ -806,8 +778,8 @@ export class ReadingDataManager {
 	/** Creates the note for a new entry; the entry's id becomes the note path. */
 	private async createNote(kind: ReadingKind, item: ReadingItem): Promise<void> {
 		const layout = this.layout();
-		const path = this.freePath(layout.notePath(kind, item.title));
-		await this.ensureFolder(this.parentOf(path));
+		const path = freeNotePath(this.app, layout.notePath(kind, item.title));
+		await ensureFolder(this.app, parentOf(path));
 		const fm = this.encode(kind, item);
 		item.id = layout.idFromPath(path);
 		// index first, so the create event finds nothing new
@@ -837,7 +809,7 @@ export class ReadingDataManager {
 		if (src && item.title !== src.title) {
 			const target = this.layout().notePath(kind, item.title);
 			if (target !== file.path && renameTargetFree(this.app, target, this.notify)) {
-				await this.ensureFolder(this.parentOf(target));
+				await ensureFolder(this.app, parentOf(target));
 				await this.app.fileManager.renameFile(file, target);
 				const from = item.id;
 				const to = this.layout().idFromPath(target);
@@ -867,8 +839,7 @@ export class ReadingDataManager {
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		const file = this.fileOf(id);
-		if (file) await this.app.fileManager.trashFile(file);
+		await trashNote(this.app, this.layout().pathFromId(id));
 		this.index.removeLocal(id);
 		this.views.delete(id);
 		this.dirty.delete(id);

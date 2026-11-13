@@ -1,10 +1,11 @@
-import { TFile, normalizePath, stringifyYaml } from 'obsidian';
+import { TFile, stringifyYaml } from 'obsidian';
 import type HoardPlugin from './main';
 import type { HistoryManager } from './HistoryManager';
 import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
-import { renameTargetFree, updateFrontMatter } from './storage/noteWrite';
+import { ensureFolder, freeNotePath, noteFile, parentOf, renameTargetFree, trashNote, updateFrontMatter } from './storage/noteWrite';
+import { ChangeListeners } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -45,7 +46,7 @@ export class GameDataManager {
 	private shared: SharedConfigStore;
 	private layout: () => VaultLayout;
 	private notify: Notify;
-	private changeListeners: Array<() => void> = [];
+	private listeners = new ChangeListeners();
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from,
@@ -180,15 +181,15 @@ export class GameDataManager {
 	// Listeners
 
 	onChange(listener: () => void): void {
-		this.changeListeners.push(listener);
+		this.listeners.add(listener);
 	}
 
 	offChange(listener: () => void): void {
-		this.changeListeners = this.changeListeners.filter((l) => l !== listener);
+		this.listeners.remove(listener);
 	}
 
 	private notifyListeners(): void {
-		for (const listener of this.changeListeners) listener();
+		this.listeners.emit();
 	}
 
 	/** Writes every pending silent edit and in-place mutation of a handed-out copy, then notifies. */
@@ -526,29 +527,7 @@ export class GameDataManager {
 	}
 
 	private fileOf(id: string): TFile | null {
-		const f = this.plugin.app.vault.getAbstractFileByPath(this.layout().pathFromId(id));
-		return f instanceof TFile ? f : null;
-	}
-
-	private freePath(path: string): string {
-		const { vault } = this.plugin.app;
-		if (!vault.getAbstractFileByPath(path)) return path;
-		const base = path.slice(0, -3);
-		let n = 2;
-		while (vault.getAbstractFileByPath(`${base} ${n}.md`)) n++;
-		return `${base} ${n}.md`;
-	}
-
-	private async ensureFolder(path: string): Promise<void> {
-		const normalized = normalizePath(path);
-		if (!normalized || normalized === '/') return;
-		if (!this.plugin.app.vault.getAbstractFileByPath(normalized)) {
-			try {
-				await this.plugin.app.vault.createFolder(normalized);
-			} catch {
-				// folder may already exist
-			}
-		}
+		return noteFile(this.plugin.app, this.layout().pathFromId(id));
 	}
 
 	/** Frontmatter to store: the encoded game with the default status filled in. */
@@ -595,8 +574,8 @@ export class GameDataManager {
 	private async createNote(game: Game): Promise<void> {
 		const layout = this.layout();
 		if (!game.status) game.status = this.getSettings().defaultStatus || 'Not started';
-		const path = this.freePath(layout.notePath('game', game.title));
-		await this.ensureFolder(path.slice(0, path.lastIndexOf('/')));
+		const path = freeNotePath(this.plugin.app, layout.notePath('game', game.title));
+		await ensureFolder(this.plugin.app, parentOf(path));
 		game.id = layout.idFromPath(path);
 		const fm = this.encode(game);
 		// index first, so the create event finds nothing new
@@ -656,8 +635,7 @@ export class GameDataManager {
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		const file = this.fileOf(id);
-		if (file) await this.plugin.app.fileManager.trashFile(file);
+		await trashNote(this.plugin.app, this.layout().pathFromId(id));
 		this.index.removeLocal(id);
 		this.views.delete(id);
 		this.dirty.delete(id);

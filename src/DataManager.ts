@@ -1,4 +1,4 @@
-import { App, TAbstractFile, TFile, normalizePath, stringifyYaml } from 'obsidian';
+import { App, TAbstractFile, TFile, stringifyYaml } from 'obsidian';
 import type HoardPlugin from './main';
 import type { DraftPersistState, Season, HoardTitle, HoardGroup, AirtimeEntry, AirtimeSchedule, EntryAirtime, MaybeTitle, RecommendedDaily, SavedFilterPreset, Book, Manga, Game } from './types';
 import type { HistoryManager } from './HistoryManager';
@@ -11,7 +11,7 @@ import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBa
 import type { ApiOutcome } from './ApiService';
 import { ApiCheckQueue } from './apiCheckQueue';
 import type { LocalStore } from './storage/LocalStore';
-import { renameTargetFree, updateFrontMatter } from './storage/noteWrite';
+import { ensureFolder, freeNotePath, noteFile, parentOf, renameTargetFree, trashNote, updateFrontMatter } from './storage/noteWrite';
 import type { ApiCheckResult, EntryCache, Notify } from './storage/storageTypes';
 import type { SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -23,6 +23,7 @@ import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
 import { changedKeys, sameJson } from './storage/sharedHelpers';
 import { emitDataChanged } from './changeSignal';
+import { ChangeListeners } from './changeListeners';
 
 export interface DataStores {
 	index: EntryIndex;
@@ -80,7 +81,7 @@ export class DataManager {
 	private shared: SharedConfigStore;
 	private layout: () => VaultLayout;
 	private notify: Notify;
-	private changeListeners: Array<() => void> = [];
+	private listeners = new ChangeListeners();
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from:
@@ -1207,11 +1208,11 @@ export class DataManager {
 	// Listeners
 
 	onChange(listener: () => void): void {
-		this.changeListeners.push(listener);
+		this.listeners.add(listener);
 	}
 
 	offChange(listener: () => void): void {
-		this.changeListeners = this.changeListeners.filter((l) => l !== listener);
+		this.listeners.remove(listener);
 	}
 
 	/** Public trigger for external callers (e.g. CsvModal) that need to force a UI refresh. */
@@ -1220,9 +1221,7 @@ export class DataManager {
 	}
 
 	private notifyListeners(): void {
-		for (const listener of this.changeListeners) {
-			listener();
-		}
+		this.listeners.emit();
 		emitDataChanged();
 	}
 
@@ -1397,15 +1396,7 @@ export class DataManager {
 	}
 
 	async ensureFolder(path: string): Promise<void> {
-		const normalized = normalizePath(path);
-		if (!normalized || normalized === '/') return;
-		if (!this.app.vault.getAbstractFileByPath(normalized)) {
-			try {
-				await this.app.vault.createFolder(normalized);
-			} catch {
-				// folder may already exist
-			}
-		}
+		await ensureFolder(this.app, path);
 	}
 
 	/** Path of the title's note: its id below the root. */
@@ -1464,22 +1455,7 @@ export class DataManager {
 	// Note I/O
 
 	private fileOf(id: string): TFile | null {
-		const f = this.app.vault.getAbstractFileByPath(this.layout().pathFromId(id));
-		return f instanceof TFile ? f : null;
-	}
-
-	/** First free `<name>.md`, `<name> 2.md`, … */
-	private freePath(path: string): string {
-		if (!this.app.vault.getAbstractFileByPath(path)) return path;
-		const base = path.slice(0, -3);
-		let n = 2;
-		while (this.app.vault.getAbstractFileByPath(`${base} ${n}.md`)) n++;
-		return `${base} ${n}.md`;
-	}
-
-	private parentOf(path: string): string {
-		const i = path.lastIndexOf('/');
-		return i < 0 ? '' : path.slice(0, i);
+		return noteFile(this.app, this.layout().pathFromId(id));
 	}
 
 	/**
@@ -1506,8 +1482,8 @@ export class DataManager {
 		const fetchable = !!title.tmdbId || !!title.malId || !!title.anilistId
 			|| externalIdFromLink(title.externalLink) !== null;
 		if (!fetchable && title.seasons.length > 0) title.seasonsOverride = true;
-		const path = this.freePath(layout.notePath('title', title.title, title.type));
-		await this.ensureFolder(this.parentOf(path));
+		const path = freeNotePath(this.app, layout.notePath('title', title.title, title.type));
+		await this.ensureFolder(parentOf(path));
 		const fm = titleToProperties(title, this.getProgress(title), this.seasonsPending(title));
 		const notes = title.notes ?? '';
 		title.id = layout.idFromPath(path);
@@ -1540,7 +1516,7 @@ export class DataManager {
 		if (src && (t.title !== src.title || t.type !== src.type)) {
 			const target = this.layout().notePath('title', t.title, t.type);
 			if (target !== file.path && renameTargetFree(this.app, target, this.notify)) {
-				await this.ensureFolder(this.parentOf(target));
+				await this.ensureFolder(parentOf(target));
 				await this.app.fileManager.renameFile(file, target);
 				this.moveId(t.id, this.layout().idFromPath(target));
 				t.id = this.layout().idFromPath(target);
@@ -1631,8 +1607,7 @@ export class DataManager {
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		const file = this.fileOf(id);
-		if (file) await this.app.fileManager.trashFile(file);
+		await trashNote(this.app, this.layout().pathFromId(id));
 		this.index.removeLocal(id);
 		this.local.deleteCache(id);
 		this.views.delete(id);
