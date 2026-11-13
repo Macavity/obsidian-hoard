@@ -42,3 +42,67 @@ describe('episodeRange', () => {
 		expect(parseEpisodeRange('S03E40', seasons)).toEqual([{ season: 3, episode: 40 }]);
 	});
 });
+
+describe('parseEpisodeRange edge cases', () => {
+	it('accepts lower case and unpadded numbers, and returns refs sorted without duplicates', () => {
+		expect(parseEpisodeRange('s1e2, S01E1, s01e02, S02E01')).toEqual([
+			{ season: 1, episode: 1 }, { season: 1, episode: 2 }, { season: 2, episode: 1 },
+		]);
+	});
+
+	it('skips empty parts between commas', () => {
+		expect(parseEpisodeRange('S01E01,, S01E02, ')).toEqual([{ season: 1, episode: 1 }, { season: 1, episode: 2 }]);
+	});
+
+	it('rejects the whole input when one part is garbage', () => {
+		expect(parseEpisodeRange('S01E01, x')).toBeNull();
+		expect(parseEpisodeRange('S01E01 S01E02')).toBeNull();
+		expect(parseEpisodeRange('S01E01-')).toBeNull();
+	});
+
+	it('expands a range inside one season, with or without the season repeated', () => {
+		const three = [{ season: 1, episode: 1 }, { season: 1, episode: 2 }, { season: 1, episode: 3 }];
+		expect(parseEpisodeRange('S01E01-E03')).toEqual(three);
+		expect(parseEpisodeRange('S01E01-S01E03')).toEqual(three);
+		expect(parseEpisodeRange('S01E02-E02')).toEqual([{ season: 1, episode: 2 }]);
+	});
+
+	it('rejects a range that runs backwards', () => {
+		expect(parseEpisodeRange('S01E05-E03')).toBeNull();
+		expect(parseEpisodeRange('S02E01-S01E05', seasons)).toBeNull();
+	});
+
+	it('expands a cross-season range through the known seasons', () => {
+		expect(parseEpisodeRange('S01E11-S02E02', seasons)).toEqual([
+			{ season: 1, episode: 11 }, { season: 1, episode: 12 }, { season: 2, episode: 1 }, { season: 2, episode: 2 },
+		]);
+	});
+
+	it('rejects a cross-season range that leaves the known seasons at either end', () => {
+		expect(parseEpisodeRange('S02E09-S03E01', seasons)).toBeNull();
+		expect(parseEpisodeRange('S01E13-S02E02', seasons)).toBeNull();
+		expect(parseEpisodeRange('S01E11-S02E11', seasons)).toBeNull();
+		expect(parseEpisodeRange('S01E00-S02E01', seasons)).toBeNull();
+	});
+
+	it('applies the episode limit to both ends of a range', () => {
+		expect(parseEpisodeRange('S01E01-E10001')).toBeNull();
+		expect(parseEpisodeRange('S01E10001-E10002')).toBeNull();
+		expect(parseEpisodeRange('S01E9999-E10000')).toEqual([{ season: 1, episode: 9999 }, { season: 1, episode: 10000 }]);
+		expect(parseEpisodeRange('S01E01-S02E10001', seasons)).toBeNull();
+	});
+});
+
+describe('formatEpisodeRange', () => {
+	it('sorts, dedupes and collapses runs inside a season', () => {
+		expect(formatEpisodeRange([
+			{ season: 1, episode: 3 }, { season: 1, episode: 1 }, { season: 1, episode: 2 }, { season: 2, episode: 1 }, { season: 1, episode: 2 },
+		])).toBe('S01E01-E03, S02E01');
+	});
+
+	it('does not join the end of one season to the start of the next', () => {
+		expect(formatEpisodeRange([{ season: 1, episode: 12 }, { season: 2, episode: 1 }])).toBe('S01E12, S02E01');
+		expect(formatEpisodeRange([{ season: 1, episode: 1 }, { season: 1, episode: 3 }])).toBe('S01E01, S01E03');
+		expect(formatEpisodeRange([])).toBe('');
+	});
+});

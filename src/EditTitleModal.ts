@@ -16,71 +16,15 @@ import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardGroup, Season } from './types';
 import { completedEpisodes } from './entryFactories';
+import { formatSeasonLine, parseSeasonLine, seasonsOf } from './storage/seasonText';
 
-/** Parses "5,8,33-37,42" into a sorted unique flat array of numbers. */
-function parseSkipSpec(spec: string): number[] {
-	const result: number[] = [];
-	for (const part of spec.split(',').map((s) => s.trim()).filter(Boolean)) {
-		const rangeParts = part.split('-');
-		if (rangeParts.length === 2) {
-			const from = parseInt(rangeParts[0] ?? '0', 10);
-			const to = parseInt(rangeParts[1] ?? '0', 10);
-			if (!isNaN(from) && !isNaN(to) && from <= to) {
-				for (let i = from; i <= to; i++) result.push(i);
-			}
-		} else {
-			const n = parseInt(part, 10);
-			if (!isNaN(n)) result.push(n);
-		}
-	}
-	return [...new Set(result)].sort((a, b) => a - b);
-}
-
-/** Serializes a sorted number array back into "5,8,33-37,42". */
-function serializeSkipSpec(nums: number[]): string {
-	if (nums.length === 0) return '';
-	const sorted = [...new Set(nums)].sort((a, b) => a - b);
-	const parts: string[] = [];
-	let i = 0;
-	while (i < sorted.length) {
-		let j = i;
-		while (j + 1 < sorted.length && sorted[j + 1] === (sorted[j] as number) + 1) j++;
-		if (j > i) {
-			parts.push(`${sorted[i]}-${sorted[j]}`);
-		} else {
-			parts.push(String(sorted[i]));
-		}
-		i = j + 1;
-	}
-	return parts.join(',');
-}
-
-/** Parses a seasons textarea ("Name: N" or "Name: N (skip_spec)" per line) back to Season[]. */
+/** Seasons from the seasons box, one "Name: N" or "Name: N (skip list)" per line. No bounds are applied here. */
 function parseSeasonsText(text: string): Season[] {
-	const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-	const seasons: Season[] = [];
-	let offset = 0;
-	for (const line of lines) {
-		// match "Name: N", optionally followed by " (skip_spec)"
-		const match = line.match(/^(.+?):\s*(\d+)(?:\s*\(([^)]+)\))?/);
-		if (match && match[1] && match[2]) {
-			const eps = parseInt(match[2], 10);
-			const skippedEpisodes = match[3] ? parseSkipSpec(match[3]) : [];
-			seasons.push({ name: match[1].trim(), episodes: eps, offset, skippedEpisodes });
-			offset += eps;
-		}
-	}
-	return seasons;
+	return seasonsOf(text.split('\n').map(parseSeasonLine).filter((l) => l !== null));
 }
 
 function seasonsToText(seasons: Season[]): string {
-	return seasons.map((s) => {
-		const base = `${s.name}: ${s.episodes}`;
-		if (s.skippedEpisodes && s.skippedEpisodes.length > 0) {
-			return `${base} (${serializeSkipSpec(s.skippedEpisodes)})`;
-		}
-		return base;
-	}).join('\n');
+	return seasons.map(formatSeasonLine).join('\n');
 }
 
 export class EditTitleModal extends Modal {

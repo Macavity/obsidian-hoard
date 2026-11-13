@@ -72,33 +72,33 @@ export function writeHoardBlock(src: string, block: Record<string, unknown>, yam
 	return [...ls.slice(0, start), ...text.split('\n'), ...ls.slice(end)].join('\n');
 }
 
-/** Index of the top-level `filters.and` item line holding `file.inFolder("…")`. */
+/** Indexes of the non-blank lines after `parent` that are indented deeper than it, up to the first that is not. */
+function nestedBlock(ls: string[], parent: number): number[] {
+	const depth = indentOf(ls[parent] ?? '');
+	const block: number[] = [];
+	for (let i = parent + 1; i < ls.length; i++) {
+		const l = ls[i] ?? '';
+		if (isBlank(l)) continue;
+		if (indentOf(l) <= depth) break;
+		block.push(i);
+	}
+	return block;
+}
+
+/**
+ * Index of the `file.inFolder("…")` line: inside the top-level `filters:` block, under its first
+ * `and:`, among the items at the indentation of the first item. -1 when there is none.
+ */
 function findInFolderLine(ls: string[]): number {
 	const filters = ls.findIndex((l) => /^filters:\s*$/.test(l));
 	if (filters < 0) return -1;
-	let i = filters + 1;
-	let andIndent = -1;
-	for (; i < ls.length; i++) {
-		const l = ls[i] ?? '';
-		if (isBlank(l)) continue;
-		if (indentOf(l) === 0) return -1;
-		if (/^\s+and:\s*$/.test(l)) {
-			andIndent = indentOf(l);
-			i++;
-			break;
-		}
-	}
-	if (andIndent < 0) return -1;
-	let itemIndent = -1;
-	for (; i < ls.length; i++) {
-		const l = ls[i] ?? '';
-		if (isBlank(l)) continue;
-		const ind = indentOf(l);
-		if (ind <= andIndent) return -1;
-		if (itemIndent < 0) itemIndent = ind;
-		if (ind === itemIndent && INFOLDER_RE.test(l)) return i;
-	}
-	return -1;
+	const and = nestedBlock(ls, filters).find((i) => /^\s+and:\s*$/.test(ls[i] ?? ''));
+	if (and === undefined) return -1;
+	const items = nestedBlock(ls, and);
+	const [first] = items;
+	if (first === undefined) return -1;
+	const itemIndent = indentOf(ls[first] ?? '');
+	return items.find((i) => indentOf(ls[i] ?? '') === itemIndent && INFOLDER_RE.test(ls[i] ?? '')) ?? -1;
 }
 
 const unescape = (s: string): string => s.replace(/\\(.)/g, '$1');

@@ -31,7 +31,7 @@ here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API client
 | State, every note write, groups, Maybe, episode toggles, API backfills, history lines | [DataManager.ts](../../src/DataManager.ts) |
 | Tab: Rows shelves or List table, filters, sort, selection, group display | [ListTab.ts](../../src/ListTab.ts); shelf DOM in `RowsView.ts`, shelf ids in `ROWS_SHELVES` (`types.ts`) |
 | Detail modal: episodes, rating, credits, studio, trailer, collection button; `GroupDetailModal` | [TitleDetailModal.ts](../../src/TitleDetailModal.ts) |
-| Edit form: title, type, episodes, link, poster and trailer override, seasons text, group | [EditTitleModal.ts](../../src/EditTitleModal.ts) |
+| Edit form: title, type, episodes, link, poster and trailer override, seasons text, group | [EditTitleModal.ts](../../src/EditTitleModal.ts); the seasons text format in [seasonText.ts](../../src/storage/seasonText.ts) ([episode range](../concepts/episode-range.md)) |
 | Add: choice modal → URL paste ([AddFromUrlModal.ts](../../src/AddFromUrlModal.ts)) or search ([AddTitleModal.ts](../../src/AddTitleModal.ts)); loose strings from Drafts and Custom Lists via `AddRouter.ts` | see [flows/add-title](../flows/add-title.md) |
 | Maybe titles: modal [MaybeAddModal.ts](../../src/MaybeAddModal.ts), listed by the Maybe sub-tab of Upcoming, never by `ListTab` | [maybe title](../concepts/maybe-title.md) |
 | Community rating badge, manual and 30-day background refresh | [CommunityRating.ts](../../src/CommunityRating.ts) |

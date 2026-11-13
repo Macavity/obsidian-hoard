@@ -34,31 +34,48 @@ function absOf(ref: EpisodeRef, seasons: Season[]): number | undefined {
  */
 export function parseEpisodeRange(input: string, seasons?: Season[]): EpisodeRef[] | null {
 	const out: EpisodeRef[] = [];
-	for (const part of input.split(',').map((p) => p.trim()).filter(Boolean)) {
-		const m = part.match(TOKEN);
-		if (!m || m[1] === undefined || m[2] === undefined) return null;
-		const season = parseInt(m[1], 10);
-		const from = parseInt(m[2], 10);
-		if (from > MAX_EPISODE) return null;
-		if (m[4] === undefined) {
-			out.push({ season, episode: from });
-			continue;
-		}
-		const to = parseInt(m[4], 10);
-		const endSeason = m[3] === undefined ? season : parseInt(m[3], 10);
-		if (to > MAX_EPISODE) return null;
-		if (endSeason === season) {
-			if (from > to) return null;
-			for (let e = from; e <= to; e++) out.push({ season, episode: e });
-			continue;
-		}
-		if (!seasons) return null;
-		const a = absOf({ season, episode: from }, seasons);
-		const b = absOf({ season: endSeason, episode: to }, seasons);
-		if (a === undefined || b === undefined || a > b) return null;
-		out.push(...fromAbsolute(Array.from({ length: b - a + 1 }, (_, k) => a + k), seasons));
+	for (const text of input.split(',').map((p) => p.trim()).filter(Boolean)) {
+		const part = readPart(text);
+		const refs = part && expandPart(part, seasons);
+		if (!refs) return null;
+		out.push(...refs);
 	}
 	return normalize(out);
+}
+
+/** One comma-separated part as written. A single episode is a range of one: `to === from`, `endSeason === season`. */
+interface RangePart {
+	season: number;
+	from: number;
+	endSeason: number;
+	to: number;
+}
+
+/** Reads one part; null for garbage and for an episode number above MAX_EPISODE. */
+function readPart(text: string): RangePart | null {
+	const m = text.match(TOKEN);
+	if (!m || m[1] === undefined || m[2] === undefined) return null;
+	const season = parseInt(m[1], 10);
+	const from = parseInt(m[2], 10);
+	const to = m[4] === undefined ? from : parseInt(m[4], 10);
+	const endSeason = m[3] === undefined ? season : parseInt(m[3], 10);
+	return from > MAX_EPISODE || to > MAX_EPISODE ? null : { season, from, endSeason, to };
+}
+
+/**
+ * The episodes a part names. Inside one season the numbers are taken as written; across seasons the
+ * range runs through `seasons`. null when it runs backwards, or crosses seasons that are unknown.
+ */
+function expandPart(p: RangePart, seasons: Season[] | undefined): EpisodeRef[] | null {
+	if (p.endSeason === p.season) {
+		if (p.from > p.to) return null;
+		return Array.from({ length: p.to - p.from + 1 }, (_, k) => ({ season: p.season, episode: p.from + k }));
+	}
+	if (!seasons) return null;
+	const a = absOf({ season: p.season, episode: p.from }, seasons);
+	const b = absOf({ season: p.endSeason, episode: p.to }, seasons);
+	if (a === undefined || b === undefined || a > b) return null;
+	return fromAbsolute(Array.from({ length: b - a + 1 }, (_, k) => a + k), seasons);
 }
 
 /** Formats refs canonically: sorted, deduped, consecutive runs per season collapsed. */
