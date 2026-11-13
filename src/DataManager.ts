@@ -11,7 +11,8 @@ import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBa
 import type { ApiOutcome } from './ApiService';
 import { ApiCheckQueue } from './apiCheckQueue';
 import type { LocalStore } from './storage/LocalStore';
-import { ensureFolder, freeNotePath, noteFile, parentOf, renameTargetFree, trashNote, updateFrontMatter } from './storage/noteWrite';
+import { ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import type { EntryWriteHooks } from './storage/noteWrite';
 import type { ApiCheckResult, EntryCache, Notify } from './storage/storageTypes';
 import type { SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -21,7 +22,7 @@ import { decodeBook, decodeManga, encodeAirtime } from './storage/readingCodec';
 import { decodeGame } from './storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
-import { changedKeys, sameJson } from './storage/sharedHelpers';
+import { sameJson } from './storage/sharedHelpers';
 import { emitDataChanged } from './changeSignal';
 import { ChangeListeners } from './changeListeners';
 
@@ -1499,65 +1500,56 @@ export class DataManager {
 		}
 	}
 
-	/**
-	 * Writes a title to its note: renames the file on a title/type change, then sets only the
-	 * frontmatter keys whose encoded value differs from the stored state (so unreadable or foreign
-	 * fields stay untouched unless this edit changes exactly that field), and the `## Notes` body when
-	 * it changed.
-	 */
-	private async writeTitle(t: HoardTitle): Promise<void> {
-		let file = this.fileOf(t.id);
-		if (!file) {
-			await this.createNote(t);
-			return;
-		}
-		const src = this.baselineOf(t);
-
-		if (src && (t.title !== src.title || t.type !== src.type)) {
-			const target = this.layout().notePath('title', t.title, t.type);
-			if (target !== file.path && renameTargetFree(this.app, target, this.notify)) {
-				await this.ensureFolder(parentOf(target));
-				await this.app.fileManager.renameFile(file, target);
-				this.moveId(t.id, this.layout().idFromPath(target));
-				t.id = this.layout().idFromPath(target);
-				file = this.fileOf(t.id) ?? file;
-			}
-		}
-
-		// edited seasons belong in the note, so they reach other devices (the cache stays per device)
-		const seasonList = (x: HoardTitle): string[] => x.seasons.map((s) => `${s.name}: ${s.episodes}`);
-		if (src && t.seasons.length > 0 && !sameJson(seasonList(src), seasonList(t))) t.seasonsOverride = true;
-		const pending = this.seasonsPending(t);
-		const before = src ? titleToProperties(src, this.getProgress(src), pending) : {};
-		const after = titleToProperties(t, this.getProgress(t), pending);
-		const changed = changedKeys(before, after);
-		if (changed.length > 0) {
-			const ok = await this.processFrontMatter(file, t, (raw) => {
-				for (const key of changed) {
-					if (key in after) raw[key] = after[key];
-					else delete raw[key];
-				}
-			});
-			if (!ok) return;
-			// a stale copy (not taken as the view) holds what the note holds for every field it knows
-			if (this.views.get(t.id)?.view !== t) setBaseline(t, structuredClone(t));
-		} else if (this.basedOnStored(t)) {
-			// nothing for the note; API data may still have changed
+	/** What the write pipeline needs to know about a title. */
+	private readonly writeHooks: EntryWriteHooks<HoardTitle> = {
+		baselineOf: (t) => this.baselineOf(t),
+		movedPath: (src, t) => (t.title !== src.title || t.type !== src.type ? this.layout().notePath('title', t.title, t.type) : null),
+		moveId: (from, to) => this.moveId(from, to),
+		prepare: (t, src) => {
+			// edited seasons belong in the note, so they reach other devices (the cache stays per device)
+			const seasonList = (x: HoardTitle): string[] => x.seasons.map((s) => `${s.name}: ${s.episodes}`);
+			if (src && t.seasons.length > 0 && !sameJson(seasonList(src), seasonList(t))) t.seasonsOverride = true;
+			const pending = this.seasonsPending(t);
+			return (x) => titleToProperties(x, this.getProgress(x), pending);
+		},
+		afterWrite: (t, fm) => this.afterWrite(t, fm),
+		isLiveCopy: (t) => this.views.get(t.id)?.view === t,
+		// nothing for the note; API data may still have changed. Without a slot there is no live copy to replace
+		unchanged: (t) => {
+			if (!this.basedOnStored(t)) return;
 			this.syncCache(t);
 			const slot = this.views.get(t.id);
 			if (slot) slot.view = t;
-		}
+		},
+		create: (t) => this.createNote(t),
+	};
 
-		// the body follows the same rule as the frontmatter: a copy only writes what it changed itself,
-		// so a stale copy cannot undo an edit that arrived from another device meanwhile
+	/**
+	 * Writes a title to its note through the shared pipeline (`writeEntry`), then the `## Notes` body
+	 * when the copy changed it. A note that was just created already holds its body; one that could
+	 * not be read is left alone altogether.
+	 */
+	private async writeTitle(t: HoardTitle): Promise<void> {
+		const outcome = await writeEntry({ app: this.app, layout: this.layout, notify: this.notify }, this.writeHooks, t);
+		if (outcome === 'created' || outcome === 'unreadable') return;
+		await this.writeNotesBody(t);
+	}
+
+	/**
+	 * The body follows the same rule as the frontmatter: a copy only writes what it changed itself,
+	 * so a stale copy cannot undo an edit that arrived from another device meanwhile.
+	 */
+	private async writeNotesBody(t: HoardTitle): Promise<void> {
 		const notes = t.notes;
+		if (typeof notes !== 'string') return;
 		const current = this.notes.get(t.id) ?? '';
-		if (typeof notes === 'string' && notes !== (getNotesBaseline(t) ?? current) && notes !== current) {
+		const file = this.fileOf(t.id);
+		if (file && notes !== (getNotesBaseline(t) ?? current) && notes !== current) {
 			// set first: the modify event of this write then sees no change
 			this.notes.set(t.id, notes);
 			await this.app.vault.process(file, (content) => replaceNotesSection(content, notes));
 		}
-		if (typeof notes === 'string') setNotesBaseline(t, this.notes.get(t.id) ?? '');
+		setNotesBaseline(t, this.notes.get(t.id) ?? '');
 	}
 
 	/** Stored state a copy was made from; falls back to the current slot or index entry. */
