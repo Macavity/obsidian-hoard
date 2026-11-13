@@ -2,6 +2,7 @@ import { normalizePath, parseYaml, type App, type TFile } from 'obsidian';
 import { hasTopLevelKey } from '../../storage/baseFile';
 import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
 import type { LocalData } from '../../storage/storageTypes';
+import { isRecord } from '../../storage/sharedHelpers';
 import { DEFAULT_SETTINGS } from '../../types';
 import type { WatchLogData } from './schema1Types';
 import { isListNote, originalFolders } from './originalPaths';
@@ -95,9 +96,6 @@ export interface WatchLogSources {
 
 const ORIGINAL_ID = 'watchlog';
 const FORK_ID = 'watchlog-sync';
-
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-	typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** Obsidian's private plugin registry; typed locally. */
 type AppWithPlugins = App & { plugins?: { enabledPlugins?: Set<string> } };

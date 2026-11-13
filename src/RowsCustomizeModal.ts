@@ -1,6 +1,6 @@
 import { App, Modal, ToggleComponent } from 'obsidian';
 import type HoardPlugin from './main';
-import { normalizeRowsLayout, type RowsShelfLayoutEntry } from './types';
+import { normalizeRowsLayout, shelvesExclude, type RowsShelfLayoutEntry } from './types';
 import { t } from './i18n';
 import { createIconButton } from './ui/IconButton';
 
@@ -128,24 +128,14 @@ export class RowsCustomizeModal extends Modal {
 
 			new ToggleComponent(controls).setValue(entry.enabled).onChange((value) => {
 				entry.enabled = value;
-				// enabling a shelf in an exclusive group turns its siblings off; rebuild the list so their toggles
-				// visibly flip
-				if (value && this.config.exclusiveGroups) {
-					let flipped = false;
-					for (const group of this.config.exclusiveGroups) {
-						if (!group.includes(entry.id)) continue;
-						for (const other of layout) {
-							if (other === entry || !group.includes(other.id) || !other.enabled) continue;
-							other.enabled = false;
-							flipped = true;
-						}
-					}
-					if (flipped) {
-						this.apply();
-						return;
-					}
-				}
-				this.persist();
+				// enabling a shelf turns off the ones it excludes; the entries change in place, since the
+				// plugin's layout is this very array
+				const groups = this.config.exclusiveGroups ?? [];
+				const rivals = value ? layout.filter((other) => other.enabled && shelvesExclude(other.id, entry.id, groups)) : [];
+				for (const rival of rivals) rival.enabled = false;
+				// rebuild the list so the rivals' toggles visibly flip
+				if (rivals.length > 0) this.apply();
+				else this.persist();
 			});
 		});
 	}

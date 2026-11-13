@@ -1,13 +1,10 @@
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, normalizeRowsLayout } from './types';
+import { normalizeSettings } from './settingsNormalize';
 import type { HoardPluginSettings } from './types';
 import { SHARED_SETTING_KEYS } from './storage/SharedConfigStore';
 import type { SharedConfigStore } from './storage/SharedConfigStore';
 import type { LocalStore } from './storage/LocalStore';
 import { SECRET_KEYS } from './storage/SecretStore';
 import type { SecretStore, SecretValues } from './storage/SecretStore';
-
-/** Settings that no longer exist; dropped from stored data. */
-const REMOVED_KEYS = ['rootFolder', 'customListsFolder'];
 
 /** The base is synced: a secret key found there is never trusted. */
 function withoutSecrets(shared: Record<string, unknown>): Record<string, unknown> {
@@ -18,97 +15,16 @@ function withoutSecrets(shared: Record<string, unknown>): Record<string, unknown
 
 /**
  * Settings = DEFAULT_SETTINGS <- local (data.json) <- secrets <- shared (base); shared keys win,
- * except secret keys, which never come from the base.
- * Inputs are cloned, so backfills never mutate the stores or DEFAULT_SETTINGS.
+ * except secret keys, which never come from the base. The merged record is a clone and is then
+ * made valid key by key (`normalizeSettings`): the result shares no list or record with the stores
+ * or with DEFAULT_SETTINGS, so an edit in place changes neither, and `persistSettings` can see it.
  */
 export function composeSettings(
 	local: Record<string, unknown>,
 	shared: Record<string, unknown>,
 	secrets: SecretValues = {},
 ): HoardPluginSettings {
-	const saved = structuredClone({ ...local, ...secrets, ...withoutSecrets(shared) }) as Partial<HoardPluginSettings>;
-	for (const k of REMOVED_KEYS) delete (saved as Record<string, unknown>)[k];
-	const settings: HoardPluginSettings = Object.assign({}, DEFAULT_SETTINGS, saved);
-	if (saved.listFilters) {
-		settings.listFilters = Object.assign(
-			{},
-			DEFAULT_SETTINGS.listFilters,
-			saved.listFilters,
-		);
-	}
-	// per-tab merge so a partially saved record keeps defaults for the rest
-	settings.cardTextStyles = Object.assign(
-		{},
-		DEFAULT_SETTINGS.cardTextStyles,
-		saved.cardTextStyles ?? {},
-	);
-	if (settings.animeApiSource === undefined) {
-		settings.animeApiSource = 'jikan';
-	}
-	// date display format. Existing installs saw DD/MM/YYYY everywhere, so 'european' is both the
-	// default and the migration target for a missing or hand-edited value. Storage is unaffected.
-	if (
-		settings.dateFormat !== 'european' &&
-		settings.dateFormat !== 'american' &&
-		settings.dateFormat !== 'iso'
-	) {
-		settings.dateFormat = 'european';
-	}
-	if (settings.typeApiMapping === undefined) {
-		settings.typeApiMapping = {};
-	}
-	// reading type badge colors (Manga / Book) — backfill defaults for old installs
-	if (!settings.readingTypeColors) {
-		settings.readingTypeColors = { manga: '#D4537E', book: '#D85A30' };
-	} else {
-		if (!settings.readingTypeColors.manga) settings.readingTypeColors.manga = '#D4537E';
-		if (!settings.readingTypeColors.book) settings.readingTypeColors.book = '#D85A30';
-	}
-	// watchlist view: 'rows' is the default, and the removed 'cards' view migrates to 'rows'
-	if (settings.defaultWatchlistView !== 'list' && settings.defaultWatchlistView !== 'rows') {
-		settings.defaultWatchlistView = 'rows';
-	}
-	// backfill the status-bar Upcoming counter toggle for existing installs (default ON)
-	if (settings.showUpcomingStatusBar === undefined) {
-		settings.showUpcomingStatusBar = true;
-	}
-	// normalize the stored rows layout (drops unknown ids, appends shelves missing from an older
-	// layout) and always take a fresh array so later in-place edits can't mutate DEFAULT_SETTINGS
-	settings.rowsLayout = normalizeRowsLayout(settings.rowsLayout);
-	// backfill the default Add type setting for existing installs
-	if (settings.defaultAddType === undefined) {
-		settings.defaultAddType = LAST_USED_TYPE_SENTINEL;
-	}
-	if (settings.lastAddedType === undefined) {
-		settings.lastAddedType = '';
-	}
-	// array fields are never undefined after a partial merge
-	if (!settings.types?.length) settings.types = DEFAULT_SETTINGS.types;
-	if (!settings.statuses?.length) settings.statuses = DEFAULT_SETTINGS.statuses;
-	if (!settings.reviews?.length) settings.reviews = DEFAULT_SETTINGS.reviews;
-	if (!settings.priorities?.length) settings.priorities = DEFAULT_SETTINGS.priorities;
-	if (!settings.seasonPalette?.length) settings.seasonPalette = DEFAULT_SETTINGS.seasonPalette;
-	// the rating system must always be exactly five well-formed tiers; a missing or malformed value
-	// (older or hand-edited data) resets to defaults
-	if (
-		!Array.isArray(settings.ratingSystem) ||
-		settings.ratingSystem.length !== 5 ||
-		settings.ratingSystem.some((t) => !t || typeof t.label !== 'string' || typeof t.color !== 'string')
-	) {
-		settings.ratingSystem = DEFAULT_SETTINGS.ratingSystem.map((t) => ({ ...t }));
-	}
-	// migrate the Plan to watch colour from old grey to new teal
-	const ptw = settings.statuses.find((s) => s.name === 'Plan to watch');
-	if (ptw && ptw.color === '#888780') ptw.color = '#00A9A5';
-
-	// ensure the "To be released" status exists (migration for existing users)
-	if (!settings.statuses.find((s) => s.name === 'To be released')) {
-		const completedIdx = settings.statuses.findIndex((s) => s.name === 'Completed');
-		const insertAt = completedIdx >= 0 ? completedIdx + 1 : settings.statuses.length;
-		settings.statuses.splice(insertAt, 0, { name: 'To be released', color: '#E8873A' });
-	}
-
-	return settings;
+	return normalizeSettings(structuredClone({ ...local, ...secrets, ...withoutSecrets(shared) }));
 }
 
 /**

@@ -7,6 +7,10 @@ import { LocalStore } from '../src/storage/LocalStore';
 import { SharedConfigStore } from '../src/storage/SharedConfigStore';
 import { VaultLayout } from '../src/storage/VaultLayout';
 import { composeSettings, persistSettings } from '../src/settingsSplit';
+import { DEFAULT_SETTINGS } from '../src/types';
+
+/** A base whose hoard block holds no setting yet. */
+const BARE_BASE = 'hoard:\n  version: 1\n';
 
 async function setup(files: Record<string, string>) {
 	const f = createFakeApp(files);
@@ -109,5 +113,50 @@ describe('settings split', () => {
 		await new Promise((r) => setTimeout(r, 50));
 		expect(changed).toBe(1);
 		expect(composeSettings(local.data.settings, shared.get().settings).statuses[0]?.name).toBe('Ext');
+	});
+
+	it('writes a type and a mapping added in place when the base holds neither yet', async () => {
+		const { f, local, shared } = await setup({ 'W/Hoard.base': BARE_BASE });
+		const settings = composeSettings(local.data.settings, shared.get().settings);
+		settings.types.push({ name: 'Probe', color: '#000000' });
+		settings.typeApiMapping.Probe = 'anime';
+		await persistSettings(settings, local, shared);
+		const base = parse(f.files.get('W/Hoard.base')!) as { hoard: { types?: { name: string }[]; typeApiMapping?: Record<string, string> } };
+		expect(base.hoard.types?.map((t) => t.name)).toContain('Probe');
+		expect(base.hoard.typeApiMapping).toEqual({ Probe: 'anime' });
+		expect(DEFAULT_SETTINGS.types.map((t) => t.name)).not.toContain('Probe');
+		expect(DEFAULT_SETTINGS.typeApiMapping).toEqual({});
+	});
+
+	it('writes a type added in place when the base already holds types', async () => {
+		const { f, local, shared } = await setup({
+			'W/Hoard.base': `${BARE_BASE}  types:\n    - name: Docu\n      color: "#111111"\n`,
+		});
+		const settings = composeSettings(local.data.settings, shared.get().settings);
+		settings.types.push({ name: 'Probe', color: '#000000' });
+		settings.types[0]!.color = '#ABCDEF';
+		await persistSettings(settings, local, shared);
+		const base = parse(f.files.get('W/Hoard.base')!) as { hoard: { types: { name: string; color: string }[] } };
+		expect(base.hoard.types).toEqual([{ name: 'Docu', color: '#ABCDEF' }, { name: 'Probe', color: '#000000' }]);
+	});
+
+	it('writes a colour changed in place when the base holds no statuses yet', async () => {
+		const { f, local, shared } = await setup({ 'W/Hoard.base': BARE_BASE });
+		const settings = composeSettings(local.data.settings, shared.get().settings);
+		settings.statuses.find((s) => s.name === 'Watching')!.color = '#ABCDEF';
+		await persistSettings(settings, local, shared);
+		expect(f.files.get('W/Hoard.base')).toContain('ABCDEF');
+		expect(DEFAULT_SETTINGS.statuses.find((s) => s.name === 'Watching')!.color).toBe('#1D9E75');
+	});
+
+	it('leaves the defaults alone when a local list is edited in place', async () => {
+		const { local, shared } = await setup({ 'W/Hoard.base': BARE_BASE });
+		const settings = composeSettings(local.data.settings, shared.get().settings);
+		settings.seasonPalette.push('#ABCDEF');
+		settings.ratingSystem[0]!.label = 'Meh';
+		await persistSettings(settings, local, shared);
+		expect(local.data.settings.seasonPalette).toContain('#ABCDEF');
+		expect(DEFAULT_SETTINGS.seasonPalette).not.toContain('#ABCDEF');
+		expect(DEFAULT_SETTINGS.ratingSystem[0]!.label).toBe('Poor');
 	});
 });

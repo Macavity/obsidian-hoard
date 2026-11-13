@@ -4,6 +4,7 @@ import type { VaultLayout } from './VaultLayout';
 import {
 	createBaseFile, findInFolderPath, hasHoardKey, readHoardBlock, replaceInFolderPath, writeHoardBlock,
 } from './baseFile';
+import { isRecord } from './sharedHelpers';
 
 /**
  * Whitelist of settings synced via the base: the vocabulary and schema every device needs to read
@@ -26,9 +27,6 @@ const NESTED_SHARED_KEYS: Readonly<Record<'reading' | 'games', readonly string[]
 /** Keys once synced, now local; dropped from the block on the next write. */
 const RETIRED_KEYS = ['ratingSystem', 'seasonPalette', 'readingTypeColors'];
 const VERSION = 1;
-
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-	typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** Splits a `reading`/`games` object into its synced and its device-local part. */
 export function splitNested(key: keyof typeof NESTED_SHARED_KEYS, obj: Record<string, unknown>):

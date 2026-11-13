@@ -5,6 +5,7 @@ description: How the settings tab is organised, how the API cards and type valid
 source:
   - src/SettingsTab.ts
   - src/settingsSplit.ts
+  - src/settingsNormalize.ts
   - src/storage/SharedConfigStore.ts
   - src/storage/VaultLayout.ts
   - src/types.ts
@@ -18,7 +19,7 @@ source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 # Settings
 
 One `HoardPluginSettings` object (`plugin.settings`), composed from defaults, `data.json` and the
-base and persisted back by the whitelist; that split, the backfills in `composeSettings` and the
+base and persisted back by the whitelist; that split, the rules in `normalizeSettings` and the
 diff-only write in `persistSettings` are in [shared vs local](../concepts/shared-vs-local.md).
 API keys, Steam id, IGDB credentials and `jikanBaseUrl` are not in `data.json` but in Obsidian's secret
 storage: `loadSettings` merges them in, `saveSettings` writes them through `SecretStore`
@@ -65,8 +66,12 @@ are colour-only.
 
 ## Adding a setting
 
-1. `HoardPluginSettings` and `DEFAULT_SETTINGS` in [types.ts](../../src/types.ts).
-2. A backfill in `composeSettings` only if old or hand-edited data can be invalid.
+1. `HoardPluginSettings` and `DEFAULT_SETTINGS` in [types.ts](../../src/types.ts). The default is
+   not optional: a key without one counts as unknown and passes through unchecked.
+2. Nothing for a value whose kind is all that can be wrong: a stored value of another kind than the
+   default's falls back to the default. An entry in `RULES`
+   ([settingsNormalize.ts](../../src/settingsNormalize.ts)) only when what the value says must be
+   checked or migrated.
 3. A `Setting` or card in the matching `render*` of the tab, saving through `plugin.saveSettings()`.
 4. Synced across devices? Add the key to `SHARED_SETTING_KEYS` (or `NESTED_SHARED_KEYS` for
    reading/games). Never a secret. Default is device-local. A new key or credential goes into

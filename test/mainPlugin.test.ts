@@ -3,7 +3,7 @@ import { Modal, Notice } from './__mocks__/obsidian';
 import HoardPlugin from '../src/main';
 import { HoardView } from '../src/HoardView';
 import { HoardSettingsTab } from '../src/SettingsTab';
-import { LAST_USED_TYPE_SENTINEL } from '../src/types';
+import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/types';
 
 const plugin = (props: Record<string, unknown>): HoardPlugin =>
 	Object.assign(Object.create(HoardPlugin.prototype) as HoardPlugin, props);
@@ -15,6 +15,15 @@ const priv = (p: HoardPlugin) => p as unknown as {
 afterEach(() => {
 	Notice.shown.length = 0;
 	vi.restoreAllMocks();
+});
+
+describe('settings before they are loaded', () => {
+	it('are a copy of the defaults, not the defaults themselves', () => {
+		const fresh = new (HoardPlugin as unknown as new () => HoardPlugin)();
+		expect(fresh.settings).toEqual(DEFAULT_SETTINGS);
+		expect(fresh.settings).not.toBe(DEFAULT_SETTINGS);
+		expect(fresh.settings.types).not.toBe(DEFAULT_SETTINGS.types);
+	});
 });
 
 describe('resolveDefaultAddType', () => {

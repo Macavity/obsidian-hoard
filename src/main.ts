@@ -39,7 +39,8 @@ import { emitDataChanged, onDataChanged } from './changeSignal';
 const DEFAULT_ROOT = 'Hoard';
 
 export default class HoardPlugin extends Plugin {
-	settings: HoardPluginSettings = DEFAULT_SETTINGS;
+	// a copy: lists edited in place before the first load must not change the defaults
+	settings: HoardPluginSettings = structuredClone(DEFAULT_SETTINGS);
 	private indexReady = false;
 	private wizardOpen = false;
 	private typeNamesKey: string | null = null;
