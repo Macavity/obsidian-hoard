@@ -128,6 +128,21 @@ describe('title writes: changed keys only', () => {
 	});
 });
 
+describe('title writes: the live copy', () => {
+	it('stays the live copy over several saves', async () => {
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': NOTE });
+		const t = dm.getTitle('Movie/A')!;
+		t.rating = 2;
+		await dm.updateTitle(t);
+		expect(dm.getTitle('Movie/A')).toBe(t);
+		t.rating = 3;
+		await dm.updateTitle(t);
+		await tick();
+		expect(dm.getTitle('Movie/A')).toBe(t);
+		expect(f.files.get('W/Movie/A.md')).toContain('Rating: 3');
+	});
+});
+
 describe('title writes: nothing to write', () => {
 	it('does not touch the note and takes a copy made from the stored state as the live copy', async () => {
 		vi.setSystemTime(NOW);

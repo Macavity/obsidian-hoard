@@ -108,6 +108,21 @@ describe('game writes: changed keys only', () => {
 	});
 });
 
+describe('game writes: the live copy', () => {
+	it('stays the live copy over several saves', async () => {
+		const { gdm, f } = await setupGames({ 'W/Games/A.md': GAME });
+		const g = gdm.getGame('Games/A')!;
+		g.rating = 2;
+		await gdm.updateGame(g);
+		expect(gdm.getGame('Games/A')).toBe(g);
+		g.rating = 3;
+		await gdm.updateGame(g);
+		await tick();
+		expect(gdm.getGame('Games/A')).toBe(g);
+		expect(f.files.get('W/Games/A.md')).toContain('Rating: 3');
+	});
+});
+
 describe('game writes: nothing to write', () => {
 	it('does not touch the note and takes a copy made from the stored state as the live copy', async () => {
 		vi.setSystemTime(NOW);

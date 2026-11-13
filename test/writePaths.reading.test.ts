@@ -110,6 +110,21 @@ describe('reading writes: changed keys only', () => {
 	});
 });
 
+describe('reading writes: the live copy', () => {
+	it('stays the live copy over several saves', async () => {
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': BOOK });
+		const b = rdm.getBook('Books/A')!;
+		b.pagesRead = 2;
+		await rdm.updateBook(b);
+		expect(rdm.getBook('Books/A')).toBe(b);
+		b.pagesRead = 3;
+		await rdm.updateBook(b);
+		await tick();
+		expect(rdm.getBook('Books/A')).toBe(b);
+		expect(f.files.get('W/Books/A.md')).toContain('Pages Read: 3');
+	});
+});
+
 describe('reading writes: nothing to write', () => {
 	it('does not touch the note and takes a copy made from the stored state as the live copy', async () => {
 		vi.setSystemTime(NOW);

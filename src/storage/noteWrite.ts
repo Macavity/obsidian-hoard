@@ -1,6 +1,9 @@
 import { TFile, normalizePath } from 'obsidian';
 import type { App } from 'obsidian';
-import type { Notify } from './storageTypes';
+import type { Fm, Notify } from './storageTypes';
+import type { VaultLayout } from './VaultLayout';
+import { setBaseline } from './baseline';
+import { changedKeys } from './sharedHelpers';
 
 /** processFrontMatter that reports unreadable YAML as a notice and returns false instead of throwing. */
 export async function updateFrontMatter(
@@ -62,4 +65,87 @@ export async function ensureFolder(app: App, path: string): Promise<void> {
 export async function trashNote(app: App, path: string): Promise<void> {
 	const file = noteFile(app, path);
 	if (file) await app.fileManager.trashFile(file);
+}
+
+/** Sets the changed keys that the encoded entry has and deletes the ones it lacks. */
+export function setChangedKeys(raw: Fm, changed: string[], after: Fm): void {
+	for (const key of changed) {
+		if (key in after) raw[key] = after[key];
+		else delete raw[key];
+	}
+}
+
+/** What a manager tells the write pipeline about its kind of entry. */
+export interface EntryWriteHooks<T extends { id: string }> {
+	/** Stored state the copy was made from, when known. */
+	baselineOf(entry: T): T | undefined;
+	/** The path the note belongs at now, when the edit against `src` moves it; else null. */
+	movedPath(src: T, entry: T): string | null;
+	/** Re-keys what the manager holds per id. The pipeline sets `entry.id` itself, after this. */
+	moveId(from: string, to: string): void;
+	/** Readies the entry for this write and returns the encoder used for both sides of the diff. */
+	prepare(entry: T, src: T | undefined): (x: T) => Fm;
+	/** Index, cache and view bookkeeping of an own write; runs inside the frontmatter callback. */
+	afterWrite(entry: T, fm: Fm): void;
+	/** True when `entry` is the copy the manager hands out. */
+	isLiveCopy(entry: T): boolean;
+	/** Nothing to write: the manager settles the copy by its own rule. */
+	unchanged(entry: T, src: T | undefined): void;
+	/** Creates the note of an entry that has none. */
+	create(entry: T): Promise<void>;
+}
+
+export type WriteOutcome = 'created' | 'written' | 'unchanged' | 'unreadable';
+
+export interface NoteIo {
+	app: App;
+	layout: () => VaultLayout;
+	notify: Notify;
+}
+
+/**
+ * Moves the note when the edit moves it and the target is free, and gives the entry its new id.
+ * Returns the file to write to: the moved one, or the old one when nothing moved.
+ */
+async function moveNote<T extends { id: string }>(io: NoteIo, hooks: EntryWriteHooks<T>, file: TFile, src: T, entry: T): Promise<TFile> {
+	const target = hooks.movedPath(src, entry);
+	if (target === null || target === file.path || !renameTargetFree(io.app, target, io.notify)) return file;
+	await ensureFolder(io.app, parentOf(target));
+	await io.app.fileManager.renameFile(file, target);
+	const to = io.layout().idFromPath(target);
+	hooks.moveId(entry.id, to);
+	entry.id = to;
+	return noteFile(io.app, io.layout().pathFromId(to)) ?? file;
+}
+
+/**
+ * Writes an entry to its note: moves the file when the edit moves it, then sets only the properties
+ * whose encoded value differs from the stored state the copy was made from, so unreadable or foreign
+ * properties stay untouched unless this edit changes exactly that one. A note that does not exist
+ * is created by the manager.
+ */
+export async function writeEntry<T extends { id: string }>(io: NoteIo, hooks: EntryWriteHooks<T>, entry: T): Promise<WriteOutcome> {
+	const found = noteFile(io.app, io.layout().pathFromId(entry.id));
+	if (!found) {
+		await hooks.create(entry);
+		return 'created';
+	}
+	const src = hooks.baselineOf(entry);
+	const file = src ? await moveNote(io, hooks, found, src, entry) : found;
+	const encode = hooks.prepare(entry, src);
+	const after = encode(entry);
+	const changed = changedKeys(src ? encode(src) : {}, after);
+	if (changed.length === 0) {
+		hooks.unchanged(entry, src);
+		return 'unchanged';
+	}
+	const ok = await updateFrontMatter(io.app, file, io.notify, (raw) => {
+		setChangedKeys(raw, changed, after);
+		// inside the callback, so the index is ahead of the write's `changed` event
+		hooks.afterWrite(entry, { ...raw });
+	});
+	if (!ok) return 'unreadable';
+	// a stale copy (not taken as the view) holds what the note holds for every field it knows
+	if (!hooks.isLiveCopy(entry)) setBaseline(entry, structuredClone(entry));
+	return 'written';
 }
