@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GAMES_ROWS_SHELVES, READING_ROWS_SHELVES, normalizeRowsLayout, type RowsShelfLayoutEntry } from '../src/types';
+import { GAMES_ROWS_SHELVES, READING_ROWS_SHELVES, normalizeRowsLayout, shelvesExclude, type RowsShelfLayoutEntry } from '../src/types';
 
 /** `id` for an enabled shelf, `-id` for a disabled one: a layout on one line. */
 const brief = (layout: RowsShelfLayoutEntry[]): string[] => layout.map((e) => (e.enabled ? e.id : `-${e.id}`));
@@ -98,9 +98,31 @@ describe('normalizeRowsLayout: exclusive shelves', () => {
 	});
 });
 
-describe('normalizeRowsLayout: stored values that are no layout (as today)', () => {
-	it('breaks on an entry that is no object and on a number', () => {
-		expect(() => normalize([null])).toThrow(TypeError);
-		expect(() => normalize(5)).toThrow(TypeError);
+describe('normalizeRowsLayout: stored values that are no layout', () => {
+	it('treats a number or a record as nothing stored', () => {
+		expect(brief(normalize(5))).toEqual(WATCHLIST);
+		expect(brief(normalize({ id: 'groups', enabled: false }))).toEqual(WATCHLIST);
+	});
+
+	it('skips an entry that is no shelf entry and keeps the others', () => {
+		expect(brief(normalize([null]))).toEqual(WATCHLIST);
+		expect(brief(normalize([null, 'groups', 7, { enabled: false }, { id: 5 }, { id: 'groups', enabled: false }])))
+			.toEqual(['-groups', 'favorites', 'recommended', 'recentlyAdded', 'recentlyWatched', 'recentlyReleased', 'byType', '-byStatus']);
+	});
+});
+
+describe('shelvesExclude', () => {
+	const groups = [['a', 'b'], ['c', 'd']];
+
+	it('holds for two different members of one group, in either order', () => {
+		expect(shelvesExclude('a', 'b', groups)).toBe(true);
+		expect(shelvesExclude('d', 'c', groups)).toBe(true);
+	});
+
+	it('does not hold for a shelf and itself, across groups, or outside any group', () => {
+		expect(shelvesExclude('a', 'a', groups)).toBe(false);
+		expect(shelvesExclude('a', 'c', groups)).toBe(false);
+		expect(shelvesExclude('a', 'e', groups)).toBe(false);
+		expect(shelvesExclude('a', 'b', [])).toBe(false);
 	});
 });

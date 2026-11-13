@@ -313,8 +313,8 @@ export const ROWS_SHELVES: ReadonlyArray<{ id: string }> = [
 
 /**
  * Shelf ids that can never both be on — byType and byStatus group the same library,
- * so both would show every title twice. Enforced in normalizeRowsLayout and in
- * RowsCustomizeModal. All members off ⇒ one flat ungrouped grid.
+ * so both would show every title twice. Decided by shelvesExclude, which normalizeRowsLayout
+ * and RowsCustomizeModal both use. All members off ⇒ one flat ungrouped grid.
  */
 export const ROWS_EXCLUSIVE_SHELVES: ReadonlyArray<ReadonlyArray<string>> = [
 	['byType', 'byStatus'],
@@ -359,44 +359,66 @@ export const READING_ROWS_SHELVES: ReadonlyArray<{ id: string }> = [
 	{ id: 'byStatus' },
 ];
 
+/** True when the two shelf ids are different members of one exclusive group. */
+export function shelvesExclude(a: string, b: string, groups: ReadonlyArray<ReadonlyArray<string>>): boolean {
+	return a !== b && groups.some((group) => group.includes(a) && group.includes(b));
+}
+
+/** Something stored that names a shelf. Only the id is checked; `enabled` is read as "not false". */
+const isShelfEntry = (v: unknown): v is { id: string; enabled?: unknown } =>
+	typeof v === 'object' && v !== null && 'id' in v && typeof v.id === 'string';
+
+/** The stored entries that name a registered shelf, the first occurrence of each; on unless stored as `false`. */
+function storedShelves(stored: unknown, shelves: ReadonlyArray<{ id: string }>): RowsShelfLayoutEntry[] {
+	const entries: unknown[] = Array.isArray(stored) ? stored : [];
+	return entries
+		.filter(isShelfEntry)
+		.filter((entry) => shelves.some((shelf) => shelf.id === entry.id))
+		.filter((entry, i, all) => all.findIndex((other) => other.id === entry.id) === i)
+		.map((entry) => ({ id: entry.id, enabled: entry.enabled !== false }));
+}
+
 /**
- * A valid rows layout from whatever was stored: unknown/duplicate ids dropped, known
- * shelves missing from the layout appended enabled. Always returns new objects.
+ * The layout with every registered shelf it lacks appended in registry order. A shelf is appended
+ * off when the layout built so far holds one that excludes it (byStatus next to a stored byType),
+ * so an update never pops a second grouping on by itself.
+ */
+function withMissingShelves(
+	layout: RowsShelfLayoutEntry[],
+	shelves: ReadonlyArray<{ id: string }>,
+	groups: ReadonlyArray<ReadonlyArray<string>>,
+): RowsShelfLayoutEntry[] {
+	return shelves.reduce((built, shelf) => {
+		if (built.some((entry) => entry.id === shelf.id)) return built;
+		const excluded = built.some((entry) => shelvesExclude(entry.id, shelf.id, groups));
+		return [...built, { id: shelf.id, enabled: !excluded }];
+	}, layout);
+}
+
+/** Self-heal: an entry is switched off when an earlier one that stays on excludes it, so a hand-edited data.json can't show both. */
+function oneEnabledPerGroup(
+	layout: RowsShelfLayoutEntry[],
+	groups: ReadonlyArray<ReadonlyArray<string>>,
+): RowsShelfLayoutEntry[] {
+	return layout.reduce<RowsShelfLayoutEntry[]>((kept, entry) => {
+		const beaten = kept.some((earlier) => earlier.enabled && shelvesExclude(earlier.id, entry.id, groups));
+		return [...kept, { id: entry.id, enabled: entry.enabled && !beaten }];
+	}, []);
+}
+
+/**
+ * A valid rows layout from whatever was stored: what is no shelf entry, unknown ids and duplicates
+ * are dropped, registered shelves missing from the layout are appended. Always returns new objects.
  * `shelves` is the registry to validate against; `exclusiveGroups` lists ids that
  * can't both be on (first enabled in layout order wins).
  */
 export function normalizeRowsLayout(
-	stored: RowsShelfLayoutEntry[] | undefined,
+	stored: unknown,
 	shelves: ReadonlyArray<{ id: string }> = ROWS_SHELVES,
 	exclusiveGroups: ReadonlyArray<ReadonlyArray<string>> = ROWS_EXCLUSIVE_SHELVES,
 ): RowsShelfLayoutEntry[] {
-	const known = new Set(shelves.map((s) => s.id));
-	const out: RowsShelfLayoutEntry[] = [];
-	const seen = new Set<string>();
-	for (const entry of stored ?? []) {
-		if (!known.has(entry.id) || seen.has(entry.id)) continue;
-		seen.add(entry.id);
-		out.push({ id: entry.id, enabled: entry.enabled !== false });
-	}
-	for (const shelf of shelves) {
-		if (seen.has(shelf.id)) continue;
-		// a newly introduced alternative to a stored shelf (byStatus next to byType) appends
-		// DISABLED, so an update never pops a second grouping on by itself
-		const hasStoredSibling = exclusiveGroups.some(
-			(g) => g.includes(shelf.id) && out.some((e) => e.id !== shelf.id && g.includes(e.id)),
-		);
-		out.push({ id: shelf.id, enabled: !hasStoredSibling });
-	}
-	// self-heal: at most one enabled entry per group, so a hand-edited data.json can't show both
-	for (const group of exclusiveGroups) {
-		let found = false;
-		for (const entry of out) {
-			if (!group.includes(entry.id) || !entry.enabled) continue;
-			if (found) entry.enabled = false;
-			found = true;
-		}
-	}
-	return out;
+	const complete = withMissingShelves(storedShelves(stored, shelves), shelves, exclusiveGroups);
+	return oneEnabledPerGroup(complete, exclusiveGroups);
 }
 
 /** Card text placement: below the poster or overlaid at its bottom. */
