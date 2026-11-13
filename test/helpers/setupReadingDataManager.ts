@@ -4,10 +4,10 @@ import { ReadingDataManager } from '../../src/ReadingDataManager';
 import type { Book, Manga } from '../../src/types';
 
 export async function setupReadingDataManager(files: Record<string, string>) {
-	const { f, plugin, local, shared, index, stores } = await createStores(files, { createBase: true });
+	const { f, plugin, local, shared, index, stores, notices } = await createStores(files, { createBase: true });
 	const rdm = new ReadingDataManager(plugin, stores);
 	await rdm.init();
-	return { rdm, f, local, index, shared };
+	return { rdm, f, local, index, shared, notices };
 }
 
 export function makeBook(over: Partial<Book>): Book {
