@@ -4,7 +4,7 @@ import { VaultLayout } from '../../src/storage/VaultLayout';
 import { getBaseline } from '../../src/storage/baseline';
 import type { ManagerNotice } from '../../src/storage/storageTypes';
 import {
-	ensureFolder, freeNotePath, noteFile, parentOf, setChangedKeys, trashNote, writeEntry,
+	ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, setChangedKeys, trashNote, writeEntry,
 	type EntryWriteHooks, type NoteIo,
 } from '../../src/storage/noteWrite';
 
@@ -246,5 +246,33 @@ describe('writeEntry: a move', () => {
 		await h.write({ id: 'Books/A', title: 'A', rating: 3 });
 		expect(rename).not.toHaveBeenCalled();
 		expect(h.notices).toEqual([]);
+	});
+});
+
+describe('rewriteOwnedKeys', () => {
+	const OWNED = ['Name', 'Rating', 'Review', 'Status'];
+
+	it('sets what the encoder gives and deletes the owned keys it omits', () => {
+		const raw: Record<string, unknown> = { Name: 'old', Review: 'stale', myKey: 1 };
+		rewriteOwnedKeys(raw, OWNED, { Name: 'A', Rating: 3 }, new Set());
+		expect(raw).toEqual({ Name: 'A', myKey: 1, Rating: 3 });
+	});
+
+	it('never touches a key it does not own, whatever the encoder gives', () => {
+		const raw: Record<string, unknown> = { myKey: 1, 'Custom F': 'x' };
+		rewriteOwnedKeys(raw, OWNED, { Name: 'A', myKey: 2, 'Custom F': 'y' }, new Set());
+		expect(raw).toEqual({ myKey: 1, 'Custom F': 'x', Name: 'A' });
+	});
+
+	it('leaves a kept key that the note has as it is, given or omitted', () => {
+		const raw: Record<string, unknown> = { Rating: 'great', Review: 'unreadable' };
+		rewriteOwnedKeys(raw, OWNED, { Rating: 3 }, new Set(['Rating', 'Review']));
+		expect(raw).toEqual({ Rating: 'great', Review: 'unreadable' });
+	});
+
+	it('fills a kept key that the note lacks, and does not invent one the encoder omits', () => {
+		const raw: Record<string, unknown> = {};
+		rewriteOwnedKeys(raw, OWNED, { Rating: 3 }, new Set(['Rating', 'Review']));
+		expect(raw).toEqual({ Rating: 3 });
 	});
 });

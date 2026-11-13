@@ -11,7 +11,7 @@ import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBa
 import type { ApiOutcome } from './ApiService';
 import { ApiCheckQueue } from './apiCheckQueue';
 import type { LocalStore } from './storage/LocalStore';
-import { ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import { ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
 import type { EntryWriteHooks } from './storage/noteWrite';
 import type { ApiCheckResult, EntryCache, Notify } from './storage/storageTypes';
 import type { SharedConfigStore } from './storage/SharedConfigStore';
@@ -1442,15 +1442,7 @@ export class DataManager {
 			// derived from the unreadable watched text: 0% would be wrong
 			if (!isMovie(title.seasons, title.totalEpisodes)) keep.add(TITLE_PROPS.progress);
 		}
-		return this.processFrontMatter(file, title, (raw) => {
-			for (const key of TITLE_KEYS) {
-				if (key in out) {
-					if (!keep.has(key) || !(key in raw)) raw[key] = out[key];
-				} else if (!keep.has(key)) {
-					delete raw[key];
-				}
-			}
-		});
+		return this.processFrontMatter(file, title, (raw) => rewriteOwnedKeys(raw, TITLE_KEYS, out, keep));
 	}
 
 	// Note I/O

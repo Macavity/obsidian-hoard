@@ -75,6 +75,20 @@ export function setChangedKeys(raw: Fm, changed: string[], after: Fm): void {
 	}
 }
 
+/**
+ * Full rewrite of the plugin's own keys: a key the encoder gives is set, one it omits is deleted.
+ * A key in `keep` (the decoder could not read it) is left alone, and only filled when the note lacks it.
+ */
+export function rewriteOwnedKeys(raw: Fm, keys: Iterable<string>, out: Fm, keep: ReadonlySet<string>): void {
+	for (const key of keys) {
+		if (key in out) {
+			if (!keep.has(key) || !(key in raw)) raw[key] = out[key];
+		} else if (!keep.has(key)) {
+			delete raw[key];
+		}
+	}
+}
+
 /** What a manager tells the write pipeline about its kind of entry. */
 export interface EntryWriteHooks<T extends { id: string }> {
 	/** Stored state the copy was made from, when known. */

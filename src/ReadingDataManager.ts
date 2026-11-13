@@ -6,7 +6,7 @@ import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
 import type { LocalStore } from './storage/LocalStore';
-import { ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import { ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
 import type { EntryWriteHooks } from './storage/noteWrite';
 import { ChangeListeners } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
@@ -859,13 +859,7 @@ export class ReadingDataManager {
 		const out = this.encode(kind, item);
 		const keep = new Set(this.index.invalidFields(item.id));
 		return this.processFrontMatter(file, kind, item, (raw) => {
-			for (const key of KIND_KEYS[kind]) {
-				if (key in out) {
-					if (!keep.has(key) || !(key in raw)) raw[key] = out[key];
-				} else if (!keep.has(key)) {
-					delete raw[key];
-				}
-			}
+			rewriteOwnedKeys(raw, KIND_KEYS[kind], out, keep);
 			// custom values are user data: written when the item has one, never deleted
 			for (const key of Object.keys(out)) {
 				if (key.startsWith(CUSTOM_FIELD_PREFIX) && (!keep.has(key) || !(key in raw))) raw[key] = out[key];
