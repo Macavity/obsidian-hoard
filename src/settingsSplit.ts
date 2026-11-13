@@ -19,7 +19,8 @@ function withoutSecrets(shared: Record<string, unknown>): Record<string, unknown
 /**
  * Settings = DEFAULT_SETTINGS <- local (data.json) <- secrets <- shared (base); shared keys win,
  * except secret keys, which never come from the base.
- * Inputs are cloned, so backfills never mutate the stores or DEFAULT_SETTINGS.
+ * Inputs and defaults are cloned: the result shares no list or record with the stores or with
+ * DEFAULT_SETTINGS, so an edit in place changes neither, and `persistSettings` can see it.
  */
 export function composeSettings(
 	local: Record<string, unknown>,
@@ -28,18 +29,19 @@ export function composeSettings(
 ): HoardPluginSettings {
 	const saved = structuredClone({ ...local, ...secrets, ...withoutSecrets(shared) }) as Partial<HoardPluginSettings>;
 	for (const k of REMOVED_KEYS) delete (saved as Record<string, unknown>)[k];
-	const settings: HoardPluginSettings = Object.assign({}, DEFAULT_SETTINGS, saved);
+	const defaults = structuredClone(DEFAULT_SETTINGS);
+	const settings: HoardPluginSettings = Object.assign({}, defaults, saved);
 	if (saved.listFilters) {
 		settings.listFilters = Object.assign(
 			{},
-			DEFAULT_SETTINGS.listFilters,
+			defaults.listFilters,
 			saved.listFilters,
 		);
 	}
 	// per-tab merge so a partially saved record keeps defaults for the rest
 	settings.cardTextStyles = Object.assign(
 		{},
-		DEFAULT_SETTINGS.cardTextStyles,
+		defaults.cardTextStyles,
 		saved.cardTextStyles ?? {},
 	);
 	if (settings.animeApiSource === undefined) {
@@ -72,8 +74,7 @@ export function composeSettings(
 	if (settings.showUpcomingStatusBar === undefined) {
 		settings.showUpcomingStatusBar = true;
 	}
-	// normalize the stored rows layout (drops unknown ids, appends shelves missing from an older
-	// layout) and always take a fresh array so later in-place edits can't mutate DEFAULT_SETTINGS
+	// normalize the stored rows layout (drops unknown ids, appends shelves missing from an older layout)
 	settings.rowsLayout = normalizeRowsLayout(settings.rowsLayout);
 	// backfill the default Add type setting for existing installs
 	if (settings.defaultAddType === undefined) {
@@ -83,11 +84,11 @@ export function composeSettings(
 		settings.lastAddedType = '';
 	}
 	// array fields are never undefined after a partial merge
-	if (!settings.types?.length) settings.types = DEFAULT_SETTINGS.types;
-	if (!settings.statuses?.length) settings.statuses = DEFAULT_SETTINGS.statuses;
-	if (!settings.reviews?.length) settings.reviews = DEFAULT_SETTINGS.reviews;
-	if (!settings.priorities?.length) settings.priorities = DEFAULT_SETTINGS.priorities;
-	if (!settings.seasonPalette?.length) settings.seasonPalette = DEFAULT_SETTINGS.seasonPalette;
+	if (!settings.types?.length) settings.types = defaults.types;
+	if (!settings.statuses?.length) settings.statuses = defaults.statuses;
+	if (!settings.reviews?.length) settings.reviews = defaults.reviews;
+	if (!settings.priorities?.length) settings.priorities = defaults.priorities;
+	if (!settings.seasonPalette?.length) settings.seasonPalette = defaults.seasonPalette;
 	// the rating system must always be exactly five well-formed tiers; a missing or malformed value
 	// (older or hand-edited data) resets to defaults
 	if (
@@ -95,7 +96,7 @@ export function composeSettings(
 		settings.ratingSystem.length !== 5 ||
 		settings.ratingSystem.some((t) => !t || typeof t.label !== 'string' || typeof t.color !== 'string')
 	) {
-		settings.ratingSystem = DEFAULT_SETTINGS.ratingSystem.map((t) => ({ ...t }));
+		settings.ratingSystem = defaults.ratingSystem;
 	}
 	// migrate the Plan to watch colour from old grey to new teal
 	const ptw = settings.statuses.find((s) => s.name === 'Plan to watch');

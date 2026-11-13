@@ -283,3 +283,50 @@ describe('composeSettings and persistSettings', () => {
 		expect(local.data.settings.cardSize).toBe(2);
 	});
 });
+
+describe('composeSettings: independence from the defaults', () => {
+	const objectKeys = (Object.keys(DEFAULT_SETTINGS) as (keyof typeof DEFAULT_SETTINGS)[])
+		.filter((key) => typeof DEFAULT_SETTINGS[key] === 'object');
+
+	it('covers every list and record among the settings', () => {
+		expect(objectKeys).toHaveLength(14);
+	});
+
+	it.each(objectKeys)('hands out its own copy of %s', (key) => {
+		const settings = composeSettings({}, {});
+		expect(settings[key]).toEqual(DEFAULT_SETTINGS[key]);
+		expect(settings[key]).not.toBe(DEFAULT_SETTINGS[key]);
+	});
+
+	it('copies what the lists and records hold, too', () => {
+		const settings = composeSettings({}, {});
+		expect(settings.types[0]).not.toBe(DEFAULT_SETTINGS.types[0]);
+		expect(settings.statuses[0]).not.toBe(DEFAULT_SETTINGS.statuses[0]);
+		expect(settings.ratingSystem[0]).not.toBe(DEFAULT_SETTINGS.ratingSystem[0]);
+		expect(settings.listFilters.typeExclude).not.toBe(DEFAULT_SETTINGS.listFilters.typeExclude);
+	});
+
+	it('falls back to a copy, not to the default itself', () => {
+		const settings = compose({ types: [], reviews: null, priorities: [], seasonPalette: null, statuses: [] });
+		for (const key of ['types', 'reviews', 'priorities', 'seasonPalette', 'statuses'] as const) {
+			expect(settings[key]).toEqual(DEFAULT_SETTINGS[key]);
+			expect(settings[key]).not.toBe(DEFAULT_SETTINGS[key]);
+		}
+	});
+
+	it('merges saved list filters over a copy of the defaults', () => {
+		const settings = composeSettings({ listFilters: { sort: 'title' } }, {});
+		expect(settings.listFilters.typeExclude).not.toBe(DEFAULT_SETTINGS.listFilters.typeExclude);
+	});
+
+	it('keeps two composes apart', () => {
+		const first = composeSettings({}, {});
+		first.types.push({ name: 'Probe', color: '#000000' });
+		first.typeApiMapping.Probe = 'anime';
+		first.statuses[0]!.color = '#ABCDEF';
+		const second = composeSettings({}, {});
+		expect(second.types).toEqual(DEFAULT_TYPES);
+		expect(second.typeApiMapping).toEqual({});
+		expect(second.statuses).toEqual(DEFAULT_STATUSES);
+	});
+});
