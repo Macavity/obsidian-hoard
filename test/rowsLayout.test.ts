@@ -92,6 +92,14 @@ describe('normalizeRowsLayout: exclusive shelves', () => {
 		expect(brief(normalize(undefined, shelves, groups))).toEqual(['a', '-b', 'c', '-d', 'e']);
 	});
 
+	it('lets a shelf stay on when the one that excludes it was itself switched off', () => {
+		// groups that overlap: no registry has them. b loses to c, so a has no enabled rival left
+		const shelves = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }];
+		const groups = [['a', 'b'], ['b', 'c'], ['c', 'd']];
+		const stored = [{ id: 'c', enabled: true }, { id: 'b', enabled: true }, { id: 'a', enabled: true }];
+		expect(brief(normalize(stored, shelves, groups))).toEqual(['c', '-b', 'a', '-d', 'e']);
+	});
+
 	it('lets both grouped shelves be on without groups', () => {
 		const stored = [{ id: 'byType', enabled: true }, { id: 'byStatus', enabled: true }];
 		expect(brief(normalize(stored, GAMES_ROWS_SHELVES, [])).slice(0, 2)).toEqual(['byType', 'byStatus']);
