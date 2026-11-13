@@ -1,4 +1,4 @@
-import { TFile, getFrontMatterInfo, normalizePath, parseYaml, stringifyYaml } from 'obsidian';
+import { TFile, getFrontMatterInfo, parseYaml, stringifyYaml } from 'obsidian';
 import type { App } from 'obsidian';
 import type HoardPlugin from './main';
 import type { HistoryManager } from './HistoryManager';
@@ -6,7 +6,9 @@ import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
 import type { LocalStore } from './storage/LocalStore';
-import { renameTargetFree, updateFrontMatter } from './storage/noteWrite';
+import { dropOldId, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import type { EntryWriteHooks } from './storage/noteWrite';
+import { ChangeListeners } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -26,7 +28,7 @@ import {
 	READING_STATUSES,
 	DEFAULT_READING_STATUS_COLORS,
 } from './types';
-import { changedKeys, slugify } from './storage/sharedHelpers';
+import { slugify } from './storage/sharedHelpers';
 
 export type ReadingKind = 'book' | 'manga';
 
@@ -73,7 +75,7 @@ export class ReadingDataManager {
 	private shared: SharedConfigStore;
 	private layout: () => VaultLayout;
 	private notify: Notify;
-	private changeListeners: Array<() => void> = [];
+	private listeners = new ChangeListeners();
 	private historyManager: HistoryManager | null = null;
 
 	private settings: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
@@ -249,11 +251,11 @@ export class ReadingDataManager {
 	// Listeners
 
 	onChange(listener: () => void): void {
-		this.changeListeners.push(listener);
+		this.listeners.add(listener);
 	}
 
 	offChange(listener: () => void): void {
-		this.changeListeners = this.changeListeners.filter((l) => l !== listener);
+		this.listeners.remove(listener);
 	}
 
 	notifyChange(): void {
@@ -261,9 +263,7 @@ export class ReadingDataManager {
 	}
 
 	private notifyListeners(): void {
-		for (const listener of this.changeListeners) {
-			listener();
-		}
+		this.listeners.emit();
 	}
 
 	/**
@@ -503,7 +503,7 @@ export class ReadingDataManager {
 
 	private predictId(kind: ReadingKind, title: string): string {
 		const layout = this.layout();
-		return layout.idFromPath(this.freePath(layout.notePath(kind, title)));
+		return layout.idFromPath(freeNotePath(this.app, layout.notePath(kind, title)));
 	}
 
 	// Shared update/remove flows
@@ -731,34 +731,7 @@ export class ReadingDataManager {
 	}
 
 	private fileOf(id: string): TFile | null {
-		const f = this.app.vault.getAbstractFileByPath(this.layout().pathFromId(id));
-		return f instanceof TFile ? f : null;
-	}
-
-	/** First free `<name>.md`, `<name> 2.md`, … */
-	private freePath(path: string): string {
-		if (!this.app.vault.getAbstractFileByPath(path)) return path;
-		const base = path.slice(0, -3);
-		let n = 2;
-		while (this.app.vault.getAbstractFileByPath(`${base} ${n}.md`)) n++;
-		return `${base} ${n}.md`;
-	}
-
-	private parentOf(path: string): string {
-		const i = path.lastIndexOf('/');
-		return i < 0 ? '' : path.slice(0, i);
-	}
-
-	private async ensureFolder(path: string): Promise<void> {
-		const normalized = normalizePath(path);
-		if (!normalized || normalized === '/') return;
-		if (!this.app.vault.getAbstractFileByPath(normalized)) {
-			try {
-				await this.app.vault.createFolder(normalized);
-			} catch {
-				// folder may already exist
-			}
-		}
+		return noteFile(this.app, this.layout().pathFromId(id));
 	}
 
 	/** True when `item` was made from the stored state of its note (or nothing is stored yet). */
@@ -806,8 +779,8 @@ export class ReadingDataManager {
 	/** Creates the note for a new entry; the entry's id becomes the note path. */
 	private async createNote(kind: ReadingKind, item: ReadingItem): Promise<void> {
 		const layout = this.layout();
-		const path = this.freePath(layout.notePath(kind, item.title));
-		await this.ensureFolder(this.parentOf(path));
+		const path = freeNotePath(this.app, layout.notePath(kind, item.title));
+		await ensureFolder(this.app, parentOf(path));
 		const fm = this.encode(kind, item);
 		item.id = layout.idFromPath(path);
 		// index first, so the create event finds nothing new
@@ -821,54 +794,30 @@ export class ReadingDataManager {
 		}
 	}
 
-	/**
-	 * Writes an entry to its note: renames the file on a title change, then sets only the frontmatter
-	 * keys whose encoded value differs from the stored state (so unreadable or foreign fields stay
-	 * untouched unless this edit changes exactly that field). Creates the note when missing.
-	 */
+	/** What the write pipeline needs to know about a book or a manga. */
+	private writeHooks(kind: ReadingKind): EntryWriteHooks<ReadingItem> {
+		return {
+			baselineOf: (item) => getBaseline(item) ?? this.views.get(item.id)?.src ?? this.sourceOf(kind, item.id),
+			movedPath: (src, item) => (item.title !== src.title ? this.layout().notePath(kind, item.title) : null),
+			moveId: (from, to) => dropOldId({ index: this.index, views: this.views, dirty: this.dirty }, from, to),
+			prepare: () => (x) => this.encode(kind, x),
+			afterWrite: (item, fm) => this.afterWrite(kind, item, fm),
+			isLiveCopy: (item) => this.views.get(item.id)?.view === item,
+			// a copy made from the stored state becomes the live one, with a slot of its own if it had none
+			unchanged: (item, src) => {
+				if (src && this.basedOnStored(item)) this.views.set(item.id, { src, view: item });
+			},
+			create: (item) => this.createNote(kind, item),
+		};
+	}
+
+	/** Writes an entry to its note through the shared pipeline (`writeEntry`); creates the note when missing. */
 	private async writeItem(kind: ReadingKind, item: ReadingItem): Promise<void> {
-		let file = this.fileOf(item.id);
-		if (!file) {
-			await this.createNote(kind, item);
-			return;
-		}
-		const src = getBaseline(item) ?? this.views.get(item.id)?.src ?? this.sourceOf(kind, item.id);
-
-		if (src && item.title !== src.title) {
-			const target = this.layout().notePath(kind, item.title);
-			if (target !== file.path && renameTargetFree(this.app, target, this.notify)) {
-				await this.ensureFolder(this.parentOf(target));
-				await this.app.fileManager.renameFile(file, target);
-				const from = item.id;
-				const to = this.layout().idFromPath(target);
-				this.index.removeLocal(from);
-				this.views.delete(from);
-				if (this.dirty.delete(from)) this.dirty.add(to);
-				item.id = to;
-				file = this.fileOf(to) ?? file;
-			}
-		}
-
-		const before = src ? this.encode(kind, src) : {};
-		const after = this.encode(kind, item);
-		const changed = changedKeys(before, after);
-		if (changed.length > 0) {
-			const ok = await this.processFrontMatter(file, kind, item, (raw) => {
-				for (const key of changed) {
-					if (key in after) raw[key] = after[key];
-					else delete raw[key];
-				}
-			});
-			// a stale copy (not taken as the view) holds what the note holds for every field it knows
-			if (ok && this.views.get(item.id)?.view !== item) setBaseline(item, structuredClone(item));
-		} else if (src && this.basedOnStored(item)) {
-			this.views.set(item.id, { src, view: item });
-		}
+		await writeEntry({ app: this.app, layout: this.layout, notify: this.notify }, this.writeHooks(kind), item);
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		const file = this.fileOf(id);
-		if (file) await this.app.fileManager.trashFile(file);
+		await trashNote(this.app, this.layout().pathFromId(id));
 		this.index.removeLocal(id);
 		this.views.delete(id);
 		this.dirty.delete(id);
@@ -903,13 +852,7 @@ export class ReadingDataManager {
 		const out = this.encode(kind, item);
 		const keep = new Set(this.index.invalidFields(item.id));
 		return this.processFrontMatter(file, kind, item, (raw) => {
-			for (const key of KIND_KEYS[kind]) {
-				if (key in out) {
-					if (!keep.has(key) || !(key in raw)) raw[key] = out[key];
-				} else if (!keep.has(key)) {
-					delete raw[key];
-				}
-			}
+			rewriteOwnedKeys(raw, KIND_KEYS[kind], out, keep);
 			// custom values are user data: written when the item has one, never deleted
 			for (const key of Object.keys(out)) {
 				if (key.startsWith(CUSTOM_FIELD_PREFIX) && (!keep.has(key) || !(key in raw))) raw[key] = out[key];

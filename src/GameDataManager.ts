@@ -1,10 +1,12 @@
-import { TFile, normalizePath, stringifyYaml } from 'obsidian';
+import { TFile, stringifyYaml } from 'obsidian';
 import type HoardPlugin from './main';
 import type { HistoryManager } from './HistoryManager';
 import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
-import { renameTargetFree, updateFrontMatter } from './storage/noteWrite';
+import { dropOldId, ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import type { EntryWriteHooks } from './storage/noteWrite';
+import { ChangeListeners } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -25,7 +27,7 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from './types';
-import { changedKeys, sameJson, slugify } from './storage/sharedHelpers';
+import { sameJson, slugify } from './storage/sharedHelpers';
 
 const GAMES_FOLDER_PREFIX = 'Games/';
 
@@ -45,7 +47,7 @@ export class GameDataManager {
 	private shared: SharedConfigStore;
 	private layout: () => VaultLayout;
 	private notify: Notify;
-	private changeListeners: Array<() => void> = [];
+	private listeners = new ChangeListeners();
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from,
@@ -180,15 +182,15 @@ export class GameDataManager {
 	// Listeners
 
 	onChange(listener: () => void): void {
-		this.changeListeners.push(listener);
+		this.listeners.add(listener);
 	}
 
 	offChange(listener: () => void): void {
-		this.changeListeners = this.changeListeners.filter((l) => l !== listener);
+		this.listeners.remove(listener);
 	}
 
 	private notifyListeners(): void {
-		for (const listener of this.changeListeners) listener();
+		this.listeners.emit();
 	}
 
 	/** Writes every pending silent edit and in-place mutation of a handed-out copy, then notifies. */
@@ -526,29 +528,7 @@ export class GameDataManager {
 	}
 
 	private fileOf(id: string): TFile | null {
-		const f = this.plugin.app.vault.getAbstractFileByPath(this.layout().pathFromId(id));
-		return f instanceof TFile ? f : null;
-	}
-
-	private freePath(path: string): string {
-		const { vault } = this.plugin.app;
-		if (!vault.getAbstractFileByPath(path)) return path;
-		const base = path.slice(0, -3);
-		let n = 2;
-		while (vault.getAbstractFileByPath(`${base} ${n}.md`)) n++;
-		return `${base} ${n}.md`;
-	}
-
-	private async ensureFolder(path: string): Promise<void> {
-		const normalized = normalizePath(path);
-		if (!normalized || normalized === '/') return;
-		if (!this.plugin.app.vault.getAbstractFileByPath(normalized)) {
-			try {
-				await this.plugin.app.vault.createFolder(normalized);
-			} catch {
-				// folder may already exist
-			}
-		}
+		return noteFile(this.plugin.app, this.layout().pathFromId(id));
 	}
 
 	/** Frontmatter to store: the encoded game with the default status filled in. */
@@ -595,8 +575,8 @@ export class GameDataManager {
 	private async createNote(game: Game): Promise<void> {
 		const layout = this.layout();
 		if (!game.status) game.status = this.getSettings().defaultStatus || 'Not started';
-		const path = this.freePath(layout.notePath('game', game.title));
-		await this.ensureFolder(path.slice(0, path.lastIndexOf('/')));
+		const path = freeNotePath(this.plugin.app, layout.notePath('game', game.title));
+		await ensureFolder(this.plugin.app, parentOf(path));
 		game.id = layout.idFromPath(path);
 		const fm = this.encode(game);
 		// index first, so the create event finds nothing new
@@ -610,54 +590,32 @@ export class GameDataManager {
 		}
 	}
 
-	/**
-	 * Writes a game to its note: renames the file on a title change, then sets only the frontmatter
-	 * keys whose encoded value differs from the stored state (so unreadable or foreign fields stay
-	 * untouched unless this edit changes exactly that field). Creates the note when missing.
-	 */
-	private async writeGame(g: Game): Promise<void> {
-		let file = this.fileOf(g.id);
-		if (!file) {
-			await this.createNote(g);
-			return;
-		}
-		const indexed = this.index.get(g.id);
-		const src = getBaseline(g) ?? this.views.get(g.id)?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
-
-		if (src && g.title !== src.title) {
-			const target = this.layout().notePath('game', g.title);
-			if (target !== file.path && renameTargetFree(this.plugin.app, target, this.notify)) {
-				const oldId = g.id;
-				await this.plugin.app.fileManager.renameFile(file, target);
-				this.index.removeLocal(oldId);
-				this.views.delete(oldId);
-				if (this.dirty.delete(oldId)) this.dirty.add(this.layout().idFromPath(target));
-				g.id = this.layout().idFromPath(target);
-				file = this.fileOf(g.id) ?? file;
-			}
-		}
-
-		const before = src ? this.encode(src) : {};
-		const after = this.encode(g);
-		const changed = changedKeys(before, after);
-		if (changed.length > 0) {
-			const ok = await this.processFrontMatter(file, g, (raw) => {
-				for (const key of changed) {
-					if (key in after) raw[key] = after[key];
-					else delete raw[key];
-				}
-			});
-			// a stale copy (not taken as the view) holds what the note holds for every field it knows
-			if (ok && this.views.get(g.id)?.view !== g) setBaseline(g, structuredClone(g));
-		} else if (this.basedOnStored(g)) {
+	/** What the write pipeline needs to know about a game. */
+	private readonly writeHooks: EntryWriteHooks<Game> = {
+		baselineOf: (g) => {
+			const indexed = this.index.get(g.id);
+			return getBaseline(g) ?? this.views.get(g.id)?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
+		},
+		movedPath: (src, g) => (g.title !== src.title ? this.layout().notePath('game', g.title) : null),
+		moveId: (from, to) => dropOldId({ index: this.index, views: this.views, dirty: this.dirty }, from, to),
+		prepare: () => (x) => this.encode(x),
+		afterWrite: (g, fm) => this.afterWrite(g, fm),
+		isLiveCopy: (g) => this.views.get(g.id)?.view === g,
+		// a copy made from the stored state replaces the live one; without a slot there is none to replace
+		unchanged: (g) => {
 			const slot = this.views.get(g.id);
-			if (slot) slot.view = g;
-		}
+			if (slot && this.basedOnStored(g)) slot.view = g;
+		},
+		create: (g) => this.createNote(g),
+	};
+
+	/** Writes a game to its note through the shared pipeline (`writeEntry`); creates the note when missing. */
+	private async writeGame(g: Game): Promise<void> {
+		await writeEntry({ app: this.plugin.app, layout: this.layout, notify: this.notify }, this.writeHooks, g);
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		const file = this.fileOf(id);
-		if (file) await this.plugin.app.fileManager.trashFile(file);
+		await trashNote(this.plugin.app, this.layout().pathFromId(id));
 		this.index.removeLocal(id);
 		this.views.delete(id);
 		this.dirty.delete(id);

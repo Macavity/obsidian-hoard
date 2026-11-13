@@ -1,4 +1,4 @@
-import { App, TAbstractFile, TFile, normalizePath, stringifyYaml } from 'obsidian';
+import { App, TAbstractFile, TFile, stringifyYaml } from 'obsidian';
 import type HoardPlugin from './main';
 import type { DraftPersistState, Season, HoardTitle, HoardGroup, AirtimeEntry, AirtimeSchedule, EntryAirtime, MaybeTitle, RecommendedDaily, SavedFilterPreset, Book, Manga, Game } from './types';
 import type { HistoryManager } from './HistoryManager';
@@ -11,7 +11,8 @@ import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBa
 import type { ApiOutcome } from './ApiService';
 import { ApiCheckQueue } from './apiCheckQueue';
 import type { LocalStore } from './storage/LocalStore';
-import { renameTargetFree, updateFrontMatter } from './storage/noteWrite';
+import { ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import type { EntryWriteHooks } from './storage/noteWrite';
 import type { ApiCheckResult, EntryCache, Notify } from './storage/storageTypes';
 import type { SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -21,8 +22,9 @@ import { decodeBook, decodeManga, encodeAirtime } from './storage/readingCodec';
 import { decodeGame } from './storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
-import { changedKeys, sameJson } from './storage/sharedHelpers';
+import { sameJson } from './storage/sharedHelpers';
 import { emitDataChanged } from './changeSignal';
+import { ChangeListeners } from './changeListeners';
 
 export interface DataStores {
 	index: EntryIndex;
@@ -80,7 +82,7 @@ export class DataManager {
 	private shared: SharedConfigStore;
 	private layout: () => VaultLayout;
 	private notify: Notify;
-	private changeListeners: Array<() => void> = [];
+	private listeners = new ChangeListeners();
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from:
@@ -1207,11 +1209,11 @@ export class DataManager {
 	// Listeners
 
 	onChange(listener: () => void): void {
-		this.changeListeners.push(listener);
+		this.listeners.add(listener);
 	}
 
 	offChange(listener: () => void): void {
-		this.changeListeners = this.changeListeners.filter((l) => l !== listener);
+		this.listeners.remove(listener);
 	}
 
 	/** Public trigger for external callers (e.g. CsvModal) that need to force a UI refresh. */
@@ -1220,9 +1222,7 @@ export class DataManager {
 	}
 
 	private notifyListeners(): void {
-		for (const listener of this.changeListeners) {
-			listener();
-		}
+		this.listeners.emit();
 		emitDataChanged();
 	}
 
@@ -1397,15 +1397,7 @@ export class DataManager {
 	}
 
 	async ensureFolder(path: string): Promise<void> {
-		const normalized = normalizePath(path);
-		if (!normalized || normalized === '/') return;
-		if (!this.app.vault.getAbstractFileByPath(normalized)) {
-			try {
-				await this.app.vault.createFolder(normalized);
-			} catch {
-				// folder may already exist
-			}
-		}
+		await ensureFolder(this.app, path);
 	}
 
 	/** Path of the title's note: its id below the root. */
@@ -1450,36 +1442,13 @@ export class DataManager {
 			// derived from the unreadable watched text: 0% would be wrong
 			if (!isMovie(title.seasons, title.totalEpisodes)) keep.add(TITLE_PROPS.progress);
 		}
-		return this.processFrontMatter(file, title, (raw) => {
-			for (const key of TITLE_KEYS) {
-				if (key in out) {
-					if (!keep.has(key) || !(key in raw)) raw[key] = out[key];
-				} else if (!keep.has(key)) {
-					delete raw[key];
-				}
-			}
-		});
+		return this.processFrontMatter(file, title, (raw) => rewriteOwnedKeys(raw, TITLE_KEYS, out, keep));
 	}
 
 	// Note I/O
 
 	private fileOf(id: string): TFile | null {
-		const f = this.app.vault.getAbstractFileByPath(this.layout().pathFromId(id));
-		return f instanceof TFile ? f : null;
-	}
-
-	/** First free `<name>.md`, `<name> 2.md`, … */
-	private freePath(path: string): string {
-		if (!this.app.vault.getAbstractFileByPath(path)) return path;
-		const base = path.slice(0, -3);
-		let n = 2;
-		while (this.app.vault.getAbstractFileByPath(`${base} ${n}.md`)) n++;
-		return `${base} ${n}.md`;
-	}
-
-	private parentOf(path: string): string {
-		const i = path.lastIndexOf('/');
-		return i < 0 ? '' : path.slice(0, i);
+		return noteFile(this.app, this.layout().pathFromId(id));
 	}
 
 	/**
@@ -1506,8 +1475,8 @@ export class DataManager {
 		const fetchable = !!title.tmdbId || !!title.malId || !!title.anilistId
 			|| externalIdFromLink(title.externalLink) !== null;
 		if (!fetchable && title.seasons.length > 0) title.seasonsOverride = true;
-		const path = this.freePath(layout.notePath('title', title.title, title.type));
-		await this.ensureFolder(this.parentOf(path));
+		const path = freeNotePath(this.app, layout.notePath('title', title.title, title.type));
+		await this.ensureFolder(parentOf(path));
 		const fm = titleToProperties(title, this.getProgress(title), this.seasonsPending(title));
 		const notes = title.notes ?? '';
 		title.id = layout.idFromPath(path);
@@ -1523,65 +1492,56 @@ export class DataManager {
 		}
 	}
 
-	/**
-	 * Writes a title to its note: renames the file on a title/type change, then sets only the
-	 * frontmatter keys whose encoded value differs from the stored state (so unreadable or foreign
-	 * fields stay untouched unless this edit changes exactly that field), and the `## Notes` body when
-	 * it changed.
-	 */
-	private async writeTitle(t: HoardTitle): Promise<void> {
-		let file = this.fileOf(t.id);
-		if (!file) {
-			await this.createNote(t);
-			return;
-		}
-		const src = this.baselineOf(t);
-
-		if (src && (t.title !== src.title || t.type !== src.type)) {
-			const target = this.layout().notePath('title', t.title, t.type);
-			if (target !== file.path && renameTargetFree(this.app, target, this.notify)) {
-				await this.ensureFolder(this.parentOf(target));
-				await this.app.fileManager.renameFile(file, target);
-				this.moveId(t.id, this.layout().idFromPath(target));
-				t.id = this.layout().idFromPath(target);
-				file = this.fileOf(t.id) ?? file;
-			}
-		}
-
-		// edited seasons belong in the note, so they reach other devices (the cache stays per device)
-		const seasonList = (x: HoardTitle): string[] => x.seasons.map((s) => `${s.name}: ${s.episodes}`);
-		if (src && t.seasons.length > 0 && !sameJson(seasonList(src), seasonList(t))) t.seasonsOverride = true;
-		const pending = this.seasonsPending(t);
-		const before = src ? titleToProperties(src, this.getProgress(src), pending) : {};
-		const after = titleToProperties(t, this.getProgress(t), pending);
-		const changed = changedKeys(before, after);
-		if (changed.length > 0) {
-			const ok = await this.processFrontMatter(file, t, (raw) => {
-				for (const key of changed) {
-					if (key in after) raw[key] = after[key];
-					else delete raw[key];
-				}
-			});
-			if (!ok) return;
-			// a stale copy (not taken as the view) holds what the note holds for every field it knows
-			if (this.views.get(t.id)?.view !== t) setBaseline(t, structuredClone(t));
-		} else if (this.basedOnStored(t)) {
-			// nothing for the note; API data may still have changed
+	/** What the write pipeline needs to know about a title. */
+	private readonly writeHooks: EntryWriteHooks<HoardTitle> = {
+		baselineOf: (t) => this.baselineOf(t),
+		movedPath: (src, t) => (t.title !== src.title || t.type !== src.type ? this.layout().notePath('title', t.title, t.type) : null),
+		moveId: (from, to) => this.moveId(from, to),
+		prepare: (t, src) => {
+			// edited seasons belong in the note, so they reach other devices (the cache stays per device)
+			const seasonList = (x: HoardTitle): string[] => x.seasons.map((s) => `${s.name}: ${s.episodes}`);
+			if (src && t.seasons.length > 0 && !sameJson(seasonList(src), seasonList(t))) t.seasonsOverride = true;
+			const pending = this.seasonsPending(t);
+			return (x) => titleToProperties(x, this.getProgress(x), pending);
+		},
+		afterWrite: (t, fm) => this.afterWrite(t, fm),
+		isLiveCopy: (t) => this.views.get(t.id)?.view === t,
+		// nothing for the note; API data may still have changed. Without a slot there is no live copy to replace
+		unchanged: (t) => {
+			if (!this.basedOnStored(t)) return;
 			this.syncCache(t);
 			const slot = this.views.get(t.id);
 			if (slot) slot.view = t;
-		}
+		},
+		create: (t) => this.createNote(t),
+	};
 
-		// the body follows the same rule as the frontmatter: a copy only writes what it changed itself,
-		// so a stale copy cannot undo an edit that arrived from another device meanwhile
+	/**
+	 * Writes a title to its note through the shared pipeline (`writeEntry`), then the `## Notes` body
+	 * when the copy changed it. A note that was just created already holds its body; one that could
+	 * not be read is left alone altogether.
+	 */
+	private async writeTitle(t: HoardTitle): Promise<void> {
+		const outcome = await writeEntry({ app: this.app, layout: this.layout, notify: this.notify }, this.writeHooks, t);
+		if (outcome === 'created' || outcome === 'unreadable') return;
+		await this.writeNotesBody(t);
+	}
+
+	/**
+	 * The body follows the same rule as the frontmatter: a copy only writes what it changed itself,
+	 * so a stale copy cannot undo an edit that arrived from another device meanwhile.
+	 */
+	private async writeNotesBody(t: HoardTitle): Promise<void> {
 		const notes = t.notes;
+		if (typeof notes !== 'string') return;
 		const current = this.notes.get(t.id) ?? '';
-		if (typeof notes === 'string' && notes !== (getNotesBaseline(t) ?? current) && notes !== current) {
+		const file = this.fileOf(t.id);
+		if (file && notes !== (getNotesBaseline(t) ?? current) && notes !== current) {
 			// set first: the modify event of this write then sees no change
 			this.notes.set(t.id, notes);
 			await this.app.vault.process(file, (content) => replaceNotesSection(content, notes));
 		}
-		if (typeof notes === 'string') setNotesBaseline(t, this.notes.get(t.id) ?? '');
+		setNotesBaseline(t, this.notes.get(t.id) ?? '');
 	}
 
 	/** Stored state a copy was made from; falls back to the current slot or index entry. */
@@ -1631,8 +1591,7 @@ export class DataManager {
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		const file = this.fileOf(id);
-		if (file) await this.app.fileManager.trashFile(file);
+		await trashNote(this.app, this.layout().pathFromId(id));
 		this.index.removeLocal(id);
 		this.local.deleteCache(id);
 		this.views.delete(id);
