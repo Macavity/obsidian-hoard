@@ -4,7 +4,8 @@ import type { HistoryManager } from './HistoryManager';
 import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
-import { ensureFolder, freeNotePath, noteFile, parentOf, renameTargetFree, trashNote, updateFrontMatter } from './storage/noteWrite';
+import { ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import type { EntryWriteHooks } from './storage/noteWrite';
 import { ChangeListeners } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
@@ -26,7 +27,7 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from './types';
-import { changedKeys, sameJson, slugify } from './storage/sharedHelpers';
+import { sameJson, slugify } from './storage/sharedHelpers';
 
 const GAMES_FOLDER_PREFIX = 'Games/';
 
@@ -589,49 +590,35 @@ export class GameDataManager {
 		}
 	}
 
-	/**
-	 * Writes a game to its note: renames the file on a title change, then sets only the frontmatter
-	 * keys whose encoded value differs from the stored state (so unreadable or foreign fields stay
-	 * untouched unless this edit changes exactly that field). Creates the note when missing.
-	 */
-	private async writeGame(g: Game): Promise<void> {
-		let file = this.fileOf(g.id);
-		if (!file) {
-			await this.createNote(g);
-			return;
-		}
-		const indexed = this.index.get(g.id);
-		const src = getBaseline(g) ?? this.views.get(g.id)?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
-
-		if (src && g.title !== src.title) {
-			const target = this.layout().notePath('game', g.title);
-			if (target !== file.path && renameTargetFree(this.plugin.app, target, this.notify)) {
-				const oldId = g.id;
-				await this.plugin.app.fileManager.renameFile(file, target);
-				this.index.removeLocal(oldId);
-				this.views.delete(oldId);
-				if (this.dirty.delete(oldId)) this.dirty.add(this.layout().idFromPath(target));
-				g.id = this.layout().idFromPath(target);
-				file = this.fileOf(g.id) ?? file;
-			}
-		}
-
-		const before = src ? this.encode(src) : {};
-		const after = this.encode(g);
-		const changed = changedKeys(before, after);
-		if (changed.length > 0) {
-			const ok = await this.processFrontMatter(file, g, (raw) => {
-				for (const key of changed) {
-					if (key in after) raw[key] = after[key];
-					else delete raw[key];
-				}
-			});
-			// a stale copy (not taken as the view) holds what the note holds for every field it knows
-			if (ok && this.views.get(g.id)?.view !== g) setBaseline(g, structuredClone(g));
-		} else if (this.basedOnStored(g)) {
+	/** What the write pipeline needs to know about a game. */
+	private readonly writeHooks: EntryWriteHooks<Game> = {
+		baselineOf: (g) => {
+			const indexed = this.index.get(g.id);
+			return getBaseline(g) ?? this.views.get(g.id)?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
+		},
+		movedPath: (src, g) => (g.title !== src.title ? this.layout().notePath('game', g.title) : null),
+		moveId: (from, to) => this.moveId(from, to),
+		prepare: () => (x) => this.encode(x),
+		afterWrite: (g, fm) => this.afterWrite(g, fm),
+		isLiveCopy: (g) => this.views.get(g.id)?.view === g,
+		// a copy made from the stored state replaces the live one; without a slot there is none to replace
+		unchanged: (g) => {
 			const slot = this.views.get(g.id);
-			if (slot) slot.view = g;
-		}
+			if (slot && this.basedOnStored(g)) slot.view = g;
+		},
+		create: (g) => this.createNote(g),
+	};
+
+	/** Drops what is held under the old id of a renamed note; a pending silent edit follows to the new id. */
+	private moveId(from: string, to: string): void {
+		this.index.removeLocal(from);
+		this.views.delete(from);
+		if (this.dirty.delete(from)) this.dirty.add(to);
+	}
+
+	/** Writes a game to its note through the shared pipeline (`writeEntry`); creates the note when missing. */
+	private async writeGame(g: Game): Promise<void> {
+		await writeEntry({ app: this.plugin.app, layout: this.layout, notify: this.notify }, this.writeHooks, g);
 	}
 
 	private async deleteNote(id: string): Promise<void> {
