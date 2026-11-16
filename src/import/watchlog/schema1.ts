@@ -1,20 +1,19 @@
 import { normalizePath, type DataAdapter } from 'obsidian';
-import type { Book, EntryAirtime, GamesData, Manga, ReadingCustomColumn, ReadingData } from '../../types';
-import type { HistoryEntry } from '../../HistoryManager';
+import type { Book, EntryAirtime, Manga, ReadingCustomColumn } from '../../types';
 import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
 import type { EntryCache, EntryKind, Fm } from '../../storage/storageTypes';
 import { titleToProperties, titleToCache } from '../../storage/titleCodec';
 import { encodeBook, encodeManga } from '../../storage/readingCodec';
 import { encodeGame } from '../../storage/gameCodec';
 import { externalIdFromLink } from '../../storage/externalId';
+import { at, readList, readStringList } from '../../storage/read';
 import { NoteWriter, ensureFolder, sameValue } from './schema1Notes';
 import { collectAirtime, collectGroups, importHistory } from './schema1Records';
-import {
-	normalizeGames, normalizeReading, normalizeTitle, orphanValues, progressOf, watchLogApiValues,
-} from './schema1Normalize';
+import { normalizeReading, normalizeTitle, orphanValues, progressOf, watchLogApiValues } from './schema1Normalize';
+import { prepareData, readHistory } from './schema1Read';
 import {
 	REMOVED_SETTINGS, WISHLIST, isRecord,
-	type IdMaps, type ImportContext, type ImportHooks, type WatchLogData, type WatchLogTitle,
+	type IdMaps, type ImportContext, type ImportHooks, type PreparedData, type WatchLogData, type WatchLogTitle,
 } from './schema1Types';
 import { emptyImportReport, type ImportReport } from './report';
 
@@ -48,11 +47,12 @@ export async function mergeSideFiles(adapter: DataAdapter, dir: string, data: Wa
 	};
 	const reading = await readJson('reading.json');
 	const hasReading = (data.reading?.books?.length ?? 0) > 0 || (data.reading?.manga?.length ?? 0) > 0;
-	if (isRecord(reading) && !hasReading) data.reading = reading as unknown as ReadingData;
-	const history = await readJson('history.json');
-	if (isRecord(history) && Array.isArray(history.entries) && !data.history?.length) {
-		data.history = history.entries as HistoryEntry[];
+	if (isRecord(reading) && !hasReading) {
+		data.skipped ??= [];
+		data.reading = normalizeReading(reading, data.skipped);
 	}
+	const history = await readJson('history.json');
+	if (!data.history?.length) data.history = readList(at(history, 'entries'), readHistory);
 }
 
 class Schema1Migration {
@@ -75,6 +75,7 @@ class Schema1Migration {
 	/** The notes, base, history and cache part of an import, plus missing device-local settings. */
 	async importData(): Promise<void> {
 		const data = this.prepare();
+		for (const label of data.skipped) this.fail(label, new Error('no id or title to name the note by'));
 		await this.importEntries(data);
 		this.hooks.progress?.('history', 1, 1);
 		await importHistory(this.ctx.history, data, this.ids);
@@ -96,29 +97,24 @@ class Schema1Migration {
 	}
 
 	/** A normalized copy of the data with WatchLog's load-time corrections applied. */
-	private prepare(): WatchLogData {
-		const data = structuredClone(this.source);
-		data.settings = isRecord(data.settings) ? data.settings : {};
+	private prepare(): PreparedData {
+		const data = prepareData(structuredClone(this.source));
 		// 'Wishlist' is a flag now; a stored exclude would linger as a filter without a checkbox
-		const filters = (data.settings as Record<string, unknown>).gamesFilters;
+		const filters = at(data.settings, 'gamesFilters');
 		if (isRecord(filters) && Array.isArray(filters.statusExclude)) {
-			filters.statusExclude = (filters.statusExclude as unknown[]).filter((n) => n !== WISHLIST);
+			filters.statusExclude = readStringList(filters.statusExclude).filter((n) => n !== WISHLIST);
 		}
-		data.titles = (Array.isArray(data.titles) ? data.titles : []).map(normalizeTitle);
-		data.groups = Array.isArray(data.groups) ? data.groups : [];
-		data.reading = normalizeReading(data.reading);
-		data.games = normalizeGames(data.games);
 		return data;
 	}
 
 	/** Creates the base, or fills an empty `hoard:` block; the store whitelists out every secret. */
-	private async ensureBase(data: WatchLogData): Promise<void> {
+	private async ensureBase(data: PreparedData): Promise<void> {
 		const { shared, layout } = this.ctx;
-		const reading = data.reading as ReadingData;
+		const reading = data.reading;
 		const initial: Record<string, unknown> = {
 			...data.settings,
 			reading: { ...reading.settings, bookColumns: reading.bookColumns, mangaColumns: reading.mangaColumns },
-			games: (data.games as GamesData).settings,
+			games: data.games.settings,
 		};
 		await shared.load();
 		if (!shared.baseFile()) {
@@ -140,10 +136,10 @@ class Schema1Migration {
 		return p;
 	}
 
-	private async importEntries(data: WatchLogData): Promise<void> {
-		const reading = data.reading as ReadingData;
+	private async importEntries(data: PreparedData): Promise<void> {
+		const reading = data.reading;
 		this.total = data.titles.length + (data.maybe?.length ?? 0) + reading.books.length + reading.manga.length
-			+ (data.games as GamesData).games.length;
+			+ data.games.games.length;
 		const groups = collectGroups(data, this.ids);
 		const airtime = collectAirtime(data);
 		const extras: Extras = (item, key) => {
@@ -158,7 +154,7 @@ class Schema1Migration {
 		await this.importReadingAndGames(data, extras);
 	}
 
-	private async importTitles(data: WatchLogData, extras: Extras): Promise<void> {
+	private async importTitles(data: PreparedData, extras: Extras): Promise<void> {
 		const layout = this.ctx.layout;
 		for (const t of data.titles) {
 			await this.entry(`title:${t.id}`, async () => {
@@ -171,7 +167,7 @@ class Schema1Migration {
 	}
 
 	/** Maybe titles become titles with `maybe: true`; one already in the library is skipped. */
-	private async importMaybe(data: WatchLogData): Promise<void> {
+	private async importMaybe(data: PreparedData): Promise<void> {
 		const layout = this.ctx.layout;
 		for (const m of data.maybe ?? []) {
 			const path = layout.notePath('title', m.title, m.type);
@@ -192,9 +188,9 @@ class Schema1Migration {
 		}
 	}
 
-	private async importReadingAndGames(data: WatchLogData, extras: Extras): Promise<void> {
+	private async importReadingAndGames(data: PreparedData, extras: Extras): Promise<void> {
 		const layout = this.ctx.layout;
-		const reading = data.reading as ReadingData;
+		const reading = data.reading;
 		const place = (kind: 'book' | 'manga' | 'game', title: string, oldId: string): { path: string; id: string } => {
 			const path = this.claim(layout.notePath(kind, title));
 			const id = layout.idFromPath(path);
@@ -217,7 +213,7 @@ class Schema1Migration {
 				await this.put('manga', path, m.title, encodeManga(manga, reading.mangaColumns), '## Notes\n\n\n## Quotes\n');
 			});
 		}
-		for (const g of (data.games as GamesData).games) {
+		for (const g of data.games.games) {
 			await this.entry(`game:${g.id}`, async () => {
 				const { path, id } = place('game', g.title, g.id);
 				const game = extras({ ...g, id, vaultPage: `${id}.md` }, `game:${g.id}`);
@@ -266,7 +262,8 @@ class Schema1Migration {
 			this.fail(path, e);
 			// history must not link to a note that does not exist
 			const id = this.ctx.layout.idFromPath(path);
-			for (const map of Object.values(this.ids) as Map<string, string>[]) for (const [k, v] of map) if (v === id) map.delete(k);
+			const { title: titles, book, manga, game, group } = this.ids;
+			for (const map of [titles, book, manga, game, group]) for (const [k, v] of map) if (v === id) map.delete(k);
 		}
 		this.advance();
 	}

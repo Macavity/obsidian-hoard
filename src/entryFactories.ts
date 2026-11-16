@@ -4,7 +4,6 @@ import { defined } from './storage/sharedHelpers';
 /**
  * New library entries. Each factory owns the defaults of its kind: a caller passes what it knows,
  * a field passed as `undefined` is left out and never replaces a default. `now` stamps both dates.
- * The WatchLog import does not use these; its defaults describe the old format.
  */
 
 export type NewTitle = Pick<HoardTitle, 'id' | 'title' | 'type'> & Partial<HoardTitle>;

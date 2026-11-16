@@ -1,10 +1,10 @@
 import { READING_STATUSES } from './types';
 import type {
-	AirtimeRecurrence, Book, EntryAirtime, Game, HoardTitle, Manga, MaybeTitle, ReadingStatus, TitleOverrides,
+	AirtimeRecurrence, Book, EntryAirtime, Game, GameGroup, HoardTitle, Manga, MaybeTitle, ReadingStatus, TitleOverrides,
 } from './types';
 import { newBook, newGame, newManga, newTitle } from './entryFactories';
 import { readSeason } from './storage/readCache';
-import { at, readList, readOptionalNumber, readOptionalString, readStringList } from './storage/read';
+import { at, readList, readOptionalNumber, readOptionalString, readString, readStringList } from './storage/read';
 import { defined, isRecord } from './storage/sharedHelpers';
 
 /**
@@ -183,4 +183,11 @@ export function readGame(v: unknown): Game | undefined {
 			dateFavorited: optText(v, 'dateFavorited'), groups: list(v, 'groups'), airtime: readAirtime(at(v, 'airtime')),
 		}),
 	});
+}
+
+export function readGameGroup(v: unknown): GameGroup | undefined {
+	const id = at(v, 'id');
+	const name = at(v, 'name');
+	if (typeof id !== 'string' || typeof name !== 'string') return undefined;
+	return { id, name, gameIds: readStringList(at(v, 'gameIds')), dateAdded: readString(at(v, 'dateAdded')) };
 }

@@ -3,17 +3,17 @@ import type { ReadingDataManager } from './ReadingDataManager';
 import type { GameDataManager } from './GameDataManager';
 import type { HistoryEntry, HistoryManager } from './HistoryManager';
 import { DEFAULT_SETTINGS, defaultGamesSettings } from './types';
-import type { GameGroup, GamesData, MaybeTitle, ReadingData, HoardTitle } from './types';
+import type { GamesData, MaybeTitle, ReadingData, HoardTitle } from './types';
 import type { LocalStore } from './storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { ImportContext } from './import/watchlog/schema1Types';
 import { withoutCredentials } from './jikanBase';
 import { SECRET_KEYS } from './storage/SecretStore';
 import { isRecord, toRecord } from './storage/sharedHelpers';
-import { at, readList, readRecord, readString, readStringList } from './storage/read';
+import { at, readList, readRecord, readString } from './storage/read';
 import { normalizeSettings } from './settingsNormalize';
 import { readColumns, readGamesSettings, readReadingSettings } from './featureSettings';
-import { readBook, readGame, readManga, readMaybe, readTitle } from './backupEntries';
+import { readBook, readGame, readGameGroup, readManga, readMaybe, readTitle } from './backupEntries';
 
 export interface BackupManagers {
 	dataManager: DataManager;
@@ -87,13 +87,6 @@ export function withoutSecrets(b: BackupFile): BackupFile {
 export type BackupErrorCode =
 	| 'parseJson' | 'notObject' | 'titlesMissing' | 'readingMissing' | 'gamesMissing' | 'sharedMissing'
 	| 'historyInvalid' | 'localInvalid' | 'unsupportedFormat';
-
-function readGameGroup(v: unknown): GameGroup | undefined {
-	const id = at(v, 'id');
-	const name = at(v, 'name');
-	if (typeof id !== 'string' || typeof name !== 'string') return undefined;
-	return { id, name, gameIds: readStringList(at(v, 'gameIds')), dateAdded: readString(at(v, 'dateAdded')) };
-}
 
 function readHistoryEntry(v: unknown): HistoryEntry | undefined {
 	const id = at(v, 'id');

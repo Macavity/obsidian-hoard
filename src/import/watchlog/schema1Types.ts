@@ -31,7 +31,12 @@ export interface WatchLogData {
 	history?: HistoryEntry[];
 	migratedReadingHistory?: boolean;
 	games?: GamesData;
+	/** Entries a read could not use (`<kind> <position>`); the import reports them. */
+	skipped?: string[];
 }
+
+/** WatchLog data as the import works on it: read, normalized, with reading and games always present. */
+export type PreparedData = WatchLogData & { reading: ReadingData; games: GamesData; skipped: string[] };
 
 /** Optional hooks of an import run: progress and the body source of newly created notes. */
 export interface ImportHooks {

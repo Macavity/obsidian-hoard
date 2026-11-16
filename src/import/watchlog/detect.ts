@@ -3,8 +3,11 @@ import { hasTopLevelKey } from '../../storage/baseFile';
 import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
 import type { LocalData } from '../../storage/storageTypes';
 import { isRecord } from '../../storage/sharedHelpers';
+import { at, readRecord } from '../../storage/read';
+import { readCache, readUi } from '../../storage/readCache';
 import { DEFAULT_SETTINGS } from '../../types';
 import type { WatchLogData } from './schema1Types';
+import { prepareData } from './schema1Read';
 import { isListNote, originalFolders } from './originalPaths';
 import { nestedHoardRoot } from './paths';
 
@@ -121,7 +124,7 @@ async function originalCounts(app: App, data: WatchLogData): Promise<SourceCount
 async function detectOriginal(app: App): Promise<OriginalSource | null> {
 	const found = await readPluginData(pluginSource(app), ORIGINAL_ID);
 	if (!found || !isRecord(found.raw) || !Array.isArray(found.raw.titles)) return null;
-	const data = found.raw as unknown as WatchLogData;
+	const data = prepareData(found.raw);
 	return {
 		kind: 'original', dir: found.dir, data, counts: await originalCounts(app, data),
 		pluginEnabled: isEnabled(app, ORIGINAL_ID),
@@ -133,9 +136,8 @@ async function detectOriginal(app: App): Promise<OriginalSource | null> {
  * `hoard:` block); a `settings:` level in between is tolerated. Throws on invalid YAML.
  */
 export function forkBaseTypes(content: string): unknown {
-	const block = (parseYaml(content) as Record<string, unknown> | null)?.[WATCHLOG_KEY];
-	if (!isRecord(block)) return undefined;
-	return block.types ?? (isRecord(block.settings) ? block.settings.types : undefined);
+	const block = at(parseYaml(content), WATCHLOG_KEY);
+	return at(block, 'types') ?? at(block, 'settings', 'types');
 }
 
 /** Type names from the base's `watchlog:` block; Hoard's defaults when it lists none. */
@@ -154,7 +156,17 @@ async function readTypeNames(app: App, base: TFile): Promise<string[]> {
 
 async function readForkData(app: App): Promise<LocalData | null> {
 	const found = await readPluginData(pluginSource(app), FORK_ID);
-	return found && isRecord(found.raw) && found.raw.schemaVersion === 2 ? (found.raw as unknown as LocalData) : null;
+	if (!found || !isRecord(found.raw) || found.raw.schemaVersion !== 2) return null;
+	const raw = found.raw;
+	return {
+		...raw,
+		schemaVersion: 2,
+		settings: readRecord(raw.settings),
+		reading: isRecord(raw.reading) ? raw.reading : undefined,
+		games: isRecord(raw.games) ? raw.games : undefined,
+		cache: readCache(raw.cache),
+		ui: readUi(raw.ui),
+	};
 }
 
 function forkCounts(app: App, root: string, typeNames: string[], hoardRoot: string | null): SourceCounts {
