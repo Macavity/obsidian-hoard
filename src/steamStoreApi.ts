@@ -1,4 +1,5 @@
 import type { GameDetailsResult, GameSearchResult, SteamAppDetails } from './ApiService';
+import { isRecord } from './storage/sharedHelpers';
 
 /**
  * The portrait library capsule. Steam's `header_image` is a 460×215 landscape banner that
@@ -19,9 +20,6 @@ export function steamStoreSearchUrl(query: string): string {
 	return `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(query)}&l=english&cc=US`;
 }
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-	return typeof v === 'object' && v !== null;
-}
 
 function platformNames(raw: unknown): string[] {
 	if (!isRecord(raw)) return [];

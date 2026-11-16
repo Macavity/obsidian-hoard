@@ -6,7 +6,7 @@ import globals from "globals";
 
 export default defineConfig([
   {
-    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "vitest.config.ts", "scripts/**", "test/e2e/**", ".ref/**", "spike/**", ".claude/**"]
+    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "vitest.config.ts", "scripts/**", "test/e2e/**", ".ref/**", "spike/**", ".claude/**", ".superpowers/**"]
   },
   // obsidianmd recommended rules require type info, so only apply to TS files
   ...obsidianmd.configs.recommended.map((config) =>
