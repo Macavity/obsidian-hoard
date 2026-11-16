@@ -153,7 +153,7 @@ export class DataManager {
 		if (!service) return;
 		for (const t of titles) {
 			if (t.maybe || this.posterRequested.has(t.id)) continue;
-			if (t.posterUrl) continue;
+			if (t.posterUrl || !this.lookupDue(t.id, 'poster')) continue;
 			const identified = !!t.tmdbId || !!t.malId || !!t.anilistId || externalIdFromLink(t.externalLink) !== null;
 			if (!identified) continue;
 			this.posterRequested.add(t.id);

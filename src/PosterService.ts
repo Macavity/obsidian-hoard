@@ -85,9 +85,11 @@ export class PosterService {
 			if (this.disposed) break;
 			const item = this.queue.shift();
 			if (!item) break;
+			let searched = true;
 			try {
 				const result = await this.fetchPosterForTitle(item.title, item.overwrite);
 				if (this.disposed) { item.resolve(null); break; }
+				searched = result !== null;
 				item.resolve(await this.settle(item.title, item.overwrite, result));
 			} catch {
 				// a rejected key or a dropped connection must not count as "no poster"
@@ -95,7 +97,8 @@ export class PosterService {
 				item.resolve(null);
 			}
 
-			const delay = this.getDelayForTitle(item.title);
+			// the delay spaces out requests; a title that sent none needs none
+			const delay = searched ? this.getDelayForTitle(item.title) : 0;
 			if (delay > 0) {
 				await new Promise<void>((r) => window.setTimeout(r, delay));
 			}

@@ -348,6 +348,15 @@ describe('DataManager on vault storage', () => {
 		expect(posterQueue).toEqual(['Movie/A', 'Movie/C']);
 	});
 
+	it('does not queue a title whose poster lookup is not due', async () => {
+		const { dm, f, posterQueue } = await setupDataManager({});
+		dm.recordLookup('Movie/C', 'poster', NOT_FOUND);
+		f.externalWrite('W/Movie/C.md', '---\nName: C\nType: Movie\nExternal ID: tmdb:movie:604\n---\n');
+		f.externalWrite('W/Movie/D.md', '---\nName: D\nType: Movie\nExternal ID: tmdb:movie:605\n---\n');
+		await tick();
+		expect(posterQueue).toEqual(['Movie/D']);
+	});
+
 	it('keeps an external change when a stale copy edits another field', async () => {
 		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\nRating: 1\n---\n\n## Notes\n' });
 		const t = dm.getTitle('Movie/A')!;

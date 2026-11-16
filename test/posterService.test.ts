@@ -107,6 +107,22 @@ describe('PosterService outcomes', () => {
 		expect(poster()).toBe('https://image.tmdb.org/t/p/w300/new.jpg');
 	});
 
+	it('a title that sent no request does not hold up the queue', async () => {
+		vi.useFakeTimers({ toFake: ['setTimeout'] });
+		try {
+			route({ 'search/tv': { status: 200, json: { results: [{ poster_path: '/bb.jpg' }] } } });
+			const { svc, title, dm } = await setup({ tmdbApiKey: 't' });
+			dm.recordLookup(ID, 'poster', NOT_FOUND);
+			const skipped = svc.enqueue(title());
+			const next = svc.enqueue(title(), true);
+			// no timer is advanced: the skipped title must not have slept its delay
+			await expect(next).resolves.toBe('https://image.tmdb.org/t/p/w300/bb.jpg');
+			await expect(skipped).resolves.toBeNull();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('does not search again while a failure is fresh', async () => {
 		const { dm, title, svc } = await setup({ tmdbApiKey: 't' });
 		dm.recordLookup(ID, 'poster', FAILED);
