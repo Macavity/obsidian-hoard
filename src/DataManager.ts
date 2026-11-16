@@ -568,8 +568,7 @@ export class DataManager {
 		// a fresh title needs posterUrl '' (not undefined) so the Cards needs-poster gate enqueues an
 		// auto-fetch on first render
 		if (title.posterUrl === undefined) title.posterUrl = '';
-		// the fetchers still answer 'none' for a source without a trailer; it is no URL
-		if (title.trailerUrl === undefined || title.trailerUrl === 'none') title.trailerUrl = '';
+		if (title.trailerUrl === undefined) title.trailerUrl = '';
 		if (title.manualTrailerUrl === undefined) title.manualTrailerUrl = '';
 		// a future release date makes it "To be released", which puts it in Upcoming
 		if (this.canAutoAddToUpcoming(title)) title.status = 'To be released';

@@ -30,7 +30,7 @@ export function watchLogApiValues(t: HoardTitle): Fm {
 		if (names.length > 0) out[TITLE_PROPS[field]] = names;
 	}
 	// the fetched trailer only: a manual one in the note is the user's
-	if (t.trailerUrl && t.trailerUrl !== 'none') out[TITLE_PROPS.trailer] = t.trailerUrl;
+	if (t.trailerUrl) out[TITLE_PROPS.trailer] = t.trailerUrl;
 	return out;
 }
 

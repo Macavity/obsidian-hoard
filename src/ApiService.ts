@@ -19,7 +19,6 @@ import type {
 	TmdbTvDetail,
 	TmdbExternalIds,
 	TmdbFindResult,
-	TmdbVideo,
 	TmdbCreditsResult,
 	TmdbCollectionRef,
 	TmdbCollectionDetail,
@@ -34,6 +33,8 @@ import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLib
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
+import { at, readBoolean, readList, readOptionalNumber, readString } from './storage/read';
+import { attempt, firstFound, NOT_FOUND, NO_KEY, type LookupResult, type LookupSource } from './lookup';
 
 export type Airing = NonNullable<EntryCache['airing']>;
 
@@ -83,6 +84,38 @@ function extractYoutubeId(url: string | null | undefined): string {
 	if (!url) return '';
 	const m = url.match(/(?:[?&]v=|\/embed\/|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
 	return m?.[1] ?? '';
+}
+
+/** AniList `trailer { id site }` → watch URL; '' when absent, not YouTube, or malformed. */
+function anilistTrailerUrl(trailer: unknown): string {
+	const id = readString(at(trailer, 'id'));
+	return readString(at(trailer, 'site')) === 'youtube' && id ? youtubeWatchUrl(id) : '';
+}
+
+/** Jikan `trailer` object → watch URL; '' when absent or malformed. */
+function jikanTrailerUrl(trailer: unknown): string {
+	const id =
+		readString(at(trailer, 'youtube_id')) ||
+		extractYoutubeId(readString(at(trailer, 'url'))) ||
+		extractYoutubeId(readString(at(trailer, 'embed_url')));
+	return id ? youtubeWatchUrl(id) : '';
+}
+
+/**
+ * Best trailer from a TMDB `videos.results`: an official YouTube Trailer first, then any
+ * YouTube Trailer, then any Teaser. A watch URL, or '' when none qualifies.
+ */
+function tmdbTrailerUrl(videos: unknown): string {
+	const yt = readList(videos, (v) => {
+		const key = readString(at(v, 'key'));
+		if (readString(at(v, 'site')) !== 'YouTube' || !key) return undefined;
+		return { key, type: readString(at(v, 'type')), official: readBoolean(at(v, 'official')) };
+	});
+	const pick =
+		yt.find((v) => v.type === 'Trailer' && v.official) ??
+		yt.find((v) => v.type === 'Trailer') ??
+		yt.find((v) => v.type === 'Teaser');
+	return pick ? youtubeWatchUrl(pick.key) : '';
 }
 
 /**
@@ -878,10 +911,7 @@ export class ApiService {
 			averageScore: media.averageScore ?? undefined,
 			genres: media.genres ?? undefined,
 			posterUrl: httpsOrEmpty(media.coverImage?.large ?? media.coverImage?.medium) || undefined,
-			trailerUrl:
-				media.trailer?.site === 'youtube' && media.trailer.id
-					? youtubeWatchUrl(media.trailer.id)
-					: 'none',
+			trailerUrl: anilistTrailerUrl(media.trailer) || undefined,
 		};
 	}
 
@@ -983,16 +1013,6 @@ export class ApiService {
 		return items.slice(0, limit).map((a) => this.mapJikanAnime(a));
 	}
 
-	/** Resolves a Jikan `trailer` object to a YouTube URL, or 'none' when absent. */
-	private jikanTrailerUrl(trailer: JikanAnime['trailer']): string {
-		if (!trailer) return 'none';
-		const id =
-			(trailer.youtube_id ?? '') ||
-			extractYoutubeId(trailer.url) ||
-			extractYoutubeId(trailer.embed_url);
-		return id ? youtubeWatchUrl(id) : 'none';
-	}
-
 	private mapJikanAnime(anime: JikanAnime): AnimeSearchResult {
 		const durationStr = anime.duration ?? '24 min per ep';
 		const durationMatch = durationStr.match(/(\d+)\s*min/);
@@ -1009,7 +1029,7 @@ export class ApiService {
 			url: httpsOrEmpty(anime.url),
 			seasons,
 			posterUrl: httpsOrEmpty(anime.images?.jpg?.large_image_url ?? anime.images?.jpg?.image_url ?? anime.images?.jpg?.small_image_url) || undefined,
-			trailerUrl: this.jikanTrailerUrl(anime.trailer),
+			trailerUrl: jikanTrailerUrl(anime.trailer) || undefined,
 		};
 	}
 
@@ -1073,7 +1093,6 @@ export class ApiService {
 				releaseDate: this.parseOmdbDate(data.Released ?? data.Year),
 				url: `https://www.imdb.com/title/${data.imdbID}`,
 				seasons: [{ name: 'Movie', episodes: 1, offset: 0 }],
-				trailerUrl: 'none', // OMDb does not provide trailers.
 				director: omdbNamesToCredits(data.Director),
 				cast: omdbNamesToCredits(data.Actors),
 			};
@@ -1112,7 +1131,6 @@ export class ApiService {
 				releaseDate: this.parseOmdbDate(data.Released ?? data.Year),
 				url: `https://www.imdb.com/title/${data.imdbID}`,
 				seasons,
-				trailerUrl: 'none', // OMDb does not provide trailers.
 				director: omdbSeriesDirectorCredits(data),
 				cast: omdbNamesToCredits(data.Actors),
 			};
@@ -1158,15 +1176,12 @@ export class ApiService {
 		}
 	}
 
-	/** Trailer lookup for one anime (Jikan /anime/{mal_id}). Returns a URL or 'none'. */
-	async getJikanTrailerByMalId(malId: number): Promise<string> {
-		try {
-			const url = `${this.jikan.base}/anime/${malId}`;
-			const data = (await this.throttleJikan(() => this.fetchWithTimeout(url))) as { data?: JikanAnime };
-			return this.jikanTrailerUrl(data.data?.trailer);
-		} catch {
-			return 'none';
-		}
+	/** Trailer lookup for one anime (Jikan /anime/{mal_id}); a request failure is `failed`, not a missing trailer. */
+	getJikanTrailerByMalId(malId: number): Promise<LookupResult<string>> {
+		return attempt(async () => {
+			const data = await this.throttleJikan(() => this.fetchWithTimeout(`${this.jikan.base}/anime/${malId}`));
+			return jikanTrailerUrl(at(data, 'data', 'trailer')) || null;
+		});
 	}
 
 	/**
@@ -1234,19 +1249,6 @@ export class ApiService {
 		}));
 	}
 
-	/**
-	 * Best trailer from a TMDB `videos.results`: an official YouTube Trailer first, then any
-	 * YouTube Trailer, then any Teaser. Returns a watch URL, or 'none'.
-	 */
-	private pickTmdbTrailer(videos: TmdbVideo[] | undefined): string {
-		const yt = (videos ?? []).filter((v) => v.site === 'YouTube' && v.key);
-		const pick =
-			yt.find((v) => v.type === 'Trailer' && v.official === true) ??
-			yt.find((v) => v.type === 'Trailer') ??
-			yt.find((v) => v.type === 'Teaser');
-		return pick ? youtubeWatchUrl(pick.key) : 'none';
-	}
-
 	async getTmdbMovieDetails(tmdbId: string): Promise<MediaSearchResult | null> {
 		if (!this.tmdbApiKey) return null;
 		try {
@@ -1268,7 +1270,7 @@ export class ApiService {
 				releaseDate: detail.release_date ?? '',
 				url: imdbId ? `https://www.imdb.com/title/${imdbId}` : '',
 				seasons: [{ name: 'Movie', episodes: 1, offset: 0 }],
-				trailerUrl: this.pickTmdbTrailer(detail.videos?.results),
+				trailerUrl: tmdbTrailerUrl(detail.videos?.results) || undefined,
 				studio: tmdbCompanyNames(detail.production_companies),
 				...tmdbCreditsToStored(detail.credits),
 			};
@@ -1316,7 +1318,7 @@ export class ApiService {
 			releaseDate: detail.first_air_date ?? '',
 			url: imdbId ? `https://www.imdb.com/title/${imdbId}` : '',
 			seasons,
-			trailerUrl: this.pickTmdbTrailer(detail.videos?.results),
+			trailerUrl: tmdbTrailerUrl(detail.videos?.results) || undefined,
 			// networks lead — HBO/Netflix is the brand; production_companies is shells
 			studio: tmdbCompanyNames([...(detail.networks ?? []), ...(detail.production_companies ?? [])]),
 			director: tmdbSeriesDirectorCredits(detail),
@@ -1737,49 +1739,48 @@ export class ApiService {
 	/**
 	 * Re-fetches an existing title's trailer from its source, reusing the add-time paths:
 	 * AniList/Jikan for anime (honouring `animeApiSource`, falling back to the other ID),
-	 * TMDB-by-IMDb for movies/TV. OMDb and anything else yield 'none'.
+	 * TMDB-by-IMDb for movies/TV. OMDb carries no trailers. notfound = the sources answered without
+	 * one (or the title has no id to ask with); failed = a request failed; nokey = no TMDB key.
 	 */
-	async fetchTrailer(
+	fetchTrailer(
 		title: HoardTitle,
 		animeApiSource: 'jikan' | 'anilist' = 'jikan',
 		apiGroup: 'anime' | 'movie' | '' = '',
-	): Promise<string> {
-		const resolvedGroup: 'anime' | 'movie' | '' =
-			apiGroup || (title.type === 'Anime' ? 'anime' : title.type === 'Movie' || title.type === 'TV Show' || title.type === 'TvShow' ? 'movie' : '');
+	): Promise<LookupResult<string>> {
+		const group = apiGroup || (title.type === 'Anime' ? 'anime' : ['Movie', 'TV Show', 'TvShow'].includes(title.type) ? 'movie' : '');
+		if (group === 'anime') return firstFound(this.animeTrailerSources(title, animeApiSource));
+		if (group === 'movie') return firstFound([() => this.tmdbTrailerByImdb(this.extractImdbId(title.externalLink ?? ''))]);
+		return Promise.resolve(NOT_FOUND);
+	}
 
-		if (resolvedGroup === 'anime') {
-			const hasMal = (title.malId ?? 0) > 0;
-			const hasAniList = (title.anilistId ?? 0) > 0;
-			const tryAniList = async (): Promise<string> => {
-				if (!hasAniList) return 'none';
-				const media = await this.getAniListById(title.anilistId!);
-				return media?.trailer?.site === 'youtube' && media.trailer.id
-					? youtubeWatchUrl(media.trailer.id)
-					: 'none';
-			};
-			const tryJikan = async (): Promise<string> => {
-				if (!hasMal) return 'none';
-				return this.getJikanTrailerByMalId(title.malId!);
-			};
-			const order = animeApiSource === 'anilist' ? [tryAniList, tryJikan] : [tryJikan, tryAniList];
-			for (const attempt of order) {
-				const url = await attempt();
-				if (url && url !== 'none') return url;
-			}
-			return 'none';
-		}
+	/** One source per anime id the title has; a title with neither id has nothing to ask. */
+	private animeTrailerSources(title: HoardTitle, animeApiSource: 'jikan' | 'anilist'): LookupSource<string>[] {
+		const { anilistId, malId } = title;
+		const anilist: LookupSource<string> = () => attempt(async () => {
+			const media = await this.queryAniListById(anilistId!);
+			return anilistTrailerUrl(media?.trailer) || null;
+		});
+		const jikan: LookupSource<string> = () => this.getJikanTrailerByMalId(malId!);
+		const sources: LookupSource<string>[] = [];
+		if ((anilistId ?? 0) > 0) sources.push(anilist);
+		if ((malId ?? 0) > 0) sources.push(jikan);
+		if (animeApiSource === 'jikan') sources.reverse();
+		return sources.length > 0 ? sources : [() => Promise.resolve(NOT_FOUND)];
+	}
 
-		if (resolvedGroup === 'movie') {
-			const imdbId = this.extractImdbId(title.externalLink ?? '');
-			// only TMDB carries trailers; OMDb never does
-			if (imdbId && this.tmdbApiKey) {
-				const full = await this.getTmdbByImdbId(imdbId);
-				if (full?.trailerUrl && full.trailerUrl !== 'none') return full.trailerUrl;
-			}
-			return 'none';
-		}
-
-		return 'none';
+	/** TMDB trailer through an IMDb id: find the movie/tv id, then its videos. */
+	private async tmdbTrailerByImdb(imdbId: string): Promise<LookupResult<string>> {
+		if (!this.tmdbApiKey) return NO_KEY;
+		if (!imdbId) return NOT_FOUND;
+		return attempt(async () => {
+			const hits = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
+			const movie = readList(at(hits, 'movie_results'), (r) => readOptionalNumber(at(r, 'id')));
+			const tv = readList(at(hits, 'tv_results'), (r) => readOptionalNumber(at(r, 'id')));
+			const [kind, id] = movie.length > 0 ? ['movie', movie[0]] : ['tv', tv[0]];
+			if (id === undefined) return null;
+			const videos = await this.fetchWithTimeout(`${TMDB_BASE}/${kind}/${String(id)}/videos`, this.tmdbHeaders());
+			return tmdbTrailerUrl(at(videos, 'results')) || null;
+		});
 	}
 
 	/**

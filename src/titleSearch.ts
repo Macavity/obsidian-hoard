@@ -7,6 +7,7 @@ import { getApiGroupForType } from './types';
 import { animeResultIdKeys, mediaResultIdKeys } from './LibraryIndex';
 import { effectiveMediaSource, type MediaSource } from './apiSources';
 import { SEARCH_PAGE_SIZE, SEARCH_RESULT_LIMIT } from './ApiService';
+import { found, NOT_FOUND, type LookupResult } from './lookup';
 
 export type TitleSearchResult = AnimeSearchResult | MediaSearchResult;
 
@@ -69,7 +70,8 @@ export interface TitlePick {
 	releaseDate: string;
 	link: string;
 	seasons: Season[];
-	trailerUrl: string;
+	/** undefined = no source answered yet; the detail view looks it up on first open */
+	trailer: LookupResult<string> | undefined;
 	director: string[];
 	cast: string[];
 	studio: string[];
@@ -77,6 +79,11 @@ export interface TitlePick {
 	posterUrl?: string;
 	/** Anime picks only: exactly one id is set. */
 	animeIds?: { malId: number | null; anilistId: number | null };
+}
+
+/** An anime search row carries its trailer: a URL is found, an absent one means the source has none. */
+function trailerOf(url: string | undefined): LookupResult<string> {
+	return url ? found(url) : NOT_FOUND;
 }
 
 function pickFromMedia(full: MediaSearchResult): TitlePick {
@@ -87,7 +94,8 @@ function pickFromMedia(full: MediaSearchResult): TitlePick {
 		releaseDate: full.releaseDate,
 		link: full.url,
 		seasons: full.seasons,
-		trailerUrl: full.trailerUrl ?? '',
+		// only TMDB details carry a trailer: no URL is no answer, and the detail view asks the right source later
+		trailer: full.trailerUrl ? found(full.trailerUrl) : undefined,
 		director: full.director ?? [],
 		cast: full.cast ?? [],
 		studio: full.studio ?? [],
@@ -104,7 +112,7 @@ function animeFields(anime: AnimeSearchResult): AnimePickFields {
 		releaseDate: anime.releaseDate,
 		link: anime.url,
 		seasons: anime.seasons,
-		trailerUrl: anime.trailerUrl ?? '',
+		trailer: trailerOf(anime.trailerUrl),
 		// anime sources carry no credits, so a pick clears any stale movie/TV selection
 		director: [],
 		cast: [],

@@ -165,7 +165,7 @@ describe('resolvePick', () => {
 		await resolvePick(plugin, anime({ anilistId: 3, trailerUrl: 'yt' }), () => true, apply);
 		const pick = apply.mock.calls[0]![0];
 		expect(pick.animeIds).toEqual({ malId: null, anilistId: 3 });
-		expect(pick.trailerUrl).toBe('yt');
+		expect(pick.trailer).toEqual({ status: 'found', value: 'yt' });
 		expect([pick.director, pick.cast, pick.studio]).toEqual([[], [], []]);
 		await resolvePick(plugin, anime({ anilistId: 0 }), () => true, apply);
 		expect(apply.mock.calls[1]![0].animeIds).toEqual({ malId: 7, anilistId: null });
@@ -229,5 +229,5 @@ describe('titlePickerBase', () => {
 });
 
 function pickOf(): TitlePick {
-	return { title: '', episodes: 0, duration: 0, releaseDate: '', link: '', seasons: [], trailerUrl: '', director: [], cast: [], studio: [] };
+	return { title: '', episodes: 0, duration: 0, releaseDate: '', link: '', seasons: [], trailer: undefined, director: [], cast: [], studio: [] };
 }

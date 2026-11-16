@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddTitleModal } from '../src/AddTitleModal';
 import type { HoardTitle, Season } from '../src/types';
+import type { LookupResult } from '../src/lookup';
 
 // noon UTC: the local calendar day is 2026-03-04 in every timezone the suite runs in
 const NOW = '2026-03-04T12:00:00.000Z';
@@ -9,6 +10,7 @@ const SEASONS: Season[] = [{ name: 'Season 1', episodes: 3, offset: 0 }];
 type Form = {
 	addTitle: () => Promise<void>;
 	fieldStatus: string; fieldPriority: string; fieldRating: number; fieldDateStarted: string;
+	fieldTrailer: LookupResult<string> | undefined;
 	fieldMalId: number | null; fieldAnilistId: number | null; fieldStudio: string[]; fieldPosterUrl: string;
 };
 
@@ -22,6 +24,7 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 		generateId: (title: string) => `t-${title}`,
 		// a copy: the pin is what was handed over, whatever happens to the object afterwards
 		addTitle: (entry: HoardTitle) => { added.push(structuredClone(entry)); return Promise.resolve(); },
+		recordLookup: vi.fn(),
 	};
 	const plugin = {
 		settings: { setFinishDateAutomatically: autoFinish, lastAddedType: '', typeApiMapping: {}, types: [] },
@@ -34,7 +37,7 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 		link: 'https://example.test/dark', seasons: SEASONS,
 		trailerUrl: prefill.trailerUrl, director: prefill.director, cast: prefill.cast,
 	});
-	return { form: modal as unknown as Form, added };
+	return { form: modal as unknown as Form, added, dataManager };
 }
 
 const BASE = {
@@ -69,6 +72,27 @@ describe('AddTitleModal add', () => {
 			posterUrl: 'https://img.test/dark.jpg', trailerUrl: 'https://yt.test/t',
 			director: ['D'], cast: ['C1', 'C2'], studio: ['S'], malId: 0, anilistId: 7,
 		}]);
+	});
+
+	it('records a trailer the source did not have, once the note exists', async () => {
+		const { form, added, dataManager } = setup();
+		form.fieldTrailer = { status: 'notfound' };
+		await form.addTitle();
+		expect(added[0]!.trailerUrl).toBe('');
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t-Dark', 'trailer', { status: 'notfound' });
+	});
+
+	it('records a failed trailer lookup as failed, not as missing', async () => {
+		const { form, dataManager } = setup();
+		form.fieldTrailer = { status: 'failed' };
+		await form.addTitle();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t-Dark', 'trailer', { status: 'failed' });
+	});
+
+	it('records nothing for a trailer that was never fetched', async () => {
+		const { form, dataManager } = setup();
+		await form.addTitle();
+		expect(dataManager.recordLookup).not.toHaveBeenCalled();
 	});
 
 	it('ticks every episode and sets the finish date when added as Completed', async () => {

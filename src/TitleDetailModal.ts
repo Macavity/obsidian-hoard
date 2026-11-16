@@ -29,6 +29,7 @@ import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
 // titles whose credits backfill is in flight — de-dupes rapid modal re-opens
 const creditsBackfillInFlight = new Set<string>();
 const studioBackfillInFlight = new Set<string>();
+const trailerBackfillInFlight = new Set<string>();
 
 export class TitleDetailModal extends Modal {
 	private plugin: HoardPlugin;
@@ -46,6 +47,7 @@ export class TitleDetailModal extends Modal {
 	private headerEl: HTMLElement | null = null;
 	private footerEl: HTMLElement | null = null;
 	private studioEl: HTMLElement | null = null;
+	private trailerEl: HTMLElement | null = null;
 	private statsBoxEl: HTMLElement | null = null;
 	private creditsEl: HTMLElement | null = null;
 	private episodesSectionEl: HTMLElement | null = null;
@@ -197,6 +199,7 @@ export class TitleDetailModal extends Modal {
 		this.renderCreditsSection();
 		this.maybeBackfillCredits();
 		this.maybeBackfillStudio();
+		void this.maybeBackfillTrailer();
 	}
 
 	// Inline-editable title
@@ -360,6 +363,29 @@ export class TitleDetailModal extends Modal {
 			this.refreshTitle();
 			this.renderCreditsSection();
 		})();
+	}
+
+	/**
+	 * One-time trailer backfill, from the same source the refresh button uses. Nothing is fetched or
+	 * recorded while the last check is still fresh; otherwise how the lookup ended is recorded.
+	 */
+	private async maybeBackfillTrailer(): Promise<void> {
+		const t = this.dataManager.getTitle(this.title.id);
+		if (!t || !this.dataManager.lookupDue(t.id, 'trailer') || trailerBackfillInFlight.has(t.id)) return;
+		trailerBackfillInFlight.add(t.id);
+		try {
+			const settings = this.plugin.settings;
+			const result = await this.plugin.apiService.fetchTrailer(
+				t, settings.animeApiSource ?? 'jikan', getApiGroupForType(t.type, settings.typeApiMapping),
+			);
+			if (result.status === 'found') this.dataManager.updateTrailerUrl(t.id, result.value);
+			else this.dataManager.recordLookup(t.id, 'trailer', result);
+		} catch {
+			this.dataManager.recordLookup(t.id, 'trailer', FAILED);
+		} finally {
+			trailerBackfillInFlight.delete(t.id);
+		}
+		if (this.trailerEl?.isConnected) this.paintTrailerControl(this.trailerEl);
 	}
 
 	/** Studio is a credits row on mobile, chips under the title on desktop. */
@@ -675,6 +701,7 @@ export class TitleDetailModal extends Modal {
 	/** Appends the trailer control (its own container) to the rating row. */
 	private renderTrailerControl(parent: HTMLElement): void {
 		const container = parent.createSpan({ cls: 'hoard-trailer-btn__control' });
+		this.trailerEl = container;
 		this.paintTrailerControl(container);
 	}
 
@@ -728,21 +755,19 @@ export class TitleDetailModal extends Modal {
 		try {
 			const animeSource = this.plugin.settings.animeApiSource ?? 'jikan';
 			const group = getApiGroupForType(title.type, this.plugin.settings.typeApiMapping);
-			const url = await this.plugin.apiService.fetchTrailer(title, animeSource, group);
-			const hit = !!url && url !== 'none';
-			if (hit) this.dataManager.updateTrailerUrl(title.id, url);
-			else this.dataManager.recordLookup(title.id, 'trailer', NOT_FOUND);
-			if (hit) {
+			const result = await this.plugin.apiService.fetchTrailer(title, animeSource, group);
+			if (result.status === 'found') {
+				this.dataManager.updateTrailerUrl(title.id, result.value);
 				this.paintTrailerControl(container);
-			} else {
-				new Notice(t('detail.trailer.notFound'));
-				btn.removeClass('is-loading');
+				return;
 			}
+			this.dataManager.recordLookup(title.id, 'trailer', result);
+			new Notice(t(result.status === 'failed' ? 'notices.api.requestFailed' : 'detail.trailer.notFound'));
 		} catch {
 			this.dataManager.recordLookup(title.id, 'trailer', FAILED);
-			new Notice(t('detail.trailer.notFound'));
-			btn.removeClass('is-loading');
+			new Notice(t('notices.api.requestFailed'));
 		}
+		btn.removeClass('is-loading');
 	}
 
 	private renderStars(): void {

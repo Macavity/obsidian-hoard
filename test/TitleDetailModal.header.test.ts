@@ -3,6 +3,7 @@ import { Notice, Platform } from 'obsidian';
 import { TitleDetailModal } from '../src/TitleDetailModal';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
 import { t } from '../src/i18n';
+import type { LookupResult } from '../src/lookup';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
@@ -22,7 +23,7 @@ const mkTitle = (over: Partial<HoardTitle> = {}): HoardTitle => (({
 	...over,
 }));
 
-function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Error; stored?: HoardTitle | null; onPerson?: boolean; tmdbKey?: boolean } = {}) {
+function build(title: HoardTitle, o: { mobile?: boolean; trailer?: LookupResult<string> | Error; stored?: HoardTitle | null; onPerson?: boolean; tmdbKey?: boolean } = {}) {
 	const stored = o.stored === undefined ? title : o.stored;
 	const dataManager = {
 		getCollapsedSeasonsForTitle: () => new Set<number>(),
@@ -41,7 +42,7 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Erro
 		recordLookup: vi.fn(),
 	};
 	const apiService = {
-		fetchTrailer: vi.fn(() => (o.trailer instanceof Error ? Promise.reject(o.trailer) : Promise.resolve(o.trailer ?? ''))),
+		fetchTrailer: vi.fn(() => (o.trailer instanceof Error ? Promise.reject(o.trailer) : Promise.resolve(o.trailer ?? { status: 'notfound' }))),
 		fetchCredits: vi.fn(() => Promise.resolve(null)),
 		fetchStudio: vi.fn(() => Promise.resolve(null)),
 		hasTmdbKey: vi.fn(() => o.tmdbKey ?? true),
@@ -168,7 +169,7 @@ describe('TitleDetailModal.refreshTrailer', () => {
 	});
 
 	it('ignores a second trigger while a fetch is in flight', async () => {
-		const { modal, apiService } = build(mkTitle(), { trailer: 'https://youtu.be/x' });
+		const { modal, apiService } = build(mkTitle(), { trailer: { status: 'found', value: 'https://youtu.be/x' } });
 		const { btn, container } = els();
 		btn.classList.add('is-loading');
 		await modal.refreshTrailer(btn, container);
@@ -176,7 +177,7 @@ describe('TitleDetailModal.refreshTrailer', () => {
 	});
 
 	it('stores a found trailer and repaints the control with a play button', async () => {
-		const { modal, dataManager } = build(mkTitle(), { trailer: 'https://youtu.be/x' });
+		const { modal, dataManager } = build(mkTitle(), { trailer: { status: 'found', value: 'https://youtu.be/x' } });
 		const { btn, container } = els();
 		await modal.refreshTrailer(btn, container);
 		expect(dataManager.updateTrailerUrl).toHaveBeenCalledWith('t1', 'https://youtu.be/x');
@@ -187,25 +188,40 @@ describe('TitleDetailModal.refreshTrailer', () => {
 	});
 
 	it('records a missing trailer as notfound and keeps the refresh button', async () => {
-		for (const trailer of ['', 'none']) {
-			const { modal, dataManager } = build(mkTitle(), { trailer });
-			const { btn, container } = els();
-			await modal.refreshTrailer(btn, container);
-			expect(dataManager.updateTrailerUrl).not.toHaveBeenCalled();
-			expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'notfound' });
-			expect(btn.classList.contains('is-loading')).toBe(false);
-			expect(shown.at(-1)).toBe(t('detail.trailer.notFound'));
-		}
+		const { modal, dataManager } = build(mkTitle(), { trailer: { status: 'notfound' } });
+		const { btn, container } = els();
+		await modal.refreshTrailer(btn, container);
+		expect(dataManager.updateTrailerUrl).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'notfound' });
+		expect(btn.classList.contains('is-loading')).toBe(false);
+		expect(shown.at(-1)).toBe(t('detail.trailer.notFound'));
 	});
 
-	it('reports a failing fetch the same way', async () => {
+	it('tells a failed lookup from a missing trailer', async () => {
+		const { modal, dataManager } = build(mkTitle(), { trailer: { status: 'failed' } });
+		const { btn, container } = els();
+		await modal.refreshTrailer(btn, container);
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'failed' });
+		expect(btn.classList.contains('is-loading')).toBe(false);
+		expect(shown).toEqual([t('notices.api.requestFailed')]);
+	});
+
+	it('looks again on an explicit refresh even when the last check was fresh', async () => {
+		const { modal, apiService, dataManager } = build(mkTitle(), { trailer: { status: 'notfound' } });
+		dataManager.lookupDue.mockReturnValue(false);
+		const { btn, container } = els();
+		await modal.refreshTrailer(btn, container);
+		expect(apiService.fetchTrailer).toHaveBeenCalledTimes(1);
+	});
+
+	it('records a throwing fetch as failed', async () => {
 		const { modal, dataManager } = build(mkTitle(), { trailer: new Error('boom') });
 		const { btn, container } = els();
 		await modal.refreshTrailer(btn, container);
 		expect(dataManager.updateTrailerUrl).not.toHaveBeenCalled();
 		expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'failed' });
 		expect(btn.classList.contains('is-loading')).toBe(false);
-		expect(shown).toEqual([t('detail.trailer.notFound')]);
+		expect(shown).toEqual([t('notices.api.requestFailed')]);
 	});
 });
 
