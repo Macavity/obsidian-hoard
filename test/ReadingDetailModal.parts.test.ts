@@ -26,6 +26,8 @@ interface Opts {
 	fail?: boolean;
 	onFile?: unknown;
 	files?: unknown[];
+	columns?: ReadingCustomColumn[];
+	fieldStyle?: 'fill' | 'border';
 }
 
 function build(o: Opts = {}) {
@@ -37,6 +39,9 @@ function build(o: Opts = {}) {
 		updateBook: vi.fn(() => Promise.resolve()),
 		updateManga: vi.fn(() => Promise.resolve()),
 		setCustomField: vi.fn(() => Promise.resolve()),
+		getBookColumns: vi.fn((): ReadingCustomColumn[] => o.columns ?? []),
+		getMangaColumns: vi.fn((): ReadingCustomColumn[] => o.columns ?? []),
+		getSettings: vi.fn(() => ({ bookCustomFieldStyle: o.fieldStyle, mangaCustomFieldStyle: o.fieldStyle })),
 	};
 	const fail = () => Promise.reject(new Error('x'));
 	const apiService = {
@@ -63,6 +68,7 @@ function build(o: Opts = {}) {
 		renderExternalLinkActions: (c: HTMLElement) => void;
 		close: () => void;
 		renderFooter: (item: Book | Manga) => void;
+		renderCustomFieldsSection: (item: Book | Manga) => void;
 		contentEl: HTMLElement;
 	};
 	return { modal: x, readingData, apiService, onChanged, openFile, getAbstractFileByPath };
@@ -88,6 +94,35 @@ describe('ReadingDetailModal favorite heart', () => {
 		await flush();
 		expect(setFavorite).toHaveBeenCalledOnce();
 		expect(setFavorite).toHaveBeenCalledWith('book', 'b1', true);
+	});
+});
+
+describe('ReadingDetailModal.renderCustomFieldsSection', () => {
+	const column = { id: 'c1', name: 'Series', type: 'text' } as ReadingCustomColumn;
+
+	it('points to the column manager when there are no columns', () => {
+		const { modal } = build();
+		modal.contentEl = document.createElement('div');
+		modal.renderCustomFieldsSection(baseBook());
+		expect(modal.contentEl.querySelector('.hoard-reading-custom-fields__empty a')).not.toBeNull();
+		expect(modal.contentEl.querySelector('.hoard-reading-custom-fields__table')).toBeNull();
+	});
+
+	it('lists a row per column with its value, in the border style when set', () => {
+		const { modal } = build({ columns: [column], fieldStyle: 'border', item: baseBook({ customFields: { c1: 'Dune Saga' } }) });
+		modal.contentEl = document.createElement('div');
+		modal.renderCustomFieldsSection(baseBook({ customFields: { c1: 'Dune Saga' } }));
+		const table = modal.contentEl.querySelector('.hoard-reading-custom-fields__table')!;
+		expect(table.classList.contains('is-border-mode')).toBe(true);
+		expect(table.querySelector('.hoard-reading-custom-fields__label')?.textContent).toBe('Series');
+		expect(table.querySelector('.hoard-reading-custom-fields__display')?.textContent).toBe('Dune Saga');
+	});
+
+	it('uses the fill style by default', () => {
+		const { modal } = build({ columns: [column] });
+		modal.contentEl = document.createElement('div');
+		modal.renderCustomFieldsSection(baseBook());
+		expect(modal.contentEl.querySelector('.is-border-mode')).toBeNull();
 	});
 });
 
