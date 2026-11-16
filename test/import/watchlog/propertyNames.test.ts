@@ -34,6 +34,8 @@ describe('translateProperties', () => {
 	});
 	it('folds older names into the current ones', () => {
 		expect(translateProperties({ manualPosterUrl: 'https://p' }).fm).toEqual({ Cover: 'https://p' });
+		expect(translateProperties({ apiSource: 'nowhere', apiId: '12' }).fm).toEqual({ apiSource: 'nowhere', apiId: '12' });
+		expect(translateProperties({ apiSource: 'tmdb', apiId: '12' }).fm).toEqual({ apiSource: 'tmdb', apiId: '12' });
 		expect(translateProperties({ apiSource: 'rawg', apiId: '12' }).fm)
 			.toEqual({ 'External ID': formatExternalId({ source: 'rawg', id: '12' }) });
 		expect(translateProperties({ externalId: 'tmdb:movie:1', apiSource: 'rawg', apiId: '12' }).fm)

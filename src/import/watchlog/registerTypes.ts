@@ -1,5 +1,4 @@
 import { DEFAULT_SETTINGS, type TagDefinition } from '../../types';
-import { readTag } from '../../settingsNormalize';
 import { at, readList, readOptionalString, readRecord, readString } from '../../storage/read';
 import type { ImportContext } from './schema1Types';
 
@@ -20,7 +19,7 @@ export async function registerTypes(ctx: ImportContext, incoming: unknown): Prom
 	await ctx.shared.load();
 	if (!ctx.shared.baseFile()) return;
 	const stored = ctx.shared.get().settings.types;
-	const current = Array.isArray(stored) ? readList(stored, readTag) : DEFAULT_SETTINGS.types;
+	const current = Array.isArray(stored) ? readList(stored, readType) : DEFAULT_SETTINGS.types;
 	const known = new Set(current.map((t) => t.name));
 	const missing = readList(incoming, readType).filter((t) => !known.has(t.name));
 	if (missing.length > 0) await ctx.shared.update({ types: [...current, ...missing] });

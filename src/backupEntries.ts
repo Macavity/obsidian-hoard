@@ -131,7 +131,7 @@ function readingFields(v: unknown) {
 		author: text(v, 'author'), status: readStatus(v), rating: num(v, 'rating'),
 		chaptersRead: num(v, 'chaptersRead'), totalChapters: num(v, 'totalChapters'), coverUrl: text(v, 'coverUrl'),
 		vaultPage: text(v, 'vaultPage'), dateStarted: date(v, 'dateStarted'), dateFinished: date(v, 'dateFinished'),
-		releaseDate: date(v, 'releaseDate'), dateAdded: text(v, 'dateAdded'), dateModified: text(v, 'dateModified'),
+		releaseDate: date(v, 'releaseDate'), dateAdded: text(v, 'dateAdded') ?? '', dateModified: text(v, 'dateModified') ?? '',
 		customFields: isRecord(at(v, 'customFields')) ? readCustomFields(at(v, 'customFields')) : undefined,
 		favorite: flag(v, 'favorite'), dateFavorited: optText(v, 'dateFavorited'), externalLink: optText(v, 'externalLink'),
 		groups: list(v, 'groups'), airtime: readAirtime(at(v, 'airtime')),
@@ -179,7 +179,7 @@ export function readGame(v: unknown): Game | undefined {
 			apiId: text(v, 'apiId'), steamAppId: text(v, 'steamAppId'), lastPlayed: date(v, 'lastPlayed'),
 			storeUrl: text(v, 'storeUrl'), externalLink: text(v, 'externalLink'), vaultPage: text(v, 'vaultPage'),
 			releaseDate: date(v, 'releaseDate'), dateStarted: date(v, 'dateStarted'), dateFinished: date(v, 'dateFinished'),
-			dateAdded: text(v, 'dateAdded'), dateModified: text(v, 'dateModified'),
+			dateAdded: text(v, 'dateAdded') ?? '', dateModified: text(v, 'dateModified') ?? '',
 			dateFavorited: optText(v, 'dateFavorited'), groups: list(v, 'groups'), airtime: readAirtime(at(v, 'airtime')),
 		}),
 	});

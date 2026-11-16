@@ -167,6 +167,22 @@ describe('WatchLog import of wrongly typed data', () => {
 		const { run } = await setupSchema1(data, {});
 		const r = await run();
 		expect(r.errors).toEqual([]);
+		expect(prepareData(data).reading.bookColumns).toEqual([{ id: 'a', name: 'Foo', type: 'text', options: ['x'] }]);
+	});
+
+	it('keeps a blank date for a book, manga and game without one', () => {
+		const data = prepareData({
+			reading: { books: [{ id: 'b', title: 'B' }], manga: [{ id: 'm', title: 'M', dateAdded: 5 }] },
+			games: { games: [{ id: 'g', title: 'G' }] },
+		});
+		for (const e of [data.reading.books[0], data.reading.manga[0], data.games.games[0]]) {
+			expect(e?.dateAdded).toBe('');
+			expect(e?.dateModified).toBe('');
+		}
+	});
+
+	it('keeps the steam api source of a game', () => {
+		expect(prepareData({ games: { games: [{ id: 'g', title: 'G', apiSource: 'steam' }] } }).games.games[0]?.apiSource).toBe('steam');
 	});
 });
 
@@ -234,6 +250,12 @@ describe('registerTypes', () => {
 	it('does not throw on a stored types value that is no list', async () => {
 		const { ctx } = setup('x');
 		await expect(registerTypes(ctx, [{ name: 'Anime', color: '#123' }])).resolves.toBeUndefined();
+	});
+
+	it('keeps a stored type without a color when it adds a new one', async () => {
+		const { ctx, f } = setup([{ name: 'Movie' }]);
+		await registerTypes(ctx, [{ name: 'Anime', color: '#123' }]);
+		expect(typesOf(f).map((t) => t.name)).toEqual(['Movie', 'Anime']);
 	});
 
 	it('does nothing when the source lists no types', async () => {
