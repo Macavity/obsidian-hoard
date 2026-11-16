@@ -4,6 +4,7 @@ title: API layer
 description: Which external services exist, how requests, errors and rate limits are handled, and how fetched data reaches notes and cache.
 source:
   - src/ApiService.ts
+  - src/api/apiError.ts
   - src/PosterService.ts
   - src/apiSources.ts
   - src/titleSearch.ts
@@ -56,10 +57,29 @@ books (`searchGoogleBooks`), manga (`searchManga`, `getMangaByMalId`), games (`s
 `applyApiKeys` in [main.ts](../../src/main.ts) on every `loadSettings` / `saveSettings`, so a restored
 backup or a WatchLog import takes effect without a restart; the Settings tab also sets them directly.
 
-- Requests go through `requestVia` with Obsidian's `requestUrl`, `throw: false`, a timeout, and a
-  classifier that maps status and body to `ApiError { source, reason }` (reasons: `no-key`, `auth`, `not-enabled`,
-  `rate-limited`, `not-found`, `server`, `http`, `parse`, `network`). `apiErrorMessage` / `apiErrorShort` turn that into one user-facing wording via `t('notices.api.*')` ([i18n](i18n.md)); `ApiError` messages themselves stay English, for developers.
-- **Keyless sources** need no credential and are never reported as `auth`. Their request URLs and
+- Every request that can fail with an `ApiError` goes through `requestJson` in `ApiService.ts`
+  (`requestVia` picks the source from the URL and adds the Jikan headers; Google Books, the Twitch
+  token and IGDB call it with a fixed source): Obsidian's `requestUrl` with `throw: false`, one
+  shared timeout (`withTimeout`), and everything that is not a response becomes reason `network`.
+- The error model is [apiError.ts](../../src/api/apiError.ts): `ApiError { source, reason }` with
+  the reasons `no-key`, `auth`, `not-enabled`, `rate-limited`, `not-found`, `server`, `http`,
+  `parse`, `network`. Two tables decide everything:
+  - `HTTP_RULES` turns a response outside 2xx into a reason. It is ordered and the first match
+    wins, so a service's special case sits above the general rule for the same status (OMDb's 401
+    with "limit" in the body, Google's 403 for a disabled API or a spent quota).
+  - `REASONS` holds, per reason, the chip label, the sentence, the services with a sentence of
+    their own, the outcome of a background check (`transient | nokey | notfound`) and whether the
+    credential is the cause (those are re-thrown by detail lookups that otherwise fold failures
+    into `null`). `apiErrorMessage` / `apiErrorShort` read it and word the error via
+    `t('notices.api.*')` ([i18n](i18n.md)); the service's own explanation from the body is shown
+    for `server` and `http` only. `ApiError` messages themselves stay English, for developers.
+  `ApiService.ts` re-exports `apiErrorMessage`, `apiErrorShort`, `ApiSource` and `ApiOutcome`, so
+  callers import them from there.
+- The Steam Web API (`steamGet`) is a second model on purpose: it returns the status with the
+  body, because Steam signals expected states by status (400 = no achievements, 403 = private
+  profile). It shares only the timeout.
+- **Keyless sources** need no credential and are never reported as `auth` (the one exception: a
+  Jikan endpoint that was sent a login answers 401 or 403). Their request URLs and
   response mappers are pure modules, so the service methods are one `request` plus a map:
   [cinemetaApi.ts](../../src/cinemetaApi.ts) (`searchCinemeta`, `getCinemetaDetails`; rows carry
   an IMDb id, a poster and the start year; details add seasons from `videos`, runtime and credits;
@@ -119,9 +139,11 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
 
 ## Where to change what
 
-- New service: methods in `ApiService` plus `ApiSource`, `apiSourceFromUrl`, a key field and a
-  Settings card ([settings](../modules/settings.md)).
-- New keyless source: a pure `*Api.ts` mapper module, `ApiSource` + `KEYLESS_SOURCES` +
-  `apiSourceFromUrl`, a value in the `apiSources.ts` union and resolver, an [external id](../concepts/external-id.md)
-  source and a `LibraryIndex` key.
+- New service: methods in `ApiService` plus `apiSourceFromUrl`, a key field and a Settings card
+  ([settings](../modules/settings.md)); in `apiError.ts` the `ApiSource` member and its label, and,
+  only if the service needs them, a row in `HTTP_RULES` and a key under `textFor` in `REASONS`.
+- New keyless source: a pure `*Api.ts` mapper module, `ApiSource` + `KEYLESS_SOURCES` (in
+  `apiError.ts`) + `apiSourceFromUrl`, a value in the `apiSources.ts` union and resolver, an
+  [external id](../concepts/external-id.md) source and a `LibraryIndex` key.
+- A new failure reason: `ApiErrorReason` and its row in `REASONS`; the compiler asks for the row.
 - New per-type routing: `typeApiMapping` and `getApiGroupForType` in `types.ts`.
