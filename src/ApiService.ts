@@ -37,6 +37,8 @@ const OPEN_LIBRARY_HOST = 'https://openlibrary.org';
 const OPEN_LIBRARY_COVERS_HOST = 'https://covers.openlibrary.org';
 const STEAM_STORE_SEARCH = 'https://store.steampowered.com/api/storesearch';
 const API_TIMEOUT_MS = 8000;
+/** Google Books cover sizes, largest first. */
+const GOOGLE_COVER_SIZES = ['extraLarge', 'large', 'medium', 'small', 'thumbnail', 'smallThumbnail'];
 
 /** Add-flow search: 9 results per modal page, 3 pages. */
 export const SEARCH_PAGE_SIZE = 9;
@@ -330,59 +332,24 @@ export interface GameDetailsResult extends GameSearchResult {
 	storeUrl: string;
 }
 
-// RAWG raw response shapes
-
-interface RawgPlatformEntry {
-	platform?: { name?: string };
-}
-
-interface RawgGame {
-	id: number;
-	slug?: string;
-	name?: string;
-	released?: string | null;
-	background_image?: string | null;
-	platforms?: RawgPlatformEntry[] | null;
-}
-
-interface RawgSearchResponse {
-	results?: RawgGame[];
-}
-
-interface RawgGameDetail extends RawgGame {
-	developers?: Array<{ name?: string }>;
-	publishers?: Array<{ name?: string }>;
-	tags?: Array<{ slug?: string; language?: string }>;
-}
-
-interface RawgStoresResponse {
-	results?: Array<{ store_id?: number; url?: string }>;
-}
-
 // RAWG store ids (stable, documented): 1 Steam, 5 GOG, 11 Epic Games.
 const RAWG_STORE_PRIORITY = [1, 5, 11];
 
-// IGDB raw response shapes
-
-interface IgdbGame {
-	id: number;
-	name?: string;
-	first_release_date?: number;
-	cover?: { image_id?: string };
-	platforms?: Array<{ name?: string }>;
-	game_modes?: Array<{ name?: string }>;
-	involved_companies?: Array<{
-		developer?: boolean;
-		publisher?: boolean;
-		company?: { name?: string };
-	}>;
-	websites?: Array<{ url?: string }>;
-	url?: string;
+/** A game record the lists can show: a numeric id and a non-empty name. */
+function hasIdAndName(g: Record<string, unknown>): boolean {
+	return typeof g.id === 'number' && readString(g.name) !== '';
 }
 
-interface TwitchTokenResponse {
-	access_token?: string;
-	expires_in?: number;
+/** The non-empty `name`s of a list of records. */
+function namesOf(v: unknown): string[] {
+	return recordsOf(v).map((r) => readString(r.name)).filter((n) => n !== '');
+}
+
+/** Store page URL by RAWG_STORE_PRIORITY, else the first https store link; '' when none. */
+function rawgStoreUrl(stores: unknown): string {
+	const links = recordsOf(at(stores, 'results')).filter((s) => httpsOrEmpty(readString(s.url)) !== '');
+	const preferred = RAWG_STORE_PRIORITY.map((storeId) => links.find((s) => s.store_id === storeId)).find((s) => s !== undefined);
+	return readString((preferred ?? links[0])?.url);
 }
 
 /** RAWG (english) tag slugs meaning co-op / versus multiplayer. */
@@ -396,6 +363,27 @@ const IGDB_STORE_DOMAINS = ['store.steampowered.com', 'gog.com', 'epicgames.com'
 
 const STEAM_API_BASE = 'https://api.steampowered.com';
 const STEAM_STORE_BASE = 'https://store.steampowered.com/api';
+
+/** SteamID64 or vanity name out of whatever the user pasted: the id itself, a profile URL of either shape, or a bare vanity. */
+function parseSteamInput(raw: string): { id: string; vanity: string } {
+	if (/^\d{17}$/.test(raw)) return { id: raw, vanity: '' };
+	const profile = /steamcommunity\.com\/profiles\/(\d{17})/.exec(raw)?.[1];
+	if (profile) return { id: profile, vanity: '' };
+	return { id: '', vanity: /steamcommunity\.com\/id\/([^/?#]+)/.exec(raw)?.[1] ?? raw };
+}
+
+/** One entry of GetOwnedGames; undefined when it has no numeric appid. */
+function steamOwnedGame(g: unknown): SteamOwnedGame | undefined {
+	const appId = readOptionalNumber(at(g, 'appid'));
+	if (appId === undefined) return undefined;
+	const lastPlayed = readNumber(at(g, 'rtime_last_played'));
+	return {
+		appId: String(appId),
+		name: readString(at(g, 'name')),
+		playtimeMinutes: readNumber(at(g, 'playtime_forever')),
+		lastPlayed: lastPlayed ? new Date(lastPlayed * 1000).toISOString() : null,
+	};
+}
 
 /** Storefront category ids (stable): 2 Single-player, 1 Multi-player, 9/38/39 co-op. */
 const STEAM_CAT_SINGLEPLAYER = 2;
@@ -433,41 +421,6 @@ export interface SteamAppDetails {
 	multiplayer: boolean;
 }
 
-interface SteamVanityResponse {
-	response?: { success?: number; steamid?: string };
-}
-
-interface SteamOwnedGamesResponse {
-	response?: {
-		game_count?: number;
-		games?: Array<{
-			appid: number;
-			name?: string;
-			playtime_forever?: number;
-			rtime_last_played?: number;
-		}>;
-	};
-}
-
-interface SteamAchievementsResponse {
-	playerstats?: {
-		success?: boolean;
-		achievements?: Array<{ achieved?: number }>;
-	};
-}
-
-interface SteamAppDetailsEntry {
-	success?: boolean;
-	data?: {
-		name?: string;
-		developers?: string[];
-		publishers?: string[];
-		genres?: Array<{ description?: string }>;
-		release_date?: { date?: string };
-		categories?: Array<{ id: number; description?: string }>;
-	};
-}
-
 /** IGDB co-op game_modes names (shared/local play, not versus). */
 const IGDB_COOP_MODES = new Set([
 	'Co-operative',
@@ -503,45 +456,6 @@ export interface MangaSearchResult {
 	coverUrl: string;
 	releaseDate: string;
 	url: string;
-}
-
-interface GoogleVolumeInfo {
-	title?: string;
-	subtitle?: string;
-	authors?: string[];
-	publishedDate?: string;
-	pageCount?: number;
-	imageLinks?: {
-		smallThumbnail?: string;
-		thumbnail?: string;
-		small?: string;
-		medium?: string;
-		large?: string;
-		extraLarge?: string;
-	};
-	infoLink?: string;
-	canonicalVolumeLink?: string;
-}
-
-interface GoogleVolume {
-	id?: string;
-	volumeInfo?: GoogleVolumeInfo;
-}
-
-interface GoogleBooksResponse {
-	items?: GoogleVolume[];
-}
-
-interface JikanMangaItem {
-	mal_id: number;
-	title: string;
-	title_english?: string | null;
-	authors?: Array<{ name: string }>;
-	chapters?: number | null;
-	volumes?: number | null;
-	published?: { from?: string | null } | null;
-	images?: { jpg?: { image_url?: string | null; large_image_url?: string | null } | null } | null;
-	url?: string | null;
 }
 
 /** Which service a failed request went to. */
@@ -1850,17 +1764,9 @@ export class ApiService {
 	 * from http and stripped of the page-curl effect, so no local caching is needed. '' when
 	 * there is no image.
 	 */
-	private googleCoverUrl(info: GoogleVolumeInfo): string {
-		const links = info.imageLinks;
-		if (!links) return '';
-		const raw =
-			links.extraLarge ??
-			links.large ??
-			links.medium ??
-			links.small ??
-			links.thumbnail ??
-			links.smallThumbnail ??
-			'';
+	private googleCoverUrl(info: unknown): string {
+		const links = at(info, 'imageLinks');
+		const raw = GOOGLE_COVER_SIZES.map((size) => readString(at(links, size))).find((url) => url !== '') ?? '';
 		if (!raw) return '';
 		// bump Google's default cover (thumbnail is zoom=1 ≈ 128px, blurry on a card) to zoom=2 ≈
 		// 300px — sharp yet light. Only thumbnail-class URLs carry a zoom param.
@@ -1881,21 +1787,22 @@ export class ApiService {
 		return published;
 	}
 
-	private mapGoogleVolume(item: GoogleVolume): BookSearchResult {
-		const info = item.volumeInfo ?? {};
-		const published = info.publishedDate ?? '';
+	private mapGoogleVolume(item: unknown): BookSearchResult {
+		const info = at(item, 'volumeInfo');
+		const published = readString(at(info, 'publishedDate'));
 		const year = published ? parseInt(published.slice(0, 4), 10) || 0 : 0;
-		const fullTitle = info.subtitle ? `${info.title ?? ''}: ${info.subtitle}` : (info.title ?? '');
+		const title = readString(at(info, 'title'));
+		const subtitle = readString(at(info, 'subtitle'));
 		return {
-			title: fullTitle,
-			author: (info.authors ?? []).join(', '),
+			title: subtitle ? `${title}: ${subtitle}` : title,
+			author: readStringList(at(info, 'authors')).join(', '),
 			year,
-			totalPages: info.pageCount ?? 0,
+			totalPages: readNumber(at(info, 'pageCount')),
 			coverUrl: this.googleCoverUrl(info),
-			googleBooksId: item.id ?? '',
+			googleBooksId: readString(at(item, 'id')),
 			openLibraryId: '',
 			releaseDate: this.googleReleaseDate(published),
-			url: httpsOrEmpty(info.infoLink ?? info.canonicalVolumeLink),
+			url: httpsOrEmpty(readOptionalString(at(info, 'infoLink')) ?? readString(at(info, 'canonicalVolumeLink'))),
 		};
 	}
 
@@ -1929,41 +1836,41 @@ export class ApiService {
 
 	/** Throws GoogleBooksError on failure — see googleBooksErrorMessage. */
 	async searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
-		const data = (await this.googleBooksFetch(
-			`/volumes?q=${encodeURIComponent(query)}&maxResults=10`,
-		)) as GoogleBooksResponse;
-		return (data.items ?? []).slice(0, 10).map((item) => this.mapGoogleVolume(item));
+		const data = await this.googleBooksFetch(`/volumes?q=${encodeURIComponent(query)}&maxResults=10`);
+		return recordsOf(at(data, 'items')).slice(0, 10).map((item) => this.mapGoogleVolume(item));
 	}
 
 	/** Resolves on success, throws GoogleBooksError so the test can report the real cause. */
 	async checkGoogleBooksConnection(): Promise<boolean> {
-		const data = (await this.googleBooksFetch('/volumes?q=tolkien&maxResults=1')) as GoogleBooksResponse;
-		return Array.isArray(data.items);
+		const data = await this.googleBooksFetch('/volumes?q=tolkien&maxResults=1');
+		return Array.isArray(at(data, 'items'));
 	}
 
 	// Jikan (Manga)
 
-	private mapJikanManga(m: JikanMangaItem): MangaSearchResult {
-		const yearStr = m.published?.from ?? '';
-		const year = yearStr ? parseInt(yearStr.slice(0, 4), 10) || 0 : 0;
+	private mapJikanManga(m: unknown): MangaSearchResult {
+		const from = readString(at(m, 'published', 'from'));
+		const year = from ? parseInt(from.slice(0, 4), 10) || 0 : 0;
+		const malId = readNumber(at(m, 'mal_id'));
+		const jpg = at(m, 'images', 'jpg');
 		return {
-			malId: m.mal_id,
-			title: m.title_english ?? m.title,
-			author: (m.authors ?? []).map((a) => a.name).join(', '),
+			malId,
+			title: readOptionalString(at(m, 'title_english')) ?? readString(at(m, 'title')),
+			author: recordsOf(at(m, 'authors')).map((a) => readString(a.name)).join(', '),
 			year,
-			totalChapters: m.chapters ?? 0,
-			totalVolumes: m.volumes ?? 0,
-			coverUrl: httpsOrEmpty(m.images?.jpg?.large_image_url ?? m.images?.jpg?.image_url),
-			releaseDate: m.published?.from ? (m.published.from.split('T')[0] ?? '') : '',
-			url: httpsOrEmpty(m.url) || `https://myanimelist.net/manga/${m.mal_id}`,
+			totalChapters: readNumber(at(m, 'chapters')),
+			totalVolumes: readNumber(at(m, 'volumes')),
+			coverUrl: httpsOrEmpty(readOptionalString(at(jpg, 'large_image_url')) ?? readString(at(jpg, 'image_url'))),
+			releaseDate: from.split('T')[0] ?? '',
+			url: httpsOrEmpty(readString(at(m, 'url'))) || `https://myanimelist.net/manga/${malId}`,
 		};
 	}
 
 	/** throws ApiError */
 	async searchManga(query: string): Promise<MangaSearchResult[]> {
 		const url = `${this.jikan.base}/manga?q=${encodeURIComponent(query)}&limit=10`;
-		const data = (await this.throttleJikan(() => this.fetchWithTimeout(url))) as { data?: JikanMangaItem[] };
-		return (data.data ?? []).map((m) => this.mapJikanManga(m));
+		const data = await this.throttleJikan(() => this.fetchWithTimeout(url));
+		return recordsOf(at(data, 'data')).map((m) => this.mapJikanManga(m));
 	}
 
 	/**
@@ -1974,9 +1881,8 @@ export class ApiService {
 	async getMangaByMalId(malId: number): Promise<MangaSearchResult | null> {
 		const url = `${this.jikan.base}/manga/${malId}`;
 		try {
-			const data = (await this.throttleJikan(() => this.fetchWithTimeout(url))) as { data?: JikanMangaItem };
-			if (!data.data) return null;
-			return this.mapJikanManga(data.data);
+			const item = at(await this.throttleJikan(() => this.fetchWithTimeout(url)), 'data');
+			return isRecord(item) ? this.mapJikanManga(item) : null;
 		} catch {
 			return null;
 		}
@@ -1989,8 +1895,8 @@ export class ApiService {
 	 */
 	async getGoogleBookById(volumeId: string): Promise<BookSearchResult | null> {
 		if (!volumeId) return null;
-		const item = (await this.googleBooksFetch(`/volumes/${encodeURIComponent(volumeId)}`)) as GoogleVolume;
-		if (!item || !item.id) return null;
+		const item = await this.googleBooksFetch(`/volumes/${encodeURIComponent(volumeId)}`);
+		if (!readOptionalString(at(item, 'id'))) return null;
 		return this.mapGoogleVolume(item);
 	}
 
@@ -2014,17 +1920,16 @@ export class ApiService {
 
 	// Games — RAWG
 
-	private mapRawgGame(g: RawgGame): GameSearchResult {
+	private mapRawgGame(g: unknown): GameSearchResult {
+		const slug = readString(at(g, 'slug'));
 		return {
 			source: 'rawg',
-			id: g.id,
-			title: g.name ?? '',
-			releaseDate: g.released ?? '',
-			coverUrl: httpsOrEmpty(g.background_image),
-			platforms: (g.platforms ?? [])
-				.map((p) => p.platform?.name ?? '')
-				.filter((n) => n !== ''),
-			url: g.slug ? `https://rawg.io/games/${g.slug}` : '',
+			id: readNumber(at(g, 'id')),
+			title: readString(at(g, 'name')),
+			releaseDate: readString(at(g, 'released')),
+			coverUrl: httpsOrEmpty(readString(at(g, 'background_image'))),
+			platforms: namesOf(recordsOf(at(g, 'platforms')).map((p) => at(p, 'platform'))),
+			url: slug ? `https://rawg.io/games/${slug}` : '',
 		};
 	}
 
@@ -2032,9 +1937,9 @@ export class ApiService {
 	async searchRawgGames(query: string): Promise<GameSearchResult[]> {
 		if (!this.hasRawgKey()) throw new ApiError('rawg', 'no-key', 'RAWG API key not set');
 		const url = `${RAWG_BASE}/games?key=${encodeURIComponent(this.rawgApiKey)}&search=${encodeURIComponent(query)}&page_size=10`;
-		const data = (await this.fetchWithTimeout(url)) as RawgSearchResponse;
-		return (data.results ?? [])
-			.filter((g) => typeof g.id === 'number' && !!g.name)
+		const data = await this.fetchWithTimeout(url);
+		return recordsOf(at(data, 'results'))
+			.filter(hasIdAndName)
 			.map((g) => this.mapRawgGame(g));
 	}
 
@@ -2046,35 +1951,27 @@ export class ApiService {
 	async getRawgGameDetails(id: number): Promise<GameDetailsResult | null> {
 		const key = encodeURIComponent(this.rawgApiKey);
 		const [detail, stores] = await Promise.all([
-			this.fetchWithTimeout(`${RAWG_BASE}/games/${id}?key=${key}`) as Promise<RawgGameDetail>,
-			(this.fetchWithTimeout(`${RAWG_BASE}/games/${id}/stores?key=${key}`) as Promise<RawgStoresResponse>)
-				.catch((): RawgStoresResponse => ({ results: [] })),
+			this.fetchWithTimeout(`${RAWG_BASE}/games/${id}?key=${key}`),
+			this.fetchWithTimeout(`${RAWG_BASE}/games/${id}/stores?key=${key}`).catch(() => null),
 		]);
-		if (typeof detail.id !== 'number' || !detail.name) return null;
-
-		const storeLinks = (stores.results ?? []).filter((s) => !!httpsOrEmpty(s.url));
-		let storeUrl = '';
-		for (const storeId of RAWG_STORE_PRIORITY) {
-			const hit = storeLinks.find((s) => s.store_id === storeId);
-			if (hit) { storeUrl = hit.url!; break; }
-		}
-		if (!storeUrl && storeLinks.length > 0) storeUrl = storeLinks[0]!.url!;
+		if (!isRecord(detail) || !hasIdAndName(detail)) return null;
 
 		// game modes come from the (english) tag slugs
 		const tagSlugs = new Set(
-			(detail.tags ?? [])
-				.filter((t) => (t.language ?? 'eng') === 'eng' && t.slug)
-				.map((t) => t.slug!),
+			recordsOf(detail.tags)
+				.filter((t) => readString(t.language, 'eng') === 'eng')
+				.map((t) => readString(t.slug))
+				.filter(Boolean),
 		);
 
 		return {
 			...this.mapRawgGame(detail),
-			developer: (detail.developers ?? []).map((d) => d.name ?? '').filter(Boolean).join(', '),
-			publisher: (detail.publishers ?? []).map((p) => p.name ?? '').filter(Boolean).join(', '),
+			developer: namesOf(detail.developers).join(', '),
+			publisher: namesOf(detail.publishers).join(', '),
 			singleplayer: tagSlugs.has('singleplayer'),
 			coop: RAWG_COOP_TAGS.some((t) => tagSlugs.has(t)),
 			multiplayer: RAWG_MULTIPLAYER_TAGS.some((t) => tagSlugs.has(t)),
-			storeUrl,
+			storeUrl: rawgStoreUrl(stores),
 		};
 	}
 
@@ -2082,8 +1979,7 @@ export class ApiService {
 	async checkRawgConnection(): Promise<boolean> {
 		if (!this.hasRawgKey()) throw new ApiError('rawg', 'no-key', 'RAWG API key not set');
 		const url = `${RAWG_BASE}/games?key=${encodeURIComponent(this.rawgApiKey)}&page_size=1`;
-		const data = (await this.fetchWithTimeout(url)) as RawgSearchResponse;
-		return Array.isArray(data.results);
+		return Array.isArray(at(await this.fetchWithTimeout(url), 'results'));
 	}
 
 	// Games — IGDB (via Twitch OAuth)
@@ -2109,11 +2005,12 @@ export class ApiService {
 			// source 'twitch', not 'igdb' — a rejected Client ID/Secret is a different fix from a
 			// rejected query, and the two used to give the same message
 			const fetchPromise = requestUrl({ url, method: 'POST', throw: false })
-				.then((r) => readApiResponse('twitch', r) as TwitchTokenResponse);
+				.then((r) => readApiResponse('twitch', r));
 			const data = await Promise.race([fetchPromise, timeoutPromise]);
-			if (!data.access_token) throw new ApiError('twitch', 'auth', 'Twitch returned no access token');
-			this.igdbToken = data.access_token;
-			this.igdbTokenExpiry = Date.now() + Math.max(0, (data.expires_in ?? 0) - 60) * 1000;
+			const accessToken = readString(at(data, 'access_token'));
+			if (!accessToken) throw new ApiError('twitch', 'auth', 'Twitch returned no access token');
+			this.igdbToken = accessToken;
+			this.igdbTokenExpiry = Date.now() + Math.max(0, readNumber(at(data, 'expires_in')) - 60) * 1000;
 			return this.igdbToken;
 		} catch (err) {
 			if (err instanceof ApiError) throw err;
@@ -2153,61 +2050,54 @@ export class ApiService {
 		}
 	}
 
-	private mapIgdbGame(g: IgdbGame): GameSearchResult {
-		const ts = g.first_release_date;
+	private mapIgdbGame(g: unknown): GameSearchResult {
+		const ts = at(g, 'first_release_date');
 		// deliberately UTC, not the local toIsoDate: IGDB gives a UTC epoch for the release *day*,
 		// so converting locally shifts the date by one for anyone west of UTC
 		const releaseDate =
 			typeof ts === 'number' && ts > 0
 				? new Date(ts * 1000).toISOString().split('T')[0] ?? ''
 				: '';
+		const imageId = readString(at(g, 'cover', 'image_id'));
 		return {
 			source: 'igdb',
-			id: g.id,
-			title: g.name ?? '',
+			id: readNumber(at(g, 'id')),
+			title: readString(at(g, 'name')),
 			releaseDate,
-			coverUrl: g.cover?.image_id
-				? `https://images.igdb.com/igdb/image/upload/t_cover_big/${g.cover.image_id}.jpg`
-				: '',
-			platforms: (g.platforms ?? []).map((p) => p.name ?? '').filter((n) => n !== ''),
-			url: httpsOrEmpty(g.url),
+			coverUrl: imageId ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg` : '',
+			platforms: namesOf(at(g, 'platforms')),
+			url: httpsOrEmpty(readString(at(g, 'url'))),
 		};
 	}
 
 	async searchIgdbGames(query: string): Promise<GameSearchResult[]> {
 		// Apicalypse strings are double-quoted — strip quotes/backslashes from input.
 		const safe = query.replace(/["\\]/g, ' ').trim();
-		const data = (await this.igdbPost(
+		const data = await this.igdbPost(
 			'games',
 			`search "${safe}"; fields name, first_release_date, cover.image_id, platforms.name, url; limit 10;`,
-		)) as IgdbGame[];
-		return (Array.isArray(data) ? data : [])
-			.filter((g) => typeof g.id === 'number' && !!g.name)
-			.map((g) => this.mapIgdbGame(g));
+		);
+		return recordsOf(data).filter(hasIdAndName).map((g) => this.mapIgdbGame(g));
 	}
 
 	async getIgdbGameDetails(id: number): Promise<GameDetailsResult | null> {
-		const data = (await this.igdbPost(
+		const data = await this.igdbPost(
 			'games',
 			'fields name, first_release_date, cover.image_id, platforms.name, url, ' +
 				'game_modes.name, websites.url, ' +
 				'involved_companies.developer, involved_companies.publisher, involved_companies.company.name; ' +
 				`where id = ${id | 0}; limit 1;`,
-		)) as IgdbGame[];
-		const g = Array.isArray(data) ? data[0] : undefined;
-		if (!g || !g.name) return null;
+		);
+		const g = recordsOf(data)[0];
+		if (!g || readString(g.name) === '') return null;
 
-		const companies = g.involved_companies ?? [];
+		const companies = recordsOf(g.involved_companies);
 		const names = (list: typeof companies): string =>
-			[...new Set(list.map((c) => c.company?.name ?? '').filter(Boolean))].join(', ');
+			[...new Set(namesOf(list.map((c) => c.company)))].join(', ');
 
-		const modes = new Set((g.game_modes ?? []).map((m) => m.name ?? ''));
-		const siteUrls = (g.websites ?? []).map((w) => httpsOrEmpty(w.url)).filter(Boolean);
-		let storeUrl = '';
-		for (const domain of IGDB_STORE_DOMAINS) {
-			const hit = siteUrls.find((u) => u.includes(domain));
-			if (hit) { storeUrl = hit; break; }
-		}
+		const modes = new Set(namesOf(g.game_modes));
+		const siteUrls = recordsOf(g.websites).map((w) => httpsOrEmpty(readString(w.url))).filter(Boolean);
+		const storeUrl = IGDB_STORE_DOMAINS.map((domain) => siteUrls.find((u) => u.includes(domain))).find(Boolean) ?? '';
 
 		return {
 			...this.mapIgdbGame(g),
@@ -2269,19 +2159,8 @@ export class ApiService {
 	 * either shape, or a bare vanity name (resolved through the API). '' when unresolvable.
 	 */
 	async resolveSteamId(input: string): Promise<string> {
-		const raw = input.trim();
-		if (raw === '') return '';
-
-		// a 17-digit number is already a SteamID64
-		if (/^\d{17}$/.test(raw)) return raw;
-
-		// .../profiles/<steamid64> — the id is right there
-		const profileMatch = raw.match(/steamcommunity\.com\/profiles\/(\d{17})/);
-		if (profileMatch) return profileMatch[1] ?? '';
-
-		// .../id/<vanity> or a bare vanity name — needs the resolve endpoint
-		const vanityMatch = raw.match(/steamcommunity\.com\/id\/([^/?#]+)/);
-		const vanity = vanityMatch ? vanityMatch[1] ?? '' : raw;
+		const { id, vanity } = parseSteamInput(input.trim());
+		if (id !== '') return id;
 		if (vanity === '' || this.steamApiKey.trim() === '') return '';
 
 		try {
@@ -2289,8 +2168,8 @@ export class ApiService {
 				+ `?key=${encodeURIComponent(this.steamApiKey)}`
 				+ `&vanityurl=${encodeURIComponent(vanity)}`;
 			const { json } = await this.steamGet(url);
-			const res = (json as SteamVanityResponse | null)?.response;
-			return res?.success === 1 ? (res.steamid ?? '') : '';
+			const res = at(json, 'response');
+			return at(res, 'success') === 1 ? readString(at(res, 'steamid')) : '';
 		} catch {
 			return '';
 		}
@@ -2314,18 +2193,13 @@ export class ApiService {
 			if (status === 401 || status === 403) return { ok: false, reason: 'badKey', games: [] };
 			if (status !== 200) return { ok: false, reason: 'network', games: [] };
 
-			const res = (json as SteamOwnedGamesResponse | null)?.response;
+			const res = at(json, 'response');
 			// {} rather than { game_count: 0, games: [] } — the private-profile shape.
-			if (!res || res.games === undefined) {
-				return { ok: false, reason: res && res.game_count === 0 ? 'empty' : 'private', games: [] };
+			const list = at(res, 'games');
+			if (!Array.isArray(list)) {
+				return { ok: false, reason: at(res, 'game_count') === 0 ? 'empty' : 'private', games: [] };
 			}
-			const games = res.games.map((g) => ({
-				appId: String(g.appid),
-				name: g.name ?? '',
-				playtimeMinutes: g.playtime_forever ?? 0,
-				lastPlayed: g.rtime_last_played ? new Date(g.rtime_last_played * 1000).toISOString() : null,
-			}));
-			return { ok: true, reason: 'ok', games };
+			return { ok: true, reason: 'ok', games: readList(list, steamOwnedGame) };
 		} catch {
 			return { ok: false, reason: 'network', games: [] };
 		}
@@ -2348,11 +2222,12 @@ export class ApiService {
 				+ `&appid=${encodeURIComponent(appId)}`;
 			const { status, json } = await this.steamGet(url);
 			if (status !== 200) return null;
-			const stats = (json as SteamAchievementsResponse | null)?.playerstats;
-			if (!stats?.success || !Array.isArray(stats.achievements)) return null;
+			const stats = at(json, 'playerstats');
+			const list = at(stats, 'achievements');
+			if (!readBoolean(at(stats, 'success')) || !Array.isArray(list)) return null;
 			return {
-				earned: stats.achievements.filter((a) => a.achieved === 1).length,
-				total: stats.achievements.length,
+				earned: recordsOf(list).filter((a) => a.achieved === 1).length,
+				total: list.length,
 			};
 		} catch {
 			return null;
@@ -2369,17 +2244,17 @@ export class ApiService {
 			const url = `${STEAM_STORE_BASE}/appdetails?appids=${encodeURIComponent(appId)}`;
 			const { status, json } = await this.steamGet(url);
 			if (status !== 200 || !json) return null;
-			const entry = (json as Record<string, SteamAppDetailsEntry | undefined>)[appId];
-			if (!entry?.success || !entry.data) return null;
-			const d = entry.data;
+			const entry = readRecord(json)[appId];
+			const d = at(entry, 'data');
+			if (!readBoolean(at(entry, 'success')) || !isRecord(d)) return null;
 
-			const categoryIds = new Set((d.categories ?? []).map((c) => c.id));
+			const categoryIds = new Set(readList(d.categories, (c) => readOptionalNumber(at(c, 'id'))));
 			return {
-				name: d.name ?? '',
-				developer: (d.developers ?? []).join(', '),
-				publisher: (d.publishers ?? []).join(', '),
-				genres: (d.genres ?? []).map((g) => g.description ?? '').filter((g) => g !== ''),
-				releaseDate: parseSteamReleaseDate(d.release_date?.date ?? ''),
+				name: readString(d.name),
+				developer: readStringList(d.developers).join(', '),
+				publisher: readStringList(d.publishers).join(', '),
+				genres: recordsOf(d.genres).map((g) => readString(g.description)).filter((g) => g !== ''),
+				releaseDate: parseSteamReleaseDate(readString(at(d, 'release_date', 'date'))),
 				coverUrl: steamLibraryCover(appId),
 				storeUrl: `https://store.steampowered.com/app/${appId}/`,
 				singleplayer: categoryIds.has(STEAM_CAT_SINGLEPLAYER),

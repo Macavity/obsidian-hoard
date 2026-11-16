@@ -1,4 +1,5 @@
 import type { BookSearchResult } from './ApiService';
+import { isRecord } from './storage/sharedHelpers';
 
 const OPEN_LIBRARY_BASE = 'https://openlibrary.org';
 
@@ -16,10 +17,6 @@ export function openLibraryWorkUrl(id: string): string {
 
 export function openLibraryCoverUrl(coverId: number): string {
 	return `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-	return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
 function workId(key: unknown): string | null {
@@ -55,7 +52,7 @@ function build(id: string, title: string, fields: Partial<BookSearchResult>): Bo
 }
 
 function mapDoc(raw: unknown): BookSearchResult | null {
-	const doc = asRecord(raw);
+	const doc = isRecord(raw) ? raw : null;
 	const id = doc && workId(doc.key);
 	if (!doc || !id || typeof doc.title !== 'string') return null;
 	return build(id, doc.title, {
@@ -67,7 +64,7 @@ function mapDoc(raw: unknown): BookSearchResult | null {
 }
 
 export function mapOpenLibrarySearch(json: unknown): BookSearchResult[] {
-	const docs = asRecord(json)?.docs;
+	const docs = isRecord(json) ? json.docs : undefined;
 	if (!Array.isArray(docs)) return [];
 	return docs.map(mapDoc).filter((r): r is BookSearchResult => r !== null);
 }
@@ -77,7 +74,7 @@ function yearOf(value: unknown): number {
 }
 
 export function mapOpenLibraryWork(json: unknown): BookSearchResult | null {
-	const work = asRecord(json);
+	const work = isRecord(json) ? json : null;
 	const id = work && workId(work.key);
 	if (!work || !id || typeof work.title !== 'string') return null;
 	const covers = Array.isArray(work.covers) ? work.covers : [];
