@@ -25,7 +25,8 @@ export function readBoolean(v: unknown, fallback = false): boolean {
 export function readList<T>(v: unknown, readItem: (item: unknown) => T | undefined): T[] {
 	if (!Array.isArray(v)) return [];
 	const out: T[] = [];
-	for (const item of v as unknown[]) {
+	const items: unknown[] = v;
+	for (const item of items) {
 		const read = readItem(item);
 		if (read !== undefined) out.push(read);
 	}
@@ -50,7 +51,8 @@ export function at(v: unknown, ...path: (string | number)[]): unknown {
 	for (const step of path) {
 		if (typeof step === 'number') {
 			if (!Array.isArray(cur)) return undefined;
-			cur = (cur as unknown[])[step];
+			const arr: unknown[] = cur;
+			cur = arr[step];
 		} else {
 			if (!isRecord(cur)) return undefined;
 			cur = cur[step];

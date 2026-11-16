@@ -20,7 +20,6 @@ export function steamStoreSearchUrl(query: string): string {
 	return `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(query)}&l=english&cc=US`;
 }
 
-
 function platformNames(raw: unknown): string[] {
 	if (!isRecord(raw)) return [];
 	return PLATFORM_NAMES.filter(([key]) => raw[key] === true).map(([, name]) => name);
