@@ -104,3 +104,26 @@ describe('PosterService keyless (Cinemeta)', () => {
 		expect(searchCinemeta).toHaveBeenCalledWith('Breaking Bad', 'movie', undefined);
 	});
 });
+
+describe('PosterService not-due titles', () => {
+  it('sends no request and records nothing for a title that is not due', async () => {
+    vi.mocked(requestUrl).mockClear();
+    const searchCinemeta = vi.fn().mockResolvedValue([]);
+    const recordLookup = vi.fn();
+    const svc = new PosterService(
+      { updatePosterUrl: vi.fn(), recordLookup, lookupDue: () => false } as unknown as DataManager,
+      () => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', typeApiMapping: {} }),
+      () => ({ searchCinemeta }) as unknown as ApiService,
+    );
+    expect(await svc.enqueue(title({}))).toBeNull();
+    expect(recordLookup).not.toHaveBeenCalled();
+    expect(searchCinemeta).not.toHaveBeenCalled();
+    expect(requestUrl).not.toHaveBeenCalled();
+  });
+
+  it('records nothing for a type without a poster source', async () => {
+    const { svc, recordLookup } = setup({}, {});
+    expect(await svc.enqueue(title({ type: 'Unmapped' }))).toBeNull();
+    expect(recordLookup).not.toHaveBeenCalled();
+  });
+});

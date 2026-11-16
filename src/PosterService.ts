@@ -4,7 +4,7 @@ import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from './types';
 import { getApiGroupForType } from './types';
 import { httpsOrEmpty } from './httpsUrl';
-import { NOT_FOUND, FAILED } from './lookup';
+import { found, NOT_FOUND, FAILED, type LookupResult } from './lookup';
 import { jsonPost, requestVia, type ApiService } from './ApiService';
 import { resolveJikanEndpoint, type JikanEndpoint } from './jikanBase';
 
@@ -138,12 +138,9 @@ export class PosterService {
 			const item = this.queue.shift();
 			if (!item) break;
 			try {
-				const url = await this.fetchPosterForTitle(item.title, item.overwrite);
+				const result = await this.fetchPosterForTitle(item.title, item.overwrite);
 				if (this.disposed) { item.resolve(null); break; }
-				// a clean "the API has no poster" waits a week; a failure (see the catch) only an hour
-				if (url) await this.dataManager.updatePosterUrl(item.title.id, url, item.overwrite);
-				else this.dataManager.recordLookup(item.title.id, 'poster', NOT_FOUND);
-				item.resolve(url);
+				item.resolve(await this.settle(item.title, item.overwrite, result));
 			} catch {
 				// a rejected key or a dropped connection must not count as "no poster"
 				this.dataManager.recordLookup(item.title.id, 'poster', FAILED);
@@ -159,6 +156,17 @@ export class PosterService {
 		this.isProcessing = false;
 	}
 
+	/** Persists a search outcome; null means no search ran (not due, no poster source), so nothing is recorded. */
+	private async settle(title: HoardTitle, overwrite: boolean, result: LookupResult<string> | null): Promise<string | null> {
+		if (!result) return null;
+		if (result.status !== 'found') {
+			this.dataManager.recordLookup(title.id, 'poster', result);
+			return null;
+		}
+		await this.dataManager.updatePosterUrl(title.id, result.value, overwrite);
+		return result.value;
+	}
+
 	private getDelayForTitle(title: HoardTitle): number {
 		const settings = this.getSettings();
 		const group = getApiGroupForType(title.type, settings.typeApiMapping);
@@ -171,18 +179,19 @@ export class PosterService {
 		return CINEMETA_DELAY_MS;
 	}
 
-	private async fetchPosterForTitle(title: HoardTitle, overwrite: boolean): Promise<string | null> {
+	/** The search outcome, or null when no search ran (not due, no poster source for the type). */
+	private async fetchPosterForTitle(title: HoardTitle, overwrite: boolean): Promise<LookupResult<string> | null> {
 		// the title already has one (a refresh looks it up again)
 		if (!overwrite) {
-			if (title.posterUrl && title.posterUrl.startsWith('http')) return title.posterUrl;
+			if (title.posterUrl && title.posterUrl.startsWith('http')) return found(title.posterUrl);
 			if (!this.dataManager.lookupDue(title.id, 'poster')) return null;
 		}
 
 		const settings = this.getSettings();
 		const group = getApiGroupForType(title.type, settings.typeApiMapping);
-		if (group === 'anime') return this.fetchAnimePoster(title);
-		if (group === 'movie') return this.fetchMediaPoster(title);
-		return null;
+		if (group !== 'anime' && group !== 'movie') return null;
+		const url = await (group === 'anime' ? this.fetchAnimePoster(title) : this.fetchMediaPoster(title));
+		return url ? found(url) : NOT_FOUND;
 	}
 
 	private cleanTitleForSearch(name: string): string {

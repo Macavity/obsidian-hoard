@@ -4,6 +4,9 @@ import { GameDataManager } from '../src/GameDataManager';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
 import type { HoardTitle } from '../src/types';
+import { PosterService } from '../src/PosterService';
+import { DEFAULT_SETTINGS } from '../src/types';
+import type { ApiService } from '../src/ApiService';
 import { NOT_FOUND, FAILED, NO_KEY, found } from '../src/lookup';
 
 describe('DataManager on vault storage', () => {
@@ -526,5 +529,18 @@ describe('DataManager lookup state', () => {
 		for (const kind of ['poster', 'trailer', 'credits', 'studio'] as const) expect(dm.lookupDue('Movie/A', kind)).toBe(false);
 		dm.resetNoKeyChecks();
 		for (const kind of ['poster', 'trailer', 'credits', 'studio'] as const) expect(dm.lookupDue('Movie/A', kind)).toBe(true);
+	});
+
+	it('keeps a transient check as it was when the poster queue meets the title again', async () => {
+		const { dm, local } = await setup();
+		dm.recordLookup('Movie/A', 'poster', FAILED);
+		const before = local.getCache('Movie/A')?.apiCheck?.poster;
+		const api = { searchCinemeta: vi.fn(), getCinemetaDetails: vi.fn() };
+		const svc = new PosterService(dm, () => DEFAULT_SETTINGS, () => api as unknown as ApiService);
+		at(10 * MIN);
+		await svc.enqueue(dm.getTitle('Movie/A')!);
+		expect(local.getCache('Movie/A')?.apiCheck?.poster).toEqual(before);
+		expect(before?.result).toBe('transient');
+		expect(api.searchCinemeta).not.toHaveBeenCalled();
 	});
 });
