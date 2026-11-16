@@ -6,7 +6,9 @@ import type {
 } from '../../types';
 import { readBook, readGame, readGameGroup, readManga } from '../../backupEntries';
 import { readGamesSettings, readReadingSettings } from '../../featureSettings';
-import { at, readList, readOneOf, readOptionalString, readRecord, readString, readStringList } from '../../storage/read';
+import {
+	at, noneAsAbsent, readList, readOneOf, readOptionalString, readRecord, readString, readStringList, withoutNone,
+} from '../../storage/read';
 import { defined } from '../../storage/sharedHelpers';
 import { TITLE_PROPS } from '../../storage/properties';
 import { WISHLIST, type WatchLogTitle } from './schema1Types';
@@ -71,6 +73,12 @@ export function normalizeTitle(raw: Record<string, unknown>): WatchLogTitle {
 	if (!Array.isArray(t.watchedEpisodes)) t.watchedEpisodes = [];
 	if (typeof t.notes !== 'string') t.notes = '';
 	if (typeof t.externalLink !== 'string') t.externalLink = '';
+	// WatchLog's `none` for "nothing found" reads as absent
+	t.posterUrl = noneAsAbsent(readOptionalString(t.posterUrl));
+	t.trailerUrl = noneAsAbsent(readOptionalString(t.trailerUrl));
+	t.director = withoutNone(t.director);
+	t.cast = withoutNone(t.cast);
+	t.studio = withoutNone(t.studio);
 	return t;
 }
 

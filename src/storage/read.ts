@@ -60,3 +60,12 @@ export function at(v: unknown, ...path: (string | number)[]): unknown {
 	}
 	return cur;
 }
+
+/** WatchLog wrote `none` for "nothing found"; a lone one reads as absent (an empty text too). */
+export function noneAsAbsent(v: string | undefined): string | undefined {
+	return v === 'none' ? undefined : v || undefined;
+}
+
+export function withoutNone(names: string[] | undefined): string[] | undefined {
+	return names?.length === 1 && names[0] === 'none' ? undefined : names;
+}

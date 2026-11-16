@@ -4,7 +4,7 @@ import type {
 } from './types';
 import { newBook, newGame, newManga, newTitle } from './entryFactories';
 import { readSeason } from './storage/readCache';
-import { at, readList, readOptionalNumber, readOptionalString, readString, readStringList } from './storage/read';
+import { at, noneAsAbsent, readList, readOptionalNumber, readOptionalString, readString, readStringList, withoutNone } from './storage/read';
 import { defined, isRecord } from './storage/sharedHelpers';
 
 /**
@@ -98,8 +98,10 @@ export function readTitle(v: unknown): HoardTitle | undefined {
 			communityRating: num(v, 'communityRating'), communityVotes: num(v, 'communityVotes'),
 			communitySource: optText(v, 'communitySource'), communityRatingLastFetched: optText(v, 'communityRatingLastFetched'),
 			pinned: flag(v, 'pinned'), favorite: flag(v, 'favorite'), dateFavorited: optText(v, 'dateFavorited'),
-			posterUrl: optText(v, 'posterUrl'), trailerUrl: optText(v, 'trailerUrl'), manualTrailerUrl: optText(v, 'manualTrailerUrl'),
-			director: list(v, 'director'), cast: list(v, 'cast'), studio: list(v, 'studio'),
+			// released backups carry WatchLog's `none` for "nothing found": it reads as absent
+			posterUrl: noneAsAbsent(optText(v, 'posterUrl')), trailerUrl: noneAsAbsent(optText(v, 'trailerUrl')),
+			manualTrailerUrl: optText(v, 'manualTrailerUrl'),
+			director: withoutNone(list(v, 'director')), cast: withoutNone(list(v, 'cast')), studio: withoutNone(list(v, 'studio')),
 			manualDirector: list(v, 'manualDirector'), manualCast: list(v, 'manualCast'), manualStudio: list(v, 'manualStudio'),
 			maybe: flag(v, 'maybe'), seasonsOverride: flag(v, 'seasonsOverride'), groups: list(v, 'groups'),
 			unmappedWatched: unmappedWatched.length > 0 ? unmappedWatched : undefined,

@@ -7,6 +7,9 @@ import { registerTypes } from '../../../src/import/watchlog/registerTypes';
 import { prepareData } from '../../../src/import/watchlog/schema1Read';
 import { importContext } from './helpers';
 import { createFakeApp } from '../../fakes/fakeApp';
+import { normalizeTitle, watchLogApiValues } from '../../../src/import/watchlog/schema1Normalize';
+import { titleToCache, titleToProperties } from '../../../src/storage/titleCodec';
+import { getDisplayTrailer } from '../../../src/types';
 import { LocalStore } from '../../../src/storage/LocalStore';
 
 type Data = Record<string, unknown> & { titles: unknown[]; games: { games: unknown[]; groups: unknown[]; settings: Record<string, unknown> }; history: unknown[] };
@@ -18,6 +21,26 @@ const fmOf = (src: string | undefined): Record<string, unknown> =>
 
 const baseOf = (files: Map<string, string>): Record<string, Record<string, unknown>> =>
 	(parse(files.get('Hoard/Hoard.base') ?? '') as { hoard: Record<string, Record<string, unknown>> }).hoard;
+
+describe('WatchLog import of legacy none markers', () => {
+	it('reads a lone none as absent, in the note, the cache and the api values', () => {
+		const t = normalizeTitle({
+			id: 'a', title: 'X', type: 'Movie', posterUrl: 'none', trailerUrl: 'none',
+			director: ['none'], cast: ['none'], studio: ['none'],
+		});
+		expect(titleToProperties(t, 0)).not.toHaveProperty('Cover');
+		expect(JSON.stringify(titleToProperties(t, 0))).not.toContain('none');
+		expect(JSON.stringify(titleToCache(t))).not.toContain('none');
+		expect(watchLogApiValues(t)).toEqual({});
+		expect(getDisplayTrailer(t)).toBe('');
+	});
+
+	it('keeps real values', () => {
+		const t = normalizeTitle({ id: 'a', title: 'X', type: 'Movie', posterUrl: 'https://p', director: ['Ann'] });
+		expect(t.posterUrl).toBe('https://p');
+		expect(t.director).toEqual(['Ann']);
+	});
+});
 
 describe('WatchLog import of wrongly typed data', () => {
 	it('a title without a text title is reported, the other titles still import', async () => {

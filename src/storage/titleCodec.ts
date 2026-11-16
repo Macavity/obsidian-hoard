@@ -3,6 +3,7 @@ import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId, Fm } 
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
 import { externalIdFromLink, formatExternalId, parseExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, TITLE_PROPS as T } from './properties';
+import { noneAsAbsent, withoutNone } from './read';
 import { parseSeasonLine, seasonsOf } from './seasonText';
 import { defined, nonEmpty, optional } from './sharedHelpers';
 
@@ -219,10 +220,6 @@ function progressFields(r: Reader, t: HoardTitle, seasonsCheck: ApiCheckResult |
 	const mapping = seasonsPending(t, seasonsCheck) ? t.seasons : mappingSeasons(t);
 	return { ...watchedFields(r, mapping), ...skippedFields(r, t.seasons, mapping) };
 }
-
-/** WatchLog wrote `none` into the note for "nothing found"; a lone one reads as absent. */
-const noneAsAbsent = (v: string | undefined): string | undefined => (v === 'none' ? undefined : v || undefined);
-const withoutNone = (names: string[] | undefined): string[] | undefined => (names?.length === 1 && names[0] === 'none' ? undefined : names);
 
 /** API fields the user set in the note; they win over the cached values and are written back (E9). */
 function overridesOf(r: Reader): TitleOverrides | undefined {

@@ -38,6 +38,29 @@ describe('backup/restore', () => {
 		for (const [path, content] of b.f.files) expect(content, path).not.toContain('SECRET');
 	});
 
+	it('reads the legacy none markers of an older backup as absent', async () => {
+		const legacy = {
+			id: 'Movie/A', title: 'A', type: 'Movie', status: 'Completed',
+			posterUrl: 'none', trailerUrl: 'none', director: ['none'], cast: ['none'], studio: ['none'],
+		};
+		const base = buildBackup(await setupBackup({}));
+		const parsed = parseBackup(JSON.stringify({ ...base, entries: { ...base.entries, titles: [legacy] } }));
+		if (!('backup' in parsed)) throw new Error('expected a v2 backup');
+		const b = await setupBackup({});
+		await restoreBackup(b, parsed.backup);
+		const t = b.dataManager.getTitle('Movie/A');
+		expect(t).toMatchObject({ id: 'Movie/A' });
+		expect(t?.posterUrl).toBeUndefined();
+		expect(t?.trailerUrl).toBeUndefined();
+		expect(t?.director).toBeUndefined();
+		expect(t?.cast).toBeUndefined();
+		expect(t?.studio).toBeUndefined();
+		expect(b.dataManager.lookupDue('Movie/A', 'poster')).toBe(true);
+		for (const [path, content] of b.f.files) expect(content, path).not.toMatch(/none/);
+		await b.local.flush();
+		expect(JSON.stringify(b.savedData() ?? {})).not.toContain('none');
+	});
+
 	it('rejects foreign formats', () => {
 		expect('error' in parseBackup('{"version":3,"watch":{}}')).toBe(true);
 		expect('error' in parseBackup('{"version":9}')).toBe(true);
