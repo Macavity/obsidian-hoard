@@ -18,7 +18,6 @@ import type {
 	TmdbMovieDetail,
 	TmdbTvDetail,
 	TmdbExternalIds,
-	TmdbFindResult,
 	TmdbCollectionRef,
 	TmdbCollectionDetail,
 	Season,
@@ -32,7 +31,7 @@ import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, stea
 import { normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
 import { at, readBoolean, readList, readOptionalNumber, readOptionalString, readString } from './storage/read';
-import { attempt, firstFound, FAILED, NOT_FOUND, NO_KEY, type LookupResult, type LookupSource } from './lookup';
+import { attempt, firstFound, found, FAILED, NOT_FOUND, NO_KEY, type LookupResult, type LookupSource } from './lookup';
 
 export type Airing = NonNullable<EntryCache['airing']>;
 
@@ -159,17 +158,6 @@ function tmdbCreditsToStored(credits: unknown): { director: string[]; cast: stri
 		cast: normalizeCreditsForStore(cast),
 	};
 }
-
-// 'none' = TMDB answered nothing there, 'error' = request failed. Only 'none' may be cached.
-export type TmdbCollectionLookup =
-	| { status: 'found'; ref: TmdbCollectionRef }
-	| { status: 'none' }
-	| { status: 'error' };
-
-export type TmdbMovieIdLookup =
-	| { status: 'found'; id: number }
-	| { status: 'none' }
-	| { status: 'error' };
 
 /** TMDB company/network names, normalized for storage. */
 function tmdbCompanyNames(...lists: unknown[]): string[] {
@@ -625,18 +613,19 @@ function isAuthFailure(err: unknown): boolean {
 	return err instanceof ApiError && (err.reason === 'auth' || err.reason === 'not-enabled');
 }
 
-/**
- * Result of a background check: transient = worth retrying soon (timeout, 429, network, 5xx),
- * nokey = no usable credential, notfound = the source has nothing for this identity.
- */
-export type ApiOutcome<T> = { status: 'ok'; value: T } | { status: 'transient' | 'nokey' | 'notfound' };
-
-function outcomeOfError(err: unknown): { status: 'transient' | 'nokey' | 'notfound' } {
-	if (err instanceof ApiError) {
-		if (err.reason === 'no-key' || err.reason === 'auth' || err.reason === 'not-enabled') return { status: 'nokey' };
-		if (err.reason === 'not-found') return { status: 'notfound' };
-	}
-	return { status: 'transient' };
+/** One source per anime id the title has, the preferred API first; a title with neither id has nothing to ask. */
+function animeSources<T>(
+	title: Pick<HoardTitle, 'anilistId' | 'malId'>,
+	preferred: 'jikan' | 'anilist',
+	anilist: (anilistId: number) => LookupSource<T>,
+	jikan: (malId: number) => LookupSource<T>,
+): LookupSource<T>[] {
+	const { anilistId, malId } = title;
+	const sources: LookupSource<T>[] = [];
+	if (anilistId !== undefined && anilistId > 0) sources.push(anilist(anilistId));
+	if (malId !== undefined && malId > 0) sources.push(jikan(malId));
+	if (preferred === 'jikan') sources.reverse();
+	return sources.length > 0 ? sources : [() => Promise.resolve(NOT_FOUND)];
 }
 
 /** A source's failure as a lookup outcome: 404 → notfound, a rejected or missing credential → nokey, anything else → failed. */
@@ -1358,12 +1347,12 @@ export class ApiService {
 	 */
 	async fetchSeasons(
 		title: Pick<HoardTitle, 'anilistId' | 'malId' | 'tmdbId' | 'tmdbMediaType' | 'externalLink'>,
-	): Promise<ApiOutcome<Season[]>> {
-		const single = (episodes: number | null | undefined): ApiOutcome<Season[]> =>
-			episodes ? { status: 'ok', value: [{ name: 'Season 1', episodes, offset: 0 }] } : { status: 'notfound' };
-		const multi = (seasons: Season[] | undefined): ApiOutcome<Season[]> => {
-			const found = nonEmptySeasons(seasons);
-			return found ? { status: 'ok', value: found } : { status: 'notfound' };
+	): Promise<LookupResult<Season[]>> {
+		const single = (episodes: number | null | undefined): LookupResult<Season[]> =>
+			episodes ? found([{ name: 'Season 1', episodes, offset: 0 }]) : NOT_FOUND;
+		const multi = (seasons: Season[] | undefined): LookupResult<Season[]> => {
+			const nonEmpty = nonEmptySeasons(seasons);
+			return nonEmpty ? found(nonEmpty) : NOT_FOUND;
 		};
 		try {
 			if (title.anilistId !== undefined) return single((await this.queryAniListById(title.anilistId))?.episodes);
@@ -1373,19 +1362,19 @@ export class ApiService {
 				return single(data.data?.episodes);
 			}
 			if (title.tmdbId !== undefined) {
-				if (title.tmdbMediaType !== 'tv') return { status: 'notfound' };
-				if (!this.tmdbApiKey) return { status: 'nokey' };
+				if (title.tmdbMediaType !== 'tv') return NOT_FOUND;
+				if (!this.tmdbApiKey) return NO_KEY;
 				return multi((await this.loadTmdbTvDetails(String(title.tmdbId))).seasons);
 			}
 			const imdbId = imdbIdFromLink(title.externalLink);
-			if (!imdbId) return { status: 'notfound' };
-			if (!this.omdbApiKey && !this.tmdbApiKey) return { status: 'nokey' };
+			if (!imdbId) return NOT_FOUND;
+			if (!this.omdbApiKey && !this.tmdbApiKey) return NO_KEY;
 			const full = this.omdbApiKey ? await this.getOmdbTvDetails(imdbId) : await this.getTmdbByImdbId(imdbId);
 			// those lookups fold failures into null: retry soon rather than call it missing
-			if (!full) return { status: 'transient' };
-			return full.mediaType === 'tv' ? multi(full.seasons) : { status: 'notfound' };
+			if (!full) return FAILED;
+			return full.mediaType === 'tv' ? multi(full.seasons) : NOT_FOUND;
 		} catch (err) {
-			return outcomeOfError(err);
+			return lookupOfError(err);
 		}
 	}
 
@@ -1395,22 +1384,22 @@ export class ApiService {
 	 * Next / last aired episode: AniList by `anilistId`, else TMDB tv by `tmdbId` (needs the key).
 	 * notfound = no source or no such title; nothing is fetched without an id.
 	 */
-	async fetchAiring(title: Pick<HoardTitle, 'anilistId' | 'tmdbId' | 'tmdbMediaType'>): Promise<ApiOutcome<Airing>> {
+	async fetchAiring(title: Pick<HoardTitle, 'anilistId' | 'tmdbId' | 'tmdbMediaType'>): Promise<LookupResult<Airing>> {
 		try {
 			if (title.anilistId !== undefined) return await this.fetchAniListAiring(title.anilistId);
 			if (title.tmdbId !== undefined && title.tmdbMediaType === 'tv') {
-				if (!this.tmdbApiKey) return { status: 'nokey' };
+				if (!this.tmdbApiKey) return NO_KEY;
 				return await this.fetchTmdbAiring(title.tmdbId);
 			}
-			return { status: 'notfound' };
+			return NOT_FOUND;
 		} catch (err) {
-			return outcomeOfError(err);
+			return lookupOfError(err);
 		}
 	}
 
-	private async fetchAniListAiring(anilistId: number): Promise<ApiOutcome<Airing>> {
+	private async fetchAniListAiring(anilistId: number): Promise<LookupResult<Airing>> {
 		const media = await this.queryAniListById(anilistId);
-		if (!media) return { status: 'notfound' };
+		if (!media) return NOT_FOUND;
 		const airing: Airing = { refreshedAt: new Date().toISOString() };
 		const next = media.nextAiringEpisode;
 		if (typeof next?.episode === 'number') {
@@ -1420,10 +1409,10 @@ export class ApiService {
 		} else if (media.status === 'FINISHED' && typeof media.episodes === 'number' && media.episodes > 0) {
 			airing.lastEpisode = media.episodes;
 		}
-		return { status: 'ok', value: airing };
+		return found(airing);
 	}
 
-	private async fetchTmdbAiring(tmdbId: number): Promise<ApiOutcome<Airing>> {
+	private async fetchTmdbAiring(tmdbId: number): Promise<LookupResult<Airing>> {
 		const detail = await this.fetchWithTimeout(`${TMDB_BASE}/tv/${tmdbId}`, this.tmdbHeaders()) as TmdbTvDetail;
 		const airing: Airing = { refreshedAt: new Date().toISOString() };
 		const next = detail.next_episode_to_air;
@@ -1437,7 +1426,7 @@ export class ApiService {
 			airing.lastEpisode = last.episode_number;
 			if (typeof last.season_number === 'number') airing.lastSeason = last.season_number;
 		}
-		return { status: 'ok', value: airing };
+		return found(airing);
 	}
 
 	hasOmdbKey(): boolean {
@@ -1470,22 +1459,17 @@ export class ApiService {
 
 	/** One source per anime id the title has, the preferred API first; a title with neither id has nothing to ask. */
 	private animeStudioSources(title: HoardTitle, animeSource: 'jikan' | 'anilist'): LookupSource<StudioLookup>[] {
-		const { anilistId, malId } = title;
-		const anilist: LookupSource<StudioLookup> = () => attempt(async () => {
-			const media = await this.queryAniListById(anilistId!);
+		const anilist = (anilistId: number): LookupSource<StudioLookup> => () => attempt(async () => {
+			const media = await this.queryAniListById(anilistId);
 			const main = readList(at(media, 'studios', 'edges'), (e) =>
 				readBoolean(at(e, 'isMain')) ? readOptionalString(at(e, 'node', 'name')) : undefined);
 			return studioOf(main);
 		}, lookupOfError);
-		const jikan: LookupSource<StudioLookup> = () => attempt(async () => {
+		const jikan = (malId: number): LookupSource<StudioLookup> => () => attempt(async () => {
 			const res = await this.throttleJikan(() => this.fetchWithTimeout(`${this.jikan.base}/anime/${malId}`));
 			return studioOf(readList(at(res, 'data', 'studios'), (st) => readOptionalString(at(st, 'name'))));
 		}, lookupOfError);
-		const sources: LookupSource<StudioLookup>[] = [];
-		if ((anilistId ?? 0) > 0) sources.push(anilist);
-		if ((malId ?? 0) > 0) sources.push(jikan);
-		if (animeSource === 'jikan') sources.reverse();
-		return sources.length > 0 ? sources : [() => Promise.resolve(NOT_FOUND)];
+		return animeSources(title, animeSource, anilist, jikan);
 	}
 
 	/** TMDB company/network names: by the cached TMDB id, else through the IMDb id's /find. */
@@ -1495,11 +1479,9 @@ export class ApiService {
 			if (title.tmdbId && title.tmdbMediaType) return this.tmdbStudioOf(title.tmdbMediaType, title.tmdbId);
 			const imdbId = imdbIdFromLink(title.externalLink);
 			if (!imdbId) return null;
-			const hits = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
-			const movieId = readOptionalNumber(at(hits, 'movie_results', 0, 'id'));
-			if (movieId) return this.tmdbStudioOf('movie', movieId, true);
-			const tvId = readOptionalNumber(at(hits, 'tv_results', 0, 'id'));
-			return tvId ? this.tmdbStudioOf('tv', tvId, true) : null;
+			const { movie, tv } = await this.tmdbFindIds(imdbId);
+			if (movie) return this.tmdbStudioOf('movie', movie, true);
+			return tv ? this.tmdbStudioOf('tv', tv, true) : null;
 		}, lookupOfError);
 	}
 
@@ -1515,17 +1497,20 @@ export class ApiService {
 
 	// TMDB collections. Movies only.
 
-	/** exact key, so empty movie_results = definitively not a movie (all TV lands here) */
-	async findTmdbMovieIdByImdbId(imdbId: string): Promise<TmdbMovieIdLookup> {
-		if (!this.tmdbApiKey || !imdbId) return { status: 'error' };
-		const url = `${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`;
-		try {
-			const data = (await this.fetchWithTimeout(url, this.tmdbHeaders())) as TmdbFindResult;
-			const id = data.movie_results?.[0]?.id;
-			return id ? { status: 'found', id } : { status: 'none' };
-		} catch {
-			return { status: 'error' };
-		}
+	/** The TMDB movie and tv ids an IMDb id resolves to (the first hit of each kind). Throws when the request fails. */
+	private async tmdbFindIds(imdbId: string): Promise<{ movie?: number; tv?: number }> {
+		const hits = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
+		return {
+			movie: readOptionalNumber(at(hits, 'movie_results', 0, 'id')),
+			tv: readOptionalNumber(at(hits, 'tv_results', 0, 'id')),
+		};
+	}
+
+	/** exact key, so notfound = definitively not a movie (all TV lands here); failed = the request failed */
+	findTmdbMovieIdByImdbId(imdbId: string): Promise<LookupResult<number>> {
+		if (!this.tmdbApiKey) return Promise.resolve(NO_KEY);
+		if (!imdbId) return Promise.resolve(NOT_FOUND);
+		return attempt(async () => (await this.tmdbFindIds(imdbId)).movie || null, lookupOfError);
 	}
 
 	/** fallback for manually-added titles with no IMDb link. Top result — can miss. */
@@ -1543,18 +1528,17 @@ export class ApiService {
 		}
 	}
 
-	async getTmdbMovieCollection(tmdbId: number): Promise<TmdbCollectionLookup> {
-		if (!this.tmdbApiKey) return { status: 'error' };
-		try {
-			const detail = (await this.fetchWithTimeout(
-				`${TMDB_BASE}/movie/${tmdbId}`,
-				this.tmdbHeaders(),
-			)) as TmdbMovieDetail;
-			const ref = detail.belongs_to_collection;
-			return ref?.id ? { status: 'found', ref } : { status: 'none' };
-		} catch {
-			return { status: 'error' };
-		}
+	/** notfound = the movie belongs to no collection; failed = the request failed */
+	getTmdbMovieCollection(tmdbId: number): Promise<LookupResult<TmdbCollectionRef>> {
+		if (!this.tmdbApiKey) return Promise.resolve(NO_KEY);
+		return attempt(async () => {
+			const detail = await this.fetchWithTimeout(`${TMDB_BASE}/movie/${tmdbId}`, this.tmdbHeaders());
+			const id = readOptionalNumber(at(detail, 'belongs_to_collection', 'id'));
+			if (!id) return null;
+			const ref: TmdbCollectionRef = { id, name: readString(at(detail, 'belongs_to_collection', 'name')) };
+			const poster = readOptionalString(at(detail, 'belongs_to_collection', 'poster_path'));
+			return poster ? { ...ref, poster_path: poster } : ref;
+		}, lookupOfError);
 	}
 
 	async getTmdbCollection(collectionId: number): Promise<TmdbCollectionDetail | null> {
@@ -1572,16 +1556,10 @@ export class ApiService {
 
 	async getTmdbByImdbId(imdbId: string): Promise<MediaSearchResult | null> {
 		if (!this.tmdbApiKey) return null;
-		const url = `${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`;
 		try {
-			const data = (await this.fetchWithTimeout(url, this.tmdbHeaders())) as TmdbFindResult;
-			if (data.movie_results && data.movie_results.length > 0) {
-				return this.getTmdbMovieDetails(String(data.movie_results[0]!.id));
-			}
-			if (data.tv_results && data.tv_results.length > 0) {
-				return this.getTmdbTvDetails(String(data.tv_results[0]!.id));
-			}
-			return null;
+			const { movie, tv } = await this.tmdbFindIds(imdbId);
+			if (movie !== undefined) return this.getTmdbMovieDetails(String(movie));
+			return tv !== undefined ? this.getTmdbTvDetails(String(tv)) : null;
 		} catch {
 			return null;
 		}
@@ -1749,17 +1727,12 @@ export class ApiService {
 
 	/** One source per anime id the title has; a title with neither id has nothing to ask. */
 	private animeTrailerSources(title: HoardTitle, animeApiSource: 'jikan' | 'anilist'): LookupSource<string>[] {
-		const { anilistId, malId } = title;
-		const anilist: LookupSource<string> = () => attempt(async () => {
-			const media = await this.queryAniListById(anilistId!);
+		const anilist = (anilistId: number): LookupSource<string> => () => attempt(async () => {
+			const media = await this.queryAniListById(anilistId);
 			return anilistTrailerUrl(media?.trailer) || null;
 		}, lookupOfError);
-		const jikan: LookupSource<string> = () => this.getJikanTrailerByMalId(malId!);
-		const sources: LookupSource<string>[] = [];
-		if ((anilistId ?? 0) > 0) sources.push(anilist);
-		if ((malId ?? 0) > 0) sources.push(jikan);
-		if (animeApiSource === 'jikan') sources.reverse();
-		return sources.length > 0 ? sources : [() => Promise.resolve(NOT_FOUND)];
+		const jikan = (malId: number): LookupSource<string> => () => this.getJikanTrailerByMalId(malId);
+		return animeSources(title, animeApiSource, anilist, jikan);
 	}
 
 	/** TMDB trailer through an IMDb id: find the movie/tv id, then its videos. */
@@ -1767,10 +1740,8 @@ export class ApiService {
 		if (!this.tmdbApiKey) return NO_KEY;
 		if (!imdbId) return NOT_FOUND;
 		return attempt(async () => {
-			const hits = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
-			const movie = readList(at(hits, 'movie_results'), (r) => readOptionalNumber(at(r, 'id')));
-			const tv = readList(at(hits, 'tv_results'), (r) => readOptionalNumber(at(r, 'id')));
-			const [kind, id] = movie.length > 0 ? ['movie', movie[0]] : ['tv', tv[0]];
+			const { movie, tv } = await this.tmdbFindIds(imdbId);
+			const [kind, id] = movie !== undefined ? ['movie', movie] : ['tv', tv];
 			if (id === undefined) return null;
 			const videos = await this.fetchWithTimeout(`${TMDB_BASE}/${kind}/${String(id)}/videos`, this.tmdbHeaders());
 			return tmdbTrailerUrl(at(videos, 'results')) || null;
@@ -1820,12 +1791,10 @@ export class ApiService {
 	private tmdbCredits(imdbId: string): Promise<LookupResult<CreditsLookup>> {
 		if (!this.tmdbApiKey) return Promise.resolve(NO_KEY);
 		return attempt(async () => {
-			const hits = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
-			const movieId = readOptionalNumber(at(hits, 'movie_results', 0, 'id'));
+			const { movie: movieId, tv: tvId } = await this.tmdbFindIds(imdbId);
 			if (movieId !== undefined) {
 				return creditsOf(tmdbCreditsToStored(await this.fetchWithTimeout(`${TMDB_BASE}/movie/${movieId}/credits`, this.tmdbHeaders())));
 			}
-			const tvId = readOptionalNumber(at(hits, 'tv_results', 0, 'id'));
 			if (tvId === undefined) return null;
 			// TV: the creators live on the detail response (created_by), not in /credits — fold the
 			// cast lookup in via append_to_response

@@ -3,7 +3,7 @@ import { setupDataManager } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
 import { setupGames } from './helpers/setupGameDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
-import type { ApiOutcome } from '../src/ApiService';
+import type { LookupResult } from '../src/lookup';
 import type { Season } from '../src/types';
 
 const DARK = '---\nName: Dark\nType: TV Show\nSeasons: ["Season 1: 10"]\nWatched Episodes: S01E01-E04\n---\n';
@@ -101,7 +101,7 @@ describe('cache writes merge', () => {
 
 	for (const status of ['notfound', 'nokey'] as const) {
 		it(`two toggles after a ${status} refill both persist`, async () => {
-			const fetchSeasons = vi.fn(() => Promise.resolve<ApiOutcome<Season[]>>({ status }));
+			const fetchSeasons = vi.fn(() => Promise.resolve<LookupResult<Season[]>>({ status }));
 			const { dm, f } = await setupDataManager(
 				{ 'W/TV Show/N.md': '---\nName: N\nType: TV Show\nExternal ID: tmdb:tv:1\nTotal Episodes: 10\n---\n' },
 				{ apiService: { fetchSeasons } },

@@ -1697,7 +1697,3 @@ export interface TmdbExternalIds {
 	imdb_id?: string;
 }
 
-export interface TmdbFindResult {
-	movie_results?: TmdbMovieDetail[];
-	tv_results?: TmdbTvDetail[];
-}

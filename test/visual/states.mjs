@@ -230,7 +230,7 @@ const stubCollection = () =>
 	saved.updateTmdbIdentity = dm.updateTmdbIdentity;
 	api.hasTmdbKey = () => true;
 	api.searchTmdbMovieId = async () => 4242;
-	api.getTmdbMovieCollection = async () => ({ status: 'ok', ref: { id: 77, name: 'Visual Collection' } });
+	api.getTmdbMovieCollection = async () => ({ status: 'found', value: { id: 77, name: 'Visual Collection' } });
 	api.getTmdbCollection = async () => ({
 		id: 77, name: 'Visual Collection',
 		parts: [

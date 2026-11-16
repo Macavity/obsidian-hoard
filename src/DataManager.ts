@@ -8,13 +8,12 @@ import type { CreditsField } from './types';
 import { newTitle } from './entryFactories';
 import type { AnyEntry, EntryIndex } from './storage/EntryIndex';
 import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBaseline } from './storage/baseline';
-import type { ApiOutcome } from './ApiService';
 import { ApiCheckQueue } from './apiCheckQueue';
 import type { LocalStore } from './storage/LocalStore';
 import { ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
 import type { EntryWriteHooks } from './storage/noteWrite';
 import type { ApiCheckKind, ApiCheckResult, EntryCache, LookupKind, Notify } from './storage/storageTypes';
-import { checkResultOf } from './lookup';
+import { checkResultOf, FAILED } from './lookup';
 import type { LookupResult } from './lookup';
 import type { SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -193,16 +192,17 @@ export class DataManager {
 		this.seasonsInFlight.add(t.id);
 		this.seasonsRunning++;
 		try {
-			let outcome: ApiOutcome<Season[]> = { status: 'transient' };
+			let outcome: LookupResult<Season[]> = FAILED;
 			try {
 				outcome = await this.apiQueue.enqueue(() => this.plugin.apiService.fetchSeasons(t));
 			} catch {
 				// stays pending until the deadline
 			}
 			if (!this.index.get(t.id)) return;
-			const seasons = outcome.status === 'ok' ? outcome.value.map((x) => ({ name: x.name, episodes: x.episodes, offset: x.offset })) : [];
+			const seasons = outcome.status === 'found' ? outcome.value.map((x) => ({ name: x.name, episodes: x.episodes, offset: x.offset })) : [];
 			const filled = seasons.length > 0;
-			const result = outcome.status === 'ok' && !filled ? 'notfound' : outcome.status;
+			// a filled list is recorded as 'ok'; a found but empty one as 'notfound'
+			const result = filled ? 'ok' : checkResultOf(outcome) ?? 'notfound';
 			this.recordApiCheck(t.id, 'seasons', result, filled ? { seasons } : {});
 			if (result !== 'transient') this.seasonsChanged = true;
 		} finally {
@@ -980,8 +980,9 @@ export class DataManager {
 		try {
 			const outcome = await this.apiQueue.enqueue(() => this.plugin.apiService.fetchAiring(e.entry));
 			if (this.index.get(id)?.kind !== 'title') return;
-			this.recordApiCheck(id, 'airing', outcome.status, outcome.status === 'ok' ? { airing: outcome.value } : {});
-			if (outcome.status === 'ok') this.notifyListeners();
+			// a found airing is recorded as 'ok' (checkResultOf records nothing for found)
+			this.recordApiCheck(id, 'airing', checkResultOf(outcome) ?? 'ok', outcome.status === 'found' ? { airing: outcome.value } : {});
+			if (outcome.status === 'found') this.notifyListeners();
 		} catch (err) {
 			console.warn(`Hoard: could not refresh airing data of ${id}`, err);
 		} finally {

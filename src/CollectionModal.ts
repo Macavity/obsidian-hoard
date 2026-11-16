@@ -64,6 +64,21 @@ function matchLibraryTitle(
 	});
 }
 
+/** The TMDB movie id of a title: the stored one, else /find by IMDb id, else a title search. null = unresolved. */
+async function resolveMovieId(plugin: HoardPlugin, title: HoardTitle): Promise<number | null> {
+	const api = plugin.apiService;
+	// a tv id in tmdbId would query a random film — only a movie id is usable here
+	if (title.tmdbMediaType === 'movie' && title.tmdbId) return title.tmdbId;
+	const imdbId = imdbIdFromLink(title.externalLink);
+	// fuzzy — a miss is never cached
+	if (!imdbId) return api.searchTmdbMovieId(title.title, title.releaseDate ?? '');
+	const found = await api.findTmdbMovieIdByImdbId(imdbId);
+	if (found.status === 'found') return found.value;
+	// exact key said not-a-movie. Cache it or every series re-queries; a failed lookup caches nothing.
+	if (found.status === 'notfound') plugin.dataManager.updateTmdbIdentity(title.id, null, COLLECTION_NONE);
+	return null;
+}
+
 // stored tmdbId -> /find by imdb id -> title search. Caches what it learns.
 export async function resolveCollection(
 	plugin: HoardPlugin,
@@ -77,34 +92,17 @@ export async function resolveCollection(
 	const known = getCollectionId(title);
 	if (known !== null) return api.getTmdbCollection(known);
 
-	// a tv id in tmdbId would query a random film — only a movie id is usable here
-	let tmdbId = title.tmdbMediaType === 'movie' ? title.tmdbId ?? null : null;
-	if (!tmdbId) {
-		const imdbId = imdbIdFromLink(title.externalLink);
-		if (imdbId) {
-			const found = await api.findTmdbMovieIdByImdbId(imdbId);
-			if (found.status === 'error') return null;
-			if (found.status === 'none') {
-				// exact key said not-a-movie. Cache it or every series re-queries.
-				plugin.dataManager.updateTmdbIdentity(title.id, null, COLLECTION_NONE);
-				return null;
-			}
-			tmdbId = found.id;
-		} else {
-			// fuzzy — a miss is never cached
-			tmdbId = await api.searchTmdbMovieId(title.title, title.releaseDate ?? '');
-		}
-	}
+	const tmdbId = await resolveMovieId(plugin, title);
 	if (!tmdbId) return null;
 
 	const lookup = await api.getTmdbMovieCollection(tmdbId);
-	if (lookup.status === 'error') return null;
-	if (lookup.status === 'none') {
+	if (lookup.status === 'failed' || lookup.status === 'nokey') return null;
+	if (lookup.status === 'notfound') {
 		plugin.dataManager.updateTmdbIdentity(title.id, tmdbId, COLLECTION_NONE);
 		return null;
 	}
-	plugin.dataManager.updateTmdbIdentity(title.id, tmdbId, lookup.ref.id);
-	return api.getTmdbCollection(lookup.ref.id);
+	plugin.dataManager.updateTmdbIdentity(title.id, tmdbId, lookup.value.id);
+	return api.getTmdbCollection(lookup.value.id);
 }
 
 export function countMissing(collection: TmdbCollectionDetail, titles: HoardTitle[]): number {
