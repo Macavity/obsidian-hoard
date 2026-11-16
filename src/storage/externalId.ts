@@ -17,8 +17,7 @@ const KINDS: Record<ExternalSource, readonly Kind[] | null> = {
 
 const ID_RE = /^[\w-]+$/;
 
-const SOURCES = Object.keys(KINDS) as ExternalSource[];
-const isSource = (s: string): s is ExternalSource => (SOURCES as string[]).includes(s);
+const isSource = (s: string): s is ExternalSource => Object.hasOwn(KINDS, s);
 
 /** Parses `source:id` or `source:kind:id`; null if unknown source, missing kind, or bad id. */
 export function parseExternalId(s: string): ExternalId | null {

@@ -110,6 +110,25 @@ export default defineConfig([
     },
   },
   {
+    // Outside data is read from `unknown`, never asserted (docs/architecture/storage.md): the data layer stays assertion-free.
+    files: [
+      "src/storage/**/*.ts",
+      "src/import/**/*.ts",
+      "src/ApiService.ts",
+      "src/PosterService.ts",
+      "src/cinemetaApi.ts",
+      "src/openLibraryApi.ts",
+      "src/steamStoreApi.ts",
+      "src/lookup.ts",
+      "src/settingsNormalize.ts",
+      "src/settingsSplit.ts",
+      "src/backup.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-unsafe-type-assertion": "error",
+    },
+  },
+  {
     // Tests run in Node/happy-dom, not in the plugin sandbox: obsidianmd rules off.
     files: ["test/**/*.ts"],
     rules: Object.fromEntries(

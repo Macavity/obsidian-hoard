@@ -84,8 +84,8 @@ export class VaultLayout {
 		const p = normalizePath(path);
 		if (this.root && !p.startsWith(this.root + '/')) return null;
 		const parts = (this.root ? p.slice(this.root.length + 1) : p).split('/');
-		if (parts.length !== 2) return null;
-		const [folder, file] = parts as [string, string];
+		const [folder, file, ...deeper] = parts;
+		if (folder === undefined || file === undefined || deeper.length > 0) return null;
 		if (!file.endsWith('.md')) return null;
 		const id = `${folder}/${file.slice(0, -3)}`;
 		if (folder === FOLDERS.customLists) return null;

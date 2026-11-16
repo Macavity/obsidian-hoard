@@ -24,7 +24,9 @@ export const SECRET_SETTINGS: Readonly<Record<SecretKey, string>> = {
 	jikanBaseUrl: 'hoard-jikan-base-url',
 };
 
-export const SECRET_KEYS = Object.keys(SECRET_SETTINGS) as readonly SecretKey[];
+export const SECRET_KEYS: readonly SecretKey[] = Object.keys(SECRET_SETTINGS).filter(
+	(k): k is SecretKey => Object.hasOwn(SECRET_SETTINGS, k),
+);
 
 /** The slice of `app.secretStorage` Hoard uses. */
 export interface SecretBackend {
