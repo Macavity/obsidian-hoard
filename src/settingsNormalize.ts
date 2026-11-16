@@ -126,7 +126,7 @@ const RULES: { [K in keyof HoardPluginSettings]?: Normalize<HoardPluginSettings[
 };
 
 /** Whether the key is one of the settings this version has. */
-const isSettingKey = (key: string): key is keyof HoardPluginSettings => key in DEFAULT_SETTINGS;
+const isSettingKey = (key: string): key is keyof HoardPluginSettings => Object.hasOwn(DEFAULT_SETTINGS, key);
 
 /** Puts the checked value of one key into `out`, which starts as a copy of the defaults. */
 function normalizeKey<K extends keyof HoardPluginSettings>(out: HoardPluginSettings, key: K, stored: unknown): void {

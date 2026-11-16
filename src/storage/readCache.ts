@@ -8,7 +8,7 @@ import { at, readList, readRecord, readOneOf, readOptionalNumber, readOptionalSt
 const CHECK_KINDS: readonly ApiCheckKind[] = ['airing', 'seasons', 'poster', 'trailer', 'credits', 'studio'];
 const CHECK_RESULTS: readonly ApiCheckResult[] = ['ok', 'transient', 'nokey', 'notfound'];
 
-function readSeason(v: unknown): Season | undefined {
+export function readSeason(v: unknown): Season | undefined {
 	const name = at(v, 'name');
 	const episodes = readOptionalNumber(at(v, 'episodes'));
 	if (typeof name !== 'string' || episodes === undefined) return undefined;

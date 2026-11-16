@@ -144,4 +144,38 @@ describe('history actions', () => {
 		expect(backup.history.map((h) => h.id)).toEqual(['h1']);
 		expect(backup.local).toEqual({ cardSize: 1 });
 	});
+
+	it('restores minimal entries and writes readable notes', async () => {
+		const src = JSON.stringify({
+			version: 2, exportedAt: '', shared: {}, history: [],
+			entries: {
+				titles: [{ id: 'Movie/Min', title: 'Min' }, { id: 'Movie/Odd', title: 'Odd', seasons: 'x', watchedEpisodes: [1, 'a'], rating: 'high', groups: 5 }],
+				maybe: [{ id: 'Movie/Maybe', title: 'Maybe' }],
+				reading: { books: [{ id: 'B', title: 'Bk', customFields: { a: 'x', b: 2, c: {}, d: null } }, { id: 'B2', title: 'Bk2', customFields: 'x' }], manga: [{ id: 'M', title: 'Mg', status: 'Gone', totalVolumes: '3' }] },
+				games: { games: [{ id: 'G', title: 'Gm', platforms: 'PC' }], settings: {} },
+			},
+		});
+		const parsed = parseBackup(src);
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const b = await setupBackup({});
+		await restoreBackup(b, parsed.backup);
+		const titleOf = (name: string) => b.dataManager.getTitles().find((t) => t.title === name);
+		expect(titleOf('Min')).toMatchObject({ title: 'Min', seasons: [], watchedEpisodes: [] });
+		expect(titleOf('Odd')).toMatchObject({ seasons: [], watchedEpisodes: [1], rating: 0 });
+		expect(b.dataManager.getMaybeTitles().map((m) => m.title)).toEqual(['Maybe']);
+		expect(b.readingDataManager.getBooks().map((x) => x.title).sort()).toEqual(['Bk', 'Bk2']);
+		expect(b.readingDataManager.getBooks().find((x) => x.title === 'Bk2')?.customFields).toEqual({});
+		expect(b.readingDataManager.getMangaList()[0]).toMatchObject({ title: 'Mg', status: 'Plan to Read', totalVolumes: 0 });
+		expect(b.gameDataManager.getGames()[0]).toMatchObject({ title: 'Gm', platforms: [] });
+	});
+
+	it('ignores a backup settings key that is only on the prototype chain', async () => {
+		const src = await setupBackup({});
+		const parsed = parseBackup(JSON.stringify({ ...buildBackup(src), local: { toString: 'x', dateFormat: 'iso' } }));
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const b = await setupBackup({});
+		await restoreBackup(b, parsed.backup);
+		expect(b.local.data.settings.dateFormat).toBe('iso');
+		expect(Object.hasOwn(b.local.data.settings, 'toString')).toBe(false);
+	});
 });

@@ -3,7 +3,7 @@ import type { ReadingDataManager } from './ReadingDataManager';
 import type { GameDataManager } from './GameDataManager';
 import type { HistoryEntry, HistoryManager } from './HistoryManager';
 import { DEFAULT_SETTINGS, defaultGamesSettings } from './types';
-import type { Book, Game, GameGroup, GamesData, Manga, MaybeTitle, ReadingData, HoardTitle } from './types';
+import type { GameGroup, GamesData, MaybeTitle, ReadingData, HoardTitle } from './types';
 import type { LocalStore } from './storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { ImportContext } from './import/watchlog/schema1Types';
@@ -13,6 +13,7 @@ import { isRecord, toRecord } from './storage/sharedHelpers';
 import { at, readList, readRecord, readString, readStringList } from './storage/read';
 import { normalizeSettings } from './settingsNormalize';
 import { readColumns, readGamesSettings, readReadingSettings } from './featureSettings';
+import { readBook, readGame, readManga, readMaybe, readTitle } from './backupEntries';
 
 export interface BackupManagers {
 	dataManager: DataManager;
@@ -87,21 +88,6 @@ export type BackupErrorCode =
 	| 'parseJson' | 'notObject' | 'titlesMissing' | 'readingMissing' | 'gamesMissing' | 'sharedMissing'
 	| 'historyInvalid' | 'localInvalid' | 'unsupportedFormat';
 
-/**
- * An entry is kept when it can be told apart: a record with its text id and title. The entries are
- * written back through the managers, which fill every other field; one that has neither is no entry.
- */
-const isEntry = <T extends { id: string; title: string }>(v: unknown): v is T =>
-	typeof at(v, 'id') === 'string' && typeof at(v, 'title') === 'string';
-
-/** Entries of one kind: the same check, handed on as the kind the restore writes. */
-const entryReader = <T extends { id: string; title: string }>() => (v: unknown): T | undefined => (isEntry<T>(v) ? v : undefined);
-const readTitle = entryReader<HoardTitle>();
-const readMaybe = entryReader<MaybeTitle>();
-const readBook = entryReader<Book>();
-const readManga = entryReader<Manga>();
-const readGame = entryReader<Game>();
-
 function readGameGroup(v: unknown): GameGroup | undefined {
 	const id = at(v, 'id');
 	const name = at(v, 'name');
@@ -171,8 +157,8 @@ export async function restoreBackup(m: BackupManagers, b: BackupFile): Promise<v
 	// a known setting of the wrong type is replaced by its valid form, the rest of the backup stays
 	const checked = toRecord(normalizeSettings(b.local));
 	for (const [k, v] of Object.entries(b.local)) {
-		if (SHARED_SETTING_KEYS.includes(k) || UNSAFE_KEYS.has(k)) continue;
-		local.data.settings[k] = k in DEFAULT_SETTINGS ? checked[k] : v;
+		if (SHARED_SETTING_KEYS.includes(k) || UNSAFE_KEYS.has(k) || k in Object.prototype) continue;
+		local.data.settings[k] = Object.hasOwn(DEFAULT_SETTINGS, k) ? checked[k] : v;
 	}
 	local.queueSave();
 	for (const t of b.entries.titles) {
