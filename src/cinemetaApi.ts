@@ -1,5 +1,6 @@
 import { httpsOrEmpty } from './httpsUrl';
 import type { HoardTitle, MediaSearchResult, Season } from './types';
+import { at, readList, readOptionalNumber, readRecord, readString, readStringList } from './storage/read';
 
 const CINEMETA_BASE = 'https://v3-cinemeta.strem.io';
 
@@ -28,39 +29,27 @@ export function cinemetaMetaUrl(kind: CinemetaKind, imdbId: string): string {
 	return `${CINEMETA_BASE}/meta/${kind}/${imdbId}.json`;
 }
 
-function asObject(v: unknown): Raw | null {
-	return v && typeof v === 'object' && !Array.isArray(v) ? (v as Raw) : null;
-}
-
-function str(v: unknown): string {
-	return typeof v === 'string' ? v : '';
-}
-
-function strList(v: unknown): string[] {
-	return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-}
-
 function fullDate(v: unknown): string {
-	const head = str(v).slice(0, 10);
+	const head = readString(v).slice(0, 10);
 	return /^\d{4}-\d{2}-\d{2}$/.test(head) ? head : '';
 }
 
 function startYear(v: unknown): string {
-	return /^(\d{4})/.exec(str(v))?.[1] ?? '';
+	return /^(\d{4})/.exec(readString(v))?.[1] ?? '';
 }
 
 /** "49 min" -> 49, "2h 5min" -> 125, anything else -> 0. */
 function parseRuntime(v: unknown): number {
-	const m = /^\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*min)?\s*$/i.exec(str(v));
+	const m = /^\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*min)?\s*$/i.exec(readString(v));
 	return m ? Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0) : 0;
 }
 
 function baseResult(raw: Raw, kind: CinemetaKind): MediaSearchResult | null {
-	const id = str(raw.id);
+	const id = readString(raw.id);
 	if (!/^tt\d+$/.test(id)) return null;
 	return {
 		imdbId: id,
-		title: str(raw.name),
+		title: readString(raw.name),
 		mediaType: kind === 'movie' ? 'movie' : 'tv',
 		episodes: 0,
 		episodeDuration: 0,
@@ -68,19 +57,16 @@ function baseResult(raw: Raw, kind: CinemetaKind): MediaSearchResult | null {
 		releaseDate: fullDate(raw.released) || startYear(raw.releaseInfo),
 		url: `https://www.imdb.com/title/${id}/`,
 		seasons: [],
-		posterUrl: httpsOrEmpty(str(raw.poster)),
+		posterUrl: httpsOrEmpty(readString(raw.poster)),
 	};
 }
 
 export function mapCinemetaSearch(json: unknown, kind: CinemetaKind, year: string, limit: number): MediaSearchResult[] {
-	const metas = asObject(json)?.metas;
-	if (!Array.isArray(metas)) return [];
 	const wantYear = /^\d{4}$/.test(year);
 	const rows: MediaSearchResult[] = [];
-	for (const entry of metas) {
+	for (const raw of readList(at(json, 'metas'), (entry) => readRecord(entry))) {
 		if (rows.length >= limit) break;
-		const raw = asObject(entry);
-		if (!raw || (wantYear && !str(raw.releaseInfo).startsWith(year))) continue;
+		if (wantYear && !readString(raw.releaseInfo).startsWith(year)) continue;
 		const row = baseResult(raw, kind);
 		if (row) rows.push(row);
 	}
@@ -89,9 +75,9 @@ export function mapCinemetaSearch(json: unknown, kind: CinemetaKind, year: strin
 
 function buildSeasons(videos: unknown): Season[] {
 	const counts = new Map<number, number>();
-	for (const v of Array.isArray(videos) ? videos : []) {
-		const season = asObject(v)?.season;
-		if (typeof season !== 'number' || !Number.isInteger(season) || season < 1) continue;
+	for (const v of readList(videos, (item) => item)) {
+		const season = readOptionalNumber(at(v, 'season'));
+		if (season === undefined || !Number.isInteger(season) || season < 1) continue;
 		counts.set(season, (counts.get(season) ?? 0) + 1);
 	}
 	let offset = 0;
@@ -108,17 +94,17 @@ function buildSeasons(videos: unknown): Season[] {
  * top-level `year`; the foreign ones only have `releaseInfo`. No year means not our record.
  */
 export function mapCinemetaMeta(json: unknown, kind: CinemetaKind): MediaSearchResult | null {
-	const raw = asObject(asObject(json)?.meta);
-	const base = raw && baseResult(raw, kind);
-	if (!raw || !base || !str(raw.year)) return null;
+	const raw = readRecord(at(json, 'meta'));
+	const base = baseResult(raw, kind);
+	if (!base || !readString(raw.year)) return null;
 	const seasons = kind === 'series' ? buildSeasons(raw.videos) : [];
 	return {
 		...base,
 		episodes: kind === 'movie' ? 1 : seasons.reduce((sum, s) => sum + s.episodes, 0),
 		episodeDuration: parseRuntime(raw.runtime),
 		seasons,
-		cast: strList(raw.cast),
-		director: strList(raw.director),
+		cast: readStringList(raw.cast),
+		director: readStringList(raw.director),
 		studio: [],
 	};
 }

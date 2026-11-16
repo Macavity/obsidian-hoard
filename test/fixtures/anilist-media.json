@@ -1,0 +1,20 @@
+{
+  "data": {
+    "Media": {
+      "id": 1,
+      "title": { "romaji": "Cowboy Bebop", "english": "Cowboy Bebop", "native": "カウボーイビバップ" },
+      "episodes": 26,
+      "duration": 24,
+      "status": "FINISHED",
+      "startDate": { "year": 1998, "month": 4, "day": 3 },
+      "averageScore": 86,
+      "popularity": 270000,
+      "coverImage": { "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1.jpg" },
+      "description": "Spike &amp; Jet<br>chase bounties.",
+      "genres": ["Action", "Sci-Fi"],
+      "trailer": { "id": "qig4KOK2R2g", "site": "youtube" },
+      "studios": { "edges": [{ "isMain": true, "node": { "name": "Sunrise" } }, { "isMain": false, "node": { "name": "Bandai" } }] },
+      "nextAiringEpisode": null
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { attempt, checkResultOf, FAILED, firstFound, found, NO_KEY, NOT_FOUND, type LookupSource } from '../src/lookup';
+import { attempt, checkResultOf, errorMessage, FAILED, firstFound, found, NO_KEY, NOT_FOUND, type LookupSource } from '../src/lookup';
 
 const src = <T>(r: Awaited<ReturnType<LookupSource<T>>>): LookupSource<T> => vi.fn(() => Promise.resolve(r));
 
@@ -50,5 +50,15 @@ describe('checkResultOf', () => {
 		expect(checkResultOf(NOT_FOUND)).toBe('notfound');
 		expect(checkResultOf(FAILED)).toBe('transient');
 		expect(checkResultOf(NO_KEY)).toBe('nokey');
+	});
+});
+
+describe('errorMessage', () => {
+	it('reads the message of an Error or of any object that carries one', () => {
+		expect(errorMessage(new Error('offline'))).toBe('offline');
+		expect(errorMessage({ message: 'plain object' })).toBe('plain object');
+	});
+	it('is empty for anything else', () => {
+		for (const thrown of ['text', null, undefined, 5, { message: 5 }]) expect(errorMessage(thrown)).toBe('');
 	});
 });

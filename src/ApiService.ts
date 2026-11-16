@@ -8,30 +8,18 @@ import type {
 	AnimeSearchResult,
 	MediaSearchResult,
 	HoardTitle,
-	JikanAnime,
-	OmdbSearchItem,
-	OmdbSearchResponse,
-	OmdbDetailResponse,
-	OmdbSeasonResponse,
-	TmdbSearchItem,
-	TmdbSearchResponse,
-	TmdbMovieDetail,
-	TmdbTvDetail,
-	TmdbExternalIds,
 	TmdbCollectionRef,
 	TmdbCollectionDetail,
 	Season,
-	AniListMedia,
-	AniListSearchResponse,
-	AniListMediaResponse,
 } from './types';
 import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, explicitMediaKind, mapCinemetaSearch, type CinemetaKind } from './cinemetaApi';
 import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLibraryWorkUrl } from './openLibraryApi';
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
-import { at, readBoolean, readList, readOptionalNumber, readOptionalString, readString } from './storage/read';
-import { attempt, firstFound, found, FAILED, NOT_FOUND, NO_KEY, type LookupResult, type LookupSource } from './lookup';
+import { at, readBoolean, readList, readNumber, readOptionalNumber, readOptionalString, readRecord, readString, readStringList } from './storage/read';
+import { isRecord } from './storage/sharedHelpers';
+import { attempt, errorMessage, firstFound, found, FAILED, NOT_FOUND, NO_KEY, type LookupResult, type LookupSource } from './lookup';
 
 export type Airing = NonNullable<EntryCache['airing']>;
 
@@ -59,11 +47,16 @@ const TMDB_PAGE_SIZE = 20;
 const OMDB_PAGE_SIZE = 10;
 const JIKAN_PAGE_SIZE = 25;
 
-/** '' unless the input is a plain 4-digit year. Guards every provider's year filter. */
 function nonEmptySeasons(seasons: Season[] | undefined): Season[] | null {
 	return seasons && seasons.length > 0 ? seasons : null;
 }
 
+/** The list's entries that are records; anything else in a wrong-typed list is dropped. */
+function recordsOf(v: unknown): Record<string, unknown>[] {
+	return readList(v, (item) => (isRecord(item) ? item : undefined));
+}
+
+/** '' unless the input is a plain 4-digit year. Guards every provider's year filter. */
 function searchYear(year: string | undefined): string {
 	return year?.trim().match(/^\d{4}$/)?.[0] ?? '';
 }
@@ -129,11 +122,11 @@ function omdbNamesToCredits(s: unknown): string[] {
  * so the creators — which OMDb puts in Writer — fill the stored director instead, with
  * role notes stripped. Falls back to Director.
  */
-function omdbSeriesDirectorCredits(data: OmdbDetailResponse): string[] {
-	const writer = readString(data.Writer);
+function omdbSeriesDirectorCredits(data: unknown): string[] {
+	const writer = readString(at(data, 'Writer'));
 	const raw = writer === 'N/A' ? [] : writer.split(',');
 	const creators = normalizeCreditsForStore(raw.map((n) => n.replace(/\([^)]*\)/g, '')));
-	return creators.length === 0 ? omdbNamesToCredits(data.Director) : creators;
+	return creators.length === 0 ? omdbNamesToCredits(at(data, 'Director')) : creators;
 }
 
 /**
@@ -157,6 +150,137 @@ function tmdbCreditsToStored(credits: unknown): { director: string[]; cast: stri
 		director: normalizeCreditsForStore(director),
 		cast: normalizeCreditsForStore(cast),
 	};
+}
+
+/** The OMDb detail request for an IMDb id. */
+function omdbDetailUrl(imdbId: string, apiKey: string): string {
+	return `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(apiKey)}`;
+}
+
+/** OMDb "DD Mon YYYY" (e.g. "08 Feb 2026") → YYYY-MM-DD. The input unchanged when it doesn't match (e.g. year-only "2026"). */
+function parseOmdbDate(dateStr: string): string {
+	const MONTHS: Record<string, string> = {
+		Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+		Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+	};
+	const m = dateStr.match(/^(\d{2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+	const mon = m?.[2] ? MONTHS[m[2]] : undefined;
+	return m && mon ? `${m[3]}-${mon}-${m[1]}` : dateStr;
+}
+
+/** Release date of an OMDb detail record: `Released`, else `Year`, in the stored format. */
+function omdbReleased(data: Record<string, unknown>): string {
+	return readOptionalString(data.Released) ?? readString(data.Year);
+}
+
+/** One OMDb search hit as an add-flow row. */
+function omdbSearchRow(item: Record<string, unknown>, type: 'movie' | 'series'): MediaSearchResult {
+	const imdbId = readString(item.imdbID);
+	return {
+		imdbId,
+		title: readString(item.Title),
+		mediaType: type === 'movie' ? 'movie' : 'tv',
+		// 0 like TMDB — the result card prints the media type instead of "1 eps".
+		// The real count comes from the detail call on select.
+		episodes: 0,
+		episodeDuration: 0,
+		// year only. OMDb search has no day/month; a faked 01-01 reads like a real date.
+		// series Year is a range ("2008–2013", "2025–") — keep the start year only
+		releaseDate: /^(\d{4})/.exec(readString(item.Year))?.[1] ?? '',
+		url: `https://www.imdb.com/title/${imdbId}`,
+		seasons: [],
+		posterUrl: httpsOrEmpty(readString(item.Poster)) || undefined,
+	};
+}
+
+/** One TMDB search hit as an add-flow row. */
+function tmdbSearchRow(item: Record<string, unknown>, type: 'movie' | 'series'): MediaSearchResult {
+	const poster = readOptionalString(item.poster_path);
+	return {
+		imdbId: String(readNumber(item.id)),
+		title: readOptionalString(item.title) ?? readString(item.name),
+		mediaType: type === 'movie' ? 'movie' : 'tv',
+		episodes: 0,
+		episodeDuration: 0,
+		releaseDate: readOptionalString(item.release_date) ?? readString(item.first_air_date),
+		url: '',
+		seasons: [],
+		posterUrl: poster ? `https://image.tmdb.org/t/p/w342${poster}` : undefined,
+	};
+}
+
+/** A TMDB tv `seasons` list as consecutive seasons, specials (season 0) left out. */
+function tmdbSeasons(v: unknown): Season[] {
+	const raw = readList(v, (s) => {
+		const number = readOptionalNumber(at(s, 'season_number'));
+		if (!isRecord(s) || number === 0) return undefined;
+		return { name: readString(at(s, 'name')) || `Season ${number ?? 1}`, episodes: readNumber(at(s, 'episode_count')) };
+	});
+	let offset = 0;
+	return raw.map((s) => {
+		const season: Season = { ...s, offset };
+		offset += s.episodes;
+		return season;
+	});
+}
+
+/** A TMDB collection, or null when the payload names none. */
+function tmdbCollectionDetail(data: unknown): TmdbCollectionDetail | null {
+	const id = readOptionalNumber(at(data, 'id'));
+	if (!id) return null;
+	return {
+		id,
+		name: readString(at(data, 'name')),
+		overview: readString(at(data, 'overview')),
+		poster_path: readOptionalString(at(data, 'poster_path')) ?? null,
+		parts: readList(at(data, 'parts'), (p) => {
+			const partId = readOptionalNumber(at(p, 'id'));
+			if (partId === undefined) return undefined;
+			return {
+				id: partId,
+				title: readString(at(p, 'title')),
+				release_date: readString(at(p, 'release_date')),
+				poster_path: readOptionalString(at(p, 'poster_path')) ?? null,
+				overview: readString(at(p, 'overview')),
+			};
+		}),
+	};
+}
+
+/** A source's community rating and vote count. */
+type CommunityScore = { rating: number; votes: number };
+type CommunityRating = CommunityScore & { source: 'mal' | 'anilist' | 'imdb' | 'tmdb' };
+
+/** The score, or null when the source reports neither a rating nor votes. */
+function scoreOf(rating: number, votes: number): CommunityScore | null {
+	return rating || votes ? { rating, votes } : null;
+}
+
+/** OMDb numbers arrive as strings ("1,234,567", "8.1", "N/A"); 0 when unreadable. */
+function parseOmdbVotes(s: string): number {
+	const n = parseInt(s.replace(/,/g, ''), 10);
+	return isNaN(n) ? 0 : n;
+}
+
+function parseOmdbRating(s: string): number {
+	const n = parseFloat(s);
+	return isNaN(n) ? 0 : n;
+}
+
+/** A rating lookup that never throws: a failed request is no rating. */
+async function quietly<T>(load: () => Promise<T | null>): Promise<T | null> {
+	try {
+		return await load();
+	} catch {
+		return null;
+	}
+}
+
+/** anime or movie group of a title: the caller's pick, else from the stored type; '' when neither says. */
+function mediaGroupOf(title: Pick<HoardTitle, 'type'>, apiGroup: 'anime' | 'movie' | ''): 'anime' | 'movie' | '' {
+	if (apiGroup) return apiGroup;
+	if (title.type === 'Anime') return 'anime';
+	return ['Movie', 'TV Show', 'TvShow'].includes(title.type) ? 'movie' : '';
 }
 
 /** TMDB company/network names, normalized for storage. */
@@ -471,9 +595,28 @@ const API_LABELS: Record<ApiSource, string> = {
 	unknown: 'The API', // dev-facing Error messages only; user text goes through serviceName()
 };
 
-/** Sources with a dedicated wording for the matching reason. */
-const AUTH_KEYS: ReadonlySet<ApiSource> = new Set<ApiSource>(['tmdb', 'omdb', 'googleBooks', 'rawg', 'twitch', 'igdb']);
-const RATE_LIMIT_KEYS: ReadonlySet<ApiSource> = new Set<ApiSource>(['omdb', 'jikan', 'anilist', 'googleBooks']);
+/** Per-source wording for a rejected credential / an exhausted quota; sources without an entry share the generic text. */
+const SOURCE_MESSAGES: Record<'auth' | 'rateLimited', Partial<Record<ApiSource, TranslationKey>>> = {
+	auth: {
+		tmdb: 'notices.api.auth.tmdb',
+		omdb: 'notices.api.auth.omdb',
+		googleBooks: 'notices.api.auth.googleBooks',
+		rawg: 'notices.api.auth.rawg',
+		twitch: 'notices.api.auth.twitch',
+		igdb: 'notices.api.auth.igdb',
+	},
+	rateLimited: {
+		omdb: 'notices.api.rateLimited.omdb',
+		jikan: 'notices.api.rateLimited.jikan',
+		anilist: 'notices.api.rateLimited.anilist',
+		googleBooks: 'notices.api.rateLimited.googleBooks',
+	},
+};
+
+/** The dedicated text for `kind` and `source`, or undefined when the source has none. */
+function translationKeyFor(kind: 'auth' | 'rateLimited', source: ApiSource): TranslationKey | undefined {
+	return SOURCE_MESSAGES[kind][source];
+}
 
 /** Service name for user text; the unknown source reads "The API". */
 function serviceName(source: ApiSource): string {
@@ -502,27 +645,28 @@ export function apiSourceFromUrl(url: string, jikanBase: string): ApiSource {
 	return prefixes.find(([prefix]) => url.startsWith(prefix))?.[1] ?? 'unknown';
 }
 
+/** OMDb answers 401 for both a bad key and an exhausted quota; Google's 403 covers quota, a disabled API and a bad key. */
+function classifyDenied(source: ApiSource, status: number, body: string): ApiErrorReason {
+	// keyless service: a 403 is the service refusing to serve, never a bad credential.
+	// AniList answers 403 with "the API has been temporarily disabled" during their outages.
+	if (KEYLESS_SOURCES.has(source)) return 'server';
+	if (source === 'omdb') return /limit/i.test(body) ? 'rate-limited' : 'auth';
+	if (source === 'googleBooks' && status === 403) {
+		if (/accessNotConfigured/i.test(body)) return 'not-enabled';
+		return /rateLimitExceeded|dailyLimitExceeded|userRateLimitExceeded/i.test(body) ? 'rate-limited' : 'auth';
+	}
+	return 'auth';
+}
+
 /**
  * HTTP status → reason. Two services need the body as well: OMDb answers 401 for both a bad key
  * and an exhausted quota, and Google's 403 covers quota, a disabled API and a bad key alike.
  */
 function classifyHttp(source: ApiSource, status: number, body: string): ApiErrorReason {
-	// keyless service: a 403 is the service refusing to serve, never a bad credential.
-	// AniList answers 403 with "the API has been temporarily disabled" during their outages.
-	if (KEYLESS_SOURCES.has(source) && (status === 401 || status === 403)) return 'server';
-	if (source === 'omdb' && (status === 401 || status === 403)) {
-		return /limit/i.test(body) ? 'rate-limited' : 'auth';
-	}
-	if (source === 'googleBooks' && status === 403) {
-		if (/accessNotConfigured/i.test(body)) return 'not-enabled';
-		if (/rateLimitExceeded|dailyLimitExceeded|userRateLimitExceeded/i.test(body)) return 'rate-limited';
-		return 'auth';
-	}
-	if (status === 401 || status === 403) return 'auth';
+	if (status === 401 || status === 403) return classifyDenied(source, status, body);
 	if (status === 429) return 'rate-limited';
 	if (status === 404) return 'not-found';
-	if (status >= 500) return 'server';
-	return 'http';
+	return status >= 500 ? 'server' : 'http';
 }
 
 /**
@@ -532,48 +676,53 @@ function classifyHttp(source: ApiSource, status: number, body: string): ApiError
  */
 function providerMessageFrom(body: string): string {
 	try {
-		const data = JSON.parse(body) as { errors?: Array<{ message?: string }>; message?: unknown } | null;
-		const gql = Array.isArray(data?.errors) ? (data.errors[0]?.message ?? '').trim() : '';
-		if (gql) return gql;
-		return typeof data?.message === 'string' ? data.message.trim() : '';
+		const data: unknown = JSON.parse(body);
+		return readString(at(data, 'errors', 0, 'message')).trim() || readString(at(data, 'message')).trim();
 	} catch {
 		return '';
 	}
+}
+
+/**
+ * The service's own explanation as a sentence, when we have nothing better than a status code to
+ * offer. Only for the generic reasons: our own auth / quota / no-key wording names the actual fix,
+ * which beats a terse provider string like Twitch's "invalid client".
+ */
+function providerSentence(err: ApiError, service: string): string | null {
+	const text = err.providerMessage;
+	if (!text || (err.reason !== 'server' && err.reason !== 'http')) return null;
+	return t('notices.api.providerMessage', { service, text: /[.!?]$/.test(text) ? text : `${text}.` });
 }
 
 /** Maps any error from an API call to a short, user-facing explanation. */
 export function apiErrorMessage(err: unknown): string {
 	if (!(err instanceof ApiError)) return t('notices.api.requestFailed');
 	const service = serviceName(err.source);
+	return providerSentence(err, service) ?? reasonMessage(err, service);
+}
+
+/** The wording for the failure's reason. */
+function reasonMessage(err: ApiError, service: string): string {
 	const status = err.status ?? '?';
-
-	// the service explained itself, and we have nothing better than a status code to offer.
-	// only for the generic reasons: our own auth / quota / no-key wording names the actual fix,
-	// which beats a terse provider string like Twitch's "invalid client".
-	if (err.providerMessage && (err.reason === 'server' || err.reason === 'http')) {
-		const text = err.providerMessage;
-		return t('notices.api.providerMessage', { service, text: /[.!?]$/.test(text) ? text : `${text}.` });
-	}
-
 	switch (err.reason) {
 		case 'no-key':
 			return err.source === 'tmdb'
 				? t('notices.api.tmdbTokenRequired')
 				: t('notices.api.keyRequired', { service });
 
-		case 'auth':
+		case 'auth': {
 			// the v3 key and the v4 token sit side by side on TMDB's own settings page
-			return AUTH_KEYS.has(err.source)
-				? t(`notices.api.auth.${err.source}` as TranslationKey)
-				: t('notices.api.auth.other', { service });
+			const key = translationKeyFor('auth', err.source);
+			return key ? t(key) : t('notices.api.auth.other', { service });
+		}
 
 		case 'not-enabled':
 			return t('notices.api.notEnabled');
 
-		case 'rate-limited':
-			return RATE_LIMIT_KEYS.has(err.source)
-				? t(`notices.api.rateLimited.${err.source}` as TranslationKey)
-				: t('notices.api.rateLimited.other', { service });
+		case 'rate-limited': {
+			const key = translationKeyFor('rateLimited', err.source);
+			return key ? t(key) : t('notices.api.rateLimited.other', { service });
+		}
 
 		case 'server':
 			return t(KEYLESS_SOURCES.has(err.source) ? 'notices.api.serverKeyless' : 'notices.api.server', { service, status });
@@ -660,9 +809,9 @@ function readApiResponse(source: ApiSource, r: { status: number; text: string; j
  * OMDb can answer 200 with `{"Response":"False","Error":"Invalid API key!"}`. Only key and quota
  * problems are real errors here — "Movie not found!" is an ordinary empty result.
  */
-function assertOmdbOk(data: { Response?: string; Error?: string }): void {
-	if (data.Response !== 'False') return;
-	const err = data.Error ?? '';
+function assertOmdbOk(data: unknown): void {
+	if (readString(at(data, 'Response')) !== 'False') return;
+	const err = readString(at(data, 'Error'));
 	if (/limit/i.test(err)) throw new ApiError('omdb', 'rate-limited', err, undefined, err);
 	if (/key/i.test(err)) throw new ApiError('omdb', 'auth', err, undefined, err);
 }
@@ -698,7 +847,7 @@ async function requestJson(
 		return await Promise.race([fetchPromise, timeoutPromise]);
 	} catch (err) {
 		if (err instanceof ApiError) throw err;
-		throw new ApiError(source, 'network', (err as Error)?.message ?? 'Network error');
+		throw new ApiError(source, 'network', errorMessage(err) || 'Network error');
 	} finally {
 		if (timer !== null) window.clearTimeout(timer);
 	}
@@ -736,9 +885,9 @@ export function jsonPost(url: string, body: unknown, headers?: Record<string, st
 
 /** GraphQL reports failures in a 200 body — AniList rate limits arrive this way. */
 function assertNoGraphqlErrors(source: ApiSource, data: unknown): void {
-	const errors = (data as { errors?: Array<{ message?: string }> } | null)?.errors;
+	const errors = at(data, 'errors');
 	if (!Array.isArray(errors) || errors.length === 0) return;
-	const message = errors[0]?.message ?? 'Request rejected';
+	const message = readString(at(errors, 0, 'message')) || 'Request rejected';
 	const reason: ApiErrorReason = /rate limit|too many/i.test(message) ? 'rate-limited' : 'http';
 	throw new ApiError(source, reason, message, undefined, undefined, message);
 }
@@ -806,8 +955,8 @@ export class ApiService {
 	/** Settings Test: the endpoint answers /anime/1 with MAL id 1. Throws ApiError. */
 	async pingJikan(): Promise<boolean> {
 		const url = `${this.jikan.base}/anime/1`;
-		const res = (await this.throttleJikan(() => this.fetchWithTimeout(url))) as { data?: { mal_id?: number } };
-		return res.data?.mal_id === 1;
+		const res = await this.throttleJikan(() => this.fetchWithTimeout(url));
+		return at(res, 'data', 'mal_id') === 1;
 	}
 
 	setOmdbKey(key: string): void {
@@ -850,6 +999,15 @@ export class ApiService {
 
 	private tmdbHeaders(): Record<string, string> {
 		return { 'Authorization': `Bearer ${this.tmdbApiKey}` };
+	}
+
+	/** The TMDB movie and tv ids an IMDb id resolves to (the first hit of each kind). Throws when the request fails. */
+	private async tmdbFindIds(imdbId: string): Promise<{ movie?: number; tv?: number }> {
+		const hits = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
+		return {
+			movie: readOptionalNumber(at(hits, 'movie_results', 0, 'id')),
+			tv: readOptionalNumber(at(hits, 'tv_results', 0, 'id')),
+		};
 	}
 
 	private request(params: RequestUrlParam, check?: (source: ApiSource, data: unknown) => void): Promise<unknown> {
@@ -895,35 +1053,36 @@ export class ApiService {
 			.trim();
 	}
 
-	private formatAniListDate(d: { year?: number | null; month?: number | null; day?: number | null } | null | undefined): string {
-		if (!d?.year) return '';
-		const yyyy = String(d.year);
-		const mm = String(d.month ?? 1).padStart(2, '0');
-		const dd = String(d.day ?? 1).padStart(2, '0');
-		return `${yyyy}-${mm}-${dd}`;
+	private formatAniListDate(d: unknown): string {
+		const year = readOptionalNumber(at(d, 'year'));
+		if (!year) return '';
+		const mm = String(readOptionalNumber(at(d, 'month')) ?? 1).padStart(2, '0');
+		const dd = String(readOptionalNumber(at(d, 'day')) ?? 1).padStart(2, '0');
+		return `${String(year)}-${mm}-${dd}`;
 	}
 
-	private mapAniListMedia(media: AniListMedia): AnimeSearchResult {
-		const name = media.title?.english || media.title?.romaji || media.title?.native || '';
-		const episodes = media.episodes ?? 0;
-		const duration = media.duration ?? 24;
+	private mapAniListMedia(media: unknown): AnimeSearchResult {
+		const id = readNumber(at(media, 'id'));
+		const title = at(media, 'title');
+		const episodes = readNumber(at(media, 'episodes'));
 		const seasons: Season[] =
 			episodes > 0 ? [{ name: 'Season 1', episodes, offset: 0 }] : [];
-		const description = media.description ? this.stripHtml(media.description) : '';
+		const description = readString(at(media, 'description'));
+		const genres = readStringList(at(media, 'genres'));
 		return {
 			malId: 0,
-			anilistId: media.id,
-			title: name,
+			anilistId: id,
+			title: readOptionalString(at(title, 'english')) ?? readOptionalString(at(title, 'romaji')) ?? readString(at(title, 'native')),
 			episodes,
-			duration,
-			releaseDate: this.formatAniListDate(media.startDate),
-			url: `https://anilist.co/anime/${media.id}`,
+			duration: readOptionalNumber(at(media, 'duration')) ?? 24,
+			releaseDate: this.formatAniListDate(at(media, 'startDate')),
+			url: `https://anilist.co/anime/${id}`,
 			seasons,
-			description,
-			averageScore: media.averageScore ?? undefined,
-			genres: media.genres ?? undefined,
-			posterUrl: httpsOrEmpty(media.coverImage?.large ?? media.coverImage?.medium) || undefined,
-			trailerUrl: anilistTrailerUrl(media.trailer) || undefined,
+			description: description ? this.stripHtml(description) : '',
+			averageScore: readOptionalNumber(at(media, 'averageScore')),
+			genres: genres.length > 0 ? genres : undefined,
+			posterUrl: httpsOrEmpty(readOptionalString(at(media, 'coverImage', 'large')) ?? readOptionalString(at(media, 'coverImage', 'medium'))) || undefined,
+			trailerUrl: anilistTrailerUrl(at(media, 'trailer')) || undefined,
 		};
 	}
 
@@ -957,21 +1116,11 @@ export class ApiService {
 		const res = await this.throttleAniList(() =>
 			this.postJsonWithTimeout(ANILIST_ENDPOINT, { query: gql, variables }),
 		);
-		const data = res as AniListSearchResponse;
-		const media = data.data?.Page?.media ?? [];
-		return media.map((m) => this.mapAniListMedia(m));
+		return recordsOf(at(res, 'data', 'Page', 'media')).map((m) => this.mapAniListMedia(m));
 	}
 
-	async getAniListById(anilistId: number): Promise<AniListMedia | null> {
-		try {
-			return await this.queryAniListById(anilistId);
-		} catch {
-			return null;
-		}
-	}
-
-	/** Like getAniListById, but failures throw (background checks tell them apart). */
-	private async queryAniListById(anilistId: number): Promise<AniListMedia | null> {
+	/** The AniList Media node for an id (null when AniList has none); failures throw, background checks tell them apart. */
+	private async queryAniListById(anilistId: number): Promise<Record<string, unknown> | null> {
 		const gql = `
 			query ($id: Int) {
 				Media(id: $id, type: ANIME) {
@@ -996,8 +1145,8 @@ export class ApiService {
 		const res = await this.throttleAniList(() =>
 			this.postJsonWithTimeout(ANILIST_ENDPOINT, { query: gql, variables: { id: anilistId } }),
 		);
-		const data = res as AniListMediaResponse;
-		return data.data?.Media ?? null;
+		const media = at(res, 'data', 'Media');
+		return isRecord(media) ? media : null;
 	}
 
 	// Jikan / MAL
@@ -1012,36 +1161,32 @@ export class ApiService {
 		const base =
 			`${this.jikan.base}/anime?q=${encodeURIComponent(query)}&limit=${JIKAN_PAGE_SIZE}&sfw=false` +
 			(yr ? `&start_date=${yr}-01-01&end_date=${yr}-12-31` : '');
-		const items: JikanAnime[] = [];
+		const items: Record<string, unknown>[] = [];
 		const maxPages = Math.ceil(limit / JIKAN_PAGE_SIZE);
 		for (let page = 1; page <= maxPages; page++) {
-			const data = (await this.throttleJikan(() => this.fetchWithTimeout(`${base}&page=${page}`))) as {
-				data?: JikanAnime[];
-				pagination?: { has_next_page?: boolean };
-			};
-			items.push(...(data.data ?? []));
-			if (items.length >= limit || !data.pagination?.has_next_page) break;
+			const data = await this.throttleJikan(() => this.fetchWithTimeout(`${base}&page=${page}`));
+			items.push(...recordsOf(at(data, 'data')));
+			if (items.length >= limit || !readBoolean(at(data, 'pagination', 'has_next_page'))) break;
 		}
 		return items.slice(0, limit).map((a) => this.mapJikanAnime(a));
 	}
 
-	private mapJikanAnime(anime: JikanAnime): AnimeSearchResult {
-		const durationStr = anime.duration ?? '24 min per ep';
-		const durationMatch = durationStr.match(/(\d+)\s*min/);
-		const duration = durationMatch && durationMatch[1] ? parseInt(durationMatch[1], 10) : 24;
-		const episodes = anime.episodes ?? 0;
-		const seasons: Season[] =
-			episodes > 0 ? [{ name: 'Season 1', episodes, offset: 0 }] : [];
+	private mapJikanAnime(anime: unknown): AnimeSearchResult {
+		const durationMatch = (readOptionalString(at(anime, 'duration')) ?? '24 min per ep').match(/(\d+)\s*min/);
+		const episodes = readNumber(at(anime, 'episodes'));
+		const jpg = at(anime, 'images', 'jpg');
 		return {
-			malId: anime.mal_id,
-			title: anime.title_english ?? anime.title,
+			malId: readNumber(at(anime, 'mal_id')),
+			title: readOptionalString(at(anime, 'title_english')) ?? readString(at(anime, 'title')),
 			episodes,
-			duration,
-			releaseDate: anime.aired?.from ? (anime.aired.from.split('T')[0] ?? '') : '',
-			url: httpsOrEmpty(anime.url),
-			seasons,
-			posterUrl: httpsOrEmpty(anime.images?.jpg?.large_image_url ?? anime.images?.jpg?.image_url ?? anime.images?.jpg?.small_image_url) || undefined,
-			trailerUrl: jikanTrailerUrl(anime.trailer) || undefined,
+			duration: durationMatch?.[1] ? parseInt(durationMatch[1], 10) : 24,
+			releaseDate: readString(at(anime, 'aired', 'from')).split('T')[0] ?? '',
+			url: httpsOrEmpty(readString(at(anime, 'url'))),
+			seasons: episodes > 0 ? [{ name: 'Season 1', episodes, offset: 0 }] : [],
+			posterUrl: httpsOrEmpty(
+				readOptionalString(at(jpg, 'large_image_url')) ?? readOptionalString(at(jpg, 'image_url')) ?? readOptionalString(at(jpg, 'small_image_url')),
+			) || undefined,
+			trailerUrl: jikanTrailerUrl(at(anime, 'trailer')) || undefined,
 		};
 	}
 
@@ -1055,74 +1200,67 @@ export class ApiService {
 			`${OMDB_BASE}/?s=${encodeURIComponent(query)}&type=${type}` +
 			(yr ? `&y=${yr}` : '') +
 			`&apikey=${encodeURIComponent(this.omdbApiKey)}`;
-		const items: OmdbSearchItem[] = [];
+		const items: Record<string, unknown>[] = [];
 		const maxPages = Math.ceil(SEARCH_RESULT_LIMIT / OMDB_PAGE_SIZE);
 		for (let page = 1; page <= maxPages; page++) {
-			const data = (await this.fetchWithTimeout(`${base}&page=${page}`)) as OmdbSearchResponse;
+			const data = await this.fetchWithTimeout(`${base}&page=${page}`);
 			assertOmdbOk(data);
 			// past the last page OMDb answers Response:False, not an empty list
-			if (data.Response === 'False') break;
-			const batch = data.Search ?? [];
+			if (readString(at(data, 'Response')) === 'False') break;
+			const batch = recordsOf(at(data, 'Search'));
 			items.push(...batch);
-			const total = parseInt(data.totalResults ?? '', 10);
+			const total = parseInt(readString(at(data, 'totalResults')), 10);
 			if (items.length >= SEARCH_RESULT_LIMIT || batch.length < OMDB_PAGE_SIZE) break;
 			if (Number.isFinite(total) && items.length >= total) break;
 		}
-		return items.slice(0, SEARCH_RESULT_LIMIT).map((item) => {
-			// series Year is a range ("2008–2013", "2025–") — keep the start year only
-			const startYear = item.Year?.match(/^(\d{4})/)?.[1];
-			// year only. OMDb search has no day/month; a faked 01-01 reads like a real date
-			return {
-				imdbId: item.imdbID,
-				title: item.Title,
-				mediaType: type === 'movie' ? ('movie' as const) : ('tv' as const),
-				// 0 like TMDB — the result card prints the media type instead of "1 eps".
-				// The real count comes from the detail call on select.
-				episodes: 0,
-				episodeDuration: 0,
-				releaseDate: startYear ?? '',
-				url: `https://www.imdb.com/title/${item.imdbID}`,
-				seasons: [],
-				posterUrl: item.Poster !== 'N/A' ? httpsOrEmpty(item.Poster) || undefined : undefined,
-			};
-		});
+		return items.slice(0, SEARCH_RESULT_LIMIT).map((item) => omdbSearchRow(item, type));
 	}
 
-	async getOmdbMovieDetails(imdbId: string): Promise<MediaSearchResult | null> {
+	/** One OMDb detail record; null for "Response: False" or a record without an id. Key and quota problems throw. */
+	private async fetchOmdbDetail(imdbId: string): Promise<Record<string, unknown> | null> {
+		const data = await this.fetchWithTimeout(omdbDetailUrl(imdbId, this.omdbApiKey));
+		assertOmdbOk(data);
+		const detail = readRecord(data);
+		return readString(detail.Response) === 'False' || !readString(detail.imdbID) ? null : detail;
+	}
+
+	/**
+	 * Runs `use` on the OMDb detail for an id. Null without a key, for a missing title and on a failed
+	 * request; a rejected credential still throws (see rethrowAuth).
+	 */
+	private async withOmdbDetail<T>(imdbId: string, use: (data: Record<string, unknown>) => Promise<T | null> | T | null): Promise<T | null> {
 		if (!this.omdbApiKey) return null;
-		const url = `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(this.omdbApiKey)}`;
 		try {
-			const data = (await this.fetchWithTimeout(url)) as OmdbDetailResponse;
-			assertOmdbOk(data);
-			if (data.Response === 'False' || !data.imdbID) return null;
-			const runtimeMin = data.Runtime ? parseInt(data.Runtime.replace(/[^0-9]/g, ''), 10) : 120;
-			return {
-				imdbId: data.imdbID,
-				title: data.Title,
-				mediaType: 'movie',
-				episodes: 1,
-				episodeDuration: isNaN(runtimeMin) ? 120 : runtimeMin,
-				releaseDate: this.parseOmdbDate(data.Released ?? data.Year),
-				url: `https://www.imdb.com/title/${data.imdbID}`,
-				seasons: [{ name: 'Movie', episodes: 1, offset: 0 }],
-				director: omdbNamesToCredits(data.Director),
-				cast: omdbNamesToCredits(data.Actors),
-			};
+			const data = await this.fetchOmdbDetail(imdbId);
+			return data ? await use(data) : null;
 		} catch (e) {
 			rethrowAuth(e);
 			return null;
 		}
 	}
 
-	async getOmdbTvDetails(imdbId: string): Promise<MediaSearchResult | null> {
-		if (!this.omdbApiKey) return null;
-		const url = `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(this.omdbApiKey)}`;
-		try {
-			const data = (await this.fetchWithTimeout(url)) as OmdbDetailResponse;
-			assertOmdbOk(data);
-			if (data.Response === 'False' || !data.imdbID) return null;
+	getOmdbMovieDetails(imdbId: string): Promise<MediaSearchResult | null> {
+		return this.withOmdbDetail(imdbId, (data): MediaSearchResult => {
+			const runtimeMin = parseInt(readString(data.Runtime).replace(/[^0-9]/g, ''), 10);
+			const id = readString(data.imdbID);
+			return {
+				imdbId: id,
+				title: readString(data.Title),
+				mediaType: 'movie',
+				episodes: 1,
+				episodeDuration: isNaN(runtimeMin) ? 120 : runtimeMin,
+				releaseDate: parseOmdbDate(omdbReleased(data)),
+				url: `https://www.imdb.com/title/${id}`,
+				seasons: [{ name: 'Movie', episodes: 1, offset: 0 }],
+				director: omdbNamesToCredits(data.Director),
+				cast: omdbNamesToCredits(data.Actors),
+			};
+		});
+	}
 
-			const totalSeasons = parseInt(data.totalSeasons ?? '1', 10) || 1;
+	getOmdbTvDetails(imdbId: string): Promise<MediaSearchResult | null> {
+		return this.withOmdbDetail(imdbId, async (data): Promise<MediaSearchResult> => {
+			const totalSeasons = parseInt(readString(data.totalSeasons, '1'), 10) || 1;
 			const seasons: Season[] = [];
 			let offset = 0;
 
@@ -1133,31 +1271,29 @@ export class ApiService {
 				offset += count;
 			}
 
-			const totalEpisodes = seasons.reduce((sum, s) => sum + s.episodes, 0);
+			const id = readString(data.imdbID);
 			return {
-				imdbId: data.imdbID,
-				title: data.Title,
+				imdbId: id,
+				title: readString(data.Title),
 				mediaType: 'tv',
-				episodes: totalEpisodes,
+				episodes: offset,
 				episodeDuration: 45,
-				releaseDate: this.parseOmdbDate(data.Released ?? data.Year),
-				url: `https://www.imdb.com/title/${data.imdbID}`,
+				releaseDate: parseOmdbDate(omdbReleased(data)),
+				url: `https://www.imdb.com/title/${id}`,
 				seasons,
 				director: omdbSeriesDirectorCredits(data),
 				cast: omdbNamesToCredits(data.Actors),
 			};
-		} catch (e) {
-			rethrowAuth(e);
-			return null;
-		}
+		});
 	}
 
 	private async getOmdbSeasonEpisodeCount(imdbId: string, season: number): Promise<number | null> {
 		const url = `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&Season=${season}&apikey=${encodeURIComponent(this.omdbApiKey)}`;
 		try {
-			const data = (await this.fetchWithTimeout(url)) as OmdbSeasonResponse;
-			if (data.Response === 'False') return null;
-			return (data.Episodes ?? []).length;
+			const data = await this.fetchWithTimeout(url);
+			if (readString(at(data, 'Response')) === 'False') return null;
+			const episodes = at(data, 'Episodes');
+			return Array.isArray(episodes) ? episodes.length : 0;
 		} catch {
 			return null;
 		}
@@ -1170,19 +1306,18 @@ export class ApiService {
 	): Promise<{ dayOfWeek: number; time: string } | null> {
 		try {
 			const url = `${this.jikan.base}/anime/${malId}`;
-			const data = (await this.fetchWithTimeout(url)) as {
-				data?: { broadcast?: { day?: string | null; time?: string | null } };
-			};
-			const broadcast = data.data?.broadcast;
-			if (!broadcast?.day || !broadcast.time) return null;
+			const data = await this.fetchWithTimeout(url);
+			const day = readOptionalString(at(data, 'data', 'broadcast', 'day'));
+			const time = readOptionalString(at(data, 'data', 'broadcast', 'time'));
+			if (!day || !time) return null;
 
 			const dayMap: Record<string, number> = {
 				Mondays: 1, Tuesdays: 2, Wednesdays: 3, Thursdays: 4,
 				Fridays: 5, Saturdays: 6, Sundays: 0,
 			};
-			const dayOfWeek = dayMap[broadcast.day];
+			const dayOfWeek = dayMap[day];
 			if (dayOfWeek === undefined) return null;
-			return { dayOfWeek, time: broadcast.time };
+			return { dayOfWeek, time };
 		} catch {
 			return null;
 		}
@@ -1196,37 +1331,10 @@ export class ApiService {
 		}, lookupOfError);
 	}
 
-	/**
-	 * OMDb "DD Mon YYYY" (e.g. "08 Feb 2026") → YYYY-MM-DD. Returns the input unchanged
-	 * when it doesn't match that pattern (e.g. year-only "2026").
-	 */
-	private parseOmdbDate(dateStr: string): string {
-		const MONTHS: Record<string, string> = {
-			Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-			Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
-		};
-		const m = dateStr.match(/^(\d{2})\s+([A-Za-z]{3})\s+(\d{4})$/);
-		if (m && m[1] && m[2] && m[3]) {
-			const mon = MONTHS[m[2]];
-			if (mon) return `${m[3]}-${mon}-${m[1]}`;
-		}
-		return dateStr;
-	}
-
 	/** Fetches OMDb detail by raw IMDb ID, auto-detecting movie vs. TV. */
-	async getOmdbByImdbId(imdbId: string): Promise<MediaSearchResult | null> {
-		if (!this.omdbApiKey) return null;
-		const url = `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(this.omdbApiKey)}`;
-		try {
-			const data = (await this.fetchWithTimeout(url)) as OmdbDetailResponse;
-			assertOmdbOk(data);
-			if (data.Response === 'False' || !data.imdbID) return null;
-			if (data.Type === 'movie') return this.getOmdbMovieDetails(imdbId);
-			return this.getOmdbTvDetails(imdbId);
-		} catch (e) {
-			rethrowAuth(e);
-			return null;
-		}
+	getOmdbByImdbId(imdbId: string): Promise<MediaSearchResult | null> {
+		return this.withOmdbDetail(imdbId, (data) =>
+			readString(data.Type) === 'movie' ? this.getOmdbMovieDetails(imdbId) : this.getOmdbTvDetails(imdbId));
 	}
 
 	// TMDB
@@ -1241,24 +1349,14 @@ export class ApiService {
 		const base =
 			`${TMDB_BASE}/search/${endpoint}?query=${encodeURIComponent(query)}` +
 			(yr ? `&${yearKey}=${yr}` : '');
-		const items: TmdbSearchItem[] = [];
+		const items: Record<string, unknown>[] = [];
 		const maxPages = Math.ceil(SEARCH_RESULT_LIMIT / TMDB_PAGE_SIZE);
 		for (let page = 1; page <= maxPages; page++) {
-			const data = (await this.fetchWithTimeout(`${base}&page=${page}`, this.tmdbHeaders())) as TmdbSearchResponse;
-			items.push(...(data.results ?? []));
-			if (items.length >= SEARCH_RESULT_LIMIT || page >= (data.total_pages ?? 1)) break;
+			const data = await this.fetchWithTimeout(`${base}&page=${page}`, this.tmdbHeaders());
+			items.push(...recordsOf(at(data, 'results')));
+			if (items.length >= SEARCH_RESULT_LIMIT || page >= readNumber(at(data, 'total_pages'), 1)) break;
 		}
-		return items.slice(0, SEARCH_RESULT_LIMIT).map((item) => ({
-			imdbId: String(item.id),
-			title: item.title ?? item.name ?? '',
-			mediaType: type === 'movie' ? ('movie' as const) : ('tv' as const),
-			episodes: 0,
-			episodeDuration: 0,
-			releaseDate: item.release_date ?? item.first_air_date ?? '',
-			url: '',
-			seasons: [],
-			posterUrl: item.poster_path ? `https://image.tmdb.org/t/p/w342${item.poster_path}` : undefined,
-		}));
+		return items.slice(0, SEARCH_RESULT_LIMIT).map((item) => tmdbSearchRow(item, type));
 	}
 
 	async getTmdbMovieDetails(tmdbId: string): Promise<MediaSearchResult | null> {
@@ -1266,25 +1364,23 @@ export class ApiService {
 		try {
 			// append_to_response=videos,credits folds the trailer + credits lookups into the detail
 			// call (no extra round-trips)
-			const [detailData, extData] = await Promise.all([
+			const [detail, ext] = await Promise.all([
 				this.fetchWithTimeout(`${TMDB_BASE}/movie/${tmdbId}?append_to_response=videos,credits`, this.tmdbHeaders()),
 				this.fetchWithTimeout(`${TMDB_BASE}/movie/${tmdbId}/external_ids`, this.tmdbHeaders()),
 			]);
-			const detail = detailData as TmdbMovieDetail;
-			const ext = extData as TmdbExternalIds;
-			const imdbId = ext.imdb_id ?? detail.imdb_id ?? '';
+			const imdbId = readOptionalString(at(ext, 'imdb_id')) ?? readString(at(detail, 'imdb_id'));
 			return {
-				imdbId: String(detail.id),
-				title: detail.title,
+				imdbId: String(readNumber(at(detail, 'id'))),
+				title: readString(at(detail, 'title')),
 				mediaType: 'movie',
 				episodes: 1,
-				episodeDuration: detail.runtime ?? 120,
-				releaseDate: detail.release_date ?? '',
+				episodeDuration: readOptionalNumber(at(detail, 'runtime')) ?? 120,
+				releaseDate: readString(at(detail, 'release_date')),
 				url: imdbId ? `https://www.imdb.com/title/${imdbId}` : '',
 				seasons: [{ name: 'Movie', episodes: 1, offset: 0 }],
-				trailerUrl: tmdbTrailerUrl(detail.videos?.results) || undefined,
-				studio: tmdbCompanyNames(detail.production_companies),
-				...tmdbCreditsToStored(detail.credits),
+				trailerUrl: tmdbTrailerUrl(at(detail, 'videos', 'results')) || undefined,
+				studio: tmdbCompanyNames(at(detail, 'production_companies')),
+				...tmdbCreditsToStored(at(detail, 'credits')),
 			};
 		} catch (e) {
 			rethrowAuth(e);
@@ -1304,37 +1400,28 @@ export class ApiService {
 
 	/** TMDB tv details; failures throw. */
 	private async loadTmdbTvDetails(tmdbId: string): Promise<MediaSearchResult> {
-		const [detailData, extData] = await Promise.all([
+		const [detail, ext] = await Promise.all([
 			this.fetchWithTimeout(`${TMDB_BASE}/tv/${tmdbId}?append_to_response=videos,credits`, this.tmdbHeaders()),
 			this.fetchWithTimeout(`${TMDB_BASE}/tv/${tmdbId}/external_ids`, this.tmdbHeaders()),
 		]);
-		const detail = detailData as TmdbTvDetail;
-		const ext = extData as TmdbExternalIds;
-		const imdbId = ext.imdb_id ?? '';
-
-		const rawSeasons = (detail.seasons ?? []).filter((s) => s.season_number !== 0);
-		let offset = 0;
-		const seasons: Season[] = rawSeasons.map((s) => {
-			const season: Season = { name: s.name, episodes: s.episode_count, offset };
-			offset += s.episode_count;
-			return season;
-		});
-		const totalEpisodes = seasons.reduce((sum, s) => sum + s.episodes, 0) || (detail.number_of_episodes ?? 0);
+		const imdbId = readString(at(ext, 'imdb_id'));
+		const seasons = tmdbSeasons(at(detail, 'seasons'));
+		const totalEpisodes = seasons.reduce((sum, s) => sum + s.episodes, 0) || readNumber(at(detail, 'number_of_episodes'));
 
 		return {
-			imdbId: String(detail.id),
-			title: detail.name,
+			imdbId: String(readNumber(at(detail, 'id'))),
+			title: readString(at(detail, 'name')),
 			mediaType: 'tv',
 			episodes: totalEpisodes,
-			episodeDuration: (detail.episode_run_time ?? [])[0] ?? 45,
-			releaseDate: detail.first_air_date ?? '',
+			episodeDuration: readOptionalNumber(at(detail, 'episode_run_time', 0)) ?? 45,
+			releaseDate: readString(at(detail, 'first_air_date')),
 			url: imdbId ? `https://www.imdb.com/title/${imdbId}` : '',
 			seasons,
-			trailerUrl: tmdbTrailerUrl(detail.videos?.results) || undefined,
+			trailerUrl: tmdbTrailerUrl(at(detail, 'videos', 'results')) || undefined,
 			// networks lead — HBO/Netflix is the brand; production_companies is shells
-			studio: tmdbCompanyNames(detail.networks, detail.production_companies),
+			studio: tmdbCompanyNames(at(detail, 'networks'), at(detail, 'production_companies')),
 			director: tmdbSeriesDirectorCredits(detail),
-			cast: tmdbCreditsToStored(detail.credits).cast,
+			cast: tmdbCreditsToStored(at(detail, 'credits')).cast,
 		};
 	}
 
@@ -1355,11 +1442,11 @@ export class ApiService {
 			return nonEmpty ? found(nonEmpty) : NOT_FOUND;
 		};
 		try {
-			if (title.anilistId !== undefined) return single((await this.queryAniListById(title.anilistId))?.episodes);
+			if (title.anilistId !== undefined) return single(readOptionalNumber(at(await this.queryAniListById(title.anilistId), 'episodes')));
 			if (title.malId !== undefined) {
 				const url = `${this.jikan.base}/anime/${title.malId}`;
-				const data = (await this.throttleJikan(() => this.fetchWithTimeout(url))) as { data?: JikanAnime };
-				return single(data.data?.episodes);
+				const data = await this.throttleJikan(() => this.fetchWithTimeout(url));
+				return single(readOptionalNumber(at(data, 'data', 'episodes')));
 			}
 			if (title.tmdbId !== undefined) {
 				if (title.tmdbMediaType !== 'tv') return NOT_FOUND;
@@ -1401,30 +1488,35 @@ export class ApiService {
 		const media = await this.queryAniListById(anilistId);
 		if (!media) return NOT_FOUND;
 		const airing: Airing = { refreshedAt: new Date().toISOString() };
-		const next = media.nextAiringEpisode;
-		if (typeof next?.episode === 'number') {
-			airing.nextEpisode = next.episode;
-			if (typeof next.airingAt === 'number') airing.nextAirDate = new Date(next.airingAt * 1000).toISOString();
-			if (next.episode > 1) airing.lastEpisode = next.episode - 1;
-		} else if (media.status === 'FINISHED' && typeof media.episodes === 'number' && media.episodes > 0) {
-			airing.lastEpisode = media.episodes;
+		const nextEpisode = readOptionalNumber(at(media, 'nextAiringEpisode', 'episode'));
+		const totalEpisodes = readNumber(media.episodes);
+		if (nextEpisode !== undefined) {
+			airing.nextEpisode = nextEpisode;
+			const airingAt = readOptionalNumber(at(media, 'nextAiringEpisode', 'airingAt'));
+			if (airingAt !== undefined) airing.nextAirDate = new Date(airingAt * 1000).toISOString();
+			if (nextEpisode > 1) airing.lastEpisode = nextEpisode - 1;
+		} else if (readString(media.status) === 'FINISHED' && totalEpisodes > 0) {
+			airing.lastEpisode = totalEpisodes;
 		}
 		return found(airing);
 	}
 
 	private async fetchTmdbAiring(tmdbId: number): Promise<LookupResult<Airing>> {
-		const detail = await this.fetchWithTimeout(`${TMDB_BASE}/tv/${tmdbId}`, this.tmdbHeaders()) as TmdbTvDetail;
+		const detail = await this.fetchWithTimeout(`${TMDB_BASE}/tv/${tmdbId}`, this.tmdbHeaders());
 		const airing: Airing = { refreshedAt: new Date().toISOString() };
-		const next = detail.next_episode_to_air;
-		if (typeof next?.episode_number === 'number') {
-			airing.nextEpisode = next.episode_number;
-			if (typeof next.season_number === 'number') airing.nextSeason = next.season_number;
-			if (next.air_date) airing.nextAirDate = next.air_date;
+		const nextEpisode = readOptionalNumber(at(detail, 'next_episode_to_air', 'episode_number'));
+		if (nextEpisode !== undefined) {
+			airing.nextEpisode = nextEpisode;
+			const season = readOptionalNumber(at(detail, 'next_episode_to_air', 'season_number'));
+			if (season !== undefined) airing.nextSeason = season;
+			const airDate = readOptionalString(at(detail, 'next_episode_to_air', 'air_date'));
+			if (airDate) airing.nextAirDate = airDate;
 		}
-		const last = detail.last_episode_to_air;
-		if (typeof last?.episode_number === 'number') {
-			airing.lastEpisode = last.episode_number;
-			if (typeof last.season_number === 'number') airing.lastSeason = last.season_number;
+		const lastEpisode = readOptionalNumber(at(detail, 'last_episode_to_air', 'episode_number'));
+		if (lastEpisode !== undefined) {
+			airing.lastEpisode = lastEpisode;
+			const season = readOptionalNumber(at(detail, 'last_episode_to_air', 'season_number'));
+			if (season !== undefined) airing.lastSeason = season;
 		}
 		return found(airing);
 	}
@@ -1457,7 +1549,7 @@ export class ApiService {
 		return this.tmdbStudio(title);
 	}
 
-	/** One source per anime id the title has, the preferred API first; a title with neither id has nothing to ask. */
+	/** The studio source per anime id the title has: AniList's main studios, Jikan's studios. */
 	private animeStudioSources(title: HoardTitle, animeSource: 'jikan' | 'anilist'): LookupSource<StudioLookup>[] {
 		const anilist = (anilistId: number): LookupSource<StudioLookup> => () => attempt(async () => {
 			const media = await this.queryAniListById(anilistId);
@@ -1497,15 +1589,6 @@ export class ApiService {
 
 	// TMDB collections. Movies only.
 
-	/** The TMDB movie and tv ids an IMDb id resolves to (the first hit of each kind). Throws when the request fails. */
-	private async tmdbFindIds(imdbId: string): Promise<{ movie?: number; tv?: number }> {
-		const hits = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
-		return {
-			movie: readOptionalNumber(at(hits, 'movie_results', 0, 'id')),
-			tv: readOptionalNumber(at(hits, 'tv_results', 0, 'id')),
-		};
-	}
-
 	/** exact key, so notfound = definitively not a movie (all TV lands here); failed = the request failed */
 	findTmdbMovieIdByImdbId(imdbId: string): Promise<LookupResult<number>> {
 		if (!this.tmdbApiKey) return Promise.resolve(NO_KEY);
@@ -1521,8 +1604,8 @@ export class ApiService {
 			`${TMDB_BASE}/search/movie?query=${encodeURIComponent(title)}&page=1` +
 			(yearParam ? `&primary_release_year=${yearParam}` : '');
 		try {
-			const data = (await this.fetchWithTimeout(url, this.tmdbHeaders())) as TmdbSearchResponse;
-			return data.results?.[0]?.id ?? null;
+			const data = await this.fetchWithTimeout(url, this.tmdbHeaders());
+			return readOptionalNumber(at(data, 'results', 0, 'id')) ?? null;
 		} catch {
 			return null;
 		}
@@ -1544,11 +1627,8 @@ export class ApiService {
 	async getTmdbCollection(collectionId: number): Promise<TmdbCollectionDetail | null> {
 		if (!this.tmdbApiKey) return null;
 		try {
-			const data = (await this.fetchWithTimeout(
-				`${TMDB_BASE}/collection/${collectionId}`,
-				this.tmdbHeaders(),
-			)) as TmdbCollectionDetail;
-			return data.id ? data : null;
+			const data = await this.fetchWithTimeout(`${TMDB_BASE}/collection/${collectionId}`, this.tmdbHeaders());
+			return tmdbCollectionDetail(data);
 		} catch {
 			return null;
 		}
@@ -1567,90 +1647,63 @@ export class ApiService {
 
 	// Community ratings
 
-	private parseOmdbVotes(s: string | undefined): number {
-		if (!s || s === 'N/A') return 0;
-		const n = parseInt(s.replace(/,/g, ''), 10);
-		return isNaN(n) ? 0 : n;
-	}
-
-	private parseOmdbRating(s: string | undefined): number {
-		if (!s || s === 'N/A') return 0;
-		const n = parseFloat(s);
-		return isNaN(n) ? 0 : n;
-	}
-
 	private extractImdbId(externalLink: string): string {
 		const m = externalLink.match(/tt\d+/);
 		return m ? m[0] : '';
 	}
 
-	private async fetchMalRating(malId: number): Promise<{ rating: number; votes: number } | null> {
-		try {
-			const url = `${this.jikan.base}/anime/${malId}`;
-			const data = (await this.fetchWithTimeout(url)) as {
-				data?: { score?: number | null; scored_by?: number | null };
-			};
-			const rating = data.data?.score ?? 0;
-			const votes = data.data?.scored_by ?? 0;
-			if (!rating && !votes) return null;
-			return { rating, votes };
-		} catch {
-			return null;
-		}
+	private fetchMalRating(malId: number): Promise<CommunityScore | null> {
+		return quietly(async () => {
+			const data = await this.fetchWithTimeout(`${this.jikan.base}/anime/${malId}`);
+			return scoreOf(readNumber(at(data, 'data', 'score')), readNumber(at(data, 'data', 'scored_by')));
+		});
 	}
 
-	private async fetchAniListRating(
-		anilistId: number,
-	): Promise<{ rating: number; votes: number } | null> {
-		const media = await this.getAniListById(anilistId);
-		if (!media) return null;
-		const rating = media.averageScore ?? 0;
-		const votes = media.popularity ?? 0;
-		if (!rating && !votes) return null;
-		return { rating, votes };
+	private fetchAniListRating(anilistId: number): Promise<CommunityScore | null> {
+		return quietly(async () => {
+			const media = await this.queryAniListById(anilistId);
+			return scoreOf(readNumber(at(media, 'averageScore')), readNumber(at(media, 'popularity')));
+		});
 	}
 
-	private async fetchOmdbRating(imdbId: string): Promise<{ rating: number; votes: number } | null> {
-		if (!this.omdbApiKey) return null;
-		try {
-			const url = `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(this.omdbApiKey)}`;
-			const data = (await this.fetchWithTimeout(url)) as {
-				Response?: string;
-				imdbRating?: string;
-				imdbVotes?: string;
-			};
-			if (data.Response === 'False') return null;
-			const rating = this.parseOmdbRating(data.imdbRating);
-			const votes = this.parseOmdbVotes(data.imdbVotes);
-			if (!rating && !votes) return null;
-			return { rating, votes };
-		} catch {
-			return null;
-		}
+	private fetchOmdbRating(imdbId: string): Promise<CommunityScore | null> {
+		if (!this.omdbApiKey) return Promise.resolve(null);
+		return quietly(async () => {
+			const data = await this.fetchWithTimeout(omdbDetailUrl(imdbId, this.omdbApiKey));
+			if (readString(at(data, 'Response')) === 'False') return null;
+			return scoreOf(parseOmdbRating(readString(at(data, 'imdbRating'))), parseOmdbVotes(readString(at(data, 'imdbVotes'))));
+		});
 	}
 
-	private async fetchTmdbRatingByImdb(
-		imdbId: string,
-	): Promise<{ rating: number; votes: number } | null> {
-		if (!this.tmdbApiKey) return null;
-		try {
-			const url = `${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`;
-			const data = (await this.fetchWithTimeout(url, this.tmdbHeaders())) as {
-				movie_results?: Array<{ vote_average?: number; vote_count?: number }>;
-				tv_results?: Array<{ vote_average?: number; vote_count?: number }>;
-			};
-			const hit =
-				(data.movie_results && data.movie_results[0]) ||
-				(data.tv_results && data.tv_results[0]) ||
-				null;
-			if (!hit) return null;
-			const rating = hit.vote_average ?? 0;
-			const votes = hit.vote_count ?? 0;
-			if (!rating && !votes) return null;
-			return { rating, votes };
-		} catch {
-			return null;
+	private fetchTmdbRatingByImdb(imdbId: string): Promise<CommunityScore | null> {
+		if (!this.tmdbApiKey) return Promise.resolve(null);
+		return quietly(async () => {
+			const data = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
+			const hit = at(data, 'movie_results', 0) ?? at(data, 'tv_results', 0);
+			return scoreOf(readNumber(at(hit, 'vote_average')), readNumber(at(hit, 'vote_count')));
+		});
+	}
+
+	/** Anime APIs in the preferred order; a title with neither id has nothing to ask. */
+	private async fetchAnimeRating(title: HoardTitle, preferred: 'jikan' | 'anilist'): Promise<CommunityRating | null> {
+		const order = preferred === 'anilist' ? (['anilist', 'mal'] as const) : (['mal', 'anilist'] as const);
+		for (const source of order) {
+			const id = (source === 'mal' ? title.malId : title.anilistId) ?? 0;
+			if (id <= 0) continue;
+			const score = source === 'mal' ? await this.fetchMalRating(id) : await this.fetchAniListRating(id);
+			if (score) return { ...score, source };
 		}
+		return null;
+	}
+
+	/** IMDb ratings from OMDb, then TMDB's copy of the same title; needs an IMDb id in the link. */
+	private async fetchImdbRating(title: HoardTitle): Promise<CommunityRating | null> {
+		const imdbId = this.extractImdbId(title.externalLink ?? '');
+		if (!imdbId) return null;
+		const omdb = await this.fetchOmdbRating(imdbId);
+		if (omdb) return { ...omdb, source: 'imdb' };
+		const tmdb = await this.fetchTmdbRatingByImdb(imdbId);
+		return tmdb ? { ...tmdb, source: 'tmdb' } : null;
 	}
 
 	/**
@@ -1662,50 +1715,14 @@ export class ApiService {
 		animeApiSource: 'jikan' | 'anilist' = 'jikan',
 		apiGroup: 'anime' | 'movie' | '' = '',
 	): Promise<{ rating: number; votes: number; source: 'mal' | 'anilist' | 'imdb' | 'tmdb' } | null> {
-		const hasMal = (title.malId ?? 0) > 0;
-		const hasAniList = (title.anilistId ?? 0) > 0;
-		const resolvedGroup: 'anime' | 'movie' | '' =
-			apiGroup || (title.type === 'Anime' ? 'anime' : title.type === 'Movie' || title.type === 'TV Show' || title.type === 'TvShow' ? 'movie' : '');
-
-		if (resolvedGroup === '') return null;
-
-		// the anime API group is bound to anime APIs
-		if (resolvedGroup === 'anime') {
-			if (animeApiSource === 'anilist') {
-				if (hasAniList) {
-					const r = await this.fetchAniListRating(title.anilistId!);
-					if (r) return { ...r, source: 'anilist' };
-				}
-				if (hasMal) {
-					const r = await this.fetchMalRating(title.malId!);
-					if (r) return { ...r, source: 'mal' };
-				}
-			} else {
-				if (hasMal) {
-					const r = await this.fetchMalRating(title.malId!);
-					if (r) return { ...r, source: 'mal' };
-				}
-				if (hasAniList) {
-					const r = await this.fetchAniListRating(title.anilistId!);
-					if (r) return { ...r, source: 'anilist' };
-				}
-			}
-			// last resort: anime with no anime-api ID falls through to IMDb/TMDB
+		const group = mediaGroupOf(title, apiGroup);
+		if (group === '') return null;
+		// the anime API group is bound to anime APIs; an anime with no anime-api ID falls through to IMDb/TMDB
+		if (group === 'anime') {
+			const anime = await this.fetchAnimeRating(title, animeApiSource);
+			if (anime) return anime;
 		}
-
-		const imdbId = this.extractImdbId(title.externalLink ?? '');
-		if (imdbId) {
-			if (this.omdbApiKey) {
-				const r = await this.fetchOmdbRating(imdbId);
-				if (r) return { ...r, source: 'imdb' };
-			}
-			if (this.tmdbApiKey) {
-				const r = await this.fetchTmdbRatingByImdb(imdbId);
-				if (r) return { ...r, source: 'tmdb' };
-			}
-		}
-
-		return null;
+		return this.fetchImdbRating(title);
 	}
 
 	/**
@@ -1719,7 +1736,7 @@ export class ApiService {
 		animeApiSource: 'jikan' | 'anilist' = 'jikan',
 		apiGroup: 'anime' | 'movie' | '' = '',
 	): Promise<LookupResult<string>> {
-		const group = apiGroup || (title.type === 'Anime' ? 'anime' : ['Movie', 'TV Show', 'TvShow'].includes(title.type) ? 'movie' : '');
+		const group = mediaGroupOf(title, apiGroup);
 		if (group === 'anime') return firstFound(this.animeTrailerSources(title, animeApiSource));
 		if (group === 'movie') return firstFound([() => this.tmdbTrailerByImdb(this.extractImdbId(title.externalLink ?? ''))]);
 		return Promise.resolve(NOT_FOUND);
@@ -1776,12 +1793,11 @@ export class ApiService {
 	private omdbCredits(imdbId: string): Promise<LookupResult<CreditsLookup>> {
 		if (!this.omdbApiKey) return Promise.resolve(NO_KEY);
 		return attempt(async () => {
-			const url = `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(this.omdbApiKey)}`;
-			const data = (await this.fetchWithTimeout(url)) as OmdbDetailResponse;
-			if (data.Response === 'False' || !data.imdbID) return null;
+			const data = readRecord(await this.fetchWithTimeout(omdbDetailUrl(imdbId, this.omdbApiKey)));
+			if (readString(data.Response) === 'False' || !readString(data.imdbID)) return null;
 			return creditsOf({
 				// series carry no per-title Director; their creators fill the field
-				director: data.Type === 'series' ? omdbSeriesDirectorCredits(data) : omdbNamesToCredits(data.Director),
+				director: readString(data.Type) === 'series' ? omdbSeriesDirectorCredits(data) : omdbNamesToCredits(data.Director),
 				cast: omdbNamesToCredits(data.Actors),
 			});
 		}, lookupOfError);
@@ -1905,7 +1921,7 @@ export class ApiService {
 			return await Promise.race([reqPromise, timeoutPromise]);
 		} catch (err) {
 			if (err instanceof ApiError) throw err;
-			throw new ApiError('googleBooks', 'network', (err as Error)?.message ?? 'Network error');
+			throw new ApiError('googleBooks', 'network', errorMessage(err) || 'Network error');
 		} finally {
 			if (timer !== null) window.clearTimeout(timer);
 		}
@@ -1982,8 +1998,8 @@ export class ApiService {
 	async checkTmdbConnection(): Promise<boolean> {
 		if (!this.tmdbApiKey) throw new ApiError('tmdb', 'no-key', 'TMDB token not set');
 		const url = `${TMDB_BASE}/movie/550`;
-		const data = (await this.fetchWithTimeout(url, this.tmdbHeaders())) as { id?: number };
-		return data.id !== undefined;
+		const data = await this.fetchWithTimeout(url, this.tmdbHeaders());
+		return at(data, 'id') !== undefined;
 	}
 
 	/** Resolves on success, throws ApiError so the test can report the real cause. */
@@ -1991,9 +2007,9 @@ export class ApiService {
 		if (!this.omdbApiKey) throw new ApiError('omdb', 'no-key', 'OMDb API key not set');
 		// a known IMDb ID (The Shawshank Redemption) as a connectivity test
 		const url = `${OMDB_BASE}/?i=tt0111161&apikey=${encodeURIComponent(this.omdbApiKey)}`;
-		const data = (await this.fetchWithTimeout(url)) as OmdbDetailResponse;
+		const data = await this.fetchWithTimeout(url);
 		assertOmdbOk(data);
-		return data.Response === 'True';
+		return at(data, 'Response') === 'True';
 	}
 
 	// Games — RAWG
@@ -2101,7 +2117,7 @@ export class ApiService {
 			return this.igdbToken;
 		} catch (err) {
 			if (err instanceof ApiError) throw err;
-			throw new ApiError('twitch', 'network', (err as Error)?.message ?? 'Network error');
+			throw new ApiError('twitch', 'network', errorMessage(err) || 'Network error');
 		} finally {
 			if (timer !== null) window.clearTimeout(timer);
 		}
@@ -2131,7 +2147,7 @@ export class ApiService {
 			this.igdbToken = '';
 			this.igdbTokenExpiry = 0;
 			if (e instanceof ApiError) throw e;
-			throw new ApiError('igdb', 'network', (e as Error)?.message ?? 'Network error');
+			throw new ApiError('igdb', 'network', errorMessage(e) || 'Network error');
 		} finally {
 			if (timer !== null) window.clearTimeout(timer);
 		}

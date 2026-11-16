@@ -1,4 +1,5 @@
 import type { ApiCheckResult } from './storage/storageTypes';
+import { at, readString } from './storage/read';
 
 export type LookupResult<T> =
 	| { status: 'found'; value: T }
@@ -61,4 +62,9 @@ export function checkResultOf(r: LookupResult<unknown>): ApiCheckResult | null {
 		case 'nokey':
 			return 'nokey';
 	}
+}
+
+/** The message of whatever was thrown ('' when it carries none) — a catch binding is `unknown`. */
+export function errorMessage(err: unknown): string {
+	return err instanceof Error ? err.message : readString(at(err, 'message'));
 }

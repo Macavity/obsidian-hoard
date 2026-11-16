@@ -1,0 +1,19 @@
+{
+  "id": 1396,
+  "name": "Breaking Bad",
+  "first_air_date": "2008-01-20",
+  "number_of_episodes": 62,
+  "episode_run_time": [45, 47],
+  "created_by": [{ "id": 66633, "name": "Vince Gilligan" }],
+  "networks": [{ "id": 174, "name": "AMC" }],
+  "production_companies": [{ "id": 11073, "name": "Sony Pictures Television Studios" }],
+  "seasons": [
+    { "season_number": 0, "name": "Specials", "episode_count": 11 },
+    { "season_number": 1, "name": "Season 1", "episode_count": 7 },
+    { "season_number": 2, "name": "Season 2", "episode_count": 13 }
+  ],
+  "next_episode_to_air": { "season_number": 3, "episode_number": 4, "air_date": "2030-05-01" },
+  "last_episode_to_air": { "season_number": 2, "episode_number": 13, "air_date": "2009-05-31" },
+  "videos": { "results": [{ "key": "HhesaQXLuRY", "site": "YouTube", "type": "Trailer", "official": true }] },
+  "credits": { "cast": [{ "name": "Bryan Cranston" }, { "name": "Aaron Paul" }], "crew": [] }
+}
