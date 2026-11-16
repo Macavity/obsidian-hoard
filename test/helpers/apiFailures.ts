@@ -38,6 +38,19 @@ export function answerAll(status: number, text = ''): void {
 	respondWith(() => Promise.resolve(reply(status, text)));
 }
 
+/**
+ * Answers by URL: the first route whose text the URL contains decides (JSON body, 200); a URL
+ * no route knows gets a 404. The Twitch token request always succeeds.
+ */
+export function route(routes: Array<[string, unknown]>): void {
+	respondWith((params) => {
+		if (isTokenRequest(params)) return Promise.resolve(TOKEN_REPLY);
+		const url = urlOfCall(params);
+		const hit = routes.find(([part]) => url.includes(part));
+		return Promise.resolve(hit ? reply(200, JSON.stringify(hit[1])) : reply(404));
+	});
+}
+
 /** The Twitch token request succeeds, every other request gets what `respond` gives. */
 export function afterToken(respond: () => Promise<Reply>): void {
 	respondWith((params) => (isTokenRequest(params) ? Promise.resolve(TOKEN_REPLY) : respond()));
