@@ -1,3 +1,5 @@
+import { t, type TranslationKey } from '../i18n';
+
 /** Which service a failed request went to. */
 export type ApiSource = 'tmdb' | 'omdb' | 'jikan' | 'anilist' | 'googleBooks' | 'rawg' | 'igdb' | 'twitch' | 'cinemeta' | 'openLibrary' | 'steamStore' | 'unknown';
 
@@ -50,11 +52,6 @@ export function apiLabel(source: ApiSource): string {
 
 /** Sources that take no credential, so "rejected your credentials" can never be the cause. */
 const KEYLESS_SOURCES: ReadonlySet<ApiSource> = new Set<ApiSource>(['jikan', 'anilist', 'cinemeta', 'openLibrary', 'steamStore']);
-
-/** True for a service that takes no credential. */
-export function isKeyless(source: ApiSource): boolean {
-	return KEYLESS_SOURCES.has(source);
-}
 
 /** A response outside 2xx, as the rules see it. */
 interface FailedResponse {
@@ -133,4 +130,124 @@ export function httpError(source: ApiSource, status: number, body: string, crede
 		status,
 		providerMessage: providerMessageFrom(body),
 	});
+}
+
+/**
+ * Result of a background check: transient = worth retrying soon (timeout, 429, network, 5xx),
+ * nokey = no usable credential, notfound = the source has nothing for this identity.
+ */
+export type ApiOutcome<T> = { status: 'ok'; value: T } | { status: 'transient' | 'nokey' | 'notfound' };
+
+/** What follows from a reason: how it reads, and what a background check and a detail lookup do with it. */
+interface ReasonRule {
+	/** chip label; may name {status} */
+	short: TranslationKey;
+	/** the sentence; may name {service} and {status} */
+	text: TranslationKey;
+	/** services with a sentence of their own for this reason */
+	textFor?: Partial<Record<ApiSource, TranslationKey>>;
+	/** the sentence for a service that takes no credential */
+	textKeyless?: TranslationKey;
+	outcome: Exclude<ApiOutcome<never>['status'], 'ok'>;
+	/** the credential is the cause: the one failure that must never read as "not found" */
+	credential?: true;
+	/** the service's own explanation, when it sent one, says more than our status code */
+	providerExplains?: true;
+}
+
+/** One row per reason. A new reason does not compile until its row is complete. */
+const REASONS: Record<ApiErrorReason, ReasonRule> = {
+	'no-key': {
+		short: 'notices.api.short.noKey',
+		text: 'notices.api.keyRequired',
+		textFor: { tmdb: 'notices.api.tmdbTokenRequired' },
+		outcome: 'nokey',
+	},
+	auth: {
+		short: 'notices.api.short.auth',
+		text: 'notices.api.auth.other',
+		textFor: {
+			// the v3 key and the v4 token sit side by side on TMDB's own settings page
+			tmdb: 'notices.api.auth.tmdb',
+			omdb: 'notices.api.auth.omdb',
+			googleBooks: 'notices.api.auth.googleBooks',
+			rawg: 'notices.api.auth.rawg',
+			twitch: 'notices.api.auth.twitch',
+			igdb: 'notices.api.auth.igdb',
+		},
+		outcome: 'nokey',
+		credential: true,
+	},
+	'not-enabled': {
+		short: 'notices.api.short.notEnabled',
+		text: 'notices.api.notEnabled',
+		outcome: 'nokey',
+		credential: true,
+	},
+	'rate-limited': {
+		short: 'notices.api.short.rateLimited',
+		text: 'notices.api.rateLimited.other',
+		textFor: {
+			omdb: 'notices.api.rateLimited.omdb',
+			jikan: 'notices.api.rateLimited.jikan',
+			anilist: 'notices.api.rateLimited.anilist',
+			googleBooks: 'notices.api.rateLimited.googleBooks',
+		},
+		outcome: 'transient',
+	},
+	'not-found': { short: 'notices.api.short.notFound', text: 'notices.api.notFound', outcome: 'notfound' },
+	server: {
+		short: 'notices.api.short.server',
+		text: 'notices.api.server',
+		textKeyless: 'notices.api.serverKeyless',
+		outcome: 'transient',
+		providerExplains: true,
+	},
+	http: { short: 'notices.api.short.http', text: 'notices.api.failed', outcome: 'transient', providerExplains: true },
+	parse: { short: 'notices.api.short.parse', text: 'notices.api.parse', outcome: 'transient' },
+	network: { short: 'notices.api.short.network', text: 'notices.api.network', outcome: 'transient' },
+};
+
+/** Service name for user text; the unknown source reads "The API" in the user's language. */
+function serviceName(source: ApiSource): string {
+	return source === 'unknown' ? t('notices.api.unknownService') : API_LABELS[source];
+}
+
+function sentenceKey(rule: ReasonRule, source: ApiSource): TranslationKey {
+	const keyless = KEYLESS_SOURCES.has(source) ? rule.textKeyless : undefined;
+	return rule.textFor?.[source] ?? keyless ?? rule.text;
+}
+
+const asSentence = (text: string): string => (/[.!?]$/.test(text) ? text : `${text}.`);
+
+/** Maps any error from an API call to a short, user-facing explanation. */
+export function apiErrorMessage(err: unknown): string {
+	if (!(err instanceof ApiError)) return t('notices.api.requestFailed');
+	const rule = REASONS[err.reason];
+	const service = serviceName(err.source);
+	// only where we have nothing better than a status code: our own auth / quota / no-key wording
+	// names the actual fix, which beats a terse provider string like Twitch's "invalid client"
+	if (rule.providerExplains && err.providerMessage) {
+		return t('notices.api.providerMessage', { service, text: asSentence(err.providerMessage) });
+	}
+	return t(sentenceKey(rule, err.source), { service, status: err.status ?? '?' });
+}
+
+/** Chip-sized label for the same error; the full sentence goes in a detail line. */
+export function apiErrorShort(err: unknown): string {
+	if (!(err instanceof ApiError)) return t('notices.api.short.failed');
+	return t(REASONS[err.reason].short, { status: err.status ?? '?' });
+}
+
+/** What a background check reports for a failed request; anything that is no ApiError is worth a retry. */
+export function outcomeOfError(err: unknown): ApiOutcome<never> {
+	return { status: err instanceof ApiError ? REASONS[err.reason].outcome : 'transient' };
+}
+
+/**
+ * Detail lookups keep their "null = not found" contract, but a rejected credential must never be
+ * reported as a missing title: that is the failure users misdiagnose. Re-throws only those.
+ */
+export function rethrowAuth(err: unknown): void {
+	if (err instanceof ApiError && REASONS[err.reason].credential) throw err;
 }

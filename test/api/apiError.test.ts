@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { ApiError, apiLabel, httpError, isKeyless } from '../../src/api/apiError';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+	ApiError, apiErrorMessage, apiErrorShort, apiLabel, httpError, outcomeOfError, rethrowAuth,
+} from '../../src/api/apiError';
+import { setLocale } from '../../src/i18n';
+
+afterEach(() => setLocale('en'));
+
+const SOURCES = ['tmdb', 'omdb', 'jikan', 'anilist', 'googleBooks', 'rawg', 'igdb', 'twitch', 'cinemeta', 'openLibrary', 'steamStore', 'unknown'] as const;
+const REASONS = ['no-key', 'auth', 'not-enabled', 'rate-limited', 'not-found', 'server', 'http', 'parse', 'network'] as const;
 
 const reasonOf = (...args: Parameters<typeof httpError>): string => httpError(...args).reason;
 
@@ -85,12 +93,121 @@ describe('ApiError', () => {
 
 describe('service facts', () => {
 	it('names every service for developer messages', () => {
-		expect((['tmdb', 'omdb', 'jikan', 'anilist', 'googleBooks', 'rawg', 'igdb', 'twitch', 'cinemeta', 'openLibrary', 'steamStore', 'unknown'] as const).map(apiLabel))
+		expect(SOURCES.map(apiLabel))
 			.toEqual(['TMDB', 'OMDb', 'MyAnimeList', 'AniList', 'Google Books', 'RAWG', 'IGDB', 'Twitch', 'Cinemeta', 'Open Library', 'Steam Store', 'The API']);
 	});
+});
 
-	it('knows which services take no credential', () => {
-		expect((['tmdb', 'omdb', 'jikan', 'anilist', 'googleBooks', 'rawg', 'igdb', 'twitch', 'cinemeta', 'openLibrary', 'steamStore', 'unknown'] as const).filter(isKeyless))
-			.toEqual(['jikan', 'anilist', 'cinemeta', 'openLibrary', 'steamStore']);
+describe('the wording of a reason', () => {
+	it('exists for every reason and service, in both languages, with nothing left to fill in', () => {
+		for (const lang of ['en', 'de']) {
+			setLocale(lang);
+			for (const reason of REASONS) {
+				for (const source of SOURCES) {
+					const err = new ApiError(source, reason, 'dev', { status: 500 });
+					// a missing translation comes back as its key, a missing parameter as its placeholder
+					expect(apiErrorMessage(err), `${lang} ${reason} ${source}`).not.toMatch(/^notices\.|\{\w+\}/);
+					expect(apiErrorShort(err), `${lang} ${reason} ${source}`).not.toMatch(/^notices\.|\{\w+\}/);
+				}
+			}
+		}
+	});
+
+	it('gives the services that take no credential the outage sentence without the key remark', () => {
+		const keyless = SOURCES.filter((source) =>
+			!apiErrorMessage(new ApiError(source, 'server', 'dev', { status: 503 })).includes('This is not your key'));
+		expect(keyless).toEqual(['jikan', 'anilist', 'cinemeta', 'openLibrary', 'steamStore']);
+	});
+
+	it('names the services that have a sentence of their own', () => {
+		const own = (reason: typeof REASONS[number], general: RegExp): string[] =>
+			SOURCES.filter((source) => !general.test(apiErrorMessage(new ApiError(source, reason, 'dev'))));
+		expect(own('auth', /rejected your credentials\.$/)).toEqual(['tmdb', 'omdb', 'googleBooks', 'rawg', 'igdb', 'twitch']);
+		expect(own('rate-limited', /wait a moment and try again\.$/)).toEqual(['omdb', 'jikan', 'anilist', 'googleBooks']);
+		expect(own('no-key', /API key required/)).toEqual(['tmdb']);
+		for (const reason of ['not-enabled', 'not-found', 'parse', 'network', 'http'] as const) {
+			expect(new Set(SOURCES.map((source) => apiErrorMessage(new ApiError(source, reason, 'dev')).replace(apiLabel(source), '@'))).size, reason).toBe(1);
+		}
+	});
+
+	it('writes a question mark where a status is named and none is known', () => {
+		expect(apiErrorMessage(new ApiError('tmdb', 'server', 'dev'))).toBe('TMDB is temporarily unavailable (HTTP ?). This is not your key; try again shortly.');
+		expect(apiErrorMessage(new ApiError('jikan', 'server', 'dev'))).toBe('MyAnimeList is temporarily unavailable (HTTP ?). Try again shortly.');
+		expect(apiErrorMessage(new ApiError('tmdb', 'http', 'dev'))).toBe('TMDB request failed (HTTP ?).');
+		expect(apiErrorShort(new ApiError('tmdb', 'http', 'dev'))).toBe('Failed (HTTP ?)');
+		expect(apiErrorShort(new ApiError('tmdb', 'http', 'dev', { status: 418 }))).toBe('Failed (HTTP 418)');
+	});
+
+	it('shows the provider text for an outage or an unexplained status only', () => {
+		const shown = REASONS.filter((reason) =>
+			apiErrorMessage(new ApiError('tmdb', reason, 'dev', { status: 500, providerMessage: 'boom' })) === 'TMDB: boom.');
+		expect(shown).toEqual(['server', 'http']);
+		for (const reason of REASONS) {
+			expect(apiErrorMessage(new ApiError('tmdb', reason, 'dev', { status: 500, providerMessage: 'boom' })).includes('boom'), reason)
+				.toBe(reason === 'server' || reason === 'http');
+		}
+		expect(apiErrorMessage(new ApiError('tmdb', 'server', 'dev', { status: 500, providerMessage: '' })))
+			.toBe('TMDB is temporarily unavailable (HTTP 500). This is not your key; try again shortly.');
+	});
+
+	it('ends a provider text with a full stop unless it already ends a sentence', () => {
+		const said = (text: string): string => apiErrorMessage(new ApiError('unknown', 'http', 'dev', { providerMessage: text }));
+		expect([said('down'), said('down.'), said('down!'), said('down?'), said('down;')])
+			.toEqual(['The API: down.', 'The API: down.', 'The API: down!', 'The API: down?', 'The API: down;.']);
+	});
+});
+
+describe('outcomeOfError', () => {
+	it('sorts every reason into what a background check does next', () => {
+		expect(REASONS.map((reason) => [reason, outcomeOfError(new ApiError('tmdb', reason, 'dev')).status])).toEqual([
+			['no-key', 'nokey'],
+			['auth', 'nokey'],
+			['not-enabled', 'nokey'],
+			['rate-limited', 'transient'],
+			['not-found', 'notfound'],
+			['server', 'transient'],
+			['http', 'transient'],
+			['parse', 'transient'],
+			['network', 'transient'],
+		]);
+	});
+
+	it('treats anything that is no API error as transient', () => {
+		expect([new Error('x'), 'x', undefined, null, { reason: 'auth' }].map((value) => outcomeOfError(value)))
+			.toEqual(Array.from({ length: 5 }, () => ({ status: 'transient' })));
+	});
+});
+
+describe('rethrowAuth', () => {
+	const thrownBy = (value: unknown): unknown => {
+		try {
+			rethrowAuth(value);
+		} catch (err) {
+			return err;
+		}
+		return 'returned';
+	};
+
+	it('throws the same error for a rejected credential and returns for everything else', () => {
+		const outcome = REASONS.map((reason) => {
+			const err = new ApiError('omdb', reason, 'dev');
+			const result = thrownBy(err);
+			return [reason, result === err ? 'thrown' : result];
+		});
+		expect(outcome).toEqual([
+			['no-key', 'returned'],
+			['auth', 'thrown'],
+			['not-enabled', 'thrown'],
+			['rate-limited', 'returned'],
+			['not-found', 'returned'],
+			['server', 'returned'],
+			['http', 'returned'],
+			['parse', 'returned'],
+			['network', 'returned'],
+		]);
+	});
+
+	it('returns for a value that is no API error', () => {
+		expect([new Error('x'), undefined, { reason: 'auth' }].map(thrownBy)).toEqual(['returned', 'returned', 'returned']);
 	});
 });

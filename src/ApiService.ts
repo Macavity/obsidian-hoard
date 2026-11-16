@@ -2,9 +2,10 @@ import { requestUrl } from 'obsidian';
 import type { RequestUrlParam } from 'obsidian';
 import { httpsOrEmpty } from './httpsUrl';
 import type { MediaSource } from './apiSources';
-import { t, type TranslationKey } from './i18n';
 import { TENRAI_BASE, type JikanEndpoint } from './jikanBase';
-import { ApiError, apiLabel, httpError, isKeyless, type ApiErrorReason, type ApiSource } from './api/apiError';
+import {
+	ApiError, apiLabel, httpError, outcomeOfError, rethrowAuth, type ApiErrorReason, type ApiOutcome, type ApiSource,
+} from './api/apiError';
 import type {
 	AnimeSearchResult,
 	MediaSearchResult,
@@ -36,7 +37,8 @@ import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, stea
 import { isCreditsNone, normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
 
-export type { ApiSource } from './api/apiError';
+export { apiErrorMessage, apiErrorShort } from './api/apiError';
+export type { ApiOutcome, ApiSource } from './api/apiError';
 
 export type Airing = NonNullable<EntryCache['airing']>;
 
@@ -388,15 +390,6 @@ interface JikanMangaItem {
 	url?: string | null;
 }
 
-/** Sources with a dedicated wording for the matching reason. */
-const AUTH_KEYS: ReadonlySet<ApiSource> = new Set<ApiSource>(['tmdb', 'omdb', 'googleBooks', 'rawg', 'twitch', 'igdb']);
-const RATE_LIMIT_KEYS: ReadonlySet<ApiSource> = new Set<ApiSource>(['omdb', 'jikan', 'anilist', 'googleBooks']);
-
-/** Service name for user text; the unknown source reads "The API". */
-function serviceName(source: ApiSource): string {
-	return source === 'unknown' ? t('notices.api.unknownService') : apiLabel(source);
-}
-
 /**
  * Source from the request URL — every base is a distinct host, so no call site has to say. The
  * Jikan base is user-configurable, so callers pass the one they request against.
@@ -417,92 +410,6 @@ export function apiSourceFromUrl(url: string, jikanBase: string): ApiSource {
 		[STEAM_STORE_SEARCH, 'steamStore'],
 	];
 	return prefixes.find(([prefix]) => url.startsWith(prefix))?.[1] ?? 'unknown';
-}
-
-/** Maps any error from an API call to a short, user-facing explanation. */
-export function apiErrorMessage(err: unknown): string {
-	if (!(err instanceof ApiError)) return t('notices.api.requestFailed');
-	const service = serviceName(err.source);
-	const status = err.status ?? '?';
-
-	// the service explained itself, and we have nothing better than a status code to offer.
-	// only for the generic reasons: our own auth / quota / no-key wording names the actual fix,
-	// which beats a terse provider string like Twitch's "invalid client".
-	if (err.providerMessage && (err.reason === 'server' || err.reason === 'http')) {
-		const text = err.providerMessage;
-		return t('notices.api.providerMessage', { service, text: /[.!?]$/.test(text) ? text : `${text}.` });
-	}
-
-	switch (err.reason) {
-		case 'no-key':
-			return err.source === 'tmdb'
-				? t('notices.api.tmdbTokenRequired')
-				: t('notices.api.keyRequired', { service });
-
-		case 'auth':
-			// the v3 key and the v4 token sit side by side on TMDB's own settings page
-			return AUTH_KEYS.has(err.source)
-				? t(`notices.api.auth.${err.source}` as TranslationKey)
-				: t('notices.api.auth.other', { service });
-
-		case 'not-enabled':
-			return t('notices.api.notEnabled');
-
-		case 'rate-limited':
-			return RATE_LIMIT_KEYS.has(err.source)
-				? t(`notices.api.rateLimited.${err.source}` as TranslationKey)
-				: t('notices.api.rateLimited.other', { service });
-
-		case 'server':
-			return t(isKeyless(err.source) ? 'notices.api.serverKeyless' : 'notices.api.server', { service, status });
-
-		case 'not-found':
-			return t('notices.api.notFound', { service });
-
-		case 'parse':
-			return t('notices.api.parse', { service });
-
-		case 'network':
-			return t('notices.api.network', { service });
-
-		default:
-			return t('notices.api.failed', { service, status });
-	}
-}
-
-/** Chip-sized label for the same error — the full sentence goes in a detail line. */
-export function apiErrorShort(err: unknown): string {
-	if (!(err instanceof ApiError)) return t('notices.api.short.failed');
-	switch (err.reason) {
-		case 'no-key': return t('notices.api.short.noKey');
-		case 'auth': return t('notices.api.short.auth');
-		case 'not-enabled': return t('notices.api.short.notEnabled');
-		case 'rate-limited': return t('notices.api.short.rateLimited');
-		case 'server': return t('notices.api.short.server');
-		case 'not-found': return t('notices.api.short.notFound');
-		case 'parse': return t('notices.api.short.parse');
-		case 'network': return t('notices.api.short.network');
-		default: return t('notices.api.short.http', { status: err.status ?? '?' });
-	}
-}
-
-/** True when the failure is a rejected credential — the one cause that must never read as "not found". */
-function isAuthFailure(err: unknown): boolean {
-	return err instanceof ApiError && (err.reason === 'auth' || err.reason === 'not-enabled');
-}
-
-/**
- * Result of a background check: transient = worth retrying soon (timeout, 429, network, 5xx),
- * nokey = no usable credential, notfound = the source has nothing for this identity.
- */
-export type ApiOutcome<T> = { status: 'ok'; value: T } | { status: 'transient' | 'nokey' | 'notfound' };
-
-function outcomeOfError(err: unknown): { status: 'transient' | 'nokey' | 'notfound' } {
-	if (err instanceof ApiError) {
-		if (err.reason === 'no-key' || err.reason === 'auth' || err.reason === 'not-enabled') return { status: 'nokey' };
-		if (err.reason === 'not-found') return { status: 'notfound' };
-	}
-	return { status: 'transient' };
 }
 
 /** Status check + JSON parse for a throw:false response. Throws ApiError on either failure. */
@@ -528,14 +435,6 @@ function assertOmdbOk(data: { Response?: string; Error?: string }): void {
 	const err = data.Error ?? '';
 	if (/limit/i.test(err)) throw new ApiError('omdb', 'rate-limited', err);
 	if (/key/i.test(err)) throw new ApiError('omdb', 'auth', err);
-}
-
-/**
- * Detail lookups keep their "null = not found" contract, but a rejected credential must never be
- * reported as a missing title — that is the failure users misdiagnose. Re-throw only those.
- */
-function rethrowAuth(err: unknown): void {
-	if (isAuthFailure(err)) throw err;
 }
 
 /**
