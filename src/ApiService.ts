@@ -2,8 +2,10 @@ import { requestUrl } from 'obsidian';
 import type { RequestUrlParam } from 'obsidian';
 import { httpsOrEmpty } from './httpsUrl';
 import type { MediaSource } from './apiSources';
-import { t, type TranslationKey } from './i18n';
 import { TENRAI_BASE, type JikanEndpoint } from './jikanBase';
+import {
+	ApiError, apiLabel, httpError, outcomeOfError, rethrowAuth, type ApiErrorReason, type ApiOutcome, type ApiSource,
+} from './api/apiError';
 import type {
 	AnimeSearchResult,
 	MediaSearchResult,
@@ -34,6 +36,9 @@ import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLib
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { isCreditsNone, normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
+
+export { apiErrorMessage, apiErrorShort } from './api/apiError';
+export type { ApiOutcome, ApiSource } from './api/apiError';
 
 export type Airing = NonNullable<EntryCache['airing']>;
 
@@ -385,66 +390,6 @@ interface JikanMangaItem {
 	url?: string | null;
 }
 
-/** Which service a failed request went to. */
-export type ApiSource = 'tmdb' | 'omdb' | 'jikan' | 'anilist' | 'googleBooks' | 'rawg' | 'igdb' | 'twitch' | 'cinemeta' | 'openLibrary' | 'steamStore' | 'unknown';
-
-/** Why it failed. 'no-key' = none set; 'auth' = the credential was rejected. */
-type ApiErrorReason =
-	| 'no-key' | 'auth' | 'not-enabled' | 'rate-limited' | 'not-found' | 'server' | 'http' | 'parse' | 'network';
-
-class ApiError extends Error {
-	source: ApiSource;
-	reason: ApiErrorReason;
-	status?: number;
-	/** raw response body, for reasons that need it (OMDb packs its cause in a JSON field) */
-	detail?: string;
-	/** the service's own wording, when it sent one worth showing verbatim */
-	providerMessage?: string;
-	constructor(
-		source: ApiSource,
-		reason: ApiErrorReason,
-		message: string,
-		status?: number,
-		detail?: string,
-		providerMessage?: string,
-	) {
-		super(message);
-		this.name = 'ApiError';
-		this.source = source;
-		this.reason = reason;
-		this.status = status;
-		this.detail = detail;
-		this.providerMessage = providerMessage;
-	}
-}
-
-/** Sources that take no credential, so "rejected your credentials" can never be the cause. */
-const KEYLESS_SOURCES: ReadonlySet<ApiSource> = new Set<ApiSource>(['jikan', 'anilist', 'cinemeta', 'openLibrary', 'steamStore']);
-
-const API_LABELS: Record<ApiSource, string> = {
-	tmdb: 'TMDB',
-	omdb: 'OMDb',
-	jikan: 'MyAnimeList',
-	anilist: 'AniList',
-	googleBooks: 'Google Books',
-	rawg: 'RAWG',
-	igdb: 'IGDB',
-	twitch: 'Twitch',
-	cinemeta: 'Cinemeta',
-	openLibrary: 'Open Library',
-	steamStore: 'Steam Store',
-	unknown: 'The API', // dev-facing Error messages only; user text goes through serviceName()
-};
-
-/** Sources with a dedicated wording for the matching reason. */
-const AUTH_KEYS: ReadonlySet<ApiSource> = new Set<ApiSource>(['tmdb', 'omdb', 'googleBooks', 'rawg', 'twitch', 'igdb']);
-const RATE_LIMIT_KEYS: ReadonlySet<ApiSource> = new Set<ApiSource>(['omdb', 'jikan', 'anilist', 'googleBooks']);
-
-/** Service name for user text; the unknown source reads "The API". */
-function serviceName(source: ApiSource): string {
-	return source === 'unknown' ? t('notices.api.unknownService') : API_LABELS[source];
-}
-
 /**
  * Source from the request URL — every base is a distinct host, so no call site has to say. The
  * Jikan base is user-configurable, so callers pass the one they request against.
@@ -467,147 +412,17 @@ export function apiSourceFromUrl(url: string, jikanBase: string): ApiSource {
 	return prefixes.find(([prefix]) => url.startsWith(prefix))?.[1] ?? 'unknown';
 }
 
-/**
- * HTTP status → reason. Two services need the body as well: OMDb answers 401 for both a bad key
- * and an exhausted quota, and Google's 403 covers quota, a disabled API and a bad key alike.
- */
-function classifyHttp(source: ApiSource, status: number, body: string): ApiErrorReason {
-	// keyless service: a 403 is the service refusing to serve, never a bad credential.
-	// AniList answers 403 with "the API has been temporarily disabled" during their outages.
-	if (KEYLESS_SOURCES.has(source) && (status === 401 || status === 403)) return 'server';
-	if (source === 'omdb' && (status === 401 || status === 403)) {
-		return /limit/i.test(body) ? 'rate-limited' : 'auth';
-	}
-	if (source === 'googleBooks' && status === 403) {
-		if (/accessNotConfigured/i.test(body)) return 'not-enabled';
-		if (/rateLimitExceeded|dailyLimitExceeded|userRateLimitExceeded/i.test(body)) return 'rate-limited';
-		return 'auth';
-	}
-	if (status === 401 || status === 403) return 'auth';
-	if (status === 429) return 'rate-limited';
-	if (status === 404) return 'not-found';
-	if (status >= 500) return 'server';
-	return 'http';
-}
-
-/**
- * The service's own explanation, when the body carries one: GraphQL `errors[0].message` (AniList,
- * on failed and 200 responses alike) or a top-level `message` (Jikan says which upstream broke).
- * '' when there is none.
- */
-function providerMessageFrom(body: string): string {
-	try {
-		const data = JSON.parse(body) as { errors?: Array<{ message?: string }>; message?: unknown } | null;
-		const gql = Array.isArray(data?.errors) ? (data.errors[0]?.message ?? '').trim() : '';
-		if (gql) return gql;
-		return typeof data?.message === 'string' ? data.message.trim() : '';
-	} catch {
-		return '';
-	}
-}
-
-/** Maps any error from an API call to a short, user-facing explanation. */
-export function apiErrorMessage(err: unknown): string {
-	if (!(err instanceof ApiError)) return t('notices.api.requestFailed');
-	const service = serviceName(err.source);
-	const status = err.status ?? '?';
-
-	// the service explained itself, and we have nothing better than a status code to offer.
-	// only for the generic reasons: our own auth / quota / no-key wording names the actual fix,
-	// which beats a terse provider string like Twitch's "invalid client".
-	if (err.providerMessage && (err.reason === 'server' || err.reason === 'http')) {
-		const text = err.providerMessage;
-		return t('notices.api.providerMessage', { service, text: /[.!?]$/.test(text) ? text : `${text}.` });
-	}
-
-	switch (err.reason) {
-		case 'no-key':
-			return err.source === 'tmdb'
-				? t('notices.api.tmdbTokenRequired')
-				: t('notices.api.keyRequired', { service });
-
-		case 'auth':
-			// the v3 key and the v4 token sit side by side on TMDB's own settings page
-			return AUTH_KEYS.has(err.source)
-				? t(`notices.api.auth.${err.source}` as TranslationKey)
-				: t('notices.api.auth.other', { service });
-
-		case 'not-enabled':
-			return t('notices.api.notEnabled');
-
-		case 'rate-limited':
-			return RATE_LIMIT_KEYS.has(err.source)
-				? t(`notices.api.rateLimited.${err.source}` as TranslationKey)
-				: t('notices.api.rateLimited.other', { service });
-
-		case 'server':
-			return t(KEYLESS_SOURCES.has(err.source) ? 'notices.api.serverKeyless' : 'notices.api.server', { service, status });
-
-		case 'not-found':
-			return t('notices.api.notFound', { service });
-
-		case 'parse':
-			return t('notices.api.parse', { service });
-
-		case 'network':
-			return t('notices.api.network', { service });
-
-		default:
-			return t('notices.api.failed', { service, status });
-	}
-}
-
-/** Chip-sized label for the same error — the full sentence goes in a detail line. */
-export function apiErrorShort(err: unknown): string {
-	if (!(err instanceof ApiError)) return t('notices.api.short.failed');
-	switch (err.reason) {
-		case 'no-key': return t('notices.api.short.noKey');
-		case 'auth': return t('notices.api.short.auth');
-		case 'not-enabled': return t('notices.api.short.notEnabled');
-		case 'rate-limited': return t('notices.api.short.rateLimited');
-		case 'server': return t('notices.api.short.server');
-		case 'not-found': return t('notices.api.short.notFound');
-		case 'parse': return t('notices.api.short.parse');
-		case 'network': return t('notices.api.short.network');
-		default: return t('notices.api.short.http', { status: err.status ?? '?' });
-	}
-}
-
-/** True when the failure is a rejected credential — the one cause that must never read as "not found". */
-function isAuthFailure(err: unknown): boolean {
-	return err instanceof ApiError && (err.reason === 'auth' || err.reason === 'not-enabled');
-}
-
-/**
- * Result of a background check: transient = worth retrying soon (timeout, 429, network, 5xx),
- * nokey = no usable credential, notfound = the source has nothing for this identity.
- */
-export type ApiOutcome<T> = { status: 'ok'; value: T } | { status: 'transient' | 'nokey' | 'notfound' };
-
-function outcomeOfError(err: unknown): { status: 'transient' | 'nokey' | 'notfound' } {
-	if (err instanceof ApiError) {
-		if (err.reason === 'no-key' || err.reason === 'auth' || err.reason === 'not-enabled') return { status: 'nokey' };
-		if (err.reason === 'not-found') return { status: 'notfound' };
-	}
-	return { status: 'transient' };
-}
-
 /** Status check + JSON parse for a throw:false response. Throws ApiError on either failure. */
-function readApiResponse(source: ApiSource, r: { status: number; text: string; json: unknown }): unknown {
-	if (r.status < 200 || r.status >= 300) {
-		throw new ApiError(
-			source,
-			classifyHttp(source, r.status, r.text),
-			`${API_LABELS[source]} returned ${r.status}`,
-			r.status,
-			r.text,
-			providerMessageFrom(r.text),
-		);
-	}
+function readApiResponse(
+	source: ApiSource,
+	r: { status: number; text: string; json: unknown },
+	credentialSent = false,
+): unknown {
+	if (r.status < 200 || r.status >= 300) throw httpError(source, r.status, r.text, credentialSent);
 	try {
 		return r.json;
 	} catch {
-		throw new ApiError(source, 'parse', `${API_LABELS[source]} returned a non-JSON body`);
+		throw new ApiError(source, 'parse', `${apiLabel(source)} returned a non-JSON body`);
 	}
 }
 
@@ -618,65 +433,62 @@ function readApiResponse(source: ApiSource, r: { status: number; text: string; j
 function assertOmdbOk(data: { Response?: string; Error?: string }): void {
 	if (data.Response !== 'False') return;
 	const err = data.Error ?? '';
-	if (/limit/i.test(err)) throw new ApiError('omdb', 'rate-limited', err, undefined, err);
-	if (/key/i.test(err)) throw new ApiError('omdb', 'auth', err, undefined, err);
+	if (/limit/i.test(err)) throw new ApiError('omdb', 'rate-limited', err);
+	if (/key/i.test(err)) throw new ApiError('omdb', 'auth', err);
 }
 
-/**
- * Detail lookups keep their "null = not found" contract, but a rejected credential must never be
- * reported as a missing title — that is the failure users misdiagnose. Re-throw only those.
- */
-function rethrowAuth(err: unknown): void {
-	if (isAuthFailure(err)) throw err;
-}
-
-/**
- * One request with the shared timeout and error classifier. throw:false so the status survives —
- * requestUrl's default collapses every 4xx into one opaque Error, which is why a rejected key used
- * to look identical to "no results". `check` inspects a parsed 200 body (GraphQL errors).
- */
-async function requestJson(
-	source: ApiSource,
-	params: RequestUrlParam,
-	check?: (data: unknown) => void,
-): Promise<unknown> {
+/** Runs `work` against the shared API timeout; the timer is cleared either way. */
+async function withTimeout<T>(work: () => Promise<T>, timedOut: () => Error): Promise<T> {
 	let timer: number | null = null;
-	const timeoutPromise = new Promise<never>((_, reject) => {
-		timer = window.setTimeout(() => reject(new ApiError(source, 'network', 'Request timed out')), API_TIMEOUT_MS);
+	const timeout = new Promise<never>((_, reject) => {
+		timer = window.setTimeout(() => reject(timedOut()), API_TIMEOUT_MS);
 	});
 	try {
-		const fetchPromise = requestUrl({ ...params, throw: false }).then((r) => {
-			const data = readApiResponse(source, r);
-			check?.(data);
-			return data;
-		});
-		return await Promise.race([fetchPromise, timeoutPromise]);
-	} catch (err) {
-		if (err instanceof ApiError) throw err;
-		throw new ApiError(source, 'network', (err as Error)?.message ?? 'Network error');
+		return await Promise.race([work(), timeout]);
 	} finally {
 		if (timer !== null) window.clearTimeout(timer);
 	}
 }
 
+/**
+ * One request with the shared timeout and error classifier; every ApiError of a request comes
+ * from here. throw:false so the status survives: requestUrl's default collapses every 4xx into one
+ * opaque Error, which is why a rejected key used to look identical to "no results". `check`
+ * inspects a parsed 200 body (GraphQL errors, a token response without a token);
+ * `credentialSent` says the request carried a login for a service that needs none.
+ */
+async function requestJson(
+	source: ApiSource,
+	params: RequestUrlParam,
+	check?: (data: unknown) => void,
+	credentialSent = false,
+): Promise<unknown> {
+	try {
+		return await withTimeout(
+			() => requestUrl({ ...params, throw: false }).then((r) => {
+				const data = readApiResponse(source, r, credentialSent);
+				check?.(data);
+				return data;
+			}),
+			() => new ApiError(source, 'network', 'Request timed out'),
+		);
+	} catch (err) {
+		if (err instanceof ApiError) throw err;
+		throw new ApiError(source, 'network', (err as Error)?.message ?? 'Network error');
+	}
+}
+
 /** requestJson for any API; requests to the Jikan endpoint carry its headers (Basic auth). */
-export async function requestVia(
+export function requestVia(
 	jikan: JikanEndpoint,
 	params: RequestUrlParam,
 	check?: (source: ApiSource, data: unknown) => void,
 ): Promise<unknown> {
 	const source = apiSourceFromUrl(params.url, jikan.base);
 	const sent = source === 'jikan' ? { ...params, headers: { ...jikan.headers, ...params.headers } } : params;
-	try {
-		return await requestJson(source, sent, check && ((data) => check(source, data)));
-	} catch (err) {
-		// keyless Jikan reads 401/403 as an outage; with a login sent, it is the login being rejected
-		const loginSent = source === 'jikan' && !!sent.headers?.['Authorization'];
-		if (loginSent && err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-			throw new ApiError(source, 'auth', err.message, err.status, err.detail, err.providerMessage);
-		}
-		throw err;
-	}
+	// keyless Jikan reads 401/403 as an outage; with a login sent, it is the login being rejected
+	const credentialSent = source === 'jikan' && !!sent.headers?.['Authorization'];
+	return requestJson(source, sent, check && ((data) => check(source, data)), credentialSent);
 }
 
 /** Request params for a JSON POST. */
@@ -689,13 +501,23 @@ export function jsonPost(url: string, body: unknown, headers?: Record<string, st
 	};
 }
 
+/** A Twitch token response that carries a token. */
+type IssuedToken = TwitchTokenResponse & { access_token: string };
+
+/** A 200 without a token is Twitch refusing the client credentials. */
+function assertTokenIssued(data: unknown): asserts data is IssuedToken {
+	if (!(data as TwitchTokenResponse).access_token) {
+		throw new ApiError('twitch', 'auth', 'Twitch returned no access token');
+	}
+}
+
 /** GraphQL reports failures in a 200 body — AniList rate limits arrive this way. */
 function assertNoGraphqlErrors(source: ApiSource, data: unknown): void {
 	const errors = (data as { errors?: Array<{ message?: string }> } | null)?.errors;
 	if (!Array.isArray(errors) || errors.length === 0) return;
 	const message = errors[0]?.message ?? 'Request rejected';
 	const reason: ApiErrorReason = /rate limit|too many/i.test(message) ? 'rate-limited' : 'http';
-	throw new ApiError(source, reason, message, undefined, undefined, message);
+	throw new ApiError(source, reason, message, { providerMessage: message });
 }
 
 export class ApiService {
@@ -1938,28 +1760,13 @@ export class ApiService {
 	 */
 	private async googleBooksFetch(path: string): Promise<unknown> {
 		const key = this.googleBooksApiKey.trim();
-		if (!key) {
-			throw new ApiError('googleBooks', 'no-key', 'Google Books API key not set');
-		}
+		if (!key) throw new ApiError('googleBooks', 'no-key', 'Google Books API key not set');
 		const sep = path.includes('?') ? '&' : '?';
-		const url = `${GOOGLE_BOOKS_BASE}${path}${sep}key=${encodeURIComponent(key)}`;
-		let timer: number | null = null;
-		const timeoutPromise = new Promise<never>((_, reject) => {
-			timer = window.setTimeout(() => reject(new ApiError('googleBooks', 'network', 'Request timed out')), API_TIMEOUT_MS);
-		});
-		try {
-			// classifyHttp splits Google's overloaded 403 (quota vs disabled API vs bad key) on the body
-			const reqPromise = requestUrl({ url, throw: false }).then((r) => readApiResponse('googleBooks', r));
-			return await Promise.race([reqPromise, timeoutPromise]);
-		} catch (err) {
-			if (err instanceof ApiError) throw err;
-			throw new ApiError('googleBooks', 'network', (err as Error)?.message ?? 'Network error');
-		} finally {
-			if (timer !== null) window.clearTimeout(timer);
-		}
+		// the classification splits Google's overloaded 403 (quota vs disabled API vs bad key) on the body
+		return await requestJson('googleBooks', { url: `${GOOGLE_BOOKS_BASE}${path}${sep}key=${encodeURIComponent(key)}` });
 	}
 
-	/** Throws GoogleBooksError on failure — see googleBooksErrorMessage. */
+	/** Throws ApiError on failure. */
 	async searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
 		const data = (await this.googleBooksFetch(
 			`/volumes?q=${encodeURIComponent(query)}&maxResults=10`,
@@ -1967,7 +1774,7 @@ export class ApiService {
 		return (data.items ?? []).slice(0, 10).map((item) => this.mapGoogleVolume(item));
 	}
 
-	/** Resolves on success, throws GoogleBooksError so the test can report the real cause. */
+	/** Resolves on success, throws ApiError so the test can report the real cause. */
 	async checkGoogleBooksConnection(): Promise<boolean> {
 		const data = (await this.googleBooksFetch('/volumes?q=tolkien&maxResults=1')) as GoogleBooksResponse;
 		return Array.isArray(data.items);
@@ -2133,37 +1940,19 @@ export class ApiService {
 			`${TWITCH_TOKEN_URL}?client_id=${encodeURIComponent(this.igdbClientId)}` +
 			`&client_secret=${encodeURIComponent(this.igdbClientSecret)}` +
 			`&grant_type=client_credentials`;
-		let timer: number | null = null;
-		const timeoutPromise = new Promise<never>((_, reject) => {
-			timer = window.setTimeout(() => reject(new ApiError('twitch', 'network', 'Request timed out')), API_TIMEOUT_MS);
-		});
-		try {
-			// source 'twitch', not 'igdb' — a rejected Client ID/Secret is a different fix from a
-			// rejected query, and the two used to give the same message
-			const fetchPromise = requestUrl({ url, method: 'POST', throw: false })
-				.then((r) => readApiResponse('twitch', r) as TwitchTokenResponse);
-			const data = await Promise.race([fetchPromise, timeoutPromise]);
-			if (!data.access_token) throw new ApiError('twitch', 'auth', 'Twitch returned no access token');
-			this.igdbToken = data.access_token;
-			this.igdbTokenExpiry = Date.now() + Math.max(0, (data.expires_in ?? 0) - 60) * 1000;
-			return this.igdbToken;
-		} catch (err) {
-			if (err instanceof ApiError) throw err;
-			throw new ApiError('twitch', 'network', (err as Error)?.message ?? 'Network error');
-		} finally {
-			if (timer !== null) window.clearTimeout(timer);
-		}
+		// source 'twitch', not 'igdb': a rejected Client ID/Secret is a different fix from a
+		// rejected query, and the two used to give the same message
+		const data = await requestJson('twitch', { url, method: 'POST' }, assertTokenIssued) as IssuedToken;
+		this.igdbToken = data.access_token;
+		this.igdbTokenExpiry = Date.now() + Math.max(0, (data.expires_in ?? 0) - 60) * 1000;
+		return this.igdbToken;
 	}
 
 	/** POSTs an Apicalypse query (plain-text body) to an IGDB endpoint. */
 	private async igdbPost(endpoint: string, query: string): Promise<unknown> {
 		const token = await this.getIgdbToken();
-		let timer: number | null = null;
-		const timeoutPromise = new Promise<never>((_, reject) => {
-			timer = window.setTimeout(() => reject(new ApiError('igdb', 'network', 'Request timed out')), API_TIMEOUT_MS);
-		});
 		try {
-			const fetchPromise = requestUrl({
+			return await requestJson('igdb', {
 				url: `${IGDB_BASE}/${endpoint}`,
 				method: 'POST',
 				headers: {
@@ -2171,17 +1960,12 @@ export class ApiService {
 					'Authorization': `Bearer ${token}`,
 				},
 				body: query,
-				throw: false,
-			}).then((r) => readApiResponse('igdb', r));
-			return await Promise.race([fetchPromise, timeoutPromise]);
+			});
 		} catch (e) {
 			// a rejected token (revoked / expired early) must not poison the cache
 			this.igdbToken = '';
 			this.igdbTokenExpiry = 0;
-			if (e instanceof ApiError) throw e;
-			throw new ApiError('igdb', 'network', (e as Error)?.message ?? 'Network error');
-		} finally {
-			if (timer !== null) window.clearTimeout(timer);
+			throw e;
 		}
 	}
 
@@ -2278,22 +2062,16 @@ export class ApiService {
 	 * expected conditions through status codes (no achievements = 400, locked-down profile =
 	 * 403), so unlike fetchWithTimeout these must not collapse into a thrown error.
 	 */
-	private async steamGet(url: string): Promise<{ status: number; json: unknown }> {
-		let timer: number | null = null;
-		const timeoutPromise = new Promise<never>((_, reject) => {
-			timer = window.setTimeout(() => reject(new Error('Request timed out')), API_TIMEOUT_MS);
-		});
-		try {
-			const fetchPromise = requestUrl({ url, throw: false }).then((r) => {
+	private steamGet(url: string): Promise<{ status: number; json: unknown }> {
+		return withTimeout(
+			() => requestUrl({ url, throw: false }).then((r) => {
 				let json: unknown = null;
 				// .json throws on a non-JSON body (Steam serves HTML error pages).
 				try { json = JSON.parse(r.text) as unknown; } catch { json = null; }
 				return { status: r.status, json };
-			});
-			return await Promise.race([fetchPromise, timeoutPromise]);
-		} finally {
-			if (timer !== null) window.clearTimeout(timer);
-		}
+			}),
+			() => new Error('Request timed out'),
+		);
 	}
 
 	/**
