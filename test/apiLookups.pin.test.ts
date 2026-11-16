@@ -128,6 +128,17 @@ describe('OMDb search', () => {
 		expect(sent).toHaveBeenCalledTimes(2);
 	});
 
+	it('does not ask for a page beyond the reported total', async () => {
+		const full = (from: number): unknown => ({
+			Response: 'True',
+			totalResults: '20',
+			Search: Array.from({ length: 10 }, (_, i) => ({ imdbID: `tt${from + i}`, Title: 'T', Year: '2000', Poster: 'N/A' })),
+		});
+		route([['&page=1', full(1)], ['&page=2', full(11)], ['&page=3', full(21)]]);
+		expect(await omdb().searchOmdb('t', 'movie')).toHaveLength(20);
+		expect(sent).toHaveBeenCalledTimes(2);
+	});
+
 	it('treats "not found" as an empty result', async () => {
 		answerAll(200, '{"Response":"False","Error":"Movie not found!"}');
 		expect(await omdb().searchOmdb('zzz', 'movie')).toEqual([]);
@@ -696,6 +707,8 @@ describe('Steam id', () => {
 
 	it('answers nothing for an unknown name, without a key and when the request fails', async () => {
 		route([['ResolveVanityURL', { response: { success: 42, message: 'No match' } }]]);
+		expect(await steam().resolveSteamId('nobody')).toBe('');
+		route([['ResolveVanityURL', { response: { success: 42, steamid: '76561197960287930' } }]]);
 		expect(await steam().resolveSteamId('nobody')).toBe('');
 		route([['ResolveVanityURL', { response: { success: 1 } }]]);
 		expect(await steam().resolveSteamId('nobody')).toBe('');
