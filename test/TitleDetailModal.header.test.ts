@@ -331,3 +331,30 @@ describe('TitleDetailModal trailer control', () => {
 		expect(btn.querySelector('.hoard-trailer-btn__label')!.textContent).toBe(t('detail.trailer.label'));
 	});
 });
+
+describe('TitleDetailModal favorite heart', () => {
+	it('paints the stored state after each write and toggles back on a second click', async () => {
+		const title = mkTitle();
+		const { modal, dataManager } = build(title);
+		// like the real manager: the write replaces the view, it does not mutate the old one
+		let stored: HoardTitle = title;
+		dataManager.getTitle.mockImplementation(() => stored);
+		const setFavorite = vi.fn(async (_id: string, favorite: boolean) => {
+			await Promise.resolve();
+			stored = { ...stored, favorite };
+		});
+		Object.assign(dataManager, { setFavorite });
+		const parent = document.createElement('div');
+		(modal as unknown as { renderFooter: (p: HTMLElement) => void }).renderFooter(parent);
+		const heart = parent.querySelector('.hoard-detail__favorite-btn') as HTMLElement;
+		expect(heart.classList.contains('is-active')).toBe(false);
+		heart.click();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(heart.classList.contains('is-active')).toBe(true);
+		heart.click();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(heart.classList.contains('is-active')).toBe(false);
+		expect(setFavorite).toHaveBeenNthCalledWith(1, 't1', true);
+		expect(setFavorite).toHaveBeenNthCalledWith(2, 't1', false);
+	});
+});

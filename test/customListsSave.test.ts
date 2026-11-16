@@ -51,3 +51,32 @@ describe('custom list saves go through vault.process', () => {
 		expect(f.files.get(path)).toBe(`# Backlog\n\n## Notes\nnew\n\n## Data\n\`\`\`json\n{\n  "x": 1\n}\n\`\`\`\n`);
 	});
 });
+
+describe('custom list data block', () => {
+	const load = async (data: string) => {
+		const { f, plugin, tab } = await setupCustomLists([makeList()]);
+		tab.destroy();
+		const manager = new CustomListManager(f.app, plugin as never);
+		const path = [...f.files.keys()].find((p) => p.endsWith('/Backlog.md'))!;
+		f.files.set(path, `# Backlog
+
+## Notes
+
+## Data
+\`\`\`json
+${data}
+\`\`\`
+`);
+		return manager.loadList('Backlog');
+	};
+
+	it('reads a null block as an empty list', async () => {
+		const list = await load('null');
+		expect(list).toMatchObject({ name: 'Backlog', columns: [], rows: [] });
+	});
+
+	it('still reports a block that is not JSON as corrupt', async () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		expect(await load('{')).toBeNull();
+	});
+});

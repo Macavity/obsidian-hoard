@@ -1021,10 +1021,12 @@ export class TitleDetailModal extends Modal {
 		};
 		paintFav();
 		favBtn.addEventListener('click', () => {
-			void this.dataManager.setFavorite(this.title.id, !this.title.favorite);
-			this.refreshTitle();
-			this.markChanged();
-			paintFav();
+			// the write replaces the view, so repaint from the fresh one once it is done
+			void this.dataManager.setFavorite(this.title.id, !this.title.favorite).then(() => {
+				this.refreshTitle();
+				this.markChanged();
+				paintFav();
+			});
 		});
 
 		// grouped with Edit so the footer keeps three children and the heart stays centered
