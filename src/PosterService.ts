@@ -4,6 +4,7 @@ import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from './types';
 import { getApiGroupForType } from './types';
 import { httpsOrEmpty } from './httpsUrl';
+import { NOT_FOUND, FAILED } from './lookup';
 import { jsonPost, requestVia, type ApiService } from './ApiService';
 import { resolveJikanEndpoint, type JikanEndpoint } from './jikanBase';
 
@@ -139,14 +140,13 @@ export class PosterService {
 			try {
 				const url = await this.fetchPosterForTitle(item.title, item.overwrite);
 				if (this.disposed) { item.resolve(null); break; }
-				// 'none' only for a clean "the API has no poster" — see the catch
-				const finalUrl = url || 'none';
-				await this.dataManager.updatePosterUrl(item.title.id, finalUrl, item.overwrite);
+				// a clean "the API has no poster" waits a week; a failure (see the catch) only an hour
+				if (url) await this.dataManager.updatePosterUrl(item.title.id, url, item.overwrite);
+				else this.dataManager.recordLookup(item.title.id, 'poster', NOT_FOUND);
 				item.resolve(url);
 			} catch {
-				// a rejected key or a dropped connection must NOT be cached as 'none': that is
-				// permanent, and it used to take a bad TMDB token and burn "no poster" into every
-				// title the user scrolled past. Leave posterUrl untouched so it retries later.
+				// a rejected key or a dropped connection must not count as "no poster"
+				this.dataManager.recordLookup(item.title.id, 'poster', FAILED);
 				item.resolve(null);
 			}
 
@@ -175,7 +175,7 @@ export class PosterService {
 		// the title already has one (a refresh looks it up again)
 		if (!overwrite) {
 			if (title.posterUrl && title.posterUrl.startsWith('http')) return title.posterUrl;
-			if (title.posterUrl === 'none') return null;
+			if (!this.dataManager.lookupDue(title.id, 'poster')) return null;
 		}
 
 		const settings = this.getSettings();

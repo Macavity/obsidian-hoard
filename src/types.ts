@@ -43,21 +43,21 @@ export interface HoardTitle {
 	favorite?: boolean;
 	/** ISO stamp of the last favorite toggle-on; absent on pre-field favorites */
 	dateFavorited?: string;
-	/** note property `Cover`. '' = unfetched, 'none' = nothing found (cache only), else a URL */
+	/** note property `Cover`. '' = none, else a URL */
 	posterUrl?: string;
-	/** '' = unfetched, 'none' = source has no trailer (e.g. OMDb), else a YouTube URL */
+	/** '' = none, else a YouTube URL */
 	trailerUrl?: string;
 	/** override — wins over trailerUrl when non-empty */
 	manualTrailerUrl?: string;
-	/** absent/empty = unfetched, ['none'] = fetch failed */
+	/** absent/empty = none */
 	director?: string[];
-	/** capped at MAX_FETCHED_CREDITS; absent/empty = unfetched, ['none'] = fetch failed */
+	/** capped at MAX_FETCHED_CREDITS; absent/empty = none */
 	cast?: string[];
 	/** user-added, appended after the fetched ones; a refresh never overwrites */
 	manualDirector?: string[];
 	/** user-added, appended after the fetched ones; a refresh never overwrites */
 	manualCast?: string[];
-	/** studio / network / brand. absent = unfetched, ['none'] = source has none */
+	/** studio / network / brand. absent/empty = none */
 	studio?: string[];
 	/** user-added, appended after the fetched ones; a refresh never overwrites */
 	manualStudio?: string[];
@@ -117,22 +117,9 @@ const MAX_FETCHED_CREDITS = 10;
 /** names shown inline before the rest collapse behind "+N more" */
 export const CREDITS_INLINE_LIMIT = 4;
 
-/** fetch failed or returned nothing (posterUrl's 'none' pattern) */
-export const CREDITS_NONE = 'none';
-
-/** fetched but empty — never re-fetch */
-export function isCreditsNone(names: string[] | undefined): boolean {
-	return names?.length === 1 && names[0] === CREDITS_NONE;
-}
-
 /** never fetched (absent or empty) */
 export function isCreditsUnfetched(names: string[] | undefined): boolean {
 	return !names || names.length === 0;
-}
-
-/** either credits field still needs its one-time fetch */
-export function needsCreditsFetch(title: HoardTitle): boolean {
-	return isCreditsUnfetched(title.director) || isCreditsUnfetched(title.cast);
 }
 
 /** studio still needs its one-time fetch (separate — anime has studios but no credits) */
@@ -140,10 +127,9 @@ export function needsStudioFetch(title: HoardTitle): boolean {
 	return isCreditsUnfetched(title.studio);
 }
 
-/** fetched names only — unfetched and 'none' both give [] */
+/** fetched names only; unfetched gives [] */
 export function getDisplayCredits(names: string[] | undefined): string[] {
-	if (!names || isCreditsNone(names)) return [];
-	return names;
+	return names ?? [];
 }
 
 /** which credits field a helper is operating on */
@@ -161,7 +147,7 @@ function fetchedCredits(title: HoardTitle, field: CreditsField): string[] | unde
 	return title.studio;
 }
 
-/** user-added names; never carries the 'none' sentinel */
+/** user-added names */
 export function getManualCredits(title: HoardTitle, field: CreditsField): string[] {
 	if (field === 'director') return title.manualDirector ?? [];
 	if (field === 'cast') return title.manualCast ?? [];
@@ -200,7 +186,7 @@ export function normalizeManualCredits(names: string[]): string[] {
 	const out: string[] = [];
 	for (const raw of names) {
 		const name = raw.trim();
-		if (name === '' || name === CREDITS_NONE) continue;
+		if (name === '') continue;
 		const key = name.toLowerCase();
 		if (seen.has(key)) continue;
 		seen.add(key);
@@ -209,10 +195,10 @@ export function normalizeManualCredits(names: string[]): string[] {
 	return out;
 }
 
-/** normalize a fetched list for storage: cap it, empty → the 'none' sentinel */
+/** normalize a fetched list for storage: trimmed, capped; empty stays empty */
 export function normalizeCreditsForStore(names: string[]): string[] {
 	const cleaned = names.map((n) => n.trim()).filter((n) => n !== '' && n !== 'N/A');
-	return cleaned.length > 0 ? cleaned.slice(0, MAX_FETCHED_CREDITS) : [CREDITS_NONE];
+	return cleaned.slice(0, MAX_FETCHED_CREDITS);
 }
 
 export interface HoardGroup {
@@ -1363,14 +1349,13 @@ export function getDisplayPoster(title: HoardTitle): string {
 }
 
 /**
- * Trailer URL to render — `manualTrailerUrl` wins; 'none' (no trailer) and ''
- * (unfetched) both resolve to ''.
+ * Trailer URL to render — `manualTrailerUrl` wins; no trailer resolves to ''.
  */
 export function getDisplayTrailer(title: HoardTitle): string {
 	if (title.manualTrailerUrl && title.manualTrailerUrl.trim() !== '') {
 		return title.manualTrailerUrl;
 	}
-	return title.trailerUrl && title.trailerUrl !== 'none' ? title.trailerUrl : '';
+	return title.trailerUrl ?? '';
 }
 
 export function formatVoteCount(votes: number): string {
@@ -1453,7 +1438,7 @@ export interface AnimeSearchResult {
 	averageScore?: number;
 	genres?: string[];
 	posterUrl?: string;
-	/** '' = unresolved, 'none' = no trailer, else a YouTube watch URL */
+	/** '' = none, else a YouTube watch URL */
 	trailerUrl?: string;
 }
 
@@ -1525,13 +1510,13 @@ export interface MediaSearchResult {
 	url: string;
 	seasons: Season[];
 	posterUrl?: string;
-	/** '' = unresolved, 'none' = no trailer, else a YouTube watch URL */
+	/** '' = none, else a YouTube watch URL */
 	trailerUrl?: string;
-	/** detail lookups only: normalized name list or ['none'] (see CREDITS_NONE) */
+	/** detail lookups only: normalized name list */
 	director?: string[];
-	/** detail lookups only: normalized names (capped at MAX_FETCHED_CREDITS) or ['none'] */
+	/** detail lookups only: normalized names (capped at MAX_FETCHED_CREDITS) */
 	cast?: string[];
-	/** detail lookups only: studio / network names or ['none'] */
+	/** detail lookups only: studio / network names */
 	studio?: string[];
 }
 

@@ -139,8 +139,9 @@ describe('handleTrackerCardsVisible', () => {
 		expect(fetched.querySelector('.hoard-card__poster-placeholder')!.classList.contains('is-loading')).toBe(false);
 		img.onload!(new Event('load'));
 		expect(fetched.querySelector('.hoard-card')!.classList.contains('has-poster')).toBe(true);
-		img.onerror!(new Event('error'));
-		expect(calls.some((c) => c.startsWith('updatePosterUrl:["t1","none"]'))).toBe(true);
+		// a broken image stores nothing
+		img.onerror?.(new Event('error'));
+		expect(calls.some((c) => c.startsWith('updatePosterUrl'))).toBe(false);
 	});
 
 	it('does nothing visible when no poster is found', async () => {

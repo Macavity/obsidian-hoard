@@ -32,7 +32,7 @@ import type {
 import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, explicitMediaKind, mapCinemetaSearch, type CinemetaKind } from './cinemetaApi';
 import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLibraryWorkUrl } from './openLibraryApi';
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
-import { isCreditsNone, normalizeCreditsForStore, imdbIdFromLink } from './types';
+import { normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
 
 export type Airing = NonNullable<EntryCache['airing']>;
@@ -87,7 +87,7 @@ function extractYoutubeId(url: string | null | undefined): string {
 
 /**
  * Splits an OMDb comma-separated name string ("Director" / "Actors") into a normalized
- * stored list: trimmed names, or ['none'] when absent / 'N/A', so both APIs yield the
+ * stored list: trimmed names, empty when absent / 'N/A', so both APIs yield the
  * same shape.
  */
 function omdbNamesToCredits(s: string | undefined): string[] {
@@ -98,21 +98,21 @@ function omdbNamesToCredits(s: string | undefined): string[] {
 /**
  * Director credits for an OMDb *series*: Director is 'N/A' there (it varies per episode),
  * so the creators — which OMDb puts in Writer — fill the stored director instead, with
- * role notes stripped. Falls back to Director, then to the 'none' sentinel.
+ * role notes stripped. Falls back to Director.
  */
 function omdbSeriesDirectorCredits(data: OmdbDetailResponse): string[] {
 	const raw = !data.Writer || data.Writer === 'N/A' ? [] : data.Writer.split(',');
 	const creators = normalizeCreditsForStore(raw.map((n) => n.replace(/\([^)]*\)/g, '')));
-	return isCreditsNone(creators) ? omdbNamesToCredits(data.Director) : creators;
+	return creators.length === 0 ? omdbNamesToCredits(data.Director) : creators;
 }
 
 /**
  * Director credits for a TMDB *series*: `created_by` (series have no single director),
- * falling back to crew Director entries, then to the 'none' sentinel.
+ * falling back to crew Director entries.
  */
 function tmdbSeriesDirectorCredits(detail: TmdbTvDetail): string[] {
 	const creators = normalizeCreditsForStore((detail.created_by ?? []).map((c) => c.name ?? ''));
-	return isCreditsNone(creators) ? tmdbCreditsToStored(detail.credits).director : creators;
+	return creators.length === 0 ? tmdbCreditsToStored(detail.credits).director : creators;
 }
 
 /**
@@ -1427,7 +1427,7 @@ export class ApiService {
 
 	/**
 	 * Studio names for a title, plus the TMDB id it resolved through so the caller can cache it.
-	 * null = couldn't reach a source (never store that); ['none'] = source has none.
+	 * null = couldn't reach a source (never store that); empty studio = source has none.
 	 *
 	 * OMDb is not a source — its Production field returns 'N/A' on movies and is absent on
 	 * series, verified 2026-07-28.

@@ -18,7 +18,7 @@ const mkTitle = (over: Partial<HoardTitle> = {}): HoardTitle => (({
 	id: 't1', title: 'Alien', type: 'Movie', status: 'Plan to Watch', priority: '', review: '', rating: 0, notes: '',
 	dateStarted: null, dateFinished: null, dateAdded: '', dateModified: '', totalEpisodes: 1, episodeDuration: 100,
 	releaseDate: null, externalLink: '', seasons: [], watchedEpisodes: [],
-	director: ['none'], cast: ['none'], studio: ['none'],
+	director: ['Dir'], cast: ['Cast'], studio: ['Studio'],
 	...over,
 }));
 
@@ -35,6 +35,10 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Erro
 		updateTrailerUrl: vi.fn((_id: string, url: string) => { if (stored) stored.trailerUrl = url; }),
 		persistCollapsedSeasons: vi.fn(() => Promise.resolve()),
 		updatePosterUrl: vi.fn(),
+		// due while the title has no value of the kind, like the real one
+		lookupDue: vi.fn((_id: string, kind: string) => kind === 'credits'
+			? !(stored?.director?.length && stored?.cast?.length) : kind === 'studio' ? !stored?.studio?.length : true),
+		recordLookup: vi.fn(),
 	};
 	const apiService = {
 		fetchTrailer: vi.fn(() => (o.trailer instanceof Error ? Promise.reject(o.trailer) : Promise.resolve(o.trailer ?? ''))),
@@ -133,7 +137,7 @@ describe('TitleDetailModal.renderHeaderBody', () => {
 describe('TitleDetailModal backfill without a key', () => {
 	const flushAll = () => new Promise<void>((r) => setTimeout(r, 0));
 
-	it('does not store none for credits when the fetch fails', async () => {
+	it('stores nothing for credits when the fetch fails', async () => {
 		const { modal, apiService, dataManager } = build(mkTitle({ id: 'cred-fail', director: undefined, cast: undefined }));
 		(dataManager as unknown as Record<string, unknown>).updateCredits = vi.fn();
 		apiService.fetchCredits.mockRejectedValueOnce(new Error('net'));
@@ -142,7 +146,7 @@ describe('TitleDetailModal backfill without a key', () => {
 		expect((dataManager as unknown as { updateCredits: unknown }).updateCredits).not.toHaveBeenCalled();
 	});
 
-	it('does not store none for a movie studio without a TMDB key', async () => {
+	it('stores nothing for a movie studio without a TMDB key', async () => {
 		const { modal, apiService, dataManager } = build(mkTitle({ id: 'studio-nokey', studio: undefined }), { tmdbKey: false });
 		(dataManager as unknown as Record<string, unknown>).updateStudio = vi.fn();
 		header(modal);
@@ -182,12 +186,13 @@ describe('TitleDetailModal.refreshTrailer', () => {
 		expect(shown).toEqual([]);
 	});
 
-	it('marks a missing trailer as none and keeps the refresh button', async () => {
+	it('records a missing trailer as notfound and keeps the refresh button', async () => {
 		for (const trailer of ['', 'none']) {
 			const { modal, dataManager } = build(mkTitle(), { trailer });
 			const { btn, container } = els();
 			await modal.refreshTrailer(btn, container);
-			expect(dataManager.updateTrailerUrl).toHaveBeenCalledWith('t1', 'none');
+			expect(dataManager.updateTrailerUrl).not.toHaveBeenCalled();
+			expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'notfound' });
 			expect(btn.classList.contains('is-loading')).toBe(false);
 			expect(shown.at(-1)).toBe(t('detail.trailer.notFound'));
 		}
@@ -198,6 +203,7 @@ describe('TitleDetailModal.refreshTrailer', () => {
 		const { btn, container } = els();
 		await modal.refreshTrailer(btn, container);
 		expect(dataManager.updateTrailerUrl).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'failed' });
 		expect(btn.classList.contains('is-loading')).toBe(false);
 		expect(shown).toEqual([t('detail.trailer.notFound')]);
 	});
@@ -274,7 +280,7 @@ describe('TitleDetailModal trailer control', () => {
 	}
 
 	it('shows one muted play button that fetches when no trailer is known', () => {
-		const { row, apiService } = ratingRow(mkTitle({ trailerUrl: 'none' }));
+		const { row, apiService } = ratingRow(mkTitle({ trailerUrl: '' }));
 		const btns = row.querySelectorAll('.hoard-trailer-btn__control button');
 		expect(btns).toHaveLength(1);
 		const btn = btns[0] as HTMLButtonElement;

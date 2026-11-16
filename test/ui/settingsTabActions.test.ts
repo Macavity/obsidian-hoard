@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
 import { HoardSettingsTab } from '../../src/SettingsTab';
-import { DEFAULT_SETTINGS, CREDITS_NONE, type HoardTitle } from '../../src/types';
+import { DEFAULT_SETTINGS, type HoardTitle } from '../../src/types';
 import { until } from '../helpers/common';
 import { makeTitle } from '../helpers/setupDataManager';
 
@@ -523,19 +523,19 @@ describe('bulk studio fetch', () => {
 		expect(shown).toHaveLength(1);
 	});
 
-	it('stores found studios and marks misses and failures as none', async () => {
+	it('stores found studios and stores an empty studio for misses', async () => {
 		const { priv, updateStudio, plugin } = setup(
 			[unfetched('hit'), unfetched('miss'), unfetched('fail'), unfetched('empty')],
 			(tt) => {
 				if (tt.id === 'hit') return Promise.resolve({ studio: ['Ghibli'], tmdbId: 5, tmdbMediaType: 'movie' });
 				if (tt.id === 'fail') return Promise.reject(new Error('net'));
-				if (tt.id === 'empty') return Promise.resolve({ studio: [CREDITS_NONE] });
+				if (tt.id === 'empty') return Promise.resolve({ studio: [] });
 				return Promise.resolve(null);
 			},
 		);
 		await priv.fetchAllStudios();
 		expect(updateStudio).toHaveBeenCalledWith('hit', ['Ghibli'], 5, 'movie');
-		expect(updateStudio).toHaveBeenCalledWith('miss', [CREDITS_NONE], undefined, undefined);
+		expect(updateStudio).toHaveBeenCalledWith('miss', [], undefined, undefined);
 		expect(updateStudio).toHaveBeenCalledTimes(3);
 		expect((plugin as { importProgress?: unknown }).importProgress).toBeNull();
 		const last = shown.at(-1)!;

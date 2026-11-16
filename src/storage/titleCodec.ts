@@ -142,10 +142,9 @@ function coreFields(r: Reader, id: string, status: string, externalLink: string,
 	};
 }
 
-/** API data from the cache. Of the poster only the 'none' marker lives there; the note's `Cover` wins later. */
+/** API data from the cache. The poster is a note field (`Cover`), not part of it. */
 function cachedApiFields(c: EntryCache): Partial<HoardTitle> {
 	return defined({
-		posterUrl: c.posterUrl === 'none' ? 'none' : undefined,
 		trailerUrl: c.trailerUrl,
 		director: c.director || undefined,
 		cast: c.cast || undefined,
@@ -221,12 +220,16 @@ function progressFields(r: Reader, t: HoardTitle, seasonsCheck: ApiCheckResult |
 	return { ...watchedFields(r, mapping), ...skippedFields(r, t.seasons, mapping) };
 }
 
+/** WatchLog wrote `none` into the note for "nothing found"; a lone one reads as absent. */
+const noneAsAbsent = (v: string | undefined): string | undefined => (v === 'none' ? undefined : v || undefined);
+const withoutNone = (names: string[] | undefined): string[] | undefined => (names?.length === 1 && names[0] === 'none' ? undefined : names);
+
 /** API fields the user set in the note; they win over the cached values and are written back (E9). */
 function overridesOf(r: Reader): TitleOverrides | undefined {
 	const overrides: TitleOverrides = defined({
-		director: nonEmpty(r.list(T.director)),
-		cast: nonEmpty(r.list(T.cast)),
-		studio: nonEmpty(r.list(T.studio)),
+		director: nonEmpty(withoutNone(r.list(T.director))),
+		cast: nonEmpty(withoutNone(r.list(T.cast))),
+		studio: nonEmpty(withoutNone(r.list(T.studio))),
 		communityRating: r.num(T.communityRating),
 		communityVotes: r.num(T.communityVotes),
 		communitySource: r.str(T.communitySource) || undefined,
@@ -243,7 +246,7 @@ function userFields(r: Reader): Partial<HoardTitle> {
 		maybe: r.bool(T.maybe) || undefined,
 		groups: nonEmpty(r.list(C.groups)),
 		posterUrl: r.str(C.cover) || undefined,
-		manualTrailerUrl: r.str(T.trailer) || undefined,
+		manualTrailerUrl: noneAsAbsent(r.str(T.trailer)),
 		overrides: overridesOf(r),
 		manualDirector: nonEmpty(r.list(T.addedDirector)),
 		manualCast: nonEmpty(r.list(T.addedCast)),
@@ -326,11 +329,11 @@ function overrideProps(o: TitleOverrides | undefined): Fm {
 	};
 }
 
-/** Links, flags and the identity of the note. A poster of 'none' is a cache marker and stays out. */
+/** Links, flags and the identity of the note. */
 function linkAndFlagProps(t: HoardTitle): Fm {
 	const identity = identityFor(t);
 	return {
-		...optional(C.cover, t.posterUrl !== 'none' && t.posterUrl),
+		...optional(C.cover, t.posterUrl),
 		...optional(T.trailer, t.manualTrailerUrl?.trim() && t.manualTrailerUrl),
 		...optional(C.url, t.externalLink),
 		...optional(T.pinned, t.pinned),
@@ -395,15 +398,14 @@ export function titleToProperties(t: HoardTitle, progress: number, seasonsPendin
 
 /** Cache keys titleToCache owns; everything else in a cache entry (apiCheck, airing, …) is kept on sync. */
 export const TITLE_CACHE_KEYS = [
-	'posterUrl', 'trailerUrl', 'director', 'cast', 'studio', 'communityRating', 'communityVotes', 'communitySource',
+	'trailerUrl', 'director', 'cast', 'studio', 'communityRating', 'communityVotes', 'communitySource',
 	'communityRatingLastFetched', 'collectionId', 'tmdbId', 'tmdbMediaType', 'malId', 'anilistId', 'seasons',
 ] as const satisfies readonly (keyof EntryCache)[];
 
-/** API-derived fields that live in data.json (posters only as the 'none' marker); seasons only when not overridden in the note. */
+/** API-derived fields that live in data.json (no poster); seasons only when not overridden in the note. */
 export function titleToCache(t: HoardTitle): EntryCache {
 	const cachedSeasons = !t.seasonsOverride && t.seasons.length > 0;
 	return defined({
-		posterUrl: t.posterUrl === 'none' ? t.posterUrl : undefined,
 		trailerUrl: t.trailerUrl,
 		director: t.director || undefined,
 		cast: t.cast || undefined,

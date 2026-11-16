@@ -6,7 +6,7 @@ import { typeNameProblemText } from './ui/problemText';
 import { cardSizeToMinWidth } from './VirtualGrid';
 import type HoardPlugin from './main';
 import type { HoardPluginSettings, TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from './types';
-import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType, isCreditsNone, CREDITS_NONE } from './types';
+import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType } from './types';
 import { readingStatusColor } from './readingColors';
 import { gamesKeyChip } from './ui/gamesKeyChip';
 import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from './apiSources';
@@ -871,9 +871,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				try {
 					const group = getApiGroupForType(title.type, mapping);
 					const found = await api.fetchStudio(title, animeSource, group);
-					// a miss stores 'none' so the next run skips it instead of retrying forever
-					await dm.updateStudio(title.id, found?.studio ?? [CREDITS_NONE], found?.tmdbId, found?.tmdbMediaType);
-					if (found?.studio && !isCreditsNone(found.studio)) filled++; else missed++;
+					await dm.updateStudio(title.id, found?.studio ?? [], found?.tmdbId, found?.tmdbMediaType);
+					if (found?.studio?.length) filled++; else missed++;
 				} catch {
 					missed++;
 				}

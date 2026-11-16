@@ -24,9 +24,12 @@ export interface ExternalId {
 /** API-derived data per entry; regenerable, so it lives in data.json only. */
 export type ApiCheckResult = 'ok' | 'transient' | 'nokey' | 'notfound';
 
+/** Fields a lookup can fill: a poster, a trailer, director + cast, a studio. */
+export type LookupKind = 'poster' | 'trailer' | 'credits' | 'studio';
+/** Kinds of background API check whose outcome is recorded in `apiCheck`. */
+export type ApiCheckKind = 'airing' | 'seasons' | LookupKind;
+
 export interface EntryCache {
-	/** only the marker 'none' = the poster fetch found nothing; posters live in the note (E12) */
-	posterUrl?: string;
 	trailerUrl?: string;
 	director?: string[];
 	cast?: string[];
@@ -42,7 +45,7 @@ export interface EntryCache {
 	malId?: number;
 	anilistId?: number;
 	/** last background API check per kind: when, and how it ended (drives the retry deadline) */
-	apiCheck?: Partial<Record<'airing' | 'seasons', { at: string; result: ApiCheckResult }>>;
+	apiCheck?: Partial<Record<ApiCheckKind, { at: string; result: ApiCheckResult }>>;
 	/** next/last aired episode from TMDB or AniList; season-relative episode numbers */
 	airing?: {
 		nextSeason?: number;

@@ -135,3 +135,24 @@ describe('titleCodec', () => {
     });
   });
 });
+
+describe('WatchLog none markers in a note', () => {
+  const decode = (props: Record<string, unknown>) => titleFromProperties('Movie/X', { Name: 'X', Type: 'Movie', ...props }, undefined);
+
+  it('reads a lone none in Director, Cast, Studio and Trailer as absent', () => {
+    const { entry, invalidFields } = decode({ Director: 'none', Cast: ['none'], Studio: ['none'], Trailer: 'none' });
+    expect(invalidFields).toEqual([]);
+    expect(entry.overrides).toBeUndefined();
+    expect(entry.manualTrailerUrl).toBeUndefined();
+    expect(titleToProperties(entry, 0)).not.toHaveProperty('Trailer');
+    expect(titleToProperties(entry, 0)).not.toHaveProperty('Director');
+  });
+
+  it('keeps a none that is one name among several', () => {
+    expect(decode({ Cast: ['none', 'Amy Adams'] }).entry.overrides?.cast).toEqual(['none', 'Amy Adams']);
+  });
+
+  it('never emits the poster into the cache', () => {
+    expect(titleToCache({ ...fullTitle(), posterUrl: 'https://img/p.jpg' })).not.toHaveProperty('posterUrl');
+  });
+});

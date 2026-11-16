@@ -71,7 +71,7 @@ export class EditTitleModal extends Modal {
 		this.fieldLink = title.externalLink;
 		this.fieldSeasonsText = seasonsToText(title.seasons);
 		this.fieldReview = title.review ?? '';
-		this.fieldPosterUrl = title.posterUrl === 'none' ? '' : title.posterUrl ?? '';
+		this.fieldPosterUrl = title.posterUrl ?? '';
 		this.fieldTrailerUrl = title.manualTrailerUrl ?? '';
 		// seed the group dropdown with the title's current group
 		this.originalGroupId =
@@ -247,7 +247,7 @@ export class EditTitleModal extends Modal {
 			seasons,
 			// keep an already-Completed title fully ticked when its episode count changes here
 			watchedEpisodes: completedEpisodes(this.original.status, this.fieldEpisodes) ?? this.original.watchedEpisodes,
-			posterUrl: this.fieldPosterUrl.trim() || (this.original.posterUrl === 'none' ? 'none' : ''),
+			posterUrl: this.fieldPosterUrl.trim(),
 			manualTrailerUrl: this.fieldTrailerUrl.trim(),
 		};
 

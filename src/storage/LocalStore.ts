@@ -1,6 +1,7 @@
 import type { SecretStore } from './SecretStore';
 import type { EntryCache, LocalData } from './storageTypes';
 import { isRecord } from './sharedHelpers';
+import { migrateNoneMarkers } from './cacheMigration';
 
 /** `newer`: data.json from a later plugin version; it is never written by this one. */
 /** `watchlog` / `newer`: data.json is kept as is and nothing is saved this session (the caller warns). */
@@ -45,7 +46,9 @@ export class LocalStore {
 		}
 		if (isRecord(raw) && raw.schemaVersion === 2) {
 			const d = raw as unknown as LocalData;
-			this.data = { ...d, settings: d.settings ?? {}, cache: d.cache ?? {}, ui: d.ui ?? {} };
+			const migrated = migrateNoneMarkers(d.cache ?? {}, new Date().toISOString());
+			this.data = { ...d, settings: d.settings ?? {}, cache: migrated.cache as LocalData['cache'], ui: d.ui ?? {} };
+			if (migrated.changed) this.queueSave();
 		} else {
 			this.data = emptyData();
 		}

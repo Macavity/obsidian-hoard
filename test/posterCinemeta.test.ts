@@ -7,12 +7,13 @@ import type { DataManager } from '../src/DataManager';
 
 function setup(api: Partial<ApiService>, keys: { tmdbApiKey?: string; omdbApiKey?: string } = {}) {
 	const updatePosterUrl = vi.fn().mockResolvedValue(undefined);
+	const recordLookup = vi.fn();
 	const svc = new PosterService(
-		{ updatePosterUrl } as unknown as DataManager,
+		{ updatePosterUrl, recordLookup, lookupDue: () => true } as unknown as DataManager,
 		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', ...keys, typeApiMapping: { Doc: 'movie' } }),
 		() => api as ApiService,
 	);
-	return { svc, updatePosterUrl };
+	return { svc, updatePosterUrl, recordLookup };
 }
 const title = (extra: Partial<HoardTitle>) =>
 	({ id: 'Movie/A', title: 'Breaking Bad', type: 'TV Show', ...extra }) as HoardTitle;
@@ -28,11 +29,12 @@ describe('PosterService keyless (Cinemeta)', () => {
 		expect(url).toBe('https://img/bb.jpg');
 	});
 
-	it('does not store none when a keyed request fails and cinemeta has nothing', async () => {
+	it('records a transient failure when a keyed request fails and cinemeta has nothing', async () => {
 		vi.mocked(requestUrl).mockRejectedValue(new Error('net'));
-		const { svc, updatePosterUrl } = setup({ searchCinemeta: vi.fn().mockResolvedValue([]) }, { tmdbApiKey: 't' });
+		const { svc, updatePosterUrl, recordLookup } = setup({ searchCinemeta: vi.fn().mockResolvedValue([]) }, { tmdbApiKey: 't' });
 		expect(await svc.enqueue(title({}))).toBeNull();
 		expect(updatePosterUrl).not.toHaveBeenCalled();
+		expect(recordLookup).toHaveBeenCalledWith('Movie/A', 'poster', { status: 'failed' });
 	});
 
 	it('uses getCinemetaDetails with the IMDb id from the external link', async () => {
@@ -70,10 +72,11 @@ describe('PosterService keyless (Cinemeta)', () => {
 		expect(searchCinemeta).toHaveBeenCalledWith('Breaking Bad', 'series', '2008');
 	});
 
-	it('does not cache a network failure as none', async () => {
-		const { svc, updatePosterUrl } = setup({ searchCinemeta: vi.fn().mockRejectedValue(new Error('net')) });
+	it('records a network failure as transient', async () => {
+		const { svc, updatePosterUrl, recordLookup } = setup({ searchCinemeta: vi.fn().mockRejectedValue(new Error('net')) });
 		expect(await svc.enqueue(title({}))).toBeNull();
 		expect(updatePosterUrl).not.toHaveBeenCalled();
+		expect(recordLookup).toHaveBeenCalledWith('Movie/A', 'poster', { status: 'failed' });
 	});
 
 	it('falls through to a search when the IMDb hit has no poster', async () => {

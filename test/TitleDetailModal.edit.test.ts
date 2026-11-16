@@ -16,7 +16,7 @@ const mkTitle = (over: Partial<HoardTitle> = {}): HoardTitle => (({
 	id: 't1', title: 'Alien', type: 'Movie', status: 'Plan to Watch', priority: '', review: '', rating: 0, notes: '',
 	dateStarted: null, dateFinished: null, dateAdded: '', dateModified: '', totalEpisodes: 1, episodeDuration: 100,
 	releaseDate: null, externalLink: '', seasons: [], watchedEpisodes: [],
-	director: ['none'], cast: ['none'], studio: ['none'],
+	director: ['Dir'], cast: ['Cast'], studio: ['Studio'],
 	...over,
 }));
 
@@ -33,6 +33,8 @@ function buildPlugin(stored: HoardTitle | null, over: Record<string, unknown> = 
 		getProgress: () => 40,
 		updateTitle: vi.fn(() => Promise.resolve()),
 		updateCredits: vi.fn(() => Promise.resolve()),
+		lookupDue: vi.fn(() => false),
+		recordLookup: vi.fn(),
 		...over,
 	};
 	const apiService = {
@@ -206,13 +208,14 @@ describe('renderCreditsRefreshButton', () => {
 		expect(onDone).toHaveBeenCalledWith(true);
 	});
 
-	it('falls back to the passed title and writes the none sentinel when nothing was fetched', async () => {
+	it('falls back to the passed title and changes nothing when the fetch failed', async () => {
 		const { btn, title, dataManager, apiService, onDone } = render('r2', null, null);
 		btn.click();
 		await flush();
 		expect(apiService.fetchCredits).toHaveBeenCalledWith(title, expect.anything());
-		expect(dataManager.updateCredits).toHaveBeenCalledWith('r2', ['none'], ['none']);
-		expect(onDone).toHaveBeenCalledWith(true);
+		expect(dataManager.updateCredits).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('r2', 'credits', { status: 'failed' });
+		expect(onDone).toHaveBeenCalledWith(false);
 	});
 
 	it('reports no change when persistence fails and clears the spinner', async () => {

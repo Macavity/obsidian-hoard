@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, relative, resolve, sep } from 'node:path';
 import { parse } from 'yaml';
 import { VaultLayout } from '../../src/storage/VaultLayout';
 import { LocalStore } from '../../src/storage/LocalStore';
+import { setupDataManager } from '../helpers/setupDataManager';
 import { titleFromProperties } from '../../src/storage/titleCodec';
 import { decodeBook, decodeManga } from '../../src/storage/readingCodec';
 import { decodeGame } from '../../src/storage/gameCodec';
@@ -105,8 +106,7 @@ describe('WatchLog-era property sets', () => {
 		const shown = displayed(t.entry);
 		expect(shown.director).toEqual([]);
 		expect(shown.cast).toEqual([]);
-		// today the note-side marker comes through as text; either way it is no playable trailer
-		expect(shown.trailer).not.toMatch(/^https?:/);
+		expect(shown.trailer).toBe('');
 	});
 
 	it('keeps the readable rest when values have the wrong type', () => {
@@ -158,4 +158,34 @@ describe('data.json with schema-2 markers', () => {
 		const t = decodeTitle({ Trailer: 'https://youtu.be/mine', Director: ['Me'] }, store.getCache('Movie/Real Values'));
 		expect(displayed(t.entry)).toMatchObject({ trailer: 'https://youtu.be/mine', director: ['Me'] });
 	});
+});
+
+describe('data.json from before the lookup state', () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('shows no poster for a cached poster marker and looks again after a week', async () => {
+    const start = new Date('2026-11-16T12:00:00Z');
+    vi.useFakeTimers({ now: start, toFake: ['Date'] });
+    const { dm, f, local, index } = await setupDataManager({ 'W/Movie/X.md': '---\nName: X\nType: Movie\n---\n' });
+    f.plugin.data = { schemaVersion: 2, settings: {}, ui: {}, cache: { 'Movie/X': { posterUrl: 'none' } } };
+    await local.load();
+    await index.rebuild();
+
+    const t = dm.getTitle('Movie/X')!;
+    expect(getDisplayPoster(t)).toBe('');
+    expect(local.getCache('Movie/X')).toEqual({ apiCheck: { poster: { at: start.toISOString(), result: 'notfound' } } });
+    vi.setSystemTime(new Date(start.getTime() + 6 * 86_400_000));
+    expect(dm.lookupDue('Movie/X', 'poster')).toBe(false);
+    vi.setSystemTime(new Date(start.getTime() + 8 * 86_400_000));
+    expect(dm.lookupDue('Movie/X', 'poster')).toBe(true);
+  });
+
+  it('shows the note cover for a cached marker and never looks for a poster', async () => {
+    const { dm, f, local, index } = await setupDataManager({ 'W/Movie/X.md': '---\nName: X\nType: Movie\nCover: https://img.example/c.jpg\n---\n' });
+    f.plugin.data = { schemaVersion: 2, settings: {}, ui: {}, cache: { 'Movie/X': { posterUrl: 'none', trailerUrl: 'none', director: ['none'] } } };
+    await local.load();
+    await index.rebuild();
+    expect(getDisplayPoster(dm.getTitle('Movie/X')!)).toBe('https://img.example/c.jpg');
+    expect(dm.lookupDue('Movie/X', 'poster')).toBe(false);
+  });
 });

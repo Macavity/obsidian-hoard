@@ -723,7 +723,7 @@ export class ListTab implements TabInstance {
 			}
 			const title = titleById.get(titleId);
 			if (!title) continue;
-			// skip titles with a poster and resolved ones ('none' = tried, nothing found)
+			// skip titles that already have a poster
 			if (title.posterUrl) continue;
 
 			const placeholder = card.querySelector('.hoard-card__poster-placeholder');
@@ -739,12 +739,7 @@ export class ListTab implements TabInstance {
 	}
 
 	private applyPosterToCard(card: HTMLElement, url: string): void {
-		loadCardPoster(card, url, () => {
-			const titleId = card.dataset.titleId;
-			if (titleId) {
-				void this.dataManager.updatePosterUrl(titleId, 'none');
-			}
-		});
+		loadCardPoster(card, url, () => { card.removeClass('has-poster'); });
 	}
 
 	/** Tear down the poster observer and the PosterService queue. */
@@ -777,7 +772,7 @@ export class ListTab implements TabInstance {
 			: '#888780';
 
 		const display = getDisplayPoster(title);
-		// missing (undefined / null / "") needs a fetch; the 'none' sentinel does not
+		// missing (undefined / null / "") needs a fetch
 		const needsPoster = !title.posterUrl;
 
 		// no bar when episodes are unknown
@@ -806,10 +801,6 @@ export class ListTab implements TabInstance {
 			year: title.releaseDate?.match(/^(\d{4})/)?.[1],
 			progressRatio,
 			textUnder: this.plugin.isCardTextUnder('watchlist'),
-			// marks only a title without a poster in its note 'none'
-			onPosterError: () => {
-				void this.dataManager.updatePosterUrl(title.id, 'none');
-			},
 			menuItems: [
 				{ label: t('list.card.editTitle'), onClick: () => this.openEditModalForTitle(title.id) },
 				{ label: t('list.card.refreshPoster'), onClick: (card) => this.refreshPosterForCard(card, title.id) },
