@@ -226,6 +226,9 @@ export interface RatingTier {
 
 // Custom Lists types
 
+/** The types a custom column can have (a list's and a reading column's alike). */
+export const COLUMN_TYPES = ['text', 'number', 'select'] as const;
+
 export interface CustomListColumn {
 	id: string;
 	label: string;

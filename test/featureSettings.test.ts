@@ -30,6 +30,19 @@ describe('readGamesSettings', () => {
 	});
 });
 
+describe('keys a newer version wrote', () => {
+	it('stay in the games settings, next to the checked ones', () => {
+		const s = readGamesSettings({ futureKey: { a: 1 }, defaultStatus: 4, defaultFolder: 'My/Games' }, defaultGamesSettings());
+		expect(s).toMatchObject({ futureKey: { a: 1 }, defaultFolder: 'My/Games' });
+		expect(s.defaultStatus).toBe(defaultGamesSettings().defaultStatus);
+	});
+
+	it('stay in the reading settings, next to the checked ones', () => {
+		const s = readReadingSettings({ futureKey: [1], defaultStatus: 'nope' });
+		expect(s).toMatchObject({ futureKey: [1], defaultStatus: DEFAULT_READING_SETTINGS.defaultStatus });
+	});
+});
+
 describe('readReadingSettings', () => {
 	it('gives the defaults, with every status colour, for nothing stored', () => {
 		expect(readReadingSettings({})).toEqual({ ...DEFAULT_READING_SETTINGS, statusColors: DEFAULT_READING_STATUS_COLORS });

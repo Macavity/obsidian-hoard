@@ -1139,9 +1139,16 @@ export class ReadingDetailModal extends Modal {
 			paintFavoriteButton(favBtn, fav);
 		};
 		paintFav();
+		let writing = false;
 		favBtn.addEventListener('click', () => {
+			// the item is replaced only when the write is done, so a second click would read the old state
+			if (writing) return;
+			writing = true;
 			const fav = this.getItem()?.favorite === true;
-			void this.readingData.setFavorite(this.mode, item.id, !fav).then(paintFav);
+			void this.readingData.setFavorite(this.mode, item.id, !fav).finally(() => {
+				writing = false;
+				paintFav();
+			});
 		});
 
 		const right = footer.createDiv({ cls: 'hoard-reading-detail__footer-right' });

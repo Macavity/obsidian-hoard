@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { requestUrl } from 'obsidian';
 import { PosterService } from '../src/PosterService';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
-import type { ApiService } from '../src/ApiService';
+import { ApiService } from '../src/ApiService';
 import type { DataManager } from '../src/DataManager';
 
 function setup(api: Partial<ApiService>, keys: { tmdbApiKey?: string; omdbApiKey?: string } = {}) {
@@ -77,6 +77,18 @@ describe('PosterService keyless (Cinemeta)', () => {
 		expect(await svc.enqueue(title({}))).toBeNull();
 		expect(updatePosterUrl).not.toHaveBeenCalled();
 		expect(recordLookup).toHaveBeenCalledWith('Movie/A', 'poster', { status: 'failed' });
+	});
+
+	it('tries the movie record when the series record answers 404', async () => {
+		vi.mocked(requestUrl).mockImplementation(((p: unknown) => {
+			const url = (p as { url: string }).url;
+			if (url.includes('/meta/series/')) return Promise.resolve({ status: 404, text: '', json: null } as never);
+			const json = { meta: { id: 'tt1234567', name: 'M', year: '2020', poster: 'https://img/movie.jpg' } };
+			return Promise.resolve({ status: 200, text: JSON.stringify(json), json } as never);
+		}) as never);
+		const { svc } = setup(new ApiService(''));
+		const url = await svc.enqueue(title({ type: 'Doc', externalLink: 'https://www.imdb.com/title/tt1234567/' }));
+		expect(url).toBe('https://img/movie.jpg');
 	});
 
 	it('falls through to a search when the IMDb hit has no poster', async () => {

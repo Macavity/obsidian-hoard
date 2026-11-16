@@ -27,6 +27,12 @@ import { createPosterPlaceholder } from './PosterCard';
 import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
 
 // titles whose credits backfill is in flight — de-dupes rapid modal re-opens
+/** The notice for a trailer lookup that found nothing: a failure, a missing key or a clean miss differ. */
+function trailerMissKey(status: 'notfound' | 'failed' | 'nokey') {
+	if (status === 'failed') return 'notices.api.requestFailed';
+	return status === 'nokey' ? 'notices.api.tmdbTokenRequired' : 'detail.trailer.notFound';
+}
+
 const creditsBackfillInFlight = new Set<string>();
 const studioBackfillInFlight = new Set<string>();
 const trailerBackfillInFlight = new Set<string>();
@@ -764,7 +770,7 @@ export class TitleDetailModal extends Modal {
 				return;
 			}
 			this.dataManager.recordLookup(title.id, 'trailer', result);
-			new Notice(t(result.status === 'failed' ? 'notices.api.requestFailed' : 'detail.trailer.notFound'));
+			new Notice(t(trailerMissKey(result.status)));
 		} catch {
 			this.dataManager.recordLookup(title.id, 'trailer', FAILED);
 			new Notice(t('notices.api.requestFailed'));

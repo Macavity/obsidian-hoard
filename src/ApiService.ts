@@ -1267,7 +1267,8 @@ export class ApiService {
 		const maxPages = Math.ceil(SEARCH_RESULT_LIMIT / TMDB_PAGE_SIZE);
 		for (let page = 1; page <= maxPages; page++) {
 			const data = await this.fetchWithTimeout(`${base}&page=${page}`, this.tmdbHeaders());
-			items.push(...recordsOf(at(data, 'results')));
+			// a row without a numeric id cannot be added
+			items.push(...recordsOf(at(data, 'results')).filter((item) => readOptionalNumber(item.id) !== undefined));
 			if (items.length >= SEARCH_RESULT_LIMIT || page >= readNumber(at(data, 'total_pages'), 1)) break;
 		}
 		return items.slice(0, SEARCH_RESULT_LIMIT).map((item) => tmdbSearchRow(item, type));
@@ -1652,7 +1653,7 @@ export class ApiService {
 	): Promise<LookupResult<string>> {
 		const group = mediaGroupOf(title, apiGroup);
 		if (group === 'anime') return firstFound(this.animeTrailerSources(title, animeApiSource));
-		if (group === 'movie') return firstFound([() => this.tmdbTrailerByImdb(this.extractImdbId(title.externalLink ?? ''))]);
+		if (group === 'movie') return this.tmdbTrailerByImdb(this.extractImdbId(title.externalLink ?? ''));
 		return Promise.resolve(NOT_FOUND);
 	}
 

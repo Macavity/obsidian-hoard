@@ -1,5 +1,5 @@
 import {
-	GAME_TBA_STATUS, defaultGamesSettings, getTitleCredits, parsePlaytimeInput,
+	COLUMN_TYPES, GAME_TBA_STATUS, defaultGamesSettings, getTitleCredits, parsePlaytimeInput,
 } from '../../types';
 import type {
 	Game, GamesData, GamesSettings, HoardTitle, ReadingData, ReadingCustomColumn, TagDefinition,
@@ -16,7 +16,6 @@ import type { Fm } from '../../storage/storageTypes';
 
 // WatchLog's load-time corrections, applied once while converting its data.
 
-const COLUMN_TYPES = ['text', 'number', 'select'] as const;
 const PLATFORM_COLOR = '#888780';
 
 export function isoOf(v: unknown): string | null {

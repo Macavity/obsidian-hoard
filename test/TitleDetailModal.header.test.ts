@@ -208,6 +208,14 @@ describe('TitleDetailModal.refreshTrailer', () => {
 		expect(shown).toEqual([t('notices.api.requestFailed')]);
 	});
 
+	it('asks for the key when none is set, rather than saying nothing was found', async () => {
+		const { modal, dataManager } = build(mkTitle(), { trailer: { status: 'nokey' } });
+		const { btn, container } = els();
+		await modal.refreshTrailer(btn, container);
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'nokey' });
+		expect(shown.at(-1)).toBe(t('notices.api.tmdbTokenRequired'));
+	});
+
 	it('looks again on an explicit refresh even when the last check was fresh', async () => {
 		const { modal, apiService, dataManager } = build(mkTitle(), { trailer: { status: 'notfound' } });
 		dataManager.lookupDue.mockReturnValue(false);

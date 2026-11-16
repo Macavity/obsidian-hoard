@@ -7,10 +7,10 @@ const isNoneList = (v: unknown): boolean => Array.isArray(v) && v.length === 1 &
 type Check = { at: string; result: 'notfound' };
 
 /** Which cache field a legacy `'none'` marker stood for, and the check that now records it. */
-const MARKERS: { kind: ApiCheckKind; fields: string[]; isMarker: (field: string, v: unknown) => boolean }[] = [
-	{ kind: 'trailer', fields: ['trailerUrl'], isMarker: (_f, v) => v === NONE },
-	{ kind: 'credits', fields: ['director', 'cast'], isMarker: (_f, v) => isNoneList(v) },
-	{ kind: 'studio', fields: ['studio'], isMarker: (_f, v) => isNoneList(v) },
+const MARKERS: { kind: ApiCheckKind; fields: string[]; isMarker: (v: unknown) => boolean }[] = [
+	{ kind: 'trailer', fields: ['trailerUrl'], isMarker: (v) => v === NONE },
+	{ kind: 'credits', fields: ['director', 'cast'], isMarker: isNoneList },
+	{ kind: 'studio', fields: ['studio'], isMarker: isNoneList },
 ];
 
 function migrateEntry(entry: Record<string, unknown>, at: string): { entry: Record<string, unknown>; changed: boolean } {
@@ -27,7 +27,7 @@ function migrateEntry(entry: Record<string, unknown>, at: string): { entry: Reco
 	}
 	for (const m of MARKERS) {
 		for (const field of m.fields) {
-			if (!m.isMarker(field, entry[field])) continue;
+			if (!m.isMarker(entry[field])) continue;
 			dropped.add(field);
 			note(m.kind);
 		}

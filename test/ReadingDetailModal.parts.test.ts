@@ -62,11 +62,34 @@ function build(o: Opts = {}) {
 		renderVaultRow: (row: HTMLElement) => void;
 		renderExternalLinkActions: (c: HTMLElement) => void;
 		close: () => void;
+		renderFooter: (item: Book | Manga) => void;
+		contentEl: HTMLElement;
 	};
 	return { modal: x, readingData, apiService, onChanged, openFile, getAbstractFileByPath };
 }
 
 beforeEach(() => { shown.length = 0; });
+
+describe('ReadingDetailModal favorite heart', () => {
+	it('ignores a second click while the write is pending', async () => {
+		const { modal, readingData } = build();
+		let favorite = false;
+		const setFavorite = vi.fn(async (_mode: string, _id: string, value: boolean) => {
+			await Promise.resolve();
+			favorite = value;
+		});
+		Object.assign(readingData, { setFavorite });
+		readingData.getBook.mockImplementation(() => ({ ...baseBook(), favorite }));
+		modal.contentEl = document.createElement('div');
+		modal.renderFooter(baseBook());
+		const heart = modal.contentEl.querySelector('.hoard-detail__favorite-btn') as HTMLElement;
+		heart.click();
+		heart.click();
+		await flush();
+		expect(setFavorite).toHaveBeenCalledOnce();
+		expect(setFavorite).toHaveBeenCalledWith('book', 'b1', true);
+	});
+});
 
 describe('ReadingDetailModal.refetchCoverFromId', () => {
 	it('warns without a Google Books key', async () => {

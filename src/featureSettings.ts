@@ -1,4 +1,4 @@
-import { DEFAULT_READING_SETTINGS, DEFAULT_READING_STATUS_COLORS, READING_STATUSES } from './types';
+import { COLUMN_TYPES, DEFAULT_READING_SETTINGS, DEFAULT_READING_STATUS_COLORS, READING_STATUSES } from './types';
 import type {
 	GamesSavedFilterPreset, GamesSettings, ReadingCustomColumn, ReadingSavedFilterPreset, ReadingSettings,
 	RowsShelfLayoutEntry, TagDefinition,
@@ -10,10 +10,20 @@ import { defined, isRecord } from './storage/sharedHelpers';
 /** The `reading:` and `games:` settings blocks of the base and data.json, read field by field. */
 
 const DEFAULT_COLUMN_COLOR = '#5F5E5A';
-const COLUMN_TYPES = ['text', 'number', 'select'] as const;
 const SUB_TABS = ['books', 'manga'] as const;
 const FIELD_STYLES = ['fill', 'border'] as const;
 const RATING_MODES = ['all', 'has', 'none'] as const;
+
+/** What `stored` holds under keys this version does not know: a newer version's, kept so a save does not drop them. */
+function otherKeys(stored: Record<string, unknown>, known: readonly string[]): Record<string, unknown> {
+	return Object.fromEntries(Object.entries(stored).filter(([key]) => !known.includes(key)));
+}
+
+const GAMES_KEYS = ['defaultFolder', 'defaultStatus', 'statuses', 'types', 'platforms', 'rowsLayout', 'savedFilterPreset'];
+const READING_KEYS = [
+	'defaultFolder', 'defaultStatus', 'bookCustomFieldStyle', 'mangaCustomFieldStyle', 'statusColors',
+	'defaultSubTab', 'savedFilters', 'rowsLayout',
+];
 
 /** Stored entries that name a shelf; which ones exist is for `normalizeRowsLayout` to decide. */
 function readShelfEntry(item: unknown): RowsShelfLayoutEntry | undefined {
@@ -57,7 +67,9 @@ function readGamesPreset(v: unknown): GamesSavedFilterPreset | null | undefined 
 /** Games settings from the merged device-local and shared records; `defaults` fills what is missing or unreadable. */
 export function readGamesSettings(stored: Record<string, unknown>, defaults: GamesSettings): GamesSettings {
 	return {
+		...otherKeys(stored, GAMES_KEYS),
 		...defaults,
+		defaultFolder: readString(stored.defaultFolder, defaults.defaultFolder),
 		defaultStatus: readString(stored.defaultStatus, defaults.defaultStatus),
 		statuses: tagsOr(stored.statuses, defaults.statuses, false),
 		types: tagsOr(stored.types, defaults.types, false),
@@ -87,6 +99,7 @@ export function readReadingSettings(stored: Record<string, unknown>): ReadingSet
 		if (typeof color === 'string') colors[status] = color;
 	}
 	return {
+		...otherKeys(stored, READING_KEYS),
 		defaultFolder: readString(stored.defaultFolder, defaults.defaultFolder),
 		defaultStatus: readOneOf(stored.defaultStatus, READING_STATUSES, defaults.defaultStatus),
 		bookCustomFieldStyle: readOneOf(stored.bookCustomFieldStyle, FIELD_STYLES, 'fill'),

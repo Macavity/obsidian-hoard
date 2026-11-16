@@ -123,6 +123,8 @@ export default defineConfig([
       "src/settingsNormalize.ts",
       "src/settingsSplit.ts",
       "src/backup.ts",
+      "src/backupEntries.ts",
+      "src/featureSettings.ts",
     ],
     rules: {
       "@typescript-eslint/no-unsafe-type-assertion": "error",

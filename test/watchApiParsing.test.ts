@@ -366,10 +366,10 @@ describe('TMDB', () => {
 		]);
 	});
 
-	it('builds a row with empty values from wrong-typed fields', async () => {
-		respond({ total_pages: 'many', results: [null, { id: 'x', title: 5, name: 5, release_date: 5, poster_path: 5 }] });
+	it('drops rows without a numeric id and builds the others with empty values', async () => {
+		respond({ total_pages: 'many', results: [null, { id: 'x', title: 'no id' }, { id: 7, title: 5, name: 5, release_date: 5, poster_path: 5 }] });
 		expect(await tmdb().searchTmdb('x', 'series')).toEqual([{
-			imdbId: '0', title: '', mediaType: 'tv', episodes: 0, episodeDuration: 0, releaseDate: '', url: '', seasons: [], posterUrl: undefined,
+			imdbId: '7', title: '', mediaType: 'tv', episodes: 0, episodeDuration: 0, releaseDate: '', url: '', seasons: [], posterUrl: undefined,
 		}]);
 	});
 

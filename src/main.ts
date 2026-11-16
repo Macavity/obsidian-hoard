@@ -218,7 +218,7 @@ export default class HoardPlugin extends Plugin {
 	onunload(): void {
 		// synchronously flush pending debounced saves so no in-memory edits are lost
 		this.dataManager.flushPendingSaveSync();
-		this.dataManager.flushPosterSaveSync();
+		this.dataManager.flushLocalData();
 		this.dataManager.flushQueuedSaveSync();
 		const flushes = [this.readingDataManager?.flushPending(), this.gameDataManager?.flushPending()];
 		this.posterService?.destroy();

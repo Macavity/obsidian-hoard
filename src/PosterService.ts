@@ -227,7 +227,11 @@ export class PosterService {
 		if (imdbId) {
 			// unknown kind: series first, the movie endpoint answers series ids with a foreign film
 			for (const k of kind ? [kind] : (['tv', 'movie'] as const)) {
-				const hit = await api.getCinemetaDetails(imdbId, k);
+				const hit = await api.getCinemetaDetails(imdbId, k).catch((e: unknown) => {
+					// no such record of this kind: try the other one, then the title search
+					if (lookupOfError(e).status === 'notfound') return null;
+					throw e;
+				});
 				if (hit?.posterUrl) return hit.posterUrl;
 			}
 		}

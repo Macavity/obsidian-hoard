@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, normalizeRowsLayout } from './types';
+import { COLUMN_TYPES, DEFAULT_SETTINGS, normalizeRowsLayout } from './types';
 import type { CustomListColumn, HoardPluginSettings, RatingTier, TagDefinition } from './types';
 import { isRecord } from './storage/sharedHelpers';
 import { at, readList, readOneOf, readRecord } from './storage/read';
@@ -53,8 +53,6 @@ function readTier(item: unknown): RatingTier | undefined {
 	const color = at(item, 'color');
 	return typeof label === 'string' && typeof color === 'string' ? { ...readRecord(item), label, color } : undefined;
 }
-
-const COLUMN_TYPES = ['text', 'number', 'select'] as const;
 
 /** A column needs its id, label and type; its other keys (options, widths …) stay as stored. */
 function readColumn(item: unknown): CustomListColumn | undefined {

@@ -444,8 +444,8 @@ export class DataManager {
 			: { ...omit(title, 'dateFavorited'), favorite });
 	}
 
-	/** Flush pending cache saves during plugin unload. */
-	flushPosterSaveSync(): void {
+	/** Flush the pending device-local data (cache, drafts, settings) during plugin unload. */
+	flushLocalData(): void {
 		void this.local.flush();
 	}
 
