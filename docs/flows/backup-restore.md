@@ -6,7 +6,9 @@ source:
   - src/backup.ts
   - src/SettingsTab.ts
   - src/main.ts
-source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
+  - src/backupEntries.ts
+  - src/featureSettings.ts
+source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
 # Backup and restore
@@ -30,7 +32,8 @@ around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../
 ## Restore
 
 1. `parseBackup` validates the file's shape (sections present, lists are arrays; entries
-   themselves are not checked) before anything is written. Order: invalid JSON is `parseJson`, a
+   themselves are read field by field: an entry without a text `id` and `title` is dropped, any other
+   wrong field takes its empty value) before anything is written. Order: invalid JSON is `parseJson`, a
    non-object `notObject`, anything else that is not a version-2 Hoard file (WatchLog exports
    included) `unsupportedFormat` (WatchLog data
    comes in through the [import wizard](watchlog-import.md)). A rejected file

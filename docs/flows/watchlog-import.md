@@ -14,7 +14,8 @@ source:
   - src/WatchLogReport.ts
   - src/main.ts
   - src/import/watchlog/registerTypes.ts
-source_commit: 4e5b4d91c9d986b410443b4eaffc84cbee9f6145
+  - src/import/watchlog/schema1Read.ts
+source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
 # WatchLog import
@@ -22,7 +23,9 @@ source_commit: 4e5b4d91c9d986b410443b4eaffc84cbee9f6145
 Hoard never touches WatchLog data on its own: it starts as a fresh install in its own root and only
 *offers* the import. Trigger: `startVaultStorage` ([startup](startup.md)) or the settings entry
 `openWatchLogImport`. User-visible behaviour: [README](../../README.md#importing-from-watchlog). Only
-`src/import/watchlog/` and the wizard know WatchLog names ([modules/import](../modules/import.md)).
+`src/import/watchlog/` and the wizard know WatchLog names ([modules/import](../modules/import.md)). The
+schema-1 `data.json` is read from `unknown` (`prepareData`): an entry without id and title is reported
+and skipped, a wrong-typed field is dropped, and the import goes on.
 
 ```mermaid
 flowchart TD

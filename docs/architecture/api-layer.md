@@ -12,7 +12,9 @@ source:
   - src/openLibraryApi.ts
   - src/steamStoreApi.ts
   - src/apiCheckQueue.ts
-source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
+  - src/lookup.ts
+  - src/storage/read.ts
+source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
 # API layer
@@ -105,17 +107,40 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
   order is TMDB key → OMDb key → Cinemeta (by IMDb id, else title search with year; with no kind signal
   series before movie), regardless of
   `activeApi`; the `ApiService` for Cinemeta arrives through the injected `getApi` from `main.ts`.
-  The result is written by `DataManager.updatePosterUrl` writes it into the note only when the note has none
-  (or always on explicit refresh). A failure is not cached as `'none'`, so a bad key does not burn
-  "no poster" into every title.
+  A found poster is written by `DataManager.updatePosterUrl` into the note only when the note has none
+  (or always on explicit refresh); any other outcome is recorded as a lookup check (see
+  [lookup results](#lookup-results-and-fetch-state)), so a bad key or an offline moment is a retryable
+  `transient`, never "no poster".
 - [ApiCheckQueue](../../src/apiCheckQueue.ts): at most 2 parallel tasks, 250 ms apart. Used by
   `DataManager.refillSeasons` and `refreshAiring`; the result (`ok | transient | nokey | notfound`)
   is stamped into `cache.apiCheck` with a per-outcome retry deadline (`apiCheckDue`), and
   `resetNoKeyChecks` re-arms `nokey` checks when a key changes. Community rating, airing, season
   refill and collections stay keyed (OMDb/TMDB/AniList/MAL). `fetchCredits` tries Cinemeta first
-  when it is the effective source, else after TMDB/OMDb; Cinemeta errors propagate so the detail
-  modal leaves credits unfetched and retries. The studio backfill is skipped for movies/TV without
-  a TMDB key instead of storing `none`.
+  when it is the effective source, else after TMDB/OMDb. The studio lookup of a movie/TV without a
+  TMDB key is recorded as `nokey`.
+
+## Lookup results and fetch state
+
+[lookup.ts](../../src/lookup.ts) keeps "nothing found" apart from "failed". A lookup returns a
+`LookupResult<T>`: `found { value }`, `notfound`, `failed` or `nokey` (no key or id, so not asked).
+`attempt(call)` adapts one request (a value is `found`, null or `[]` is `notfound`, a throw is `failed`,
+or what `onError` makes of it); `lookupOfError` ([ApiService.ts](../../src/ApiService.ts)) is that
+`onError` for an `ApiError` (404 is `notfound`, a missing or rejected credential is `nokey`, the rest
+`failed`). `firstFound(sources)` runs an ordered list: the first `found` wins, a throwing source counts as
+`failed`, `nokey` sources are skipped, and the verdict of the rest is `failed` over `notfound` over `nokey`
+(an empty list is `nokey`). Trailer, credits, studio and poster chains and the ID lookups all run through
+it; a source reports failure instead of swallowing it in a `catch`.
+
+`checkResultOf` maps a result to the cache's `ApiCheckResult` (`found` records nothing, `notfound` is
+`notfound`, `failed` is `transient`, `nokey` is `nokey`) and `DataManager.recordLookup` stamps it into
+`apiCheck`. Deadlines, "found is final" and the migration of the old `'none'` markers:
+[entry cache](../concepts/entry-cache.md#fetch-state).
+
+Responses are read from `unknown` with the readers of [read.ts](../../src/storage/read.ts) (`readString`,
+`readNumber`, `readList`, `at`, ...), never asserted: a field of the wrong type (Jikan `studios: null`, a
+TMDB cast item without a name, an AniList `trailer: "x"`) becomes its empty value and the entry is still
+built. `no-unsafe-type-assertion` is on for the API modules, so they stay that way
+([storage](storage.md#reading-outside-data)).
 
 ## Where to change what
 
