@@ -76,7 +76,8 @@ ${data}
 	});
 
 	it('still reports a block that is not JSON as corrupt', async () => {
-		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		expect(await load('{')).toBeNull();
+		expect(warn).toHaveBeenCalled();
 	});
 });

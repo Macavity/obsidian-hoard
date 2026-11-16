@@ -357,4 +357,25 @@ describe('TitleDetailModal favorite heart', () => {
 		expect(setFavorite).toHaveBeenNthCalledWith(1, 't1', true);
 		expect(setFavorite).toHaveBeenNthCalledWith(2, 't1', false);
 	});
+
+	it('ignores a second click while the write is pending', async () => {
+		const title = mkTitle();
+		const { modal, dataManager } = build(title);
+		let stored: HoardTitle = title;
+		dataManager.getTitle.mockImplementation(() => stored);
+		const setFavorite = vi.fn(async (_id: string, favorite: boolean) => {
+			await Promise.resolve();
+			stored = { ...stored, favorite };
+		});
+		Object.assign(dataManager, { setFavorite });
+		const parent = document.createElement('div');
+		(modal as unknown as { renderFooter: (p: HTMLElement) => void }).renderFooter(parent);
+		const heart = parent.querySelector('.hoard-detail__favorite-btn') as HTMLElement;
+		heart.click();
+		heart.click();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(setFavorite).toHaveBeenCalledOnce();
+		expect(setFavorite).toHaveBeenCalledWith('t1', true);
+		expect(heart.classList.contains('is-active')).toBe(true);
+	});
 });

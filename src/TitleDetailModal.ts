@@ -1020,9 +1020,14 @@ export class TitleDetailModal extends Modal {
 			paintFavoriteButton(favBtn, fav);
 		};
 		paintFav();
+		let writing = false;
 		favBtn.addEventListener('click', () => {
+			// the view is replaced only when the write is done, so a second click would read the old state
+			if (writing) return;
+			writing = true;
 			// the write replaces the view, so repaint from the fresh one once it is done
-			void this.dataManager.setFavorite(this.title.id, !this.title.favorite).then(() => {
+			void this.dataManager.setFavorite(this.title.id, !this.title.favorite).finally(() => {
+				writing = false;
 				this.refreshTitle();
 				this.markChanged();
 				paintFav();
