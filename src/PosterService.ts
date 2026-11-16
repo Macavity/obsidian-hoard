@@ -4,7 +4,8 @@ import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from './types';
 import { getApiGroupForType } from './types';
 import { httpsOrEmpty } from './httpsUrl';
-import { found, NOT_FOUND, FAILED, type LookupResult } from './lookup';
+import { found, attempt, firstFound, FAILED, NO_KEY, type LookupResult, type LookupSource } from './lookup';
+import { at, readList, readOptionalString, readString } from './storage/read';
 import { jsonPost, requestVia, type ApiService } from './ApiService';
 import { resolveJikanEndpoint, type JikanEndpoint } from './jikanBase';
 
@@ -25,59 +26,6 @@ interface QueueItem {
 	resolve: (url: string | null) => void;
 	/** explicit refresh: replace the title's poster */
 	overwrite: boolean;
-}
-
-interface JikanImagesShape {
-	data?: {
-		images?: {
-			jpg?: {
-				image_url?: string;
-				large_image_url?: string;
-			};
-		};
-	};
-	// search shape: data is an array
-}
-
-interface JikanSearchShape {
-	data?: Array<{
-		images?: {
-			jpg?: {
-				image_url?: string;
-				large_image_url?: string;
-			};
-		};
-	}>;
-}
-
-interface TmdbMultiResult {
-	results?: Array<{ poster_path?: string | null }>;
-}
-
-interface TmdbPosterSearchResult {
-	results?: Array<{
-		poster_path?: string | null;
-		release_date?: string;
-		first_air_date?: string;
-	}>;
-}
-
-interface TmdbFindPosterResult {
-	movie_results?: Array<{ poster_path?: string | null }>;
-	tv_results?: Array<{ poster_path?: string | null }>;
-}
-
-interface OmdbResult {
-	Poster?: string;
-	Response?: string;
-}
-
-interface AniListPosterResponse {
-	data?: {
-		Media?: {
-			coverImage?: { large?: string | null; medium?: string | null } | null;
-		} | null;
-	};
 }
 
 export class PosterService {
@@ -190,8 +138,8 @@ export class PosterService {
 		const settings = this.getSettings();
 		const group = getApiGroupForType(title.type, settings.typeApiMapping);
 		if (group !== 'anime' && group !== 'movie') return null;
-		const url = await (group === 'anime' ? this.fetchAnimePoster(title) : this.fetchMediaPoster(title));
-		return url ? found(url) : NOT_FOUND;
+		if (group === 'anime') return attempt(() => this.fetchAnimePoster(title));
+		return firstFound(this.mediaSources(title, settings));
 	}
 
 	private cleanTitleForSearch(name: string): string {
@@ -210,25 +158,17 @@ export class PosterService {
 	private async fetchAnimePoster(title: HoardTitle): Promise<string | null> {
 		if (title.anilistId && title.anilistId > 0) {
 			const gql = `query ($id: Int) { Media(id: $id, type: ANIME) { coverImage { large medium } } }`;
-			const data = (await this.postJson(ANILIST_ENDPOINT, {
-				query: gql,
-				variables: { id: title.anilistId },
-			})) as AniListPosterResponse | null;
-			const cover = data?.data?.Media?.coverImage;
-			return httpsOrEmpty(cover?.large ?? cover?.medium) || null;
+			const data = await this.postJson(ANILIST_ENDPOINT, { query: gql, variables: { id: title.anilistId } });
+			const cover = at(data, 'data', 'Media', 'coverImage');
+			return httpsOrEmpty(readString(at(cover, 'large')) || readString(at(cover, 'medium'))) || null;
 		}
 		if (title.malId) {
-			const url = `${this.jikan().base}/anime/${title.malId}`;
-			const data = (await this.fetchJson(url)) as JikanImagesShape | null;
-			const jpg = data?.data?.images?.jpg;
-			return httpsOrEmpty(jpg?.large_image_url ?? jpg?.image_url) || null;
+			const data = await this.fetchJson(`${this.jikan().base}/anime/${title.malId}`);
+			return jikanCover(at(data, 'data', 'images', 'jpg'));
 		}
 		const q = encodeURIComponent(this.cleanTitleForSearch(title.title));
-		const url = `${this.jikan().base}/anime?q=${q}&limit=1`;
-		const data = (await this.fetchJson(url)) as JikanSearchShape | null;
-		const first = data?.data?.[0];
-		const jpg = first?.images?.jpg;
-		return httpsOrEmpty(jpg?.large_image_url ?? jpg?.image_url) || null;
+		const data = await this.fetchJson(`${this.jikan().base}/anime?q=${q}&limit=1`);
+		return jikanCover(at(data, 'data', 0, 'images', 'jpg'));
 	}
 
 	/** Extracts an IMDb id (`tt…`) from an external link, or '' when absent. */
@@ -255,46 +195,24 @@ export class PosterService {
 	 * Best poster from TMDB search results: prefers a candidate whose release year matches the entry,
 	 * else the first result that has one. Returns the raw poster_path, not the full URL.
 	 */
-	private pickTmdbPoster(
-		results: TmdbPosterSearchResult['results'],
-		year: number | null,
-	): string | null {
-		if (!results || results.length === 0) return null;
-		if (year !== null) {
-			const yearStr = String(year);
-			const matched = results.find((r) => {
-				const date = r.release_date ?? r.first_air_date ?? '';
-				return date.startsWith(yearStr) && r.poster_path;
-			});
-			if (matched?.poster_path) return matched.poster_path;
-		}
-		const first = results.find((r) => r.poster_path);
-		return first?.poster_path ?? null;
+	private pickTmdbPoster(results: unknown, year: number | null): string | null {
+		const candidates = readList(results, (r) => {
+			const path = readOptionalString(at(r, 'poster_path'));
+			if (!path) return undefined;
+			const date = readOptionalString(at(r, 'release_date')) ?? readString(at(r, 'first_air_date'));
+			return { path, date };
+		});
+		const matched = year === null ? undefined : candidates.find((c) => c.date.startsWith(String(year)));
+		return (matched ?? candidates[0])?.path ?? null;
 	}
 
-	/** TMDB, then OMDb, then Cinemeta: a clean miss moves on, a failed request never ends as a final 'none'. */
-	private async fetchMediaPoster(title: HoardTitle): Promise<string | null> {
-		const settings = this.getSettings();
-		const tmdb = settings.tmdbApiKey ? await this.tryTmdbPoster(title, settings) : { poster: null, failure: null };
-		if (tmdb.poster) return tmdb.poster;
-		const omdb = settings.omdbApiKey ? await this.fetchOmdbPoster(title, settings) : null;
-		const poster = omdb ?? (await this.fetchCinemetaPoster(title));
-		if (!poster && tmdb.failure) throw tmdb.failure;
-		return poster;
-	}
-
-	/** A TMDB failure is returned, not thrown, when another source can still answer; without one it propagates. */
-	private async tryTmdbPoster(
-		title: HoardTitle,
-		settings: HoardPluginSettings,
-	): Promise<{ poster: string | null; failure: Error | null }> {
-		try {
-			return { poster: await this.fetchTmdbPoster(title, settings), failure: null };
-		} catch (err) {
-			// a rejected TMDB token used to dead-end here, leaving a working OMDb key unused
-			if (!settings.omdbApiKey) throw err;
-			return { poster: null, failure: err instanceof Error ? err : new Error(String(err)) };
-		}
+	/** TMDB, then OMDb, then Cinemeta; a source without a key (or Cinemeta without an api) reports nokey. */
+	private mediaSources(title: HoardTitle, settings: HoardPluginSettings): LookupSource<string>[] {
+		return [
+			() => (settings.tmdbApiKey ? attempt(() => this.fetchTmdbPoster(title, settings)) : Promise.resolve(NO_KEY)),
+			() => (settings.omdbApiKey ? attempt(() => this.fetchOmdbPoster(title, settings)) : Promise.resolve(NO_KEY)),
+			() => (this.getApi ? attempt(() => this.fetchCinemetaPoster(title)) : Promise.resolve(NO_KEY)),
+		];
 	}
 
 	/** Keyless fallback: by IMDb id when known, else a title search. Errors propagate (never cached as 'none'). */
@@ -331,82 +249,55 @@ export class PosterService {
 		return (matched ?? withPoster[0])?.posterUrl || null;
 	}
 
-	private async fetchTmdbPoster(title: HoardTitle, settings: HoardPluginSettings): Promise<string | null> {
-		const searchName = this.cleanTitleForSearch(title.title);
-		const imdbId = this.extractImdbId(title.externalLink);
-		const year = this.getReleaseYear(title);
-		const kind = this.resolveMediaKind(title);
+	/** What the three poster searches share: the cleaned name, IMDb id, release year and media kind. */
+	private posterQuery(title: HoardTitle) {
+		return {
+			name: this.cleanTitleForSearch(title.title),
+			imdbId: this.extractImdbId(title.externalLink),
+			year: this.getReleaseYear(title),
+			kind: this.resolveMediaKind(title),
+		};
+	}
 
-		{
-			const headers = { Authorization: `Bearer ${settings.tmdbApiKey}` };
-			// 1. most precise: resolve by IMDb id directly
-			if (imdbId) {
-				const url = `${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`;
-				const data = (await this.fetchJson(url, headers)) as TmdbFindPosterResult | null;
-				const hit = data?.movie_results?.[0] ?? data?.tv_results?.[0] ?? null;
-				if (hit?.poster_path) return `${TMDB_IMG_BASE}${hit.poster_path}`;
-				// no poster on the exact match — fall through to a typed/untyped search
-			}
-			// 2/3/4. type-aware movie/tv search with year preference
-			if (kind !== null) {
-				const endpoint = kind === 'movie' ? 'movie' : 'tv';
-				const q = encodeURIComponent(searchName);
-				const url = `${TMDB_BASE}/search/${endpoint}?query=${q}&page=1`;
-				const data = (await this.fetchJson(url, headers)) as TmdbPosterSearchResult | null;
-				const poster = this.pickTmdbPoster(data?.results, year);
-				if (poster) return `${TMDB_IMG_BASE}${poster}`;
-				return null;
-			}
-			// safety net: no type signal → untyped multi-search
-			const q = encodeURIComponent(searchName);
-			const url = `${TMDB_BASE}/search/multi?query=${q}&page=1`;
-			const data = (await this.fetchJson(url, headers)) as TmdbMultiResult | null;
-			const poster = data?.results?.[0]?.poster_path;
-			if (poster) return `${TMDB_IMG_BASE}${poster}`;
-			return null;
+	private async fetchTmdbPoster(title: HoardTitle, settings: HoardPluginSettings): Promise<string | null> {
+		const { name, imdbId, year, kind } = this.posterQuery(title);
+		const headers = { Authorization: `Bearer ${settings.tmdbApiKey}` };
+		const q = encodeURIComponent(name);
+		// 1. most precise: resolve by IMDb id directly; no poster on the exact match falls through to a search
+		if (imdbId) {
+			const data = await this.fetchJson(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, headers);
+			const hit = at(data, 'movie_results', 0) ?? at(data, 'tv_results', 0);
+			const path = readOptionalString(at(hit, 'poster_path'));
+			if (path) return `${TMDB_IMG_BASE}${path}`;
 		}
+		// 2. type-aware search with year preference; 3. no type signal: untyped multi-search
+		if (kind !== null) {
+			const data = await this.fetchJson(`${TMDB_BASE}/search/${kind}?query=${q}&page=1`, headers);
+			const path = this.pickTmdbPoster(at(data, 'results'), year);
+			return path ? `${TMDB_IMG_BASE}${path}` : null;
+		}
+		const data = await this.fetchJson(`${TMDB_BASE}/search/multi?query=${q}&page=1`, headers);
+		const path = readOptionalString(at(data, 'results', 0, 'poster_path'));
+		return path ? `${TMDB_IMG_BASE}${path}` : null;
 	}
 
 	private async fetchOmdbPoster(title: HoardTitle, settings: HoardPluginSettings): Promise<string | null> {
-		const searchName = this.cleanTitleForSearch(title.title);
-		const imdbId = this.extractImdbId(title.externalLink);
-		const year = this.getReleaseYear(title);
-		const kind = this.resolveMediaKind(title);
-
-		{
-			const key = encodeURIComponent(settings.omdbApiKey);
-			// 1. most precise: resolve by IMDb id directly
-			if (imdbId) {
-				const url = `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${key}`;
-				const data = (await this.fetchJson(url)) as OmdbResult | null;
-				const poster = data?.Poster;
-				if (poster && httpsOrEmpty(poster)) return poster;
-				// no poster on the exact match — fall through to a typed/untyped search
-			}
-			const q = encodeURIComponent(searchName);
-			// 2/3/4. type-aware movie/series search, preferring the matching year
-			if (kind !== null) {
-				const omdbType = kind === 'movie' ? 'movie' : 'series';
-				const base = `${OMDB_BASE}/?t=${q}&type=${omdbType}&apikey=${key}`;
-				let poster: string | undefined;
-				if (year !== null) {
-					const data = (await this.fetchJson(`${base}&y=${year}`)) as OmdbResult | null;
-					poster = data?.Poster;
-				}
-				if (!poster || poster === 'N/A') {
-					const data = (await this.fetchJson(base)) as OmdbResult | null;
-					poster = data?.Poster;
-				}
-				if (poster && httpsOrEmpty(poster)) return poster;
-				return null;
-			}
-			// safety net: no type signal → untyped lookup
-			const url = `${OMDB_BASE}/?t=${q}&apikey=${key}`;
-			const data = (await this.fetchJson(url)) as OmdbResult | null;
-			const poster = data?.Poster;
-			if (poster && httpsOrEmpty(poster)) return poster;
-			return null;
+		const { name, imdbId, year, kind } = this.posterQuery(title);
+		const key = encodeURIComponent(settings.omdbApiKey);
+		const posterAt = async (url: string): Promise<string | null> => {
+			const poster = readString(at(await this.fetchJson(url), 'Poster'));
+			return httpsOrEmpty(poster) ? poster : null;
+		};
+		// 1. most precise: resolve by IMDb id directly; no poster on the exact match falls through to a search
+		if (imdbId) {
+			const poster = await posterAt(`${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${key}`);
+			if (poster) return poster;
 		}
+		const base = `${OMDB_BASE}/?t=${encodeURIComponent(name)}&apikey=${key}`;
+		// 2. type-aware search, preferring the matching year; 3. no type signal: untyped lookup
+		if (kind === null) return posterAt(base);
+		const typed = `${base}&type=${kind === 'movie' ? 'movie' : 'series'}`;
+		return (year !== null && (await posterAt(`${typed}&y=${year}`))) || posterAt(typed);
 	}
 
 	/** throw:false + the shared classifier, so processQueue can tell a real failure from "no poster". */
@@ -421,6 +312,10 @@ export class PosterService {
 	private request(params: RequestUrlParam): Promise<unknown> {
 		return requestVia(this.jikan(), params);
 	}
+}
+
+function jikanCover(jpg: unknown): string | null {
+	return httpsOrEmpty(readString(at(jpg, 'large_image_url')) || readString(at(jpg, 'image_url'))) || null;
 }
 
 function cinemetaKinds(kind: 'movie' | 'tv' | null): Array<'movie' | 'series'> {

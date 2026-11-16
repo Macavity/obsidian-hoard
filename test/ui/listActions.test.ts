@@ -66,7 +66,7 @@ describe('ListTab.handleCardsVisible', () => {
 		poster.removeClass.mockClear();
 		enqueue = vi.fn(() => Promise.resolve('http://new'));
 		host = make({
-			dataManager: { getTitles: vi.fn(() => titles) },
+			dataManager: { getTitles: vi.fn(() => titles), lookupDue: (id: string) => !titles.find((t) => t.id === id)?.posterUrl },
 			plugin: { posterService: { enqueue } },
 			applyPosterToCard: vi.fn(),
 		});

@@ -115,11 +115,6 @@ export interface PosterCardSpec {
 	textUnder?: boolean;
 	/** Small always-visible corner marker left of the ⋮ button (Games wishlist). `icon` is a Lucide id. */
 	flag?: { icon: string; label: string };
-	/**
-	 * Called when the poster <img> fails to load (e.g. persist the 'none' sentinel). The has-poster
-	 * class is already removed.
-	 */
-	onPosterError?: () => void;
 	menuAriaLabel?: string;
 	/** Omit for no ⋮ button. */
 	menuItems?: CardMenuItem[];
@@ -168,7 +163,6 @@ export function buildPosterCard(
 		// restores the placeholder. Attach onerror before src so a cached failure still fires.
 		img.onerror = () => {
 			card.removeClass('has-poster');
-			spec.onPosterError?.();
 		};
 		card.addClass('has-poster');
 		img.src = spec.posterUrl;

@@ -723,8 +723,8 @@ export class ListTab implements TabInstance {
 			}
 			const title = titleById.get(titleId);
 			if (!title) continue;
-			// skip titles that already have a poster
-			if (title.posterUrl) continue;
+			// has a poster, or a lookup that is not due yet
+			if (!this.dataManager.lookupDue(title.id, 'poster')) continue;
 
 			const placeholder = card.querySelector('.hoard-card__poster-placeholder');
 			placeholder?.addClass('is-loading');

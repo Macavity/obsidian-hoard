@@ -1538,8 +1538,8 @@ export class AirtimeTab implements TabInstance {
 
 			const title = this.dataManager.getTitle(titleId);
 			if (!title) continue;
-			// same gate as the Watchlist cards: a poster is set
-			if (title.posterUrl) continue;
+			// same gate as the Watchlist cards
+			if (!this.dataManager.lookupDue(title.id, 'poster')) continue;
 
 			const placeholder = cell.querySelector('.hoard-card__poster-placeholder');
 			placeholder?.addClass('is-loading');
