@@ -4,6 +4,7 @@ import { httpsOrEmpty } from './httpsUrl';
 import type { MediaSource } from './apiSources';
 import { t, type TranslationKey } from './i18n';
 import { TENRAI_BASE, type JikanEndpoint } from './jikanBase';
+import { ApiError, apiLabel, httpError, isKeyless, type ApiErrorReason, type ApiSource } from './api/apiError';
 import type {
 	AnimeSearchResult,
 	MediaSearchResult,
@@ -34,6 +35,8 @@ import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLib
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { isCreditsNone, normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
+
+export type { ApiSource } from './api/apiError';
 
 export type Airing = NonNullable<EntryCache['airing']>;
 
@@ -385,64 +388,13 @@ interface JikanMangaItem {
 	url?: string | null;
 }
 
-/** Which service a failed request went to. */
-export type ApiSource = 'tmdb' | 'omdb' | 'jikan' | 'anilist' | 'googleBooks' | 'rawg' | 'igdb' | 'twitch' | 'cinemeta' | 'openLibrary' | 'steamStore' | 'unknown';
-
-/** Why it failed. 'no-key' = none set; 'auth' = the credential was rejected. */
-type ApiErrorReason =
-	| 'no-key' | 'auth' | 'not-enabled' | 'rate-limited' | 'not-found' | 'server' | 'http' | 'parse' | 'network';
-
-class ApiError extends Error {
-	source: ApiSource;
-	reason: ApiErrorReason;
-	status?: number;
-	/** raw response body, for reasons that need it (OMDb packs its cause in a JSON field) */
-	detail?: string;
-	/** the service's own wording, when it sent one worth showing verbatim */
-	providerMessage?: string;
-	constructor(
-		source: ApiSource,
-		reason: ApiErrorReason,
-		message: string,
-		status?: number,
-		detail?: string,
-		providerMessage?: string,
-	) {
-		super(message);
-		this.name = 'ApiError';
-		this.source = source;
-		this.reason = reason;
-		this.status = status;
-		this.detail = detail;
-		this.providerMessage = providerMessage;
-	}
-}
-
-/** Sources that take no credential, so "rejected your credentials" can never be the cause. */
-const KEYLESS_SOURCES: ReadonlySet<ApiSource> = new Set<ApiSource>(['jikan', 'anilist', 'cinemeta', 'openLibrary', 'steamStore']);
-
-const API_LABELS: Record<ApiSource, string> = {
-	tmdb: 'TMDB',
-	omdb: 'OMDb',
-	jikan: 'MyAnimeList',
-	anilist: 'AniList',
-	googleBooks: 'Google Books',
-	rawg: 'RAWG',
-	igdb: 'IGDB',
-	twitch: 'Twitch',
-	cinemeta: 'Cinemeta',
-	openLibrary: 'Open Library',
-	steamStore: 'Steam Store',
-	unknown: 'The API', // dev-facing Error messages only; user text goes through serviceName()
-};
-
 /** Sources with a dedicated wording for the matching reason. */
 const AUTH_KEYS: ReadonlySet<ApiSource> = new Set<ApiSource>(['tmdb', 'omdb', 'googleBooks', 'rawg', 'twitch', 'igdb']);
 const RATE_LIMIT_KEYS: ReadonlySet<ApiSource> = new Set<ApiSource>(['omdb', 'jikan', 'anilist', 'googleBooks']);
 
 /** Service name for user text; the unknown source reads "The API". */
 function serviceName(source: ApiSource): string {
-	return source === 'unknown' ? t('notices.api.unknownService') : API_LABELS[source];
+	return source === 'unknown' ? t('notices.api.unknownService') : apiLabel(source);
 }
 
 /**
@@ -465,45 +417,6 @@ export function apiSourceFromUrl(url: string, jikanBase: string): ApiSource {
 		[STEAM_STORE_SEARCH, 'steamStore'],
 	];
 	return prefixes.find(([prefix]) => url.startsWith(prefix))?.[1] ?? 'unknown';
-}
-
-/**
- * HTTP status → reason. Two services need the body as well: OMDb answers 401 for both a bad key
- * and an exhausted quota, and Google's 403 covers quota, a disabled API and a bad key alike.
- */
-function classifyHttp(source: ApiSource, status: number, body: string): ApiErrorReason {
-	// keyless service: a 403 is the service refusing to serve, never a bad credential.
-	// AniList answers 403 with "the API has been temporarily disabled" during their outages.
-	if (KEYLESS_SOURCES.has(source) && (status === 401 || status === 403)) return 'server';
-	if (source === 'omdb' && (status === 401 || status === 403)) {
-		return /limit/i.test(body) ? 'rate-limited' : 'auth';
-	}
-	if (source === 'googleBooks' && status === 403) {
-		if (/accessNotConfigured/i.test(body)) return 'not-enabled';
-		if (/rateLimitExceeded|dailyLimitExceeded|userRateLimitExceeded/i.test(body)) return 'rate-limited';
-		return 'auth';
-	}
-	if (status === 401 || status === 403) return 'auth';
-	if (status === 429) return 'rate-limited';
-	if (status === 404) return 'not-found';
-	if (status >= 500) return 'server';
-	return 'http';
-}
-
-/**
- * The service's own explanation, when the body carries one: GraphQL `errors[0].message` (AniList,
- * on failed and 200 responses alike) or a top-level `message` (Jikan says which upstream broke).
- * '' when there is none.
- */
-function providerMessageFrom(body: string): string {
-	try {
-		const data = JSON.parse(body) as { errors?: Array<{ message?: string }>; message?: unknown } | null;
-		const gql = Array.isArray(data?.errors) ? (data.errors[0]?.message ?? '').trim() : '';
-		if (gql) return gql;
-		return typeof data?.message === 'string' ? data.message.trim() : '';
-	} catch {
-		return '';
-	}
 }
 
 /** Maps any error from an API call to a short, user-facing explanation. */
@@ -541,7 +454,7 @@ export function apiErrorMessage(err: unknown): string {
 				: t('notices.api.rateLimited.other', { service });
 
 		case 'server':
-			return t(KEYLESS_SOURCES.has(err.source) ? 'notices.api.serverKeyless' : 'notices.api.server', { service, status });
+			return t(isKeyless(err.source) ? 'notices.api.serverKeyless' : 'notices.api.server', { service, status });
 
 		case 'not-found':
 			return t('notices.api.notFound', { service });
@@ -593,21 +506,16 @@ function outcomeOfError(err: unknown): { status: 'transient' | 'nokey' | 'notfou
 }
 
 /** Status check + JSON parse for a throw:false response. Throws ApiError on either failure. */
-function readApiResponse(source: ApiSource, r: { status: number; text: string; json: unknown }): unknown {
-	if (r.status < 200 || r.status >= 300) {
-		throw new ApiError(
-			source,
-			classifyHttp(source, r.status, r.text),
-			`${API_LABELS[source]} returned ${r.status}`,
-			r.status,
-			r.text,
-			providerMessageFrom(r.text),
-		);
-	}
+function readApiResponse(
+	source: ApiSource,
+	r: { status: number; text: string; json: unknown },
+	credentialSent = false,
+): unknown {
+	if (r.status < 200 || r.status >= 300) throw httpError(source, r.status, r.text, credentialSent);
 	try {
 		return r.json;
 	} catch {
-		throw new ApiError(source, 'parse', `${API_LABELS[source]} returned a non-JSON body`);
+		throw new ApiError(source, 'parse', `${apiLabel(source)} returned a non-JSON body`);
 	}
 }
 
@@ -618,8 +526,8 @@ function readApiResponse(source: ApiSource, r: { status: number; text: string; j
 function assertOmdbOk(data: { Response?: string; Error?: string }): void {
 	if (data.Response !== 'False') return;
 	const err = data.Error ?? '';
-	if (/limit/i.test(err)) throw new ApiError('omdb', 'rate-limited', err, undefined, err);
-	if (/key/i.test(err)) throw new ApiError('omdb', 'auth', err, undefined, err);
+	if (/limit/i.test(err)) throw new ApiError('omdb', 'rate-limited', err);
+	if (/key/i.test(err)) throw new ApiError('omdb', 'auth', err);
 }
 
 /**
@@ -633,12 +541,14 @@ function rethrowAuth(err: unknown): void {
 /**
  * One request with the shared timeout and error classifier. throw:false so the status survives —
  * requestUrl's default collapses every 4xx into one opaque Error, which is why a rejected key used
- * to look identical to "no results". `check` inspects a parsed 200 body (GraphQL errors).
+ * to look identical to "no results". `check` inspects a parsed 200 body (GraphQL errors);
+ * `credentialSent` says the request carried a login for a service that needs none.
  */
 async function requestJson(
 	source: ApiSource,
 	params: RequestUrlParam,
 	check?: (data: unknown) => void,
+	credentialSent = false,
 ): Promise<unknown> {
 	let timer: number | null = null;
 	const timeoutPromise = new Promise<never>((_, reject) => {
@@ -646,7 +556,7 @@ async function requestJson(
 	});
 	try {
 		const fetchPromise = requestUrl({ ...params, throw: false }).then((r) => {
-			const data = readApiResponse(source, r);
+			const data = readApiResponse(source, r, credentialSent);
 			check?.(data);
 			return data;
 		});
@@ -660,23 +570,16 @@ async function requestJson(
 }
 
 /** requestJson for any API; requests to the Jikan endpoint carry its headers (Basic auth). */
-export async function requestVia(
+export function requestVia(
 	jikan: JikanEndpoint,
 	params: RequestUrlParam,
 	check?: (source: ApiSource, data: unknown) => void,
 ): Promise<unknown> {
 	const source = apiSourceFromUrl(params.url, jikan.base);
 	const sent = source === 'jikan' ? { ...params, headers: { ...jikan.headers, ...params.headers } } : params;
-	try {
-		return await requestJson(source, sent, check && ((data) => check(source, data)));
-	} catch (err) {
-		// keyless Jikan reads 401/403 as an outage; with a login sent, it is the login being rejected
-		const loginSent = source === 'jikan' && !!sent.headers?.['Authorization'];
-		if (loginSent && err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-			throw new ApiError(source, 'auth', err.message, err.status, err.detail, err.providerMessage);
-		}
-		throw err;
-	}
+	// keyless Jikan reads 401/403 as an outage; with a login sent, it is the login being rejected
+	const credentialSent = source === 'jikan' && !!sent.headers?.['Authorization'];
+	return requestJson(source, sent, check && ((data) => check(source, data)), credentialSent);
 }
 
 /** Request params for a JSON POST. */
@@ -695,7 +598,7 @@ function assertNoGraphqlErrors(source: ApiSource, data: unknown): void {
 	if (!Array.isArray(errors) || errors.length === 0) return;
 	const message = errors[0]?.message ?? 'Request rejected';
 	const reason: ApiErrorReason = /rate limit|too many/i.test(message) ? 'rate-limited' : 'http';
-	throw new ApiError(source, reason, message, undefined, undefined, message);
+	throw new ApiError(source, reason, message, { providerMessage: message });
 }
 
 export class ApiService {
@@ -1948,7 +1851,7 @@ export class ApiService {
 			timer = window.setTimeout(() => reject(new ApiError('googleBooks', 'network', 'Request timed out')), API_TIMEOUT_MS);
 		});
 		try {
-			// classifyHttp splits Google's overloaded 403 (quota vs disabled API vs bad key) on the body
+			// the classification splits Google's overloaded 403 (quota vs disabled API vs bad key) on the body
 			const reqPromise = requestUrl({ url, throw: false }).then((r) => readApiResponse('googleBooks', r));
 			return await Promise.race([reqPromise, timeoutPromise]);
 		} catch (err) {
