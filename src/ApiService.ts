@@ -437,10 +437,24 @@ function assertOmdbOk(data: { Response?: string; Error?: string }): void {
 	if (/key/i.test(err)) throw new ApiError('omdb', 'auth', err);
 }
 
+/** Runs `work` against the shared API timeout; the timer is cleared either way. */
+async function withTimeout<T>(work: () => Promise<T>, timedOut: () => Error): Promise<T> {
+	let timer: number | null = null;
+	const timeout = new Promise<never>((_, reject) => {
+		timer = window.setTimeout(() => reject(timedOut()), API_TIMEOUT_MS);
+	});
+	try {
+		return await Promise.race([work(), timeout]);
+	} finally {
+		if (timer !== null) window.clearTimeout(timer);
+	}
+}
+
 /**
- * One request with the shared timeout and error classifier. throw:false so the status survives —
- * requestUrl's default collapses every 4xx into one opaque Error, which is why a rejected key used
- * to look identical to "no results". `check` inspects a parsed 200 body (GraphQL errors);
+ * One request with the shared timeout and error classifier; every ApiError of a request comes
+ * from here. throw:false so the status survives: requestUrl's default collapses every 4xx into one
+ * opaque Error, which is why a rejected key used to look identical to "no results". `check`
+ * inspects a parsed 200 body (GraphQL errors, a token response without a token);
  * `credentialSent` says the request carried a login for a service that needs none.
  */
 async function requestJson(
@@ -449,22 +463,18 @@ async function requestJson(
 	check?: (data: unknown) => void,
 	credentialSent = false,
 ): Promise<unknown> {
-	let timer: number | null = null;
-	const timeoutPromise = new Promise<never>((_, reject) => {
-		timer = window.setTimeout(() => reject(new ApiError(source, 'network', 'Request timed out')), API_TIMEOUT_MS);
-	});
 	try {
-		const fetchPromise = requestUrl({ ...params, throw: false }).then((r) => {
-			const data = readApiResponse(source, r, credentialSent);
-			check?.(data);
-			return data;
-		});
-		return await Promise.race([fetchPromise, timeoutPromise]);
+		return await withTimeout(
+			() => requestUrl({ ...params, throw: false }).then((r) => {
+				const data = readApiResponse(source, r, credentialSent);
+				check?.(data);
+				return data;
+			}),
+			() => new ApiError(source, 'network', 'Request timed out'),
+		);
 	} catch (err) {
 		if (err instanceof ApiError) throw err;
 		throw new ApiError(source, 'network', (err as Error)?.message ?? 'Network error');
-	} finally {
-		if (timer !== null) window.clearTimeout(timer);
 	}
 }
 
@@ -489,6 +499,16 @@ export function jsonPost(url: string, body: unknown, headers?: Record<string, st
 		headers: { 'Content-Type': 'application/json', ...(headers ?? {}) },
 		body: JSON.stringify(body),
 	};
+}
+
+/** A Twitch token response that carries a token. */
+type IssuedToken = TwitchTokenResponse & { access_token: string };
+
+/** A 200 without a token is Twitch refusing the client credentials. */
+function assertTokenIssued(data: unknown): asserts data is IssuedToken {
+	if (!(data as TwitchTokenResponse).access_token) {
+		throw new ApiError('twitch', 'auth', 'Twitch returned no access token');
+	}
 }
 
 /** GraphQL reports failures in a 200 body — AniList rate limits arrive this way. */
@@ -1740,28 +1760,13 @@ export class ApiService {
 	 */
 	private async googleBooksFetch(path: string): Promise<unknown> {
 		const key = this.googleBooksApiKey.trim();
-		if (!key) {
-			throw new ApiError('googleBooks', 'no-key', 'Google Books API key not set');
-		}
+		if (!key) throw new ApiError('googleBooks', 'no-key', 'Google Books API key not set');
 		const sep = path.includes('?') ? '&' : '?';
-		const url = `${GOOGLE_BOOKS_BASE}${path}${sep}key=${encodeURIComponent(key)}`;
-		let timer: number | null = null;
-		const timeoutPromise = new Promise<never>((_, reject) => {
-			timer = window.setTimeout(() => reject(new ApiError('googleBooks', 'network', 'Request timed out')), API_TIMEOUT_MS);
-		});
-		try {
-			// the classification splits Google's overloaded 403 (quota vs disabled API vs bad key) on the body
-			const reqPromise = requestUrl({ url, throw: false }).then((r) => readApiResponse('googleBooks', r));
-			return await Promise.race([reqPromise, timeoutPromise]);
-		} catch (err) {
-			if (err instanceof ApiError) throw err;
-			throw new ApiError('googleBooks', 'network', (err as Error)?.message ?? 'Network error');
-		} finally {
-			if (timer !== null) window.clearTimeout(timer);
-		}
+		// the classification splits Google's overloaded 403 (quota vs disabled API vs bad key) on the body
+		return await requestJson('googleBooks', { url: `${GOOGLE_BOOKS_BASE}${path}${sep}key=${encodeURIComponent(key)}` });
 	}
 
-	/** Throws GoogleBooksError on failure — see googleBooksErrorMessage. */
+	/** Throws ApiError on failure. */
 	async searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
 		const data = (await this.googleBooksFetch(
 			`/volumes?q=${encodeURIComponent(query)}&maxResults=10`,
@@ -1769,7 +1774,7 @@ export class ApiService {
 		return (data.items ?? []).slice(0, 10).map((item) => this.mapGoogleVolume(item));
 	}
 
-	/** Resolves on success, throws GoogleBooksError so the test can report the real cause. */
+	/** Resolves on success, throws ApiError so the test can report the real cause. */
 	async checkGoogleBooksConnection(): Promise<boolean> {
 		const data = (await this.googleBooksFetch('/volumes?q=tolkien&maxResults=1')) as GoogleBooksResponse;
 		return Array.isArray(data.items);
@@ -1935,37 +1940,19 @@ export class ApiService {
 			`${TWITCH_TOKEN_URL}?client_id=${encodeURIComponent(this.igdbClientId)}` +
 			`&client_secret=${encodeURIComponent(this.igdbClientSecret)}` +
 			`&grant_type=client_credentials`;
-		let timer: number | null = null;
-		const timeoutPromise = new Promise<never>((_, reject) => {
-			timer = window.setTimeout(() => reject(new ApiError('twitch', 'network', 'Request timed out')), API_TIMEOUT_MS);
-		});
-		try {
-			// source 'twitch', not 'igdb' — a rejected Client ID/Secret is a different fix from a
-			// rejected query, and the two used to give the same message
-			const fetchPromise = requestUrl({ url, method: 'POST', throw: false })
-				.then((r) => readApiResponse('twitch', r) as TwitchTokenResponse);
-			const data = await Promise.race([fetchPromise, timeoutPromise]);
-			if (!data.access_token) throw new ApiError('twitch', 'auth', 'Twitch returned no access token');
-			this.igdbToken = data.access_token;
-			this.igdbTokenExpiry = Date.now() + Math.max(0, (data.expires_in ?? 0) - 60) * 1000;
-			return this.igdbToken;
-		} catch (err) {
-			if (err instanceof ApiError) throw err;
-			throw new ApiError('twitch', 'network', (err as Error)?.message ?? 'Network error');
-		} finally {
-			if (timer !== null) window.clearTimeout(timer);
-		}
+		// source 'twitch', not 'igdb': a rejected Client ID/Secret is a different fix from a
+		// rejected query, and the two used to give the same message
+		const data = await requestJson('twitch', { url, method: 'POST' }, assertTokenIssued) as IssuedToken;
+		this.igdbToken = data.access_token;
+		this.igdbTokenExpiry = Date.now() + Math.max(0, (data.expires_in ?? 0) - 60) * 1000;
+		return this.igdbToken;
 	}
 
 	/** POSTs an Apicalypse query (plain-text body) to an IGDB endpoint. */
 	private async igdbPost(endpoint: string, query: string): Promise<unknown> {
 		const token = await this.getIgdbToken();
-		let timer: number | null = null;
-		const timeoutPromise = new Promise<never>((_, reject) => {
-			timer = window.setTimeout(() => reject(new ApiError('igdb', 'network', 'Request timed out')), API_TIMEOUT_MS);
-		});
 		try {
-			const fetchPromise = requestUrl({
+			return await requestJson('igdb', {
 				url: `${IGDB_BASE}/${endpoint}`,
 				method: 'POST',
 				headers: {
@@ -1973,17 +1960,12 @@ export class ApiService {
 					'Authorization': `Bearer ${token}`,
 				},
 				body: query,
-				throw: false,
-			}).then((r) => readApiResponse('igdb', r));
-			return await Promise.race([fetchPromise, timeoutPromise]);
+			});
 		} catch (e) {
 			// a rejected token (revoked / expired early) must not poison the cache
 			this.igdbToken = '';
 			this.igdbTokenExpiry = 0;
-			if (e instanceof ApiError) throw e;
-			throw new ApiError('igdb', 'network', (e as Error)?.message ?? 'Network error');
-		} finally {
-			if (timer !== null) window.clearTimeout(timer);
+			throw e;
 		}
 	}
 
@@ -2080,22 +2062,16 @@ export class ApiService {
 	 * expected conditions through status codes (no achievements = 400, locked-down profile =
 	 * 403), so unlike fetchWithTimeout these must not collapse into a thrown error.
 	 */
-	private async steamGet(url: string): Promise<{ status: number; json: unknown }> {
-		let timer: number | null = null;
-		const timeoutPromise = new Promise<never>((_, reject) => {
-			timer = window.setTimeout(() => reject(new Error('Request timed out')), API_TIMEOUT_MS);
-		});
-		try {
-			const fetchPromise = requestUrl({ url, throw: false }).then((r) => {
+	private steamGet(url: string): Promise<{ status: number; json: unknown }> {
+		return withTimeout(
+			() => requestUrl({ url, throw: false }).then((r) => {
 				let json: unknown = null;
 				// .json throws on a non-JSON body (Steam serves HTML error pages).
 				try { json = JSON.parse(r.text) as unknown; } catch { json = null; }
 				return { status: r.status, json };
-			});
-			return await Promise.race([fetchPromise, timeoutPromise]);
-		} finally {
-			if (timer !== null) window.clearTimeout(timer);
-		}
+			}),
+			() => new Error('Request timed out'),
+		);
 	}
 
 	/**
