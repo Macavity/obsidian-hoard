@@ -43,8 +43,8 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: LookupResult<
 	};
 	const apiService = {
 		fetchTrailer: vi.fn(() => (o.trailer instanceof Error ? Promise.reject(o.trailer) : Promise.resolve(o.trailer ?? { status: 'notfound' }))),
-		fetchCredits: vi.fn(() => Promise.resolve(null)),
-		fetchStudio: vi.fn(() => Promise.resolve(null)),
+		fetchCredits: vi.fn(() => Promise.resolve({ status: 'notfound' })),
+		fetchStudio: vi.fn(() => Promise.resolve({ status: 'notfound' })),
 		hasTmdbKey: vi.fn(() => o.tmdbKey ?? true),
 		hasOmdbKey: vi.fn(() => false),
 	};
@@ -145,15 +145,17 @@ describe('TitleDetailModal backfill without a key', () => {
 		header(modal);
 		await flushAll();
 		expect((dataManager as unknown as { updateCredits: unknown }).updateCredits).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('cred-fail', 'credits', { status: 'failed' });
 	});
 
-	it('stores nothing for a movie studio without a TMDB key', async () => {
+	it('stores nothing and records nokey for a movie studio without a TMDB key', async () => {
 		const { modal, apiService, dataManager } = build(mkTitle({ id: 'studio-nokey', studio: undefined }), { tmdbKey: false });
 		(dataManager as unknown as Record<string, unknown>).updateStudio = vi.fn();
+		apiService.fetchStudio.mockResolvedValueOnce({ status: 'nokey' });
 		header(modal);
 		await flushAll();
-		expect(apiService.fetchStudio).not.toHaveBeenCalled();
 		expect((dataManager as unknown as { updateStudio: unknown }).updateStudio).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('studio-nokey', 'studio', { status: 'nokey' });
 	});
 });
 

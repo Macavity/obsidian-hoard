@@ -41,6 +41,8 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 		rewriteFrontmatterIfExists: vi.fn((t: HoardTitle) => Promise.resolve(t.title !== 'gone')),
 		createMarkdownFileIfMissing: vi.fn((t: HoardTitle) => Promise.resolve(t.title === 'new')),
 		updateStudio: vi.fn(() => Promise.resolve()),
+		lookupDue: vi.fn(() => true),
+		recordLookup: vi.fn(),
 	};
 	const reading = {
 		getBooks: () => over.books ?? [],
@@ -84,7 +86,9 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 			setRawgKey: vi.fn(),
 			fetchStudio: vi.fn((t: HoardTitle) => {
 				if (t.title === 'err') return Promise.reject(new Error('net'));
-				return Promise.resolve(t.title === 'hit' ? { studio: ['Ghibli'], tmdbId: 1, tmdbMediaType: 'movie' } : null);
+				return Promise.resolve(t.title === 'hit'
+					? { status: 'found', value: { studio: ['Ghibli'], tmdbId: 1, tmdbMediaType: 'movie' } }
+					: { status: 'notfound' });
 			}),
 		},
 		importProgress: null as unknown,
@@ -274,10 +278,12 @@ describe('HoardSettingsTab fetchAllStudios', () => {
 		await makeTab().tab.fetchAllStudios();
 		expect(Notice.shown).toContain('Every title already has a studio.');
 	});
-	it('fills hits, stores misses as none and survives errors', async () => {
+	it('fills hits, records misses and errors without storing and survives errors', async () => {
 		const { tab, dm, plugin } = makeTab({ titles: [anime('hit'), anime('miss'), anime('err')] });
 		await tab.fetchAllStudios();
-		expect(dm.updateStudio).toHaveBeenCalledTimes(2);
+		expect(dm.updateStudio).toHaveBeenCalledTimes(1);
+		expect(dm.recordLookup).toHaveBeenCalledWith('miss', 'studio', { status: 'notfound' });
+		expect(dm.recordLookup).toHaveBeenCalledWith('err', 'studio', { status: 'failed' });
 		expect(plugin.importProgress).toBeNull();
 		expect(Notice.shown).toContain('Done: 1 title filled, 2 with no studio available.');
 	});
@@ -296,7 +302,7 @@ describe('HoardSettingsTab fetchAllStudios', () => {
 		const { tab, plugin } = makeTab({ titles: [anime('hit'), anime('hit2')] });
 		plugin.apiService.fetchStudio.mockImplementationOnce(() => {
 			(plugin.importProgress as { cancel(): void }).cancel();
-			return Promise.resolve({ studio: ['A'], tmdbId: 1, tmdbMediaType: 'tv' });
+			return Promise.resolve({ status: 'found', value: { studio: ['A'], tmdbId: 1, tmdbMediaType: 'tv' } });
 		});
 		await tab.fetchAllStudios();
 		expect(Notice.shown).toContain('Cancelled: 1 title filled.');

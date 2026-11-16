@@ -68,7 +68,7 @@ describe('cinemeta credits', () => {
 		respond(cinemetaMeta);
 		const credits = await api().fetchCredits(bb, 'cinemeta');
 		expect(urlOf()).toBe('https://v3-cinemeta.strem.io/meta/series/tt0903747.json');
-		expect(credits).toEqual({ director: [], cast: ['Bryan Cranston', 'Aaron Paul', 'Anna Gunn'] });
+		expect(credits).toEqual({ status: 'found', value: { director: [], cast: ['Bryan Cranston', 'Aaron Paul', 'Anna Gunn'] } });
 	});
 
 	it('tries series before movie for a custom type with one episode', async () => {
@@ -88,14 +88,14 @@ describe('cinemeta credits', () => {
 		expect(urlOf(1)).toContain('/meta/movie/');
 	});
 
-	it('lets a network error propagate so nothing is stored', async () => {
+	it('reports a failed request as failed, so nothing is stored', async () => {
 		fail(429);
-		await expect(api().fetchCredits(bb, 'cinemeta')).rejects.toMatchObject({ source: 'cinemeta' });
+		expect(await api().fetchCredits(bb, 'cinemeta')).toEqual({ status: 'failed' });
 	});
 
-	it('returns null when cinemeta knows neither kind', async () => {
+	it('is notfound when cinemeta knows neither kind', async () => {
 		respond({});
-		expect(await api().fetchCredits(unknownKind, 'cinemeta')).toBeNull();
+		expect(await api().fetchCredits(unknownKind, 'cinemeta')).toEqual({ status: 'notfound' });
 	});
 });
 

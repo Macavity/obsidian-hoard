@@ -509,49 +509,67 @@ describe('bulk studio fetch', () => {
 	const setup = (titles: HoardTitle[], fetchStudio: (t: HoardTitle) => Promise<unknown>) => {
 		const updateStudio = vi.fn(() => Promise.resolve());
 		const notifyChange = vi.fn();
+		const recordLookup = vi.fn();
+		const fetchStudioSpy = vi.fn(fetchStudio);
+		const notDue = new Set<string>();
 		const ctx = makeTab({
-			dataManager: { getTitles: () => titles, updateStudio, notifyChange },
-			apiService: { fetchStudio: vi.fn(fetchStudio), hasTmdbKey: () => true },
+			dataManager: { getTitles: () => titles, updateStudio, notifyChange, recordLookup, lookupDue: (id: string) => !notDue.has(id) },
+			apiService: { fetchStudio: fetchStudioSpy, hasTmdbKey: () => true },
 		});
-		return { ...ctx, updateStudio, notifyChange };
+		return { ...ctx, updateStudio, notifyChange, recordLookup, notDue, fetchStudio: fetchStudioSpy };
 	};
 	const unfetched = (id: string) => makeTitle({ id });
 
 	it('says so when every title has a studio', async () => {
-		const { priv } = setup([makeTitle({ id: 'a', studio: ['X'] })], () => Promise.resolve(null));
+		const { priv } = setup([makeTitle({ id: 'a', studio: ['X'] })], () => Promise.resolve({ status: 'notfound' }));
 		await priv.fetchAllStudios();
 		expect(shown).toHaveLength(1);
 	});
 
-	it('stores found studios and stores an empty studio for misses', async () => {
-		const { priv, updateStudio, plugin } = setup(
-			[unfetched('hit'), unfetched('miss'), unfetched('fail'), unfetched('empty')],
+	it('stores found studios and records every miss without storing it', async () => {
+		const { priv, updateStudio, recordLookup, plugin } = setup(
+			[unfetched('hit'), unfetched('miss'), unfetched('fail'), unfetched('offline'), unfetched('nokey')],
 			(tt) => {
-				if (tt.id === 'hit') return Promise.resolve({ studio: ['Ghibli'], tmdbId: 5, tmdbMediaType: 'movie' });
+				if (tt.id === 'hit') return Promise.resolve({ status: 'found', value: { studio: ['Ghibli'], tmdbId: 5, tmdbMediaType: 'movie' } });
 				if (tt.id === 'fail') return Promise.reject(new Error('net'));
-				if (tt.id === 'empty') return Promise.resolve({ studio: [] });
-				return Promise.resolve(null);
+				if (tt.id === 'offline') return Promise.resolve({ status: 'failed' });
+				if (tt.id === 'nokey') return Promise.resolve({ status: 'nokey' });
+				return Promise.resolve({ status: 'notfound' });
 			},
 		);
 		await priv.fetchAllStudios();
+		expect(updateStudio).toHaveBeenCalledTimes(1);
 		expect(updateStudio).toHaveBeenCalledWith('hit', ['Ghibli'], 5, 'movie');
-		expect(updateStudio).toHaveBeenCalledWith('miss', [], undefined, undefined);
-		expect(updateStudio).toHaveBeenCalledTimes(3);
+		expect(recordLookup.mock.calls).toEqual([
+			['miss', 'studio', { status: 'notfound' }],
+			['fail', 'studio', { status: 'failed' }],
+			['offline', 'studio', { status: 'failed' }],
+			['nokey', 'studio', { status: 'nokey' }],
+		]);
 		expect((plugin as { importProgress?: unknown }).importProgress).toBeNull();
 		const last = shown.at(-1)!;
 		expect(last).toContain('1');
-		expect(last).toContain('3');
+		expect(last).toContain('4');
+	});
+
+	it('skips titles whose last lookup is not due and records nothing for them', async () => {
+		const ctx = setup([unfetched('later'), unfetched('now')], () => Promise.resolve({ status: 'found', value: { studio: ['A'] } }));
+		ctx.notDue.add('later');
+		await ctx.priv.fetchAllStudios();
+		expect(ctx.fetchStudio).toHaveBeenCalledTimes(1);
+		expect(ctx.updateStudio).toHaveBeenCalledWith('now', ['A'], undefined, undefined);
+		expect(ctx.recordLookup).not.toHaveBeenCalled();
 	});
 
 	it('reports a clean result without misses', async () => {
-		const { priv } = setup([unfetched('hit')], () => Promise.resolve({ studio: ['A'] }));
+		const { priv } = setup([unfetched('hit')], () => Promise.resolve({ status: 'found', value: { studio: ['A'] } }));
 		await priv.fetchAllStudios();
 		expect(shown.at(-1)).toContain('1');
 		expect(shown.at(-1)).not.toContain('missed');
 	});
 
 	it('stops when cancelled', async () => {
-		const ctx = setup([unfetched('a'), unfetched('b'), unfetched('c')], () => Promise.resolve({ studio: ['A'] }));
+		const ctx = setup([unfetched('a'), unfetched('b'), unfetched('c')], () => Promise.resolve({ status: 'found', value: { studio: ['A'] } }));
 		const run = ctx.priv.fetchAllStudios();
 		(ctx.plugin as unknown as { importProgress: { cancel: () => void } }).importProgress.cancel();
 		await run;

@@ -53,6 +53,20 @@ describe('PosterService outcomes', () => {
 		expect(poster()).toBeFalsy();
 	});
 
+	it('a TMDB 404 (a stale id) is notfound, not transient', async () => {
+		route({ 'themoviedb.org': { status: 404 } });
+		const { svc, title, check } = await setup({ tmdbApiKey: 't' }, null);
+		expect(await svc.enqueue(title())).toBeNull();
+		expect(check()).toBe('notfound');
+	});
+
+	it('a rejected TMDB key (401) is nokey, not transient', async () => {
+		route({ 'themoviedb.org': { status: 401 } });
+		const { svc, title, check } = await setup({ tmdbApiKey: 't' }, null);
+		expect(await svc.enqueue(title())).toBeNull();
+		expect(check()).toBe('nokey');
+	});
+
 	it('every provider answering with a clean miss is notfound', async () => {
 		route({ 'themoviedb.org': { status: 200, json: { results: [] } }, 'omdbapi.com': { status: 200, json: { Response: 'False' } } });
 		const { svc, title, check } = await setup({ tmdbApiKey: 't', omdbApiKey: 'o' });

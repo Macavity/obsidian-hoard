@@ -6,7 +6,7 @@ import { getApiGroupForType } from './types';
 import { httpsOrEmpty } from './httpsUrl';
 import { found, attempt, firstFound, FAILED, NO_KEY, type LookupResult, type LookupSource } from './lookup';
 import { at, readList, readOptionalString, readString } from './storage/read';
-import { jsonPost, requestVia, type ApiService } from './ApiService';
+import { jsonPost, lookupOfError, requestVia, type ApiService } from './ApiService';
 import { resolveJikanEndpoint, type JikanEndpoint } from './jikanBase';
 
 const OMDB_BASE = 'https://www.omdbapi.com';
@@ -138,7 +138,7 @@ export class PosterService {
 		const settings = this.getSettings();
 		const group = getApiGroupForType(title.type, settings.typeApiMapping);
 		if (group !== 'anime' && group !== 'movie') return null;
-		if (group === 'anime') return attempt(() => this.fetchAnimePoster(title));
+		if (group === 'anime') return attempt(() => this.fetchAnimePoster(title), lookupOfError);
 		return firstFound(this.mediaSources(title, settings));
 	}
 
@@ -209,9 +209,9 @@ export class PosterService {
 	/** TMDB, then OMDb, then Cinemeta; a source without a key (or Cinemeta without an api) reports nokey. */
 	private mediaSources(title: HoardTitle, settings: HoardPluginSettings): LookupSource<string>[] {
 		return [
-			() => (settings.tmdbApiKey ? attempt(() => this.fetchTmdbPoster(title, settings)) : Promise.resolve(NO_KEY)),
-			() => (settings.omdbApiKey ? attempt(() => this.fetchOmdbPoster(title, settings)) : Promise.resolve(NO_KEY)),
-			() => (this.getApi ? attempt(() => this.fetchCinemetaPoster(title)) : Promise.resolve(NO_KEY)),
+			() => (settings.tmdbApiKey ? attempt(() => this.fetchTmdbPoster(title, settings), lookupOfError) : Promise.resolve(NO_KEY)),
+			() => (settings.omdbApiKey ? attempt(() => this.fetchOmdbPoster(title, settings), lookupOfError) : Promise.resolve(NO_KEY)),
+			() => (this.getApi ? attempt(() => this.fetchCinemetaPoster(title), lookupOfError) : Promise.resolve(NO_KEY)),
 		];
 	}
 

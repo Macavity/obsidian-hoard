@@ -33,15 +33,19 @@ export async function firstFound<T>(sources: readonly LookupSource<T>[]): Promis
 	return missed ? NOT_FOUND : NO_KEY;
 }
 
-/** Adapts a call: value → found, null/undefined/empty array → notfound, throw → failed. */
-export async function attempt<T>(call: () => Promise<T | null | undefined>): Promise<LookupResult<T>> {
+/** Adapts a call: value → found, null/undefined/empty array → notfound, throw → failed
+ *  (or whatever `onError` makes of the error, e.g. a classified 404 → notfound). */
+export async function attempt<T>(
+	call: () => Promise<T | null | undefined>,
+	onError: (err: unknown) => LookupResult<never> = () => FAILED,
+): Promise<LookupResult<T>> {
 	try {
 		const value = await call();
 		if (value === null || value === undefined) return NOT_FOUND;
 		if (Array.isArray(value) && value.length === 0) return NOT_FOUND;
 		return found(value);
-	} catch {
-		return FAILED;
+	} catch (err) {
+		return onError(err);
 	}
 }
 

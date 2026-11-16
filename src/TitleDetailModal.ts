@@ -18,7 +18,7 @@ import { pinModalFooter } from './StickyModal';
 import { createSeasonHeader, renderEpisodeGrid } from './ui/EpisodeGrid';
 import type { TmdbCollectionDetail } from './types';
 import { t } from './i18n';
-import { found, FAILED, NOT_FOUND } from './lookup';
+import { FAILED, NOT_FOUND } from './lookup';
 import { effectiveMediaSource } from './apiSources';
 import { createIconButton } from './ui/IconButton';
 import { paintFavoriteButton, renderGroupDetailHeader, episodeGridText } from './ui/detailShared';
@@ -344,16 +344,21 @@ export class TitleDetailModal extends Modal {
 		creditsBackfillInFlight.add(t.id);
 		void (async () => {
 			try {
-				const fetched = await this.plugin.apiService.fetchCredits(
+				const result = await this.plugin.apiService.fetchCredits(
 					t,
 					effectiveMediaSource(this.plugin.settings, this.plugin.apiService),
 				);
-				// only absent fields are filled
-				const director = isCreditsUnfetched(t.director) ? (fetched?.director ?? []) : t.director!;
-				const cast = isCreditsUnfetched(t.cast) ? (fetched?.cast ?? []) : t.cast!;
-				await this.dataManager.updateCredits(t.id, director, cast);
-				const complete = !isCreditsUnfetched(director) && !isCreditsUnfetched(cast);
-				this.dataManager.recordLookup(t.id, 'credits', !fetched ? FAILED : complete ? found(fetched) : NOT_FOUND);
+				if (result.status === 'found') {
+					// only absent fields are filled
+					const director = isCreditsUnfetched(t.director) ? result.value.director : t.director!;
+					const cast = isCreditsUnfetched(t.cast) ? result.value.cast : t.cast!;
+					await this.dataManager.updateCredits(t.id, director, cast);
+					// one side still empty: the source has no more, so check again only after the notfound deadline
+					const complete = !isCreditsUnfetched(director) && !isCreditsUnfetched(cast);
+					this.dataManager.recordLookup(t.id, 'credits', complete ? result : NOT_FOUND);
+				} else {
+					this.dataManager.recordLookup(t.id, 'credits', result);
+				}
 			} catch {
 				// the fetch or its persistence failed: retry after the transient deadline
 				this.dataManager.recordLookup(t.id, 'credits', FAILED);
@@ -436,23 +441,21 @@ export class TitleDetailModal extends Modal {
 		const t = this.dataManager.getTitle(this.title.id);
 		if (!t || !this.dataManager.lookupDue(t.id, 'studio') || studioBackfillInFlight.has(t.id)) return;
 		const group = getApiGroupForType(t.type, this.plugin.settings.typeApiMapping);
-		// movie studios need TMDB: without a key a miss is not an answer, so leave the field unfetched
-		if (group === 'movie' && !this.plugin.apiService.hasTmdbKey()) return;
 		studioBackfillInFlight.add(t.id);
 		void (async () => {
 			try {
-				const got = await this.plugin.apiService.fetchStudio(
+				const result = await this.plugin.apiService.fetchStudio(
 					t,
 					this.plugin.settings.animeApiSource ?? 'jikan',
 					group,
 				);
-				await this.dataManager.updateStudio(
-					t.id,
-					got?.studio ?? [],
-					got?.tmdbId,
-					got?.tmdbMediaType,
-				);
-				this.dataManager.recordLookup(t.id, 'studio', !got ? FAILED : got.studio.length > 0 ? found(got) : NOT_FOUND);
+				if (result.status === 'found') {
+					const { studio, tmdbId, tmdbMediaType } = result.value;
+					await this.dataManager.updateStudio(t.id, studio, tmdbId, tmdbMediaType);
+				} else {
+					// movie studios without a TMDB key arrive here as nokey
+					this.dataManager.recordLookup(t.id, 'studio', result);
+				}
 			} catch {
 				// retried after the transient deadline
 				this.dataManager.recordLookup(t.id, 'studio', FAILED);
@@ -706,10 +709,9 @@ export class TitleDetailModal extends Modal {
 	}
 
 	/**
-	 * Paints the trailer control: a trailer → red play button (opens externally); none ('' or
-	 * 'none') → the same button muted, which fetches from source on click. Same frame in both
-	 * states so the row does not jump. Re-read from the store so an override saved in the edit
-	 * modal shows.
+	 * Paints the trailer control: a trailer → red play button (opens externally); none → the same button muted,
+	 * which fetches from source on click. Same frame in both states so the row does not jump.
+	 * Re-read from the store so an override saved in the edit modal shows.
 	 */
 	private paintTrailerControl(container: HTMLElement): void {
 		container.empty();
@@ -1143,14 +1145,15 @@ export function renderCreditsRefreshButton(
 			let changed = false;
 			try {
 				const t = plugin.dataManager.getTitle(title.id) ?? title;
-				const fetched = await plugin.apiService.fetchCredits(
+				const result = await plugin.apiService.fetchCredits(
 					t,
 					effectiveMediaSource(plugin.settings, plugin.apiService),
 				);
-				if (!fetched) plugin.dataManager.recordLookup(t.id, 'credits', FAILED);
-				else {
-					await plugin.dataManager.updateCredits(t.id, fetched.director, fetched.cast);
+				if (result.status === 'found') {
+					await plugin.dataManager.updateCredits(t.id, result.value.director, result.value.cast);
 					changed = true;
+				} else {
+					plugin.dataManager.recordLookup(t.id, 'credits', result);
 				}
 			} catch {
 				// persistence failed — stored fields stay as they were
@@ -1185,7 +1188,7 @@ export interface CreditsRowHandlers {
  *
  * A field with nothing fetched, nothing added and no way to add renders nothing — but an add
  * handler makes the row always appear, which is what gives anime titles (no IMDb id, so credits
- * never fetch) a place to put a cast. The 'none' sentinel renders an em-dash.
+ * never fetch) a place to put a cast. An empty row renders an em-dash.
  *
  * Past CREDITS_INLINE_LIMIT the remainder collapses behind a "+N more" chip that expands in place —
  * a popover would be clipped by the accordion.

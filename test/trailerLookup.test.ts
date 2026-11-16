@@ -44,6 +44,11 @@ describe('fetchTrailer: anime', () => {
 		expect(await new ApiService('').fetchTrailer(title({ malId: 5 }), 'jikan', 'anime')).toEqual({ status: 'notfound' });
 	});
 
+	it('reports a 404 for a stale MAL id as notfound, not failed', async () => {
+		sent.mockResolvedValue({ status: 404, text: '', json: null } as never);
+		expect(await new ApiService('').fetchTrailer(title({ malId: 5 }), 'jikan', 'anime')).toEqual({ status: 'notfound' });
+	});
+
 	it('finds the Jikan trailer from its embed url', async () => {
 		route([['/anime/5', jikan({ youtube_id: null, url: null, embed_url: 'https://www.youtube.com/embed/abcdef12345?enablejsapi=1' })]]);
 		expect(await new ApiService('').fetchTrailer(title({ malId: 5 }), 'jikan', 'anime')).toEqual({ status: 'found', value: YT('abcdef12345') });
@@ -101,6 +106,11 @@ describe('fetchTrailer: movies and shows', () => {
 	it('is notfound when TMDB does not know the IMDb id', async () => {
 		route([['/find/', { movie_results: [], tv_results: [] }]]);
 		expect(await new ApiService('', 'k').fetchTrailer(movie, 'jikan', 'movie')).toEqual({ status: 'notfound' });
+	});
+
+	it('reports a rejected TMDB key (401) as nokey, not failed', async () => {
+		sent.mockResolvedValue({ status: 401, text: '', json: null } as never);
+		expect(await new ApiService('', 'k').fetchTrailer(movie, 'jikan', 'movie')).toEqual({ status: 'nokey' });
 	});
 
 	it('is failed when TMDB is unreachable', async () => {

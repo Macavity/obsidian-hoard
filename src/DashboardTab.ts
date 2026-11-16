@@ -542,7 +542,7 @@ export class DashboardTab implements TabInstance {
 
 	/**
 	 * Occurrence counts of credit names, over the merged view so user-added credits count too;
-	 * unfetched / 'none' fields contribute nothing.
+	 * unfetched fields contribute nothing.
 	 */
 	private countCredits(titles: HoardTitle[], field: CreditsField): Map<string, number> {
 		// bucket case-insensitively, display the first spelling seen: AniList returns "bones"

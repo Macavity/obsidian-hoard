@@ -1,3 +1,5 @@
+import { readStringList } from './storage/read';
+
 export interface Season {
 	name: string;
 	episodes: number;
@@ -195,9 +197,9 @@ export function normalizeManualCredits(names: string[]): string[] {
 	return out;
 }
 
-/** normalize a fetched list for storage: trimmed, capped; empty stays empty */
-export function normalizeCreditsForStore(names: string[]): string[] {
-	const cleaned = names.map((n) => n.trim()).filter((n) => n !== '' && n !== 'N/A');
+/** normalize a fetched list for storage: non-strings dropped, trimmed, capped; empty stays empty */
+export function normalizeCreditsForStore(names: unknown): string[] {
+	const cleaned = readStringList(names).map((n) => n.trim()).filter((n) => n !== '' && n !== 'N/A');
 	return cleaned.slice(0, MAX_FETCHED_CREDITS);
 }
 

@@ -19,10 +19,8 @@ import type {
 	TmdbTvDetail,
 	TmdbExternalIds,
 	TmdbFindResult,
-	TmdbCreditsResult,
 	TmdbCollectionRef,
 	TmdbCollectionDetail,
-	TmdbCompany,
 	Season,
 	AniListMedia,
 	AniListSearchResponse,
@@ -33,8 +31,8 @@ import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLib
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { normalizeCreditsForStore, imdbIdFromLink } from './types';
 import type { EntryCache } from './storage/storageTypes';
-import { at, readBoolean, readList, readOptionalNumber, readString } from './storage/read';
-import { attempt, firstFound, NOT_FOUND, NO_KEY, type LookupResult, type LookupSource } from './lookup';
+import { at, readBoolean, readList, readOptionalNumber, readOptionalString, readString } from './storage/read';
+import { attempt, firstFound, FAILED, NOT_FOUND, NO_KEY, type LookupResult, type LookupSource } from './lookup';
 
 export type Airing = NonNullable<EntryCache['airing']>;
 
@@ -123,9 +121,8 @@ function tmdbTrailerUrl(videos: unknown): string {
  * stored list: trimmed names, empty when absent / 'N/A', so both APIs yield the
  * same shape.
  */
-function omdbNamesToCredits(s: string | undefined): string[] {
-	if (!s || s === 'N/A') return normalizeCreditsForStore([]);
-	return normalizeCreditsForStore(s.split(','));
+function omdbNamesToCredits(s: unknown): string[] {
+	return normalizeCreditsForStore(readString(s).split(','));
 }
 
 /**
@@ -134,7 +131,8 @@ function omdbNamesToCredits(s: string | undefined): string[] {
  * role notes stripped. Falls back to Director.
  */
 function omdbSeriesDirectorCredits(data: OmdbDetailResponse): string[] {
-	const raw = !data.Writer || data.Writer === 'N/A' ? [] : data.Writer.split(',');
+	const writer = readString(data.Writer);
+	const raw = writer === 'N/A' ? [] : writer.split(',');
 	const creators = normalizeCreditsForStore(raw.map((n) => n.replace(/\([^)]*\)/g, '')));
 	return creators.length === 0 ? omdbNamesToCredits(data.Director) : creators;
 }
@@ -143,20 +141,19 @@ function omdbSeriesDirectorCredits(data: OmdbDetailResponse): string[] {
  * Director credits for a TMDB *series*: `created_by` (series have no single director),
  * falling back to crew Director entries.
  */
-function tmdbSeriesDirectorCredits(detail: TmdbTvDetail): string[] {
-	const creators = normalizeCreditsForStore((detail.created_by ?? []).map((c) => c.name ?? ''));
-	return creators.length === 0 ? tmdbCreditsToStored(detail.credits).director : creators;
+function tmdbSeriesDirectorCredits(detail: unknown): string[] {
+	const creators = normalizeCreditsForStore(readList(at(detail, 'created_by'), (c) => readOptionalString(at(c, 'name'))));
+	return creators.length === 0 ? tmdbCreditsToStored(at(detail, 'credits')).director : creators;
 }
 
 /**
  * Maps a TMDB `credits` payload to the stored { director, cast }: crew entries with the
  * Director job, plus the billing-ordered cast — normalized and capped like OMDb's.
  */
-function tmdbCreditsToStored(credits: TmdbCreditsResult | undefined): { director: string[]; cast: string[] } {
-	const director = (credits?.crew ?? [])
-		.filter((c) => c.job === 'Director' && c.name)
-		.map((c) => c.name!);
-	const cast = (credits?.cast ?? []).map((c) => c.name ?? '');
+function tmdbCreditsToStored(credits: unknown): { director: string[]; cast: string[] } {
+	const director = readList(at(credits, 'crew'), (c) =>
+		readString(at(c, 'job')) === 'Director' ? readOptionalString(at(c, 'name')) : undefined);
+	const cast = readList(at(credits, 'cast'), (c) => readOptionalString(at(c, 'name')));
 	return {
 		director: normalizeCreditsForStore(director),
 		cast: normalizeCreditsForStore(cast),
@@ -175,8 +172,25 @@ export type TmdbMovieIdLookup =
 	| { status: 'error' };
 
 /** TMDB company/network names, normalized for storage. */
-function tmdbCompanyNames(list: TmdbCompany[] | undefined): string[] {
-	return normalizeCreditsForStore((list ?? []).map((c) => c.name ?? ''));
+function tmdbCompanyNames(...lists: unknown[]): string[] {
+	return normalizeCreditsForStore(lists.flatMap((list) => readList(list, (c) => readOptionalString(at(c, 'name')))));
+}
+
+/** What a credits lookup found: both lists normalized for storage. */
+export interface CreditsLookup { director: string[]; cast: string[] }
+
+/** What a studio lookup found, plus the TMDB id it resolved through, for the caller to cache. */
+export interface StudioLookup { studio: string[]; tmdbId?: number; tmdbMediaType?: 'movie' | 'tv' }
+
+/** The credits, or null when there are none (a lookup that came back empty found nothing). */
+function creditsOf(credits: CreditsLookup): CreditsLookup | null {
+	return credits.director.length === 0 && credits.cast.length === 0 ? null : credits;
+}
+
+/** The studio, or null when there is none. */
+function studioOf(names: unknown): StudioLookup | null {
+	const studio = normalizeCreditsForStore(names);
+	return studio.length === 0 ? null : { studio };
 }
 
 /** One row in the Add-game search results (both RAWG and IGDB map to this). */
@@ -623,6 +637,15 @@ function outcomeOfError(err: unknown): { status: 'transient' | 'nokey' | 'notfou
 		if (err.reason === 'not-found') return { status: 'notfound' };
 	}
 	return { status: 'transient' };
+}
+
+/** A source's failure as a lookup outcome: 404 → notfound, a rejected or missing credential → nokey, anything else → failed. */
+export function lookupOfError(err: unknown): LookupResult<never> {
+	if (err instanceof ApiError) {
+		if (err.reason === 'no-key' || err.reason === 'auth' || err.reason === 'not-enabled') return NO_KEY;
+		if (err.reason === 'not-found') return NOT_FOUND;
+	}
+	return FAILED;
 }
 
 /** Status check + JSON parse for a throw:false response. Throws ApiError on either failure. */
@@ -1181,7 +1204,7 @@ export class ApiService {
 		return attempt(async () => {
 			const data = await this.throttleJikan(() => this.fetchWithTimeout(`${this.jikan.base}/anime/${malId}`));
 			return jikanTrailerUrl(at(data, 'data', 'trailer')) || null;
-		});
+		}, lookupOfError);
 	}
 
 	/**
@@ -1320,7 +1343,7 @@ export class ApiService {
 			seasons,
 			trailerUrl: tmdbTrailerUrl(detail.videos?.results) || undefined,
 			// networks lead — HBO/Netflix is the brand; production_companies is shells
-			studio: tmdbCompanyNames([...(detail.networks ?? []), ...(detail.production_companies ?? [])]),
+			studio: tmdbCompanyNames(detail.networks, detail.production_companies),
 			director: tmdbSeriesDirectorCredits(detail),
 			cast: tmdbCreditsToStored(detail.credits).cast,
 		};
@@ -1429,94 +1452,65 @@ export class ApiService {
 
 	/**
 	 * Studio names for a title, plus the TMDB id it resolved through so the caller can cache it.
-	 * null = couldn't reach a source (never store that); empty studio = source has none.
+	 * notfound = the sources answered without a studio (or the title has no id to ask with);
+	 * failed = a request failed; nokey = a movie without a TMDB key.
 	 *
 	 * OMDb is not a source — its Production field returns 'N/A' on movies and is absent on
 	 * series, verified 2026-07-28.
 	 */
-	async fetchStudio(
+	fetchStudio(
 		title: HoardTitle,
 		animeSource: 'jikan' | 'anilist',
 		group: 'anime' | 'movie' | '',
-	): Promise<{ studio: string[]; tmdbId?: number; tmdbMediaType?: 'movie' | 'tv' } | null> {
-		if (group === 'anime') {
-			const studio = await this.fetchAnimeStudio(title, animeSource);
-			return studio ? { studio } : null;
-		}
-		if (group !== 'movie' || !this.tmdbApiKey) return null;
-		return this.fetchTmdbStudio(title);
+	): Promise<LookupResult<StudioLookup>> {
+		if (group === 'anime') return firstFound(this.animeStudioSources(title, animeSource));
+		if (group !== 'movie') return Promise.resolve(NOT_FOUND);
+		return this.tmdbStudio(title);
 	}
 
-	private async fetchAnimeStudio(
-		title: HoardTitle,
-		animeSource: 'jikan' | 'anilist',
-	): Promise<string[] | null> {
-		// follow the stored id, whichever it is — the preferred source may have no id here
-		if (animeSource === 'anilist' && title.anilistId) {
-			const media = await this.getAniListById(title.anilistId);
-			if (!media) return null;
-			const main = (media.studios?.edges ?? [])
-				.filter((e) => e?.isMain)
-				.map((e) => e?.node?.name ?? '');
-			return normalizeCreditsForStore(main);
-		}
-		if (title.malId) {
-			try {
-				const url = `${this.jikan.base}/anime/${title.malId}`;
-				const res = (await this.throttleJikan(() => this.fetchWithTimeout(url))) as {
-					data?: JikanAnime;
-				};
-				const studios = res.data?.studios;
-				if (!studios) return null;
-				return normalizeCreditsForStore(studios.map((st) => st?.name ?? ''));
-			} catch {
-				return null;
-			}
-		}
-		// preference was Jikan but only an AniList id exists — use what we have
-		if (title.anilistId) {
-			const media = await this.getAniListById(title.anilistId);
-			if (!media) return null;
-			return normalizeCreditsForStore(
-				(media.studios?.edges ?? []).filter((e) => e?.isMain).map((e) => e?.node?.name ?? ''),
-			);
-		}
-		return null;
+	/** One source per anime id the title has, the preferred API first; a title with neither id has nothing to ask. */
+	private animeStudioSources(title: HoardTitle, animeSource: 'jikan' | 'anilist'): LookupSource<StudioLookup>[] {
+		const { anilistId, malId } = title;
+		const anilist: LookupSource<StudioLookup> = () => attempt(async () => {
+			const media = await this.queryAniListById(anilistId!);
+			const main = readList(at(media, 'studios', 'edges'), (e) =>
+				readBoolean(at(e, 'isMain')) ? readOptionalString(at(e, 'node', 'name')) : undefined);
+			return studioOf(main);
+		}, lookupOfError);
+		const jikan: LookupSource<StudioLookup> = () => attempt(async () => {
+			const res = await this.throttleJikan(() => this.fetchWithTimeout(`${this.jikan.base}/anime/${malId}`));
+			return studioOf(readList(at(res, 'data', 'studios'), (st) => readOptionalString(at(st, 'name'))));
+		}, lookupOfError);
+		const sources: LookupSource<StudioLookup>[] = [];
+		if ((anilistId ?? 0) > 0) sources.push(anilist);
+		if ((malId ?? 0) > 0) sources.push(jikan);
+		if (animeSource === 'jikan') sources.reverse();
+		return sources.length > 0 ? sources : [() => Promise.resolve(NOT_FOUND)];
 	}
 
-	private async fetchTmdbStudio(
-		title: HoardTitle,
-	): Promise<{ studio: string[]; tmdbId?: number; tmdbMediaType?: 'movie' | 'tv' } | null> {
-		// a cached id skips the /find round-trip entirely
-		if (title.tmdbId && title.tmdbMediaType) {
-			const detail =
-				title.tmdbMediaType === 'movie'
-					? await this.getTmdbMovieDetails(String(title.tmdbId))
-					: await this.getTmdbTvDetails(String(title.tmdbId));
-			return detail?.studio ? { studio: detail.studio } : null;
-		}
+	/** TMDB company/network names: by the cached TMDB id, else through the IMDb id's /find. */
+	private tmdbStudio(title: HoardTitle): Promise<LookupResult<StudioLookup>> {
+		if (!this.tmdbApiKey) return Promise.resolve(NO_KEY);
+		return attempt(async () => {
+			if (title.tmdbId && title.tmdbMediaType) return this.tmdbStudioOf(title.tmdbMediaType, title.tmdbId);
+			const imdbId = imdbIdFromLink(title.externalLink);
+			if (!imdbId) return null;
+			const hits = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
+			const movieId = readOptionalNumber(at(hits, 'movie_results', 0, 'id'));
+			if (movieId) return this.tmdbStudioOf('movie', movieId, true);
+			const tvId = readOptionalNumber(at(hits, 'tv_results', 0, 'id'));
+			return tvId ? this.tmdbStudioOf('tv', tvId, true) : null;
+		}, lookupOfError);
+	}
 
-		const imdbId = imdbIdFromLink(title.externalLink);
-		if (!imdbId) return null;
-		try {
-			const url = `${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`;
-			const found = (await this.fetchWithTimeout(url, this.tmdbHeaders())) as TmdbFindResult;
-			const movieId = found.movie_results?.[0]?.id;
-			if (movieId) {
-				const detail = await this.getTmdbMovieDetails(String(movieId));
-				if (!detail?.studio) return null;
-				return { studio: detail.studio, tmdbId: movieId, tmdbMediaType: 'movie' };
-			}
-			const tvId = found.tv_results?.[0]?.id;
-			if (tvId) {
-				const detail = await this.getTmdbTvDetails(String(tvId));
-				if (!detail?.studio) return null;
-				return { studio: detail.studio, tmdbId: tvId, tmdbMediaType: 'tv' };
-			}
-			return null;
-		} catch {
-			return null;
-		}
+	/** Studio of one TMDB record; `withId` also reports the id, for the caller to cache. */
+	private async tmdbStudioOf(kind: 'movie' | 'tv', id: number, withId = false): Promise<StudioLookup | null> {
+		const detail = await this.fetchWithTimeout(`${TMDB_BASE}/${kind}/${id}`, this.tmdbHeaders());
+		const studio = kind === 'tv'
+			? tmdbCompanyNames(at(detail, 'networks'), at(detail, 'production_companies')) // networks lead: HBO/Netflix is the brand
+			: tmdbCompanyNames(at(detail, 'production_companies'));
+		if (studio.length === 0) return null;
+		return withId ? { studio, tmdbId: id, tmdbMediaType: kind } : { studio };
 	}
 
 	// TMDB collections. Movies only.
@@ -1759,7 +1753,7 @@ export class ApiService {
 		const anilist: LookupSource<string> = () => attempt(async () => {
 			const media = await this.queryAniListById(anilistId!);
 			return anilistTrailerUrl(media?.trailer) || null;
-		});
+		}, lookupOfError);
 		const jikan: LookupSource<string> = () => this.getJikanTrailerByMalId(malId!);
 		const sources: LookupSource<string>[] = [];
 		if ((anilistId ?? 0) > 0) sources.push(anilist);
@@ -1780,99 +1774,87 @@ export class ApiService {
 			if (id === undefined) return null;
 			const videos = await this.fetchWithTimeout(`${TMDB_BASE}/${kind}/${String(id)}/videos`, this.tmdbHeaders());
 			return tmdbTrailerUrl(at(videos, 'results')) || null;
-		});
+		}, lookupOfError);
 	}
 
 	/**
 	 * One-time director/cast backfill for an existing title, keyed off the IMDb id in its
 	 * stored externalLink. Prefers the active API, falls back to the others, Cinemeta last (keyless).
-	 * Returns normalized stored lists, or null when there is no usable id or no source knows the
-	 * title. Keyed-API failures yield null; Cinemeta network errors throw so the caller stores nothing.
+	 * notfound = no usable id, or no source knows the title; failed = a source's request failed and
+	 * none found anything; nokey = every keyed source lacks its key.
 	 */
-	async fetchCredits(
-		title: HoardTitle,
-		source: MediaSource = 'omdb',
-	): Promise<{ director: string[]; cast: string[] } | null> {
+	fetchCredits(title: HoardTitle, source: MediaSource = 'omdb'): Promise<LookupResult<CreditsLookup>> {
 		const imdbId = this.extractImdbId(title.externalLink ?? '');
-		if (!imdbId) return null;
-
-		// OMDb: Director/Actors ride in the plain detail response — one cheap call (deliberately
-		// NOT getOmdbTvDetails, which fans out per-season requests)
-		const tryOmdb = async (): Promise<{ director: string[]; cast: string[] } | null> => {
-			if (!this.omdbApiKey) return null;
-			try {
-				const url = `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(this.omdbApiKey)}`;
-				const data = (await this.fetchWithTimeout(url)) as OmdbDetailResponse;
-				if (data.Response === 'False' || !data.imdbID) return null;
-				return {
-					// series carry no per-title Director; their creators fill the field
-					director:
-						data.Type === 'series'
-							? omdbSeriesDirectorCredits(data)
-							: omdbNamesToCredits(data.Director),
-					cast: omdbNamesToCredits(data.Actors),
-				};
-			} catch {
-				return null;
-			}
+		if (!imdbId) return Promise.resolve(NOT_FOUND);
+		const sources: Record<MediaSource, LookupSource<CreditsLookup>> = {
+			omdb: () => this.omdbCredits(imdbId),
+			tmdb: () => this.tmdbCredits(imdbId),
+			cinemeta: () => this.cinemetaCredits(imdbId, title),
 		};
+		const order: MediaSource[] =
+			source === 'cinemeta' ? ['cinemeta', 'omdb', 'tmdb']
+				: source === 'tmdb' ? ['tmdb', 'omdb', 'cinemeta']
+					: ['omdb', 'tmdb', 'cinemeta'];
+		return firstFound(order.map((name) => sources[name]));
+	}
 
-		// TMDB: resolve the IMDb id via /find, then hit the lean /credits endpoint
-		const tryTmdb = async (): Promise<{ director: string[]; cast: string[] } | null> => {
-			if (!this.tmdbApiKey) return null;
-			try {
-				const findUrl = `${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`;
-				const found = (await this.fetchWithTimeout(findUrl, this.tmdbHeaders())) as TmdbFindResult;
-				const movieId = found.movie_results?.[0]?.id;
-				const tvId = found.tv_results?.[0]?.id;
-				if (movieId !== undefined) {
-					const credits = (await this.fetchWithTimeout(`${TMDB_BASE}/movie/${movieId}/credits`, this.tmdbHeaders())) as TmdbCreditsResult;
-					return tmdbCreditsToStored(credits);
-				}
-				if (tvId === undefined) return null;
-				// TV: the creators live on the detail response (created_by), not in /credits — fold the
-				// cast lookup in via append_to_response
-				const detail = (await this.fetchWithTimeout(
-					`${TMDB_BASE}/tv/${tvId}?append_to_response=credits`,
-					this.tmdbHeaders(),
-				)) as TmdbTvDetail;
-				return {
-					director: tmdbSeriesDirectorCredits(detail),
-					cast: tmdbCreditsToStored(detail.credits).cast,
-				};
-			} catch {
-				return null;
+	/**
+	 * OMDb: Director/Actors ride in the plain detail response — one cheap call (deliberately
+	 * NOT getOmdbTvDetails, which fans out per-season requests).
+	 */
+	private omdbCredits(imdbId: string): Promise<LookupResult<CreditsLookup>> {
+		if (!this.omdbApiKey) return Promise.resolve(NO_KEY);
+		return attempt(async () => {
+			const url = `${OMDB_BASE}/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(this.omdbApiKey)}`;
+			const data = (await this.fetchWithTimeout(url)) as OmdbDetailResponse;
+			if (data.Response === 'False' || !data.imdbID) return null;
+			return creditsOf({
+				// series carry no per-title Director; their creators fill the field
+				director: data.Type === 'series' ? omdbSeriesDirectorCredits(data) : omdbNamesToCredits(data.Director),
+				cast: omdbNamesToCredits(data.Actors),
+			});
+		}, lookupOfError);
+	}
+
+	/** TMDB: resolve the IMDb id via /find, then hit the lean /credits endpoint. */
+	private tmdbCredits(imdbId: string): Promise<LookupResult<CreditsLookup>> {
+		if (!this.tmdbApiKey) return Promise.resolve(NO_KEY);
+		return attempt(async () => {
+			const hits = await this.fetchWithTimeout(`${TMDB_BASE}/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`, this.tmdbHeaders());
+			const movieId = readOptionalNumber(at(hits, 'movie_results', 0, 'id'));
+			if (movieId !== undefined) {
+				return creditsOf(tmdbCreditsToStored(await this.fetchWithTimeout(`${TMDB_BASE}/movie/${movieId}/credits`, this.tmdbHeaders())));
 			}
-		};
-
-		// Cinemeta errors propagate on purpose: the caller must not store 'none' for a network failure
-		const tryCinemeta = (): Promise<{ director: string[]; cast: string[] } | null> => this.fetchCinemetaCredits(imdbId, title);
-
-		const order =
-			source === 'cinemeta' ? [tryCinemeta, tryOmdb, tryTmdb]
-				: source === 'tmdb' ? [tryTmdb, tryOmdb, tryCinemeta]
-					: [tryOmdb, tryTmdb, tryCinemeta];
-		for (const attempt of order) {
-			const result = await attempt();
-			if (result) return result;
-		}
-		return null;
+			const tvId = readOptionalNumber(at(hits, 'tv_results', 0, 'id'));
+			if (tvId === undefined) return null;
+			// TV: the creators live on the detail response (created_by), not in /credits — fold the
+			// cast lookup in via append_to_response
+			const detail = await this.fetchWithTimeout(`${TMDB_BASE}/tv/${tvId}?append_to_response=credits`, this.tmdbHeaders());
+			return creditsOf({
+				director: tmdbSeriesDirectorCredits(detail),
+				cast: tmdbCreditsToStored(at(detail, 'credits')).cast,
+			});
+		}, lookupOfError);
 	}
 
 	/** Keyless credits: the series record first for an unknown kind (the movie endpoint answers series ids with a foreign film). */
-	private async fetchCinemetaCredits(
-		imdbId: string,
-		title: HoardTitle,
-	): Promise<{ director: string[]; cast: string[] } | null> {
-		const kind = explicitMediaKind(title);
-		for (const k of kind ? [kind] : (['tv', 'movie'] as const)) {
-			const meta = await this.getCinemetaDetails(imdbId, k);
-			if (!meta) continue;
-			const { director = [], cast = [] } = meta;
-			if (director.length === 0 && cast.length === 0) return null;
-			return { director: normalizeCreditsForStore(director), cast: normalizeCreditsForStore(cast) };
-		}
-		return null;
+	private cinemetaCredits(imdbId: string, title: HoardTitle): Promise<LookupResult<CreditsLookup>> {
+		return attempt(async () => {
+			const kind = explicitMediaKind(title);
+			for (const k of kind ? [kind] : (['tv', 'movie'] as const)) {
+				let meta: MediaSearchResult | null;
+				try {
+					meta = await this.getCinemetaDetails(imdbId, k);
+				} catch (e) {
+					// no such record of this kind: try the other one
+					if (lookupOfError(e).status === 'notfound') continue;
+					throw e;
+				}
+				if (!meta) continue;
+				return creditsOf({ director: normalizeCreditsForStore(meta.director), cast: normalizeCreditsForStore(meta.cast) });
+			}
+			return null;
+		}, lookupOfError);
 	}
 
 	// Google Books (Books)
