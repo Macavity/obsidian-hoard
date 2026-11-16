@@ -6,6 +6,9 @@ import type { Fm } from './storageTypes';
 export const isRecord = (v: unknown): v is Record<string, unknown> =>
 	typeof v === 'object' && v !== null && !Array.isArray(v);
 
+/** The own properties of a typed object as a plain record, for code that handles settings key by key. */
+export const toRecord = (o: object): Record<string, unknown> => Object.fromEntries(Object.entries(o));
+
 export const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 /** Keys whose encoded value differs between two frontmatter objects (present in either). */

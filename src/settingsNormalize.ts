@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS, normalizeRowsLayout } from './types';
-import type { HoardPluginSettings, RatingTier, TagDefinition } from './types';
+import type { CustomListColumn, HoardPluginSettings, RatingTier, TagDefinition } from './types';
 import { isRecord } from './storage/sharedHelpers';
+import { at, readList, readOneOf, readRecord } from './storage/read';
 
 /** Settings that no longer exist; dropped from stored data. */
 export const REMOVED_SETTINGS = ['rootFolder', 'customListsFolder'];
@@ -9,7 +10,7 @@ export const REMOVED_SETTINGS = ['rootFolder', 'customListsFolder'];
 type Normalize<T> = (stored: unknown, fallback: T) => T;
 
 /** Whether the value is of the sample's kind: both lists, both records, or of one primitive type. */
-function sameKind(value: unknown, sample: unknown): boolean {
+function sameKind<T>(value: unknown, sample: T): value is T {
 	if (Array.isArray(sample)) return Array.isArray(value);
 	if (isRecord(sample)) return isRecord(value);
 	return typeof value === typeof sample;
@@ -17,32 +18,64 @@ function sameKind(value: unknown, sample: unknown): boolean {
 
 /**
  * The rule of every key that has none of its own: a stored value of the default's kind is kept.
- * Only the kind is checked. An unknown theme name or a list of the wrong things passes, as it
- * always did; a missing value, null, or text where a list belongs gives the default.
+ * Only the kind is checked. An unknown theme name passes, as it always did; a missing value, null,
+ * or text where a list belongs gives the default. Lists have their own rules (`listOf`).
  */
 function keepSameKind<T>(stored: unknown, fallback: T): T {
-	return sameKind(stored, fallback) ? (stored as T) : fallback;
+	return sameKind(stored, fallback) ? stored : fallback;
 }
 
 const oneOf = <T extends string>(...allowed: T[]): Normalize<T> =>
 	(stored, fallback) => allowed.find((value) => value === stored) ?? fallback;
 
-/** A list with at least one entry. What the entries are is not checked. */
-function nonEmptyList<T>(stored: unknown, fallback: T[]): T[] {
-	return Array.isArray(stored) && stored.length > 0 ? (stored as T[]) : fallback;
+/**
+ * A list of what `readItem` accepts: entries it rejects are dropped. A list left without an entry
+ * (or one that was never a list) gives the default, as every one of these lists needs at least one.
+ */
+const nonEmptyListOf = <T>(readItem: (item: unknown) => T | undefined): Normalize<T[]> => (stored, fallback) => {
+	const items = readList(stored, readItem);
+	return items.length > 0 ? items : fallback;
+};
+
+/** A list of what `readItem` accepts, possibly empty; a stored value that is no list gives the default. */
+const listOf = <T>(readItem: (item: unknown) => T | undefined): Normalize<T[]> => (stored, fallback) =>
+	Array.isArray(stored) ? readList(stored, readItem) : fallback;
+
+/** A name with a colour; any other key of the entry stays. */
+export function readTag(item: unknown): TagDefinition | undefined {
+	const name = at(item, 'name');
+	const color = at(item, 'color');
+	return typeof name === 'string' && typeof color === 'string' ? { ...readRecord(item), name, color } : undefined;
 }
+
+function readTier(item: unknown): RatingTier | undefined {
+	const label = at(item, 'label');
+	const color = at(item, 'color');
+	return typeof label === 'string' && typeof color === 'string' ? { ...readRecord(item), label, color } : undefined;
+}
+
+const COLUMN_TYPES = ['text', 'number', 'select'] as const;
+
+/** A column needs its id, label and type; its other keys (options, widths …) stay as stored. */
+function readColumn(item: unknown): CustomListColumn | undefined {
+	const id = at(item, 'id');
+	const label = at(item, 'label');
+	const type = readOneOf<(typeof COLUMN_TYPES)[number] | ''>(at(item, 'type'), COLUMN_TYPES, '');
+	return typeof id === 'string' && typeof label === 'string' && type !== '' ? { ...readRecord(item), id, label, type } : undefined;
+}
+
+const readText = (item: unknown): string | undefined => (typeof item === 'string' ? item : undefined);
 
 /** A stored record, spread over the default: keys it lacks keep their default. */
 function mergedOver<T extends object>(stored: unknown, fallback: T): T {
 	return isRecord(stored) ? { ...fallback, ...stored } : fallback;
 }
 
-const isTier = (v: unknown): v is RatingTier =>
-	isRecord(v) && typeof v.label === 'string' && typeof v.color === 'string';
-
 /** The rating system is always exactly five well-formed tiers; older or hand-edited data resets. */
-const fiveTiers: Normalize<RatingTier[]> = (stored, fallback) =>
-	Array.isArray(stored) && stored.length === 5 && stored.every(isTier) ? stored : fallback;
+const fiveTiers: Normalize<RatingTier[]> = (stored, fallback) => {
+	const tiers = readList(stored, readTier);
+	return Array.isArray(stored) && stored.length === 5 && tiers.length === 5 ? tiers : fallback;
+};
 
 /** Each of the two badge colours is a non-empty text, else the default's. */
 const readingColors: Normalize<HoardPluginSettings['readingTypeColors']> = (stored, fallback) => {
@@ -66,7 +99,7 @@ function withReleased(statuses: TagDefinition[]): TagDefinition[] {
 }
 
 const watchStatuses: Normalize<TagDefinition[]> = (stored, fallback) =>
-	withReleased(retinted(nonEmptyList(stored, fallback)));
+	withReleased(retinted(nonEmptyListOf(readTag)(stored, fallback)));
 
 /**
  * The keys whose stored value needs more than the right kind. A key not listed here follows
@@ -77,11 +110,13 @@ const RULES: { [K in keyof HoardPluginSettings]?: Normalize<HoardPluginSettings[
 	dateFormat: oneOf('european', 'american', 'iso'),
 	// the removed 'cards' view becomes the default, 'rows'
 	defaultWatchlistView: oneOf('list', 'rows'),
-	types: nonEmptyList,
+	types: nonEmptyListOf(readTag),
 	statuses: watchStatuses,
-	reviews: nonEmptyList,
-	priorities: nonEmptyList,
-	seasonPalette: nonEmptyList,
+	reviews: nonEmptyListOf(readTag),
+	priorities: nonEmptyListOf(readTag),
+	seasonPalette: nonEmptyListOf(readText),
+	customListTabOrder: listOf(readText),
+	defaultCustomColumns: listOf(readColumn),
 	ratingSystem: fiveTiers,
 	listFilters: mergedOver,
 	cardTextStyles: mergedOver,
@@ -90,10 +125,13 @@ const RULES: { [K in keyof HoardPluginSettings]?: Normalize<HoardPluginSettings[
 	rowsLayout: (stored) => normalizeRowsLayout(stored),
 };
 
-/** A copy of the object with each value replaced, key by key, by one of the same type. */
-function mapValues<T extends object>(source: T, each: <K extends keyof T>(value: T[K], key: K) => T[K]): T {
-	const keys = Object.keys(source) as (keyof T)[];
-	return Object.fromEntries(keys.map((key) => [key, each(source[key], key)])) as T;
+/** Whether the key is one of the settings this version has. */
+const isSettingKey = (key: string): key is keyof HoardPluginSettings => key in DEFAULT_SETTINGS;
+
+/** Puts the checked value of one key into `out`, which starts as a copy of the defaults. */
+function normalizeKey<K extends keyof HoardPluginSettings>(out: HoardPluginSettings, key: K, stored: unknown): void {
+	const rule: Normalize<HoardPluginSettings[K]> = RULES[key] ?? keepSameKind;
+	out[key] = rule(stored, out[key]);
 }
 
 /**
@@ -103,9 +141,9 @@ function mapValues<T extends object>(source: T, each: <K extends keyof T>(value:
  */
 export function normalizeSettings(stored: Record<string, unknown>): HoardPluginSettings {
 	const unknown = Object.fromEntries(Object.entries(stored).filter(([key]) => !REMOVED_SETTINGS.includes(key)));
-	const known = mapValues(structuredClone(DEFAULT_SETTINGS), (fallback, key) => {
-		const rule: Normalize<typeof fallback> = RULES[key] ?? keepSameKind;
-		return rule(stored[key], fallback);
-	});
-	return { ...unknown, ...known };
+	const out = structuredClone(DEFAULT_SETTINGS);
+	for (const key of Object.keys(out)) {
+		if (isSettingKey(key)) normalizeKey(out, key, stored[key]);
+	}
+	return { ...unknown, ...out };
 }

@@ -98,4 +98,47 @@ describe('LocalStore', () => {
 		expect(saveSpy).not.toHaveBeenCalled();
 		expect(p.data).toBe(data);
 	});
+	it('reads a cache entry field by field: wrong-typed fields drop, the entry stays', async () => {
+		const cache = {
+			'Movie/A': { seasons: 'x', tmdbId: '5', studio: ['S'], director: ['D', 3], collectionId: 7, apiCheck: { credits: { at: '2026-01-01T00:00:00.000Z', result: 'notfound' }, studio: 'bad' } },
+			'Movie/B': 'not an entry',
+		};
+		const p = plugin({ schemaVersion: 2, settings: {}, cache, ui: {} });
+		const s = new LocalStore(p); await s.load();
+		expect(s.getCache('Movie/A')).toEqual({
+			studio: ['S'], director: ['D'], collectionId: 7,
+			apiCheck: { credits: { at: '2026-01-01T00:00:00.000Z', result: 'notfound' } },
+		});
+		expect(s.getCache('Movie/B')).toBeUndefined();
+	});
+	it('reads valid seasons and airing, and ignores a cache or ui of the wrong kind', async () => {
+		const seasons = [{ name: 'S1', episodes: 8, offset: 0 }, { name: 'bad' }];
+		const airing = { nextSeason: 2, nextEpisode: 'x', refreshedAt: '2026-02-02T00:00:00.000Z' };
+		const p = plugin({ schemaVersion: 2, settings: 'x', cache: { 'TV/A': { seasons, airing, tmdbMediaType: 'tv', communitySource: 5 } }, ui: [] });
+		const s = new LocalStore(p); await s.load();
+		expect(s.getCache('TV/A')).toEqual({
+			seasons: [{ name: 'S1', episodes: 8, offset: 0 }], airing: { nextSeason: 2, refreshedAt: '2026-02-02T00:00:00.000Z' }, tmdbMediaType: 'tv',
+		});
+		expect(s.data.settings).toEqual({});
+		expect(s.data.ui).toEqual({});
+		const q = new LocalStore(plugin({ schemaVersion: 2, settings: {}, cache: [] })); await q.load();
+		expect(q.data.cache).toEqual({});
+	});
+	it('reads the ui state field by field and keeps keys it does not know', async () => {
+		const ui = {
+			collapsedSeasons: { 'TV/A': [1, 'x', 2] }, pinnedGroup: 5, recommendedDaily: { date: '2026-01-01', ids: ['a', 1] },
+			gamesRecommendedDaily: { date: 3 }, watchlogImport: { original: 'imported', fork: 'maybe' }, other: 1,
+		};
+		const p = plugin({ schemaVersion: 2, settings: {}, cache: {}, ui, reading: 'x', games: { a: 1 }, secretsInStorage: 'yes' });
+		const s = new LocalStore(p); await s.load();
+		expect(s.data.ui).toEqual({
+			collapsedSeasons: { 'TV/A': [1, 2] }, recommendedDaily: { date: '2026-01-01', ids: ['a'] }, watchlogImport: { original: 'imported' }, other: 1,
+		});
+		expect(s.data.ui.pinnedGroup).toBeUndefined();
+		expect(s.data.reading).toBeUndefined();
+		expect(s.data.games).toEqual({ a: 1 });
+		expect(s.data.secretsInStorage).toBeUndefined();
+		const q = new LocalStore(plugin({ schemaVersion: 2, settings: {}, cache: {}, ui: { pinnedGroup: null } })); await q.load();
+		expect(q.data.ui.pinnedGroup).toBeNull();
+	});
 });

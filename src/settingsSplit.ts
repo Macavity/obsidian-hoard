@@ -1,4 +1,5 @@
 import { normalizeSettings } from './settingsNormalize';
+import { toRecord } from './storage/sharedHelpers';
 import type { HoardPluginSettings } from './types';
 import { SHARED_SETTING_KEYS } from './storage/SharedConfigStore';
 import type { SharedConfigStore } from './storage/SharedConfigStore';
@@ -37,7 +38,7 @@ export async function persistSettings(
 	shared: SharedConfigStore,
 	secrets?: SecretStore,
 ): Promise<void> {
-	const all = settings as unknown as Record<string, unknown>;
+	const all = toRecord(settings);
 	const localPart: Record<string, unknown> = {};
 	for (const [k, v] of Object.entries(all)) {
 		if (SHARED_SETTING_KEYS.includes(k)) continue;
@@ -55,7 +56,7 @@ export async function persistSettings(
 	local.data.settings = localPart;
 	local.queueSave();
 	// only keys that differ from what the base (plus defaults) already yields; none: no write at all
-	const baseline = composeSettings({}, shared.get().settings) as unknown as Record<string, unknown>;
+	const baseline = toRecord(composeSettings({}, shared.get().settings));
 	const changed = shared.diff(Object.fromEntries(
 		Object.entries(all).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(baseline[k])),
 	));

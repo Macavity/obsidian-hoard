@@ -1,5 +1,6 @@
 import en from './en';
 import de from './de';
+import { at } from '../storage/read';
 
 type Leaf = string | { one: string; other: string; zero?: string };
 // Leaf strings are widened: `as const` locale files hold literal types the translations must not have to match.
@@ -24,8 +25,7 @@ let locale = 'en';
 let rules = new Intl.PluralRules('en');
 
 function isPlural(v: unknown): v is Exclude<Leaf, string> {
-	const o = v as { one?: unknown; other?: unknown };
-	return typeof v === 'object' && v !== null && typeof o.one === 'string' && typeof o.other === 'string';
+	return typeof at(v, 'one') === 'string' && typeof at(v, 'other') === 'string';
 }
 
 function flatten(node: object, prefix: string, out: Map<string, Leaf>): void {
@@ -40,7 +40,7 @@ function flatFor(lang: string): Map<string, Leaf> {
 	let map = flatCache.get(lang);
 	if (!map) {
 		map = new Map();
-		flatten(registry[lang] as object, '', map);
+		flatten(registry[lang] ?? {}, '', map);
 		flatCache.set(lang, map);
 	}
 	return map;

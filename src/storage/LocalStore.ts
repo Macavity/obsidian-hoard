@@ -2,6 +2,8 @@ import type { SecretStore } from './SecretStore';
 import type { EntryCache, LocalData } from './storageTypes';
 import { isRecord } from './sharedHelpers';
 import { migrateNoneMarkers } from './cacheMigration';
+import { readCache, readUi } from './readCache';
+import { readRecord } from './read';
 
 /** `newer`: data.json from a later plugin version; it is never written by this one. */
 /** `watchlog` / `newer`: data.json is kept as is and nothing is saved this session (the caller warns). */
@@ -10,6 +12,14 @@ export type LoadResult = { schema: 2 } | { schema: 'newer' } | { schema: 'watchl
 export interface DataPlugin {
 	loadData(): Promise<unknown>;
 	saveData(d: unknown): Promise<void>;
+}
+
+/** Which data.json this is: WatchLog's (schema 1, a `titles` list), a later version's, ours, or none we can read. */
+function formatOf(raw: unknown): 'watchlog' | 'newer' | 2 | 'empty' {
+	if (!isRecord(raw)) return 'empty';
+	if (raw.schemaVersion === undefined && Array.isArray(raw.titles)) return 'watchlog';
+	if (typeof raw.schemaVersion === 'number' && raw.schemaVersion > 2) return 'newer';
+	return raw.schemaVersion === 2 ? 2 : 'empty';
 }
 
 const SAVE_DEBOUNCE_MS = 100;
@@ -33,28 +43,34 @@ export class LocalStore {
 
 	async load(): Promise<LoadResult> {
 		const raw = await this.plugin.loadData();
-		if (isRecord(raw) && raw.schemaVersion === undefined && Array.isArray(raw.titles)) {
-			// a WatchLog data.json: Hoard starts empty beside it and never writes over it
+		const format = formatOf(raw);
+		if (format === 'watchlog' || format === 'newer') {
+			// a WatchLog or newer data.json: Hoard starts empty beside it and never writes over it
 			this.writable = false;
 			this.data = emptyData();
-			return { schema: 'watchlog' };
+			return { schema: format };
 		}
-		if (isRecord(raw) && typeof raw.schemaVersion === 'number' && raw.schemaVersion > 2) {
-			this.writable = false;
-			this.data = emptyData();
-			return { schema: 'newer' };
-		}
-		if (isRecord(raw) && raw.schemaVersion === 2) {
-			const d = raw as unknown as LocalData;
-			const migrated = migrateNoneMarkers(d.cache ?? {}, new Date().toISOString());
-			this.data = { ...d, settings: d.settings ?? {}, cache: migrated.cache as LocalData['cache'], ui: d.ui ?? {} };
-			if (migrated.changed) this.queueSave();
-		} else {
-			this.data = emptyData();
-		}
+		this.data = emptyData();
+		if (format === 2 && isRecord(raw)) this.read(raw);
 		// migrate keys left in data.json by older versions; persist right away so they are gone from disk
 		if (this.absorbSecrets()) await this.save();
 		return { schema: 2 };
+	}
+
+	/** Takes a schema-2 data.json field by field; the legacy `none` markers become checks first. */
+	private read(raw: Record<string, unknown>): void {
+		const migrated = migrateNoneMarkers(readRecord(raw.cache), new Date().toISOString());
+		this.data = {
+			...raw,
+			schemaVersion: 2,
+			settings: readRecord(raw.settings),
+			secretsInStorage: raw.secretsInStorage === true ? true : undefined,
+			reading: isRecord(raw.reading) ? raw.reading : undefined,
+			games: isRecord(raw.games) ? raw.games : undefined,
+			cache: readCache(migrated.cache),
+			ui: readUi(raw.ui),
+		};
+		if (migrated.changed) this.queueSave();
 	}
 
 	/** Records that keys live in secret storage (no-op if already recorded). */

@@ -32,6 +32,7 @@ import type { WatchLogSourceKind, WatchLogSources } from './import/watchlog/dete
 import { createImporter } from './import/watchlog/importer';
 import { getDecision, pendingSources } from './import/watchlog/onboardingState';
 import { composeSettings, persistSettings } from './settingsSplit';
+import { toRecord } from './storage/sharedHelpers';
 import { resolveJikanEndpoint } from './jikanBase';
 import { emitDataChanged, onDataChanged } from './changeSignal';
 
@@ -241,7 +242,7 @@ export default class HoardPlugin extends Plugin {
 				this.shared.deferBase({
 					create: async () => {
 						await this.dataManager.ensureFolder(this.layout.root);
-						await this.shared.createBase(this.settings as unknown as Record<string, unknown>);
+						await this.shared.createBase(toRecord(this.settings));
 					},
 					appeared: () => this.adoptSyncedBase(),
 				});

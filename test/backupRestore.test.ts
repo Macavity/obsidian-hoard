@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import data from './fixtures/data-v1.json';
 import { setupBackup } from './helpers/setupBackup';
 import { inferHistoryAction } from '../src/HistoryManager';
+import { DEFAULT_SETTINGS } from '../src/types';
 import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../src/backup';
 
 const BASE = 'hoard:\n  version: 1\n  statuses:\n    - name: Rewatch\n      color: "#123456"\n';
@@ -101,5 +102,46 @@ describe('history actions', () => {
 		await restoreBackup(b, parsed.backup);
 		expect(Object.getPrototypeOf(b.local.data.settings)).toBe(Object.prototype);
 		expect((b.local.data.settings as { polluted?: unknown }).polluted).toBeUndefined();
+	});
+
+	it('restores a backup with a wrong-typed settings key and keeps the rest', async () => {
+		const src = await setupBackup({});
+		const local = { cardSize: 'big', dateFormat: 'iso', ratingSystem: 'x', customListTabOrder: [3, 'a'], futureKey: [1] };
+		const parsed = parseBackup(JSON.stringify({ ...buildBackup(src), local }));
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const b = await setupBackup({});
+		await restoreBackup(b, parsed.backup);
+		expect(b.local.data.settings).toMatchObject({ dateFormat: 'iso', cardSize: 0, customListTabOrder: ['a'], futureKey: [1] });
+		expect(b.local.data.settings.ratingSystem).toEqual(DEFAULT_SETTINGS.ratingSystem);
+	});
+
+	it('drops the entries of a backup that have no id and reads the rest of the file', () => {
+		const src = JSON.stringify({
+			version: 2, exportedAt: '2026-01-01', shared: {}, local: { cardSize: 1 },
+			history: [{ id: 'h1', timestamp: 't', message: 'm' }, { id: 3 }, 'x'],
+			entries: {
+				titles: [{ id: 'Movie/A', title: 'A' }, 5, { title: 'no id' }], maybe: [{ id: 'm', title: 'M' }, { id: 'n' }],
+				reading: {
+					books: [{ id: 'b', title: 'B' }, {}], manga: [{ id: 'g', title: 'G' }], bookColumns: [{ id: 'c', name: 'N' }, 3],
+					mangaColumns: 'x', settings: { defaultStatus: 'Reading' },
+				},
+				games: { games: [{ id: 'x', title: 'X' }, null], groups: [{ id: 'g1', name: 'G1', gameIds: ['x', 4] }, { id: 'g2' }], settings: { defaultStatus: 'Playing' } },
+			},
+		});
+		const parsed = parseBackup(src);
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const { backup } = parsed;
+		expect(backup.entries.titles.map((t) => t.id)).toEqual(['Movie/A']);
+		expect(backup.entries.maybe.map((t) => t.id)).toEqual(['m']);
+		expect(backup.entries.reading.books.map((t) => t.id)).toEqual(['b']);
+		expect(backup.entries.reading.manga.map((t) => t.id)).toEqual(['g']);
+		expect(backup.entries.reading.bookColumns.map((c) => c.id)).toEqual(['c']);
+		expect(backup.entries.reading.mangaColumns).toEqual([]);
+		expect(backup.entries.reading.settings.defaultStatus).toBe('Reading');
+		expect(backup.entries.games.games.map((g) => g.id)).toEqual(['x']);
+		expect(backup.entries.games.groups).toEqual([{ id: 'g1', name: 'G1', gameIds: ['x'], dateAdded: '' }]);
+		expect(backup.entries.games.settings.defaultStatus).toBe('Playing');
+		expect(backup.history.map((h) => h.id)).toEqual(['h1']);
+		expect(backup.local).toEqual({ cardSize: 1 });
 	});
 });

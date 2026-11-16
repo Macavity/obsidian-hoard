@@ -1,4 +1,6 @@
 import type { YamlIO } from './storageTypes';
+import { at } from './read';
+import { isRecord } from './sharedHelpers';
 
 const KEY = 'hoard';
 const INFOLDER_RE = /^(\s*-\s+file\.inFolder\(")((?:[^"\\]|\\.)*)("\)\s*)$/;
@@ -54,9 +56,8 @@ export function readHoardBlock(src: string, yaml: YamlIO): Record<string, unknow
 	const range = blockRange(ls, KEY);
 	if (!range) return null;
 	const [start, end] = range;
-	const parsed = yaml.parse(ls.slice(start, end).join('\n')) as Record<string, unknown> | null;
-	const block = parsed?.[KEY];
-	return block && typeof block === 'object' && !Array.isArray(block) ? (block as Record<string, unknown>) : null;
+	const block = at(yaml.parse(ls.slice(start, end).join('\n')), KEY);
+	return isRecord(block) ? block : null;
 }
 
 /** Replaces or appends only the `hoard:` block; the rest stays byte-identical. */

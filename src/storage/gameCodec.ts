@@ -17,11 +17,12 @@ export function parsePlaytime(s: string): number | null {
 	return h * 60 + (m[2] ? Number(m[2]) : 0);
 }
 
-const GAME_API_SOURCES: readonly string[] = ['rawg', 'igdb', 'steam'];
+const GAME_API_SOURCES = ['rawg', 'igdb', 'steam'] as const;
 
 function decodeApi(r: FmReader): { apiSource: Game['apiSource']; apiId: string } {
 	const ext = parseExternalId(r.str(C.externalId));
-	if (ext && GAME_API_SOURCES.includes(ext.source)) return { apiSource: ext.source as Game['apiSource'], apiId: ext.id };
+	const apiSource = GAME_API_SOURCES.find((s) => s === ext?.source);
+	if (ext && apiSource) return { apiSource, apiId: ext.id };
 	return { apiSource: '', apiId: '' };
 }
 

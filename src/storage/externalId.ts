@@ -27,9 +27,10 @@ export function parseExternalId(s: string): ExternalId | null {
 	if (!source || !isSource(source)) return null;
 	const kinds = KINDS[source];
 	if (kinds) {
-		const [kind, id] = rest;
-		if (rest.length !== 2 || !kind || !id || !kinds.includes(kind as Kind) || !ID_RE.test(id)) return null;
-		return { source, kind: kind as Kind, id };
+		const [kindText, id] = rest;
+		const kind = kinds.find((k) => k === kindText);
+		if (rest.length !== 2 || !kind || !id || !ID_RE.test(id)) return null;
+		return { source, kind, id };
 	}
 	const [id] = rest;
 	if (rest.length !== 1 || !id || !ID_RE.test(id)) return null;

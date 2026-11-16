@@ -25,10 +25,10 @@ import {
 	DEFAULT_READING_SETTINGS,
 	isReleaseDateFuture,
 	todayIso,
-	READING_STATUSES,
-	DEFAULT_READING_STATUS_COLORS,
 } from './types';
 import { slugify } from './storage/sharedHelpers';
+import { readRecord } from './storage/read';
+import { readColumns, readReadingSettings } from './featureSettings';
 
 export type ReadingKind = 'book' | 'manga';
 
@@ -134,29 +134,10 @@ export class ReadingDataManager {
 
 	/** Composes the local (data.json) and shared (base) reading settings into memory; never writes. */
 	private readShared(): void {
-		const raw = { ...this.local.data.reading, ...(this.shared.get().settings.reading as object | undefined) } as Partial<ReadingSettings> & {
-			bookColumns?: ReadingCustomColumn[];
-			mangaColumns?: ReadingCustomColumn[];
-		};
-		const { bookColumns, mangaColumns, ...rest } = raw;
-		const settings: ReadingSettings = { ...DEFAULT_READING_SETTINGS, ...rest };
-		// "On Hold" was removed; never leave it as the default for new entries
-		if ((settings.defaultStatus as string) === 'On Hold') settings.defaultStatus = 'Plan to Read';
-		// status colours are user-editable — seed missing keys from the shipped defaults
-		const colors: Record<string, string> = { ...DEFAULT_READING_STATUS_COLORS, ...(settings.statusColors ?? {}) };
-		for (const status of READING_STATUSES) {
-			if (typeof colors[status] !== 'string') colors[status] = DEFAULT_READING_STATUS_COLORS[status];
-		}
-		settings.statusColors = colors;
-		this.settings = settings;
-		const clean = (cols: unknown): ReadingCustomColumn[] =>
-			(Array.isArray(cols) ? (cols as ReadingCustomColumn[]) : []).map((c) => ({
-				...c,
-				options: Array.isArray(c.options) ? c.options : [],
-				color: c.color || '#5F5E5A',
-			}));
-		this.bookColumns = clean(bookColumns);
-		this.mangaColumns = clean(mangaColumns);
+		const stored = { ...readRecord(this.local.data.reading), ...readRecord(this.shared.get().settings.reading) };
+		this.settings = readReadingSettings(stored);
+		this.bookColumns = readColumns(stored.bookColumns);
+		this.mangaColumns = readColumns(stored.mangaColumns);
 		this.index.setColumns(this.bookColumns, this.mangaColumns);
 	}
 

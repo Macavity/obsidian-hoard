@@ -64,11 +64,12 @@ const RECURRENCES: readonly AirtimeRecurrence[] = ['once', 'daily', 'weekly', 'm
 export function decodeAirtime(r: FmReader): EntryAirtime | undefined {
 	const rec = r.str(A.recurrence);
 	if (!rec) return undefined;
-	if (!(RECURRENCES as readonly string[]).includes(rec)) {
+	const recurrence = RECURRENCES.find((x) => x === rec);
+	if (!recurrence) {
 		r.invalidFields.push(A.recurrence);
 		return undefined;
 	}
-	const a: EntryAirtime = { recurrence: rec as AirtimeRecurrence };
+	const a: EntryAirtime = { recurrence };
 	if (r.fm[A.day] != null && r.fm[A.day] !== '') a.day = r.num(A.day);
 	const time = r.str(A.time);
 	if (time) a.time = time;
@@ -119,7 +120,8 @@ function encodeCustomFields(e: Book | Manga, columns: Columns, out: Fm): void {
 
 function status(r: FmReader): ReadingStatus {
 	const s = r.str(C.status);
-	if ((READING_STATUSES as string[]).includes(s)) return s as ReadingStatus;
+	const known = READING_STATUSES.find((x) => x === s);
+	if (known) return known;
 	if (s) r.invalidFields.push(C.status);
 	return 'Plan to Read';
 }

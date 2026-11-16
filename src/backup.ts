@@ -2,13 +2,17 @@ import type { DataManager } from './DataManager';
 import type { ReadingDataManager } from './ReadingDataManager';
 import type { GameDataManager } from './GameDataManager';
 import type { HistoryEntry, HistoryManager } from './HistoryManager';
-import type { GamesData, MaybeTitle, ReadingData, HoardTitle } from './types';
+import { DEFAULT_SETTINGS, defaultGamesSettings } from './types';
+import type { Book, Game, GameGroup, GamesData, Manga, MaybeTitle, ReadingData, HoardTitle } from './types';
 import type { LocalStore } from './storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { ImportContext } from './import/watchlog/schema1Types';
 import { withoutCredentials } from './jikanBase';
 import { SECRET_KEYS } from './storage/SecretStore';
-import { isRecord } from './storage/sharedHelpers';
+import { isRecord, toRecord } from './storage/sharedHelpers';
+import { at, readList, readRecord, readString, readStringList } from './storage/read';
+import { normalizeSettings } from './settingsNormalize';
+import { readColumns, readGamesSettings, readReadingSettings } from './featureSettings';
 
 export interface BackupManagers {
 	dataManager: DataManager;
@@ -83,6 +87,36 @@ export type BackupErrorCode =
 	| 'parseJson' | 'notObject' | 'titlesMissing' | 'readingMissing' | 'gamesMissing' | 'sharedMissing'
 	| 'historyInvalid' | 'localInvalid' | 'unsupportedFormat';
 
+/**
+ * An entry is kept when it can be told apart: a record with its text id and title. The entries are
+ * written back through the managers, which fill every other field; one that has neither is no entry.
+ */
+const isEntry = <T extends { id: string; title: string }>(v: unknown): v is T =>
+	typeof at(v, 'id') === 'string' && typeof at(v, 'title') === 'string';
+
+/** Entries of one kind: the same check, handed on as the kind the restore writes. */
+const entryReader = <T extends { id: string; title: string }>() => (v: unknown): T | undefined => (isEntry<T>(v) ? v : undefined);
+const readTitle = entryReader<HoardTitle>();
+const readMaybe = entryReader<MaybeTitle>();
+const readBook = entryReader<Book>();
+const readManga = entryReader<Manga>();
+const readGame = entryReader<Game>();
+
+function readGameGroup(v: unknown): GameGroup | undefined {
+	const id = at(v, 'id');
+	const name = at(v, 'name');
+	if (typeof id !== 'string' || typeof name !== 'string') return undefined;
+	return { id, name, gameIds: readStringList(at(v, 'gameIds')), dateAdded: readString(at(v, 'dateAdded')) };
+}
+
+function readHistoryEntry(v: unknown): HistoryEntry | undefined {
+	const id = at(v, 'id');
+	const timestamp = at(v, 'timestamp');
+	const message = at(v, 'message');
+	if (typeof id !== 'string' || typeof timestamp !== 'string' || typeof message !== 'string') return undefined;
+	return { ...readRecord(v), id, timestamp, message };
+}
+
 /** Validates the whole file before anything is written. */
 export function parseBackup(text: string): { backup: BackupFile } | { error: BackupErrorCode } {
 	let parsed: unknown;
@@ -102,7 +136,30 @@ export function parseBackup(text: string): { backup: BackupFile } | { error: Bac
 	if (!isRecord(parsed['shared'])) return { error: 'sharedMissing' };
 	if (!Array.isArray(parsed['history'])) return { error: 'historyInvalid' };
 	if (parsed['local'] !== undefined && !isRecord(parsed['local'])) return { error: 'localInvalid' };
-	return { backup: { ...parsed, local: parsed['local'] ?? {} } as unknown as BackupFile };
+	const backup: BackupFile = {
+		version: 2,
+		exportedAt: readString(parsed['exportedAt']),
+		entries: {
+			titles: readList(e['titles'], readTitle),
+			maybe: readList(e['maybe'], readMaybe),
+			reading: {
+				books: readList(reading['books'], readBook),
+				manga: readList(reading['manga'], readManga),
+				bookColumns: readColumns(reading['bookColumns']),
+				mangaColumns: readColumns(reading['mangaColumns']),
+				settings: readReadingSettings(readRecord(reading['settings'])),
+			},
+			games: {
+				games: readList(games['games'], readGame),
+				groups: readList(games['groups'], readGameGroup),
+				settings: readGamesSettings(readRecord(games['settings']), defaultGamesSettings()),
+			},
+		},
+		shared: parsed['shared'],
+		local: readRecord(parsed['local']),
+		history: readList(parsed['history'], readHistoryEntry),
+	};
+	return { backup };
 }
 
 /** Writes the backup through the manager APIs; notes that already exist are kept. */
@@ -111,9 +168,11 @@ export async function restoreBackup(m: BackupManagers, b: BackupFile): Promise<v
 	await dm.restoreSharedSettings(b.shared);
 	// keys of an old backup land via LocalStore.save in secret storage (fill-only), never in data.json; shared keys are ignored
 	const { local } = m.storage;
+	// a known setting of the wrong type is replaced by its valid form, the rest of the backup stays
+	const checked = toRecord(normalizeSettings(b.local));
 	for (const [k, v] of Object.entries(b.local)) {
 		if (SHARED_SETTING_KEYS.includes(k) || UNSAFE_KEYS.has(k)) continue;
-		local.data.settings[k] = v;
+		local.data.settings[k] = k in DEFAULT_SETTINGS ? checked[k] : v;
 	}
 	local.queueSave();
 	for (const t of b.entries.titles) {
