@@ -6,7 +6,7 @@ import { TENRAI_BASE, resolveJikanEndpoint } from '../../src/jikanBase';
 /** The network stand-in from the obsidian mock. */
 export const sent = vi.mocked(requestUrl);
 
-export const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
+const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const TOKEN_REPLY = { status: 200, text: '{"access_token":"tok","expires_in":3600}', json: { access_token: 'tok', expires_in: 3600 } };
 
 export const urlOfCall = (params: unknown): string => (params as { url: string }).url;
@@ -23,7 +23,8 @@ function parsed(text: string): unknown {
 export const reply = (status: number, text = ''): { status: number; text: string; json: unknown } =>
 	({ status, text, json: parsed(text) });
 
-type Reply = ReturnType<typeof reply>;
+/** What the stand-in answers with. */
+export type Reply = ReturnType<typeof reply>;
 
 export const isTokenRequest = (params: unknown): boolean => urlOfCall(params).startsWith(TWITCH_TOKEN_URL);
 

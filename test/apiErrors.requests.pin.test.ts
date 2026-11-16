@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService, apiErrorMessage, apiErrorShort, requestVia } from '../src/ApiService';
 import { TENRAI_BASE } from '../src/jikanBase';
 import {
-	CALLS, afterToken, answer, answerAll, answerWith, failure, isTokenRequest, reply, respondWith, sent, urlOfCall, type Service,
+	CALLS, afterToken, answer, answerAll, answerWith, failure, isTokenRequest, reply, respondWith, sent, urlOfCall, type Reply, type Service,
 } from './helpers/apiFailures';
 
 beforeEach(() => { sent.mockReset(); });
@@ -75,7 +75,7 @@ describe('a request that fails before any answer', () => {
 });
 
 describe('a 2xx answer whose body is not JSON', () => {
-	const unreadable = (): Promise<ReturnType<typeof reply>> => Promise.resolve({
+	const unreadable = (): Promise<Reply> => Promise.resolve({
 		status: 200,
 		text: '<html>',
 		get json(): unknown { throw new SyntaxError('Unexpected token <'); },
@@ -190,7 +190,7 @@ describe('GraphQL errors inside a 200', () => {
 });
 
 describe('the IGDB token', () => {
-	const okQuery = (): Promise<ReturnType<typeof reply>> => Promise.resolve(reply(200, '[]'));
+	const okQuery = (): Promise<Reply> => Promise.resolve(reply(200, '[]'));
 
 	it('is requested with the client credentials and sent with the query', async () => {
 		afterToken(okQuery);
