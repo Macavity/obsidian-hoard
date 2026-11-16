@@ -23,7 +23,7 @@ import { decodeBook, decodeManga, encodeAirtime } from './storage/readingCodec';
 import { decodeGame } from './storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
-import { sameJson } from './storage/sharedHelpers';
+import { omit, sameJson } from './storage/sharedHelpers';
 import { emitDataChanged } from './changeSignal';
 import { ChangeListeners } from './changeListeners';
 
@@ -438,11 +438,10 @@ export class DataManager {
 	async setFavorite(id: string, favorite: boolean): Promise<void> {
 		const title = this.getTitle(id);
 		if (!title) return;
-		title.favorite = favorite;
 		// stamp drives the Favorites shelf order (newest first); cleared on unfavorite
-		if (favorite) title.dateFavorited = new Date().toISOString();
-		else delete title.dateFavorited;
-		await this.writeTitle(title);
+		await this.writeTitle(favorite
+			? { ...title, favorite, dateFavorited: new Date().toISOString() }
+			: { ...omit(title, 'dateFavorited'), favorite });
 	}
 
 	/** Flush pending cache saves during plugin unload. */
@@ -600,12 +599,12 @@ export class DataManager {
 			return;
 		}
 		title.id = id;
-		delete title.maybe;
 		if (!title.notes) title.notes = this.notes.get(id) ?? '';
-		setNotesBaseline(title, this.notes.get(id) ?? '');
-		this.views.set(id, { src: maybe.entry, view: title });
-		setBaseline(title, maybe.entry);
-		await this.writeTitle(title);
+		const adopted = omit(title, 'maybe');
+		setNotesBaseline(adopted, this.notes.get(id) ?? '');
+		this.views.set(id, { src: maybe.entry, view: adopted });
+		setBaseline(adopted, maybe.entry);
+		await this.writeTitle(adopted);
 	}
 
 	/** Batch-add: one note per title; ids are rewritten to the created note paths. */
@@ -653,8 +652,7 @@ export class DataManager {
 		} else if ((isFullDate || !releaseDate) && title.status === 'To be released') {
 			// date is past/today or cleared — the auto status no longer applies
 			title.status = 'Plan to watch';
-			delete title.airtime;
-			await this.updateTitle(title);
+			await this.updateTitle(omit(title, 'airtime'));
 		}
 	}
 
@@ -662,8 +660,7 @@ export class DataManager {
 	async removeAirtimeEntriesForTitle(titleId: string): Promise<void> {
 		const title = this.getTitle(titleId);
 		if (!title?.airtime) return;
-		delete title.airtime;
-		await this.writeTitle(title);
+		await this.writeTitle(omit(title, 'airtime'));
 		this.notifyListeners();
 	}
 
@@ -841,9 +838,7 @@ export class DataManager {
 		const before = title.groups ?? [];
 		const next = [...new Set(fn([...before]))];
 		if (sameJson(before, next)) return;
-		if (next.length > 0) title.groups = next;
-		else delete title.groups;
-		await this.writeTitle(title);
+		await this.writeTitle(next.length > 0 ? { ...title, groups: next } : omit(title, 'groups'));
 	}
 
 	getGroupedTitleIds(): Set<string> {
@@ -1064,10 +1059,8 @@ export class DataManager {
 		if (e.kind === 'title') {
 			const title = this.getTitle(e.entry.id);
 			if (!title) return false;
-			if (airtime) title.airtime = airtime;
-			else delete title.airtime;
-			if (releaseDate) title.releaseDate = releaseDate;
-			await this.writeTitle(title);
+			const scheduled = airtime ? { ...title, airtime } : omit(title, 'airtime');
+			await this.writeTitle(releaseDate ? { ...scheduled, releaseDate } : scheduled);
 			return true;
 		}
 		const file = this.fileOf(e.entry.id);

@@ -27,7 +27,7 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from './types';
-import { sameJson, slugify, toRecord } from './storage/sharedHelpers';
+import { omit, sameJson, slugify, toRecord } from './storage/sharedHelpers';
 import { readRecord } from './storage/read';
 import { readGamesSettings } from './featureSettings';
 
@@ -273,19 +273,17 @@ export class GameDataManager {
 		);
 	}
 
-	async updateGame(updated: Game): Promise<void> {
-		updated.dateModified = new Date().toISOString();
-		this.applyReleaseStatus(updated);
-		const slot = this.views.get(updated.id);
-		const indexed = this.index.get(updated.id);
-		const old = getBaseline(updated) ?? slot?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
+	async updateGame(input: Game): Promise<void> {
+		input.dateModified = new Date().toISOString();
+		this.applyReleaseStatus(input);
+		const slot = this.views.get(input.id);
+		const indexed = this.index.get(input.id);
+		const old = getBaseline(input) ?? slot?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
 		if (!old) return;
 		// favorite arrives as a whole-object replace — stamp/clear off the transition. Drives the
 		// Favorites shelf order (newest first).
-		if (old.favorite !== updated.favorite) {
-			if (updated.favorite) updated.dateFavorited = new Date().toISOString();
-			else delete updated.dateFavorited;
-		}
+		const updated = old.favorite === input.favorite ? input
+			: input.favorite ? { ...input, dateFavorited: new Date().toISOString() } : omit(input, 'dateFavorited');
 		if (old.status !== updated.status) {
 			const act = updated.status === GAME_FINISHED_STATUS ? 'completed' as const : 'status' as const;
 			// mirror the watch behavior: stamp today's finish date on the transition to Finished

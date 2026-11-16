@@ -4,7 +4,7 @@ import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { FmReader, airtimeProps, decodeAirtime } from './readingCodec';
 import { COMMON_PROPS as C, GAME_PROPS as G } from './properties';
-import { optional } from './sharedHelpers';
+import { defined, nonEmpty, optional } from './sharedHelpers';
 
 const PLAYTIME_RE = /^(?:(\d{1,3}(?:,\d{3})+|\d+)h)?(?: ?(\d+)m)?$/;
 
@@ -63,7 +63,6 @@ export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Gam
 		status: r.str(C.status),
 		priority: r.str(G.priority),
 		favorite: r.bool(C.favorite),
-		dateFavorited: r.strOrNull(C.dateFavorited) ?? undefined,
 		wishlist: r.bool(G.wishlist),
 		rating: r.num(C.rating),
 		progress: r.num(G.progress),
@@ -88,12 +87,13 @@ export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Gam
 		dateFinished: r.strOrNull(C.dateFinished),
 		dateAdded: r.str(C.dateAdded),
 		dateModified: r.str(C.dateModified),
-		groups: r.list(C.groups),
-		airtime: decodeAirtime(r),
+		// optional keys are absent, not empty
+		...defined({
+			dateFavorited: r.strOrNull(C.dateFavorited) || undefined,
+			groups: nonEmpty(r.list(C.groups)),
+			airtime: decodeAirtime(r),
+		}),
 	};
-	if (!entry.dateFavorited) delete entry.dateFavorited;
-	if (!entry.groups?.length) delete entry.groups;
-	if (!entry.airtime) delete entry.airtime;
 	return { entry, invalidFields: r.invalidFields };
 }
 

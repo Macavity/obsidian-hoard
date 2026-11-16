@@ -26,6 +26,14 @@ export function defined<T extends object>(o: T): { [K in keyof T]?: Exclude<T[K]
 	return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as { [K in keyof T]?: Exclude<T[K], undefined> };
 }
 
+/** A copy of the object without `key`: absent, not present-and-undefined. Keeps the baseline symbol like a spread. */
+export function omit<T extends object, K extends keyof T>(o: T, key: K): T extends unknown ? Omit<T, K> : never;
+export function omit(o: object, key: PropertyKey): object {
+	const { [key]: dropped, ...rest } = o as Record<PropertyKey, unknown>;
+	void dropped;
+	return rest;
+}
+
 /** The list when it has entries, else undefined: an empty list is written as an absent field. */
 export const nonEmpty = <T>(v: T[] | undefined): T[] | undefined => (v && v.length > 0 ? v : undefined);
 

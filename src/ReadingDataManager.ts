@@ -26,7 +26,7 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from './types';
-import { slugify } from './storage/sharedHelpers';
+import { omit, slugify } from './storage/sharedHelpers';
 import { readRecord } from './storage/read';
 import { readColumns, readReadingSettings } from './featureSettings';
 
@@ -220,11 +220,11 @@ export class ReadingDataManager {
 	async setFavorite(kind: ReadingKind, id: string, favorite: boolean): Promise<void> {
 		const item = kind === 'book' ? this.getBook(id) : this.getManga(id);
 		if (!item) return;
-		item.favorite = favorite;
 		// stamp drives the Favorites shelf order (newest first); cleared on unfavorite
-		if (favorite) item.dateFavorited = new Date().toISOString();
-		else delete item.dateFavorited;
-		try { await this.writeItem(kind, item); } catch (e) {
+		const next = favorite
+			? { ...item, favorite, dateFavorited: new Date().toISOString() }
+			: { ...omit(item, 'dateFavorited'), favorite };
+		try { await this.writeItem(kind, next); } catch (e) {
 			console.warn('[Hoard] setFavorite note write failed:', e);
 		}
 	}

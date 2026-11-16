@@ -3,6 +3,7 @@ import type { Book, Manga, EntryAirtime, AirtimeRecurrence, ReadingCustomColumn,
 import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, READING_PROPS as R, customFieldKey } from './properties';
+import { defined, nonEmpty } from './sharedHelpers';
 
 type Columns = readonly ReadingCustomColumn[];
 
@@ -162,13 +163,10 @@ function decodeReadingCommon(id: string, r: FmReader, columns: Columns): Reading
 		title: r.str(C.name),
 		author: r.str(R.author),
 		status: status(r),
-		favorite: r.bool(C.favorite) || undefined,
-		dateFavorited: r.strOrNull(C.dateFavorited) ?? undefined,
 		rating: r.num(C.rating),
 		chaptersRead: r.num(R.chaptersRead),
 		totalChapters: r.num(R.totalChapters),
 		coverUrl: r.str(C.cover),
-		externalLink: r.strOrNull(C.url) ?? undefined,
 		vaultPage: `${id}.md`,
 		dateStarted: r.strOrNull(C.dateStarted),
 		dateFinished: r.strOrNull(C.dateFinished),
@@ -176,18 +174,15 @@ function decodeReadingCommon(id: string, r: FmReader, columns: Columns): Reading
 		dateAdded: r.str(C.dateAdded),
 		dateModified: r.str(C.dateModified),
 		customFields: decodeCustomFields(r, columns),
-		groups: r.list(C.groups),
-		airtime: decodeAirtime(r),
+		// optional keys are absent, not empty
+		...defined({
+			favorite: r.bool(C.favorite) || undefined,
+			dateFavorited: r.strOrNull(C.dateFavorited) || undefined,
+			externalLink: r.strOrNull(C.url) || undefined,
+			groups: nonEmpty(r.list(C.groups)),
+			airtime: decodeAirtime(r),
+		}),
 	};
-}
-
-/** Optional keys are absent, not empty, on a decoded entry. */
-function stripEmptyOptional(entry: Book | Manga): void {
-	if (!entry.favorite) delete entry.favorite;
-	if (!entry.dateFavorited) delete entry.dateFavorited;
-	if (!entry.externalLink) delete entry.externalLink;
-	if (!entry.groups?.length) delete entry.groups;
-	if (!entry.airtime) delete entry.airtime;
 }
 
 export function decodeBook(id: string, fm: Record<string, unknown>, columns: readonly ReadingCustomColumn[]): Decoded<Book> {
@@ -204,7 +199,6 @@ export function decodeBook(id: string, fm: Record<string, unknown>, columns: rea
 		googleBooksId: r.str(R.googleBooksId) || gbooks,
 		openLibraryId: ext?.source === 'openlibrary' ? ext.id : '',
 	};
-	stripEmptyOptional(entry);
 	return { entry, invalidFields: r.invalidFields };
 }
 
@@ -239,7 +233,6 @@ export function decodeManga(id: string, fm: Record<string, unknown>, columns: re
 		totalVolumes: r.num(R.totalVolumes),
 		malId: r.str(R.malId) || mal,
 	};
-	stripEmptyOptional(entry);
 	return { entry, invalidFields: r.invalidFields };
 }
 
