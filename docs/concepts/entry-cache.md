@@ -12,7 +12,7 @@ source:
   - src/storage/readCache.ts
   - src/storage/cacheMigration.ts
   - src/lookup.ts
-source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
+source_commit: 90a390fed31f6fc9f6527e0137e4eadbe7cd5dfa
 ---
 
 # Entry cache
@@ -28,7 +28,12 @@ community rating/votes/source/last fetch, TMDB collection id, seasons, resolved 
 Code comments cite the decisions by number: **E9** = API values live in the cache, only user
 overrides are written to the note; **E12** = the poster URL is a plain note field (`Cover`); "the API
 has no poster" is a `notfound` check of kind `poster`, not a value. No cache field, note or in-memory
-title holds the string `'none'` any more.
+title holds the string `'none'` any more: the three ways it could still come in read it as absent. The
+cache migration below turns a stored marker into a check; a backup restore
+([backupEntries.ts](../../src/backupEntries.ts), `readTitle`) and a WatchLog import (`normalizeTitle`)
+drop a lone `none` / `['none']` of poster, trailer, director, cast and studio with the shared
+`noneAsAbsent` / `withoutNone` of [read.ts](../../src/storage/read.ts), which the note reader uses for
+`Director: none` too. A restored or imported title therefore has no `Cover: none` and its poster is due.
 
 ## How note and cache merge
 
@@ -73,8 +78,8 @@ for director, cast or studio in the cache. On load
 `apiCheck[kind] = { at: <load time>, result: 'notfound' }` and the value is dropped, so migrated titles
 are re-checked a week after the upgrade, not all at once. An existing check is kept, and a note value
 is never touched (it wins over the cache anyway). `posterUrl` is no cache field any more and goes
-either way. The result is saved when the store is writable; on a read-only store (WatchLog schema-1 or
-newer file) it is translated in memory each session.
+either way. The result is saved right after the load. A read-only store (WatchLog schema-1 or newer file)
+loads no cache at all (`emptyData`), so there is nothing to migrate there.
 
 ## Lifecycle
 
@@ -83,7 +88,8 @@ newer file) it is translated in memory each session.
 - `LocalStore` debounces writes (100 ms) and is **read-only** for the session when `data.json` holds a
   WatchLog schema-1 file or a newer schema version.
 - A device without cache (fresh sync) sees titles with an API identity but no poster or seasons;
-  `DataManager.queueMissingPosters` / `queueMissingSeasons` refill through the throttled
+  `DataManager.queueMissingPosters` (only titles whose poster lookup is due, so a fresh `notfound` or
+  `transient` check is not asked again at startup) / `queueMissingSeasons` refill through the throttled
   [ApiCheckQueue](../architecture/api-layer.md). Until seasons arrive, `seasonsPending` keeps episode
   toggles from mapping onto an implicit season.
 

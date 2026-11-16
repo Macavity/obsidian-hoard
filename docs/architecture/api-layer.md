@@ -14,7 +14,7 @@ source:
   - src/apiCheckQueue.ts
   - src/lookup.ts
   - src/storage/read.ts
-source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
+source_commit: 90a390fed31f6fc9f6527e0137e4eadbe7cd5dfa
 ---
 
 # API layer
@@ -103,9 +103,10 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
 
 ## Background work
 
-- [PosterService](../../src/PosterService.ts): a serial queue with per-service delays; movie/TV
+- [PosterService](../../src/PosterService.ts): a serial queue with per-service delays (none for a title that
+  sent no request, e.g. one whose lookup is not due); movie/TV
   order is TMDB key → OMDb key → Cinemeta (by IMDb id, else title search with year; with no kind signal
-  series before movie), regardless of
+  series before movie; a 404 for one kind goes on to the other, then to the search), regardless of
   `activeApi`; the `ApiService` for Cinemeta arrives through the injected `getApi` from `main.ts`.
   A found poster is written by `DataManager.updatePosterUrl` into the note only when the note has none
   (or always on explicit refresh); any other outcome is recorded as a lookup check (see
@@ -122,7 +123,7 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
 ## Lookup results and fetch state
 
 [lookup.ts](../../src/lookup.ts) keeps "nothing found" apart from "failed". A lookup returns a
-`LookupResult<T>`: `found { value }`, `notfound`, `failed` or `nokey` (no key or id, so not asked).
+`LookupResult<T>`: `found { value }`, `notfound`, `failed` or `nokey` (no usable key, so not asked; a title without an id to ask with is `notfound`).
 `attempt(call)` adapts one request (a value is `found`, null or `[]` is `notfound`, a throw is `failed`,
 or what `onError` makes of it); `lookupOfError` ([ApiService.ts](../../src/ApiService.ts)) is that
 `onError` for an `ApiError` (404 is `notfound`, a missing or rejected credential is `nokey`, the rest
