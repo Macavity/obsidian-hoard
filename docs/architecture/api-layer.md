@@ -15,7 +15,7 @@ source:
   - src/apiCheckQueue.ts
   - src/lookup.ts
   - src/storage/read.ts
-source_commit: 90a390fed31f6fc9f6527e0137e4eadbe7cd5dfa
+source_commit: 297e1a7
 ---
 
 # API layer
@@ -70,12 +70,12 @@ backup or a WatchLog import takes effect without a restart; the Settings tab als
     wins, so a service's special case sits above the general rule for the same status (OMDb's 401
     with "limit" in the body, Google's 403 for a disabled API or a spent quota).
   - `REASONS` holds, per reason, the chip label, the sentence, the services with a sentence of
-    their own, the outcome of a background check (`transient | nokey | notfound`) and whether the
+    their own, the lookup outcome (`failed | nokey | notfound`, see [lookup results](#lookup-results-and-fetch-state)) and whether the
     credential is the cause (those are re-thrown by detail lookups that otherwise fold failures
     into `null`). `apiErrorMessage` / `apiErrorShort` read it and word the error via
     `t('notices.api.*')` ([i18n](i18n.md)); the service's own explanation from the body is shown
     for `server` and `http` only. `ApiError` messages themselves stay English, for developers.
-  `ApiService.ts` re-exports `apiErrorMessage`, `apiErrorShort`, `ApiSource` and `ApiOutcome`, so
+  `ApiService.ts` re-exports `apiErrorMessage`, `apiErrorShort`, `lookupOfError` and `ApiSource`, so
   callers import them from there.
 - The Steam Web API (`steamGet`) is a second model on purpose: it returns the status with the
   body, because Steam signals expected states by status (400 = no achievements, 403 = private
@@ -145,9 +145,9 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
 [lookup.ts](../../src/lookup.ts) keeps "nothing found" apart from "failed". A lookup returns a
 `LookupResult<T>`: `found { value }`, `notfound`, `failed` or `nokey` (no usable key, so not asked; a title without an id to ask with is `notfound`).
 `attempt(call)` adapts one request (a value is `found`, null or `[]` is `notfound`, a throw is `failed`,
-or what `onError` makes of it); `lookupOfError` ([ApiService.ts](../../src/ApiService.ts)) is that
+or what `onError` makes of it); `lookupOfError` ([apiError.ts](../../src/api/apiError.ts), read off `REASONS`) is that
 `onError` for an `ApiError` (404 is `notfound`, a missing or rejected credential is `nokey`, the rest
-`failed`). `firstFound(sources)` runs an ordered list: the first `found` wins, a throwing source counts as
+`failed`, and anything that is no `ApiError` too). `firstFound(sources)` runs an ordered list: the first `found` wins, a throwing source counts as
 `failed`, `nokey` sources are skipped, and the verdict of the rest is `failed` over `notfound` over `nokey`
 (an empty list is `nokey`). Trailer, credits, studio and poster chains and the ID lookups all run through
 it; a source reports failure instead of swallowing it in a `catch`.
