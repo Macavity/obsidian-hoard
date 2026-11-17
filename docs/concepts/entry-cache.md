@@ -11,8 +11,9 @@ source:
   - src/storage/read.ts
   - src/storage/readCache.ts
   - src/storage/cacheMigration.ts
+  - src/import/watchlog/detect.ts
   - src/lookup.ts
-source_commit: 90a390fed31f6fc9f6527e0137e4eadbe7cd5dfa
+source_commit: 24cd6e5
 ---
 
 # Entry cache
@@ -27,13 +28,10 @@ community rating/votes/source/last fetch, TMDB collection id, seasons, resolved 
 
 Code comments cite the decisions by number: **E9** = API values live in the cache, only user
 overrides are written to the note; **E12** = the poster URL is a plain note field (`Cover`); "the API
-has no poster" is a `notfound` check of kind `poster`, not a value. No cache field, note or in-memory
-title holds the string `'none'` any more: the three ways it could still come in read it as absent. The
-cache migration below turns a stored marker into a check; a backup restore
-([backupEntries.ts](../../src/backupEntries.ts), `readTitle`) and a WatchLog import (`normalizeTitle`)
-drop a lone `none` / `['none']` of poster, trailer, director, cast and studio with the shared
-`noneAsAbsent` / `withoutNone` of [read.ts](../../src/storage/read.ts), which the note reader uses for
-`Director: none` too. A restored or imported title therefore has no `Cover: none` and its poster is due.
+has no poster" is a `notfound` check of kind `poster`, not a value. Hoard writes no `'none'` any more.
+Markers only ever existed in a cache (`data.json` of older Hoard versions and of the WatchLog Sync
+fork); both go through the migration below. Notes, backups and schema-1 imports are read as they are:
+a `none` there would be a literal value (none seen in the real vault, so no special case).
 
 ## How note and cache merge
 
@@ -79,7 +77,9 @@ for director, cast or studio in the cache. On load
 are re-checked a week after the upgrade, not all at once. An existing check is kept, and a note value
 is never touched (it wins over the cache anyway). `posterUrl` is no cache field any more and goes
 either way. The result is saved right after the load. A read-only store (WatchLog schema-1 or newer file)
-loads no cache at all (`emptyData`), so there is nothing to migrate there.
+loads no cache at all (`emptyData`), so there is nothing to migrate there. The fork import runs the
+same migration on the fork's cache before merging it
+([detect.ts](../../src/import/watchlog/detect.ts), `readForkData`).
 
 ## Lifecycle
 

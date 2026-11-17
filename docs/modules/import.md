@@ -18,7 +18,7 @@ source:
   - src/import/watchlog/schema1Read.ts
   - src/import/watchlog/schema1Normalize.ts
   - src/import/watchlog/schema1Records.ts
-source_commit: 90a390fed31f6fc9f6527e0137e4eadbe7cd5dfa
+source_commit: 24cd6e5
 ---
 
 # Import
@@ -90,7 +90,7 @@ value gets its own `Custom <name>` key; a value whose column no longer exists be
 review item. `prepareData` ([schema1Read.ts](../../src/import/watchlog/schema1Read.ts)) reads the file as
 `unknown`, field by field: a wrong-typed field is dropped, and an entry without id and title is skipped
 and reported (`skipped`, one failed item each) without blocking the rest. Helpers: `schema1Normalize`
-(WatchLog field quirks; a lone `none` in `posterUrl`, `trailerUrl`, `director`, `cast` or `studio` is read as absent, so no `Cover: none` reaches a note, the cache or the API values), `schema1Records` (groups,
+(WatchLog field quirks), `schema1Records` (groups,
 airtime, history), `originalPaths` (where WatchLog kept its notes, from its settings).
 
 Widget fence renaming ([widgets.ts](../../src/import/watchlog/widgets.ts)) is a cleanup step; see

@@ -15,7 +15,7 @@ source:
   - src/main.ts
   - src/import/watchlog/registerTypes.ts
   - src/import/watchlog/schema1Read.ts
-source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
+source_commit: 24cd6e5
 ---
 
 # WatchLog import
@@ -95,7 +95,8 @@ Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts]
      property names translated in place (`translateProperties`, [modules/import](../modules/import.md));
      unreadable YAML is an `invalidYaml` review item, the copy stays. The base is copied with its `watchlog:` block renamed to `hoard:` unless a
      Hoard base exists (reported). Device settings, cache and the draft / reading / games UI state fill
-     only what Hoard lacks.
+     only what Hoard lacks; the fork cache's `'none'` markers become `notfound` checks first
+     ([entry cache](../concepts/entry-cache.md#reading-datajson)).
    - *original* ([importOriginal.ts](../../src/import/watchlog/importOriginal.ts)): schema-1 data
      (side files `reading.json` / `history.json` merged for very old installs) goes through
      `importWatchLogData`, which writes notes through the normal codecs: new notes take the body of
