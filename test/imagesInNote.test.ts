@@ -12,21 +12,17 @@ const fmOf = (src: string | undefined): Record<string, unknown> =>
 	parse(/^---\n([\s\S]*?)\n?---/.exec(src ?? '')?.[1] ?? '') as Record<string, unknown>;
 
 describe('images are note fields (E12)', () => {
-	it('title codec: poster round-trips; none is never written', () => {
-		const fromNote = titleFromProperties('Movie/A', { Name: 'A', Cover: 'https://mine' }, { posterUrl: 'https://cache' }).entry;
+	it('title codec: poster round-trips', () => {
+		const fromNote = titleFromProperties('Movie/A', { Name: 'A', Cover: 'https://mine' }, undefined).entry;
 		expect(fromNote.posterUrl).toBe('https://mine');
 		expect(titleToProperties(fromNote, 0).Cover).toBe('https://mine');
-		expect(titleFromProperties('Movie/A', { Name: 'A' }, { posterUrl: 'https://cache' }).entry.posterUrl).toBeUndefined();
-		const none = titleFromProperties('Movie/A', { Name: 'A' }, { posterUrl: 'none' }).entry;
-		expect(none.posterUrl).toBe('none');
-		expect(titleToProperties(none, 0)).not.toHaveProperty('Cover');
+		expect(titleFromProperties('Movie/A', { Name: 'A' }, undefined).entry.posterUrl).toBeUndefined();
 		expect(titleToProperties(makeTitle({ posterUrl: 'https://p' }), 0).Cover).toBe('https://p');
 		expect(getDisplayPoster(fromNote)).toBe('https://mine');
 	});
 
-	it('title cache keeps only the none marker', () => {
+	it('title cache never holds the poster', () => {
 		expect(titleToCache(makeTitle({ posterUrl: 'https://p' }))).not.toHaveProperty('posterUrl');
-		expect(titleToCache(makeTitle({ posterUrl: 'none' })).posterUrl).toBe('none');
 	});
 
 	it('reading and game codecs: Cover is always encoded', () => {
@@ -41,7 +37,7 @@ describe('images are note fields (E12)', () => {
 		const { dm, f, local } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
 		await dm.updatePosterUrl('Movie/A', 'https://img/p.jpg');
 		expect(fmOf(f.files.get('W/Movie/A.md')).Cover).toBe('https://img/p.jpg');
-		expect(local.getCache('Movie/A')?.posterUrl).toBeUndefined();
+		expect(JSON.stringify(local.getCache('Movie/A') ?? {})).not.toContain('posterUrl');
 		expect(dm.getTitle('Movie/A')?.posterUrl).toBe('https://img/p.jpg');
 	});
 
@@ -56,16 +52,6 @@ describe('images are note fields (E12)', () => {
 		await dm.updatePosterUrl('Movie/A', 'https://api', true);
 		expect(fmOf(f.files.get('W/Movie/A.md')).Cover).toBe('https://api');
 		expect(dm.getTitle('Movie/A')?.posterUrl).toBe('https://api');
-	});
-
-	it('title: none marks only a title without poster, in the cache', async () => {
-		const note = '---\nName: A\nType: Movie\n---\n';
-		const { dm, f, local } = await setupDataManager({ 'W/Movie/A.md': note });
-		await dm.updatePosterUrl('Movie/A', 'none');
-		dm.flushPosterSave();
-		expect(f.files.get('W/Movie/A.md')).toBe(note);
-		expect(local.getCache('Movie/A')?.posterUrl).toBe('none');
-		expect(dm.getTitle('Movie/A')?.posterUrl).toBe('none');
 	});
 
 	it('title: queues an identified title without poster', async () => {

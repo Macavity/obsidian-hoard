@@ -4,7 +4,7 @@
  * Agnostic to Watch vs Reading: callers pass the group's items plus an accessor resolving each
  * item's cover URL.
  *
- * Selection: the first up-to-3 items with a valid cover (skipping empty / 'none'); the strip count
+ * Selection: the first up-to-3 items with a valid cover (skipping empty); the strip count
  * equals the covers found (1–3). None found ⇒ the letter fallback.
  *
  * Covers are painted as CSS background-images, not <img>, so a cover loading never reflows the card
@@ -19,7 +19,7 @@ export function renderGroupCollage<T>(
 	const covers: string[] = [];
 	for (const item of items) {
 		const url = getCover(item);
-		if (url && url !== 'none' && url.trim() !== '') {
+		if (url && url.trim() !== '') {
 			covers.push(url);
 			if (covers.length === 3) break;
 		}

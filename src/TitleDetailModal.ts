@@ -2,7 +2,7 @@ import { App, Modal, Notice, Platform, setIcon, setTooltip } from 'obsidian';
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import type { HoardTitle, HoardGroup, Season, TagDefinition, CreditsField } from './types';
-import { formatTime, todayIso, getThemedColor, getDisplayPoster, getDisplayTrailer, getApiGroupForType, getTitleCredits, getManualCredits, isCreditsUnfetched, needsCreditsFetch, needsStudioFetch, CREDITS_NONE, CREDITS_INLINE_LIMIT, STUDIO_INLINE_LIMIT } from './types';
+import { formatTime, todayIso, getThemedColor, getDisplayPoster, getDisplayTrailer, getApiGroupForType, getTitleCredits, getManualCredits, isCreditsUnfetched, CREDITS_INLINE_LIMIT, STUDIO_INLINE_LIMIT } from './types';
 import { createDatePicker } from './DatePicker';
 import type { DatePickerHandle } from './DatePicker';
 import { AddCreditModal } from './AddCreditModal';
@@ -18,6 +18,7 @@ import { pinModalFooter } from './StickyModal';
 import { createSeasonHeader, renderEpisodeGrid } from './ui/EpisodeGrid';
 import type { TmdbCollectionDetail } from './types';
 import { t } from './i18n';
+import { FAILED, NOT_FOUND } from './lookup';
 import { effectiveMediaSource } from './apiSources';
 import { createIconButton } from './ui/IconButton';
 import { paintFavoriteButton, renderGroupDetailHeader, episodeGridText } from './ui/detailShared';
@@ -26,8 +27,15 @@ import { createPosterPlaceholder } from './PosterCard';
 import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
 
 // titles whose credits backfill is in flight — de-dupes rapid modal re-opens
+/** The notice for a trailer lookup that found nothing: a failure, a missing key or a clean miss differ. */
+function trailerMissKey(status: 'notfound' | 'failed' | 'nokey') {
+	if (status === 'failed') return 'notices.api.requestFailed';
+	return status === 'nokey' ? 'notices.api.tmdbTokenRequired' : 'detail.trailer.notFound';
+}
+
 const creditsBackfillInFlight = new Set<string>();
 const studioBackfillInFlight = new Set<string>();
+const trailerBackfillInFlight = new Set<string>();
 
 export class TitleDetailModal extends Modal {
 	private plugin: HoardPlugin;
@@ -45,6 +53,7 @@ export class TitleDetailModal extends Modal {
 	private headerEl: HTMLElement | null = null;
 	private footerEl: HTMLElement | null = null;
 	private studioEl: HTMLElement | null = null;
+	private trailerEl: HTMLElement | null = null;
 	private statsBoxEl: HTMLElement | null = null;
 	private creditsEl: HTMLElement | null = null;
 	private episodesSectionEl: HTMLElement | null = null;
@@ -196,6 +205,7 @@ export class TitleDetailModal extends Modal {
 		this.renderCreditsSection();
 		this.maybeBackfillCredits();
 		this.maybeBackfillStudio();
+		void this.maybeBackfillTrailer();
 	}
 
 	// Inline-editable title
@@ -331,31 +341,62 @@ export class TitleDetailModal extends Modal {
 
 	/**
 	 * One-time credits backfill for titles predating the fields. Fetches from the stored IMDb link and
-	 * stores the result in the cache only; the note is never written. A failed or empty fetch marks
-	 * the fields 'none' so no later open retries.
+	 * stores the result in the cache only; the note is never written. How the fetch ended is recorded
+	 * as a lookup check, which sets when a later open may retry.
 	 */
 	private maybeBackfillCredits(): void {
 		const t = this.dataManager.getTitle(this.title.id);
-		if (!t || !needsCreditsFetch(t) || creditsBackfillInFlight.has(t.id)) return;
+		if (!t || !this.dataManager.lookupDue(t.id, 'credits') || creditsBackfillInFlight.has(t.id)) return;
 		creditsBackfillInFlight.add(t.id);
 		void (async () => {
 			try {
-				const fetched = await this.plugin.apiService.fetchCredits(
+				const result = await this.plugin.apiService.fetchCredits(
 					t,
 					effectiveMediaSource(this.plugin.settings, this.plugin.apiService),
 				);
-				// only absent fields are filled; data or a 'none' marker is kept as-is
-				const director = isCreditsUnfetched(t.director) ? (fetched?.director ?? [CREDITS_NONE]) : t.director!;
-				const cast = isCreditsUnfetched(t.cast) ? (fetched?.cast ?? [CREDITS_NONE]) : t.cast!;
-				await this.dataManager.updateCredits(t.id, director, cast);
+				if (result.status === 'found') {
+					// only absent fields are filled
+					const director = isCreditsUnfetched(t.director) ? result.value.director : t.director!;
+					const cast = isCreditsUnfetched(t.cast) ? result.value.cast : t.cast!;
+					await this.dataManager.updateCredits(t.id, director, cast);
+					// one side still empty: the source has no more, so check again only after the notfound deadline
+					const complete = !isCreditsUnfetched(director) && !isCreditsUnfetched(cast);
+					this.dataManager.recordLookup(t.id, 'credits', complete ? result : NOT_FOUND);
+				} else {
+					this.dataManager.recordLookup(t.id, 'credits', result);
+				}
 			} catch {
-				// persistence failed — fields stay unfetched, so the next open retries
+				// the fetch or its persistence failed: retry after the transient deadline
+				this.dataManager.recordLookup(t.id, 'credits', FAILED);
 			} finally {
 				creditsBackfillInFlight.delete(t.id);
 			}
 			this.refreshTitle();
 			this.renderCreditsSection();
 		})();
+	}
+
+	/**
+	 * One-time trailer backfill, from the same source the refresh button uses. Nothing is fetched or
+	 * recorded while the last check is still fresh; otherwise how the lookup ended is recorded.
+	 */
+	private async maybeBackfillTrailer(): Promise<void> {
+		const t = this.dataManager.getTitle(this.title.id);
+		if (!t || !this.dataManager.lookupDue(t.id, 'trailer') || trailerBackfillInFlight.has(t.id)) return;
+		trailerBackfillInFlight.add(t.id);
+		try {
+			const settings = this.plugin.settings;
+			const result = await this.plugin.apiService.fetchTrailer(
+				t, settings.animeApiSource ?? 'jikan', getApiGroupForType(t.type, settings.typeApiMapping),
+			);
+			if (result.status === 'found') this.dataManager.updateTrailerUrl(t.id, result.value);
+			else this.dataManager.recordLookup(t.id, 'trailer', result);
+		} catch {
+			this.dataManager.recordLookup(t.id, 'trailer', FAILED);
+		} finally {
+			trailerBackfillInFlight.delete(t.id);
+		}
+		if (this.trailerEl?.isConnected) this.paintTrailerControl(this.trailerEl);
 	}
 
 	/** Studio is a credits row on mobile, chips under the title on desktop. */
@@ -401,29 +442,29 @@ export class TitleDetailModal extends Modal {
 		});
 	}
 
-	/** One-time studio backfill; a miss stores 'none' so no later open retries. */
+	/** One-time studio backfill; a miss is recorded as a lookup check, which sets when a later open may retry. */
 	private maybeBackfillStudio(): void {
 		const t = this.dataManager.getTitle(this.title.id);
-		if (!t || !needsStudioFetch(t) || studioBackfillInFlight.has(t.id)) return;
+		if (!t || !this.dataManager.lookupDue(t.id, 'studio') || studioBackfillInFlight.has(t.id)) return;
 		const group = getApiGroupForType(t.type, this.plugin.settings.typeApiMapping);
-		// movie studios need TMDB: without a key a miss is not an answer, so leave the field unfetched
-		if (group === 'movie' && !this.plugin.apiService.hasTmdbKey()) return;
 		studioBackfillInFlight.add(t.id);
 		void (async () => {
 			try {
-				const found = await this.plugin.apiService.fetchStudio(
+				const result = await this.plugin.apiService.fetchStudio(
 					t,
 					this.plugin.settings.animeApiSource ?? 'jikan',
 					group,
 				);
-				await this.dataManager.updateStudio(
-					t.id,
-					found?.studio ?? [CREDITS_NONE],
-					found?.tmdbId,
-					found?.tmdbMediaType,
-				);
+				if (result.status === 'found') {
+					const { studio, tmdbId, tmdbMediaType } = result.value;
+					await this.dataManager.updateStudio(t.id, studio, tmdbId, tmdbMediaType);
+				} else {
+					// movie studios without a TMDB key arrive here as nokey
+					this.dataManager.recordLookup(t.id, 'studio', result);
+				}
 			} catch {
-				// stays unfetched, so the next open retries
+				// retried after the transient deadline
+				this.dataManager.recordLookup(t.id, 'studio', FAILED);
 			} finally {
 				studioBackfillInFlight.delete(t.id);
 			}
@@ -460,10 +501,7 @@ export class TitleDetailModal extends Modal {
 		const display = getDisplayPoster(this.title);
 		if (display && display.startsWith('http')) {
 			showImg(display);
-			img.onerror = () => {
-				showPlaceholder();
-				void this.dataManager.updatePosterUrl(this.title.id, 'none');
-			};
+			img.onerror = showPlaceholder;
 		} else if (this.title.posterUrl === '') {
 			placeholder.addClass('is-loading');
 			void this.plugin.posterService?.enqueue(this.title).then((url) => {
@@ -672,14 +710,14 @@ export class TitleDetailModal extends Modal {
 	/** Appends the trailer control (its own container) to the rating row. */
 	private renderTrailerControl(parent: HTMLElement): void {
 		const container = parent.createSpan({ cls: 'hoard-trailer-btn__control' });
+		this.trailerEl = container;
 		this.paintTrailerControl(container);
 	}
 
 	/**
-	 * Paints the trailer control: a trailer → red play button (opens externally); none ('' or
-	 * 'none') → the same button muted, which fetches from source on click. Same frame in both
-	 * states so the row does not jump. Re-read from the store so an override saved in the edit
-	 * modal shows.
+	 * Paints the trailer control: a trailer → red play button (opens externally); none → the same button muted,
+	 * which fetches from source on click. Same frame in both states so the row does not jump.
+	 * Re-read from the store so an override saved in the edit modal shows.
 	 */
 	private paintTrailerControl(container: HTMLElement): void {
 		container.empty();
@@ -714,7 +752,7 @@ export class TitleDetailModal extends Modal {
 
 	/**
 	 * Re-fetches the trailer from the title's source (the add-time path). A hit stores the URL and
-	 * repaints; a miss marks it 'none', notifies, and keeps the refresh button.
+	 * repaints; a miss notifies and keeps the refresh button.
 	 */
 	private async refreshTrailer(btn: HTMLElement, container: HTMLElement): Promise<void> {
 		// the class blocks pointer clicks only; Enter/Space still reach a focused button
@@ -725,19 +763,19 @@ export class TitleDetailModal extends Modal {
 		try {
 			const animeSource = this.plugin.settings.animeApiSource ?? 'jikan';
 			const group = getApiGroupForType(title.type, this.plugin.settings.typeApiMapping);
-			const url = await this.plugin.apiService.fetchTrailer(title, animeSource, group);
-			const hit = !!url && url !== 'none';
-			this.dataManager.updateTrailerUrl(title.id, hit ? url : 'none');
-			if (hit) {
+			const result = await this.plugin.apiService.fetchTrailer(title, animeSource, group);
+			if (result.status === 'found') {
+				this.dataManager.updateTrailerUrl(title.id, result.value);
 				this.paintTrailerControl(container);
-			} else {
-				new Notice(t('detail.trailer.notFound'));
-				btn.removeClass('is-loading');
+				return;
 			}
+			this.dataManager.recordLookup(title.id, 'trailer', result);
+			new Notice(t(trailerMissKey(result.status)));
 		} catch {
-			new Notice(t('detail.trailer.notFound'));
-			btn.removeClass('is-loading');
+			this.dataManager.recordLookup(title.id, 'trailer', FAILED);
+			new Notice(t('notices.api.requestFailed'));
 		}
+		btn.removeClass('is-loading');
 	}
 
 	private renderStars(): void {
@@ -988,11 +1026,20 @@ export class TitleDetailModal extends Modal {
 			paintFavoriteButton(favBtn, fav);
 		};
 		paintFav();
+		let writing = false;
 		favBtn.addEventListener('click', () => {
-			void this.dataManager.setFavorite(this.title.id, !this.title.favorite);
-			this.refreshTitle();
-			this.markChanged();
-			paintFav();
+			// the view is replaced only when the write is done, so a second click would read the old state
+			if (writing) return;
+			writing = true;
+			// the write replaces the view, so repaint from the fresh one once it is done
+			void this.dataManager.setFavorite(this.title.id, !this.title.favorite).catch(() => {
+				new Notice(t('detail.favorite.failed'));
+			}).finally(() => {
+				writing = false;
+				this.refreshTitle();
+				this.markChanged();
+				paintFav();
+			});
 		});
 
 		// grouped with Edit so the footer keeps three children and the heart stays centered
@@ -1088,10 +1135,9 @@ export class TitleDetailModal extends Modal {
 const creditsRefreshInFlight = new Set<string>();
 
 /**
- * Small ⟳ above the Director row: forces a re-fetch regardless of state — including fields already
- * holding data or the 'none' sentinel, which the automatic backfill never retries. Overwrites both
- * fields (a failed fetch still ends at 'none'). `onDone` fires when the attempt settles, with
- * `changed` true only if it persisted.
+ * Small ⟳ above the Director row: forces a re-fetch regardless of state, including fields already
+ * holding data. Overwrites both fields; a failed fetch changes nothing. `onDone` fires when the attempt
+ * settles, with `changed` true only if it persisted.
  */
 export function renderCreditsRefreshButton(
 	parent: HTMLElement,
@@ -1114,16 +1160,16 @@ export function renderCreditsRefreshButton(
 			let changed = false;
 			try {
 				const t = plugin.dataManager.getTitle(title.id) ?? title;
-				const fetched = await plugin.apiService.fetchCredits(
+				const result = await plugin.apiService.fetchCredits(
 					t,
 					effectiveMediaSource(plugin.settings, plugin.apiService),
 				);
-				await plugin.dataManager.updateCredits(
-					t.id,
-					fetched?.director ?? [CREDITS_NONE],
-					fetched?.cast ?? [CREDITS_NONE],
-				);
-				changed = true;
+				if (result.status === 'found') {
+					await plugin.dataManager.updateCredits(t.id, result.value.director, result.value.cast);
+					changed = true;
+				} else {
+					plugin.dataManager.recordLookup(t.id, 'credits', result);
+				}
 			} catch {
 				// persistence failed — stored fields stay as they were
 			} finally {
@@ -1157,7 +1203,7 @@ export interface CreditsRowHandlers {
  *
  * A field with nothing fetched, nothing added and no way to add renders nothing — but an add
  * handler makes the row always appear, which is what gives anime titles (no IMDb id, so credits
- * never fetch) a place to put a cast. The 'none' sentinel renders an em-dash.
+ * never fetch) a place to put a cast. An empty row renders an em-dash.
  *
  * Past CREDITS_INLINE_LIMIT the remainder collapses behind a "+N more" chip that expands in place —
  * a popover would be clipped by the accordion.
@@ -1377,10 +1423,7 @@ function buildTitleCardElement(
 	const display = getDisplayPoster(title);
 	if (display && display.startsWith('http')) {
 		showImg(display);
-		img.onerror = () => {
-			showPlaceholder();
-			void plugin.dataManager.updatePosterUrl(title.id, 'none');
-		};
+		img.onerror = showPlaceholder;
 	} else if (title.posterUrl === '') {
 		placeholder.addClass('is-loading');
 		void plugin.posterService?.enqueue(title).then((url) => {

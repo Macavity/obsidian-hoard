@@ -13,7 +13,9 @@ source:
   - src/apiSources.ts
   - src/ui/problemText.ts
   - src/storage/SecretStore.ts
-source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
+  - src/featureSettings.ts
+  - src/storage/read.ts
+source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
 # Settings
@@ -25,7 +27,8 @@ API keys, Steam id, IGDB credentials and `jikanBaseUrl` are not in `data.json` b
 storage: `loadSettings` merges them in, `saveSettings` writes them through `SecretStore`
 ([shared vs local](../concepts/shared-vs-local.md)).
 Reading and games keep their own settings objects in their managers, split the same way
-(`splitNested`). `main.ts` wraps the two in `loadSettings` / `saveSettings`; a changed TMDB or
+(`splitNested`); their stored blocks are read field by field by `readReadingSettings` /
+`readGamesSettings` ([featureSettings.ts](../../src/featureSettings.ts)), which backup restore uses too. `main.ts` wraps the two in `loadSettings` / `saveSettings`; a changed TMDB or
 OMDb key also re-arms "no key" API checks; a synced base change re-composes and dispatches
 `hoard-data-changed`.
 
@@ -69,7 +72,9 @@ are colour-only.
 1. `HoardPluginSettings` and `DEFAULT_SETTINGS` in [types.ts](../../src/types.ts). The default is
    not optional: a key without one counts as unknown and passes through unchecked.
 2. Nothing for a value whose kind is all that can be wrong: a stored value of another kind than the
-   default's falls back to the default. An entry in `RULES`
+   default's falls back to the default. List elements are checked too: invalid ones are dropped, and if
+   what is left breaks the setting's own rule (five rating tiers, a non-empty list) the whole value falls
+   back to the default. An entry in `RULES`
    ([settingsNormalize.ts](../../src/settingsNormalize.ts)) only when what the value says must be
    checked or migrated.
 3. A `Setting` or card in the matching `render*` of the tab, saving through `plugin.saveSettings()`.

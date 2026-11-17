@@ -6,6 +6,7 @@ import { getApiGroupForType, todayIso } from './types';
 import { completedEpisodes, newTitle } from './entryFactories';
 import { nonEmpty } from './storage/sharedHelpers';
 import { t } from './i18n';
+import { found, type LookupResult } from './lookup';
 import { priorityLabel, statusLabel } from './i18n/labels';
 import { renderSearchResultRow } from './SearchThumbnail';
 import {
@@ -52,9 +53,9 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 	private fieldDateStarted = '';
 	private fieldMalId: number | null = null;
 	private fieldAnilistId: number | null = null;
-	// trailer resolved at selection ('' unfetched, 'none' source without one, or a URL)
-	private fieldTrailerUrl = '';
-	// credits resolved at selection ([] unfetched, ['none'] unavailable, or names)
+	// trailer resolved at selection (undefined = not fetched yet); a miss or failure is recorded on add
+	private fieldTrailer: LookupResult<string> | undefined;
+	// credits resolved at selection ([] unfetched, or names)
 	private fieldDirector: string[] = [];
 	private fieldCast: string[] = [];
 	private fieldStudio: string[] = [];
@@ -101,7 +102,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 			this.media.releaseDate = prefill.releaseDate;
 			this.media.link = prefill.link;
 			this.fieldSeasons = prefill.seasons;
-			if (prefill.trailerUrl !== undefined) this.fieldTrailerUrl = prefill.trailerUrl;
+			if (prefill.trailerUrl) this.fieldTrailer = found(prefill.trailerUrl);
 			if (prefill.director !== undefined) this.fieldDirector = prefill.director;
 			if (prefill.cast !== undefined) this.fieldCast = prefill.cast;
 		}
@@ -147,7 +148,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 	private applyPick(pick: TitlePick): void {
 		fillMediaFields(this.media, pick);
 		this.fieldSeasons = pick.seasons;
-		this.fieldTrailerUrl = pick.trailerUrl;
+		this.fieldTrailer = pick.trailer;
 		this.fieldDirector = pick.director;
 		this.fieldCast = pick.cast;
 		this.fieldStudio = pick.studio;
@@ -247,7 +248,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 			watchedEpisodes: allEpisodes,
 			favorite: false,
 			posterUrl: this.fieldPosterUrl,
-			trailerUrl: this.fieldTrailerUrl,
+			trailerUrl: this.fieldTrailer?.status === 'found' ? this.fieldTrailer.value : '',
 			manualTrailerUrl: '',
 			// empty stays absent (= unfetched) so the detail modal's lazy backfill runs
 			director: nonEmpty(this.fieldDirector),
@@ -258,6 +259,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		});
 
 		await this.dataManager.addTitle(entry);
+		if (this.fieldTrailer) this.dataManager.recordLookup(entry.id, 'trailer', this.fieldTrailer);
 
 		// remember the type actually used so "Last type used" can follow it
 		this.plugin.settings.lastAddedType = entry.type;

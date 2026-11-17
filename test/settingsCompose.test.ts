@@ -275,6 +275,27 @@ describe('composeSettings: stored values of the wrong kind', () => {
 		expect(compose({ seasonPalette: { 0: '#111111' } }).seasonPalette).toEqual(DEFAULT_SETTINGS.seasonPalette);
 	});
 
+	it('keeps the well-formed entries of a list and drops the rest', () => {
+		expect(composeSettings({ statuses: [{ name: 'A', color: '#fff' }, 5, { name: 3 }] }, {}).statuses.map((s) => s.name))
+			.toEqual(['A', 'To be released']);
+		expect(compose({ types: [{ name: 'A', color: '#fff' }, null, { name: 'B' }] }).types).toEqual([{ name: 'A', color: '#fff' }]);
+		expect(compose({ seasonPalette: ['#111111', 5, null] }).seasonPalette).toEqual(['#111111']);
+		expect(compose({ customListTabOrder: ['a', 3, 'b'] }).customListTabOrder).toEqual(['a', 'b']);
+		expect(compose({ defaultCustomColumns: [{ id: 'c', label: 'L', type: 'text' }, 'x', { id: 4 }] }).defaultCustomColumns)
+			.toEqual([{ id: 'c', label: 'L', type: 'text' }]);
+	});
+
+	it('gives the default list when no entry of it is left', () => {
+		expect(compose({ statuses: [5] }).statuses).toEqual(DEFAULT_STATUSES);
+		expect(compose({ types: [{ name: 3 }, 'x'] }).types).toEqual(DEFAULT_TYPES);
+		expect(compose({ seasonPalette: [1, 2] }).seasonPalette).toEqual(DEFAULT_SETTINGS.seasonPalette);
+	});
+
+	it('resets a rating system with one bad tier', () => {
+		const tiers = DEFAULT_RATING.map((t, i) => (i === 2 ? { label: 3, color: '#000' } : t));
+		expect(compose({ ratingSystem: tiers }).ratingSystem).toEqual(DEFAULT_RATING);
+	});
+
 	it('gives the default for a value of another kind', () => {
 		const s = compose({
 			cardSize: '2', showHintBanners: 'yes', gamesFilters: [], customListTabOrder: {}, draftsVaultTag: 5,

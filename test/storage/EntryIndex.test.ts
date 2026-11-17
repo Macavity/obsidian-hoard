@@ -24,12 +24,12 @@ describe('EntryIndex', () => {
 	});
 	it('picks up external changes, deletes and renames', async () => {
 		const { f, idx, local, cb } = await setup({ 'W/Movie/A.md': note('Name: A\nRating: 1') });
-		local.setCache('Movie/A', { posterUrl: 'p' });
+		local.setCache('Movie/A', { trailerUrl: 'p' });
 		f.externalWrite('W/Movie/A.md', note('Name: A\nRating: 5')); await tick();
 		expect((idx.get('Movie/A')!.entry as { rating: number }).rating).toBe(5);
 		f.externalRename('W/Movie/A.md', 'W/Movie/A2.md'); await tick();
 		expect(idx.get('Movie/A')).toBeUndefined();
-		expect(local.getCache('Movie/A2')).toEqual({ posterUrl: 'p' });
+		expect(local.getCache('Movie/A2')).toEqual({ trailerUrl: 'p' });
 		f.externalDelete('W/Movie/A2.md'); await tick();
 		expect(idx.titles()).toEqual([]);
 		expect(cb).toHaveBeenCalled();
@@ -70,7 +70,7 @@ describe('EntryIndex edge cases', () => {
 	});
 	it('drops the cache of a deleted note but never writes the vault', async () => {
 		const { f, idx, local } = await setup({ 'W/Movie/A.md': note('Name: A') });
-		local.setCache('Movie/A', { posterUrl: 'p' });
+		local.setCache('Movie/A', { trailerUrl: 'p' });
 		const before = new Map(f.files);
 		await idx.rebuild();
 		expect(f.files).toEqual(before);
@@ -80,10 +80,10 @@ describe('EntryIndex edge cases', () => {
 	});
 	it('sweeps cache keys without a note once, keeping unmanaged keys', async () => {
 		const { idx, local } = await setup({ 'W/Movie/A.md': note('Name: A'), 'W/Movie/Bad.md': '---\n: : :\n---\n' });
-		local.setCache('Movie/A', { posterUrl: 'a' });
-		local.setCache('Movie/Bad', { posterUrl: 'b' });
-		local.setCache('Movie/Gone', { posterUrl: 'g' });
-		local.setCache('Removed Type/X', { posterUrl: 'x' });
+		local.setCache('Movie/A', { trailerUrl: 'a' });
+		local.setCache('Movie/Bad', { trailerUrl: 'b' });
+		local.setCache('Movie/Gone', { trailerUrl: 'g' });
+		local.setCache('Removed Type/X', { trailerUrl: 'x' });
 		idx.sweepCache();
 		expect(Object.keys(local.data.cache).sort()).toEqual(['Movie/A', 'Movie/Bad', 'Removed Type/X']);
 	});
@@ -91,7 +91,7 @@ describe('EntryIndex edge cases', () => {
 		const f = createFakeApp({});
 		await f.plugin.saveData({ schemaVersion: 3 });
 		const local = new LocalStore(f.plugin); await local.load();
-		local.data.cache['Movie/Gone'] = { posterUrl: 'g' };
+		local.data.cache['Movie/Gone'] = { trailerUrl: 'g' };
 		const idx = new EntryIndex(f.app, () => new VaultLayout('W', () => ['Movie']), local, () => {});
 		await idx.build();
 		idx.sweepCache();

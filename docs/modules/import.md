@@ -15,7 +15,10 @@ source:
   - src/import/watchlog/widgets.ts
   - src/WatchLogOnboardingModal.ts
   - src/WatchLogReport.ts
-source_commit: 43b1380df12642609c05bbf18f366063f3184d48
+  - src/import/watchlog/schema1Read.ts
+  - src/import/watchlog/schema1Normalize.ts
+  - src/import/watchlog/schema1Records.ts
+source_commit: 24cd6e5
 ---
 
 # Import
@@ -84,7 +87,10 @@ note that fails to write is reported and skipped. The fork's device settings ski
 keys like the schema-1 path does. WatchLog's custom reading columns are sanitized once in the normalize
 step (blank or non-string names become `Field N`, case-insensitive duplicates get " 2", " 3"), so every
 value gets its own `Custom <name>` key; a value whose column no longer exists becomes an `orphanValue`
-review item. Helpers: `schema1Normalize` (WatchLog field quirks), `schema1Records` (groups,
+review item. `prepareData` ([schema1Read.ts](../../src/import/watchlog/schema1Read.ts)) reads the file as
+`unknown`, field by field: a wrong-typed field is dropped, and an entry without id and title is skipped
+and reported (`skipped`, one failed item each) without blocking the rest. Helpers: `schema1Normalize`
+(WatchLog field quirks), `schema1Records` (groups,
 airtime, history), `originalPaths` (where WatchLog kept its notes, from its settings).
 
 Widget fence renaming ([widgets.ts](../../src/import/watchlog/widgets.ts)) is a cleanup step; see

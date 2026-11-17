@@ -287,29 +287,29 @@ describe('background checks', () => {
 		expect(await check()).toEqual({ status: 'notfound' });
 	});
 
-	it.each(CHECKS)('%s: a limit, an outage and a dead connection are transient', async (_name, check) => {
+	it.each(CHECKS)('%s: a limit, an outage and a dead connection are failed', async (_name, check) => {
 		answerAll(429);
-		expect(await check()).toEqual({ status: 'transient' });
+		expect(await check()).toEqual({ status: 'failed' });
 		answerAll(500);
-		expect(await check()).toEqual({ status: 'transient' });
+		expect(await check()).toEqual({ status: 'failed' });
 		answerAll(418);
-		expect(await check()).toEqual({ status: 'transient' });
+		expect(await check()).toEqual({ status: 'failed' });
 		respondWith(() => { throw new Error('net down'); });
-		expect(await check()).toEqual({ status: 'transient' });
+		expect(await check()).toEqual({ status: 'failed' });
 	});
 
-	it('a rejected TMDB token is nokey, a 401 from a keyless service is transient', async () => {
+	it('a rejected TMDB token is nokey, a 401 from a keyless service is failed', async () => {
 		answerAll(401);
 		expect(await api().fetchAiring({ tmdbId: 1, tmdbMediaType: 'tv' })).toEqual({ status: 'nokey' });
-		expect(await api().fetchAiring({ anilistId: 1 })).toEqual({ status: 'transient' });
-		expect(await api().fetchSeasons({ malId: 1, externalLink: '' })).toEqual({ status: 'transient' });
+		expect(await api().fetchAiring({ anilistId: 1 })).toEqual({ status: 'failed' });
+		expect(await api().fetchSeasons({ malId: 1, externalLink: '' })).toEqual({ status: 'failed' });
 		answerAll(403);
 		expect(await api().fetchAiring({ tmdbId: 1, tmdbMediaType: 'tv' })).toEqual({ status: 'nokey' });
 	});
 
-	it('a GraphQL rate limit inside a 200 is transient', async () => {
+	it('a GraphQL rate limit inside a 200 is failed', async () => {
 		answerAll(200, JSON.stringify({ errors: [{ message: 'Too Many Requests.' }] }));
-		expect(await api().fetchAiring({ anilistId: 1 })).toEqual({ status: 'transient' });
+		expect(await api().fetchAiring({ anilistId: 1 })).toEqual({ status: 'failed' });
 	});
 });
 

@@ -17,8 +17,7 @@ const KINDS: Record<ExternalSource, readonly Kind[] | null> = {
 
 const ID_RE = /^[\w-]+$/;
 
-const SOURCES = Object.keys(KINDS) as ExternalSource[];
-const isSource = (s: string): s is ExternalSource => (SOURCES as string[]).includes(s);
+const isSource = (s: string): s is ExternalSource => Object.hasOwn(KINDS, s);
 
 /** Parses `source:id` or `source:kind:id`; null if unknown source, missing kind, or bad id. */
 export function parseExternalId(s: string): ExternalId | null {
@@ -27,9 +26,10 @@ export function parseExternalId(s: string): ExternalId | null {
 	if (!source || !isSource(source)) return null;
 	const kinds = KINDS[source];
 	if (kinds) {
-		const [kind, id] = rest;
-		if (rest.length !== 2 || !kind || !id || !kinds.includes(kind as Kind) || !ID_RE.test(id)) return null;
-		return { source, kind: kind as Kind, id };
+		const [kindText, id] = rest;
+		const kind = kinds.find((k) => k === kindText);
+		if (rest.length !== 2 || !kind || !id || !ID_RE.test(id)) return null;
+		return { source, kind, id };
 	}
 	const [id] = rest;
 	if (rest.length !== 1 || !id || !ID_RE.test(id)) return null;

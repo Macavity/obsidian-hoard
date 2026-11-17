@@ -3,7 +3,7 @@ import { setupDataManager } from './helpers/setupDataManager';
 import { ApiCheckQueue } from '../src/apiCheckQueue';
 import { DataManager } from '../src/DataManager';
 import { ApiService } from '../src/ApiService';
-import type { ApiOutcome } from '../src/ApiService';
+import type { LookupResult } from '../src/lookup';
 import type { EntryCache } from '../src/storage/storageTypes';
 import type { Season } from '../src/types';
 
@@ -12,9 +12,9 @@ const HOUR = 3_600_000;
 // later than the real clock, so setup-time queue starts never delay the first faked one
 const START = new Date('2030-10-19T12:00:00Z');
 const show = (n: number) => `---\nName: S${n}\nType: TV Show\nExternal ID: tmdb:tv:${n + 1}\nAirtime Recurrence: daily\nSeasons:\n  - 'S1: 8'\n---\n`;
-const okAiring = (): ApiOutcome<Airing> => ({ status: 'ok', value: { nextEpisode: 2, refreshedAt: new Date().toISOString() } });
+const okAiring = (): LookupResult<Airing> => ({ status: 'found', value: { nextEpisode: 2, refreshedAt: new Date().toISOString() } });
 
-async function setup(files: Record<string, string>, fetchAiring: () => Promise<ApiOutcome<Airing>>) {
+async function setup(files: Record<string, string>, fetchAiring: () => Promise<LookupResult<Airing>>) {
 	const s = await setupDataManager(files, { apiService: { fetchAiring, fetchSeasons: () => Promise.resolve({ status: 'notfound' }) } });
 	return s;
 }
@@ -58,7 +58,7 @@ describe('API checks in DataManager', () => {
 		let running = 0;
 		let peak = 0;
 		let done = 0;
-		const fetchAiring = async (): Promise<ApiOutcome<Airing>> => {
+		const fetchAiring = async (): Promise<LookupResult<Airing>> => {
 			peak = Math.max(peak, ++running);
 			await new Promise((r) => setTimeout(r, 600));
 			running--;
@@ -75,7 +75,7 @@ describe('API checks in DataManager', () => {
 	});
 
 	it('persists a transient failure and honours it after a restart', async () => {
-		const fetchAiring = vi.fn((): Promise<ApiOutcome<Airing>> => Promise.resolve({ status: 'transient' }));
+		const fetchAiring = vi.fn((): Promise<LookupResult<Airing>> => Promise.resolve({ status: 'failed' }));
 		const { dm, local, plugin, index, shared, layout } = await setup({ 'W/TV Show/C.md': show(1) }, fetchAiring);
 		vi.useFakeTimers({ now: START });
 		await dm.refreshAiring('TV Show/C');
@@ -91,7 +91,7 @@ describe('API checks in DataManager', () => {
 	});
 
 	it('deadlines: ok 6 h, notfound 7 d, nokey until the key changes; force skips only the deadline', async () => {
-		let next: ApiOutcome<Airing> = okAiring();
+		let next: LookupResult<Airing> = okAiring();
 		const fetchAiring = vi.fn(() => Promise.resolve(next));
 		const { dm, local } = await setup({ 'W/TV Show/C.md': show(1) }, fetchAiring);
 		vi.useFakeTimers({ now: START });
@@ -127,7 +127,7 @@ describe('API checks in DataManager', () => {
 	});
 
 	it('season refill: failure is persisted, not retried within the deadline, even after a restart', async () => {
-		const fetchSeasons = vi.fn((): Promise<ApiOutcome<Season[]>> => Promise.resolve({ status: 'transient' }));
+		const fetchSeasons = vi.fn((): Promise<LookupResult<Season[]>> => Promise.resolve({ status: 'failed' }));
 		const note = '---\nName: Dark\nType: TV Show\nExternal ID: tmdb:tv:70523\nWatched Episodes: S01E01\n---\n';
 		const { dm, local, plugin, index, shared, layout } = await setupDataManager({ 'W/TV Show/Dark.md': note }, { apiService: { fetchSeasons } });
 		await vi.waitFor(() => expect(local.getCache('TV Show/Dark')?.apiCheck?.seasons?.result).toBe('transient'));

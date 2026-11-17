@@ -48,6 +48,11 @@ describe('baseFile', () => {
 		expect(base.findInFolderPath(c)).toBe('Hoard');
 		expect((yaml.parse(c) as { views: unknown[] }).views.length).toBe(1);
 	});
+	it('reads a hoard block that is no record as no block', () => {
+		expect(base.readHoardBlock('hoard:\n  - a\n  - b\n', yaml)).toBeNull();
+		expect(base.readHoardBlock('hoard: text\n', yaml)).toBeNull();
+		expect(base.readHoardBlock('hoard:\n', yaml)).toBeNull();
+	});
 	it('ignores blocks under other keys', () => {
 		const other = `${src}other:\n  version: 1\n`;
 		expect(base.hasHoardKey(other)).toBe(false);

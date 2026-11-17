@@ -86,6 +86,17 @@ describe('importFork', () => {
 		expect(ctx.local.data.cache['Movie/Heat']).toEqual({ year: 2 });
 	});
 
+	it('turns the fork cache\'s none markers into notfound checks', async () => {
+		const cache = { 'Movie/Heat': { tmdbId: 949, trailerUrl: 'none', studio: ['none'], cast: ['Al Pacino'] } };
+		const { ctx, src } = await setupFork(FORK, { schemaVersion: 2, settings: {}, cache, ui: {} });
+		await importFork(src, ctx, () => {});
+		const entry = ctx.local.data.cache['Movie/Heat'];
+		expect(entry).toMatchObject({ tmdbId: 949, cast: ['Al Pacino'] });
+		expect(entry).not.toHaveProperty('trailerUrl');
+		expect(entry).not.toHaveProperty('studio');
+		expect(entry?.apiCheck).toMatchObject({ trailer: { result: 'notfound' }, studio: { result: 'notfound' } });
+	});
+
 	it('takes no shared or removed settings into data.json', async () => {
 		const { ctx, src } = await setupFork(FORK, { schemaVersion: 2, settings: { tmdbApiKey: 'k', types: [{ name: 'X' }], rootFolder: 'WatchLog' }, cache: {}, ui: {} });
 		await importFork(src, ctx, () => {});

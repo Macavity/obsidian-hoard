@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-	ApiError, apiErrorMessage, apiErrorShort, apiLabel, httpError, outcomeOfError, rethrowAuth,
+	ApiError, apiErrorMessage, apiErrorShort, apiLabel, httpError, lookupOfError, rethrowAuth,
 } from '../../src/api/apiError';
 import { setLocale } from '../../src/i18n';
 
@@ -157,24 +157,24 @@ describe('the wording of a reason', () => {
 	});
 });
 
-describe('outcomeOfError', () => {
-	it('sorts every reason into what a background check does next', () => {
-		expect(REASONS.map((reason) => [reason, outcomeOfError(new ApiError('tmdb', reason, 'dev')).status])).toEqual([
+describe('lookupOfError', () => {
+	it('sorts every reason into what a lookup does next', () => {
+		expect(REASONS.map((reason) => [reason, lookupOfError(new ApiError('tmdb', reason, 'dev')).status])).toEqual([
 			['no-key', 'nokey'],
 			['auth', 'nokey'],
 			['not-enabled', 'nokey'],
-			['rate-limited', 'transient'],
+			['rate-limited', 'failed'],
 			['not-found', 'notfound'],
-			['server', 'transient'],
-			['http', 'transient'],
-			['parse', 'transient'],
-			['network', 'transient'],
+			['server', 'failed'],
+			['http', 'failed'],
+			['parse', 'failed'],
+			['network', 'failed'],
 		]);
 	});
 
-	it('treats anything that is no API error as transient', () => {
-		expect([new Error('x'), 'x', undefined, null, { reason: 'auth' }].map((value) => outcomeOfError(value)))
-			.toEqual(Array.from({ length: 5 }, () => ({ status: 'transient' })));
+	it('treats anything that is no API error as failed', () => {
+		expect([new Error('x'), 'x', undefined, null, { reason: 'auth' }].map((value) => lookupOfError(value)))
+			.toEqual(Array.from({ length: 5 }, () => ({ status: 'failed' })));
 	});
 });
 

@@ -142,10 +142,9 @@ function coreFields(r: Reader, id: string, status: string, externalLink: string,
 	};
 }
 
-/** API data from the cache. Of the poster only the 'none' marker lives there; the note's `Cover` wins later. */
+/** API data from the cache. The poster is a note field (`Cover`), not part of it. */
 function cachedApiFields(c: EntryCache): Partial<HoardTitle> {
 	return defined({
-		posterUrl: c.posterUrl === 'none' ? 'none' : undefined,
 		trailerUrl: c.trailerUrl,
 		director: c.director || undefined,
 		cast: c.cast || undefined,
@@ -326,11 +325,11 @@ function overrideProps(o: TitleOverrides | undefined): Fm {
 	};
 }
 
-/** Links, flags and the identity of the note. A poster of 'none' is a cache marker and stays out. */
+/** Links, flags and the identity of the note. */
 function linkAndFlagProps(t: HoardTitle): Fm {
 	const identity = identityFor(t);
 	return {
-		...optional(C.cover, t.posterUrl !== 'none' && t.posterUrl),
+		...optional(C.cover, t.posterUrl),
 		...optional(T.trailer, t.manualTrailerUrl?.trim() && t.manualTrailerUrl),
 		...optional(C.url, t.externalLink),
 		...optional(T.pinned, t.pinned),
@@ -395,15 +394,14 @@ export function titleToProperties(t: HoardTitle, progress: number, seasonsPendin
 
 /** Cache keys titleToCache owns; everything else in a cache entry (apiCheck, airing, …) is kept on sync. */
 export const TITLE_CACHE_KEYS = [
-	'posterUrl', 'trailerUrl', 'director', 'cast', 'studio', 'communityRating', 'communityVotes', 'communitySource',
+	'trailerUrl', 'director', 'cast', 'studio', 'communityRating', 'communityVotes', 'communitySource',
 	'communityRatingLastFetched', 'collectionId', 'tmdbId', 'tmdbMediaType', 'malId', 'anilistId', 'seasons',
 ] as const satisfies readonly (keyof EntryCache)[];
 
-/** API-derived fields that live in data.json (posters only as the 'none' marker); seasons only when not overridden in the note. */
+/** API-derived fields that live in data.json (no poster); seasons only when not overridden in the note. */
 export function titleToCache(t: HoardTitle): EntryCache {
 	const cachedSeasons = !t.seasonsOverride && t.seasons.length > 0;
 	return defined({
-		posterUrl: t.posterUrl === 'none' ? t.posterUrl : undefined,
 		trailerUrl: t.trailerUrl,
 		director: t.director || undefined,
 		cast: t.cast || undefined,

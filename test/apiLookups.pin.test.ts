@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService } from '../src/ApiService';
+import type { LookupResult } from '../src/lookup';
 import { answerAll, respondWith, route, sent, urlOfCall } from './helpers/apiFailures';
 import { makeTitle } from './helpers/setupDataManager';
 
@@ -52,10 +53,15 @@ const TMDB_TV = {
 const TMDB_MOVIE_ROUTES: Array<[string, unknown]> = [
 	['/movie/550/external_ids', { imdb_id: 'tt0137523' }],
 	['/movie/550?append_to_response=videos,credits', TMDB_MOVIE],
+	// the studio and trailer lookups ask the lighter endpoints
+	['/movie/550/videos', TMDB_MOVIE.videos],
+	['/movie/550', TMDB_MOVIE],
 ];
 const TMDB_TV_ROUTES: Array<[string, unknown]> = [
 	['/tv/1396/external_ids', { imdb_id: 'tt0903747' }],
 	['/tv/1396?append_to_response=videos,credits', TMDB_TV],
+	['/tv/1396/videos', TMDB_TV.videos],
+	['/tv/1396', TMDB_TV],
 ];
 const FIGHT_CLUB = {
 	imdbId: '550',
@@ -80,7 +86,6 @@ const BREAKING_BAD = {
 	releaseDate: '2008-01-20',
 	url: 'https://www.imdb.com/title/tt0903747',
 	seasons: [{ name: 'Season 1', episodes: 7, offset: 0 }, { name: 'Season 2', episodes: 13, offset: 7 }],
-	trailerUrl: 'none',
 	studio: ['AMC', 'Sony Pictures Television'],
 	director: ['Vince Gilligan'],
 	cast: ['Bryan Cranston'],
@@ -162,13 +167,13 @@ describe('OMDb details', () => {
 	const SHAWSHANK = {
 		imdbId: 'tt0111161', title: 'The Shawshank Redemption', mediaType: 'movie', episodes: 1, episodeDuration: 142,
 		releaseDate: '1994-10-14', url: 'https://www.imdb.com/title/tt0111161', seasons: [{ name: 'Movie', episodes: 1, offset: 0 }],
-		trailerUrl: 'none', director: ['Frank Darabont'], cast: ['Tim Robbins', 'Morgan Freeman'],
+		director: ['Frank Darabont'], cast: ['Tim Robbins', 'Morgan Freeman'],
 	};
 	const BREAKING_BAD_OMDB = {
 		imdbId: 'tt0903747', title: 'Breaking Bad', mediaType: 'tv', episodes: 5, episodeDuration: 45,
 		releaseDate: '2008-01-20', url: 'https://www.imdb.com/title/tt0903747',
 		seasons: [{ name: 'Season 1', episodes: 3, offset: 0 }, { name: 'Season 2', episodes: 2, offset: 3 }],
-		trailerUrl: 'none', director: ['Vince Gilligan'], cast: ['Bryan Cranston', 'Aaron Paul'],
+		director: ['Vince Gilligan'], cast: ['Bryan Cranston', 'Aaron Paul'],
 	};
 
 	it('maps a movie', async () => {
@@ -180,7 +185,7 @@ describe('OMDb details', () => {
 	it('falls back to the year, two hours and no credits when OMDb has none', async () => {
 		route([['?i=tt1', { Response: 'True', imdbID: 'tt1', Title: 'X', Year: '2026', Runtime: 'N/A', Director: 'N/A' }]]);
 		expect(await omdb().getOmdbMovieDetails('tt1')).toMatchObject({
-			releaseDate: '2026', episodeDuration: 120, director: ['none'], cast: ['none'],
+			releaseDate: '2026', episodeDuration: 120, director: [], cast: [],
 		});
 	});
 
@@ -269,10 +274,12 @@ describe('TMDB search and details', () => {
 	it.each([
 		['any trailer when none is official', [{ site: 'YouTube', key: 't', type: 'Teaser' }, { site: 'YouTube', key: 'tr', type: 'Trailer' }], 'https://www.youtube.com/watch?v=tr'],
 		['a teaser when there is no trailer', [{ site: 'YouTube', key: 't', type: 'Teaser' }, { site: 'YouTube', key: 'c', type: 'Clip' }], 'https://www.youtube.com/watch?v=t'],
-		['nothing from other sites or other kinds', [{ site: 'Vimeo', key: 'v', type: 'Trailer' }, { site: 'YouTube', key: 'c', type: 'Clip' }, { site: 'YouTube', type: 'Trailer' }], 'none'],
+		['nothing from other sites or other kinds', [{ site: 'Vimeo', key: 'v', type: 'Trailer' }, { site: 'YouTube', key: 'c', type: 'Clip' }, { site: 'YouTube', type: 'Trailer' }], undefined],
 	])('picks %s', async (_name, results, trailerUrl) => {
 		route([['/movie/550/external_ids', {}], ['/movie/550?append', { ...TMDB_MOVIE, videos: { results } }]]);
-		expect(await tmdb().getTmdbMovieDetails('550')).toMatchObject({ trailerUrl, url: '' });
+		const detail = await tmdb().getTmdbMovieDetails('550');
+		expect(detail?.trailerUrl).toBe(trailerUrl);
+		expect(detail?.url).toBe('');
 	});
 
 	it('maps a series without its specials, networks before production companies', async () => {
@@ -302,13 +309,13 @@ describe('TMDB search and details', () => {
 describe('TMDB collections', () => {
 	it('finds the movie id of an IMDb id', async () => {
 		route([['/find/tt0137523?external_source=imdb_id', { movie_results: [{ id: 550 }] }]]);
-		expect(await tmdb().findTmdbMovieIdByImdbId('tt0137523')).toEqual({ status: 'found', id: 550 });
+		expect(await tmdb().findTmdbMovieIdByImdbId('tt0137523')).toEqual({ status: 'found', value: 550 });
 		route([['/find/', { movie_results: [], tv_results: [{ id: 1396 }] }]]);
-		expect(await tmdb().findTmdbMovieIdByImdbId('tt0903747')).toEqual({ status: 'none' });
+		expect(await tmdb().findTmdbMovieIdByImdbId('tt0903747')).toEqual({ status: 'notfound' });
 		answerAll(500);
-		expect(await tmdb().findTmdbMovieIdByImdbId('tt1')).toEqual({ status: 'error' });
-		expect(await keyless().findTmdbMovieIdByImdbId('tt1')).toEqual({ status: 'error' });
-		expect(await tmdb().findTmdbMovieIdByImdbId('')).toEqual({ status: 'error' });
+		expect(await tmdb().findTmdbMovieIdByImdbId('tt1')).toEqual({ status: 'failed' });
+		expect(await keyless().findTmdbMovieIdByImdbId('tt1')).toEqual({ status: 'nokey' });
+		expect(await tmdb().findTmdbMovieIdByImdbId('')).toEqual({ status: 'notfound' });
 	});
 
 	it('searches a movie id by title and the year of a date', async () => {
@@ -331,12 +338,12 @@ describe('TMDB collections', () => {
 
 	it('reads the collection a movie belongs to', async () => {
 		route([['/movie/11', { id: 11, belongs_to_collection: { id: 10, name: 'Star Wars Collection' } }]]);
-		expect(await tmdb().getTmdbMovieCollection(11)).toEqual({ status: 'found', ref: { id: 10, name: 'Star Wars Collection' } });
+		expect(await tmdb().getTmdbMovieCollection(11)).toEqual({ status: 'found', value: { id: 10, name: 'Star Wars Collection' } });
 		route([['/movie/550', { id: 550, belongs_to_collection: null }]]);
-		expect(await tmdb().getTmdbMovieCollection(550)).toEqual({ status: 'none' });
+		expect(await tmdb().getTmdbMovieCollection(550)).toEqual({ status: 'notfound' });
 		answerAll(500);
-		expect(await tmdb().getTmdbMovieCollection(550)).toEqual({ status: 'error' });
-		expect(await keyless().getTmdbMovieCollection(550)).toEqual({ status: 'error' });
+		expect(await tmdb().getTmdbMovieCollection(550)).toEqual({ status: 'failed' });
+		expect(await keyless().getTmdbMovieCollection(550)).toEqual({ status: 'nokey' });
 	});
 });
 
@@ -350,7 +357,7 @@ describe('airing by TMDB id', () => {
 			last_episode_to_air: { episode_number: 2, season_number: 2 },
 		}]]);
 		expect(await tmdb().fetchAiring({ tmdbId: 1396, tmdbMediaType: 'tv' })).toEqual({
-			status: 'ok',
+			status: 'found',
 			value: {
 				refreshedAt: '2026-11-16T10:00:00.000Z', nextEpisode: 3, nextSeason: 2, nextAirDate: '2026-12-01', lastEpisode: 2, lastSeason: 2,
 			},
@@ -362,7 +369,7 @@ describe('airing by TMDB id', () => {
 		vi.setSystemTime(new Date('2026-11-16T10:00:00.000Z'));
 		route([['/tv/1396', { next_episode_to_air: null, last_episode_to_air: { episode_number: 16 } }]]);
 		expect(await tmdb().fetchAiring({ tmdbId: 1396, tmdbMediaType: 'tv' }))
-			.toEqual({ status: 'ok', value: { refreshedAt: '2026-11-16T10:00:00.000Z', lastEpisode: 16 } });
+			.toEqual({ status: 'found', value: { refreshedAt: '2026-11-16T10:00:00.000Z', lastEpisode: 16 } });
 		expect(await keyless().fetchAiring({ tmdbId: 1396, tmdbMediaType: 'tv' })).toEqual({ status: 'nokey' });
 		expect(await tmdb().fetchAiring({ tmdbId: 550, tmdbMediaType: 'movie' })).toEqual({ status: 'notfound' });
 	});
@@ -462,41 +469,41 @@ describe('trailer', () => {
 
 	it('asks the preferred anime source first and the other one when it has none', async () => {
 		route([JIKAN, ANILIST]);
-		expect(await keyless().fetchTrailer(anime, 'jikan')).toBe('https://www.youtube.com/watch?v=jikan123');
-		expect(await keyless().fetchTrailer(anime, 'anilist')).toBe('https://www.youtube.com/watch?v=anilist1');
+		expect(await keyless().fetchTrailer(anime, 'jikan')).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=jikan123' });
+		expect(await keyless().fetchTrailer(anime, 'anilist')).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=anilist1' });
 		route([['/anime/5', { data: { trailer: null } }], ANILIST]);
-		expect(await keyless().fetchTrailer(anime, 'jikan')).toBe('https://www.youtube.com/watch?v=anilist1');
+		expect(await keyless().fetchTrailer(anime, 'jikan')).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=anilist1' });
 		route([JIKAN, ['graphql.anilist.co', { data: { Media: { id: 9, trailer: { site: 'dailymotion', id: 'x' } } } }]]);
-		expect(await keyless().fetchTrailer(anime, 'anilist')).toBe('https://www.youtube.com/watch?v=jikan123');
+		expect(await keyless().fetchTrailer(anime, 'anilist')).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=jikan123' });
 	});
 
 	it('reads the video id from whatever shape Jikan sends', async () => {
-		const from = async (trailer: unknown): Promise<string> => {
+		const from = async (trailer: unknown): Promise<LookupResult<string>> => {
 			route([['/anime/5', { data: { trailer } }]]);
 			return keyless().fetchTrailer(makeTitle({ type: 'Anime', malId: 5 }));
 		};
-		expect(await from({ youtube_id: 'idfield1' })).toBe('https://www.youtube.com/watch?v=idfield1');
-		expect(await from({ url: 'https://www.youtube.com/watch?v=watch123' })).toBe('https://www.youtube.com/watch?v=watch123');
-		expect(await from({ url: 'https://youtu.be/short123' })).toBe('https://www.youtube.com/watch?v=short123');
-		expect(await from({ url: 'https://example.org/video' })).toBe('none');
+		expect(await from({ youtube_id: 'idfield1' })).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=idfield1' });
+		expect(await from({ url: 'https://www.youtube.com/watch?v=watch123' })).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=watch123' });
+		expect(await from({ url: 'https://youtu.be/short123' })).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=short123' });
+		expect(await from({ url: 'https://example.org/video' })).toEqual({ status: 'notfound' });
 	});
 
 	it('uses TMDB by IMDb id for a movie', async () => {
 		route([['/find/tt0137523', { movie_results: [{ id: 550 }] }], ...TMDB_MOVIE_ROUTES]);
-		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie', externalLink: IMDB_LINK }))).toBe('https://www.youtube.com/watch?v=official1');
+		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie', externalLink: IMDB_LINK }))).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=official1' });
 		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Documentary', externalLink: IMDB_LINK }), 'jikan', 'movie'))
-			.toBe('https://www.youtube.com/watch?v=official1');
+			.toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=official1' });
 	});
 
-	it('answers none without a source', async () => {
-		expect(await omdb().fetchTrailer(makeTitle({ type: 'Movie', externalLink: IMDB_LINK }))).toBe('none');
-		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie' }))).toBe('none');
-		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Documentary', externalLink: IMDB_LINK }))).toBe('none');
-		expect(await keyless().fetchTrailer(makeTitle({ type: 'Anime' }))).toBe('none');
+	it('answers nokey or notfound without a source, failed when it cannot be reached', async () => {
+		expect(await omdb().fetchTrailer(makeTitle({ type: 'Movie', externalLink: IMDB_LINK }))).toEqual({ status: 'nokey' });
+		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie' }))).toEqual({ status: 'notfound' });
+		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Documentary', externalLink: IMDB_LINK }))).toEqual({ status: 'notfound' });
+		expect(await keyless().fetchTrailer(makeTitle({ type: 'Anime' }))).toEqual({ status: 'notfound' });
 		expect(sent).not.toHaveBeenCalled();
 		answerAll(500);
-		expect(await keyless().fetchTrailer(anime)).toBe('none');
-		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie', externalLink: IMDB_LINK }))).toBe('none');
+		expect(await keyless().fetchTrailer(anime)).toEqual({ status: 'failed' });
+		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie', externalLink: IMDB_LINK }))).toEqual({ status: 'failed' });
 	});
 });
 
@@ -508,50 +515,50 @@ describe('studio', () => {
 
 	it('follows the stored anime id', async () => {
 		route([JIKAN, ANILIST]);
-		expect(await keyless().fetchStudio(makeTitle({ malId: 5, anilistId: 9 }), 'anilist', 'anime')).toEqual({ studio: ['Madhouse'] });
-		expect(await keyless().fetchStudio(makeTitle({ malId: 5, anilistId: 9 }), 'jikan', 'anime')).toEqual({ studio: ['Bones'] });
-		expect(await keyless().fetchStudio(makeTitle({ anilistId: 9 }), 'jikan', 'anime')).toEqual({ studio: ['Madhouse'] });
-		expect(await keyless().fetchStudio(makeTitle({ malId: 5 }), 'anilist', 'anime')).toEqual({ studio: ['Bones'] });
+		expect(await keyless().fetchStudio(makeTitle({ malId: 5, anilistId: 9 }), 'anilist', 'anime')).toEqual({ status: 'found', value: { studio: ['Madhouse'] } });
+		expect(await keyless().fetchStudio(makeTitle({ malId: 5, anilistId: 9 }), 'jikan', 'anime')).toEqual({ status: 'found', value: { studio: ['Bones'] } });
+		expect(await keyless().fetchStudio(makeTitle({ anilistId: 9 }), 'jikan', 'anime')).toEqual({ status: 'found', value: { studio: ['Madhouse'] } });
+		expect(await keyless().fetchStudio(makeTitle({ malId: 5 }), 'anilist', 'anime')).toEqual({ status: 'found', value: { studio: ['Bones'] } });
 	});
 
-	it('stores none when the anime source has no main studio, and nothing when it cannot be reached', async () => {
+	it('finds nothing when the anime source has no main studio, and fails when it cannot be reached', async () => {
 		route([['graphql.anilist.co', { data: { Media: { id: 9, studios: { edges: [] } } } }], ['/anime/5', { data: {} }]]);
-		expect(await keyless().fetchStudio(makeTitle({ anilistId: 9 }), 'anilist', 'anime')).toEqual({ studio: ['none'] });
-		expect(await keyless().fetchStudio(makeTitle({ malId: 5 }), 'jikan', 'anime')).toBeNull();
-		expect(await keyless().fetchStudio(makeTitle({}), 'jikan', 'anime')).toBeNull();
+		expect(await keyless().fetchStudio(makeTitle({ anilistId: 9 }), 'anilist', 'anime')).toEqual({ status: 'notfound' });
+		expect(await keyless().fetchStudio(makeTitle({ malId: 5 }), 'jikan', 'anime')).toEqual({ status: 'notfound' });
+		expect(await keyless().fetchStudio(makeTitle({}), 'jikan', 'anime')).toEqual({ status: 'notfound' });
 		answerAll(500);
-		expect(await keyless().fetchStudio(makeTitle({ malId: 5 }), 'jikan', 'anime')).toBeNull();
-		expect(await keyless().fetchStudio(makeTitle({ anilistId: 9 }), 'anilist', 'anime')).toBeNull();
-		expect(await keyless().fetchStudio(makeTitle({ anilistId: 9 }), 'jikan', 'anime')).toBeNull();
+		expect(await keyless().fetchStudio(makeTitle({ malId: 5 }), 'jikan', 'anime')).toEqual({ status: 'failed' });
+		expect(await keyless().fetchStudio(makeTitle({ anilistId: 9 }), 'anilist', 'anime')).toEqual({ status: 'failed' });
+		expect(await keyless().fetchStudio(makeTitle({ anilistId: 9 }), 'jikan', 'anime')).toEqual({ status: 'failed' });
 	});
 
 	it('reads a movie or series by its cached TMDB id', async () => {
 		route([...TMDB_MOVIE_ROUTES, ...TMDB_TV_ROUTES]);
 		expect(await tmdb().fetchStudio(makeTitle({ tmdbId: 550, tmdbMediaType: 'movie' }), 'jikan', 'movie'))
-			.toEqual({ studio: ['Fox 2000 Pictures', 'Regency Enterprises'] });
+			.toEqual({ status: 'found', value: { studio: ['Fox 2000 Pictures', 'Regency Enterprises'] } });
 		expect(await tmdb().fetchStudio(makeTitle({ tmdbId: 1396, tmdbMediaType: 'tv' }), 'jikan', 'movie'))
-			.toEqual({ studio: ['AMC', 'Sony Pictures Television'] });
+			.toEqual({ status: 'found', value: { studio: ['AMC', 'Sony Pictures Television'] } });
 	});
 
 	it('resolves an IMDb link and hands back the TMDB id it found', async () => {
 		route([['/find/tt0137523', { movie_results: [{ id: 550 }] }], ...TMDB_MOVIE_ROUTES]);
 		expect(await tmdb().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', 'movie'))
-			.toEqual({ studio: ['Fox 2000 Pictures', 'Regency Enterprises'], tmdbId: 550, tmdbMediaType: 'movie' });
+			.toEqual({ status: 'found', value: { studio: ['Fox 2000 Pictures', 'Regency Enterprises'], tmdbId: 550, tmdbMediaType: 'movie' } });
 		route([['/find/tt0137523', { movie_results: [], tv_results: [{ id: 1396 }] }], ...TMDB_TV_ROUTES]);
 		expect(await tmdb().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', 'movie'))
-			.toEqual({ studio: ['AMC', 'Sony Pictures Television'], tmdbId: 1396, tmdbMediaType: 'tv' });
+			.toEqual({ status: 'found', value: { studio: ['AMC', 'Sony Pictures Television'], tmdbId: 1396, tmdbMediaType: 'tv' } });
 	});
 
-	it('answers null without a token, an id or a match', async () => {
-		expect(await keyless().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', 'movie')).toBeNull();
-		expect(await tmdb().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', '')).toBeNull();
-		expect(await tmdb().fetchStudio(makeTitle({}), 'jikan', 'movie')).toBeNull();
+	it('answers nokey without a token, notfound without an id or a match', async () => {
+		expect(await keyless().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', 'movie')).toEqual({ status: 'nokey' });
+		expect(await tmdb().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', '')).toEqual({ status: 'notfound' });
+		expect(await tmdb().fetchStudio(makeTitle({}), 'jikan', 'movie')).toEqual({ status: 'notfound' });
 		expect(sent).not.toHaveBeenCalled();
 		route([['/find/tt0137523', { movie_results: [], tv_results: [] }]]);
-		expect(await tmdb().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', 'movie')).toBeNull();
+		expect(await tmdb().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', 'movie')).toEqual({ status: 'notfound' });
 		answerAll(500);
-		expect(await tmdb().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', 'movie')).toBeNull();
-		expect(await tmdb().fetchStudio(makeTitle({ tmdbId: 550, tmdbMediaType: 'movie' }), 'jikan', 'movie')).toBeNull();
+		expect(await tmdb().fetchStudio(makeTitle({ externalLink: IMDB_LINK }), 'jikan', 'movie')).toEqual({ status: 'failed' });
+		expect(await tmdb().fetchStudio(makeTitle({ tmdbId: 550, tmdbMediaType: 'movie' }), 'jikan', 'movie')).toEqual({ status: 'failed' });
 	});
 });
 
@@ -563,7 +570,7 @@ describe('credits', () => {
 			['/find/tt0137523', { movie_results: [{ id: 550 }] }],
 			['/movie/550/credits', { crew: [{ job: 'Director', name: 'David Fincher' }, { job: 'Writer', name: 'Jim Uhls' }], cast: [{ name: 'Edward Norton' }] }],
 		]);
-		expect(await tmdb().fetchCredits(movie, 'tmdb')).toEqual({ director: ['David Fincher'], cast: ['Edward Norton'] });
+		expect(await tmdb().fetchCredits(movie, 'tmdb')).toEqual({ status: 'found', value: { director: ['David Fincher'], cast: ['Edward Norton'] } });
 		expect(urls()).toEqual([
 			'https://api.themoviedb.org/3/find/tt0137523?external_source=imdb_id',
 			'https://api.themoviedb.org/3/movie/550/credits',
@@ -575,7 +582,7 @@ describe('credits', () => {
 			['/find/tt0137523', { movie_results: [], tv_results: [{ id: 1396 }] }],
 			['/tv/1396?append_to_response=credits', { created_by: [{ name: 'Vince Gilligan' }], credits: { cast: [{ name: 'Bryan Cranston' }] } }],
 		]);
-		expect(await tmdb().fetchCredits(movie, 'tmdb')).toEqual({ director: ['Vince Gilligan'], cast: ['Bryan Cranston'] });
+		expect(await tmdb().fetchCredits(movie, 'tmdb')).toEqual({ status: 'found', value: { director: ['Vince Gilligan'], cast: ['Bryan Cranston'] } });
 	});
 
 	it('asks the active source first and the other keyed one when it knows nothing', async () => {
@@ -585,11 +592,11 @@ describe('credits', () => {
 			['/movie/550/credits', { crew: [{ job: 'Director', name: 'From TMDB' }], cast: [] }],
 		];
 		route([OMDB_DETAIL, ...TMDB_ROUTES]);
-		expect(await both().fetchCredits(movie, 'omdb')).toEqual({ director: ['David Fincher'], cast: ['Brad Pitt'] });
-		expect(await both().fetchCredits(movie, 'tmdb')).toEqual({ director: ['From TMDB'], cast: ['none'] });
+		expect(await both().fetchCredits(movie, 'omdb')).toEqual({ status: 'found', value: { director: ['David Fincher'], cast: ['Brad Pitt'] } });
+		expect(await both().fetchCredits(movie, 'tmdb')).toEqual({ status: 'found', value: { director: ['From TMDB'], cast: [] } });
 		route([['omdbapi.com/?i=tt0137523', { Response: 'False' }], ...TMDB_ROUTES]);
-		expect(await both().fetchCredits(movie, 'omdb')).toEqual({ director: ['From TMDB'], cast: ['none'] });
-		expect(await both().fetchCredits(makeTitle({ type: 'Movie' }), 'omdb')).toBeNull();
+		expect(await both().fetchCredits(movie, 'omdb')).toEqual({ status: 'found', value: { director: ['From TMDB'], cast: [] } });
+		expect(await both().fetchCredits(makeTitle({ type: 'Movie' }), 'omdb')).toEqual({ status: 'notfound' });
 	});
 });
 

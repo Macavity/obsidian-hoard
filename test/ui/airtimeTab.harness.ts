@@ -54,6 +54,7 @@ export function makeTab(w: World) {
 		getAirtimeEntries: () => w.entries,
 		getTitles: () => w.titles,
 		getTitle: (id: string) => w.titles.find((x) => x.id === id),
+		lookupDue: (id: string) => !w.titles.find((x) => x.id === id)?.posterUrl,
 		getMaybeTitles: () => [],
 		isAiringTracked: () => w.tracked,
 		removeClearsReleaseDate: () => w.clearsDate,

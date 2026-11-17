@@ -6,7 +6,7 @@ import globals from "globals";
 
 export default defineConfig([
   {
-    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "vitest.config.ts", "scripts/**", "test/e2e/**", ".ref/**", "spike/**", ".claude/**"]
+    ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "vitest.config.ts", "scripts/**", "test/e2e/**", ".ref/**", "spike/**", ".claude/**", ".superpowers/**"]
   },
   // obsidianmd recommended rules require type info, so only apply to TS files
   ...obsidianmd.configs.recommended.map((config) =>
@@ -107,6 +107,27 @@ export default defineConfig([
         selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[key.type='Literal']:not([key.value=/^--/])",
         message: "setCssProps takes custom properties only (keys starting with --).",
       }],
+    },
+  },
+  {
+    // Outside data is read from `unknown`, never asserted (docs/architecture/storage.md): the data layer stays assertion-free.
+    files: [
+      "src/storage/**/*.ts",
+      "src/import/**/*.ts",
+      "src/ApiService.ts",
+      "src/PosterService.ts",
+      "src/cinemetaApi.ts",
+      "src/openLibraryApi.ts",
+      "src/steamStoreApi.ts",
+      "src/lookup.ts",
+      "src/settingsNormalize.ts",
+      "src/settingsSplit.ts",
+      "src/backup.ts",
+      "src/backupEntries.ts",
+      "src/featureSettings.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-unsafe-type-assertion": "error",
     },
   },
   {

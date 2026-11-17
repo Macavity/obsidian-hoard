@@ -24,6 +24,7 @@ const detail = {
 	favorite: {
 		add: 'Add to favorites',
 		remove: 'Remove from favorites',
+		failed: 'Could not save the favorite.',
 	},
 	collection: {
 		label: 'Collection',

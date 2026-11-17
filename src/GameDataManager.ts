@@ -27,7 +27,9 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from './types';
-import { sameJson, slugify } from './storage/sharedHelpers';
+import { omit, sameJson, slugify, toRecord } from './storage/sharedHelpers';
+import { readRecord } from './storage/read';
+import { readGamesSettings } from './featureSettings';
 
 const GAMES_FOLDER_PREFIX = 'Games/';
 
@@ -124,17 +126,14 @@ export class GameDataManager {
 	getSettings(): GamesSettings {
 		if (this.settingsCache) return this.settingsCache;
 		const defaults = defaultGamesSettings();
-		const stored = { ...this.local.data.games, ...(this.shared.get().settings.games as object | undefined) } as Partial<GamesSettings>;
-		const merged: GamesSettings = { ...defaults, ...stored, defaultFolder: defaults.defaultFolder };
-		if (!Array.isArray(merged.statuses) || merged.statuses.length === 0) merged.statuses = defaults.statuses;
-		if (!Array.isArray(merged.types) || merged.types.length === 0) merged.types = defaults.types;
-		if (!Array.isArray(merged.platforms)) merged.platforms = defaults.platforms;
+		const stored = { ...readRecord(this.local.data.games), ...readRecord(this.shared.get().settings.games) };
+		const merged = readGamesSettings(stored, defaults);
 		this.settingsCache = merged;
 		return merged;
 	}
 
 	private async writeSettings(settings: GamesSettings): Promise<void> {
-		const { shared, local } = splitNested('games', settings as unknown as Record<string, unknown>);
+		const { shared, local } = splitNested('games', toRecord(settings));
 		this.local.data.games = local;
 		this.local.queueSave();
 		await this.shared.update({ games: shared });
@@ -166,18 +165,15 @@ export class GameDataManager {
 	// Daily "Recommended" picks (device-local)
 
 	getRecommendedDaily(): RecommendedDaily {
-		return this.gamesUi().gamesRecommendedDaily ?? { date: '', ids: [] };
+		return this.local.data.ui.gamesRecommendedDaily ?? { date: '', ids: [] };
 	}
 
 	/** Silent — the Rows view that rolled the picks renders them itself. */
 	setRecommendedDaily(rec: RecommendedDaily): void {
-		this.gamesUi().gamesRecommendedDaily = rec;
+		this.local.data.ui.gamesRecommendedDaily = rec;
 		this.local.queueSave();
 	}
 
-	private gamesUi(): { gamesRecommendedDaily?: RecommendedDaily } {
-		return this.local.data.ui as { gamesRecommendedDaily?: RecommendedDaily };
-	}
 
 	// Listeners
 
@@ -277,19 +273,17 @@ export class GameDataManager {
 		);
 	}
 
-	async updateGame(updated: Game): Promise<void> {
-		updated.dateModified = new Date().toISOString();
-		this.applyReleaseStatus(updated);
-		const slot = this.views.get(updated.id);
-		const indexed = this.index.get(updated.id);
-		const old = getBaseline(updated) ?? slot?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
+	async updateGame(input: Game): Promise<void> {
+		input.dateModified = new Date().toISOString();
+		this.applyReleaseStatus(input);
+		const slot = this.views.get(input.id);
+		const indexed = this.index.get(input.id);
+		const old = getBaseline(input) ?? slot?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
 		if (!old) return;
 		// favorite arrives as a whole-object replace — stamp/clear off the transition. Drives the
 		// Favorites shelf order (newest first).
-		if (old.favorite !== updated.favorite) {
-			if (updated.favorite) updated.dateFavorited = new Date().toISOString();
-			else delete updated.dateFavorited;
-		}
+		const updated = old.favorite === input.favorite ? input
+			: input.favorite ? { ...input, dateFavorited: new Date().toISOString() } : omit(input, 'dateFavorited');
 		if (old.status !== updated.status) {
 			const act = updated.status === GAME_FINISHED_STATUS ? 'completed' as const : 'status' as const;
 			// mirror the watch behavior: stamp today's finish date on the transition to Finished

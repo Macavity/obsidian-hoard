@@ -1,9 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { ReadingDataManager } from '../src/ReadingDataManager';
 import { GameDataManager } from '../src/GameDataManager';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
 import type { HoardTitle } from '../src/types';
+import { PosterService } from '../src/PosterService';
+import { DEFAULT_SETTINGS } from '../src/types';
+import type { ApiService } from '../src/ApiService';
+import { NOT_FOUND, FAILED, NO_KEY, found } from '../src/lookup';
 
 describe('DataManager on vault storage', () => {
 	it('adds a title as a note and keeps it out of data.json', async () => {
@@ -344,6 +348,15 @@ describe('DataManager on vault storage', () => {
 		expect(posterQueue).toEqual(['Movie/A', 'Movie/C']);
 	});
 
+	it('does not queue a title whose poster lookup is not due', async () => {
+		const { dm, f, posterQueue } = await setupDataManager({});
+		dm.recordLookup('Movie/C', 'poster', NOT_FOUND);
+		f.externalWrite('W/Movie/C.md', '---\nName: C\nType: Movie\nExternal ID: tmdb:movie:604\n---\n');
+		f.externalWrite('W/Movie/D.md', '---\nName: D\nType: Movie\nExternal ID: tmdb:movie:605\n---\n');
+		await tick();
+		expect(posterQueue).toEqual(['Movie/D']);
+	});
+
 	it('keeps an external change when a stale copy edits another field', async () => {
 		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\nRating: 1\n---\n\n## Notes\n' });
 		const t = dm.getTitle('Movie/A')!;
@@ -454,5 +467,89 @@ describe('DataManager on vault storage', () => {
 		expect(t.collectionId).toBe(7);
 		expect(t.tmdbId).toBeUndefined();
 		expect(t.tmdbMediaType).toBeUndefined();
+	});
+});
+
+describe('DataManager lookup state', () => {
+	const START = new Date('2026-11-16T12:00:00Z');
+	const MIN = 60_000;
+	const DAY = 24 * 60 * MIN;
+	const bare = '---\nName: A\nType: Movie\n---\n';
+	const at = (ms: number) => vi.setSystemTime(new Date(START.getTime() + ms));
+	const setup = async (note = bare) => {
+		vi.useFakeTimers({ now: START, toFake: ['Date'] });
+		return setupDataManager({ 'W/Movie/A.md': note });
+	};
+	afterEach(() => { vi.useRealTimers(); });
+
+	it('is due for a title with no value and no check', async () => {
+		const { dm } = await setup();
+		for (const kind of ['poster', 'trailer', 'credits', 'studio'] as const) expect(dm.lookupDue('Movie/A', kind)).toBe(true);
+	});
+
+	it('is never due while the value is there, whatever the check says', async () => {
+		const { dm } = await setup('---\nName: A\nType: Movie\nCover: https://img/c.jpg\nTrailer: https://youtu.be/t\n---\n');
+		dm.recordLookup('Movie/A', 'poster', NOT_FOUND);
+		dm.recordLookup('Movie/A', 'trailer', NOT_FOUND);
+		at(1000);
+		expect(dm.lookupDue('Movie/A', 'poster')).toBe(false);
+		expect(dm.lookupDue('Movie/A', 'trailer')).toBe(false);
+	});
+
+	it('needs both director and cast for credits to count as present', async () => {
+		const { dm } = await setup();
+		await dm.updateCredits('Movie/A', ['D'], []);
+		expect(dm.lookupDue('Movie/A', 'credits')).toBe(true);
+		await dm.updateCredits('Movie/A', ['D'], ['C']);
+		expect(dm.lookupDue('Movie/A', 'credits')).toBe(false);
+		await dm.updateStudio('Movie/A', ['S']);
+		expect(dm.lookupDue('Movie/A', 'studio')).toBe(false);
+	});
+
+	it('retries a failure after an hour', async () => {
+		const { dm } = await setup();
+		dm.recordLookup('Movie/A', 'credits', FAILED);
+		at(30 * MIN);
+		expect(dm.lookupDue('Movie/A', 'credits')).toBe(false);
+		at(61 * MIN);
+		expect(dm.lookupDue('Movie/A', 'credits')).toBe(true);
+	});
+
+	it('retries a clean miss after a week', async () => {
+		const { dm, local } = await setup();
+		dm.recordLookup('Movie/A', 'studio', NOT_FOUND);
+		expect(local.getCache('Movie/A')?.apiCheck?.studio).toEqual({ at: START.toISOString(), result: 'notfound' });
+		at(6 * DAY);
+		expect(dm.lookupDue('Movie/A', 'studio')).toBe(false);
+		at(8 * DAY);
+		expect(dm.lookupDue('Movie/A', 'studio')).toBe(true);
+	});
+
+	it('records nothing for a found value', async () => {
+		const { dm, local } = await setup();
+		dm.recordLookup('Movie/A', 'trailer', found('https://youtu.be/t'));
+		expect(local.getCache('Movie/A')?.apiCheck?.trailer).toBeUndefined();
+	});
+
+	it('waits for a key on nokey, and a key change makes every kind due again', async () => {
+		const { dm } = await setup();
+		for (const kind of ['poster', 'trailer', 'credits', 'studio'] as const) dm.recordLookup('Movie/A', kind, NO_KEY);
+		at(30 * DAY);
+		for (const kind of ['poster', 'trailer', 'credits', 'studio'] as const) expect(dm.lookupDue('Movie/A', kind)).toBe(false);
+		dm.resetNoKeyChecks();
+		for (const kind of ['poster', 'trailer', 'credits', 'studio'] as const) expect(dm.lookupDue('Movie/A', kind)).toBe(true);
+	});
+
+	it('keeps a transient check as it was when the poster queue meets the title again', async () => {
+		const { dm, local } = await setup();
+		dm.recordLookup('Movie/A', 'poster', FAILED);
+		const before = local.getCache('Movie/A')?.apiCheck?.poster;
+		const api = { searchCinemeta: vi.fn(), getCinemetaDetails: vi.fn() };
+		const svc = new PosterService(dm, () => DEFAULT_SETTINGS, () => api as unknown as ApiService);
+		at(10 * MIN);
+		await svc.enqueue(dm.getTitle('Movie/A')!);
+		expect(local.getCache('Movie/A')?.apiCheck?.poster).toEqual(before);
+		expect(before?.result).toBe('transient');
+		expect(api.searchCinemeta).not.toHaveBeenCalled();
 	});
 });

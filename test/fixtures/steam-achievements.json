@@ -1,0 +1,12 @@
+{
+	"playerstats": {
+		"steamID": "76561198000000000",
+		"gameName": "Half-Life 2",
+		"achievements": [
+			{ "apiname": "HL2_BEAT_CITADEL", "achieved": 1, "unlocktime": 1700000000 },
+			{ "apiname": "HL2_BEAT_GAME", "achieved": 0, "unlocktime": 0 },
+			{ "apiname": "HL2_GNOME", "achieved": 1, "unlocktime": 1700000100 }
+		],
+		"success": true
+	}
+}

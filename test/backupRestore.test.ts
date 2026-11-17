@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import data from './fixtures/data-v1.json';
 import { setupBackup } from './helpers/setupBackup';
 import { inferHistoryAction } from '../src/HistoryManager';
+import { DEFAULT_SETTINGS } from '../src/types';
 import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../src/backup';
 
 const BASE = 'hoard:\n  version: 1\n  statuses:\n    - name: Rewatch\n      color: "#123456"\n';
@@ -101,5 +102,80 @@ describe('history actions', () => {
 		await restoreBackup(b, parsed.backup);
 		expect(Object.getPrototypeOf(b.local.data.settings)).toBe(Object.prototype);
 		expect((b.local.data.settings as { polluted?: unknown }).polluted).toBeUndefined();
+	});
+
+	it('restores a backup with a wrong-typed settings key and keeps the rest', async () => {
+		const src = await setupBackup({});
+		const local = { cardSize: 'big', dateFormat: 'iso', ratingSystem: 'x', customListTabOrder: [3, 'a'], futureKey: [1] };
+		const parsed = parseBackup(JSON.stringify({ ...buildBackup(src), local }));
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const b = await setupBackup({});
+		await restoreBackup(b, parsed.backup);
+		expect(b.local.data.settings).toMatchObject({ dateFormat: 'iso', cardSize: 0, customListTabOrder: ['a'], futureKey: [1] });
+		expect(b.local.data.settings.ratingSystem).toEqual(DEFAULT_SETTINGS.ratingSystem);
+	});
+
+	it('drops the entries of a backup that have no id and reads the rest of the file', () => {
+		const src = JSON.stringify({
+			version: 2, exportedAt: '2026-01-01', shared: {}, local: { cardSize: 1 },
+			history: [{ id: 'h1', timestamp: 't', message: 'm' }, { id: 3 }, 'x'],
+			entries: {
+				titles: [{ id: 'Movie/A', title: 'A' }, 5, { title: 'no id' }], maybe: [{ id: 'm', title: 'M' }, { id: 'n' }],
+				reading: {
+					books: [{ id: 'b', title: 'B' }, {}], manga: [{ id: 'g', title: 'G' }], bookColumns: [{ id: 'c', name: 'N' }, 3],
+					mangaColumns: 'x', settings: { defaultStatus: 'Reading' },
+				},
+				games: { games: [{ id: 'x', title: 'X' }, null], groups: [{ id: 'g1', name: 'G1', gameIds: ['x', 4] }, { id: 'g2' }], settings: { defaultStatus: 'Playing' } },
+			},
+		});
+		const parsed = parseBackup(src);
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const { backup } = parsed;
+		expect(backup.entries.titles.map((t) => t.id)).toEqual(['Movie/A']);
+		expect(backup.entries.maybe.map((t) => t.id)).toEqual(['m']);
+		expect(backup.entries.reading.books.map((t) => t.id)).toEqual(['b']);
+		expect(backup.entries.reading.manga.map((t) => t.id)).toEqual(['g']);
+		expect(backup.entries.reading.bookColumns.map((c) => c.id)).toEqual(['c']);
+		expect(backup.entries.reading.mangaColumns).toEqual([]);
+		expect(backup.entries.reading.settings.defaultStatus).toBe('Reading');
+		expect(backup.entries.games.games.map((g) => g.id)).toEqual(['x']);
+		expect(backup.entries.games.groups).toEqual([{ id: 'g1', name: 'G1', gameIds: ['x'], dateAdded: '' }]);
+		expect(backup.entries.games.settings.defaultStatus).toBe('Playing');
+		expect(backup.history.map((h) => h.id)).toEqual(['h1']);
+		expect(backup.local).toEqual({ cardSize: 1 });
+	});
+
+	it('restores minimal entries and writes readable notes', async () => {
+		const src = JSON.stringify({
+			version: 2, exportedAt: '', shared: {}, history: [],
+			entries: {
+				titles: [{ id: 'Movie/Min', title: 'Min' }, { id: 'Movie/Odd', title: 'Odd', seasons: 'x', watchedEpisodes: [1, 'a'], rating: 'high', groups: 5 }],
+				maybe: [{ id: 'Movie/Maybe', title: 'Maybe' }],
+				reading: { books: [{ id: 'B', title: 'Bk', customFields: { a: 'x', b: 2, c: {}, d: null } }, { id: 'B2', title: 'Bk2', customFields: 'x' }], manga: [{ id: 'M', title: 'Mg', status: 'Gone', totalVolumes: '3' }] },
+				games: { games: [{ id: 'G', title: 'Gm', platforms: 'PC' }], settings: {} },
+			},
+		});
+		const parsed = parseBackup(src);
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const b = await setupBackup({});
+		await restoreBackup(b, parsed.backup);
+		const titleOf = (name: string) => b.dataManager.getTitles().find((t) => t.title === name);
+		expect(titleOf('Min')).toMatchObject({ title: 'Min', seasons: [], watchedEpisodes: [] });
+		expect(titleOf('Odd')).toMatchObject({ seasons: [], watchedEpisodes: [1], rating: 0 });
+		expect(b.dataManager.getMaybeTitles().map((m) => m.title)).toEqual(['Maybe']);
+		expect(b.readingDataManager.getBooks().map((x) => x.title).sort()).toEqual(['Bk', 'Bk2']);
+		expect(b.readingDataManager.getBooks().find((x) => x.title === 'Bk2')?.customFields).toEqual({});
+		expect(b.readingDataManager.getMangaList()[0]).toMatchObject({ title: 'Mg', status: 'Plan to Read', totalVolumes: 0 });
+		expect(b.gameDataManager.getGames()[0]).toMatchObject({ title: 'Gm', platforms: [] });
+	});
+
+	it('ignores a backup settings key that is only on the prototype chain', async () => {
+		const src = await setupBackup({});
+		const parsed = parseBackup(JSON.stringify({ ...buildBackup(src), local: { toString: 'x', dateFormat: 'iso' } }));
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const b = await setupBackup({});
+		await restoreBackup(b, parsed.backup);
+		expect(b.local.data.settings.dateFormat).toBe('iso');
+		expect(Object.hasOwn(b.local.data.settings, 'toString')).toBe(false);
 	});
 });

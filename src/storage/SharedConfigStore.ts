@@ -52,8 +52,8 @@ function pick(src: Record<string, unknown>): Record<string, unknown> {
 /** Key-order independent serialization, to compare parsed blocks. */
 function canon(v: unknown): string {
 	if (Array.isArray(v)) return `[${v.map(canon).join(',')}]`;
-	if (v && typeof v === 'object') {
-		const e = Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1));
+	if (isRecord(v)) {
+		const e = Object.entries(v).sort(([a], [b]) => (a < b ? -1 : 1));
 		return `{${e.map(([k, x]) => `${JSON.stringify(k)}:${canon(x)}`).join(',')}}`;
 	}
 	return JSON.stringify(v) ?? 'null';

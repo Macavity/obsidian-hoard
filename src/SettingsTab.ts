@@ -6,12 +6,13 @@ import { typeNameProblemText } from './ui/problemText';
 import { cardSizeToMinWidth } from './VirtualGrid';
 import type HoardPlugin from './main';
 import type { HoardPluginSettings, TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from './types';
-import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType, isCreditsNone, CREDITS_NONE } from './types';
+import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType } from './types';
 import { readingStatusColor } from './readingColors';
 import { gamesKeyChip } from './ui/gamesKeyChip';
 import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from './apiSources';
 import { SteamSyncModal } from './SteamSyncModal';
 import type { SteamFailureReason } from './ApiService';
+import { FAILED } from './lookup';
 
 /** short status-line label per Steam failure (the modal shows the long form) */
 function steamFailureLabel(reason: SteamFailureReason): string {
@@ -847,9 +848,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const dm = this.plugin.dataManager;
 		const api = this.plugin.apiService;
 		const mapping = this.plugin.settings.typeApiMapping;
-		// movie studios need TMDB: without a key a miss is not an answer, so leave the field unfetched
+		// movie studios need TMDB: without a key a miss is not an answer, so leave the field unfetched;
+		// a title whose last lookup is still fresh is not asked again
 		const pending = dm.getTitles().filter((title) =>
-			needsStudioFetch(title) && (getApiGroupForType(title.type, mapping) !== 'movie' || api.hasTmdbKey()));
+			needsStudioFetch(title)
+			&& dm.lookupDue(title.id, 'studio')
+			&& (getApiGroupForType(title.type, mapping) !== 'movie' || api.hasTmdbKey()));
 		const total = pending.length;
 		if (total === 0) {
 			new Notice(t('settings.general.studios.allHave'));
@@ -870,11 +874,17 @@ export class HoardSettingsTab extends PluginSettingTab {
 				const title = pending[i]!;
 				try {
 					const group = getApiGroupForType(title.type, mapping);
-					const found = await api.fetchStudio(title, animeSource, group);
-					// a miss stores 'none' so the next run skips it instead of retrying forever
-					await dm.updateStudio(title.id, found?.studio ?? [CREDITS_NONE], found?.tmdbId, found?.tmdbMediaType);
-					if (found?.studio && !isCreditsNone(found.studio)) filled++; else missed++;
+					const result = await api.fetchStudio(title, animeSource, group);
+					if (result.status === 'found') {
+						const { studio, tmdbId, tmdbMediaType } = result.value;
+						await dm.updateStudio(title.id, studio, tmdbId, tmdbMediaType);
+						filled++;
+					} else {
+						dm.recordLookup(title.id, 'studio', result);
+						missed++;
+					}
 				} catch {
+					dm.recordLookup(title.id, 'studio', FAILED);
 					missed++;
 				}
 				this.plugin.importProgress = { current: i + 1, total, cancel: cancelFn };

@@ -135,3 +135,9 @@ describe('titleCodec', () => {
     });
   });
 });
+
+describe('titleToCache', () => {
+  it('never emits the poster into the cache', () => {
+    expect(titleToCache({ ...fullTitle(), posterUrl: 'https://img/p.jpg' })).not.toHaveProperty('posterUrl');
+  });
+});

@@ -3,6 +3,7 @@ import { Platform } from 'obsidian';
 import { TitleDetailModal, renderCreditsRefreshButton } from '../src/TitleDetailModal';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
 import { t } from '../src/i18n';
+import { FAILED, found, type LookupResult } from '../src/lookup';
 
 vi.mock('../src/NoteLinkButton', () => ({
 	appendNoteLinkButton: (_app: unknown, parent: HTMLElement) => parent.createSpan({ cls: 'note-link-stub' }),
@@ -16,7 +17,7 @@ const mkTitle = (over: Partial<HoardTitle> = {}): HoardTitle => (({
 	id: 't1', title: 'Alien', type: 'Movie', status: 'Plan to Watch', priority: '', review: '', rating: 0, notes: '',
 	dateStarted: null, dateFinished: null, dateAdded: '', dateModified: '', totalEpisodes: 1, episodeDuration: 100,
 	releaseDate: null, externalLink: '', seasons: [], watchedEpisodes: [],
-	director: ['none'], cast: ['none'], studio: ['none'],
+	director: ['Dir'], cast: ['Cast'], studio: ['Studio'],
 	...over,
 }));
 
@@ -33,11 +34,13 @@ function buildPlugin(stored: HoardTitle | null, over: Record<string, unknown> = 
 		getProgress: () => 40,
 		updateTitle: vi.fn(() => Promise.resolve()),
 		updateCredits: vi.fn(() => Promise.resolve()),
+		lookupDue: vi.fn(() => false),
+		recordLookup: vi.fn(),
 		...over,
 	};
 	const apiService = {
-		fetchCredits: vi.fn(() => Promise.resolve(null as { director: string[]; cast: string[] } | null)),
-		fetchStudio: vi.fn(() => Promise.resolve(null)),
+		fetchCredits: vi.fn((): Promise<LookupResult<{ director: string[]; cast: string[] }>> => Promise.resolve({ status: 'notfound' })),
+		fetchStudio: vi.fn(() => Promise.resolve({ status: 'notfound' })),
 		hasTmdbKey: vi.fn(() => true),
 		hasOmdbKey: vi.fn(() => false),
 	};
@@ -178,7 +181,7 @@ describe('renderCreditsRefreshButton', () => {
 		vi.clearAllMocks();
 	});
 
-	const render = (id: string, stored: HoardTitle | null, fetched: { director: string[]; cast: string[] } | null, onDone = vi.fn()) => {
+	const render = (id: string, stored: HoardTitle | null, fetched: LookupResult<{ director: string[]; cast: string[] }>, onDone = vi.fn()) => {
 		const title = mkTitle({ id });
 		const { plugin, dataManager, apiService } = buildPlugin(stored);
 		apiService.fetchCredits.mockResolvedValue(fetched);
@@ -188,7 +191,7 @@ describe('renderCreditsRefreshButton', () => {
 	};
 
 	it('renders a labelled framed refresh button', () => {
-		const { btn } = render('r0', null, null);
+		const { btn } = render('r0', null, FAILED);
 		expect(btn.getAttribute('data-icon')).toBe('refresh-cw');
 		expect(btn.getAttribute('aria-label')).toBe(t('detail.credits.refresh'));
 		expect(btn.classList.contains('is-loading')).toBe(false);
@@ -196,7 +199,7 @@ describe('renderCreditsRefreshButton', () => {
 
 	it('stores fetched credits, spins while in flight and reports a change', async () => {
 		const stored = mkTitle({ id: 'r1' });
-		const { btn, dataManager, apiService, onDone } = render('r1', stored, { director: ['Ridley Scott'], cast: ['Sigourney Weaver'] });
+		const { btn, dataManager, apiService, onDone } = render('r1', stored, found({ director: ['Ridley Scott'], cast: ['Sigourney Weaver'] }));
 		btn.click();
 		expect(btn.classList.contains('is-loading')).toBe(true);
 		await flush();
@@ -206,17 +209,18 @@ describe('renderCreditsRefreshButton', () => {
 		expect(onDone).toHaveBeenCalledWith(true);
 	});
 
-	it('falls back to the passed title and writes the none sentinel when nothing was fetched', async () => {
-		const { btn, title, dataManager, apiService, onDone } = render('r2', null, null);
+	it('falls back to the passed title and changes nothing when the fetch failed', async () => {
+		const { btn, title, dataManager, apiService, onDone } = render('r2', null, FAILED);
 		btn.click();
 		await flush();
 		expect(apiService.fetchCredits).toHaveBeenCalledWith(title, expect.anything());
-		expect(dataManager.updateCredits).toHaveBeenCalledWith('r2', ['none'], ['none']);
-		expect(onDone).toHaveBeenCalledWith(true);
+		expect(dataManager.updateCredits).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('r2', 'credits', { status: 'failed' });
+		expect(onDone).toHaveBeenCalledWith(false);
 	});
 
 	it('reports no change when persistence fails and clears the spinner', async () => {
-		const { btn, dataManager, onDone } = render('r3', null, { director: ['x'], cast: ['y'] });
+		const { btn, dataManager, onDone } = render('r3', null, found({ director: ['x'], cast: ['y'] }));
 		dataManager.updateCredits.mockRejectedValueOnce(new Error('disk'));
 		btn.click();
 		await flush();
@@ -225,7 +229,7 @@ describe('renderCreditsRefreshButton', () => {
 	});
 
 	it('ignores clicks while a refresh for the same title is in flight', async () => {
-		const { btn, apiService, onDone } = render('r4', null, null);
+		const { btn, apiService, onDone } = render('r4', null, FAILED);
 		btn.click();
 		btn.click();
 		await flush();
@@ -234,7 +238,7 @@ describe('renderCreditsRefreshButton', () => {
 	});
 
 	it('shows the spinner on a button rendered mid-flight', async () => {
-		const first = render('r5', null, null);
+		const first = render('r5', null, FAILED);
 		first.btn.click();
 		const second = document.createElement('div');
 		const { plugin } = buildPlugin(null);

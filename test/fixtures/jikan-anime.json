@@ -1,0 +1,18 @@
+{
+  "data": {
+    "mal_id": 1,
+    "url": "https://myanimelist.net/anime/1/Cowboy_Bebop",
+    "images": { "jpg": { "image_url": "https://cdn.myanimelist.net/images/anime/4/19644.jpg", "small_image_url": "https://cdn.myanimelist.net/images/anime/4/19644t.jpg", "large_image_url": "https://cdn.myanimelist.net/images/anime/4/19644l.jpg" } },
+    "trailer": { "youtube_id": "qig4KOK2R2g", "url": "https://www.youtube.com/watch?v=qig4KOK2R2g", "embed_url": "https://www.youtube.com/embed/qig4KOK2R2g" },
+    "title": "Cowboy Bebop",
+    "title_english": "Cowboy Bebop",
+    "episodes": 26,
+    "duration": "24 min per ep",
+    "aired": { "from": "1998-04-03T00:00:00+00:00", "to": "1999-04-24T00:00:00+00:00" },
+    "score": 8.75,
+    "scored_by": 1000000,
+    "broadcast": { "day": "Saturdays", "time": "01:00", "timezone": "Asia/Tokyo" },
+    "studios": [{ "mal_id": 14, "name": "Sunrise" }]
+  },
+  "pagination": { "last_visible_page": 1, "has_next_page": false }
+}

@@ -14,7 +14,13 @@ source:
   - src/storage/titleCodec.ts
   - src/storage/properties.ts
   - src/storage/noteWrite.ts
-source_commit: 64cb1297ad64e33ac1573090568cdec0eafceea1
+  - src/storage/read.ts
+  - src/storage/readCache.ts
+  - src/storage/cacheMigration.ts
+  - src/storage/sharedHelpers.ts
+  - src/storage/gameCodec.ts
+  - src/storage/readingCodec.ts
+source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
 # Storage
@@ -63,6 +69,19 @@ only from [properties.ts](../../src/storage/properties.ts) ([property names](../
 The book and manga codecs also take that kind's custom columns, because a custom value's key is
 `Custom <column name>`; `EntryIndex.setColumns` re-decodes reading notes when a column name changes.
 
+## Reading outside data
+
+Everything that enters from outside (notes, `data.json`, `Hoard.base`, API responses, backups, the
+WatchLog import) is read from `unknown`, field by field, never asserted
+([read.ts](../../src/storage/read.ts)): `readString`, `readNumber`, `readBoolean`, `readStringList`,
+`readList(v, readItem)` (drops items the reader rejects), `readOneOf`, `readRecord`, `readOptional*` and
+`at(v, ...path)`. They are pure and never throw; a wrong or missing field becomes its empty value, so one
+bad field never breaks the entry. `no-unsafe-type-assertion` is on for `src/storage/`, `src/import/`, the
+API modules, `lookup.ts`, `settingsNormalize`, `settingsSplit` and `backup.ts` (`eslint.config.mjs`).
+Entries are built as one expression with `defined()` / conditional spreads and `omit()`
+([sharedHelpers.ts](../../src/storage/sharedHelpers.ts)); no key is `delete`d from an entry afterwards, so
+an optional field is absent, not present-and-undefined (maps keyed by id keep `delete`).
+
 ## Writing: the managers
 
 All three managers write through `writeEntry` in [noteWrite.ts](../../src/storage/noteWrite.ts): it
@@ -91,7 +110,9 @@ where the write pipeline emits them. `main.ts` renders the code in the active la
 - `LocalStore` is `data.json` schema 2 (`schemaVersion`, `settings`, `cache`, `ui`, optional
   `reading`/`games`/`drafts`). It refuses to write, for the whole session, when the file is a
   WatchLog schema-1 file (device settings and cache then start empty; notes in the vault are indexed as
-  usual) or from a newer plugin version; both show a sticky Notice. The per-device WatchLog
+  usual) or from a newer plugin version; both show a sticky Notice. A schema-2 file is read field by
+  field ([readCache.ts](../../src/storage/readCache.ts)) and its legacy `'none'` markers become
+  `notfound` checks ([entry cache](../concepts/entry-cache.md#reading-datajson)). The per-device WatchLog
   import decision lives in `ui.watchlogImport` ([flows/watchlog-import](../flows/watchlog-import.md)).
 - `SecretStore` ([SecretStore.ts](../../src/storage/SecretStore.ts)) wraps `getSecret`/`setSecret`; `write`
   verifies by read-back and returns the keys it could not store, `absorb` migrates keys out of a settings

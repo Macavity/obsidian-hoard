@@ -11,7 +11,8 @@ source:
   - src/LibraryIndex.ts
   - src/DataManager.ts
   - src/entryFactories.ts
-source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
+  - src/lookup.ts
+source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
 # Add title
@@ -56,6 +57,8 @@ sequenceDiagram
 4. **Pick**: `resolvePick` fetches details for the chosen row (seasons, trailer, director, cast,
    studio, anime ids) through the same effective source, with an `isCurrent` guard so a stale
    response is dropped; `applyPick` fills the media fields and the form re-renders. Under Cinemeta
+   the pick carries the trailer as a lookup result (`found` or `notfound`), and the add records it
+   (`recordLookup`) so an empty trailer is not looked up again at once. Under Cinemeta
    the pick also carries the row's poster (`posterUrl`), which lands in the new note; OMDb and TMDB
    picks leave it empty and the poster queue fills it later ([api layer](../architecture/api-layer.md)).
    A pasted IMDb link (`AddFromUrlModal`) resolves the same way and opens this modal prefilled,

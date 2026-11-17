@@ -1,6 +1,5 @@
-import { formatExternalId } from '../../storage/externalId';
+import { formatExternalId, parseExternalId } from '../../storage/externalId';
 import { AIRTIME_PROPS, COMMON_PROPS, GAME_PROPS, READING_PROPS, TITLE_PROPS } from '../../storage/properties';
-import type { ExternalSource } from '../../storage/storageTypes';
 
 const C = COMMON_PROPS;
 const A = AIRTIME_PROPS;
@@ -117,7 +116,8 @@ function foldApiIdentity(fm: Record<string, unknown>): string | undefined {
 	if (Object.hasOwn(fm, 'externalId') || Object.hasOwn(fm, COMMON_PROPS.externalId)) return undefined;
 	if (typeof apiSource !== 'string') return undefined;
 	if (typeof apiId !== 'string' && typeof apiId !== 'number') return undefined;
-	return formatExternalId({ source: apiSource as ExternalSource, id: String(apiId) });
+	const identity = parseExternalId(`${apiSource}:${apiId}`);
+	return identity ? formatExternalId(identity) : undefined;
 }
 
 /** Writes `key` under its new name; on collision the old key stays and is recorded in `kept`. */

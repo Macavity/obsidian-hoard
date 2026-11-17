@@ -54,4 +54,14 @@ describe('cinemeta', () => {
 		expect(mapCinemetaMeta('x', 'movie')).toBeNull();
 		expect(mapCinemetaMeta({ meta: { id: 'nope', name: 'x' } }, 'movie')).toBeNull();
 	});
+	it('skips wrong-typed search rows and counts only whole season numbers', () => {
+		expect(mapCinemetaSearch({ metas: [null, 5, 'x', { id: 7 }, { id: 'tt1', name: 5, poster: 5, releaseInfo: 1999 }] }, 'movie', '', 9))
+			.toMatchObject([{ imdbId: 'tt1', title: '', releaseDate: '', posterUrl: '' }]);
+		expect(mapCinemetaSearch({ metas: 'x' }, 'movie', '', 9)).toEqual([]);
+		const meta = { id: 'tt1', name: 'x', year: '2000', cast: 'x', director: [1, 'D'], videos: [null, { season: '1' }, { season: 1.5 }, { season: 0 }, { season: 2 }, { season: 2 }] };
+		expect(mapCinemetaMeta({ meta }, 'series')).toMatchObject({
+			seasons: [{ name: 'Season 2', episodes: 2, offset: 0 }], episodes: 2, cast: [], director: ['D'],
+		});
+		expect(mapCinemetaMeta({ meta: { ...meta, videos: 'x' } }, 'series')).toMatchObject({ seasons: [], episodes: 0 });
+	});
 });

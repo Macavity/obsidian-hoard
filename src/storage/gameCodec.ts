@@ -4,7 +4,7 @@ import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { FmReader, airtimeProps, decodeAirtime } from './readingCodec';
 import { COMMON_PROPS as C, GAME_PROPS as G } from './properties';
-import { optional } from './sharedHelpers';
+import { defined, nonEmpty, optional } from './sharedHelpers';
 
 const PLAYTIME_RE = /^(?:(\d{1,3}(?:,\d{3})+|\d+)h)?(?: ?(\d+)m)?$/;
 
@@ -17,11 +17,12 @@ export function parsePlaytime(s: string): number | null {
 	return h * 60 + (m[2] ? Number(m[2]) : 0);
 }
 
-const GAME_API_SOURCES: readonly string[] = ['rawg', 'igdb', 'steam'];
+const GAME_API_SOURCES = ['rawg', 'igdb', 'steam'] as const;
 
 function decodeApi(r: FmReader): { apiSource: Game['apiSource']; apiId: string } {
 	const ext = parseExternalId(r.str(C.externalId));
-	if (ext && GAME_API_SOURCES.includes(ext.source)) return { apiSource: ext.source as Game['apiSource'], apiId: ext.id };
+	const apiSource = GAME_API_SOURCES.find((s) => s === ext?.source);
+	if (ext && apiSource) return { apiSource, apiId: ext.id };
 	return { apiSource: '', apiId: '' };
 }
 
@@ -62,7 +63,6 @@ export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Gam
 		status: r.str(C.status),
 		priority: r.str(G.priority),
 		favorite: r.bool(C.favorite),
-		dateFavorited: r.strOrNull(C.dateFavorited) ?? undefined,
 		wishlist: r.bool(G.wishlist),
 		rating: r.num(C.rating),
 		progress: r.num(G.progress),
@@ -87,12 +87,13 @@ export function decodeGame(id: string, fm: Record<string, unknown>): Decoded<Gam
 		dateFinished: r.strOrNull(C.dateFinished),
 		dateAdded: r.str(C.dateAdded),
 		dateModified: r.str(C.dateModified),
-		groups: r.list(C.groups),
-		airtime: decodeAirtime(r),
+		// optional keys are absent, not empty
+		...defined({
+			dateFavorited: r.strOrNull(C.dateFavorited) || undefined,
+			groups: nonEmpty(r.list(C.groups)),
+			airtime: decodeAirtime(r),
+		}),
 	};
-	if (!entry.dateFavorited) delete entry.dateFavorited;
-	if (!entry.groups?.length) delete entry.groups;
-	if (!entry.airtime) delete entry.airtime;
 	return { entry, invalidFields: r.invalidFields };
 }
 

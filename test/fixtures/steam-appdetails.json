@@ -1,0 +1,19 @@
+{
+	"1145350": {
+		"success": true,
+		"data": {
+			"type": "game",
+			"name": "Hades II",
+			"steam_appid": 1145350,
+			"developers": ["Supergiant Games"],
+			"publishers": ["Supergiant Games"],
+			"categories": [
+				{ "id": 2, "description": "Single-player" },
+				{ "id": 38, "description": "Online Co-op" },
+				{ "id": 22, "description": "Steam Achievements" }
+			],
+			"genres": [{ "id": "1", "description": "Action" }, { "id": "25", "description": "Adventure" }],
+			"release_date": { "coming_soon": false, "date": "Sep 25, 2025" }
+		}
+	}
+}

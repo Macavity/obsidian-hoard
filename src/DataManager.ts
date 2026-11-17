@@ -8,12 +8,13 @@ import type { CreditsField } from './types';
 import { newTitle } from './entryFactories';
 import type { AnyEntry, EntryIndex } from './storage/EntryIndex';
 import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBaseline } from './storage/baseline';
-import type { ApiOutcome } from './ApiService';
 import { ApiCheckQueue } from './apiCheckQueue';
 import type { LocalStore } from './storage/LocalStore';
 import { ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
 import type { EntryWriteHooks } from './storage/noteWrite';
-import type { ApiCheckResult, EntryCache, Notify } from './storage/storageTypes';
+import type { ApiCheckKind, ApiCheckResult, EntryCache, LookupKind, Notify } from './storage/storageTypes';
+import { checkResultOf, FAILED } from './lookup';
+import type { LookupResult } from './lookup';
 import type { SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
 import { TITLE_CACHE_KEYS, titleFromProperties, titleToProperties, isMovie, seasonsPending, titleToCache } from './storage/titleCodec';
@@ -22,7 +23,7 @@ import { decodeBook, decodeManga, encodeAirtime } from './storage/readingCodec';
 import { decodeGame } from './storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
-import { sameJson } from './storage/sharedHelpers';
+import { omit, sameJson } from './storage/sharedHelpers';
 import { emitDataChanged } from './changeSignal';
 import { ChangeListeners } from './changeListeners';
 
@@ -68,7 +69,8 @@ function scheduleOf(a: EntryAirtime, releaseDate: string | null): AirtimeSchedul
 /** Minimum gap between two API refreshes of a title's airing pointer, unless forced. */
 /** Retry deadline per outcome of a background API check; a missing key waits until a key changes. */
 const API_CHECK_TTL_MS = { ok: 6 * 3_600_000, transient: 3_600_000, notfound: 7 * 24 * 3_600_000 };
-type ApiCheckKind = 'airing' | 'seasons';
+/** Every kind of check recorded in `apiCheck`; a key change resets the `nokey` ones of all. */
+const API_CHECK_KINDS: readonly ApiCheckKind[] = ['airing', 'seasons', 'poster', 'trailer', 'credits', 'studio'];
 
 /**
  * Watchlist titles, backed by one note per title. Reads come from the EntryIndex (frontmatter) plus
@@ -107,10 +109,6 @@ export class DataManager {
 	private pendingSaveTimer: number | null = null;
 	private pendingMdTitleIds: Set<string> = new Set();
 	private readonly EPISODE_SAVE_DEBOUNCE_MS = 500;
-
-	// debounced batched poster saves: memory now, data.json ~every 5s
-	private posterSaveTimer: number | null = null;
-	private readonly POSTER_SAVE_DEBOUNCE_MS = 5000;
 
 	private airingInFlight: Set<string> = new Set();
 
@@ -155,7 +153,7 @@ export class DataManager {
 		if (!service) return;
 		for (const t of titles) {
 			if (t.maybe || this.posterRequested.has(t.id)) continue;
-			if (t.posterUrl) continue;
+			if (t.posterUrl || !this.lookupDue(t.id, 'poster')) continue;
 			const identified = !!t.tmdbId || !!t.malId || !!t.anilistId || externalIdFromLink(t.externalLink) !== null;
 			if (!identified) continue;
 			this.posterRequested.add(t.id);
@@ -194,16 +192,17 @@ export class DataManager {
 		this.seasonsInFlight.add(t.id);
 		this.seasonsRunning++;
 		try {
-			let outcome: ApiOutcome<Season[]> = { status: 'transient' };
+			let outcome: LookupResult<Season[]> = FAILED;
 			try {
 				outcome = await this.apiQueue.enqueue(() => this.plugin.apiService.fetchSeasons(t));
 			} catch {
 				// stays pending until the deadline
 			}
 			if (!this.index.get(t.id)) return;
-			const seasons = outcome.status === 'ok' ? outcome.value.map((x) => ({ name: x.name, episodes: x.episodes, offset: x.offset })) : [];
+			const seasons = outcome.status === 'found' ? outcome.value.map((x) => ({ name: x.name, episodes: x.episodes, offset: x.offset })) : [];
 			const filled = seasons.length > 0;
-			const result = outcome.status === 'ok' && !filled ? 'notfound' : outcome.status;
+			// a filled list is recorded as 'ok'; a found but empty one as 'notfound'
+			const result = filled ? 'ok' : checkResultOf(outcome) ?? 'notfound';
 			this.recordApiCheck(t.id, 'seasons', result, filled ? { seasons } : {});
 			if (result !== 'transient') this.seasonsChanged = true;
 		} finally {
@@ -230,16 +229,42 @@ export class DataManager {
 		return isNaN(at) || Date.now() - at >= API_CHECK_TTL_MS[check.result];
 	}
 
+	/**
+	 * True when a lookup of this kind should run: false while the value is there (a found value is
+	 * final), else the retry deadline of the last recorded check decides.
+	 */
+	lookupDue(id: string, kind: LookupKind): boolean {
+		const title = this.getTitle(id);
+		if (title && this.hasLookupValue(title, kind)) return false;
+		return this.apiCheckDue(id, kind, false);
+	}
+
+	private hasLookupValue(t: HoardTitle, kind: LookupKind): boolean {
+		switch (kind) {
+			case 'poster': return !!t.posterUrl;
+			case 'trailer': return !!t.trailerUrl || !!t.manualTrailerUrl;
+			case 'credits': return !!t.director?.length && !!t.cast?.length;
+			case 'studio': return !!t.studio?.length;
+		}
+	}
+
+	/** Records how a lookup ended, unless it found something (the value itself is the record). */
+	recordLookup(id: string, kind: LookupKind, result: LookupResult<unknown>): void {
+		const check = checkResultOf(result);
+		if (check) this.recordApiCheck(id, kind, check);
+	}
+
 	private recordApiCheck(id: string, kind: ApiCheckKind, result: ApiCheckResult, patch: Partial<EntryCache> = {}): void {
 		const apiCheck = { ...this.local.getCache(id)?.apiCheck, [kind]: { at: new Date().toISOString(), result } };
-		this.local.setCache(id, { ...patch, apiCheck });
+		// everything here comes from an API and can be fetched again: the save may wait for the batch
+		this.local.setCache(id, { ...patch, apiCheck }, 'lazy');
 	}
 
 	/** An API key changed: checks that failed for want of a key may run again. */
 	resetNoKeyChecks(): void {
 		let changed = false;
 		for (const entry of Object.values(this.local.data.cache)) {
-			for (const kind of ['airing', 'seasons'] as const) {
+			for (const kind of API_CHECK_KINDS) {
 				if (entry.apiCheck?.[kind]?.result !== 'nokey') continue;
 				delete entry.apiCheck[kind];
 				changed = true;
@@ -287,19 +312,12 @@ export class DataManager {
 	/**
 	 * Silent poster update, no notify — the card that triggered the fetch updates its own <img>.
 	 * A URL goes into the note's `Cover` property, but only when it is empty (E12), unless `overwrite`
-	 * (the explicit refresh). 'none' (nothing found) is a cache marker for a title without a poster.
+	 * (the explicit refresh).
 	 */
 	async updatePosterUrl(titleId: string, url: string, overwrite = false): Promise<void> {
 		const title = this.getTitle(titleId);
 		if (!title) return;
-		const hasPoster = !!title.posterUrl && title.posterUrl !== 'none';
-		if (url === 'none') {
-			if (hasPoster) return;
-			title.posterUrl = url;
-			this.local.data.cache[titleId] = { ...this.local.getCache(titleId), posterUrl: url };
-			this.schedulePosterSave();
-			return;
-		}
+		const hasPoster = !!title.posterUrl;
 		if (!url || (hasPoster && !overwrite)) return;
 		if (this.dirty.has(titleId) || this.pendingMdTitleIds.has(titleId)) {
 			// the pending write carries it
@@ -421,33 +439,14 @@ export class DataManager {
 	async setFavorite(id: string, favorite: boolean): Promise<void> {
 		const title = this.getTitle(id);
 		if (!title) return;
-		title.favorite = favorite;
 		// stamp drives the Favorites shelf order (newest first); cleared on unfavorite
-		if (favorite) title.dateFavorited = new Date().toISOString();
-		else delete title.dateFavorited;
-		await this.writeTitle(title);
+		await this.writeTitle(favorite
+			? { ...title, favorite, dateFavorited: new Date().toISOString() }
+			: { ...omit(title, 'dateFavorited'), favorite });
 	}
 
-	private schedulePosterSave(): void {
-		if (this.posterSaveTimer !== null) return;
-		this.posterSaveTimer = window.setTimeout(() => {
-			this.posterSaveTimer = null;
-			this.local.queueSave();
-		}, this.POSTER_SAVE_DEBOUNCE_MS);
-	}
-
-	/** Flush a pending debounced poster save now (e.g. on plugin unload). */
-	flushPosterSave(): void {
-		if (this.posterSaveTimer !== null) {
-			window.clearTimeout(this.posterSaveTimer);
-			this.posterSaveTimer = null;
-			this.local.queueSave();
-		}
-	}
-
-	/** Flush a pending poster save during plugin unload. */
-	flushPosterSaveSync(): void {
-		this.flushPosterSave();
+	/** Flush the pending device-local data (cache, drafts, settings) during plugin unload. */
+	flushLocalData(): void {
 		void this.local.flush();
 	}
 
@@ -601,12 +600,12 @@ export class DataManager {
 			return;
 		}
 		title.id = id;
-		delete title.maybe;
 		if (!title.notes) title.notes = this.notes.get(id) ?? '';
-		setNotesBaseline(title, this.notes.get(id) ?? '');
-		this.views.set(id, { src: maybe.entry, view: title });
-		setBaseline(title, maybe.entry);
-		await this.writeTitle(title);
+		const adopted = omit(title, 'maybe');
+		setNotesBaseline(adopted, this.notes.get(id) ?? '');
+		this.views.set(id, { src: maybe.entry, view: adopted });
+		setBaseline(adopted, maybe.entry);
+		await this.writeTitle(adopted);
 	}
 
 	/** Batch-add: one note per title; ids are rewritten to the created note paths. */
@@ -654,8 +653,7 @@ export class DataManager {
 		} else if ((isFullDate || !releaseDate) && title.status === 'To be released') {
 			// date is past/today or cleared — the auto status no longer applies
 			title.status = 'Plan to watch';
-			delete title.airtime;
-			await this.updateTitle(title);
+			await this.updateTitle(omit(title, 'airtime'));
 		}
 	}
 
@@ -663,8 +661,7 @@ export class DataManager {
 	async removeAirtimeEntriesForTitle(titleId: string): Promise<void> {
 		const title = this.getTitle(titleId);
 		if (!title?.airtime) return;
-		delete title.airtime;
-		await this.writeTitle(title);
+		await this.writeTitle(omit(title, 'airtime'));
 		this.notifyListeners();
 	}
 
@@ -842,9 +839,7 @@ export class DataManager {
 		const before = title.groups ?? [];
 		const next = [...new Set(fn([...before]))];
 		if (sameJson(before, next)) return;
-		if (next.length > 0) title.groups = next;
-		else delete title.groups;
-		await this.writeTitle(title);
+		await this.writeTitle(next.length > 0 ? { ...title, groups: next } : omit(title, 'groups'));
 	}
 
 	getGroupedTitleIds(): Set<string> {
@@ -981,8 +976,9 @@ export class DataManager {
 		try {
 			const outcome = await this.apiQueue.enqueue(() => this.plugin.apiService.fetchAiring(e.entry));
 			if (this.index.get(id)?.kind !== 'title') return;
-			this.recordApiCheck(id, 'airing', outcome.status, outcome.status === 'ok' ? { airing: outcome.value } : {});
-			if (outcome.status === 'ok') this.notifyListeners();
+			// a found airing is recorded as 'ok' (checkResultOf records nothing for found)
+			this.recordApiCheck(id, 'airing', checkResultOf(outcome) ?? 'ok', outcome.status === 'found' ? { airing: outcome.value } : {});
+			if (outcome.status === 'found') this.notifyListeners();
 		} catch (err) {
 			console.warn(`Hoard: could not refresh airing data of ${id}`, err);
 		} finally {
@@ -1064,10 +1060,8 @@ export class DataManager {
 		if (e.kind === 'title') {
 			const title = this.getTitle(e.entry.id);
 			if (!title) return false;
-			if (airtime) title.airtime = airtime;
-			else delete title.airtime;
-			if (releaseDate) title.releaseDate = releaseDate;
-			await this.writeTitle(title);
+			const scheduled = airtime ? { ...title, airtime } : omit(title, 'airtime');
+			await this.writeTitle(releaseDate ? { ...scheduled, releaseDate } : scheduled);
 			return true;
 		}
 		const file = this.fileOf(e.entry.id);

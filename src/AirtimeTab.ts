@@ -1419,10 +1419,7 @@ export class AirtimeTab implements TabInstance {
 				const display = getDisplayPoster(title);
 				const needsPoster = !title.posterUrl;
 				if (display && display.startsWith('http')) {
-					img.onerror = () => {
-						card.removeClass('has-poster');
-						void this.dataManager.updatePosterUrl(title.id, 'none');
-					};
+					img.onerror = () => card.removeClass('has-poster');
 					card.addClass('has-poster');
 					img.src = display;
 				} else if (needsPoster) {
@@ -1541,8 +1538,8 @@ export class AirtimeTab implements TabInstance {
 
 			const title = this.dataManager.getTitle(titleId);
 			if (!title) continue;
-			// same gate as the Watchlist cards: a poster is set, or 'none' means tried, nothing found
-			if (title.posterUrl) continue;
+			// same gate as the Watchlist cards
+			if (!this.dataManager.lookupDue(title.id, 'poster')) continue;
 
 			const placeholder = cell.querySelector('.hoard-card__poster-placeholder');
 			placeholder?.addClass('is-loading');
@@ -1554,7 +1551,6 @@ export class AirtimeTab implements TabInstance {
 				const img = cell.querySelector<HTMLImageElement>('.hoard-card__poster');
 				if (!card || !img) return;
 				img.onload = () => card.addClass('has-poster');
-				img.onerror = () => void this.dataManager.updatePosterUrl(titleId, 'none');
 				img.src = url;
 			});
 		}

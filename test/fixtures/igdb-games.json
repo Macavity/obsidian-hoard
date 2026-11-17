@@ -1,0 +1,20 @@
+[
+	{
+		"id": 1942,
+		"cover": { "id": 89386, "image_id": "co1wyy" },
+		"first_release_date": 1431993600,
+		"game_modes": [{ "id": 1, "name": "Single player" }, { "id": 2, "name": "Multiplayer" }, { "id": 3, "name": "Co-operative" }],
+		"involved_companies": [
+			{ "id": 1, "developer": true, "publisher": false, "company": { "id": 10, "name": "CD Projekt RED" } },
+			{ "id": 2, "developer": false, "publisher": true, "company": { "id": 11, "name": "CD Projekt" } }
+		],
+		"name": "The Witcher 3: Wild Hunt",
+		"platforms": [{ "id": 6, "name": "PC (Microsoft Windows)" }, { "id": 48, "name": "PlayStation 4" }],
+		"url": "https://www.igdb.com/games/the-witcher-3-wild-hunt",
+		"websites": [
+			{ "id": 1, "url": "https://www.gog.com/game/the_witcher_3_wild_hunt" },
+			{ "id": 2, "url": "https://store.steampowered.com/app/292030" },
+			{ "id": 3, "url": "http://example.com/plain-http" }
+		]
+	}
+]

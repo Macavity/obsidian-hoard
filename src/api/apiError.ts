@@ -1,4 +1,6 @@
 import { t, type TranslationKey } from '../i18n';
+import type { LookupResult } from '../lookup';
+import { at, readString } from '../storage/read';
 
 /** Which service a failed request went to. */
 export type ApiSource = 'tmdb' | 'omdb' | 'jikan' | 'anilist' | 'googleBooks' | 'rawg' | 'igdb' | 'twitch' | 'cinemeta' | 'openLibrary' | 'steamStore' | 'unknown';
@@ -110,10 +112,8 @@ function matches(rule: HttpRule, failed: FailedResponse): boolean {
  */
 function providerMessageFrom(body: string): string {
 	try {
-		const data = JSON.parse(body) as { errors?: Array<{ message?: string }>; message?: unknown } | null;
-		const gql = Array.isArray(data?.errors) ? (data.errors[0]?.message ?? '').trim() : '';
-		if (gql) return gql;
-		return typeof data?.message === 'string' ? data.message.trim() : '';
+		const data: unknown = JSON.parse(body);
+		return readString(at(data, 'errors', 0, 'message')).trim() || readString(at(data, 'message')).trim();
 	} catch {
 		return '';
 	}
@@ -132,12 +132,6 @@ export function httpError(source: ApiSource, status: number, body: string, crede
 	});
 }
 
-/**
- * Result of a background check: transient = worth retrying soon (timeout, 429, network, 5xx),
- * nokey = no usable credential, notfound = the source has nothing for this identity.
- */
-export type ApiOutcome<T> = { status: 'ok'; value: T } | { status: 'transient' | 'nokey' | 'notfound' };
-
 /** What follows from a reason: how it reads, and what a background check and a detail lookup do with it. */
 interface ReasonRule {
 	/** chip label; may name {status} */
@@ -148,7 +142,8 @@ interface ReasonRule {
 	textFor?: Partial<Record<ApiSource, TranslationKey>>;
 	/** the sentence for a service that takes no credential */
 	textKeyless?: TranslationKey;
-	outcome: Exclude<ApiOutcome<never>['status'], 'ok'>;
+	/** failed = worth retrying soon, nokey = no usable credential, notfound = nothing for this identity */
+	outcome: Exclude<LookupResult<never>['status'], 'found'>;
 	/** the credential is the cause: the one failure that must never read as "not found" */
 	credential?: true;
 	/** the service's own explanation, when it sent one, says more than our status code */
@@ -193,19 +188,19 @@ const REASONS: Record<ApiErrorReason, ReasonRule> = {
 			anilist: 'notices.api.rateLimited.anilist',
 			googleBooks: 'notices.api.rateLimited.googleBooks',
 		},
-		outcome: 'transient',
+		outcome: 'failed',
 	},
 	'not-found': { short: 'notices.api.short.notFound', text: 'notices.api.notFound', outcome: 'notfound' },
 	server: {
 		short: 'notices.api.short.server',
 		text: 'notices.api.server',
 		textKeyless: 'notices.api.serverKeyless',
-		outcome: 'transient',
+		outcome: 'failed',
 		providerExplains: true,
 	},
-	http: { short: 'notices.api.short.http', text: 'notices.api.failed', outcome: 'transient', providerExplains: true },
-	parse: { short: 'notices.api.short.parse', text: 'notices.api.parse', outcome: 'transient' },
-	network: { short: 'notices.api.short.network', text: 'notices.api.network', outcome: 'transient' },
+	http: { short: 'notices.api.short.http', text: 'notices.api.failed', outcome: 'failed', providerExplains: true },
+	parse: { short: 'notices.api.short.parse', text: 'notices.api.parse', outcome: 'failed' },
+	network: { short: 'notices.api.short.network', text: 'notices.api.network', outcome: 'failed' },
 };
 
 /** Service name for user text; the unknown source reads "The API" in the user's language. */
@@ -239,9 +234,9 @@ export function apiErrorShort(err: unknown): string {
 	return t(REASONS[err.reason].short, { status: err.status ?? '?' });
 }
 
-/** What a background check reports for a failed request; anything that is no ApiError is worth a retry. */
-export function outcomeOfError(err: unknown): ApiOutcome<never> {
-	return { status: err instanceof ApiError ? REASONS[err.reason].outcome : 'transient' };
+/** A source's failure as a lookup outcome; anything that is no ApiError is worth a retry. */
+export function lookupOfError(err: unknown): LookupResult<never> {
+	return { status: err instanceof ApiError ? REASONS[err.reason].outcome : 'failed' };
 }
 
 /**

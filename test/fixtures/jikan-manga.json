@@ -1,0 +1,21 @@
+{
+	"pagination": { "last_visible_page": 1, "has_next_page": false },
+	"data": [
+		{
+			"mal_id": 2,
+			"url": "https://myanimelist.net/manga/2/Berserk",
+			"images": {
+				"jpg": {
+					"image_url": "https://cdn.myanimelist.net/images/manga/1/157897.jpg",
+					"large_image_url": "https://cdn.myanimelist.net/images/manga/1/157897l.jpg"
+				}
+			},
+			"title": "Berserk",
+			"title_english": "Berserk",
+			"chapters": null,
+			"volumes": 42,
+			"published": { "from": "1989-08-25T00:00:00+00:00", "to": null },
+			"authors": [{ "mal_id": 1868, "type": "people", "name": "Miura, Kentarou", "url": "https://myanimelist.net/people/1868" }]
+		}
+	]
+}

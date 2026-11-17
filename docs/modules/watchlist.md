@@ -14,7 +14,8 @@ source:
   - src/MaybeAddModal.ts
   - src/storage/titleCodec.ts
   - src/entryFactories.ts
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+  - src/lookup.ts
+source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
 # Watchlist
@@ -66,8 +67,11 @@ here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API client
 - **Release date.** A future full date forces status "To be released" and therefore an Upcoming
   card; a past or cleared date reverts a "To be released" title to "Plan to watch" and leaves any
   other status alone (`applyReleaseDateChange`).
-- **Credits** are backfilled once per detail-modal open for absent fields; a miss stores the
-  `'none'` marker so it is not retried. Shown credits are fetched merged with manual.
+- **Credits, trailer and studio** are backfilled when the detail modal opens, for absent fields only
+  and only when the lookup is due (`lookupDue`): a miss is recorded as `notfound` (retried after 7 d),
+  a failure as `transient` (after 1 h), a missing TMDB key as `nokey`; a found value is final
+  ([entry cache](../concepts/entry-cache.md#fetch-state)). A WatchLog-era note with `Director: none` or
+  `Trailer: none` displays as before: no names, no trailer. Shown credits are fetched merged with manual.
 - **Collections** are movies only: the verdict (collection id or `COLLECTION_NONE`) is cached via
   `updateTmdbIdentity`; the detail footer shows the button only for 2+ parts.
 

@@ -6,6 +6,7 @@ import type { VaultLayout } from './VaultLayout';
 import { titleFromProperties } from './titleCodec';
 import { decodeBook, decodeManga } from './readingCodec';
 import { decodeGame } from './gameCodec';
+import { isRecord } from './sharedHelpers';
 
 export type AnyEntry =
 	| { kind: 'title'; entry: HoardTitle }
@@ -13,7 +14,6 @@ export type AnyEntry =
 	| { kind: 'manga'; entry: Manga }
 	| { kind: 'game'; entry: Game };
 
-type EntryOf<K extends AnyEntry['kind']> = Extract<AnyEntry, { kind: K }>['entry'];
 
 interface Slot { value: AnyEntry; invalid: string[] }
 
@@ -22,16 +22,13 @@ const CHANGE_DEBOUNCE_MS = 150;
 /** Deep equality ignoring key order; keys with `undefined` count as absent. */
 function sameValue(a: unknown, b: unknown): boolean {
 	if (a === b) return true;
-	if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
-	if (Array.isArray(a) !== Array.isArray(b)) return false;
-	if (Array.isArray(a) && Array.isArray(b)) {
-		return a.length === b.length && a.every((v, i) => sameValue(v, b[i]));
+	if (Array.isArray(a) || Array.isArray(b)) {
+		return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => sameValue(v, b[i]));
 	}
-	const ra = a as Record<string, unknown>;
-	const rb = b as Record<string, unknown>;
-	const ka = Object.keys(ra).filter((k) => ra[k] !== undefined);
-	const kb = Object.keys(rb).filter((k) => rb[k] !== undefined);
-	return ka.length === kb.length && ka.every((k) => k in rb && sameValue(ra[k], rb[k]));
+	if (!isRecord(a) || !isRecord(b)) return false;
+	const ka = Object.keys(a).filter((k) => a[k] !== undefined);
+	const kb = Object.keys(b).filter((k) => b[k] !== undefined);
+	return ka.length === kb.length && ka.every((k) => k in b && sameValue(a[k], b[k]));
 }
 
 /** Derived in-memory map id → entry, fed by metadataCache/vault events. Never writes to the vault. */
@@ -103,10 +100,10 @@ export class EntryIndex {
 		}
 	}
 
-	titles(): HoardTitle[] { return this.ofKind('title'); }
-	books(): Book[] { return this.ofKind('book'); }
-	manga(): Manga[] { return this.ofKind('manga'); }
-	games(): Game[] { return this.ofKind('game'); }
+	titles(): HoardTitle[] { return this.entriesOf((e) => (e.kind === 'title' ? e.entry : undefined)); }
+	books(): Book[] { return this.entriesOf((e) => (e.kind === 'book' ? e.entry : undefined)); }
+	manga(): Manga[] { return this.entriesOf((e) => (e.kind === 'manga' ? e.entry : undefined)); }
+	games(): Game[] { return this.entriesOf((e) => (e.kind === 'game' ? e.entry : undefined)); }
 
 	get(id: string): AnyEntry | undefined {
 		return this.entries.get(id)?.value;
@@ -153,10 +150,11 @@ export class EntryIndex {
 		return new Promise((resolve) => this.app.workspace.onLayoutReady(resolve));
 	}
 
-	private ofKind<K extends AnyEntry['kind']>(kind: K): EntryOf<K>[] {
-		const out: EntryOf<K>[] = [];
+	private entriesOf<T>(pick: (e: AnyEntry) => T | undefined): T[] {
+		const out: T[] = [];
 		for (const { value } of this.entries.values()) {
-			if (value.kind === kind) out.push(value.entry as EntryOf<K>);
+			const entry = pick(value);
+			if (entry !== undefined) out.push(entry);
 		}
 		return out;
 	}

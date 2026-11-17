@@ -1,0 +1,8 @@
+{
+	"count": 3,
+	"results": [
+		{ "id": 1, "game_id": 3498, "store_id": 11, "url": "https://www.epicgames.com/store/p/grand-theft-auto-v" },
+		{ "id": 2, "game_id": 3498, "store_id": 5, "url": "https://www.gog.com/game/gta_v" },
+		{ "id": 3, "game_id": 3498, "store_id": 3, "url": "http://store.playstation.com/gta" }
+	]
+}

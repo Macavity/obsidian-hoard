@@ -10,6 +10,7 @@ import { openStatusDropdown } from './StatusDropdown';
 import { openAddForTitle } from './AddRouter';
 import { cloneColumns, renderCancelSave, renderColumnsEditor } from './ui/ColumnsEditor';
 import { t } from './i18n';
+import { at } from './storage/read';
 import { createIconButton } from './ui/IconButton';
 import { statusLabel, typeLabel, readingStatusLabel } from './i18n/labels';
 
@@ -248,17 +249,21 @@ export class CustomListManager {
 
 		if (dataMatch?.[1]) {
 			try {
-				const p = JSON.parse(dataMatch[1]) as { columns?: unknown; rows?: unknown; tabColor?: unknown; nameWidth?: unknown };
-				if (typeof p.tabColor === 'string') tabColor = p.tabColor;
-				if (typeof p.nameWidth === 'number') nameWidth = p.nameWidth;
-				if (Array.isArray(p.columns)) {
-					columns = (p.columns as unknown[]).filter((c): c is CustomListColumn =>
+				const p: unknown = JSON.parse(dataMatch[1]);
+				const color = at(p, 'tabColor');
+				if (typeof color === 'string') tabColor = color;
+				const width = at(p, 'nameWidth');
+				if (typeof width === 'number') nameWidth = width;
+				const cols = at(p, 'columns');
+				if (Array.isArray(cols)) {
+					columns = cols.filter((c): c is CustomListColumn =>
 						typeof c === 'object' && c !== null &&
 						'id' in c && 'label' in c && 'type' in c,
 					);
 				}
-				if (Array.isArray(p.rows)) {
-					rows = (p.rows as unknown[]).filter((r): r is CustomListRow =>
+				const rawRows = at(p, 'rows');
+				if (Array.isArray(rawRows)) {
+					rows = rawRows.filter((r): r is CustomListRow =>
 						typeof r === 'object' && r !== null && 'id' in r,
 					);
 				}

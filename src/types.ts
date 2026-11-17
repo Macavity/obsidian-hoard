@@ -1,3 +1,5 @@
+import { readStringList } from './storage/read';
+
 export interface Season {
 	name: string;
 	episodes: number;
@@ -43,21 +45,21 @@ export interface HoardTitle {
 	favorite?: boolean;
 	/** ISO stamp of the last favorite toggle-on; absent on pre-field favorites */
 	dateFavorited?: string;
-	/** note property `Cover`. '' = unfetched, 'none' = nothing found (cache only), else a URL */
+	/** note property `Cover`. '' = none, else a URL */
 	posterUrl?: string;
-	/** '' = unfetched, 'none' = source has no trailer (e.g. OMDb), else a YouTube URL */
+	/** '' = none, else a YouTube URL */
 	trailerUrl?: string;
 	/** override — wins over trailerUrl when non-empty */
 	manualTrailerUrl?: string;
-	/** absent/empty = unfetched, ['none'] = fetch failed */
+	/** absent/empty = none */
 	director?: string[];
-	/** capped at MAX_FETCHED_CREDITS; absent/empty = unfetched, ['none'] = fetch failed */
+	/** capped at MAX_FETCHED_CREDITS; absent/empty = none */
 	cast?: string[];
 	/** user-added, appended after the fetched ones; a refresh never overwrites */
 	manualDirector?: string[];
 	/** user-added, appended after the fetched ones; a refresh never overwrites */
 	manualCast?: string[];
-	/** studio / network / brand. absent = unfetched, ['none'] = source has none */
+	/** studio / network / brand. absent/empty = none */
 	studio?: string[];
 	/** user-added, appended after the fetched ones; a refresh never overwrites */
 	manualStudio?: string[];
@@ -117,22 +119,9 @@ const MAX_FETCHED_CREDITS = 10;
 /** names shown inline before the rest collapse behind "+N more" */
 export const CREDITS_INLINE_LIMIT = 4;
 
-/** fetch failed or returned nothing (posterUrl's 'none' pattern) */
-export const CREDITS_NONE = 'none';
-
-/** fetched but empty — never re-fetch */
-export function isCreditsNone(names: string[] | undefined): boolean {
-	return names?.length === 1 && names[0] === CREDITS_NONE;
-}
-
 /** never fetched (absent or empty) */
 export function isCreditsUnfetched(names: string[] | undefined): boolean {
 	return !names || names.length === 0;
-}
-
-/** either credits field still needs its one-time fetch */
-export function needsCreditsFetch(title: HoardTitle): boolean {
-	return isCreditsUnfetched(title.director) || isCreditsUnfetched(title.cast);
 }
 
 /** studio still needs its one-time fetch (separate — anime has studios but no credits) */
@@ -140,10 +129,9 @@ export function needsStudioFetch(title: HoardTitle): boolean {
 	return isCreditsUnfetched(title.studio);
 }
 
-/** fetched names only — unfetched and 'none' both give [] */
+/** fetched names only; unfetched gives [] */
 export function getDisplayCredits(names: string[] | undefined): string[] {
-	if (!names || isCreditsNone(names)) return [];
-	return names;
+	return names ?? [];
 }
 
 /** which credits field a helper is operating on */
@@ -161,7 +149,7 @@ function fetchedCredits(title: HoardTitle, field: CreditsField): string[] | unde
 	return title.studio;
 }
 
-/** user-added names; never carries the 'none' sentinel */
+/** user-added names */
 export function getManualCredits(title: HoardTitle, field: CreditsField): string[] {
 	if (field === 'director') return title.manualDirector ?? [];
 	if (field === 'cast') return title.manualCast ?? [];
@@ -200,7 +188,7 @@ export function normalizeManualCredits(names: string[]): string[] {
 	const out: string[] = [];
 	for (const raw of names) {
 		const name = raw.trim();
-		if (name === '' || name === CREDITS_NONE) continue;
+		if (name === '') continue;
 		const key = name.toLowerCase();
 		if (seen.has(key)) continue;
 		seen.add(key);
@@ -209,10 +197,10 @@ export function normalizeManualCredits(names: string[]): string[] {
 	return out;
 }
 
-/** normalize a fetched list for storage: cap it, empty → the 'none' sentinel */
-export function normalizeCreditsForStore(names: string[]): string[] {
-	const cleaned = names.map((n) => n.trim()).filter((n) => n !== '' && n !== 'N/A');
-	return cleaned.length > 0 ? cleaned.slice(0, MAX_FETCHED_CREDITS) : [CREDITS_NONE];
+/** normalize a fetched list for storage: non-strings dropped, trimmed, capped; empty stays empty */
+export function normalizeCreditsForStore(names: unknown): string[] {
+	const cleaned = readStringList(names).map((n) => n.trim()).filter((n) => n !== '' && n !== 'N/A');
+	return cleaned.slice(0, MAX_FETCHED_CREDITS);
 }
 
 export interface HoardGroup {
@@ -237,6 +225,9 @@ export interface RatingTier {
 }
 
 // Custom Lists types
+
+/** The types a custom column can have (a list's and a reading column's alike). */
+export const COLUMN_TYPES = ['text', 'number', 'select'] as const;
 
 export interface CustomListColumn {
 	id: string;
@@ -1363,14 +1354,13 @@ export function getDisplayPoster(title: HoardTitle): string {
 }
 
 /**
- * Trailer URL to render — `manualTrailerUrl` wins; 'none' (no trailer) and ''
- * (unfetched) both resolve to ''.
+ * Trailer URL to render — `manualTrailerUrl` wins; no trailer resolves to ''.
  */
 export function getDisplayTrailer(title: HoardTitle): string {
 	if (title.manualTrailerUrl && title.manualTrailerUrl.trim() !== '') {
 		return title.manualTrailerUrl;
 	}
-	return title.trailerUrl && title.trailerUrl !== 'none' ? title.trailerUrl : '';
+	return title.trailerUrl ?? '';
 }
 
 export function formatVoteCount(votes: number): string {
@@ -1453,66 +1443,8 @@ export interface AnimeSearchResult {
 	averageScore?: number;
 	genres?: string[];
 	posterUrl?: string;
-	/** '' = unresolved, 'none' = no trailer, else a YouTube watch URL */
+	/** '' = none, else a YouTube watch URL */
 	trailerUrl?: string;
-}
-
-// AniList API shapes
-
-export interface AniListTitle {
-	romaji?: string | null;
-	english?: string | null;
-	native?: string | null;
-}
-
-export interface AniListDate {
-	year?: number | null;
-	month?: number | null;
-	day?: number | null;
-}
-
-export interface AniListCoverImage {
-	large?: string | null;
-	medium?: string | null;
-}
-
-/** studios.edges — isMain marks the animation studio; the rest are producers */
-export interface AniListStudioEdge {
-	isMain?: boolean | null;
-	node?: { name?: string | null } | null;
-}
-
-export interface AniListMedia {
-	id: number;
-	studios?: { edges?: AniListStudioEdge[] | null } | null;
-	title?: AniListTitle | null;
-	episodes?: number | null;
-	duration?: number | null;
-	status?: string | null;
-	season?: string | null;
-	seasonYear?: number | null;
-	startDate?: AniListDate | null;
-	averageScore?: number | null;
-	popularity?: number | null;
-	coverImage?: AniListCoverImage | null;
-	description?: string | null;
-	genres?: string[] | null;
-	trailer?: { id?: string | null; site?: string | null } | null;
-	nextAiringEpisode?: {
-		airingAt?: number | null;
-		episode?: number | null;
-		timeUntilAiring?: number | null;
-	} | null;
-}
-
-export interface AniListSearchResponse {
-	data?: { Page?: { media?: AniListMedia[] } };
-	errors?: Array<{ message: string }>;
-}
-
-export interface AniListMediaResponse {
-	data?: { Media?: AniListMedia };
-	errors?: Array<{ message: string }>;
 }
 
 export interface MediaSearchResult {
@@ -1525,131 +1457,17 @@ export interface MediaSearchResult {
 	url: string;
 	seasons: Season[];
 	posterUrl?: string;
-	/** '' = unresolved, 'none' = no trailer, else a YouTube watch URL */
+	/** '' = none, else a YouTube watch URL */
 	trailerUrl?: string;
-	/** detail lookups only: normalized name list or ['none'] (see CREDITS_NONE) */
+	/** detail lookups only: normalized name list */
 	director?: string[];
-	/** detail lookups only: normalized names (capped at MAX_FETCHED_CREDITS) or ['none'] */
+	/** detail lookups only: normalized names (capped at MAX_FETCHED_CREDITS) */
 	cast?: string[];
-	/** detail lookups only: studio / network names or ['none'] */
+	/** detail lookups only: studio / network names */
 	studio?: string[];
 }
 
-// Jikan API shapes
-
-export interface JikanAnime {
-	mal_id: number;
-	/** animation studio(s); Jikan keeps producers and licensors in separate fields */
-	studios?: Array<{ name?: string | null }> | null;
-	title: string;
-	title_english: string | null;
-	episodes: number | null;
-	duration: string | null;
-	aired: { from: string | null } | null;
-	url: string;
-	images?: { jpg?: { image_url?: string | null; small_image_url?: string | null; large_image_url?: string | null } | null } | null;
-	// Jikan often nulls youtube_id / url while embed_url still carries the id, so all
-	// three are parsed defensively (see ApiService.extractYoutubeId)
-	trailer?: { youtube_id?: string | null; url?: string | null; embed_url?: string | null } | null;
-}
-
-// OMDb API shapes
-
-export interface OmdbSearchItem {
-	Title: string;
-	Year: string;
-	imdbID: string;
-	Type: string;
-	/** Poster URL, or the literal 'N/A'. */
-	Poster?: string;
-}
-
-export interface OmdbSearchResponse {
-	Search?: OmdbSearchItem[];
-	Response: string;
-	Error?: string;
-	/** Total hits across all pages, as a string. */
-	totalResults?: string;
-}
-
-export interface OmdbDetailResponse {
-	Title: string;
-	Year: string;
-	Released?: string;
-	Runtime?: string;
-	totalSeasons?: string;
-	imdbID: string;
-	Type: string;
-	Response: string;
-	Error?: string;
-	imdbRating?: string;
-	imdbVotes?: string;
-	/** Comma-separated director name(s), or 'N/A'. */
-	Director?: string;
-	/** Comma-separated writer(s), or 'N/A'. For series this holds the creators. */
-	Writer?: string;
-	/** Comma-separated actors (OMDb returns at most 4), or 'N/A'. */
-	Actors?: string;
-}
-
-export interface OmdbSeasonResponse {
-	Season: string;
-	Episodes?: Array<{ Episode: string; Title: string; imdbID: string }>;
-	Response: string;
-}
-
 // TMDB API shapes
-
-export interface TmdbSearchItem {
-	id: number;
-	title?: string;
-	name?: string;
-	release_date?: string;
-	first_air_date?: string;
-	poster_path?: string | null;
-}
-
-export interface TmdbSearchResponse {
-	results?: TmdbSearchItem[];
-	total_pages?: number;
-}
-
-export interface TmdbVideo {
-	key: string;
-	site: string;
-	type: string;
-	official?: boolean;
-	name?: string;
-}
-
-export interface TmdbVideosResult {
-	results?: TmdbVideo[];
-}
-
-export interface TmdbCreditsResult {
-	cast?: Array<{ name?: string }>;
-	crew?: Array<{ name?: string; job?: string }>;
-}
-
-export interface TmdbMovieDetail {
-	id: number;
-	title: string;
-	runtime?: number;
-	release_date?: string;
-	imdb_id?: string;
-	/** null for standalone films. Movies only — no TV equivalent. */
-	belongs_to_collection?: TmdbCollectionRef | null;
-	production_companies?: TmdbCompany[];
-	/** only when the detail call uses append_to_response=videos */
-	videos?: TmdbVideosResult;
-	/** only when the detail call uses append_to_response=credits */
-	credits?: TmdbCreditsResult;
-}
-
-export interface TmdbCompany {
-	id: number;
-	name?: string;
-}
 
 export interface TmdbCollectionRef {
 	id: number;
@@ -1674,43 +1492,3 @@ export interface TmdbCollectionDetail {
 	parts?: TmdbCollectionPart[];
 }
 
-export interface TmdbTvSeason {
-	season_number: number;
-	name: string;
-	episode_count: number;
-}
-
-export interface TmdbTvDetail {
-	id: number;
-	name: string;
-	/** HBO / Netflix / AMC — the usable brand for a series, unlike production_companies */
-	networks?: TmdbCompany[];
-	production_companies?: TmdbCompany[];
-	/** Series creators — TV has no single director, so these fill the director field. */
-	created_by?: Array<{ name?: string }>;
-	episode_run_time?: number[];
-	first_air_date?: string;
-	number_of_episodes?: number;
-	seasons?: TmdbTvSeason[];
-	next_episode_to_air?: TmdbEpisodeRef | null;
-	last_episode_to_air?: TmdbEpisodeRef | null;
-	/** only when the detail call uses append_to_response=videos */
-	videos?: TmdbVideosResult;
-	/** only when the detail call uses append_to_response=credits */
-	credits?: TmdbCreditsResult;
-}
-
-export interface TmdbEpisodeRef {
-	season_number?: number;
-	episode_number?: number;
-	air_date?: string | null;
-}
-
-export interface TmdbExternalIds {
-	imdb_id?: string;
-}
-
-export interface TmdbFindResult {
-	movie_results?: TmdbMovieDetail[];
-	tv_results?: TmdbTvDetail[];
-}

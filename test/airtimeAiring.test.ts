@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { setupDataManager } from './helpers/setupDataManager';
 import { runAirtimeScheduler } from '../src/airtimeScheduler';
-import type { ApiOutcome } from '../src/ApiService';
+import type { LookupResult } from '../src/lookup';
 import type { EntryCache } from '../src/storage/storageTypes';
 
 const SHOW = 'W/TV Show/C.md';
 const showNote = (extra = '') =>
 	`---\nName: C\nType: TV Show\nExternal ID: tmdb:tv:1399\nAirtime Recurrence: daily\nAirtime Time: 20:15\nAirtime Season: 2\nAirtime Episode: 5\n${extra}---\n`;
 
-async function setup(files: Record<string, string>, fetchAiring = vi.fn((): Promise<ApiOutcome<NonNullable<EntryCache['airing']>>> => Promise.resolve({ status: 'notfound' }))) {
+async function setup(files: Record<string, string>, fetchAiring = vi.fn((): Promise<LookupResult<NonNullable<EntryCache['airing']>>> => Promise.resolve({ status: 'notfound' }))) {
 	const s = await setupDataManager(files);
 	(s.plugin as unknown as Record<string, unknown>).apiService = { fetchAiring };
 	return { ...s, fetchAiring };
@@ -50,7 +50,7 @@ describe('airing pointer from the API cache', () => {
 
 	it('refreshes at most every 6 h unless forced, writing only the cache', async () => {
 		const airing = { nextSeason: 3, nextEpisode: 8, refreshedAt: '' };
-		const fetchAiring = vi.fn((): Promise<ApiOutcome<NonNullable<EntryCache['airing']>>> => Promise.resolve({ status: 'ok', value: { ...airing, refreshedAt: new Date().toISOString() } }));
+		const fetchAiring = vi.fn((): Promise<LookupResult<NonNullable<EntryCache['airing']>>> => Promise.resolve({ status: 'found', value: { ...airing, refreshedAt: new Date().toISOString() } }));
 		const { dm, f, local } = await setup({ [SHOW]: showNote() }, fetchAiring);
 		const before = new Map(f.files);
 		vi.useFakeTimers({ now: new Date('2026-10-19T12:00:00Z') });

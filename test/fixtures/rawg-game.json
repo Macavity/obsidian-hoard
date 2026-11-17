@@ -1,0 +1,19 @@
+{
+	"id": 3498,
+	"slug": "grand-theft-auto-v",
+	"name": "Grand Theft Auto V",
+	"released": "2013-09-17",
+	"background_image": "https://media.rawg.io/media/games/456/456dea5e1c7e3cd07060c14e96612001.jpg",
+	"platforms": [
+		{ "platform": { "id": 4, "name": "PC", "slug": "pc" } },
+		{ "platform": { "id": 187, "name": "PlayStation 5", "slug": "playstation5" } }
+	],
+	"developers": [{ "id": 3524, "name": "Rockstar North" }],
+	"publishers": [{ "id": 2155, "name": "Rockstar Games" }],
+	"tags": [
+		{ "id": 31, "name": "Singleplayer", "slug": "singleplayer", "language": "eng" },
+		{ "id": 7, "name": "Multiplayer", "slug": "multiplayer", "language": "eng" },
+		{ "id": 18, "name": "Co-op", "slug": "co-op", "language": "eng" },
+		{ "id": 99, "name": "Одиночная игра", "slug": "pvp", "language": "rus" }
+	]
+}

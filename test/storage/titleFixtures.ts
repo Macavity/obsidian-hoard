@@ -24,7 +24,7 @@ export const minimalTitle = (): HoardTitle => ({
 
 /** A cache entry with every key the title codec owns. */
 export const cacheAll = (): EntryCache => ({
-  posterUrl: 'none', trailerUrl: '', director: ['Dir'], cast: ['Cast'], studio: ['St'], communityRating: 7.5, communityVotes: 10,
+  trailerUrl: '', director: ['Dir'], cast: ['Cast'], studio: ['St'], communityRating: 7.5, communityVotes: 10,
   communitySource: 'imdb', communityRatingLastFetched: '2026-02-01', collectionId: 9, tmdbId: 11, tmdbMediaType: 'tv',
   malId: 21, anilistId: 31, seasons: [{ name: 'Season 1', episodes: 3, offset: 0 }],
 });

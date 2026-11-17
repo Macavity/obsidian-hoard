@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Notice } from 'obsidian';
 import { setupDataManager } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
-import type { ApiOutcome } from '../src/ApiService';
+import type { LookupResult } from '../src/lookup';
 import type { Season } from '../src/types';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
@@ -21,7 +21,7 @@ describe('series without a season list', () => {
 	});
 
 	it('refill notfound: implicit season, toggles allowed', async () => {
-		const fetchSeasons = vi.fn(() => Promise.resolve<ApiOutcome<Season[]>>({ status: 'notfound' }));
+		const fetchSeasons = vi.fn(() => Promise.resolve<LookupResult<Season[]>>({ status: 'notfound' }));
 		const { dm, f, notices } = await setupDataManager({ 'W/TV Show/N.md': NOTE }, { apiService: { fetchSeasons } });
 		await tick();
 		expect(fetchSeasons).toHaveBeenCalledTimes(1);
@@ -31,7 +31,7 @@ describe('series without a season list', () => {
 	});
 
 	it('refill nokey: own notice, toggles allowed', async () => {
-		const fetchSeasons = vi.fn(() => Promise.resolve<ApiOutcome<Season[]>>({ status: 'nokey' }));
+		const fetchSeasons = vi.fn(() => Promise.resolve<LookupResult<Season[]>>({ status: 'nokey' }));
 		const { dm, f, notices } = await setupDataManager({ 'W/TV Show/N.md': NOTE }, { apiService: { fetchSeasons } });
 		await tick();
 		await dm.markEpisodeWatched('TV Show/N', 2, true);
@@ -40,7 +40,7 @@ describe('series without a season list', () => {
 	});
 
 	it('refill transient: toggles wait', async () => {
-		const fetchSeasons = vi.fn(() => Promise.resolve<ApiOutcome<Season[]>>({ status: 'transient' }));
+		const fetchSeasons = vi.fn(() => Promise.resolve<LookupResult<Season[]>>({ status: 'failed' }));
 		const { dm, f, notices } = await setupDataManager({ 'W/TV Show/N.md': NOTE }, { apiService: { fetchSeasons } });
 		await tick();
 		await dm.markEpisodeWatched('TV Show/N', 2, true);

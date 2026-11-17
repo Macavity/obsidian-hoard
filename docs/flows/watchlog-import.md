@@ -14,7 +14,8 @@ source:
   - src/WatchLogReport.ts
   - src/main.ts
   - src/import/watchlog/registerTypes.ts
-source_commit: 4e5b4d91c9d986b410443b4eaffc84cbee9f6145
+  - src/import/watchlog/schema1Read.ts
+source_commit: 24cd6e5
 ---
 
 # WatchLog import
@@ -22,7 +23,9 @@ source_commit: 4e5b4d91c9d986b410443b4eaffc84cbee9f6145
 Hoard never touches WatchLog data on its own: it starts as a fresh install in its own root and only
 *offers* the import. Trigger: `startVaultStorage` ([startup](startup.md)) or the settings entry
 `openWatchLogImport`. User-visible behaviour: [README](../../README.md#importing-from-watchlog). Only
-`src/import/watchlog/` and the wizard know WatchLog names ([modules/import](../modules/import.md)).
+`src/import/watchlog/` and the wizard know WatchLog names ([modules/import](../modules/import.md)). The
+schema-1 `data.json` is read from `unknown` (`prepareData`): an entry without id and title is reported
+and skipped, a wrong-typed field is dropped, and the import goes on.
 
 ```mermaid
 flowchart TD
@@ -92,7 +95,8 @@ Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts]
      property names translated in place (`translateProperties`, [modules/import](../modules/import.md));
      unreadable YAML is an `invalidYaml` review item, the copy stays. The base is copied with its `watchlog:` block renamed to `hoard:` unless a
      Hoard base exists (reported). Device settings, cache and the draft / reading / games UI state fill
-     only what Hoard lacks.
+     only what Hoard lacks; the fork cache's `'none'` markers become `notfound` checks first
+     ([entry cache](../concepts/entry-cache.md#reading-datajson)).
    - *original* ([importOriginal.ts](../../src/import/watchlog/importOriginal.ts)): schema-1 data
      (side files `reading.json` / `history.json` merged for very old installs) goes through
      `importWatchLogData`, which writes notes through the normal codecs: new notes take the body of

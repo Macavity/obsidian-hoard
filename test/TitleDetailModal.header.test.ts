@@ -3,6 +3,7 @@ import { Notice, Platform } from 'obsidian';
 import { TitleDetailModal } from '../src/TitleDetailModal';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
 import { t } from '../src/i18n';
+import type { LookupResult } from '../src/lookup';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
@@ -18,11 +19,11 @@ const mkTitle = (over: Partial<HoardTitle> = {}): HoardTitle => (({
 	id: 't1', title: 'Alien', type: 'Movie', status: 'Plan to Watch', priority: '', review: '', rating: 0, notes: '',
 	dateStarted: null, dateFinished: null, dateAdded: '', dateModified: '', totalEpisodes: 1, episodeDuration: 100,
 	releaseDate: null, externalLink: '', seasons: [], watchedEpisodes: [],
-	director: ['none'], cast: ['none'], studio: ['none'],
+	director: ['Dir'], cast: ['Cast'], studio: ['Studio'],
 	...over,
 }));
 
-function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Error; stored?: HoardTitle | null; onPerson?: boolean; tmdbKey?: boolean } = {}) {
+function build(title: HoardTitle, o: { mobile?: boolean; trailer?: LookupResult<string> | Error; stored?: HoardTitle | null; onPerson?: boolean; tmdbKey?: boolean } = {}) {
 	const stored = o.stored === undefined ? title : o.stored;
 	const dataManager = {
 		getCollapsedSeasonsForTitle: () => new Set<number>(),
@@ -35,11 +36,15 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: string | Erro
 		updateTrailerUrl: vi.fn((_id: string, url: string) => { if (stored) stored.trailerUrl = url; }),
 		persistCollapsedSeasons: vi.fn(() => Promise.resolve()),
 		updatePosterUrl: vi.fn(),
+		// due while the title has no value of the kind, like the real one
+		lookupDue: vi.fn((_id: string, kind: string) => kind === 'credits'
+			? !(stored?.director?.length && stored?.cast?.length) : kind === 'studio' ? !stored?.studio?.length : true),
+		recordLookup: vi.fn(),
 	};
 	const apiService = {
-		fetchTrailer: vi.fn(() => (o.trailer instanceof Error ? Promise.reject(o.trailer) : Promise.resolve(o.trailer ?? ''))),
-		fetchCredits: vi.fn(() => Promise.resolve(null)),
-		fetchStudio: vi.fn(() => Promise.resolve(null)),
+		fetchTrailer: vi.fn(() => (o.trailer instanceof Error ? Promise.reject(o.trailer) : Promise.resolve(o.trailer ?? { status: 'notfound' }))),
+		fetchCredits: vi.fn(() => Promise.resolve({ status: 'notfound' })),
+		fetchStudio: vi.fn(() => Promise.resolve({ status: 'notfound' })),
 		hasTmdbKey: vi.fn(() => o.tmdbKey ?? true),
 		hasOmdbKey: vi.fn(() => false),
 	};
@@ -133,22 +138,24 @@ describe('TitleDetailModal.renderHeaderBody', () => {
 describe('TitleDetailModal backfill without a key', () => {
 	const flushAll = () => new Promise<void>((r) => setTimeout(r, 0));
 
-	it('does not store none for credits when the fetch fails', async () => {
+	it('stores nothing for credits when the fetch fails', async () => {
 		const { modal, apiService, dataManager } = build(mkTitle({ id: 'cred-fail', director: undefined, cast: undefined }));
 		(dataManager as unknown as Record<string, unknown>).updateCredits = vi.fn();
 		apiService.fetchCredits.mockRejectedValueOnce(new Error('net'));
 		header(modal);
 		await flushAll();
 		expect((dataManager as unknown as { updateCredits: unknown }).updateCredits).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('cred-fail', 'credits', { status: 'failed' });
 	});
 
-	it('does not store none for a movie studio without a TMDB key', async () => {
+	it('stores nothing and records nokey for a movie studio without a TMDB key', async () => {
 		const { modal, apiService, dataManager } = build(mkTitle({ id: 'studio-nokey', studio: undefined }), { tmdbKey: false });
 		(dataManager as unknown as Record<string, unknown>).updateStudio = vi.fn();
+		apiService.fetchStudio.mockResolvedValueOnce({ status: 'nokey' });
 		header(modal);
 		await flushAll();
-		expect(apiService.fetchStudio).not.toHaveBeenCalled();
 		expect((dataManager as unknown as { updateStudio: unknown }).updateStudio).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('studio-nokey', 'studio', { status: 'nokey' });
 	});
 });
 
@@ -164,7 +171,7 @@ describe('TitleDetailModal.refreshTrailer', () => {
 	});
 
 	it('ignores a second trigger while a fetch is in flight', async () => {
-		const { modal, apiService } = build(mkTitle(), { trailer: 'https://youtu.be/x' });
+		const { modal, apiService } = build(mkTitle(), { trailer: { status: 'found', value: 'https://youtu.be/x' } });
 		const { btn, container } = els();
 		btn.classList.add('is-loading');
 		await modal.refreshTrailer(btn, container);
@@ -172,7 +179,7 @@ describe('TitleDetailModal.refreshTrailer', () => {
 	});
 
 	it('stores a found trailer and repaints the control with a play button', async () => {
-		const { modal, dataManager } = build(mkTitle(), { trailer: 'https://youtu.be/x' });
+		const { modal, dataManager } = build(mkTitle(), { trailer: { status: 'found', value: 'https://youtu.be/x' } });
 		const { btn, container } = els();
 		await modal.refreshTrailer(btn, container);
 		expect(dataManager.updateTrailerUrl).toHaveBeenCalledWith('t1', 'https://youtu.be/x');
@@ -182,24 +189,49 @@ describe('TitleDetailModal.refreshTrailer', () => {
 		expect(shown).toEqual([]);
 	});
 
-	it('marks a missing trailer as none and keeps the refresh button', async () => {
-		for (const trailer of ['', 'none']) {
-			const { modal, dataManager } = build(mkTitle(), { trailer });
-			const { btn, container } = els();
-			await modal.refreshTrailer(btn, container);
-			expect(dataManager.updateTrailerUrl).toHaveBeenCalledWith('t1', 'none');
-			expect(btn.classList.contains('is-loading')).toBe(false);
-			expect(shown.at(-1)).toBe(t('detail.trailer.notFound'));
-		}
+	it('records a missing trailer as notfound and keeps the refresh button', async () => {
+		const { modal, dataManager } = build(mkTitle(), { trailer: { status: 'notfound' } });
+		const { btn, container } = els();
+		await modal.refreshTrailer(btn, container);
+		expect(dataManager.updateTrailerUrl).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'notfound' });
+		expect(btn.classList.contains('is-loading')).toBe(false);
+		expect(shown.at(-1)).toBe(t('detail.trailer.notFound'));
 	});
 
-	it('reports a failing fetch the same way', async () => {
+	it('tells a failed lookup from a missing trailer', async () => {
+		const { modal, dataManager } = build(mkTitle(), { trailer: { status: 'failed' } });
+		const { btn, container } = els();
+		await modal.refreshTrailer(btn, container);
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'failed' });
+		expect(btn.classList.contains('is-loading')).toBe(false);
+		expect(shown).toEqual([t('notices.api.requestFailed')]);
+	});
+
+	it('asks for the key when none is set, rather than saying nothing was found', async () => {
+		const { modal, dataManager } = build(mkTitle(), { trailer: { status: 'nokey' } });
+		const { btn, container } = els();
+		await modal.refreshTrailer(btn, container);
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'nokey' });
+		expect(shown.at(-1)).toBe(t('notices.api.tmdbTokenRequired'));
+	});
+
+	it('looks again on an explicit refresh even when the last check was fresh', async () => {
+		const { modal, apiService, dataManager } = build(mkTitle(), { trailer: { status: 'notfound' } });
+		dataManager.lookupDue.mockReturnValue(false);
+		const { btn, container } = els();
+		await modal.refreshTrailer(btn, container);
+		expect(apiService.fetchTrailer).toHaveBeenCalledTimes(1);
+	});
+
+	it('records a throwing fetch as failed', async () => {
 		const { modal, dataManager } = build(mkTitle(), { trailer: new Error('boom') });
 		const { btn, container } = els();
 		await modal.refreshTrailer(btn, container);
 		expect(dataManager.updateTrailerUrl).not.toHaveBeenCalled();
+		expect(dataManager.recordLookup).toHaveBeenCalledWith('t1', 'trailer', { status: 'failed' });
 		expect(btn.classList.contains('is-loading')).toBe(false);
-		expect(shown).toEqual([t('detail.trailer.notFound')]);
+		expect(shown).toEqual([t('notices.api.requestFailed')]);
 	});
 });
 
@@ -274,7 +306,7 @@ describe('TitleDetailModal trailer control', () => {
 	}
 
 	it('shows one muted play button that fetches when no trailer is known', () => {
-		const { row, apiService } = ratingRow(mkTitle({ trailerUrl: 'none' }));
+		const { row, apiService } = ratingRow(mkTitle({ trailerUrl: '' }));
 		const btns = row.querySelectorAll('.hoard-trailer-btn__control button');
 		expect(btns).toHaveLength(1);
 		const btn = btns[0] as HTMLButtonElement;
@@ -305,5 +337,70 @@ describe('TitleDetailModal trailer control', () => {
 		const btn = row.querySelector('.hoard-trailer-btn__control button')!;
 		expect(btn.classList.contains('hoard-trailer-btn--labeled')).toBe(true);
 		expect(btn.querySelector('.hoard-trailer-btn__label')!.textContent).toBe(t('detail.trailer.label'));
+	});
+});
+
+describe('TitleDetailModal favorite heart', () => {
+	it('paints the stored state after each write and toggles back on a second click', async () => {
+		const title = mkTitle();
+		const { modal, dataManager } = build(title);
+		// like the real manager: the write replaces the view, it does not mutate the old one
+		let stored: HoardTitle = title;
+		dataManager.getTitle.mockImplementation(() => stored);
+		const setFavorite = vi.fn(async (_id: string, favorite: boolean) => {
+			await Promise.resolve();
+			stored = { ...stored, favorite };
+		});
+		Object.assign(dataManager, { setFavorite });
+		const parent = document.createElement('div');
+		(modal as unknown as { renderFooter: (p: HTMLElement) => void }).renderFooter(parent);
+		const heart = parent.querySelector('.hoard-detail__favorite-btn') as HTMLElement;
+		expect(heart.classList.contains('is-active')).toBe(false);
+		heart.click();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(heart.classList.contains('is-active')).toBe(true);
+		heart.click();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(heart.classList.contains('is-active')).toBe(false);
+		expect(setFavorite).toHaveBeenNthCalledWith(1, 't1', true);
+		expect(setFavorite).toHaveBeenNthCalledWith(2, 't1', false);
+	});
+
+	it('ignores a second click while the write is pending', async () => {
+		const title = mkTitle();
+		const { modal, dataManager } = build(title);
+		let stored: HoardTitle = title;
+		dataManager.getTitle.mockImplementation(() => stored);
+		const setFavorite = vi.fn(async (_id: string, favorite: boolean) => {
+			await Promise.resolve();
+			stored = { ...stored, favorite };
+		});
+		Object.assign(dataManager, { setFavorite });
+		const parent = document.createElement('div');
+		(modal as unknown as { renderFooter: (p: HTMLElement) => void }).renderFooter(parent);
+		const heart = parent.querySelector('.hoard-detail__favorite-btn') as HTMLElement;
+		heart.click();
+		heart.click();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(setFavorite).toHaveBeenCalledOnce();
+		expect(setFavorite).toHaveBeenCalledWith('t1', true);
+		expect(heart.classList.contains('is-active')).toBe(true);
+	});
+
+	it('reports a failed write and takes the next click', async () => {
+		const title = mkTitle();
+		const { modal, dataManager } = build(title);
+		dataManager.getTitle.mockImplementation(() => title);
+		const setFavorite = vi.fn(() => Promise.reject(new Error('disk full')));
+		Object.assign(dataManager, { setFavorite });
+		const parent = document.createElement('div');
+		(modal as unknown as { renderFooter: (p: HTMLElement) => void }).renderFooter(parent);
+		const heart = parent.querySelector('.hoard-detail__favorite-btn') as HTMLElement;
+		heart.click();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(shown).toEqual([t('detail.favorite.failed')]);
+		expect(heart.classList.contains('is-active')).toBe(false);
+		heart.click();
+		expect(setFavorite).toHaveBeenCalledTimes(2);
 	});
 });

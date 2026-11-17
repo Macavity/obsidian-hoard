@@ -25,13 +25,9 @@ describe('titleFromProperties', () => {
     const { entry } = decode({ Name: 'X' }, cacheAll());
     expect(entry).toEqual({
       ...EMPTY, totalEpisodes: 3, seasons: [{ name: 'Season 1', episodes: 3, offset: 0, skippedEpisodes: [] }],
-      posterUrl: 'none', trailerUrl: '', director: ['Dir'], cast: ['Cast'], studio: ['St'], communityRating: 7.5, communityVotes: 10,
+      trailerUrl: '', director: ['Dir'], cast: ['Cast'], studio: ['St'], communityRating: 7.5, communityVotes: 10,
       communitySource: 'imdb', communityRatingLastFetched: '2026-02-01', collectionId: 9, tmdbId: 11, tmdbMediaType: 'tv', malId: 21, anilistId: 31,
     });
-  });
-
-  it('lets the note cover win over the cached "none" marker', () => {
-    expect(decode({ Cover: 'https://c/p.jpg' }, { posterUrl: 'none' }).entry.posterUrl).toBe('https://c/p.jpg');
   });
 
   it('lets the External ID win over cached ids of the same kind', () => {
@@ -161,17 +157,17 @@ describe('titleToCache', () => {
     expect(titleToCache(minimalTitle())).toEqual({});
   });
 
-  it('returns the API fields in a fixed order, the poster only as the "none" marker', () => {
+  it('returns the API fields in a fixed order, without the poster', () => {
     const cache = titleToCache({
-      ...fullTitle(), seasonsOverride: false, posterUrl: 'none', trailerUrl: 'https://youtu.be/t', director: ['Dir'], cast: ['Cast'],
+      ...fullTitle(), seasonsOverride: false, trailerUrl: 'https://youtu.be/t', director: ['Dir'], cast: ['Cast'],
       studio: ['St'], communityRating: 7, communityVotes: 3, communitySource: 'imdb', communityRatingLastFetched: 'f', collectionId: 4,
     });
     expect(cache).toEqual({
-      posterUrl: 'none', trailerUrl: 'https://youtu.be/t', director: ['Dir'], cast: ['Cast'], studio: ['St'], communityRating: 7,
+      trailerUrl: 'https://youtu.be/t', director: ['Dir'], cast: ['Cast'], studio: ['St'], communityRating: 7,
       communityVotes: 3, communitySource: 'imdb', communityRatingLastFetched: 'f', collectionId: 4, tmdbId: 70523, tmdbMediaType: 'tv',
       malId: 5, anilistId: 6, seasons: [{ name: 'Season 1', episodes: 8, offset: 0 }, { name: 'Season 2', episodes: 4, offset: 8 }],
     });
-    expect(Object.keys(cache)).toEqual(['posterUrl', 'trailerUrl', 'director', 'cast', 'studio', 'communityRating', 'communityVotes',
+    expect(Object.keys(cache)).toEqual(['trailerUrl', 'director', 'cast', 'studio', 'communityRating', 'communityVotes',
       'communitySource', 'communityRatingLastFetched', 'collectionId', 'tmdbId', 'tmdbMediaType', 'malId', 'anilistId', 'seasons']);
   });
 
@@ -182,7 +178,7 @@ describe('titleToCache', () => {
 
   it('keeps a real poster URL and overridden seasons out of the cache', () => {
     const cache = titleToCache(fullTitle());
-    expect(cache.posterUrl).toBeUndefined();
+    expect(cache).not.toHaveProperty('posterUrl');
     expect(cache.seasons).toBeUndefined();
   });
 });

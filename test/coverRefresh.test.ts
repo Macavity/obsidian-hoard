@@ -92,8 +92,8 @@ describe('refreshAllCovers', () => {
 
 	it('title: "no poster" never replaces an existing poster; a found one does', async () => {
 		const note = '---\nName: A\nType: Movie\nCover: https://mine\n---\n';
-		// PosterService on a clean "nothing found" writes 'none' with overwrite
-		const { d } = await run({ 'W/Movie/A.md': note }, {}, async (dm, id) => { await dm.updatePosterUrl(id, 'none', true); return null; });
+		// PosterService on a clean "nothing found" has no URL to write, even with overwrite
+		const { d } = await run({ 'W/Movie/A.md': note }, {}, async (dm, id) => { await dm.updatePosterUrl(id, '', true); return null; });
 		expect(d.dm.getTitle('Movie/A')?.posterUrl).toBe('https://mine');
 		expect(fmOf(d.f.files.get('W/Movie/A.md')).Cover).toBe('https://mine');
 	});

@@ -1,17 +1,20 @@
 import {
-	DEFAULT_READING_SETTINGS, GAME_TBA_STATUS, defaultGamesSettings, getTitleCredits, parsePlaytimeInput,
+	COLUMN_TYPES, GAME_TBA_STATUS, defaultGamesSettings, getTitleCredits, parsePlaytimeInput,
 } from '../../types';
 import type {
-	Book, Game, GamesData, GamesSettings, HoardTitle, Manga, ReadingData, ReadingStatus,
-	ReadingCustomColumn, TagDefinition,
+	Game, GamesData, GamesSettings, HoardTitle, ReadingData, ReadingCustomColumn, TagDefinition,
 } from '../../types';
+import { readBook, readGame, readGameGroup, readManga } from '../../backupEntries';
+import { readGamesSettings, readReadingSettings } from '../../featureSettings';
+import { at, readList, readOneOf, readOptionalString, readRecord, readString, readStringList } from '../../storage/read';
+import { defined } from '../../storage/sharedHelpers';
 import { TITLE_PROPS } from '../../storage/properties';
-import { WISHLIST, isRecord, type WatchLogTitle } from './schema1Types';
+import { WISHLIST, type WatchLogTitle } from './schema1Types';
 import type { Fm } from '../../storage/storageTypes';
 
 // WatchLog's load-time corrections, applied once while converting its data.
 
-const ON_HOLD = 'On Hold';
+const PLATFORM_COLOR = '#888780';
 
 export function isoOf(v: unknown): string | null {
 	if (typeof v !== 'string') return null;
@@ -30,7 +33,7 @@ export function watchLogApiValues(t: HoardTitle): Fm {
 		if (names.length > 0) out[TITLE_PROPS[field]] = names;
 	}
 	// the fetched trailer only: a manual one in the note is the user's
-	if (t.trailerUrl && t.trailerUrl !== 'none') out[TITLE_PROPS.trailer] = t.trailerUrl;
+	if (t.trailerUrl) out[TITLE_PROPS.trailer] = t.trailerUrl;
 	return out;
 }
 
@@ -40,7 +43,23 @@ export function progressOf(t: HoardTitle): number {
 	return effective === 0 ? 0 : Math.min(100, Math.round((t.watchedEpisodes.length / effective) * 100));
 }
 
-export function normalizeTitle(raw: Partial<WatchLogTitle>): WatchLogTitle {
+/**
+ * The entries of a list that `read` accepts; the others are noted in `skipped` as `<label> <position>`.
+ * Anything that is no list at all has no entries.
+ */
+export function readEntries<T>(raw: unknown, read: (v: unknown) => T | undefined, label: string, skipped: string[]): T[] {
+	const out: T[] = [];
+	if (!Array.isArray(raw)) return out;
+	const items: unknown[] = raw;
+	items.forEach((item, i) => {
+		const entry = read(item);
+		if (entry === undefined) skipped.push(`${label} ${i + 1}`);
+		else out.push(entry);
+	});
+	return out;
+}
+
+export function normalizeTitle(raw: Record<string, unknown>): WatchLogTitle {
 	const t: WatchLogTitle = {
 		id: '', title: '', type: 'TV Show', status: 'Plan to watch', priority: 'Medium', review: '', rating: 0,
 		notes: '', dateStarted: null, dateFinished: null, dateAdded: '', dateModified: '', totalEpisodes: 0,
@@ -54,9 +73,16 @@ export function normalizeTitle(raw: Partial<WatchLogTitle>): WatchLogTitle {
 	return t;
 }
 
-function readingStatus<T extends { status: ReadingStatus }>(item: T): T {
-	if ((item.status as string) === ON_HOLD) item.status = 'Plan to Read';
-	return item;
+function readColumn(v: unknown): ReadingCustomColumn | undefined {
+	const id = at(v, 'id');
+	if (typeof id !== 'string') return undefined;
+	return {
+		id,
+		name: readString(at(v, 'name')).trim(),
+		type: readOneOf(at(v, 'type'), COLUMN_TYPES, 'text'),
+		options: readStringList(at(v, 'options')),
+		...defined({ color: readOptionalString(at(v, 'color')) }),
+	};
 }
 
 /**
@@ -67,16 +93,15 @@ function readingStatus<T extends { status: ReadingStatus }>(item: T): T {
 function sanitizeColumns(raw: unknown): ReadingCustomColumn[] {
 	const used = new Set<string>();
 	let generated = 0;
-	return (Array.isArray(raw) ? raw : []).filter(isRecord).map((c) => {
-		const given = typeof c.name === 'string' ? c.name.trim() : '';
-		let name = given;
+	return readList(raw, readColumn).map((c) => {
+		let name = c.name;
 		let n = 1;
 		while (!name || used.has(name.toLowerCase())) {
-			if (given) name = `${given} ${++n}`;
+			if (c.name) name = `${c.name} ${++n}`;
 			else name = `Field ${++generated}`;
 		}
 		used.add(name.toLowerCase());
-		return { ...c, name } as unknown as ReadingCustomColumn;
+		return { ...c, name };
 	});
 }
 
@@ -90,87 +115,71 @@ export function orphanValues(
 		.map(([column, v]) => ({ column, value: String(v) }));
 }
 
-export function normalizeReading(raw: ReadingData | undefined): ReadingData {
-	const settings = { ...DEFAULT_READING_SETTINGS, ...(isRecord(raw?.settings) ? raw.settings : {}) };
-	if ((settings.defaultStatus as string) === ON_HOLD) settings.defaultStatus = 'Plan to Read';
-	const common = {
-		author: '', status: 'Plan to Read' as ReadingStatus, rating: 0, chaptersRead: 0, totalChapters: 0,
-		coverUrl: '', vaultPage: '', dateStarted: null, dateFinished: null, releaseDate: null, dateAdded: '',
-		dateModified: '',
-	};
-	const bookDefaults = {
-		...common, progressUnit: 'pages' as const, pagesRead: 0, totalPages: 0, wordsRead: 0, totalWords: 0, googleBooksId: '',
-	};
-	const mangaDefaults = { ...common, volumesRead: 0, totalVolumes: 0, malId: '' };
-	const books = (Array.isArray(raw?.books) ? raw.books : []).map((b): Book => readingStatus({
-		...bookDefaults, ...b, customFields: isRecord(b.customFields) ? b.customFields : {},
-	}));
-	const manga = (Array.isArray(raw?.manga) ? raw.manga : []).map((m): Manga => readingStatus({
-		...mangaDefaults, ...m, customFields: isRecord(m.customFields) ? m.customFields : {},
-	}));
+/** Reading data of unknown shape; books and manga without an id and a title are noted in `skipped`. */
+export function normalizeReading(raw: unknown, skipped: string[] = []): ReadingData {
 	return {
-		books,
-		manga,
-		bookColumns: sanitizeColumns(raw?.bookColumns),
-		mangaColumns: sanitizeColumns(raw?.mangaColumns),
-		settings,
+		books: readEntries(at(raw, 'books'), readBook, 'book', skipped),
+		manga: readEntries(at(raw, 'manga'), readManga, 'manga', skipped),
+		bookColumns: sanitizeColumns(at(raw, 'bookColumns')),
+		mangaColumns: sanitizeColumns(at(raw, 'mangaColumns')),
+		settings: readReadingSettings(readRecord(at(raw, 'settings'))),
 	};
 }
 
-/** Applies GameDataManager's former load-time migration: platform strings, the retired Wishlist status, playtime. */
-export function normalizeGames(raw: GamesData | undefined): GamesData {
-	const defaults = defaultGamesSettings();
-	const s: GamesSettings = { ...defaults, ...(isRecord(raw?.settings) ? raw.settings : {}) };
-	if (!Array.isArray(s.statuses) || s.statuses.length === 0) s.statuses = defaults.statuses;
-	if (!Array.isArray(s.types) || s.types.length === 0) s.types = defaults.types;
-	s.platforms = Array.isArray(s.platforms)
-		? (s.platforms as unknown[]).map((p): TagDefinition => typeof p === 'string'
-			? { name: p, color: defaults.platforms.find((d) => d.name === p)?.color ?? '#888780' }
-			: p as TagDefinition)
-		: defaults.platforms;
-	const wishlistIdx = s.statuses.findIndex((st) => st.name === WISHLIST);
-	if (wishlistIdx !== -1) {
-		if (s.statuses.some((st) => st.name === GAME_TBA_STATUS)) s.statuses.splice(wishlistIdx, 1);
-		else s.statuses[wishlistIdx] = { name: GAME_TBA_STATUS, color: '#EAB308' };
+/** Platforms were once plain names; they become tags, other entries stay for the settings reader to judge. */
+function platformTags(raw: unknown, known: readonly TagDefinition[]): unknown {
+	if (!Array.isArray(raw)) return raw;
+	const items: unknown[] = raw;
+	return items.map((p) => (typeof p === 'string' ? { name: p, color: known.find((d) => d.name === p)?.color ?? PLATFORM_COLOR } : p));
+}
+
+/** 'Wishlist' is a flag now: the status goes (or becomes "To be released"), and so do its default and filter. */
+function retireWishlist(s: GamesSettings): void {
+	const idx = s.statuses.findIndex((st) => st.name === WISHLIST);
+	if (idx !== -1) {
+		if (s.statuses.some((st) => st.name === GAME_TBA_STATUS)) s.statuses.splice(idx, 1);
+		else s.statuses[idx] = { name: GAME_TBA_STATUS, color: '#EAB308' };
 	}
 	if (s.defaultStatus === WISHLIST) s.defaultStatus = 'Not started';
 	if (s.savedFilterPreset) {
 		s.savedFilterPreset = {
 			...s.savedFilterPreset,
-			statusExclude: (s.savedFilterPreset.statusExclude ?? []).filter((n) => n !== WISHLIST),
+			statusExclude: s.savedFilterPreset.statusExclude.filter((n) => n !== WISHLIST),
 		};
 	}
-	const unwished = s.defaultStatus || 'Not started';
-	const gameDefaults = {
-		developer: '', publisher: '', type: '', status: unwished, priority: '', favorite: false, wishlist: false,
-		rating: 0, progress: 0, playtimeMinutes: 0, achievementsEarned: 0, achievementsTotal: 0,
-		singleplayer: false, coop: false, multiplayer: false, coverUrl: '', apiId: '', steamAppId: '',
-		lastPlayed: null, storeUrl: '', externalLink: '', vaultPage: '', releaseDate: null, dateStarted: null,
-		dateFinished: null, dateAdded: '', dateModified: '',
-	};
+}
 
-	const games = (Array.isArray(raw?.games) ? raw.games : []).map((src): Game => {
-		const stored = src as Game & { playtime?: unknown };
-		const { playtime, ...rest } = stored;
-		const g: Game = {
-			...gameDefaults,
-			...rest,
-			platforms: Array.isArray(rest.platforms) ? rest.platforms : [],
-			apiSource: rest.apiSource === 'rawg' || rest.apiSource === 'igdb' ? rest.apiSource : '',
-		};
-		if (typeof stored.playtimeMinutes !== 'number') {
-			g.playtimeMinutes = typeof playtime === 'string' ? parsePlaytimeInput(playtime) : 0;
-		}
-		if (g.status === WISHLIST) {
-			g.wishlist = true;
-			g.status = unwished;
-		}
-		return g;
-	});
+function normalizeGamesSettings(raw: unknown): GamesSettings {
+	const defaults = defaultGamesSettings();
+	const stored = readRecord(raw);
+	const settings = readGamesSettings({ ...stored, platforms: platformTags(stored.platforms, defaults.platforms) }, defaults);
+	retireWishlist(settings);
+	return settings;
+}
+
+/** A game with the retired Wishlist status as a flag and the old text playtime in minutes; undefined without an id and a title. */
+function normalizeGame(src: unknown, unwished: string): Game | undefined {
+	const g = readGame(src);
+	if (!g) return undefined;
+	if (typeof at(src, 'status') !== 'string') g.status = unwished;
+	const playtime = at(src, 'playtime');
+	if (typeof at(src, 'playtimeMinutes') !== 'number' && typeof playtime === 'string') {
+		g.playtimeMinutes = parsePlaytimeInput(playtime);
+	}
+	if (g.status === WISHLIST) {
+		g.wishlist = true;
+		g.status = unwished;
+	}
+	return g;
+}
+
+/** Applies GameDataManager's former load-time migration: platform strings, the retired Wishlist status, playtime. */
+export function normalizeGames(raw: unknown, skipped: string[] = []): GamesData {
+	const settings = normalizeGamesSettings(at(raw, 'settings'));
+	const unwished = settings.defaultStatus || 'Not started';
 	return {
-		games,
-		groups: Array.isArray(raw?.groups) ? raw.groups : [],
-		settings: s,
-		recommendedDaily: raw?.recommendedDaily,
+		games: readEntries(at(raw, 'games'), (g) => normalizeGame(g, unwished), 'game', skipped),
+		groups: readList(at(raw, 'groups'), readGameGroup),
+		settings,
 	};
 }
