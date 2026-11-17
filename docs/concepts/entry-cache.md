@@ -13,7 +13,7 @@ source:
   - src/storage/cacheMigration.ts
   - src/import/watchlog/detect.ts
   - src/lookup.ts
-source_commit: 24cd6e5
+source_commit: 5e0cdd3
 ---
 
 # Entry cache
@@ -85,7 +85,10 @@ same migration on the fork's cache before merging it
 
 - `EntryIndex.sweepCache()` (once after build) drops entries whose note is gone.
 - `EntryIndex` deletes the cache on vault delete and re-keys it on rename.
-- `LocalStore` debounces writes (100 ms) and is **read-only** for the session when `data.json` holds a
+- `LocalStore` debounces writes (100 ms). Lookup results (`DataManager.recordApiCheck`, the only
+  cache writer) save lazily: within 5 s, so a bulk run writes `data.json` every few seconds instead of
+  per title; any other change pulls the save forward, unload flushes it. A crash loses at most a repeated
+  lookup. The store is **read-only** for the session when `data.json` holds a
   WatchLog schema-1 file or a newer schema version.
 - A device without cache (fresh sync) sees titles with an API identity but no poster or seasons;
   `DataManager.queueMissingPosters` (only titles whose poster lookup is due, so a fresh `notfound` or
