@@ -3,7 +3,6 @@ import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId, Fm } 
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
 import { externalIdFromLink, formatExternalId, parseExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, TITLE_PROPS as T } from './properties';
-import { noneAsAbsent, withoutNone } from './read';
 import { parseSeasonLine, seasonsOf } from './seasonText';
 import { defined, nonEmpty, optional } from './sharedHelpers';
 
@@ -224,9 +223,9 @@ function progressFields(r: Reader, t: HoardTitle, seasonsCheck: ApiCheckResult |
 /** API fields the user set in the note; they win over the cached values and are written back (E9). */
 function overridesOf(r: Reader): TitleOverrides | undefined {
 	const overrides: TitleOverrides = defined({
-		director: nonEmpty(withoutNone(r.list(T.director))),
-		cast: nonEmpty(withoutNone(r.list(T.cast))),
-		studio: nonEmpty(withoutNone(r.list(T.studio))),
+		director: nonEmpty(r.list(T.director)),
+		cast: nonEmpty(r.list(T.cast)),
+		studio: nonEmpty(r.list(T.studio)),
 		communityRating: r.num(T.communityRating),
 		communityVotes: r.num(T.communityVotes),
 		communitySource: r.str(T.communitySource) || undefined,
@@ -243,7 +242,7 @@ function userFields(r: Reader): Partial<HoardTitle> {
 		maybe: r.bool(T.maybe) || undefined,
 		groups: nonEmpty(r.list(C.groups)),
 		posterUrl: r.str(C.cover) || undefined,
-		manualTrailerUrl: noneAsAbsent(r.str(T.trailer)),
+		manualTrailerUrl: r.str(T.trailer) || undefined,
 		overrides: overridesOf(r),
 		manualDirector: nonEmpty(r.list(T.addedDirector)),
 		manualCast: nonEmpty(r.list(T.addedCast)),

@@ -100,15 +100,6 @@ describe('hoard-test-vault notes stay readable', () => {
 });
 
 describe('WatchLog-era property sets', () => {
-	it('shows no names and no trailer for `none` markers in the note', () => {
-		const t = decodeTitle({ Director: 'none', Cast: ['none'], Trailer: 'none' });
-		expect(t.invalidFields).toEqual([]);
-		const shown = displayed(t.entry);
-		expect(shown.director).toEqual([]);
-		expect(shown.cast).toEqual([]);
-		expect(shown.trailer).toBe('');
-	});
-
 	it('keeps the readable rest when values have the wrong type', () => {
 		const t = decodeTitle({ Rating: 'x', Cast: 5, Seasons: {}, Cover: 'https://img.example/p.jpg', Runtime: 100 });
 		expect(t.entry.title).toBe('X');

@@ -5,6 +5,7 @@ import type { LocalData } from '../../storage/storageTypes';
 import { isRecord } from '../../storage/sharedHelpers';
 import { at, readRecord } from '../../storage/read';
 import { readCache, readUi } from '../../storage/readCache';
+import { migrateNoneMarkers } from '../../storage/cacheMigration';
 import { DEFAULT_SETTINGS } from '../../types';
 import type { WatchLogData } from './schema1Types';
 import { prepareData } from './schema1Read';
@@ -164,7 +165,7 @@ async function readForkData(app: App): Promise<LocalData | null> {
 		settings: readRecord(raw.settings),
 		reading: isRecord(raw.reading) ? raw.reading : undefined,
 		games: isRecord(raw.games) ? raw.games : undefined,
-		cache: readCache(raw.cache),
+		cache: readCache(migrateNoneMarkers(readRecord(raw.cache), new Date().toISOString()).cache),
 		ui: readUi(raw.ui),
 	};
 }
