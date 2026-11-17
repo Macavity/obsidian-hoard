@@ -21,6 +21,45 @@ describe('LocalStore', () => {
 		s.deleteCache('Movie/B'); await s.flush();
 		expect((p.data as { cache: object }).cache).toEqual({});
 	});
+	it('batches lazy cache writes into one save after five seconds', async () => {
+		vi.useFakeTimers();
+		try {
+			const p = plugin({ schemaVersion: 2, settings: {}, cache: {}, ui: {} }); const s = new LocalStore(p);
+			await s.load();
+			const save = vi.spyOn(p, 'saveData');
+			s.setCache('Movie/A', { tmdbId: 1 }, 'lazy');
+			await vi.advanceTimersByTimeAsync(3000);
+			s.setCache('Movie/B', { tmdbId: 2 }, 'lazy');
+			await vi.advanceTimersByTimeAsync(1999);
+			expect(save).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(1);
+			expect(save).toHaveBeenCalledOnce();
+			expect((p.data as { cache: object }).cache).toEqual({ 'Movie/A': { tmdbId: 1 }, 'Movie/B': { tmdbId: 2 } });
+		} finally { vi.useRealTimers(); }
+	});
+	it('a normal change pulls a pending lazy save forward', async () => {
+		vi.useFakeTimers();
+		try {
+			const p = plugin({ schemaVersion: 2, settings: {}, cache: {}, ui: {} }); const s = new LocalStore(p);
+			await s.load();
+			const save = vi.spyOn(p, 'saveData');
+			s.setCache('Movie/A', { tmdbId: 1 }, 'lazy');
+			s.setCache('Movie/B', { tmdbId: 2 });
+			await vi.advanceTimersByTimeAsync(100);
+			expect(save).toHaveBeenCalledOnce();
+			s.setCache('Movie/C', { tmdbId: 3 });
+			s.setCache('Movie/D', { tmdbId: 4 }, 'lazy');
+			await vi.advanceTimersByTimeAsync(100);
+			expect(save).toHaveBeenCalledTimes(2);
+		} finally { vi.useRealTimers(); }
+	});
+	it('flush writes a pending lazy save at once', async () => {
+		const p = plugin({ schemaVersion: 2, settings: {}, cache: {}, ui: {} }); const s = new LocalStore(p);
+		await s.load();
+		s.setCache('Movie/A', { tmdbId: 1 }, 'lazy');
+		await s.flush();
+		expect((p.data as { cache: object }).cache).toEqual({ 'Movie/A': { tmdbId: 1 } });
+	});
 	it('treats schema-1 data as empty and never overwrites it', async () => {
 		const data = { titles: [], groups: [], settings: {} };
 		const p = plugin(data); const s = new LocalStore(p);

@@ -256,7 +256,8 @@ export class DataManager {
 
 	private recordApiCheck(id: string, kind: ApiCheckKind, result: ApiCheckResult, patch: Partial<EntryCache> = {}): void {
 		const apiCheck = { ...this.local.getCache(id)?.apiCheck, [kind]: { at: new Date().toISOString(), result } };
-		this.local.setCache(id, { ...patch, apiCheck });
+		// everything here comes from an API and can be fetched again: the save may wait for the batch
+		this.local.setCache(id, { ...patch, apiCheck }, 'lazy');
 	}
 
 	/** An API key changed: checks that failed for want of a key may run again. */

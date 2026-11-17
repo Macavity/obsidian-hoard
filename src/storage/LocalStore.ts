@@ -23,6 +23,8 @@ function formatOf(raw: unknown): 'watchlog' | 'newer' | 2 | 'empty' {
 }
 
 const SAVE_DEBOUNCE_MS = 100;
+/** Lookup bookkeeping can wait: a bulk run then writes data.json every few seconds, not per title. */
+const LAZY_SAVE_MS = 5000;
 
 const emptyData = (): LocalData => ({ schemaVersion: 2, settings: {}, cache: {}, ui: {} });
 
@@ -91,9 +93,11 @@ export class LocalStore {
 		return this.data.cache[id];
 	}
 
-	setCache(id: string, patch: Partial<EntryCache>): void {
+	/** `lazy`: losing it on a crash only costs a repeated lookup, so the save may wait. */
+	setCache(id: string, patch: Partial<EntryCache>, save: 'now' | 'lazy' = 'now'): void {
 		this.data.cache[id] = { ...this.data.cache[id], ...patch };
-		this.queueSave();
+		if (save === 'lazy') this.queueLazySave();
+		else this.queueSave();
 	}
 
 	deleteCache(id: string): void {
@@ -113,10 +117,20 @@ export class LocalStore {
 	queueSave(): void {
 		this.dirty = true;
 		this.clearTimer();
+		this.schedule(SAVE_DEBOUNCE_MS);
+	}
+
+	/** Saves within LAZY_SAVE_MS; a save already scheduled, sooner or later, stays as it is. */
+	private queueLazySave(): void {
+		this.dirty = true;
+		if (this.timer === null) this.schedule(LAZY_SAVE_MS);
+	}
+
+	private schedule(ms: number): void {
 		this.timer = window.setTimeout(() => {
 			this.timer = null;
 			void this.save();
-		}, SAVE_DEBOUNCE_MS);
+		}, ms);
 	}
 
 	/** Write pending changes now (onunload). */
