@@ -1032,7 +1032,9 @@ export class TitleDetailModal extends Modal {
 			if (writing) return;
 			writing = true;
 			// the write replaces the view, so repaint from the fresh one once it is done
-			void this.dataManager.setFavorite(this.title.id, !this.title.favorite).finally(() => {
+			void this.dataManager.setFavorite(this.title.id, !this.title.favorite).catch(() => {
+				new Notice(t('detail.favorite.failed'));
+			}).finally(() => {
 				writing = false;
 				this.refreshTitle();
 				this.markChanged();

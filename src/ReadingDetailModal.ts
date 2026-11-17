@@ -1145,7 +1145,9 @@ export class ReadingDetailModal extends Modal {
 			if (writing) return;
 			writing = true;
 			const fav = this.getItem()?.favorite === true;
-			void this.readingData.setFavorite(this.mode, item.id, !fav).finally(() => {
+			void this.readingData.setFavorite(this.mode, item.id, !fav).catch(() => {
+				new Notice(t('detail.favorite.failed'));
+			}).finally(() => {
 				writing = false;
 				paintFav();
 			});

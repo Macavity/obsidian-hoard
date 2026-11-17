@@ -386,4 +386,21 @@ describe('TitleDetailModal favorite heart', () => {
 		expect(setFavorite).toHaveBeenCalledWith('t1', true);
 		expect(heart.classList.contains('is-active')).toBe(true);
 	});
+
+	it('reports a failed write and takes the next click', async () => {
+		const title = mkTitle();
+		const { modal, dataManager } = build(title);
+		dataManager.getTitle.mockImplementation(() => title);
+		const setFavorite = vi.fn(() => Promise.reject(new Error('disk full')));
+		Object.assign(dataManager, { setFavorite });
+		const parent = document.createElement('div');
+		(modal as unknown as { renderFooter: (p: HTMLElement) => void }).renderFooter(parent);
+		const heart = parent.querySelector('.hoard-detail__favorite-btn') as HTMLElement;
+		heart.click();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(shown).toEqual([t('detail.favorite.failed')]);
+		expect(heart.classList.contains('is-active')).toBe(false);
+		heart.click();
+		expect(setFavorite).toHaveBeenCalledTimes(2);
+	});
 });

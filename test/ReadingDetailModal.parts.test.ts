@@ -95,6 +95,21 @@ describe('ReadingDetailModal favorite heart', () => {
 		expect(setFavorite).toHaveBeenCalledOnce();
 		expect(setFavorite).toHaveBeenCalledWith('book', 'b1', true);
 	});
+
+	it('reports a failed write and takes the next click', async () => {
+		const { modal, readingData } = build();
+		const setFavorite = vi.fn(() => Promise.reject(new Error('disk full')));
+		Object.assign(readingData, { setFavorite });
+		readingData.getBook.mockImplementation(() => baseBook());
+		modal.contentEl = document.createElement('div');
+		modal.renderFooter(baseBook());
+		const heart = modal.contentEl.querySelector('.hoard-detail__favorite-btn') as HTMLElement;
+		heart.click();
+		await flush();
+		expect(shown).toEqual([t('detail.favorite.failed')]);
+		heart.click();
+		expect(setFavorite).toHaveBeenCalledTimes(2);
+	});
 });
 
 describe('ReadingDetailModal.renderCustomFieldsSection', () => {
