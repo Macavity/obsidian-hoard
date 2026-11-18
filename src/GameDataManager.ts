@@ -5,9 +5,9 @@ import type { HistoryManager } from './HistoryManager';
 import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
-import { dropOldId, followRename, ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
-import type { EntryWriteHooks } from './storage/noteWrite';
-import { ChangeListeners } from './changeListeners';
+import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import type { EntryWriteHooks, HeldEntries } from './storage/noteWrite';
+import { ChangeNotifier } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -34,15 +34,6 @@ import { readGamesSettings } from './featureSettings';
 
 const GAMES_FOLDER_PREFIX = 'Games/';
 
-/**
- * Games, backed by one note per game under `<Root>/Games`. Reads come from the EntryIndex; writes go
- * to the note via processFrontMatter and only touch keys whose encoded value changed. Settings live
- * in the shared base (`games:`), the daily picks in data.json.
- *
- * Upcoming mirrors Reading's: a game with a future release date is auto-added to the shared
- * tracker and removed when the date passes or the game is deleted; applyReleaseStatus maintains the
- * auto "To be released" status.
- */
 /** What Games needs from the Upcoming tracker; its owner is wired in by the plugin. */
 export interface GameUpcomingSync {
 	autoAddGameToUpcoming(g: Game): Promise<void>;
@@ -57,7 +48,16 @@ export type GameDataManagerDeps = DataStores & {
 	upcoming: GameUpcomingSync;
 };
 
-export class GameDataManager {
+/**
+ * Games, backed by one note per game under `<Root>/Games`. Reads come from the EntryIndex; writes go
+ * to the note via processFrontMatter and only touch keys whose encoded value changed. Settings live
+ * in the shared base (`games:`), the daily picks in data.json.
+ *
+ * Upcoming mirrors Reading's: a game with a future release date is auto-added to the shared
+ * tracker and removed when the date passes or the game is deleted; applyReleaseStatus maintains the
+ * auto "To be released" status.
+ */
+export class GameDataManager extends ChangeNotifier {
 	private app: App;
 	private registerEvent: (ref: EventRef) => void;
 	private appSettings: SettingsReader;
@@ -67,7 +67,6 @@ export class GameDataManager {
 	private shared: SharedConfigStore;
 	private layout: () => VaultLayout;
 	private notify: Notify;
-	private listeners = new ChangeListeners();
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from,
@@ -75,9 +74,13 @@ export class GameDataManager {
 	private views = new Map<string, { src: Game; base: Game; view: Game }>();
 	// games changed via updateGameSilent, written on the next saveAndNotify
 	private dirty = new Set<string>();
+	// what a rename re-keys and a delete forgets
+	private held: HeldEntries<{ src: Game; base: Game; view: Game }>;
 	private settingsCache: GamesSettings | null = null;
 
 	constructor(deps: GameDataManagerDeps) {
+		super();
+		this.held = { index: deps.index, views: this.views, dirty: this.dirty };
 		this.notify = deps.notify;
 		this.app = deps.app;
 		this.appSettings = deps.settings;
@@ -95,7 +98,7 @@ export class GameDataManager {
 
 	/** After index.build() and shared.load(): follows index and base changes, reconciles Upcoming. */
 	async init(): Promise<void> {
-		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => followRename({ index: this.index, views: this.views, dirty: this.dirty }, this.layout(), file, oldPath)));
+		registerRenameFollow(this.app, this.registerEvent, this.held, this.layout);
 		this.index.onChange((ids) => {
 			let touched = false;
 			for (const id of ids) {
@@ -191,20 +194,6 @@ export class GameDataManager {
 		this.local.queueSave();
 	}
 
-
-	// Listeners
-
-	onChange(listener: () => void): void {
-		this.listeners.add(listener);
-	}
-
-	offChange(listener: () => void): void {
-		this.listeners.remove(listener);
-	}
-
-	private notifyListeners(): void {
-		this.listeners.emit();
-	}
 
 	/** Writes every pending silent edit and in-place mutation of a handed-out copy, then notifies. */
 	async saveAndNotify(): Promise<void> {
@@ -634,10 +623,7 @@ export class GameDataManager {
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		await trashNote(this.app, this.layout().pathFromId(id));
-		this.index.removeLocal(id);
-		this.views.delete(id);
-		this.dirty.delete(id);
+		await deleteEntryNote(this.app, this.layout(), this.held, id);
 	}
 
 	async ensureGameNote(game: Game): Promise<string> {

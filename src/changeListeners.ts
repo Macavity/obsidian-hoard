@@ -16,3 +16,24 @@ export class ChangeListeners {
 		for (const listener of this.listeners) listener();
 	}
 }
+
+/** Base of the data managers: listener registration and the trigger for external callers (e.g. CsvModal) that force a UI refresh. */
+export abstract class ChangeNotifier {
+	private readonly listeners = new ChangeListeners();
+
+	onChange(listener: () => void): void {
+		this.listeners.add(listener);
+	}
+
+	offChange(listener: () => void): void {
+		this.listeners.remove(listener);
+	}
+
+	notifyChange(): void {
+		this.notifyListeners();
+	}
+
+	protected notifyListeners(): void {
+		this.listeners.emit();
+	}
+}

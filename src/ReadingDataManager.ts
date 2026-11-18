@@ -6,9 +6,9 @@ import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
 import type { LocalStore } from './storage/LocalStore';
-import { dropOldId, followRename, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
-import type { EntryWriteHooks } from './storage/noteWrite';
-import { ChangeListeners } from './changeListeners';
+import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import type { EntryWriteHooks, HeldEntries } from './storage/noteWrite';
+import { ChangeNotifier } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
 import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
 import type { VaultLayout } from './storage/VaultLayout';
@@ -56,11 +56,6 @@ const KIND_KEYS: Record<ReadingKind, readonly string[]> = {
 const encodeWith = (kind: ReadingKind, item: ReadingItem, columns: readonly ReadingCustomColumn[]): Fm =>
 	kind === 'book' ? encodeBook(item as Book, columns) : encodeManga(item as Manga, columns);
 
-/**
- * Books and manga, backed by one note each. Reads come from the EntryIndex (frontmatter); writes go
- * to the note via processFrontMatter and only touch keys whose encoded value changed. Reading
- * settings and table columns live in the shared config (Hoard.base).
- */
 /** Notes a column rename moved, and notes it left alone (their values stay under the old key). */
 export interface ColumnMoveResult {
 	moved: number;
@@ -81,7 +76,12 @@ export type ReadingDataManagerDeps = DataStores & {
 	upcoming: ReadingUpcomingSync;
 };
 
-export class ReadingDataManager {
+/**
+ * Books and manga, backed by one note each. Reads come from the EntryIndex (frontmatter); writes go
+ * to the note via processFrontMatter and only touch keys whose encoded value changed. Reading
+ * settings and table columns live in the shared config (Hoard.base).
+ */
+export class ReadingDataManager extends ChangeNotifier {
 	private appSettings: SettingsReader;
 	private upcoming: ReadingUpcomingSync;
 	private app: App;
@@ -91,7 +91,6 @@ export class ReadingDataManager {
 	private shared: SharedConfigStore;
 	private layout: () => VaultLayout;
 	private notify: Notify;
-	private listeners = new ChangeListeners();
 	private historyManager: HistoryManager | null = null;
 
 	private settings: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
@@ -103,8 +102,12 @@ export class ReadingDataManager {
 	private views: Map<string, { src: ReadingItem; view: ReadingItem }> = new Map();
 	// ids changed via the *Silent updaters, written on the next saveAndNotify()
 	private dirty: Set<string> = new Set();
+	// what a rename re-keys and a delete forgets
+	private held: HeldEntries<{ src: ReadingItem; view: ReadingItem }>;
 
 	constructor(deps: ReadingDataManagerDeps) {
+		super();
+		this.held = { index: deps.index, views: this.views, dirty: this.dirty };
 		this.appSettings = deps.settings;
 		this.upcoming = deps.upcoming;
 		this.app = deps.app;
@@ -123,7 +126,7 @@ export class ReadingDataManager {
 	/** After index.build() and shared.load(): follows index and shared-config changes. */
 	async init(): Promise<void> {
 		this.readShared();
-		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => followRename({ index: this.index, views: this.views, dirty: this.dirty }, this.layout(), file, oldPath)));
+		registerRenameFollow(this.app, this.registerEvent, this.held, this.layout);
 		this.index.onChange((ids) => {
 			let touched = false;
 			for (const id of ids) {
@@ -243,24 +246,6 @@ export class ReadingDataManager {
 		try { await this.writeItem(kind, next); } catch (e) {
 			console.warn('[Hoard] setFavorite note write failed:', e);
 		}
-	}
-
-	// Listeners
-
-	onChange(listener: () => void): void {
-		this.listeners.add(listener);
-	}
-
-	offChange(listener: () => void): void {
-		this.listeners.remove(listener);
-	}
-
-	notifyChange(): void {
-		this.notifyListeners();
-	}
-
-	private notifyListeners(): void {
-		this.listeners.emit();
 	}
 
 	/**
@@ -827,10 +812,7 @@ export class ReadingDataManager {
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		await trashNote(this.app, this.layout().pathFromId(id));
-		this.index.removeLocal(id);
-		this.views.delete(id);
-		this.dirty.delete(id);
+		await deleteEntryNote(this.app, this.layout(), this.held, id);
 	}
 
 	/** Writes (creates or updates) the note file. Returns its path. */

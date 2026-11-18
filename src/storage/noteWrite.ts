@@ -1,5 +1,5 @@
 import { TFile, normalizePath } from 'obsidian';
-import type { App, TAbstractFile } from 'obsidian';
+import type { App, EventRef, TAbstractFile } from 'obsidian';
 import type { Fm, Notify } from './storageTypes';
 import type { VaultLayout } from './VaultLayout';
 import { setBaseline } from './baseline';
@@ -89,14 +89,24 @@ export function rewriteOwnedKeys(raw: Fm, keys: Iterable<string>, out: Fm, keep:
 	}
 }
 
+/** A handed-out copy and the index entry it was made from; both carry the id. */
+export type Slot = { src: { id: string }; view: { id: string } };
+
+/** What a manager holds per id and a rename re-keys: index entry, view slot, pending-write flag. */
+export interface HeldEntries<S extends Slot> {
+	index: { removeLocal(id: string): void };
+	views: Map<string, S>;
+	dirty: Set<string>;
+}
+
 /**
  * What a rename re-keys in a manager that holds an index entry, a view and a pending flag per id:
  * the index entry is dropped (the next read builds it under the new id). A view with a pending silent
  * edit moves to the new id together with the flag, so the flush writes the renamed note; any other view
  * is dropped.
  */
-export function dropOldId<S extends { src: { id: string }; view: { id: string } }>(
-	held: { index: { removeLocal(id: string): void }; views: Map<string, S>; dirty: Set<string> },
+export function dropOldId<S extends Slot>(
+	held: HeldEntries<S>,
 	from: string,
 	to: string,
 ): void {
@@ -109,14 +119,14 @@ export function dropOldId<S extends { src: { id: string }; view: { id: string } 
 }
 
 /** The slot under a new id: the handed-out copy is the same object, so the UI keeps holding it. */
-export function retargetSlot<S extends { src: { id: string }; view: { id: string } }>(slot: S, to: string): S {
+export function retargetSlot<S extends Slot>(slot: S, to: string): S {
 	slot.view.id = to;
 	return { ...slot, src: { ...slot.src, id: to } };
 }
 
 /** A vault rename of a note whose id has a pending silent edit: re-keys it so the flush writes the renamed note. */
-export function followRename<S extends { src: { id: string }; view: { id: string } }>(
-	held: { index: { removeLocal(id: string): void }; views: Map<string, S>; dirty: Set<string> },
+function followRename<S extends Slot>(
+	held: HeldEntries<S>,
 	layout: VaultLayout,
 	file: TAbstractFile,
 	oldPath: string,
@@ -126,6 +136,24 @@ export function followRename<S extends { src: { id: string }; view: { id: string
 	const to = layout.classify(file.path)?.id;
 	if (from === undefined || to === undefined || from === to || !held.dirty.has(from)) return;
 	dropOldId(held, from, to);
+}
+
+/** Follows vault renames of notes that have a pending silent edit; `register` ties the handler to the plugin's lifetime. */
+export function registerRenameFollow<S extends Slot>(
+	app: App,
+	register: (ref: EventRef) => void,
+	held: HeldEntries<S>,
+	layout: () => VaultLayout,
+): void {
+	register(app.vault.on('rename', (file, oldPath) => followRename(held, layout(), file, oldPath)));
+}
+
+/** Trashes the note of an id and forgets everything the manager holds for it. */
+export async function deleteEntryNote<S extends Slot>(app: App, layout: VaultLayout, held: HeldEntries<S>, id: string): Promise<void> {
+	await trashNote(app, layout.pathFromId(id));
+	held.index.removeLocal(id);
+	held.views.delete(id);
+	held.dirty.delete(id);
 }
 
 /** What a manager tells the write pipeline about its kind of entry. */

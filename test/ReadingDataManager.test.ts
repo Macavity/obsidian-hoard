@@ -24,6 +24,7 @@ describe('ReadingDataManager on vault storage', () => {
 		await rdm.flushPending();
 		expect(f.files.get('W/Books/B.md')).toMatch(/Pages Read: 42/);
 		expect(f.files.has('W/Books/A.md')).toBe(false);
+		expect(rdm.getBook('Books/B')?.vaultPage).toBe('W/Books/B.md');
 	});
 
 	it('writes progress changes to frontmatter and keeps unknown keys and body', async () => {

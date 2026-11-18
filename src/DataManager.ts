@@ -27,7 +27,7 @@ import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from './storage/properties';
 import { extractNotes, replaceNotesSection } from './storage/noteBody';
 import { omit, sameJson } from './storage/sharedHelpers';
 import { emitDataChanged } from './changeSignal';
-import { ChangeListeners } from './changeListeners';
+import { ChangeNotifier } from './changeListeners';
 
 export interface DataStores {
 	index: EntryIndex;
@@ -96,11 +96,14 @@ const API_CHECK_TTL_MS = { ok: 6 * 3_600_000, transient: 3_600_000, notfound: 7 
 /** Every kind of check recorded in `apiCheck`; a key change resets the `nokey` ones of all. */
 const API_CHECK_KINDS: readonly ApiCheckKind[] = ['airing', 'seasons', 'poster', 'trailer', 'credits', 'studio'];
 
+/** Statuses whose unwatched episodes still count as time remaining. */
+const COUNTED_REMAINING: readonly string[] = ['Plan to watch', 'Watching'];
+
 /**
  * Watchlist titles, backed by one note per title. Reads come from the EntryIndex (frontmatter) plus
  * the LocalStore cache; writes go to the note via processFrontMatter and only touch what changed.
  */
-export class DataManager {
+export class DataManager extends ChangeNotifier {
 	private deps: DataManagerDeps;
 	private app: App;
 	private index: EntryIndex;
@@ -108,7 +111,6 @@ export class DataManager {
 	private shared: SharedConfigStore;
 	private layout: () => VaultLayout;
 	private notify: Notify;
-	private listeners = new ChangeListeners();
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from:
@@ -141,6 +143,7 @@ export class DataManager {
 	}
 
 	constructor(deps: DataManagerDeps) {
+		super();
 		this.deps = deps;
 		this.notify = deps.notify;
 		this.app = deps.app;
@@ -1168,40 +1171,24 @@ export class DataManager {
 	}
 
 	calcTimeRemaining(title: HoardTitle): number {
-		if (title.episodeDuration <= 0) return 0;
 		if (title.status === 'Dropped') return 0;
-		// "To be released" doesn't count toward time remaining — not yet available
-		if (title.status === 'To be released') return 0;
-		if (title.type === 'Movie') {
-			return title.watchedEpisodes.includes(1) ? 0 : title.episodeDuration;
-		}
-		const effective = this.getEffectiveTotal(title);
-		if (title.status === 'Plan to watch') {
-			return Math.max(0, effective - title.watchedEpisodes.length) * title.episodeDuration;
-		}
-		if (title.status === 'Watching') {
-			return Math.max(0, effective - title.watchedEpisodes.length) * title.episodeDuration;
-		}
-		return 0;
+		return this.remainingTime(title, COUNTED_REMAINING);
 	}
 
 	calcTimeRemainingForModal(title: HoardTitle): number {
+		return this.remainingTime(title, [...COUNTED_REMAINING, 'Dropped']);
+	}
+
+	/** Unwatched time of a title whose status is one of `counted`; a movie counts until watched. */
+	private remainingTime(title: HoardTitle, counted: readonly string[]): number {
 		if (title.episodeDuration <= 0) return 0;
+		// "To be released" is not yet available
 		if (title.status === 'To be released') return 0;
 		if (title.type === 'Movie') {
 			return title.watchedEpisodes.includes(1) ? 0 : title.episodeDuration;
 		}
-		const effective = this.getEffectiveTotal(title);
-		if (title.status === 'Dropped') {
-			return Math.max(0, effective - title.watchedEpisodes.length) * title.episodeDuration;
-		}
-		if (title.status === 'Plan to watch') {
-			return Math.max(0, effective - title.watchedEpisodes.length) * title.episodeDuration;
-		}
-		if (title.status === 'Watching') {
-			return Math.max(0, effective - title.watchedEpisodes.length) * title.episodeDuration;
-		}
-		return 0;
+		if (!counted.includes(title.status)) return 0;
+		return Math.max(0, this.getEffectiveTotal(title) - title.watchedEpisodes.length) * title.episodeDuration;
 	}
 
 	getTotalTimeWatched(): number {
@@ -1214,21 +1201,8 @@ export class DataManager {
 
 	// Listeners
 
-	onChange(listener: () => void): void {
-		this.listeners.add(listener);
-	}
-
-	offChange(listener: () => void): void {
-		this.listeners.remove(listener);
-	}
-
-	/** Public trigger for external callers (e.g. CsvModal) that need to force a UI refresh. */
-	notifyChange(): void {
-		this.notifyListeners();
-	}
-
-	private notifyListeners(): void {
-		this.listeners.emit();
+	protected override notifyListeners(): void {
+		super.notifyListeners();
 		emitDataChanged();
 	}
 
