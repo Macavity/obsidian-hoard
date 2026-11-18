@@ -8,6 +8,11 @@ import { SharedConfigStore } from '../../src/shared/storage/SharedConfigStore';
 import { EntryIndex } from '../../src/shared/storage/EntryIndex';
 import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
 import type { ManagerNotice } from '../../src/shared/storage/storageTypes';
+import { DataManager } from '../../src/modules/watchlist/services/DataManager';
+import type { PosterQueue, ReleaseDateTargets } from '../../src/modules/watchlist/services/DataManager';
+import { ReadingDataManager, type ReadingUpcomingSync } from '../../src/modules/reading/services/ReadingDataManager';
+import { GameDataManager, type GameUpcomingSync } from '../../src/modules/games/services/GameDataManager';
+import type { ApiService } from '../../src/shared/api/ApiService';
 import type HoardPlugin from '../../src/app/main';
 
 // browser globals the managers touch
@@ -64,6 +69,35 @@ export async function createStores(files: Record<string, string>, opts: StoreOpt
 	index.start();
 	const stores = { index, local, shared, layout: () => layout, notify };
 	/** Stores plus what every manager takes besides them. */
-	const base = { ...stores, app: f.app, settings: { get: () => settings }, registerEvent: f.plugin.registerEvent };
+	const base = { ...stores, vault: f.app.vault, fileManager: f.app.fileManager, settings: { get: () => settings }, registerEvent: f.plugin.registerEvent };
 	return { f, plugin, settings, local, layout, shared, index, notices, stores, base };
+}
+
+type StoreBase = Awaited<ReturnType<typeof createStores>>['base'];
+
+/** A DataManager on the stores of `createStores`; the ports are the caller's. */
+export function newDataManager(
+	base: StoreBase,
+	api: Pick<ApiService, 'fetchAiring' | 'fetchSeasons'>,
+	posters: () => PosterQueue | null,
+	releaseDates: ReleaseDateTargets,
+): DataManager {
+	return new DataManager(
+		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify,
+		base.settings, api, posters, base.registerEvent, releaseDates,
+	);
+}
+
+export function newReadingManager(base: StoreBase, upcoming: ReadingUpcomingSync): ReadingDataManager {
+	return new ReadingDataManager(
+		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify,
+		base.settings, base.registerEvent, upcoming,
+	);
+}
+
+export function newGameManager(base: StoreBase, upcoming: GameUpcomingSync): GameDataManager {
+	return new GameDataManager(
+		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify,
+		base.settings, base.registerEvent, upcoming,
+	);
 }

@@ -1,5 +1,5 @@
 import { TFile, normalizePath } from 'obsidian';
-import type { App, EventRef, TAbstractFile } from 'obsidian';
+import type { EventRef, FileManager, TAbstractFile, Vault } from 'obsidian';
 import type { Fm, Notify } from './storageTypes';
 import type { VaultLayout } from './VaultLayout';
 import { setBaseline } from './baseline';
@@ -7,13 +7,13 @@ import { changedKeys } from '../domain/sharedHelpers';
 
 /** processFrontMatter that reports unreadable YAML as a notice and returns false instead of throwing. */
 export async function updateFrontMatter(
-	app: App,
+	fileManager: Pick<FileManager, 'processFrontMatter'>,
 	file: TFile,
 	notify: Notify,
 	fn: (fm: Record<string, unknown>) => void,
 ): Promise<boolean> {
 	try {
-		await app.fileManager.processFrontMatter(file, fn);
+		await fileManager.processFrontMatter(file, fn);
 		return true;
 	} catch (e) {
 		console.warn(`Hoard: could not update frontmatter of ${file.path}`, e);
@@ -23,24 +23,24 @@ export async function updateFrontMatter(
 }
 
 /** True when `target` is free for a rename; otherwise reports it (the note keeps its old name). */
-function renameTargetFree(app: App, target: string, notify: Notify): boolean {
-	if (!app.vault.getAbstractFileByPath(target)) return true;
+function renameTargetFree(vault: Pick<Vault, 'getAbstractFileByPath'>, target: string, notify: Notify): boolean {
+	if (!vault.getAbstractFileByPath(target)) return true;
 	notify({ code: 'renameTargetExists', target });
 	return false;
 }
 
 /** The note file at a vault path, or null (a folder, or nothing). */
-export function noteFile(app: App, path: string): TFile | null {
-	const f = app.vault.getAbstractFileByPath(path);
+export function noteFile(vault: Pick<Vault, 'getAbstractFileByPath'>, path: string): TFile | null {
+	const f = vault.getAbstractFileByPath(path);
 	return f instanceof TFile ? f : null;
 }
 
 /** First free `<name>.md`, `<name> 2.md`, … */
-export function freeNotePath(app: App, path: string): string {
-	if (!app.vault.getAbstractFileByPath(path)) return path;
+export function freeNotePath(vault: Pick<Vault, 'getAbstractFileByPath'>, path: string): string {
+	if (!vault.getAbstractFileByPath(path)) return path;
 	const base = path.slice(0, -3);
 	let n = 2;
-	while (app.vault.getAbstractFileByPath(`${base} ${n}.md`)) n++;
+	while (vault.getAbstractFileByPath(`${base} ${n}.md`)) n++;
 	return `${base} ${n}.md`;
 }
 
@@ -50,21 +50,25 @@ export function parentOf(path: string): string {
 }
 
 /** Creates the folder when it is missing; one that appeared in the meantime is fine. */
-export async function ensureFolder(app: App, path: string): Promise<void> {
+export async function ensureFolder(vault: Pick<Vault, 'getAbstractFileByPath' | 'createFolder'>, path: string): Promise<void> {
 	const normalized = normalizePath(path);
 	if (!normalized || normalized === '/') return;
-	if (app.vault.getAbstractFileByPath(normalized)) return;
+	if (vault.getAbstractFileByPath(normalized)) return;
 	try {
-		await app.vault.createFolder(normalized);
+		await vault.createFolder(normalized);
 	} catch {
 		// folder may already exist
 	}
 }
 
 /** Moves the note at the path to the trash, when there is one. */
-export async function trashNote(app: App, path: string): Promise<void> {
-	const file = noteFile(app, path);
-	if (file) await app.fileManager.trashFile(file);
+export async function trashNote(
+	vault: Pick<Vault, 'getAbstractFileByPath'>,
+	fileManager: Pick<FileManager, 'trashFile'>,
+	path: string,
+): Promise<void> {
+	const file = noteFile(vault, path);
+	if (file) await fileManager.trashFile(file);
 }
 
 /** Sets the changed keys that the encoded entry has and deletes the ones it lacks. */
@@ -140,17 +144,23 @@ function followRename<S extends Slot>(
 
 /** Follows vault renames of notes that have a pending silent edit; `register` ties the handler to the plugin's lifetime. */
 export function registerRenameFollow<S extends Slot>(
-	app: App,
+	vault: Pick<Vault, 'on'>,
 	register: (ref: EventRef) => void,
 	held: HeldEntries<S>,
 	layout: () => VaultLayout,
 ): void {
-	register(app.vault.on('rename', (file, oldPath) => followRename(held, layout(), file, oldPath)));
+	register(vault.on('rename', (file, oldPath) => followRename(held, layout(), file, oldPath)));
 }
 
 /** Trashes the note of an id and forgets everything the manager holds for it. */
-export async function deleteEntryNote<S extends Slot>(app: App, layout: VaultLayout, held: HeldEntries<S>, id: string): Promise<void> {
-	await trashNote(app, layout.pathFromId(id));
+export async function deleteEntryNote<S extends Slot>(
+	vault: Pick<Vault, 'getAbstractFileByPath'>,
+	fileManager: Pick<FileManager, 'trashFile'>,
+	layout: VaultLayout,
+	held: HeldEntries<S>,
+	id: string,
+): Promise<void> {
+	await trashNote(vault, fileManager, layout.pathFromId(id));
 	held.index.removeLocal(id);
 	held.views.delete(id);
 	held.dirty.delete(id);
@@ -179,7 +189,8 @@ export interface EntryWriteHooks<T extends { id: string }> {
 export type WriteOutcome = 'created' | 'written' | 'unchanged' | 'unreadable';
 
 export interface NoteIo {
-	app: App;
+	vault: Pick<Vault, 'getAbstractFileByPath' | 'createFolder'>;
+	fileManager: Pick<FileManager, 'processFrontMatter' | 'renameFile'>;
 	layout: () => VaultLayout;
 	notify: Notify;
 }
@@ -190,13 +201,13 @@ export interface NoteIo {
  */
 async function moveNote<T extends { id: string }>(io: NoteIo, hooks: EntryWriteHooks<T>, file: TFile, src: T, entry: T): Promise<TFile> {
 	const target = hooks.movedPath(src, entry);
-	if (target === null || target === file.path || !renameTargetFree(io.app, target, io.notify)) return file;
-	await ensureFolder(io.app, parentOf(target));
-	await io.app.fileManager.renameFile(file, target);
+	if (target === null || target === file.path || !renameTargetFree(io.vault, target, io.notify)) return file;
+	await ensureFolder(io.vault, parentOf(target));
+	await io.fileManager.renameFile(file, target);
 	const to = io.layout().idFromPath(target);
 	hooks.moveId(entry.id, to);
 	entry.id = to;
-	return noteFile(io.app, io.layout().pathFromId(to)) ?? file;
+	return noteFile(io.vault, io.layout().pathFromId(to)) ?? file;
 }
 
 /**
@@ -206,7 +217,7 @@ async function moveNote<T extends { id: string }>(io: NoteIo, hooks: EntryWriteH
  * is created by the manager.
  */
 export async function writeEntry<T extends { id: string }>(io: NoteIo, hooks: EntryWriteHooks<T>, entry: T): Promise<WriteOutcome> {
-	const found = noteFile(io.app, io.layout().pathFromId(entry.id));
+	const found = noteFile(io.vault, io.layout().pathFromId(entry.id));
 	if (!found) {
 		await hooks.create(entry);
 		return 'created';
@@ -220,7 +231,7 @@ export async function writeEntry<T extends { id: string }>(io: NoteIo, hooks: En
 		hooks.unchanged(entry, src);
 		return 'unchanged';
 	}
-	const ok = await updateFrontMatter(io.app, file, io.notify, (raw) => {
+	const ok = await updateFrontMatter(io.fileManager, file, io.notify, (raw) => {
 		setChangedKeys(raw, changed, after);
 		// inside the callback, so the index is ahead of the write's `changed` event
 		hooks.afterWrite(entry, { ...raw });

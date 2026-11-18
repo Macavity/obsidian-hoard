@@ -34,12 +34,12 @@ function setup(f: Fixture) {
 		getNextUnwatchedEpisode: () => (f.nextEp === undefined ? 2 : f.nextEp),
 		markEpisodeWatched: (...a: unknown[]) => { marked.push(a); return Promise.resolve(); },
 	};
-	new WidgetRenderer({
-		registerMarkdownCodeBlockProcessor: ((lang: string, fn: Processor) => map.set(lang, fn)) as never,
-		register: () => {},
-		settings: fakeSettings({ types: [{ name: 'Anime', color: '#f00' }], statuses: [], coloredTypeBadges: true, colorTheme: 'default' }) as never,
-		titles: dm as never,
-	});
+	new WidgetRenderer(
+		fakeSettings({ types: [{ name: 'Anime', color: '#f00' }], statuses: [], coloredTypeBadges: true, colorTheme: 'default' }) as never,
+		dm as never,
+		((lang: string, fn: Processor) => map.set(lang, fn)) as never,
+		() => {},
+	);
 	return { map, marked };
 }
 

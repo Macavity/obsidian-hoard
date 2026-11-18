@@ -40,7 +40,7 @@ describe.each([
 		expect(src).not.toBeNull();
 		const types = kind === "fork" ? sources.fork!.typeNames : (sources.original!.data.settings.types ?? []).map((t) => t.name);
 		const ctx = importContext(f, new LocalStore(f.plugin), "Hoard", types);
-		const importer = createImporter({ app: f.app, local: new LocalStore(f.plugin), ctx: () => ctx, layout: () => ctx.layout, openFile: () => {} }, sources);
+		const importer = createImporter(f.app, new LocalStore(f.plugin), () => ctx, () => ctx.layout, () => {}, sources);
 		const report = await importer.run(kind, () => {});
 		expect(report.errors).toEqual([]);
 		const titles = [...f.files.keys()].filter((p) => ctx.layout.classify(p)?.kind === "title");

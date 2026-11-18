@@ -1,8 +1,8 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { ReadingDataManager } from '../src/modules/reading/services/ReadingDataManager';
-import { GameDataManager } from '../src/modules/games/services/GameDataManager';
+import type { ReadingDataManager } from '../src/modules/reading/services/ReadingDataManager';
+import type { GameDataManager } from '../src/modules/games/services/GameDataManager';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
-import { tick } from './helpers/common';
+import { tick, newReadingManager, newGameManager } from './helpers/common';
 import type { HoardTitle } from '../src/shared/domain/types';
 import { PosterService } from '../src/shared/api/PosterService';
 import { DEFAULT_SETTINGS } from '../src/shared/domain/types';
@@ -172,8 +172,8 @@ describe('DataManager on vault storage', () => {
 			'W/Games/Halo.md': '---\nName: Halo\nType: game\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',
 		});
 		const p = plugin as unknown as Record<string, unknown>;
-		p.readingDataManager = new ReadingDataManager({ ...base, upcoming: dm });
-		p.gameDataManager = new GameDataManager({ ...base, upcoming: dm });
+		p.readingDataManager = newReadingManager(base, dm);
+		p.gameDataManager = newGameManager(base, dm);
 		await (p.readingDataManager as ReadingDataManager).init();
 		await (p.gameDataManager as GameDataManager).init();
 		const entries = dm.getAirtimeEntries();
@@ -224,7 +224,7 @@ describe('DataManager on vault storage', () => {
 			'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: To be released\nRelease Date: 2099-01-01\nAirtime Recurrence: monthly\nAirtime Day: 5\n---\n',
 		});
 		const p = plugin as unknown as Record<string, unknown>;
-		p.readingDataManager = new ReadingDataManager({ ...base, upcoming: dm });
+		p.readingDataManager = newReadingManager(base, dm);
 		await (p.readingDataManager as ReadingDataManager).init();
 		const [entry] = dm.getAirtimeEntries();
 		expect(entry!.schedule.recurrence).toBe('monthly');

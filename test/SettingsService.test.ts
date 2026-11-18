@@ -6,7 +6,7 @@ function make(persist: () => Promise<void> = () => Promise.resolve()) {
 	const settings: HoardPluginSettings = structuredClone(DEFAULT_SETTINGS);
 	const persistSpy = vi.fn(persist);
 	const changed = vi.fn();
-	const svc = new SettingsService({ current: () => settings, persist: persistSpy, changed });
+	const svc = new SettingsService(() => settings, persistSpy, changed);
 	return { svc, persistSpy, changed };
 }
 

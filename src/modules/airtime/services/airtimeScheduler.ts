@@ -3,13 +3,6 @@ import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
 
-export interface AirtimeSchedulerDeps {
-	dataManager: Pick<DataManager, 'getAirtimeEntries' | 'getTitle' | 'refreshAiring'>;
-	readingDataManager: Pick<ReadingDataManager, 'getBook' | 'getManga'>;
-	gameDataManager: Pick<GameDataManager, 'getGame'>;
-	notify(name: string): void;
-}
-
 const pad = (n: number): string => String(n).padStart(2, '0');
 
 /**
@@ -23,32 +16,39 @@ const AIRTIME_CATCH_UP_MINUTES = 12 * 60;
  * minute (within AIRTIME_CATCH_UP_MINUTES). Never writes a note; recurring watch schedules get their
  * API airing pointer refreshed (forced on the notifying tick, otherwise throttled by refreshAiring).
  */
-export function runAirtimeScheduler(deps: AirtimeSchedulerDeps, notified: Set<string>, now = new Date()): void {
+export function runAirtimeScheduler(
+	dataManager: Pick<DataManager, 'getAirtimeEntries' | 'getTitle' | 'refreshAiring'>,
+	readingDataManager: Pick<ReadingDataManager, 'getBook' | 'getManga'>,
+	gameDataManager: Pick<GameDataManager, 'getGame'>,
+	notify: (name: string) => void,
+	notified: Set<string>,
+	now = new Date(),
+): void {
 	const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-	for (const entry of deps.dataManager.getAirtimeEntries()) {
+	for (const entry of dataManager.getAirtimeEntries()) {
 		// direct day check avoids the getAirtimeCountdown rollover bug
 		const due = isDueNow(entry.schedule.releaseTime, now) && isScheduledForToday(entry.schedule, now);
 		// deduplicate: only fire once per entry per day
 		const notifKey = `${entry.id}-${today}`;
 		const fire = due && !notified.has(notifKey);
 		const isWatch = entry.source !== 'reading' && entry.source !== 'game';
-		if (isWatch && entry.schedule.recurrence !== 'once') void deps.dataManager.refreshAiring(entry.titleId, fire);
+		if (isWatch && entry.schedule.recurrence !== 'once') void dataManager.refreshAiring(entry.titleId, fire);
 		if (!fire) continue;
 		notified.add(notifKey);
 
 		// resolve the entry's subject — a watch title, a reading item, or a game
 		let name: string | undefined;
 		if (entry.source === 'game') {
-			name = deps.gameDataManager.getGame(entry.titleId)?.title;
+			name = gameDataManager.getGame(entry.titleId)?.title;
 		} else if (entry.source === 'reading') {
 			name = (entry.readingKind ?? 'book') === 'book'
-				? deps.readingDataManager.getBook(entry.titleId)?.title
-				: deps.readingDataManager.getManga(entry.titleId)?.title;
+				? readingDataManager.getBook(entry.titleId)?.title
+				: readingDataManager.getManga(entry.titleId)?.title;
 		} else {
-			name = deps.dataManager.getTitle(entry.titleId)?.title;
+			name = dataManager.getTitle(entry.titleId)?.title;
 		}
-		if (name !== undefined) deps.notify(name);
+		if (name !== undefined) notify(name);
 	}
 }
 

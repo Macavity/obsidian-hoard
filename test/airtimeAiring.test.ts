@@ -91,10 +91,11 @@ describe('airtime scheduler', () => {
 		const before = new Map(f.files);
 		const notify = vi.fn();
 		const refresh = vi.spyOn(dm, 'refreshAiring');
-		const deps = { dataManager: dm, readingDataManager: { getBook: () => undefined, getManga: () => undefined }, gameDataManager: { getGame: () => undefined }, notify };
+		const reading = { getBook: () => undefined, getManga: () => undefined };
+		const games = { getGame: () => undefined };
 		const notified = new Set<string>();
-		runAirtimeScheduler(deps, notified, new Date(2026, 9, 19, 20, 15));
-		runAirtimeScheduler(deps, notified, new Date(2026, 9, 19, 20, 15, 30));
+		runAirtimeScheduler(dm, reading, games, notify, notified, new Date(2026, 9, 19, 20, 15));
+		runAirtimeScheduler(dm, reading, games, notify, notified, new Date(2026, 9, 19, 20, 15, 30));
 		await new Promise((r) => setTimeout(r, 0));
 		expect(notify).toHaveBeenCalledTimes(1);
 		expect(notify).toHaveBeenCalledWith('C');

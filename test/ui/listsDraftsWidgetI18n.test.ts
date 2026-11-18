@@ -19,12 +19,12 @@ describe('widget i18n', () => {
 		const g = globalThis as Record<string, unknown>;
 		g.activeDocument = { addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true };
 		const dm = { getAirtimeEntries: () => [], getTitles: () => [], getPinnedGroupId: () => null, getGroups: () => [] };
-		new WidgetRenderer({
-			registerMarkdownCodeBlockProcessor: ((lang: string, fn: (s: string, e: HTMLElement) => void) => map.set(lang, fn)) as never,
-			register: () => {},
-			settings: fakeSettings({ types: [], statuses: [], coloredTypeBadges: false }) as never,
-			titles: dm as never,
-		});
+		new WidgetRenderer(
+			fakeSettings({ types: [], statuses: [], coloredTypeBadges: false }) as never,
+			dm as never,
+			((lang: string, fn: (s: string, e: HTMLElement) => void) => map.set(lang, fn)) as never,
+			() => {},
+		);
 		return map;
 	}
 

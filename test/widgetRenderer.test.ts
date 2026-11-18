@@ -80,17 +80,17 @@ function mountRenderer(fx: Fixture = {}) {
 		getAirtimeEntries: () => (fx.releases ?? []).map((r) => ({ titleId: r.titleId, schedule: { recurrence: 'once', releaseDate: r.releaseDate } })),
 		markEpisodeWatched: vi.fn(async () => {}),
 	};
-	new WidgetRenderer({
-		settings: fakeSettings({
+	new WidgetRenderer(
+		fakeSettings({
 			colorTheme: fx.colorTheme ?? 'default',
 			coloredTypeBadges: true,
 			types: [{ name: 'Series', color: '#123456' }, { name: 'Movie', color: '#654321' }],
 			statuses: [{ name: 'Watching', color: '#00aa00' }],
 		}) as never,
-		registerMarkdownCodeBlockProcessor: ((lang: string, fn: Handler) => handlers.set(lang, fn)) as never,
-		register: () => {},
-		titles: dm as never,
-	});
+		dm as never,
+		((lang: string, fn: Handler) => handlers.set(lang, fn)) as never,
+		() => {},
+	);
 	const run = (lang: string, source: string): HTMLElement => {
 		const el = document.createElement('div');
 		document.body.appendChild(el);

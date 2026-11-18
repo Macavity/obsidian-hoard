@@ -1,5 +1,5 @@
-import { App, TAbstractFile, TFile, stringifyYaml } from 'obsidian';
-import type { EventRef } from 'obsidian';
+import { TAbstractFile, TFile, stringifyYaml } from 'obsidian';
+import type { EventRef, FileManager, Vault } from 'obsidian';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
 import { toEntryAirtime } from '../../../shared/domain/airtime';
@@ -30,14 +30,6 @@ import { omit, sameJson } from '../../../shared/domain/sharedHelpers';
 import { emitDataChanged } from '../../../shared/services/changeSignal';
 import { ChangeNotifier } from '../../../shared/services/changeListeners';
 
-export interface DataStores {
-	index: EntryIndex;
-	local: LocalStore;
-	shared: SharedConfigStore;
-	layout: () => VaultLayout;
-	notify: Notify;
-}
-
 /** Where DataManager hands titles that need a poster (the PosterService). */
 export interface PosterQueue {
 	enqueue(t: HoardTitle): Promise<unknown>;
@@ -48,17 +40,6 @@ export interface ReleaseDateTargets {
 	clearBookOrMangaReleaseDate(kind: 'book' | 'manga', id: string): Promise<void>;
 	clearGameReleaseDate(id: string): Promise<void>;
 }
-
-export type DataManagerDeps = DataStores & {
-	app: App;
-	settings: SettingsReader;
-	api: Pick<ApiService, 'fetchAiring' | 'fetchSeasons'>;
-	/** Resolved per use: the poster service is created after the manager. */
-	posters: () => PosterQueue | null;
-	/** Bound to the plugin, so the handlers are removed on unload. */
-	registerEvent: (ref: EventRef) => void;
-	releaseDates: ReleaseDateTargets;
-};
 
 const AIRTIME_KEYS: readonly string[] = Object.values(AIRTIME_PROPS);
 
@@ -92,13 +73,6 @@ const COUNTED_REMAINING: readonly string[] = ['Plan to watch', 'Watching'];
  * the LocalStore cache; writes go to the note via processFrontMatter and only touch what changed.
  */
 export class DataManager extends ChangeNotifier {
-	private deps: DataManagerDeps;
-	private app: App;
-	private index: EntryIndex;
-	private local: LocalStore;
-	private shared: SharedConfigStore;
-	private layout: () => VaultLayout;
-	private notify: Notify;
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from:
@@ -130,15 +104,23 @@ export class DataManager extends ChangeNotifier {
 		this.historyManager = hm;
 	}
 
-	constructor(deps: DataManagerDeps) {
+	constructor(
+		private readonly vault: Vault,
+		private readonly fileManager: FileManager,
+		private readonly index: EntryIndex,
+		private readonly local: LocalStore,
+		private readonly shared: SharedConfigStore,
+		private readonly layout: () => VaultLayout,
+		private readonly notify: Notify,
+		private readonly settings: SettingsReader,
+		private readonly api: Pick<ApiService, 'fetchAiring' | 'fetchSeasons'>,
+		/** Resolved per use: the poster service is created after the manager. */
+		private readonly posters: () => PosterQueue | null,
+		/** Bound to the plugin, so the handlers are removed on unload. */
+		private readonly registerEvent: (ref: EventRef) => void,
+		private readonly releaseDates: ReleaseDateTargets,
+	) {
 		super();
-		this.deps = deps;
-		this.notify = deps.notify;
-		this.app = deps.app;
-		this.index = deps.index;
-		this.local = deps.local;
-		this.shared = deps.shared;
-		this.layout = deps.layout;
 	}
 
 	/** After index.build(): reads note bodies and follows index/vault changes. */
@@ -150,10 +132,10 @@ export class DataManager extends ChangeNotifier {
 			this.queueMissingSeasons(changed);
 			this.notifyListeners();
 		});
-		const { vault } = this.app;
-		this.deps.registerEvent(vault.on('modify', (f) => void this.refreshNotes(f)));
-		this.deps.registerEvent(vault.on('create', (f) => void this.refreshNotes(f)));
-		this.deps.registerEvent(vault.on('rename', (f, oldPath) => this.onVaultRename(f, oldPath)));
+		const { vault } = this;
+		this.registerEvent(vault.on('modify', (f) => void this.refreshNotes(f)));
+		this.registerEvent(vault.on('create', (f) => void this.refreshNotes(f)));
+		this.registerEvent(vault.on('rename', (f, oldPath) => this.onVaultRename(f, oldPath)));
 		this.queueMissingPosters(this.getTitles());
 		this.queueMissingSeasons(this.getTitles());
 		this.notifyListeners();
@@ -164,7 +146,7 @@ export class DataManager extends ChangeNotifier {
 	 * to the poster queue, once per id and session.
 	 */
 	private queueMissingPosters(titles: HoardTitle[]): void {
-		const service = this.deps.posters();
+		const service = this.posters();
 		if (!service) return;
 		for (const t of titles) {
 			if (t.maybe || this.posterRequested.has(t.id)) continue;
@@ -208,7 +190,7 @@ export class DataManager extends ChangeNotifier {
 		try {
 			let outcome: LookupResult<Season[]> = FAILED;
 			try {
-				outcome = await this.apiQueue.enqueue(() => this.deps.api.fetchSeasons(t));
+				outcome = await this.apiQueue.enqueue(() => this.api.fetchSeasons(t));
 			} catch {
 				// stays pending until the deadline
 			}
@@ -989,7 +971,7 @@ export class DataManager extends ChangeNotifier {
 		if (e?.kind !== 'title' || this.airingInFlight.has(id) || !this.apiCheckDue(id, 'airing', force)) return;
 		this.airingInFlight.add(id);
 		try {
-			const outcome = await this.apiQueue.enqueue(() => this.deps.api.fetchAiring(e.entry));
+			const outcome = await this.apiQueue.enqueue(() => this.api.fetchAiring(e.entry));
 			if (this.index.get(id)?.kind !== 'title') return;
 			// a found airing is recorded as 'ok' (checkResultOf records nothing for found)
 			this.recordApiCheck(id, 'airing', checkResultOf(outcome) ?? 'ok', outcome.status === 'found' ? { airing: outcome.value } : {});
@@ -1051,8 +1033,8 @@ export class DataManager extends ChangeNotifier {
 
 	/** Reading / game release date removal through their managers (history, release-status rules). */
 	private async clearReleaseDate(e: AnyEntry): Promise<void> {
-		if (e.kind === 'book' || e.kind === 'manga') await this.deps.releaseDates.clearBookOrMangaReleaseDate(e.kind, e.entry.id);
-		else if (e.kind === 'game') await this.deps.releaseDates.clearGameReleaseDate(e.entry.id);
+		if (e.kind === 'book' || e.kind === 'manga') await this.releaseDates.clearBookOrMangaReleaseDate(e.kind, e.entry.id);
+		else if (e.kind === 'game') await this.releaseDates.clearGameReleaseDate(e.entry.id);
 	}
 
 	/**
@@ -1072,7 +1054,7 @@ export class DataManager extends ChangeNotifier {
 		const id = e.entry.id;
 		const kind = e.kind;
 		try {
-			await this.app.fileManager.processFrontMatter(file, (raw: Record<string, unknown>) => {
+			await this.fileManager.processFrontMatter(file, (raw: Record<string, unknown>) => {
 				for (const key of AIRTIME_KEYS) delete raw[key];
 				encodeAirtime(airtime, raw);
 				if (releaseDate) raw[COMMON_PROPS.releaseDate] = releaseDate;
@@ -1266,7 +1248,7 @@ export class DataManager extends ChangeNotifier {
 	private applyAutoCompleteRules(title: HoardTitle): void {
 		const effectiveTotal = this.getEffectiveTotal(title);
 		if (
-			this.deps.settings.get().autoCompleteOnLastEpisode &&
+			this.settings.get().autoCompleteOnLastEpisode &&
 			effectiveTotal > 0 &&
 			title.watchedEpisodes.length >= effectiveTotal
 		) {
@@ -1275,7 +1257,7 @@ export class DataManager extends ChangeNotifier {
 				// match updateTitle(): completed titles drop priority
 				title.priority = '';
 			}
-			if (this.deps.settings.get().setFinishDateAutomatically && !title.dateFinished) {
+			if (this.settings.get().setFinishDateAutomatically && !title.dateFinished) {
 				title.dateFinished = todayIso();
 			}
 		} else if (title.status === 'Completed' && title.watchedEpisodes.length < effectiveTotal) {
@@ -1356,16 +1338,16 @@ export class DataManager extends ChangeNotifier {
 	// Folder management
 
 	async ensureFolders(): Promise<void> {
-		if (!this.deps.settings.get().autoCreateFolders) return;
+		if (!this.settings.get().autoCreateFolders) return;
 		const layout = this.layout();
 		if (layout.root) await this.ensureFolder(layout.root);
-		for (const type of this.deps.settings.get().types) {
+		for (const type of this.settings.get().types) {
 			await this.ensureFolder(layout.folderFor('title', type.name));
 		}
 	}
 
 	async ensureFolder(path: string): Promise<void> {
-		await ensureFolder(this.app, path);
+		await ensureFolder(this.vault, path);
 	}
 
 	/** Path of the title's note: its id below the root. */
@@ -1382,7 +1364,7 @@ export class DataManager extends ChangeNotifier {
 	async readNotesFromFile(title: HoardTitle): Promise<string | null> {
 		const file = this.fileOf(title.id);
 		if (!file) return null;
-		const notes = extractNotes(await this.app.vault.read(file));
+		const notes = extractNotes(await this.vault.read(file));
 		this.notes.set(title.id, notes ?? '');
 		return notes;
 	}
@@ -1416,7 +1398,7 @@ export class DataManager extends ChangeNotifier {
 	// Note I/O
 
 	private fileOf(id: string): TFile | null {
-		return noteFile(this.app, this.layout().pathFromId(id));
+		return noteFile(this.vault, this.layout().pathFromId(id));
 	}
 
 	/**
@@ -1430,7 +1412,7 @@ export class DataManager extends ChangeNotifier {
 		fn: (fm: Record<string, unknown>) => void,
 		background = false,
 	): Promise<boolean> {
-		return updateFrontMatter(this.app, file, this.notify, (fm: Record<string, unknown>) => {
+		return updateFrontMatter(this.fileManager, file, this.notify, (fm: Record<string, unknown>) => {
 			fn(fm);
 			this.afterWrite(t, { ...fm }, background);
 		});
@@ -1443,7 +1425,7 @@ export class DataManager extends ChangeNotifier {
 		const fetchable = !!title.tmdbId || !!title.malId || !!title.anilistId
 			|| externalIdFromLink(title.externalLink) !== null;
 		if (!fetchable && title.seasons.length > 0) title.seasonsOverride = true;
-		const path = freeNotePath(this.app, layout.notePath('title', title.title, title.type));
+		const path = freeNotePath(this.vault, layout.notePath('title', title.title, title.type));
 		await this.ensureFolder(parentOf(path));
 		const fm = titleToProperties(title, this.getProgress(title), this.seasonsPending(title));
 		const notes = title.notes ?? '';
@@ -1452,7 +1434,7 @@ export class DataManager extends ChangeNotifier {
 		// index first, so the create event finds nothing new
 		this.afterWrite(title, fm);
 		try {
-			await this.app.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n\n${notes}\n`);
+			await this.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n\n${notes}\n`);
 		} catch (e) {
 			this.index.removeLocal(title.id);
 			this.views.delete(title.id);
@@ -1490,7 +1472,7 @@ export class DataManager extends ChangeNotifier {
 	 * not be read is left alone altogether.
 	 */
 	private async writeTitle(t: HoardTitle): Promise<void> {
-		const outcome = await writeEntry({ app: this.app, layout: this.layout, notify: this.notify }, this.writeHooks, t);
+		const outcome = await writeEntry({ vault: this.vault, fileManager: this.fileManager, layout: this.layout, notify: this.notify }, this.writeHooks, t);
 		if (outcome === 'created' || outcome === 'unreadable') return;
 		await this.writeNotesBody(t);
 	}
@@ -1507,7 +1489,7 @@ export class DataManager extends ChangeNotifier {
 		if (file && notes !== (getNotesBaseline(t) ?? current) && notes !== current) {
 			// set first: the modify event of this write then sees no change
 			this.notes.set(t.id, notes);
-			await this.app.vault.process(file, (content) => replaceNotesSection(content, notes));
+			await this.vault.process(file, (content) => replaceNotesSection(content, notes));
 		}
 		setNotesBaseline(t, this.notes.get(t.id) ?? '');
 	}
@@ -1559,7 +1541,7 @@ export class DataManager extends ChangeNotifier {
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		await trashNote(this.app, this.layout().pathFromId(id));
+		await trashNote(this.vault, this.fileManager, this.layout().pathFromId(id));
 		this.index.removeLocal(id);
 		this.local.deleteCache(id);
 		this.views.delete(id);
@@ -1603,7 +1585,7 @@ export class DataManager extends ChangeNotifier {
 	private async readNotes(id: string): Promise<void> {
 		const file = this.fileOf(id);
 		if (!file) return;
-		this.notes.set(id, extractNotes(await this.app.vault.cachedRead(file)) ?? '');
+		this.notes.set(id, extractNotes(await this.vault.cachedRead(file)) ?? '');
 	}
 
 	/** Follows `## Notes` edits made outside the plugin. */
@@ -1611,7 +1593,7 @@ export class DataManager extends ChangeNotifier {
 		if (!(file instanceof TFile)) return;
 		const c = this.layout().classify(file.path);
 		if (c?.kind !== 'title') return;
-		const next = extractNotes(await this.app.vault.read(file)) ?? '';
+		const next = extractNotes(await this.vault.read(file)) ?? '';
 		const prev = this.notes.get(c.id) ?? '';
 		if (next === prev) return;
 		this.notes.set(c.id, next);

@@ -106,19 +106,18 @@ export interface CoverGameData {
 	updateGame(updated: Game): Promise<void>;
 }
 
-export interface CoverRefreshDeps {
-	api: GameCoverApi & ReadingCoverApi & BookSearchApi;
+/** Runtime data of one refresh run. */
+export interface CoverRefreshOptions {
 	gamesApiSource: 'steam' | 'rawg' | 'igdb';
-	dataManager: CoverTitles;
-	posterService: Pick<PosterService, 'enqueue'>;
-	readingData: CoverReadingData;
-	gameData: CoverGameData;
-	queue: Pick<ApiCheckQueue, 'enqueue'>;
 	/** called once with the number of entries to process */
 	onStart?: (total: number) => void;
 }
 
 export interface CoverRefreshResult { total: number; updated: number; unchanged: number }
+
+function canRefreshBook(b: Book, canGoogle: boolean): boolean {
+	return !!(b.openLibraryId || (b.googleBooksId && canGoogle));
+}
 
 /**
  * Bulk refresh: every entry's note image is replaced by the API image, but only when the fetch returned
@@ -126,77 +125,82 @@ export interface CoverRefreshResult { total: number; updated: number; unchanged:
  * id (books, manga, games) are skipped. Reading and games fetches go through the shared throttled queue,
  * title posters through the poster queue.
  */
-export async function refreshAllCovers(d: CoverRefreshDeps): Promise<CoverRefreshResult> {
-	const titles = d.dataManager.getTitles();
-	const books = d.readingData.getBooks();
-	const manga = d.readingData.getMangaList();
-	const games = d.gameData.getGames();
-	const canBooks = d.api.hasGoogleBooksKey();
-	const result: CoverRefreshResult = { total: titles.length + books.length + manga.length + games.length, updated: 0, unchanged: 0 };
-	d.onStart?.(result.total);
+export class CoverRefresher {
+	constructor(
+		private readonly api: GameCoverApi & ReadingCoverApi & BookSearchApi,
+		private readonly titles: CoverTitles,
+		private readonly posterService: Pick<PosterService, 'enqueue'>,
+		private readonly readingData: CoverReadingData,
+		private readonly gameData: CoverGameData,
+		private readonly queue: Pick<ApiCheckQueue, 'enqueue'>,
+	) {}
 
-	const none = Promise.resolve(false);
-	const jobs: Array<Promise<boolean>> = [
-		...titles.map((t) => posterJob(d, t)),
-		...books.map((b) => (canRefreshBook(b, canBooks)
-			? queuedCoverJob(d, b.coverUrl, () => fetchReadingCoverById(d.api, 'book', b), (url) => storeBookCover(d, b.id, url))
-			: none)),
-		...manga.map((m) => (m.malId
-			? queuedCoverJob(d, m.coverUrl, () => fetchReadingCoverById(d.api, 'manga', m), (url) => storeMangaCover(d, m.id, url))
-			: none)),
-		...games.map((g) => queuedCoverJob(
-			d,
-			g.coverUrl,
-			async () => (await resolveGameCover(d.api, d.gamesApiSource, g, true)).url,
-			(url) => storeGameCover(d, g.id, url),
-		)),
-	];
-	for (const changed of await Promise.all(jobs)) {
-		if (changed) result.updated++;
-		else result.unchanged++;
+	async refreshAll(opts: CoverRefreshOptions): Promise<CoverRefreshResult> {
+		const titles = this.titles.getTitles();
+		const books = this.readingData.getBooks();
+		const manga = this.readingData.getMangaList();
+		const games = this.gameData.getGames();
+		const canBooks = this.api.hasGoogleBooksKey();
+		const result: CoverRefreshResult = { total: titles.length + books.length + manga.length + games.length, updated: 0, unchanged: 0 };
+		opts.onStart?.(result.total);
+
+		const none = Promise.resolve(false);
+		const jobs: Array<Promise<boolean>> = [
+			...titles.map((t) => this.posterJob(t)),
+			...books.map((b) => (canRefreshBook(b, canBooks)
+				? this.queuedCoverJob(b.coverUrl, () => fetchReadingCoverById(this.api, 'book', b), (url) => this.storeBookCover(b.id, url))
+				: none)),
+			...manga.map((m) => (m.malId
+				? this.queuedCoverJob(m.coverUrl, () => fetchReadingCoverById(this.api, 'manga', m), (url) => this.storeMangaCover(m.id, url))
+				: none)),
+			...games.map((g) => this.queuedCoverJob(
+				g.coverUrl,
+				async () => (await resolveGameCover(this.api, opts.gamesApiSource, g, true)).url,
+				(url) => this.storeGameCover(g.id, url),
+			)),
+		];
+		for (const changed of await Promise.all(jobs)) {
+			if (changed) result.updated++;
+			else result.unchanged++;
+		}
+		return result;
 	}
-	return result;
-}
 
-function canRefreshBook(b: Book, canGoogle: boolean): boolean {
-	return !!(b.openLibraryId || (b.googleBooksId && canGoogle));
-}
+	private posterJob(t: HoardTitle): Promise<boolean> {
+		return (async () => {
+			const url = await this.posterService.enqueue(t, true);
+			return !!url && url !== t.posterUrl;
+		})().catch(() => false);
+	}
 
-function posterJob(d: CoverRefreshDeps, t: HoardTitle): Promise<boolean> {
-	return (async () => {
-		const url = await d.posterService.enqueue(t, true);
-		return !!url && url !== t.posterUrl;
-	})().catch(() => false);
-}
+	/** Queued fetch → store; true only when a fetched URL differs from the previous one. Failures count as unchanged. */
+	private queuedCoverJob(
+		prev: string,
+		fetchUrl: () => Promise<string>,
+		store: (url: string) => Promise<boolean>,
+	): Promise<boolean> {
+		return this.queue.enqueue(async () => {
+			const url = await fetchUrl();
+			if (!url || !(await store(url))) return false;
+			return url !== prev;
+		}).catch(() => false);
+	}
 
-/** Queued fetch → store; true only when a fetched URL differs from the previous one. Failures count as unchanged. */
-function queuedCoverJob(
-	d: CoverRefreshDeps,
-	prev: string,
-	fetchUrl: () => Promise<string>,
-	store: (url: string) => Promise<boolean>,
-): Promise<boolean> {
-	return d.queue.enqueue(async () => {
-		const url = await fetchUrl();
-		if (!url || !(await store(url))) return false;
-		return url !== prev;
-	}).catch(() => false);
-}
+	private async storeBookCover(id: string, coverUrl: string): Promise<boolean> {
+		const fresh = this.readingData.getBook(id);
+		if (fresh) await this.readingData.updateBook({ ...fresh, coverUrl });
+		return !!fresh;
+	}
 
-async function storeBookCover(d: CoverRefreshDeps, id: string, coverUrl: string): Promise<boolean> {
-	const fresh = d.readingData.getBook(id);
-	if (fresh) await d.readingData.updateBook({ ...fresh, coverUrl });
-	return !!fresh;
-}
+	private async storeMangaCover(id: string, coverUrl: string): Promise<boolean> {
+		const fresh = this.readingData.getManga(id);
+		if (fresh) await this.readingData.updateManga({ ...fresh, coverUrl });
+		return !!fresh;
+	}
 
-async function storeMangaCover(d: CoverRefreshDeps, id: string, coverUrl: string): Promise<boolean> {
-	const fresh = d.readingData.getManga(id);
-	if (fresh) await d.readingData.updateManga({ ...fresh, coverUrl });
-	return !!fresh;
-}
-
-async function storeGameCover(d: CoverRefreshDeps, id: string, coverUrl: string): Promise<boolean> {
-	const fresh = d.gameData.getGame(id);
-	if (fresh) await d.gameData.updateGame({ ...fresh, coverUrl });
-	return !!fresh;
+	private async storeGameCover(id: string, coverUrl: string): Promise<boolean> {
+		const fresh = this.gameData.getGame(id);
+		if (fresh) await this.gameData.updateGame({ ...fresh, coverUrl });
+		return !!fresh;
+	}
 }

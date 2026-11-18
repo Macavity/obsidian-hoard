@@ -147,7 +147,7 @@ import { ReadingCsvChoiceModal } from '../../reading/ui/ReadingCsvChoiceModal';
 import { ReadingCsvModal, type ReadingCsvModalDeps } from '../../reading/ui/ReadingCsvModal';
 import { DefaultColumnsModal, type DefaultColumnsModalDeps } from '../../custom-lists/ui/CustomListsTab';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
-import type { refreshAllCovers } from '../../covers/services/coverRefresh';
+import type { CoverRefresher } from '../../covers/services/coverRefresh';
 import { apiErrorMessage, apiErrorShort } from '../../../shared/api/ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from '../../../shared/api/jikanBase';
 import type { PosterService } from '../../../shared/api/PosterService';
@@ -194,7 +194,7 @@ export interface HoardSettingsTabDeps extends CsvModalDeps, ReadingCsvModalDeps,
 	restoreBackup: typeof restoreBackup;
 	withoutSecrets: typeof withoutSecrets;
 	/** Bulk cover refresh of the covers module. */
-	refreshAllCovers: typeof refreshAllCovers;
+	coverRefresher: Pick<CoverRefresher, 'refreshAll'>;
 	/** A WatchLog source was imported earlier (the cleanup row is only offered then). */
 	watchLogImported: () => boolean;
 	openWatchLogImport: (startAt: 'found' | 'cleanup') => Promise<void>;
@@ -760,14 +760,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 	private async refetchAllPosters(): Promise<void> {
 		const d = this.deps;
-		const res = await this.deps.refreshAllCovers({
-			api: d.api,
+		const res = await d.coverRefresher.refreshAll({
 			gamesApiSource: effectiveGameSource(d.settings.get(), d.api),
-			dataManager: d.titles,
-			posterService: d.posters,
-			readingData: d.reading,
-			gameData: d.games,
-			queue: d.titles.apiQueue,
 			onStart: (n) => new Notice(t('settings.general.replaceImages.start', { count: n })),
 		});
 		new Notice(t('settings.general.replaceImages.done', { updated: res.updated, unchanged: res.unchanged }));

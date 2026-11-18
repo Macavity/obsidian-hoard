@@ -1,8 +1,7 @@
 import { TFile, getFrontMatterInfo, parseYaml, stringifyYaml } from 'obsidian';
-import type { App, EventRef } from 'obsidian';
+import type { EventRef, FileManager, Vault } from 'obsidian';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { DataStores } from '../../watchlist/services/DataManager';
 import type { Notify } from '../../../shared/storage/storageTypes';
 import type { EntryIndex } from '../../../shared/storage/EntryIndex';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
@@ -68,29 +67,12 @@ export interface ReadingUpcomingSync {
 	removeReadingAirtimeEntries(id: string): Promise<void>;
 }
 
-export type ReadingDataManagerDeps = DataStores & {
-	app: App;
-	settings: SettingsReader;
-	/** Bound to the plugin, so the handler is removed on unload. */
-	registerEvent: (ref: EventRef) => void;
-	upcoming: ReadingUpcomingSync;
-};
-
 /**
  * Books and manga, backed by one note each. Reads come from the EntryIndex (frontmatter); writes go
  * to the note via processFrontMatter and only touch keys whose encoded value changed. Reading
  * settings and table columns live in the shared config (Hoard.base).
  */
 export class ReadingDataManager extends ChangeNotifier {
-	private appSettings: SettingsReader;
-	private upcoming: ReadingUpcomingSync;
-	private app: App;
-	private registerEvent: (ref: EventRef) => void;
-	private index: EntryIndex;
-	private local: LocalStore;
-	private shared: SharedConfigStore;
-	private layout: () => VaultLayout;
-	private notify: Notify;
 	private historyManager: HistoryManager | null = null;
 
 	private settings: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
@@ -105,18 +87,21 @@ export class ReadingDataManager extends ChangeNotifier {
 	// what a rename re-keys and a delete forgets
 	private held: HeldEntries<{ src: ReadingItem; view: ReadingItem }>;
 
-	constructor(deps: ReadingDataManagerDeps) {
+	constructor(
+		private readonly vault: Vault,
+		private readonly fileManager: FileManager,
+		private readonly index: EntryIndex,
+		private readonly local: LocalStore,
+		private readonly shared: SharedConfigStore,
+		private readonly layout: () => VaultLayout,
+		private readonly notify: Notify,
+		private readonly appSettings: SettingsReader,
+		/** Bound to the plugin, so the handler is removed on unload. */
+		private readonly registerEvent: (ref: EventRef) => void,
+		private readonly upcoming: ReadingUpcomingSync,
+	) {
 		super();
-		this.held = { index: deps.index, views: this.views, dirty: this.dirty };
-		this.appSettings = deps.settings;
-		this.upcoming = deps.upcoming;
-		this.app = deps.app;
-		this.index = deps.index;
-		this.local = deps.local;
-		this.shared = deps.shared;
-		this.layout = deps.layout;
-		this.notify = deps.notify;
-		this.registerEvent = deps.registerEvent;
+		this.held = { index, views: this.views, dirty: this.dirty };
 	}
 
 	setHistoryManager(hm: HistoryManager): void {
@@ -126,7 +111,7 @@ export class ReadingDataManager extends ChangeNotifier {
 	/** After index.build() and shared.load(): follows index and shared-config changes. */
 	async init(): Promise<void> {
 		this.readShared();
-		registerRenameFollow(this.app, this.registerEvent, this.held, this.layout);
+		registerRenameFollow(this.vault, this.registerEvent, this.held, this.layout);
 		this.index.onChange((ids) => {
 			let touched = false;
 			for (const id of ids) {
@@ -263,7 +248,7 @@ export class ReadingDataManager extends ChangeNotifier {
 		const layout = this.layout();
 		for (const [kind, list] of [['book', books], ['manga', manga]] as const) {
 			for (const item of list as ReadingItem[]) {
-				if (this.app.vault.getAbstractFileByPath(layout.notePath(kind, item.title))) continue;
+				if (this.vault.getAbstractFileByPath(layout.notePath(kind, item.title))) continue;
 				await this.createNote(kind, { ...item });
 			}
 		}
@@ -498,7 +483,7 @@ export class ReadingDataManager extends ChangeNotifier {
 
 	private predictId(kind: ReadingKind, title: string): string {
 		const layout = this.layout();
-		return layout.idFromPath(freeNotePath(this.app, layout.notePath(kind, title)));
+		return layout.idFromPath(freeNotePath(this.vault, layout.notePath(kind, title)));
 	}
 
 	// Shared update/remove flows
@@ -638,7 +623,7 @@ export class ReadingDataManager extends ChangeNotifier {
 			if (!file || from === to || !(await this.fileHasKey(file, from))) continue;
 			let hit = false;
 			let conflict = false;
-			const ok = await updateFrontMatter(this.app, file, this.notify, (fm: Fm) => {
+			const ok = await updateFrontMatter(this.fileManager, file, this.notify, (fm: Fm) => {
 				if (!(from in fm)) return;
 				if (to in fm) {
 					console.warn(`[Hoard] ${file.path} already has "${to}"; "${from}" stays`);
@@ -659,7 +644,7 @@ export class ReadingDataManager extends ChangeNotifier {
 
 	/** True when the note's properties, read from the file, contain `key`; unreadable YAML counts when it names the key. */
 	private async fileHasKey(file: TFile, key: string): Promise<boolean> {
-		const info = getFrontMatterInfo(await this.app.vault.read(file));
+		const info = getFrontMatterInfo(await this.vault.read(file));
 		if (!info.exists) return false;
 		try {
 			const fm: unknown = parseYaml(info.frontmatter);
@@ -726,7 +711,7 @@ export class ReadingDataManager extends ChangeNotifier {
 	}
 
 	private fileOf(id: string): TFile | null {
-		return noteFile(this.app, this.layout().pathFromId(id));
+		return noteFile(this.vault, this.layout().pathFromId(id));
 	}
 
 	/** True when `item` was made from the stored state of its note (or nothing is stored yet). */
@@ -765,7 +750,7 @@ export class ReadingDataManager extends ChangeNotifier {
 		fn: (fm: Fm) => void,
 		background = false,
 	): Promise<boolean> {
-		return updateFrontMatter(this.app, file, this.notify, (fm: Fm) => {
+		return updateFrontMatter(this.fileManager, file, this.notify, (fm: Fm) => {
 			fn(fm);
 			this.afterWrite(kind, item, { ...fm }, background);
 		});
@@ -774,14 +759,14 @@ export class ReadingDataManager extends ChangeNotifier {
 	/** Creates the note for a new entry; the entry's id becomes the note path. */
 	private async createNote(kind: ReadingKind, item: ReadingItem): Promise<void> {
 		const layout = this.layout();
-		const path = freeNotePath(this.app, layout.notePath(kind, item.title));
-		await ensureFolder(this.app, parentOf(path));
+		const path = freeNotePath(this.vault, layout.notePath(kind, item.title));
+		await ensureFolder(this.vault, parentOf(path));
 		const fm = this.encode(kind, item);
 		item.id = layout.idFromPath(path);
 		// index first, so the create event finds nothing new
 		this.afterWrite(kind, item, fm);
 		try {
-			await this.app.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n\n\n## Quotes\n`);
+			await this.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n\n\n## Quotes\n`);
 		} catch (e) {
 			this.index.removeLocal(item.id);
 			this.views.delete(item.id);
@@ -808,11 +793,11 @@ export class ReadingDataManager extends ChangeNotifier {
 
 	/** Writes an entry to its note through the shared pipeline (`writeEntry`); creates the note when missing. */
 	private async writeItem(kind: ReadingKind, item: ReadingItem): Promise<void> {
-		await writeEntry({ app: this.app, layout: this.layout, notify: this.notify }, this.writeHooks(kind), item);
+		await writeEntry({ vault: this.vault, fileManager: this.fileManager, layout: this.layout, notify: this.notify }, this.writeHooks(kind), item);
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		await deleteEntryNote(this.app, this.layout(), this.held, id);
+		await deleteEntryNote(this.vault, this.fileManager, this.layout(), this.held, id);
 	}
 
 	/** Writes (creates or updates) the note file. Returns its path. */
@@ -854,7 +839,7 @@ export class ReadingDataManager extends ChangeNotifier {
 
 	async readReadingNote(_kind: ReadingKind, item: ReadingItem): Promise<string | null> {
 		const file = this.fileOf(item.id);
-		return file ? this.app.vault.read(file) : null;
+		return file ? this.vault.read(file) : null;
 	}
 
 	/** Appends a `> [!quote]` callout to the ## Quotes section, creating it if missing. */
@@ -876,7 +861,7 @@ export class ReadingDataManager extends ChangeNotifier {
 			.join('\n');
 		const callout = `> [!quote]${titlePart}\n${bodyLines}`;
 
-		await this.app.vault.process(file, (current) => {
+		await this.vault.process(file, (current) => {
 			const quotesMatch = current.match(/(^|\n)## Quotes[ \t]*\r?\n/);
 			if (quotesMatch && quotesMatch.index !== undefined) {
 				const insertAt = quotesMatch.index + quotesMatch[0].length;

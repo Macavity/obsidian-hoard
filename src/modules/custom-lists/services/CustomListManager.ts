@@ -1,4 +1,4 @@
-import { normalizePath, TFile, type App } from 'obsidian';
+import { normalizePath, TFile, type FileManager, type Vault } from 'obsidian';
 import type { CustomList, CustomListColumn, CustomListRow } from '../../../shared/domain/types';
 import { at } from '../../../shared/domain/read';
 import type { VaultLayout } from '../../../shared/storage/VaultLayout';
@@ -32,13 +32,6 @@ function replaceNotes(content: string, notes: string): string {
 		: content.slice(0, afterNotes) + notes + '\n';
 }
 
-export interface CustomListManagerDeps {
-	app: App;
-	layout: () => Pick<VaultLayout, 'customListsFolder'>;
-	/** A list file's data block is unreadable; the UI tells the user. */
-	onCorrupt: (name: string) => void;
-}
-
 export class CustomListManager {
 	/** Names of lists whose ## Data JSON is corrupt — never overwrite these. */
 	corruptLists: Set<string> = new Set();
@@ -57,7 +50,11 @@ export class CustomListManager {
 	private baselines = new WeakMap<CustomList, string>();
 
 	constructor(
-		private readonly deps: CustomListManagerDeps,
+		private readonly vault: Vault,
+		private readonly fileManager: Pick<FileManager, 'trashFile'>,
+		private readonly layout: () => Pick<VaultLayout, 'customListsFolder'>,
+		/** A list file's data block is unreadable; the UI tells the user. */
+		private readonly onCorrupt: (name: string) => void,
 		/** Called when a write was refused because the note changed elsewhere. */
 		private readonly onConflict: (list: CustomList) => void = () => {},
 	) {}
@@ -100,9 +97,9 @@ export class CustomListManager {
 
 	/** The note's list without reporting corruption: undefined without a file, null if it does not parse. */
 	async peek(name: string): Promise<CustomList | null | undefined> {
-		const file = this.deps.app.vault.getAbstractFileByPath(this.pathOf(name));
+		const file = this.vault.getAbstractFileByPath(this.pathOf(name));
 		if (!(file instanceof TFile)) return undefined;
-		return this.parse(name, await this.deps.app.vault.read(file), false);
+		return this.parse(name, await this.vault.read(file), false);
 	}
 
 	/**
@@ -111,7 +108,7 @@ export class CustomListManager {
 	 */
 	private async writeChecked(list: CustomList, file: TFile, transform: (data: string) => string): Promise<boolean> {
 		let written = false;
-		await this.deps.app.vault.process(file, (data) => {
+		await this.vault.process(file, (data) => {
 			const disk = this.parse(list.name, data, false);
 			if (!disk || this.stateKey(disk) !== this.baselines.get(list)) return data;
 			const next = transform(data);
@@ -125,19 +122,19 @@ export class CustomListManager {
 	}
 
 	get folderPath(): string {
-		return this.deps.layout().customListsFolder;
+		return this.layout().customListsFolder;
 	}
 
 	async ensureFolder(): Promise<void> {
 		const path = normalizePath(this.folderPath);
-		if (!this.deps.app.vault.getAbstractFileByPath(path)) {
-			try { await this.deps.app.vault.createFolder(path); } catch { /* ok */ }
+		if (!this.vault.getAbstractFileByPath(path)) {
+			try { await this.vault.createFolder(path); } catch { /* ok */ }
 		}
 	}
 
 	listNames(): string[] {
 		const dir = normalizePath(this.folderPath);
-		return this.deps.app.vault.getFiles()
+		return this.vault.getFiles()
 			.filter(f => {
 				const parentPath = f.parent?.path ?? '';
 				return parentPath === dir && f.extension === 'md';
@@ -148,10 +145,10 @@ export class CustomListManager {
 
 	async loadList(name: string): Promise<CustomList | null> {
 		const path = normalizePath(`${this.folderPath}/${name}.md`);
-		const file = this.deps.app.vault.getAbstractFileByPath(path);
+		const file = this.vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) return null;
 		try {
-			const list = this.parse(name, await this.deps.app.vault.read(file));
+			const list = this.parse(name, await this.vault.read(file));
 			if (list) {
 				this.corruptLists.delete(name);
 				this.baselines.set(list, this.stateKey(list));
@@ -213,7 +210,7 @@ export class CustomListManager {
 			} catch (e) {
 				if (!report) return null;
 				console.warn('[Hoard] Custom list JSON parse failed for', name, e);
-				this.deps.onCorrupt(name);
+				this.onCorrupt(name);
 				this.corruptLists.add(name);
 				return null;
 			}
@@ -235,7 +232,7 @@ export class CustomListManager {
 			}
 			await this.ensureFolder();
 			const path = this.pathOf(list.name);
-			const existing = this.deps.app.vault.getAbstractFileByPath(path);
+			const existing = this.vault.getAbstractFileByPath(path);
 			if (existing instanceof TFile) {
 				return this.writeChecked(list, existing, (data) => replaceDataBlock(data, this.dataJson(list)));
 			}
@@ -245,7 +242,7 @@ export class CustomListManager {
 				return false;
 			}
 			const content = this.serialize(list);
-			await this.deps.app.vault.create(path, content);
+			await this.vault.create(path, content);
 			const created = this.parse(list.name, content);
 			if (created) this.baselines.set(list, this.stateKey(created));
 			return true;
@@ -255,7 +252,7 @@ export class CustomListManager {
 	/** Saves only the ## Notes section, without touching ## Data JSON. */
 	async saveNotes(list: CustomList, notes: string): Promise<boolean> {
 		return this.saveSerialized(list.name, async () => {
-			const file = this.deps.app.vault.getAbstractFileByPath(this.pathOf(list.name));
+			const file = this.vault.getAbstractFileByPath(this.pathOf(list.name));
 			if (!(file instanceof TFile)) {
 				this.onConflict(list); // deleted or renamed elsewhere
 				return false;
@@ -273,18 +270,18 @@ export class CustomListManager {
 
 	async deleteList(name: string): Promise<void> {
 		const path = normalizePath(`${this.folderPath}/${name}.md`);
-		const file = this.deps.app.vault.getAbstractFileByPath(path);
+		const file = this.vault.getAbstractFileByPath(path);
 		if (file instanceof TFile) {
-			try { await this.deps.app.fileManager.trashFile(file); } catch { /* ok */ }
+			try { await this.fileManager.trashFile(file); } catch { /* ok */ }
 		}
 	}
 
 	async renameList(oldName: string, newName: string): Promise<void> {
 		const newPath = normalizePath(`${this.folderPath}/${newName}.md`);
 		const oldPath = normalizePath(`${this.folderPath}/${oldName}.md`);
-		const file = this.deps.app.vault.getAbstractFileByPath(oldPath);
+		const file = this.vault.getAbstractFileByPath(oldPath);
 		if (file instanceof TFile) {
-			try { await this.deps.app.vault.rename(file, newPath); } catch { /* ok */ }
+			try { await this.vault.rename(file, newPath); } catch { /* ok */ }
 		}
 	}
 

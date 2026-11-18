@@ -53,7 +53,7 @@ export async function setupCustomLists(lists: CustomList[], titles: Partial<Hoar
 		games: { getGames: () => [] },
 		openAdd,
 		listManager: (onConflict?: (list: CustomList) => void) =>
-			new CustomListManager({ app: f.app, layout: () => layout, onCorrupt: () => {} }, onConflict),
+			new CustomListManager(f.app.vault, f.app.fileManager, () => layout, () => {}, onConflict),
 	};
 	const container = document.createElement('div');
 	document.body.appendChild(container);

@@ -1,10 +1,10 @@
 import { TFile, stringifyYaml } from 'obsidian';
-import type { App, EventRef } from 'obsidian';
+import type { EventRef, FileManager, Vault } from 'obsidian';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { DataStores } from '../../watchlist/services/DataManager';
 import type { Notify } from '../../../shared/storage/storageTypes';
 import type { EntryIndex } from '../../../shared/storage/EntryIndex';
+import type { LocalStore } from '../../../shared/storage/LocalStore';
 import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
 import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
 import { ChangeNotifier } from '../../../shared/services/changeListeners';
@@ -40,14 +40,6 @@ export interface GameUpcomingSync {
 	removeGameAirtimeEntries(id: string): Promise<void>;
 }
 
-export type GameDataManagerDeps = DataStores & {
-	app: App;
-	settings: SettingsReader;
-	/** Bound to the plugin, so the handler is removed on unload. */
-	registerEvent: (ref: EventRef) => void;
-	upcoming: GameUpcomingSync;
-};
-
 /**
  * Games, backed by one note per game under `<Root>/Games`. Reads come from the EntryIndex; writes go
  * to the note via processFrontMatter and only touch keys whose encoded value changed. Settings live
@@ -58,15 +50,6 @@ export type GameDataManagerDeps = DataStores & {
  * auto "To be released" status.
  */
 export class GameDataManager extends ChangeNotifier {
-	private app: App;
-	private registerEvent: (ref: EventRef) => void;
-	private appSettings: SettingsReader;
-	private upcoming: GameUpcomingSync;
-	private index: EntryIndex;
-	private local: DataStores['local'];
-	private shared: SharedConfigStore;
-	private layout: () => VaultLayout;
-	private notify: Notify;
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from,
@@ -78,18 +61,21 @@ export class GameDataManager extends ChangeNotifier {
 	private held: HeldEntries<{ src: Game; base: Game; view: Game }>;
 	private settingsCache: GamesSettings | null = null;
 
-	constructor(deps: GameDataManagerDeps) {
+	constructor(
+		private readonly vault: Vault,
+		private readonly fileManager: FileManager,
+		private readonly index: EntryIndex,
+		private readonly local: LocalStore,
+		private readonly shared: SharedConfigStore,
+		private readonly layout: () => VaultLayout,
+		private readonly notify: Notify,
+		private readonly appSettings: SettingsReader,
+		/** Bound to the plugin, so the handler is removed on unload. */
+		private readonly registerEvent: (ref: EventRef) => void,
+		private readonly upcoming: GameUpcomingSync,
+	) {
 		super();
-		this.held = { index: deps.index, views: this.views, dirty: this.dirty };
-		this.notify = deps.notify;
-		this.app = deps.app;
-		this.appSettings = deps.settings;
-		this.upcoming = deps.upcoming;
-		this.index = deps.index;
-		this.local = deps.local;
-		this.shared = deps.shared;
-		this.layout = deps.layout;
-		this.registerEvent = deps.registerEvent;
+		this.held = { index, views: this.views, dirty: this.dirty };
 	}
 
 	setHistoryManager(hm: HistoryManager): void {
@@ -98,7 +84,7 @@ export class GameDataManager extends ChangeNotifier {
 
 	/** After index.build() and shared.load(): follows index and base changes, reconciles Upcoming. */
 	async init(): Promise<void> {
-		registerRenameFollow(this.app, this.registerEvent, this.held, this.layout);
+		registerRenameFollow(this.vault, this.registerEvent, this.held, this.layout);
 		this.index.onChange((ids) => {
 			let touched = false;
 			for (const id of ids) {
@@ -536,7 +522,7 @@ export class GameDataManager extends ChangeNotifier {
 	}
 
 	private fileOf(id: string): TFile | null {
-		return noteFile(this.app, this.layout().pathFromId(id));
+		return noteFile(this.vault, this.layout().pathFromId(id));
 	}
 
 	/** Frontmatter to store: the encoded game with the default status filled in. */
@@ -550,7 +536,7 @@ export class GameDataManager extends ChangeNotifier {
 	 * `background` marks an automatic fill (no user write).
 	 */
 	private async processFrontMatter(file: TFile, g: Game, fn: (fm: Record<string, unknown>) => void, background = false): Promise<boolean> {
-		return updateFrontMatter(this.app, file, this.notify, (fm: Record<string, unknown>) => {
+		return updateFrontMatter(this.fileManager, file, this.notify, (fm: Record<string, unknown>) => {
 			fn(fm);
 			this.afterWrite(g, { ...fm }, background);
 		});
@@ -583,14 +569,14 @@ export class GameDataManager extends ChangeNotifier {
 	private async createNote(game: Game): Promise<void> {
 		const layout = this.layout();
 		if (!game.status) game.status = this.getSettings().defaultStatus || 'Not started';
-		const path = freeNotePath(this.app, layout.notePath('game', game.title));
-		await ensureFolder(this.app, parentOf(path));
+		const path = freeNotePath(this.vault, layout.notePath('game', game.title));
+		await ensureFolder(this.vault, parentOf(path));
 		game.id = layout.idFromPath(path);
 		const fm = this.encode(game);
 		// index first, so the create event finds nothing new
 		this.afterWrite(game, fm);
 		try {
-			await this.app.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n`);
+			await this.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n`);
 		} catch (e) {
 			this.index.removeLocal(game.id);
 			this.views.delete(game.id);
@@ -619,11 +605,11 @@ export class GameDataManager extends ChangeNotifier {
 
 	/** Writes a game to its note through the shared pipeline (`writeEntry`); creates the note when missing. */
 	private async writeGame(g: Game): Promise<void> {
-		await writeEntry({ app: this.app, layout: this.layout, notify: this.notify }, this.writeHooks, g);
+		await writeEntry({ vault: this.vault, fileManager: this.fileManager, layout: this.layout, notify: this.notify }, this.writeHooks, g);
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		await deleteEntryNote(this.app, this.layout(), this.held, id);
+		await deleteEntryNote(this.vault, this.fileManager, this.layout(), this.held, id);
 	}
 
 	async ensureGameNote(game: Game): Promise<string> {
@@ -633,7 +619,7 @@ export class GameDataManager extends ChangeNotifier {
 
 	async readGameNote(game: Game): Promise<string | null> {
 		const file = this.fileOf(game.id);
-		return file ? this.app.vault.read(file) : null;
+		return file ? this.vault.read(file) : null;
 	}
 
 	/** Reads the `## Notes` body back from the game's note; null when the file or section is absent. */
@@ -647,6 +633,6 @@ export class GameDataManager extends ChangeNotifier {
 		await this.ensureGameNote(game);
 		const file = this.fileOf(game.id);
 		if (!file) return;
-		await this.app.vault.process(file, (content) => replaceNotesSection(content, notesBody));
+		await this.vault.process(file, (content) => replaceNotesSection(content, notesBody));
 	}
 }

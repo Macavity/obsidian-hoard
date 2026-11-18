@@ -40,7 +40,7 @@ function settings() {
 /** Builds the tab on fake deps; `over` replaces or adds deps (titles, reading, api, ...). */
 /** The real service over the fake settings, so a change reaches the main window like in the plugin. */
 const emitting = (live: ReturnType<typeof settings>) =>
-	new SettingsService({ current: () => live, persist: () => Promise.resolve(), changed: emitDataChanged });
+	new SettingsService(() => live, () => Promise.resolve(), emitDataChanged);
 
 function makeTab(over: Record<string, unknown> = {}, app: unknown = {}) {
 	const live = settings();

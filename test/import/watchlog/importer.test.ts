@@ -13,7 +13,7 @@ async function make() {
 	const s = await setupFork(FORK);
 	const openFile = vi.fn();
 	const sources = await detectWatchLogSources(s.f.app);
-	const importer = createImporter({ app: s.f.app, local: s.local, ctx: () => s.ctx, layout: () => s.ctx.layout, openFile }, sources);
+	const importer = createImporter(s.f.app, s.local, () => s.ctx, () => s.ctx.layout, openFile, sources);
 	return { s, importer, openFile };
 }
 

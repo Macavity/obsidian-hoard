@@ -1,19 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DataManager } from '../src/modules/watchlist/services/DataManager';
 import HoardPlugin from '../src/app/main';
 import { setupDataManager } from './helpers/setupDataManager';
+import { newDataManager } from './helpers/common';
 
 describe('DataManager registrations', () => {
 	it('registers the vault rename handler through the injected registerEvent', async () => {
 		const registered: unknown[] = [];
 		const { f, base } = await setupDataManager({});
-		const spy = new DataManager({
-			...base,
-			api: { fetchAiring: () => Promise.resolve({ status: 'nokey' }), fetchSeasons: () => Promise.resolve({ status: 'nokey' }) },
-			posters: () => null,
-			registerEvent: (ref) => { registered.push(ref); },
-			releaseDates: { clearBookOrMangaReleaseDate: () => Promise.resolve(), clearGameReleaseDate: () => Promise.resolve() },
-		});
+		const spy = newDataManager(
+			{ ...base, registerEvent: (ref) => { registered.push(ref); } },
+			{ fetchAiring: () => Promise.resolve({ status: 'nokey' }), fetchSeasons: () => Promise.resolve({ status: 'nokey' }) },
+			() => null,
+			{ clearBookOrMangaReleaseDate: () => Promise.resolve(), clearGameReleaseDate: () => Promise.resolve() },
+		);
 		vi.spyOn(f.app.vault, 'on').mockImplementation(((name: string) => ({ name })) as never);
 		await spy.init();
 		expect(registered).toEqual([{ name: 'modify' }, { name: 'create' }, { name: 'rename' }]);

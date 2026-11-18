@@ -1,5 +1,5 @@
 import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, getLanguage, parseYaml, setIcon, stringifyYaml } from 'obsidian';
-import { refreshAllCovers, resolveGameCover, fetchReadingCoverById, firstBookCover, searchBooks } from '../modules/covers/services/coverRefresh';
+import { CoverRefresher, resolveGameCover, fetchReadingCoverById, firstBookCover, searchBooks } from '../modules/covers/services/coverRefresh';
 import { CustomListManager } from '../modules/custom-lists/services/CustomListManager';
 import { setLocale, t } from '../shared/i18n';
 import { statusLabel, typeLabel } from '../shared/i18n/labels';
@@ -49,11 +49,11 @@ export default class HoardPlugin extends Plugin {
 	// a copy: lists edited in place before the first load must not change the defaults
 	private state: HoardPluginSettings = structuredClone(DEFAULT_SETTINGS);
 	/** The single settings access for everything else; `state` is only the plugin's own copy. */
-	private readonly settingsService = new SettingsService({
-		current: () => this.state,
-		persist: () => this.persistAll(),
-		changed: emitDataChanged,
-	});
+	private readonly settingsService = new SettingsService(
+		() => this.state,
+		() => this.persistAll(),
+		emitDataChanged,
+	);
 	private indexReady = false;
 	private wizardOpen = false;
 	private typeNamesKey: string | null = null;
@@ -73,54 +73,57 @@ export default class HoardPlugin extends Plugin {
 	);
 	private index = new EntryIndex(this.app, () => this.layout, this.local, (ref) => this.registerEvent(ref));
 	// the managers reach each other through lambdas, so the construction order does not matter
-	private dataManager: DataManager = new DataManager({
-		index: this.index,
-		local: this.local,
-		shared: this.shared,
-		layout: () => this.layout,
-		notify: (n) => this.notifyManager(n),
-		app: this.app,
-		settings: this.settingsService,
+	private dataManager: DataManager = new DataManager(
+		this.app.vault,
+		this.app.fileManager,
+		this.index,
+		this.local,
+		this.shared,
+		() => this.layout,
+		(n) => this.notifyManager(n),
+		this.settingsService,
 		// apiService and posterService are replaced / created in onload
-		api: {
+		{
 			fetchAiring: (e) => this.apiService.fetchAiring(e),
 			fetchSeasons: (t) => this.apiService.fetchSeasons(t),
 		},
-		posters: () => this.posterService ?? null,
-		registerEvent: (ref) => this.registerEvent(ref),
-		releaseDates: {
+		() => this.posterService ?? null,
+		(ref) => this.registerEvent(ref),
+		{
 			clearBookOrMangaReleaseDate: (kind, id) => this.readingDataManager.clearBookOrMangaReleaseDate(kind, id),
 			clearGameReleaseDate: (id) => this.gameDataManager.clearGameReleaseDate(id),
 		},
-	});
-	private readingDataManager: ReadingDataManager = new ReadingDataManager({
-		index: this.index,
-		local: this.local,
-		shared: this.shared,
-		layout: () => this.layout,
-		notify: (n) => this.notifyManager(n),
-		app: this.app,
-		settings: this.settingsService,
-		registerEvent: (ref) => this.registerEvent(ref),
-		upcoming: {
+	);
+	private readingDataManager: ReadingDataManager = new ReadingDataManager(
+		this.app.vault,
+		this.app.fileManager,
+		this.index,
+		this.local,
+		this.shared,
+		() => this.layout,
+		(n) => this.notifyManager(n),
+		this.settingsService,
+		(ref) => this.registerEvent(ref),
+		{
 			autoAddReadingToUpcoming: (item, kind) => this.dataManager.autoAddReadingToUpcoming(item, kind),
 			removeReadingAirtimeEntries: (id) => this.dataManager.removeReadingAirtimeEntries(id),
 		},
-	});
-	private gameDataManager: GameDataManager = new GameDataManager({
-		index: this.index,
-		local: this.local,
-		shared: this.shared,
-		layout: () => this.layout,
-		notify: (n) => this.notifyManager(n),
-		app: this.app,
-		settings: this.settingsService,
-		registerEvent: (ref) => this.registerEvent(ref),
-		upcoming: {
+	);
+	private gameDataManager: GameDataManager = new GameDataManager(
+		this.app.vault,
+		this.app.fileManager,
+		this.index,
+		this.local,
+		this.shared,
+		() => this.layout,
+		(n) => this.notifyManager(n),
+		this.settingsService,
+		(ref) => this.registerEvent(ref),
+		{
 			autoAddGameToUpcoming: (g) => this.dataManager.autoAddGameToUpcoming(g),
 			removeGameAirtimeEntries: (id) => this.dataManager.removeGameAirtimeEntries(id),
 		},
-	});
+	);
 	private apiService: ApiService = new ApiService('', '');
 	/** TMDB/OMDb key snapshot of the last settings save; null before onload set it */
 	private apiKeys: string | null = null;
@@ -130,6 +133,7 @@ export default class HoardPlugin extends Plugin {
 		(ref) => this.registerEvent(ref),
 	));
 	private posterService!: PosterService;
+	private coverRefresher!: CoverRefresher;
 	private widgetRenderer?: WidgetRenderer;
 
 	// runtime import progress state (not persisted)
@@ -180,6 +184,14 @@ export default class HoardPlugin extends Plugin {
 			() => this.settingsService.get(),
 			() => this.apiService,
 		);
+		this.coverRefresher = new CoverRefresher(
+			this.apiService,
+			this.dataManager,
+			this.posterService,
+			this.readingDataManager,
+			this.gameDataManager,
+			this.dataManager.apiQueue,
+		);
 
 		this.startAirtimeScheduler();
 		// notes are read once the vault and metadata cache are ready
@@ -189,12 +201,12 @@ export default class HoardPlugin extends Plugin {
 			return new HoardView(leaf, this.hoardViewDeps());
 		});
 
-		this.widgetRenderer = new WidgetRenderer({
-			settings: this.settingsService,
-			titles: this.dataManager,
-			registerMarkdownCodeBlockProcessor: (language, handler) => this.registerMarkdownCodeBlockProcessor(language, handler),
-			register: (cleanup) => this.register(cleanup),
-		});
+		this.widgetRenderer = new WidgetRenderer(
+			this.settingsService,
+			this.dataManager,
+			(language, handler) => this.registerMarkdownCodeBlockProcessor(language, handler),
+			(cleanup) => this.register(cleanup),
+		);
 
 		this.addRibbonIcon('tv', t('app.ribbon'), () => {
 			void this.activateView();
@@ -273,11 +285,13 @@ export default class HoardPlugin extends Plugin {
 
 	/** Vault I/O of the custom lists; a corrupt list file is reported with a notice. */
 	private listManager = (onConflict?: (list: CustomList) => void): CustomListManager =>
-		new CustomListManager({
-			app: this.app,
-			layout: () => this.getLayout(),
-			onCorrupt: (name) => new Notice(t('lists.corrupt', { name })),
-		}, onConflict);
+		new CustomListManager(
+			this.app.vault,
+			this.app.fileManager,
+			() => this.getLayout(),
+			(name) => new Notice(t('lists.corrupt', { name })),
+			onConflict,
+		);
 
 	/** What the settings pane and the modals it opens read and change. */
 	private settingsTabDeps(): HoardSettingsTabDeps {
@@ -296,7 +310,7 @@ export default class HoardPlugin extends Plugin {
 			parseBackup,
 			restoreBackup,
 			withoutSecrets,
-			refreshAllCovers,
+			coverRefresher: this.coverRefresher,
 			watchLogImported: () => (['original', 'fork'] as const).some((k) => getDecision(this.local, k) === 'imported'),
 			openWatchLogImport: (startAt) => this.openWatchLogImport(startAt),
 			reloadSettings: () => this.loadSettings(),
@@ -433,16 +447,17 @@ export default class HoardPlugin extends Plugin {
 	private async openWizard(sources: WatchLogSources, startAt?: 'found' | 'cleanup'): Promise<void> {
 		const kinds: WatchLogSourceKind[] = ['original', 'fork'];
 		const imported = startAt === 'cleanup' ? kinds.filter((k) => getDecision(this.local, k) === 'imported') : undefined;
-		const importer = createImporter({
-			app: this.app,
-			local: this.local,
-			ctx: () => this.importContext(),
-			layout: () => this.layout,
-			openFile: (path) => {
+		const importer = createImporter(
+			this.app,
+			this.local,
+			() => this.importContext(),
+			() => this.layout,
+			(path) => {
 				const file = this.app.vault.getFileByPath(path);
 				if (file) void this.app.workspace.getLeaf('tab').openFile(file);
 			},
-		}, sources);
+			sources,
+		);
 		this.wizardOpen = true;
 		try {
 			const modal = new WatchLogOnboardingModal(this.app, importer, { startAt, imported });
@@ -564,12 +579,13 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	private checkAirtimeNotifications(): void {
-		runAirtimeScheduler({
-			dataManager: this.dataManager,
-			readingDataManager: this.readingDataManager,
-			gameDataManager: this.gameDataManager,
-			notify: (name) => new Notice(name, 8000),
-		}, this.notifiedEntries);
+		runAirtimeScheduler(
+			this.dataManager,
+			this.readingDataManager,
+			this.gameDataManager,
+			(name) => new Notice(name, 8000),
+			this.notifiedEntries,
+		);
 
 		// the due count is time-based, so refresh the status bar on every tick
 		this.updateStatusBar();

@@ -1,6 +1,5 @@
 // FakeApp + storage stores + ReadingDataManager wired like main.ts (root 'W', base file present).
-import { createStores } from './common';
-import { ReadingDataManager } from '../../src/modules/reading/services/ReadingDataManager';
+import { createStores, newReadingManager } from './common';
 import type { Book, Manga } from '../../src/shared/domain/types';
 
 /** Reading without an Upcoming tracker behind it. */
@@ -8,7 +7,7 @@ const noUpcoming = { autoAddReadingToUpcoming: () => Promise.resolve(), removeRe
 
 export async function setupReadingDataManager(files: Record<string, string>) {
 	const { f, local, shared, index, base, notices } = await createStores(files, { createBase: true });
-	const rdm = new ReadingDataManager({ ...base, upcoming: noUpcoming });
+	const rdm = newReadingManager(base, noUpcoming);
 	await rdm.init();
 	return { rdm, f, local, index, shared, notices };
 }

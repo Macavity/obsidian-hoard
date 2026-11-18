@@ -48,17 +48,9 @@ export function findNextRelease(
 
 type WidgetLanguage = 'hoard' | 'hoard-todo' | 'hoard-stat' | 'hoard-upcoming' | 'hoard-now' | 'hoard-now-next';
 
-/** What the widgets read; Obsidian's registration hooks arrive as bound functions (K4). */
-export interface WidgetRendererDeps {
-	settings: SettingsReader;
-	titles: Pick<DataManager,
-		'getTitle' | 'getTitles' | 'getProgress' | 'getNextUnwatchedEpisode' | 'getEffectiveTotal' | 'getTotalTimeWatched'
-		| 'getTotalTimeRemaining' | 'getCompletedCount' | 'getPinnedGroupId' | 'getGroups' | 'getAirtimeEntries' | 'markEpisodeWatched'>;
-	/** Bound to the plugin, so the processors go away on unload. */
-	registerMarkdownCodeBlockProcessor: (language: string, handler: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void) => unknown;
-	/** Bound to the plugin: the callback runs on unload. */
-	register: (cleanup: () => void) => void;
-}
+export type WidgetTitles = Pick<DataManager,
+	'getTitle' | 'getTitles' | 'getProgress' | 'getNextUnwatchedEpisode' | 'getEffectiveTotal' | 'getTotalTimeWatched'
+	| 'getTotalTimeRemaining' | 'getCompletedCount' | 'getPinnedGroupId' | 'getGroups' | 'getAirtimeEntries' | 'markEpisodeWatched'>;
 
 /**
  * Renders the `hoard-*` code-block widgets inside notes and keeps them in step with the data.
@@ -71,8 +63,14 @@ export class WidgetRenderer {
 	/** Generic re-render hooks for non-todo widgets (stats, upcoming, now-watching, now-next). */
 	private widgetRerender = new Map<HTMLElement, () => void>();
 
-	constructor(private deps: WidgetRendererDeps) {
-
+	constructor(
+		private readonly settings: SettingsReader,
+		private readonly titles: WidgetTitles,
+		/** Bound to the plugin, so the processors go away on unload. */
+		registerMarkdownCodeBlockProcessor: (language: string, handler: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void) => unknown,
+		/** Bound to the plugin: the callback runs on unload. */
+		register: (cleanup: () => void) => void,
+	) {
 		const handlers: Record<WidgetLanguage, (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void> = {
 			'hoard': (source, el, ctx) => this.process(source, el, ctx),
 			'hoard-todo': (source, el) => this.processWlTodo(source, el),
@@ -82,7 +80,7 @@ export class WidgetRenderer {
 			'hoard-now-next': (source, el) => this.processWlNowNext(source, el),
 		};
 		for (const [language, handler] of Object.entries(handlers) as [WidgetLanguage, typeof handlers[WidgetLanguage]][]) {
-			this.deps.registerMarkdownCodeBlockProcessor(language, (source, el, ctx) => {
+			registerMarkdownCodeBlockProcessor(language, (source, el, ctx) => {
 				this.applyColorTheme(el);
 				handler(source, el, ctx);
 			});
@@ -90,12 +88,12 @@ export class WidgetRenderer {
 
 		// re-render all active widgets on data change (list → widget sync)
 		// the returned remover cleans the listener up on plugin unload
-		deps.register(onDataChanged(() => this.onDataChanged()));
+		register(onDataChanged(() => this.onDataChanged()));
 	}
 
 	/** Theme vars are keyed off data-theme (theme.css); widgets live in notes, outside the themed view. */
 	private applyColorTheme(el: HTMLElement): void {
-		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
+		const colorTheme = this.settings.get().colorTheme ?? 'default';
 		if (colorTheme !== 'default') el.setAttribute('data-theme', colorTheme);
 	}
 
@@ -108,7 +106,7 @@ export class WidgetRenderer {
 				stale.push(el);
 				continue;
 			}
-			const title = this.deps.titles.getTitle(titleId);
+			const title = this.titles.getTitle(titleId);
 			if (!title) {
 				stale.push(el);
 				continue;
@@ -156,7 +154,7 @@ export class WidgetRenderer {
 			return;
 		}
 
-		const title = this.deps.titles.getTitle(id);
+		const title = this.titles.getTitle(id);
 		if (!title) {
 			el.createDiv({
 				cls: 'hoard-widget__error',
@@ -198,16 +196,16 @@ export class WidgetRenderer {
 
 		this.sep(mainRow);
 
-		this.renderBadge(mainRow, title.type, this.deps.settings.get().types, typeLabel(title.type));
+		this.renderBadge(mainRow, title.type, this.settings.get().types, typeLabel(title.type));
 
 		this.sep(mainRow);
 
 		// status badge (respects coloredTypeBadges)
-		this.renderBadge(mainRow, title.status, this.deps.settings.get().statuses, statusLabel(title.status));
+		this.renderBadge(mainRow, title.status, this.settings.get().statuses, statusLabel(title.status));
 
 		this.sep(mainRow);
 
-		const progress = this.deps.titles.getProgress(title);
+		const progress = this.titles.getProgress(title);
 		const barWrap = mainRow.createDiv({ cls: 'hoard-widget__bar-wrap' });
 		barWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({ '--hoard-progress-width': `${progress}%` });
 
@@ -226,7 +224,7 @@ export class WidgetRenderer {
 		// checkbox 2: "Next up" — writes to Hoard data
 		const isMovie = title.type === 'Movie';
 		if (!isMovie) {
-			const nextEp = this.deps.titles.getNextUnwatchedEpisode(title);
+			const nextEp = this.titles.getNextUnwatchedEpisode(title);
 			const nextRow = el.createDiv({ cls: 'hoard-widget__next-row' });
 
 			if (nextEp !== null) {
@@ -274,16 +272,16 @@ export class WidgetRenderer {
 
 		this.sep(row);
 
-		this.renderBadge(row, title.type, this.deps.settings.get().types, typeLabel(title.type));
+		this.renderBadge(row, title.type, this.settings.get().types, typeLabel(title.type));
 
 		this.sep(row);
 
 		// status badge (respects coloredTypeBadges)
-		this.renderBadge(row, title.status, this.deps.settings.get().statuses, statusLabel(title.status));
+		this.renderBadge(row, title.status, this.settings.get().statuses, statusLabel(title.status));
 
 		this.sep(row);
 
-		const progress = this.deps.titles.getProgress(title);
+		const progress = this.titles.getProgress(title);
 		row.createSpan({ cls: 'hoard-widget__percent', text: `${progress}%` });
 
 		this.sep(row);
@@ -296,7 +294,7 @@ export class WidgetRenderer {
 				episode: 1, checked: watched, tooltip: t('widget.markMovie'), follow: true,
 			}, (t) => this.renderWidgetMinimal(el, t));
 		} else {
-			const nextEp = this.deps.titles.getNextUnwatchedEpisode(title);
+			const nextEp = this.titles.getNextUnwatchedEpisode(title);
 			if (nextEp !== null) {
 				this.renderEpisodeCheckbox(row, title, {
 					episode: nextEp, checked: false, tooltip: t('widget.markEpisode', { episode: nextEp }), follow: false,
@@ -316,12 +314,12 @@ export class WidgetRenderer {
 	/** Type / status badge: coloured from the tag definition when coloured badges are on. */
 	private renderBadge(host: HTMLElement, text: string, tags: readonly TagDefinition[], display: string = text): void {
 		const def = this.getTagDef(text, tags);
-		const colored = this.deps.settings.get().coloredTypeBadges;
+		const colored = this.settings.get().coloredTypeBadges;
 		const badge = host.createSpan({
 			cls: colored ? 'hoard-badge hoard-badge--sm' : 'hoard-badge__plain',
 			text: display,
 		});
-		if (colored && def) badge.setCssProps({ '--hoard-badge-color': getThemedColor(text, def.color, this.deps.settings.get().colorTheme) });
+		if (colored && def) badge.setCssProps({ '--hoard-badge-color': getThemedColor(text, def.color, this.settings.get().colorTheme) });
 	}
 
 	/**
@@ -341,8 +339,8 @@ export class WidgetRenderer {
 		cb.checked = spec.checked;
 		cb.title = spec.tooltip;
 		cb.addEventListener('change', () => {
-			void this.deps.titles.markEpisodeWatched(title.id, spec.episode, spec.follow ? cb.checked : true).then(() => {
-				const updated = this.deps.titles.getTitle(title.id);
+			void this.titles.markEpisodeWatched(title.id, spec.episode, spec.follow ? cb.checked : true).then(() => {
+				const updated = this.titles.getTitle(title.id);
 				if (updated) rerender(updated);
 			});
 		});
@@ -350,27 +348,27 @@ export class WidgetRenderer {
 
 	/** Soonest future one-off release among the airtime entries. */
 	private nextRelease(): NextRelease | null {
-		return findNextRelease(this.deps.titles.getAirtimeEntries(), this.deps.titles.getTitles(), Date.now());
+		return findNextRelease(this.titles.getAirtimeEntries(), this.titles.getTitles(), Date.now());
 	}
 
 	private getPinned(): { pinnedTitle: HoardTitle | null; pinnedGroup: HoardGroup | null } {
-		const pinnedTitle = this.deps.titles.getTitles().find((t) => t.pinned) ?? null;
-		const pinnedGroupId = this.deps.titles.getPinnedGroupId();
+		const pinnedTitle = this.titles.getTitles().find((t) => t.pinned) ?? null;
+		const pinnedGroupId = this.titles.getPinnedGroupId();
 		const pinnedGroup = pinnedGroupId
-			? this.deps.titles.getGroups().find((g) => g.id === pinnedGroupId) ?? null
+			? this.titles.getGroups().find((g) => g.id === pinnedGroupId) ?? null
 			: null;
 		return { pinnedTitle, pinnedGroup };
 	}
 
 	/** Title count and episode progress (%) of a group's member titles. */
 	private pinnedGroupStats(group: HoardGroup): { count: number; progress: number } {
-		const byId = new Map(this.deps.titles.getTitles().map((t) => [t.id, t]));
+		const byId = new Map(this.titles.getTitles().map((t) => [t.id, t]));
 		const members = group.titleIds
 			.map((id) => byId.get(id))
 			.filter((t): t is HoardTitle => t !== undefined);
 		return {
 			count: members.length,
-			progress: groupProgress(members, (t) => this.deps.titles.getEffectiveTotal(t)),
+			progress: groupProgress(members, (t) => this.titles.getEffectiveTotal(t)),
 		};
 	}
 
@@ -408,7 +406,7 @@ export class WidgetRenderer {
 			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-todo: ${t('widget.todoMissingTitle')}` });
 			return;
 		}
-		const title = this.deps.titles.getTitles().find(
+		const title = this.titles.getTitles().find(
 			(t) => t.title.toLowerCase() === titleName.toLowerCase(),
 		);
 		if (!title) {
@@ -437,29 +435,29 @@ export class WidgetRenderer {
 		el.addClass('hoard-widget-stat');
 
 		if (kind === 'watched') {
-			const minutes = this.deps.titles.getTotalTimeWatched();
+			const minutes = this.titles.getTotalTimeWatched();
 			this.renderStatCard(el, '🕐', formatTime(minutes), t('widget.statWatched'));
 		} else if (kind === 'completed') {
-			const count = this.deps.titles.getCompletedCount();
+			const count = this.titles.getCompletedCount();
 			this.renderStatCard(el, '✅', t('widget.titlesCount', { count }), t('widget.statCompleted'));
 		} else if (kind === 'remaining') {
-			const minutes = this.deps.titles.getTotalTimeRemaining();
+			const minutes = this.titles.getTotalTimeRemaining();
 			this.renderStatCard(el, '⏳', formatTime(minutes), t('widget.statRemaining'));
 		} else if (kind === 'time') {
-			const watched = this.deps.titles.getTotalTimeWatched();
-			const remaining = this.deps.titles.getTotalTimeRemaining();
+			const watched = this.titles.getTotalTimeWatched();
+			const remaining = this.titles.getTotalTimeRemaining();
 			this.renderTimeCardMini(el, watched, remaining);
 		} else if (kind === 'time full') {
-			const watched = this.deps.titles.getTotalTimeWatched();
-			const remaining = this.deps.titles.getTotalTimeRemaining();
+			const watched = this.titles.getTotalTimeWatched();
+			const remaining = this.titles.getTotalTimeRemaining();
 			this.renderTimeCardFull(el, watched, remaining);
 		} else if (kind === 'completed full') {
-			const count = this.deps.titles.getCompletedCount();
+			const count = this.titles.getCompletedCount();
 			this.renderCompletedCardFull(el, count);
 		} else if (kind === 'time completed full') {
-			const watched = this.deps.titles.getTotalTimeWatched();
-			const remaining = this.deps.titles.getTotalTimeRemaining();
-			const count = this.deps.titles.getCompletedCount();
+			const watched = this.titles.getTotalTimeWatched();
+			const remaining = this.titles.getTotalTimeRemaining();
+			const count = this.titles.getCompletedCount();
 			this.renderTripleStatCard(el, watched, remaining, count);
 		} else {
 			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-stat: ${t('widget.unknownStat', { kind })}` });
@@ -567,7 +565,7 @@ export class WidgetRenderer {
 		const card = el.createDiv({ cls: 'hoard-widget-upcoming__card' });
 		card.createSpan({ cls: 'hoard-widget-upcoming__title', text: bestEntry.titleName });
 
-		this.renderBadge(card, bestEntry.type, this.deps.settings.get().types, typeLabel(bestEntry.type));
+		this.renderBadge(card, bestEntry.type, this.settings.get().types, typeLabel(bestEntry.type));
 
 		card.createSpan({ cls: 'hoard-widget-upcoming__date', text: formatDateDisplay(bestEntry.releaseDate) });
 		const daysUntil = bestEntry.daysUntil;
@@ -591,7 +589,7 @@ export class WidgetRenderer {
 		}
 		card.createDiv({ cls: 'hoard-widget__full-card-title', text: bestEntry.titleName });
 		const meta = card.createDiv({ cls: 'hoard-widget__full-card-meta' });
-		this.renderBadge(meta, bestEntry.type, this.deps.settings.get().types, typeLabel(bestEntry.type));
+		this.renderBadge(meta, bestEntry.type, this.settings.get().types, typeLabel(bestEntry.type));
 		const daysUntil = bestEntry.daysUntil;
 		const countdown = daysUntil === 0 ? t('widget.today') : daysUntil === 1 ? t('widget.tomorrow') : t('widget.inDays', { count: daysUntil });
 		meta.createSpan({ text: countdown });
@@ -637,14 +635,14 @@ export class WidgetRenderer {
 		const pinned = pinnedTitle!;
 		card.createSpan({ cls: 'hoard-widget-now__title', text: pinned.title });
 
-		this.renderBadge(card, pinned.type, this.deps.settings.get().types, typeLabel(pinned.type));
+		this.renderBadge(card, pinned.type, this.settings.get().types, typeLabel(pinned.type));
 
 		if (pinned.type !== 'Movie') {
-			const nextEp = this.deps.titles.getNextUnwatchedEpisode(pinned);
+			const nextEp = this.titles.getNextUnwatchedEpisode(pinned);
 			card.createSpan({ cls: 'hoard-widget-now__episode', text: nextEp !== null ? t('widget.episodeShort', { episode: nextEp }) : `✓ ${t('widget.completed')}` });
 		}
 
-		const progress = this.deps.titles.getProgress(pinned);
+		const progress = this.titles.getProgress(pinned);
 		const barWrap = card.createDiv({ cls: 'hoard-widget-now__bar-wrap' });
 		const bar = barWrap.createDiv({ cls: 'hoard-widget-now__bar' });
 		bar.setCssProps({ '--hoard-widget-now-bar-width': `${progress}%` });
@@ -677,10 +675,10 @@ export class WidgetRenderer {
 		const pinned = pinnedTitle!;
 		card.createDiv({ cls: 'hoard-widget__full-card-title', text: pinned.title });
 
-		const progress = this.deps.titles.getProgress(pinned);
+		const progress = this.titles.getProgress(pinned);
 		const bottomRow = card.createDiv({ cls: 'hoard-widget-now__full-bottom-row' });
 
-		this.renderBadge(bottomRow, pinned.type, this.deps.settings.get().types, typeLabel(pinned.type));
+		this.renderBadge(bottomRow, pinned.type, this.settings.get().types, typeLabel(pinned.type));
 
 		this.renderNwBarCol(bottomRow, progress);
 	}
@@ -726,7 +724,7 @@ export class WidgetRenderer {
 		} else {
 			const pinned = pinnedTitle!;
 			nowCol.createDiv({ cls: 'hoard-widget__full-card-title', text: pinned.title });
-			const progress = this.deps.titles.getProgress(pinned);
+			const progress = this.titles.getProgress(pinned);
 			nowCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: `${progress}%` });
 		}
 

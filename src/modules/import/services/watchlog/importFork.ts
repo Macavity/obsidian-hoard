@@ -77,7 +77,7 @@ async function translateNote(path: string, ctx: ImportContext, report: ImportRep
 		report.review.push(...items);
 		return;
 	}
-	const ok = await updateFrontMatter(ctx.app, note, () => {}, (fm) => {
+	const ok = await updateFrontMatter(ctx.app.fileManager, note, () => {}, (fm) => {
 		for (const key of Object.keys(fm)) delete fm[key];
 		for (const [k, v] of Object.entries(next)) Object.defineProperty(fm, k, { value: v, writable: true, enumerable: true, configurable: true });
 	});

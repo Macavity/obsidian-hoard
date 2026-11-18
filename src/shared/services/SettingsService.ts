@@ -17,31 +17,29 @@ export interface SettingsWriter {
 
 const STAGE_DELAY_MS = 500;
 
-export interface SettingsServiceDeps {
-	current: () => HoardPluginSettings;
-	persist: () => Promise<void>;
-	changed: () => void;
-}
-
 export class SettingsService implements SettingsReader, SettingsWriter {
 	private stageTimer: number | null = null;
 
-	constructor(private readonly deps: SettingsServiceDeps) {}
+	constructor(
+		private readonly current: () => HoardPluginSettings,
+		private readonly persist: () => Promise<void>,
+		private readonly changed: () => void,
+	) {}
 
 	get(): DeepReadonly<HoardPluginSettings> {
-		return this.deps.current();
+		return this.current();
 	}
 
 	async update(fn: (draft: HoardPluginSettings) => void): Promise<void> {
-		fn(this.deps.current());
+		fn(this.current());
 		// this save covers anything staged before
 		this.cancelStaged();
-		await this.deps.persist();
-		this.deps.changed();
+		await this.persist();
+		this.changed();
 	}
 
 	stage(fn: (draft: HoardPluginSettings) => void): void {
-		fn(this.deps.current());
+		fn(this.current());
 		this.cancelStaged();
 		this.stageTimer = window.setTimeout(() => {
 			this.stageTimer = null;

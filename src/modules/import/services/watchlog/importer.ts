@@ -10,14 +10,6 @@ import { setDecision, type ImportDecision } from './onboardingState';
 import { writeReportNote } from './reportNote';
 import type { ImportContext } from './schema1Types';
 
-export interface ImporterDeps {
-	app: App;
-	local: LocalStore;
-	ctx: () => ImportContext;
-	layout: () => VaultLayout;
-	openFile: (path: string) => void;
-}
-
 /** Everything the wizard needs from the import logic; the wizard (ui) only sees this shape. */
 export interface WatchLogImporter {
 	sources: WatchLogSources;
@@ -31,17 +23,23 @@ export interface WatchLogImporter {
 }
 
 /** Wires the onboarding wizard to the import logic. */
-export function createImporter(deps: ImporterDeps, sources: WatchLogSources): WatchLogImporter {
-	const { app, local } = deps;
+export function createImporter(
+	app: App,
+	local: LocalStore,
+	ctx: () => ImportContext,
+	layout: () => VaultLayout,
+	openFile: (path: string) => void,
+	sources: WatchLogSources,
+): WatchLogImporter {
 	return {
 		sources,
 		run: (kind: WatchLogSourceKind, progress: Progress) => kind === 'fork'
-			? importFork(sources.fork!, deps.ctx(), progress)
-			: importOriginal(sources.original!, deps.ctx(), progress),
-		plan: (imported: WatchLogSourceKind[]) => planCleanup(app, sources, deps.layout(), imported),
-		cleanup: (items: CleanupItem[]) => runCleanup(app, items, deps.layout()),
-		writeReport: (markdown: string) => writeReportNote(app, deps.layout(), markdown),
+			? importFork(sources.fork!, ctx(), progress)
+			: importOriginal(sources.original!, ctx(), progress),
+		plan: (imported: WatchLogSourceKind[]) => planCleanup(app, sources, layout(), imported),
+		cleanup: (items: CleanupItem[]) => runCleanup(app, items, layout()),
+		writeReport: (markdown: string) => writeReportNote(app, layout(), markdown),
 		decide: (kind: WatchLogSourceKind, d: ImportDecision) => setDecision(local, kind, d),
-		openFile: deps.openFile,
+		openFile,
 	};
 }
