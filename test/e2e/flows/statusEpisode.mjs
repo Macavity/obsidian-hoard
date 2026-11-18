@@ -22,7 +22,7 @@ export async function statusEpisode() {
 	await click(STATUS_PILL);
 	await waitForSelector(".hoard-status-dropdown");
 	// the dropdown lists the configured statuses without "To be released", in settings order
-	const index = Number(evalJs(`String(app.plugins.plugins['hoard'].settings.statuses.filter((s) => s.name !== 'To be released').findIndex((s) => s.name === ${JSON.stringify(NEW_STATUS)}) + 1)`));
+	const index = Number(evalJs(`String(app.plugins.plugins['hoard'].state.statuses.filter((s) => s.name !== 'To be released').findIndex((s) => s.name === ${JSON.stringify(NEW_STATUS)}) + 1)`));
 	assert(index > 0, `status ${NEW_STATUS} not configured`);
 	await click(`.hoard-status-dropdown .hoard-status-dropdown__option:nth-child(${index})`);
 	await waitFor(() => readNote(VAULT_PATH, FIXTURE_EDIT_TITLE).props.Status === NEW_STATUS, 10000);
