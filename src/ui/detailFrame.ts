@@ -10,11 +10,16 @@ export function mobileRowClass(base: string, mobile: string): string {
  * `.hoard-view[data-theme=…]`, so episode boxes, stars and progress bars need both on the content root.
  */
 export function markDetailRoot(modalEl: HTMLElement, contentEl: HTMLElement, colorTheme: string | undefined): void {
+	markViewRoot(modalEl, contentEl, colorTheme);
+	contentEl.addClass('hoard-detail');
+}
+
+/** Scopes the active colour theme to a modal: `data-theme` on the shell and the content, plus the `hoard-view` root class. */
+export function markViewRoot(modalEl: HTMLElement, contentEl: HTMLElement, colorTheme: string | undefined): void {
 	const theme = colorTheme ?? 'default';
 	modalEl.setAttribute('data-theme', theme);
 	contentEl.setAttribute('data-theme', theme);
 	contentEl.addClass('hoard-view');
-	contentEl.addClass('hoard-detail');
 }
 
 /** The heart button of a detail footer, centred by the footer's space-between; the caller paints and wires it. */

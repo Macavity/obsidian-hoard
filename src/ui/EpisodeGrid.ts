@@ -106,7 +106,7 @@ export function createSeasonHeader(
 	parent: HTMLElement,
 	name: string,
 	index: number,
-	palette: string[],
+	palette: readonly string[],
 ): { seasonWrap: HTMLElement; seasonHeader: HTMLElement } {
 	const seasonWrap = parent.createDiv({ cls: 'hoard-accordion__season-wrap' });
 	const seasonHeader = seasonWrap.createDiv({ cls: 'hoard-accordion__season-header' });

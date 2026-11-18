@@ -2,8 +2,9 @@
 
 import { App, Modal, Notice } from 'obsidian';
 import { t } from './i18n';
-import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
+import type { ApiService } from './ApiService';
+import type { SettingsReader } from './SettingsService';
 import { newTitle } from './entryFactories';
 import { nonEmpty } from './storage/sharedHelpers';
 import type {
@@ -24,6 +25,26 @@ import {
 import { buildPosterCard } from './PosterCard';
 import type { CardMenuContext } from './PosterCard';
 import { pinModalFooter } from './StickyModal';
+
+/** What resolving a title's TMDB collection reads and caches. */
+export interface ResolveCollectionDeps {
+	settings: SettingsReader;
+	titles: Pick<DataManager, 'updateTmdbIdentity'>;
+	api: Pick<
+		ApiService,
+		'hasTmdbKey' | 'searchTmdbMovieId' | 'findTmdbMovieIdByImdbId' | 'getTmdbCollection' | 'getTmdbMovieCollection'
+	>;
+}
+
+export interface CollectionModalDeps extends ResolveCollectionDeps {
+	app: App;
+	titles: Pick<
+		DataManager,
+		| 'updateTmdbIdentity' | 'getTitles' | 'getGroups' | 'getEffectiveTotal' | 'generateId' | 'generateGroupId'
+		| 'addTitleBatch' | 'addGroup' | 'updateGroup' | 'notifyChange'
+	>;
+	api: ResolveCollectionDeps['api'] & Pick<ApiService, 'getTmdbMovieDetails'>;
+}
 
 const TMDB_IMG_BASE = 'https://image.tmdb.org/t/p';
 const NOT_ADDED_COLOR = '#4b5563';
@@ -65,8 +86,8 @@ function matchLibraryTitle(
 }
 
 /** The TMDB movie id of a title: the stored one, else /find by IMDb id, else a title search. null = unresolved. */
-async function resolveMovieId(plugin: HoardPlugin, title: HoardTitle): Promise<number | null> {
-	const api = plugin.apiService;
+async function resolveMovieId(deps: ResolveCollectionDeps, title: HoardTitle): Promise<number | null> {
+	const api = deps.api;
 	// a tv id in tmdbId would query a random film — only a movie id is usable here
 	if (title.tmdbMediaType === 'movie' && title.tmdbId) return title.tmdbId;
 	const imdbId = imdbIdFromLink(title.externalLink);
@@ -75,33 +96,33 @@ async function resolveMovieId(plugin: HoardPlugin, title: HoardTitle): Promise<n
 	const found = await api.findTmdbMovieIdByImdbId(imdbId);
 	if (found.status === 'found') return found.value;
 	// exact key said not-a-movie. Cache it or every series re-queries; a failed lookup caches nothing.
-	if (found.status === 'notfound') plugin.dataManager.updateTmdbIdentity(title.id, null, COLLECTION_NONE);
+	if (found.status === 'notfound') deps.titles.updateTmdbIdentity(title.id, null, COLLECTION_NONE);
 	return null;
 }
 
 // stored tmdbId -> /find by imdb id -> title search. Caches what it learns.
 export async function resolveCollection(
-	plugin: HoardPlugin,
+	deps: ResolveCollectionDeps,
 	title: HoardTitle,
 ): Promise<TmdbCollectionDetail | null> {
-	const api = plugin.apiService;
+	const api = deps.api;
 	if (!api.hasTmdbKey()) return null;
-	if (getApiGroupForType(title.type, plugin.settings.typeApiMapping) !== 'movie') return null;
+	if (getApiGroupForType(title.type, deps.settings.get().typeApiMapping) !== 'movie') return null;
 	if (isCollectionNone(title)) return null;
 
 	const known = getCollectionId(title);
 	if (known !== null) return api.getTmdbCollection(known);
 
-	const tmdbId = await resolveMovieId(plugin, title);
+	const tmdbId = await resolveMovieId(deps, title);
 	if (!tmdbId) return null;
 
 	const lookup = await api.getTmdbMovieCollection(tmdbId);
 	if (lookup.status === 'failed' || lookup.status === 'nokey') return null;
 	if (lookup.status === 'notfound') {
-		plugin.dataManager.updateTmdbIdentity(title.id, tmdbId, COLLECTION_NONE);
+		deps.titles.updateTmdbIdentity(title.id, tmdbId, COLLECTION_NONE);
 		return null;
 	}
-	plugin.dataManager.updateTmdbIdentity(title.id, tmdbId, lookup.value.id);
+	deps.titles.updateTmdbIdentity(title.id, tmdbId, lookup.value.id);
 	return api.getTmdbCollection(lookup.value.id);
 }
 
@@ -110,8 +131,6 @@ export function countMissing(collection: TmdbCollectionDetail, titles: HoardTitl
 }
 
 export class CollectionModal extends Modal {
-	private plugin: HoardPlugin;
-	private dataManager: DataManager;
 	private collection: TmdbCollectionDetail;
 	private onChanged?: () => void;
 	private changed = false;
@@ -131,16 +150,13 @@ export class CollectionModal extends Modal {
 	private cleanups: (() => void)[] = [];
 
 	constructor(
-		app: App,
-		plugin: HoardPlugin,
+		private deps: CollectionModalDeps,
 		collection: TmdbCollectionDetail,
 		movieType: string,
 		onOpenTitle: (title: HoardTitle) => void,
 		onChanged?: () => void,
 	) {
-		super(app);
-		this.plugin = plugin;
-		this.dataManager = plugin.dataManager;
+		super(deps.app);
 		this.collection = collection;
 		this.movieType = movieType;
 		this.onOpenTitle = onOpenTitle;
@@ -158,7 +174,7 @@ export class CollectionModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
+		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
 		this.modalEl.setAttribute('data-theme', colorTheme);
 		this.modalEl.addClass('hoard-collection__modal-shell');
 		this.contentEl.setAttribute('data-theme', colorTheme);
@@ -212,7 +228,7 @@ export class CollectionModal extends Modal {
 
 	private renderMeta(): void {
 		if (!this.metaEl) return;
-		const titles = this.dataManager.getTitles();
+		const titles = this.deps.titles.getTitles();
 		const owned = this.parts.filter((p) => matchLibraryTitle(p, titles)).length;
 		this.metaEl.setText(t('misc.collection.libraryCount', { owned, total: this.parts.length }));
 	}
@@ -222,8 +238,8 @@ export class CollectionModal extends Modal {
 		if (!grid) return;
 		grid.empty();
 
-		const settings = this.plugin.settings;
-		const titles = this.dataManager.getTitles();
+		const settings = this.deps.settings.get();
+		const titles = this.deps.titles.getTitles();
 		const menuCtx: CardMenuContext = { container: grid, cleanups: this.cleanups };
 
 		for (const part of this.parts) {
@@ -238,7 +254,7 @@ export class CollectionModal extends Modal {
 				const typeColor = typeDef
 					? getThemedColor(existing.type, typeDef.color, settings.colorTheme)
 					: NOT_ADDED_COLOR;
-				const total = this.dataManager.getEffectiveTotal(existing);
+				const total = this.deps.titles.getEffectiveTotal(existing);
 				const ratio =
 					existing.status === 'Completed'
 						? 1
@@ -312,7 +328,7 @@ export class CollectionModal extends Modal {
 		if (!footer) return;
 		footer.empty();
 
-		const titles = this.dataManager.getTitles();
+		const titles = this.deps.titles.getTitles();
 		const missing = this.parts.filter((p) => !matchLibraryTitle(p, titles));
 
 		const left = footer.createDiv({ cls: 'hoard-collection__footer-left' });
@@ -371,8 +387,8 @@ export class CollectionModal extends Modal {
 		// renderFooter detached the clicked button — re-query
 		const addBtn = this.footerEl?.querySelector<HTMLElement>('.hoard-collection__add') ?? null;
 
-		const api = this.plugin.apiService;
-		const settings = this.plugin.settings;
+		const api = this.deps.api;
+		const settings = this.deps.settings.get();
 		// shipped defaults may have been renamed away
 		const status =
 			settings.statuses.find((s) => s.name === 'Plan to watch')?.name ??
@@ -384,7 +400,7 @@ export class CollectionModal extends Modal {
 			'Medium';
 
 		// generateId only sees stored titles — dedupe within the batch too
-		const takenIds = new Set(this.dataManager.getTitles().map((t) => t.id));
+		const takenIds = new Set(this.deps.titles.getTitles().map((t) => t.id));
 		const entries: HoardTitle[] = [];
 		let failed = 0;
 
@@ -398,7 +414,7 @@ export class CollectionModal extends Modal {
 				continue;
 			}
 
-			let id = this.dataManager.generateId(detail.title);
+			let id = this.deps.titles.generateId(detail.title);
 			if (takenIds.has(id)) {
 				let n = 2;
 				while (takenIds.has(`${id}-${n}`)) n++;
@@ -431,9 +447,9 @@ export class CollectionModal extends Modal {
 
 		if (entries.length > 0) {
 			// handles the future-release "To be released" + Upcoming routing
-			await this.dataManager.addTitleBatch(entries);
+			await this.deps.titles.addTitleBatch(entries);
 			if (this.createGroup) await this.createCollectionGroup(entries);
-			this.dataManager.notifyChange();
+			this.deps.titles.notifyChange();
 			this.changed = true;
 			if (this.onChanged) this.onChanged();
 		}
@@ -458,7 +474,7 @@ export class CollectionModal extends Modal {
 
 	// whole collection, not just the new entries
 	private async createCollectionGroup(added: HoardTitle[]): Promise<void> {
-		const titles = this.dataManager.getTitles();
+		const titles = this.deps.titles.getTitles();
 		const memberIds = new Set(added.map((t) => t.id));
 		for (const part of this.parts) {
 			const existing = matchLibraryTitle(part, titles);
@@ -467,22 +483,22 @@ export class CollectionModal extends Modal {
 		if (memberIds.size === 0) return;
 
 		const name = this.collection.name;
-		const existingGroup = this.dataManager.getGroups().find((g) => g.name === name);
+		const existingGroup = this.deps.titles.getGroups().find((g) => g.name === name);
 		if (existingGroup) {
 			// top up, don't duplicate
 			for (const id of memberIds) {
 				if (!existingGroup.titleIds.includes(id)) existingGroup.titleIds.push(id);
 			}
-			await this.dataManager.updateGroup(existingGroup);
+			await this.deps.titles.updateGroup(existingGroup);
 			return;
 		}
 
 		const group: HoardGroup = {
-			id: this.dataManager.generateGroupId(name),
+			id: this.deps.titles.generateGroupId(name),
 			name,
 			titleIds: [...memberIds],
 			dateAdded: new Date().toISOString(),
 		};
-		await this.dataManager.addGroup(group);
+		await this.deps.titles.addGroup(group);
 	}
 }

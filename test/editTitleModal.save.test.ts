@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EditTitleModal } from '../src/EditTitleModal';
+import { fakeSettings } from './helpers/fakeSettings';
 import type { HoardTitle } from '../src/types';
 
 const ORIGINAL: HoardTitle = {
@@ -18,7 +19,7 @@ function setup(original: HoardTitle) {
 		getTitles: () => [original],
 		updateTitle: (t: HoardTitle) => { updated.push(structuredClone(t)); return Promise.resolve(); },
 	};
-	const modal = new EditTitleModal({} as never, { settings: { types: [] } } as never, dataManager as never, original, () => {});
+	const modal = new EditTitleModal({ app: {} as never, settings: fakeSettings({ types: [] }) as never, titles: dataManager as never }, original, () => {});
 	return { form: modal as unknown as Form, updated };
 }
 

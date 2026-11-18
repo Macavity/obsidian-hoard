@@ -163,7 +163,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	}
 
 	protected renderResult(host: HTMLElement, result: GameSearchResult, select: (itemEl: HTMLElement) => void): HTMLElement {
-		if (!this.libIndex) this.libIndex = LibraryIndex.build(this.plugin, ['games']);
+		if (!this.libIndex) this.libIndex = LibraryIndex.build({ games: () => this.plugin.gameDataManager.getGames() }, ['games']);
 		return renderSearchResultRow(host, {
 			// card covers are full-width now, so request a sharper 600px rendition
 			thumbUrl: rawgResizedCover(result.coverUrl, 600),

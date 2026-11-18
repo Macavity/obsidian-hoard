@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Platform, WorkspaceLeaf } from 'obsidian';
 import { HoardView } from '../../src/HoardView';
 import { qsa } from '../helpers/dom';
+import { hoardViewDeps } from '../helpers/hoardViewDeps';
 
 const { Stub, pending, aired, maybe } = vi.hoisted(() => ({
 	Stub: class {
@@ -37,14 +38,7 @@ afterEach(() => {
 
 async function open() {
 	let resolved: () => void = () => {};
-	const plugin = {
-		settings: { colorTheme: 'default' },
-		app: { metadataCache: { on: (_n: string, cb: () => void) => { resolved = cb; return {}; } } },
-		readingDataManager: {},
-		gameDataManager: {},
-	};
-	const dm = { onChange: () => {}, offChange: () => {} };
-	const view = new HoardView(new WorkspaceLeaf(), plugin as never, dm as never);
+	const view = new HoardView(new WorkspaceLeaf(), hoardViewDeps((cb) => { resolved = cb; }));
 	await view.onOpen();
 	const tabs = (): HTMLButtonElement[] => qsa<HTMLButtonElement>(view.contentEl, '.hoard-tab-bar__btn');
 	const label = (name: string): string | undefined => tabs().find((b) => b.textContent?.startsWith(name))?.textContent ?? undefined;

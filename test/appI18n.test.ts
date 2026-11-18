@@ -19,7 +19,7 @@ describe('plugin shell i18n', () => {
 
 	it('translates the view title', () => {
 		setLocale('de');
-		const view = new HoardView({} as never, {} as never, {} as never);
+		const view = new HoardView({} as never, {} as never);
 		expect(view.getDisplayText()).toBe(deApp.viewTitle);
 	});
 

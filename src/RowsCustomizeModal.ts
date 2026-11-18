@@ -1,8 +1,9 @@
 import { App, Modal, ToggleComponent } from 'obsidian';
-import type HoardPlugin from './main';
+import type { SettingsReader } from './SettingsService';
 import { normalizeRowsLayout, shelvesExclude, type RowsShelfLayoutEntry } from './types';
 import { t } from './i18n';
 import { createIconButton } from './ui/IconButton';
+import { markViewRoot } from './ui/detailFrame';
 
 /** Wires the modal to one tab's shelf registry + persisted layout, so any tab
  *  with a Rows view (Watchlist today, others later) can reuse it. */
@@ -10,7 +11,7 @@ export interface RowsCustomizeConfig {
 	/** The tab's shelf registry — ids + display labels, in default order. */
 	shelves: ReadonlyArray<{ id: string; label: string }>;
 	/** Read the stored layout (may be stale/partial — normalized on open). */
-	getLayout: () => RowsShelfLayoutEntry[] | undefined;
+	getLayout: () => readonly RowsShelfLayoutEntry[] | undefined;
 	/** Assign the (normalized) layout back to its settings slot. */
 	setLayout: (layout: RowsShelfLayoutEntry[]) => void;
 	/** Fired after every persisted change so an open Rows view can re-render
@@ -20,10 +21,14 @@ export interface RowsCustomizeConfig {
 	/** Shelf ids that can't be enabled together (e.g. [['byType','byStatus']]).
 	 *  Enabling one auto-disables the other members of its group. */
 	exclusiveGroups?: ReadonlyArray<ReadonlyArray<string>>;
-	/** Persist the layout's settings slot. Defaults to plugin.saveSettings()
-	 *  (the Watchlist slot); tabs whose layout lives inside data.json (Games,
-	 *  Reading) pass their own data-manager save here. */
-	persist?: () => void;
+	/** Persist the layout's settings slot: the Watchlist writes it through the settings service; tabs
+	 *  whose layout lives inside data.json (Games, Reading) save through their data manager. */
+	persist: () => void;
+}
+
+export interface RowsCustomizeModalDeps {
+	app: App;
+	settings: SettingsReader;
 }
 
 /**
@@ -33,22 +38,17 @@ export interface RowsCustomizeConfig {
  * open Rows view re-renders live behind the modal.
  */
 export class RowsCustomizeModal extends Modal {
-	private plugin: HoardPlugin;
 	private config: RowsCustomizeConfig;
 	private layout: RowsShelfLayoutEntry[] = [];
 	private listEl: HTMLElement | null = null;
 
-	constructor(app: App, plugin: HoardPlugin, config: RowsCustomizeConfig) {
-		super(app);
-		this.plugin = plugin;
+	constructor(private deps: RowsCustomizeModalDeps, config: RowsCustomizeConfig) {
+		super(deps.app);
 		this.config = config;
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
+		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-rows-customize');
 		this.titleEl.setText(t('list.rows.customize'));
 
@@ -74,8 +74,7 @@ export class RowsCustomizeModal extends Modal {
 
 	/** Persist the current layout and refresh an open Rows view live. */
 	private persist(): void {
-		if (this.config.persist) this.config.persist();
-		else void this.plugin.saveSettings();
+		this.config.persist();
 		this.config.onChanged();
 	}
 
@@ -129,7 +128,7 @@ export class RowsCustomizeModal extends Modal {
 			new ToggleComponent(controls).setValue(entry.enabled).onChange((value) => {
 				entry.enabled = value;
 				// enabling a shelf turns off the ones it excludes; the entries change in place, since the
-				// plugin's layout is this very array
+				// persisted layout is this very array
 				const groups = this.config.exclusiveGroups ?? [];
 				const rivals = value ? layout.filter((other) => other.enabled && shelvesExclude(other.id, entry.id, groups)) : [];
 				for (const rival of rivals) rival.enabled = false;

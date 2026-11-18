@@ -1109,7 +1109,7 @@ export class ReadingTab implements TabInstance {
 			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
-			new RowsCustomizeModal(this.plugin.app, this.plugin, {
+			new RowsCustomizeModal({ app: this.plugin.app, settings: this.plugin.settingsService }, {
 				shelves: READING_ROWS_SHELVES.map((sh) => ({ id: sh.id, label: t(`reading.shelves.${sh.id}` as TranslationKey) })),
 				getLayout: () => this.readingData.getSettings().rowsLayout,
 				setLayout: (layout) => { this.readingData.getSettings().rowsLayout = layout; },

@@ -6,8 +6,8 @@ import type { HoardTitle } from '../src/types';
 
 function render(title: HoardTitle | undefined): HTMLElement {
 	const parent = document.createElement('div');
-	const plugin = { dataManager: { getTitle: () => title } };
-	renderCommunityRating(parent, plugin as never, 'a');
+	const deps = { titles: { getTitle: () => title } };
+	renderCommunityRating(parent, deps as never, 'a');
 	return parent;
 }
 

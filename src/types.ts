@@ -412,6 +412,13 @@ export function normalizeRowsLayout(
 	return oneEnabledPerGroup(complete, exclusiveGroups);
 }
 
+/** A running bulk import (runtime only, never persisted); `cancel` stops it. */
+export interface ImportProgress {
+	current: number;
+	total: number;
+	cancel: () => void;
+}
+
 /** Card text placement: below the poster or overlaid at its bottom. */
 export type CardTextStyle = 'under' | 'inside';
 
@@ -1139,7 +1146,7 @@ export function getThemedColor(name: string, defaultColor: string, theme: string
 const NO_PRIORITY = '';
 
 /** Priority filter options: the configured names plus the empty one. */
-export function priorityFilterOpts(priorities: TagDefinition[]): string[] {
+export function priorityFilterOpts(priorities: readonly TagDefinition[]): string[] {
 	return [...priorities.map((p) => p.name), NO_PRIORITY];
 }
 
@@ -1148,9 +1155,9 @@ export function priorityFilterOpts(priorities: TagDefinition[]): string[] {
  * which is now the same as excluding every named priority.
  */
 export function migratePriorityExclude(
-	exclude: string[] | undefined,
+	exclude: readonly string[] | undefined,
 	emptyOnly: boolean | undefined,
-	priorities: TagDefinition[],
+	priorities: readonly TagDefinition[],
 ): Set<string> {
 	if (emptyOnly) return new Set(priorities.map((p) => p.name));
 	return new Set(exclude ?? []);

@@ -1,27 +1,26 @@
-import { App, Modal } from 'obsidian';
-import type HoardPlugin from './main';
-import type { DataManager } from './DataManager';
+import { Modal } from 'obsidian';
 import type { MediaSearchResult } from './types';
-import { apiErrorMessage } from './ApiService';
-import { AddTitleModal } from './AddTitleModal';
+import { apiErrorMessage, type ApiService } from './ApiService';
+import { AddTitleModal, type AddTitleModalDeps } from './AddTitleModal';
 import { t } from './i18n';
 import { effectiveMediaSource } from './apiSources';
 
 /** themoviedb.org/movie/27205-inception, /tv/1396, with or without slug and query */
 const TMDB_URL_RE = /themoviedb\.org\/(movie|tv)\/(\d+)/i;
 
+/** Opens the manual form with the looked-up title, so it carries the form's deps. */
+export interface AddFromUrlModalDeps extends AddTitleModalDeps {
+	api: AddTitleModalDeps['api'] & Pick<ApiService, 'getTmdbByImdbId' | 'getOmdbByImdbId' | 'hasTmdbKey'>;
+}
+
 export class AddFromUrlModal extends Modal {
-	private plugin: HoardPlugin;
-	private dataManager: DataManager;
 	private onAdded: () => void;
 	private imdbInput: HTMLInputElement | null = null;
 	private tmdbInput: HTMLInputElement | null = null;
 	private errorEl: HTMLElement | null = null;
 
-	constructor(app: App, plugin: HoardPlugin, dataManager: DataManager, onAdded: () => void) {
-		super(app);
-		this.plugin = plugin;
-		this.dataManager = dataManager;
+	constructor(private deps: AddFromUrlModalDeps, onAdded: () => void) {
+		super(deps.app);
 		this.onAdded = onAdded;
 	}
 
@@ -84,8 +83,8 @@ export class AddFromUrlModal extends Modal {
 	private async lookupImdb(): Promise<MediaSearchResult | null | 'invalid'> {
 		const match = (this.imdbInput?.value.trim() ?? '').match(/tt\d+/);
 		if (!match) return 'invalid';
-		const api = this.plugin.apiService;
-		const source = effectiveMediaSource(this.plugin.settings, api);
+		const api = this.deps.api;
+		const source = effectiveMediaSource(this.deps.settings.get(), api);
 		if (source === 'tmdb') return api.getTmdbByImdbId(match[0]);
 		if (source === 'omdb') return api.getOmdbByImdbId(match[0]);
 		// Cinemeta is keyed by kind, and an IMDb link doesn't say which: series first, then movie (the movie endpoint answers series ids with a foreign film)
@@ -96,11 +95,11 @@ export class AddFromUrlModal extends Modal {
 	private async lookupTmdb(): Promise<MediaSearchResult | null | 'invalid' | 'nokey'> {
 		const match = (this.tmdbInput?.value.trim() ?? '').match(TMDB_URL_RE);
 		if (!match) return 'invalid';
-		if (!this.plugin.apiService.hasTmdbKey()) return 'nokey';
+		if (!this.deps.api.hasTmdbKey()) return 'nokey';
 		const [, kind, id] = match;
 		return kind!.toLowerCase() === 'movie'
-			? this.plugin.apiService.getTmdbMovieDetails(id!)
-			: this.plugin.apiService.getTmdbTvDetails(id!);
+			? this.deps.api.getTmdbMovieDetails(id!)
+			: this.deps.api.getTmdbTvDetails(id!);
 	}
 
 	private async handleAdd(
@@ -133,7 +132,7 @@ export class AddFromUrlModal extends Modal {
 			this.close();
 
 			const type = result.mediaType === 'movie' ? 'Movie' : 'TV Show';
-			new AddTitleModal(this.app, this.plugin, this.dataManager, this.onAdded, {
+			new AddTitleModal(this.deps, this.onAdded, {
 				title: result.title,
 				type,
 				episodes: result.episodes,

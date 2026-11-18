@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
+import { fakeSettings } from './helpers/fakeSettings';
 import { TitleDetailModal } from '../src/TitleDetailModal';
 import { DEFAULT_SETTINGS, type HoardTitle, type TmdbCollectionDetail } from '../src/types';
 import { t } from '../src/i18n';
@@ -16,11 +17,12 @@ const collection = (parts: number): TmdbCollectionDetail =>
 	({ id: 1, name: 'Alien Collection', parts: Array.from({ length: parts }, (_, i) => ({ id: i })) });
 
 function build() {
-	const plugin = {
-		settings: { ...DEFAULT_SETTINGS },
-		dataManager: { getCollapsedSeasonsForTitle: () => new Set<number>(), getTitles: () => [title] },
+	const deps = {
+		app: {} as never,
+		settings: fakeSettings({ ...DEFAULT_SETTINGS }),
+		titles: { getCollapsedSeasonsForTitle: () => new Set<number>(), getTitles: () => [title] },
 	};
-	const modal = new TitleDetailModal({} as never, plugin as never, title) as unknown as {
+	const modal = new TitleDetailModal(deps as never, title) as unknown as {
 		maybeRenderCollectionButton: (host: HTMLElement) => Promise<void>;
 	};
 	const footer = document.createElement('div');

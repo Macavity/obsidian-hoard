@@ -4,7 +4,7 @@ import { statusLabel, typeLabel } from './i18n/labels';
 import type { ManagerNotice } from './storage/storageTypes';
 import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, HoardPluginSettings, setActiveDateFormat } from './types';
 import { cardSizeToMinWidth } from './VirtualGrid';
-import type { CardStyleTab } from './types';
+import type { CardStyleTab, ImportProgress } from './types';
 import { DataManager } from './DataManager';
 import { ReadingDataManager } from './ReadingDataManager';
 import { GameDataManager } from './GameDataManager';
@@ -17,7 +17,8 @@ import { SecretStore, shouldShowSecretsNotice } from './storage/SecretStore';
 import { SharedConfigStore } from './storage/SharedConfigStore';
 import { EntryIndex } from './storage/EntryIndex';
 import { HistoryStore } from './storage/HistoryStore';
-import { HoardView, HOARD_VIEW_TYPE, TabName } from './HoardView';
+import { HoardView, HOARD_VIEW_TYPE, TabName, type HoardViewDeps } from './HoardView';
+import type { ListTabDeps } from './ListTab';
 import { AddTitleModal } from './AddTitleModal';
 import { TitleDetailModal } from './TitleDetailModal';
 import { InsertWidgetModal } from './InsertWidgetModal';
@@ -128,7 +129,7 @@ export default class HoardPlugin extends Plugin {
 	widgetRenderer?: WidgetRenderer;
 
 	// runtime import progress state (not persisted)
-	importProgress: { current: number; total: number; cancel: () => void } | null = null;
+	importProgress: ImportProgress | null = null;
 
 	// which entry+day combos have already fired a notification
 	private notifiedEntries: Set<string> = new Set();
@@ -181,7 +182,7 @@ export default class HoardPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(() => void this.startVaultStorage());
 
 		this.registerView(HOARD_VIEW_TYPE, (leaf) => {
-			return new HoardView(leaf, this, this.dataManager);
+			return new HoardView(leaf, this.hoardViewDeps());
 		});
 
 		this.widgetRenderer = new WidgetRenderer(this, this.dataManager);
@@ -200,7 +201,8 @@ export default class HoardPlugin extends Plugin {
 			id: 'add-title',
 			name: t('app.commands.addTitle'),
 			callback: () => {
-				new AddTitleModal(this.app, this, this.dataManager, (entry) => {
+				const deps = this.listTabDeps();
+				new AddTitleModal(deps, (entry) => {
 					// setting off = just reveal whatever tab was open, no modal
 					if (!(this.settings.openWatchlistAfterAdd ?? true)) {
 						void this.activateView();
@@ -209,7 +211,7 @@ export default class HoardPlugin extends Plugin {
 					void this.activateView('watchlist').then(() => {
 						// re-read: addTitle may have forced "To be released"
 						const fresh = this.dataManager.getTitle(entry.id) ?? entry;
-						new TitleDetailModal(this.app, this, fresh).open();
+						new TitleDetailModal(deps, fresh).open();
 					});
 				}).open();
 			},
@@ -242,6 +244,30 @@ export default class HoardPlugin extends Plugin {
 		// keep the status bar in sync with data edits (no new timer: the 60s airtime interval drives the
 		// time-based refresh).
 		this.register(onDataChanged(() => this.updateStatusBar()));
+	}
+
+	/** What the Watchlist tab and the modals it opens read; the add-title command shares it. */
+	private listTabDeps(): ListTabDeps {
+		return {
+			app: this.app,
+			settings: this.settingsService,
+			titles: this.dataManager,
+			api: this.apiService,
+			posters: this.posterService,
+			history: this.historyManager,
+			getCardMinWidth: () => this.getCardMinWidth(),
+			isCardTextUnder: (tab) => this.isCardTextUnder(tab),
+			importProgress: () => this.importProgress,
+			resolveDefaultAddType: () => this.resolveDefaultAddType(),
+		};
+	}
+
+	private hoardViewDeps(): HoardViewDeps {
+		return {
+			...this.listTabDeps(),
+			importRunning: () => this.importRunning,
+			plugin: this, // TODO(Task 6-8): the other tabs still take the plugin
+		};
 	}
 
 	/** Renders a manager notice in the active language. */

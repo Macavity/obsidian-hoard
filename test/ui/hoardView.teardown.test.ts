@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WorkspaceLeaf } from 'obsidian';
 import { HoardView } from '../../src/HoardView';
+import { hoardViewDeps } from '../helpers/hoardViewDeps';
 
 const { tab, destroyed } = vi.hoisted(() => {
 	const destroyed: string[] = [];
@@ -30,14 +31,7 @@ vi.mock('../../src/DraftsTab', () => ({
 afterEach(() => { destroyed.length = 0; });
 
 async function open(): Promise<HoardView> {
-	const plugin = {
-		settings: { colorTheme: 'default' },
-		app: { metadataCache: { on: () => ({}) } },
-		readingDataManager: {},
-		gameDataManager: {},
-	};
-	const dm = { onChange: () => {}, offChange: () => {} };
-	const view = new HoardView(new WorkspaceLeaf(), plugin as never, dm as never);
+	const view = new HoardView(new WorkspaceLeaf(), hoardViewDeps());
 	await view.onOpen();
 	return view;
 }

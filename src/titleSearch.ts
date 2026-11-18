@@ -1,4 +1,4 @@
-import type HoardPlugin from './main';
+import type { SettingsReader } from './SettingsService';
 import { t } from './i18n';
 import { typeLabel } from './i18n/labels';
 import type { MediaFields } from './ui/FormCells';
@@ -6,8 +6,18 @@ import type { AnimeSearchResult, MediaSearchResult, Season } from './types';
 import { getApiGroupForType } from './types';
 import { animeResultIdKeys, mediaResultIdKeys } from './LibraryIndex';
 import { effectiveMediaSource, type MediaSource } from './apiSources';
-import { SEARCH_PAGE_SIZE, SEARCH_RESULT_LIMIT } from './ApiService';
+import { SEARCH_PAGE_SIZE, SEARCH_RESULT_LIMIT, type ApiService } from './ApiService';
 import { found, NOT_FOUND, type LookupResult } from './lookup';
+
+/** What searching and resolving a title pick reads. */
+export interface TitleSearchDeps {
+	settings: SettingsReader;
+	api: Pick<
+		ApiService,
+		| 'hasOmdbKey' | 'hasTmdbKey' | 'searchAniList' | 'searchAnime' | 'searchTmdb' | 'searchOmdb' | 'searchCinemeta'
+		| 'getCinemetaDetails' | 'getTmdbMovieDetails' | 'getTmdbTvDetails' | 'getOmdbMovieDetails' | 'getOmdbTvDetails'
+	>;
+}
 
 export type TitleSearchResult = AnimeSearchResult | MediaSearchResult;
 
@@ -17,22 +27,22 @@ export function isAnimeResult(r: TitleSearchResult): r is AnimeSearchResult {
 
 /** Searches the API configured for the type; null when the type has none. */
 export async function searchTitles(
-	plugin: HoardPlugin,
+	deps: TitleSearchDeps,
 	type: string,
 	query: string,
 	year: string,
 ): Promise<TitleSearchResult[] | null> {
-	const api = plugin.apiService;
-	const apiGroup = getApiGroupForType(type, plugin.settings.typeApiMapping);
+	const api = deps.api;
+	const apiGroup = getApiGroupForType(type, deps.settings.get().typeApiMapping);
 	if (apiGroup === '') return null;
 	if (apiGroup === 'anime') {
-		const animeSource = plugin.settings.animeApiSource ?? 'jikan';
+		const animeSource = deps.settings.get().animeApiSource ?? 'jikan';
 		return animeSource === 'anilist'
 			? await api.searchAniList(query, year)
 			: await api.searchAnime(query, year, SEARCH_RESULT_LIMIT);
 	}
 	const kind = type === 'Movie' ? 'movie' : 'series';
-	const source = effectiveMediaSource(plugin.settings, api);
+	const source = effectiveMediaSource(deps.settings.get(), api);
 	if (source === 'tmdb') return await api.searchTmdb(query, kind, year);
 	if (source === 'omdb') return await api.searchOmdb(query, kind, year);
 	return await api.searchCinemeta(query, kind, year);
@@ -40,11 +50,11 @@ export async function searchTitles(
 
 /** Full movie/TV record for a search row from the active media API. */
 export function fetchMediaDetails(
-	plugin: HoardPlugin,
+	deps: TitleSearchDeps,
 	result: MediaSearchResult,
 ): Promise<MediaSearchResult | null> {
-	const api = plugin.apiService;
-	const source = effectiveMediaSource(plugin.settings, api);
+	const api = deps.api;
+	const source = effectiveMediaSource(deps.settings.get(), api);
 	const tv = result.mediaType === 'tv';
 	if (source === 'cinemeta') return api.getCinemetaDetails(result.imdbId, result.mediaType);
 	if (source === 'tmdb') return tv ? api.getTmdbTvDetails(result.imdbId) : api.getTmdbMovieDetails(result.imdbId);
@@ -140,7 +150,7 @@ function pickFromRow(result: TitleSearchResult): TitlePick {
  * the selection went stale and the form must not be touched. A missing detail record or a failed fetch applies the search row.
  */
 export async function resolvePick(
-	plugin: HoardPlugin,
+	deps: TitleSearchDeps,
 	result: TitleSearchResult,
 	isCurrent: () => boolean,
 	apply: (pick: TitlePick) => void,
@@ -149,11 +159,11 @@ export async function resolvePick(
 		apply(pickFromAnime(result));
 		return true;
 	}
-	const keepPoster = effectiveMediaSource(plugin.settings, plugin.apiService) === 'cinemeta';
+	const keepPoster = effectiveMediaSource(deps.settings.get(), deps.api) === 'cinemeta';
 	const withPoster = (pick: TitlePick, ...rows: TitleSearchResult[]): TitlePick =>
 		keepPoster ? { ...pick, posterUrl: rows.map((r) => r.posterUrl).find(Boolean) ?? '' } : pick;
 	try {
-		const full = await fetchMediaDetails(plugin, result);
+		const full = await fetchMediaDetails(deps, result);
 		if (!isCurrent()) return false;
 		apply(full ? withPoster(pickFromMedia(full), full, result) : withPoster(pickFromRow(result), result));
 	} catch {
@@ -174,7 +184,7 @@ export function fillMediaFields(media: MediaFields, pick: TitlePick): void {
 
 /** Picker settings shared by the add-title and add-maybe modals. */
 export function titlePickerBase(
-	plugin: HoardPlugin,
+	deps: TitleSearchDeps,
 	selectedType: string,
 	onTypeChange: (type: string) => void,
 ) {
@@ -183,7 +193,7 @@ export function titlePickerBase(
 		withYear: true,
 		pageSize: SEARCH_PAGE_SIZE,
 		typeSelect: {
-			names: plugin.settings.types.map((t) => t.name),
+			names: deps.settings.get().types.map((t) => t.name),
 			selected: selectedType,
 			onChange: onTypeChange,
 			format: typeLabel,

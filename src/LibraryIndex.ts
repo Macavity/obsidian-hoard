@@ -1,10 +1,16 @@
 import type { MediaSource } from './apiSources';
-import type HoardPlugin from './main';
 import type { AnimeSearchResult, MediaSearchResult, HoardTitle, Book, Manga, Game } from './types';
 import type { GameSearchResult, BookSearchResult, MangaSearchResult } from './ApiService';
 import { imdbIdFromLink } from './types';
 
 export type LibraryScope = 'watchlist' | 'books' | 'manga' | 'games';
+/** Where each scope reads its entries from; a caller supplies only the scopes it builds. */
+export interface LibrarySources {
+	watchlist: () => readonly HoardTitle[];
+	books: () => readonly Book[];
+	manga: () => readonly Manga[];
+	games: () => readonly Game[];
+}
 export type LibraryName = 'Watchlist' | 'Books' | 'Manga' | 'Games';
 
 // punctuation only — letters/digits of any script survive, so CJK titles still key.
@@ -102,23 +108,23 @@ export class LibraryIndex {
 	private byId = new Map<string, LibraryName>();
 	private byTitle = new Map<string, LibraryName>();
 
-	static build(plugin: HoardPlugin, scopes: LibraryScope[]): LibraryIndex {
+	static build<S extends LibraryScope>(sources: Pick<LibrarySources, S>, scopes: readonly S[]): LibraryIndex {
 		const idx = new LibraryIndex();
 
-		for (const scope of scopes) idx.addScope(plugin, scope);
+		for (const scope of scopes) idx.addScope(sources as LibrarySources, scope);
 
 		return idx;
 	}
 
-	private addScope(plugin: HoardPlugin, scope: LibraryScope): void {
+	private addScope(sources: LibrarySources, scope: LibraryScope): void {
 		if (scope === 'watchlist') {
-			for (const t of plugin.dataManager.getTitles()) this.add('Watchlist', t.title, titleIdKeys(t));
+			for (const t of sources.watchlist()) this.add('Watchlist', t.title, titleIdKeys(t));
 		} else if (scope === 'books') {
-			for (const b of plugin.readingDataManager.getBooks()) this.add('Books', b.title, bookIdKeys(b));
+			for (const b of sources.books()) this.add('Books', b.title, bookIdKeys(b));
 		} else if (scope === 'manga') {
-			for (const m of plugin.readingDataManager.getMangaList()) this.add('Manga', m.title, mangaIdKeys(m));
+			for (const m of sources.manga()) this.add('Manga', m.title, mangaIdKeys(m));
 		} else {
-			for (const g of plugin.gameDataManager.getGames()) this.add('Games', g.title, gameIdKeys(g));
+			for (const g of sources.games()) this.add('Games', g.title, gameIdKeys(g));
 		}
 	}
 

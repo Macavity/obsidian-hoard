@@ -1,10 +1,18 @@
 import { Notice } from 'obsidian';
-import type HoardPlugin from './main';
+import type { DataManager } from './DataManager';
+import type { SettingsReader } from './SettingsService';
 import type { HoardTitle, AnimeSearchResult } from './types';
 import { formatVoteCount, getApiGroupForType, getCommunityRating } from './types';
-import { apiErrorMessage } from './ApiService';
+import { apiErrorMessage, type ApiService } from './ApiService';
 import { t } from './i18n';
 import { createIconButton } from './ui/IconButton';
+
+/** What the community-rating helpers read and write. */
+export interface CommunityRatingDeps {
+	titles: Pick<DataManager, 'getTitle' | 'updateTitle' | 'updateCommunityRating'>;
+	settings: SettingsReader;
+	api: Pick<ApiService, 'fetchCommunityRating' | 'searchAniList' | 'searchAnime'>;
+}
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -30,11 +38,11 @@ function formatScore(rating: number, source: string): string {
 
 export function renderCommunityRating(
 	parent: HTMLElement,
-	plugin: HoardPlugin,
+	deps: CommunityRatingDeps,
 	titleId: string,
 	onUpdated?: () => void,
 ): void {
-	const title = plugin.dataManager.getTitle(titleId);
+	const title = deps.titles.getTitle(titleId);
 	if (!title) return;
 
 	parent.createSpan({ cls: 'hoard-star-rating__divider' });
@@ -72,7 +80,7 @@ export function renderCommunityRating(
 	});
 	refreshBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
-		void refreshCommunityRating(plugin, titleId, refreshBtn, true).then(() => {
+		void refreshCommunityRating(deps, titleId, refreshBtn, true).then(() => {
 			if (onUpdated) onUpdated();
 		});
 	});
@@ -86,23 +94,23 @@ export function renderCommunityRating(
 const pendingRatingRefreshes: Set<string> = new Set();
 
 export function maybeAutoRefreshCommunityRating(
-	plugin: HoardPlugin,
+	deps: CommunityRatingDeps,
 	titleId: string,
 	onUpdated?: () => void,
 ): void {
-	const title = plugin.dataManager.getTitle(titleId);
+	const title = deps.titles.getTitle(titleId);
 	if (!title) return;
 	const last = title.communityRatingLastFetched ?? '';
 	if (last) {
 		const ts = Date.parse(last);
 		if (!isNaN(ts) && Date.now() - ts < THIRTY_DAYS_MS) return;
 	}
-	if (!hasFetchableSource(title, plugin.settings.animeApiSource ?? 'jikan', plugin.settings.typeApiMapping)) return;
+	if (!hasFetchableSource(title, deps.settings.get().animeApiSource ?? 'jikan', deps.settings.get().typeApiMapping)) return;
 	if (pendingRatingRefreshes.has(titleId)) return;
 	pendingRatingRefreshes.add(titleId);
 	void (async () => {
 		try {
-			const ok = await backgroundRefresh(plugin, titleId);
+			const ok = await backgroundRefresh(deps, titleId);
 			if (ok && onUpdated) onUpdated();
 		} finally {
 			pendingRatingRefreshes.delete(titleId);
@@ -124,14 +132,14 @@ function hasFetchableSource(
 	return !!(title.externalLink ?? '').match(/tt\d+/);
 }
 
-async function backgroundRefresh(plugin: HoardPlugin, titleId: string): Promise<boolean> {
-	const title = plugin.dataManager.getTitle(titleId);
+async function backgroundRefresh(deps: CommunityRatingDeps, titleId: string): Promise<boolean> {
+	const title = deps.titles.getTitle(titleId);
 	if (!title) return false;
-	const animeSource = plugin.settings.animeApiSource ?? 'jikan';
-	const group = getApiGroupForType(title.type, plugin.settings.typeApiMapping);
-	const result = await plugin.apiService.fetchCommunityRating(title, animeSource, group);
+	const animeSource = deps.settings.get().animeApiSource ?? 'jikan';
+	const group = getApiGroupForType(title.type, deps.settings.get().typeApiMapping);
+	const result = await deps.api.fetchCommunityRating(title, animeSource, group);
 	if (!result) return false;
-	plugin.dataManager.updateCommunityRating(titleId, result.rating, result.votes, result.source);
+	deps.titles.updateCommunityRating(titleId, result.rating, result.votes, result.source);
 	return true;
 }
 
@@ -142,17 +150,17 @@ async function backgroundRefresh(plugin: HoardPlugin, titleId: string): Promise<
  * lighter updateCommunityRating path.
  */
 export async function refreshCommunityRating(
-	plugin: HoardPlugin,
+	deps: CommunityRatingDeps,
 	titleId: string,
 	btnEl: HTMLElement | null,
 	showNotice: boolean,
 ): Promise<boolean> {
-	let title = plugin.dataManager.getTitle(titleId);
+	let title = deps.titles.getTitle(titleId);
 	if (!title) return false;
 	if (btnEl) btnEl.addClass('is-loading');
 	try {
-		const animeSource = plugin.settings.animeApiSource ?? 'jikan';
-		const group = getApiGroupForType(title.type, plugin.settings.typeApiMapping);
+		const animeSource = deps.settings.get().animeApiSource ?? 'jikan';
+		const group = getApiGroupForType(title.type, deps.settings.get().typeApiMapping);
 
 		if (group === '') {
 			if (showNotice) {
@@ -169,7 +177,7 @@ export async function refreshCommunityRating(
 
 			if (!hasPreferredId) {
 				// search by name on the preferred API
-				const matched = await searchForMatch(plugin, title, wantsAniList);
+				const matched = await searchForMatch(deps, title, wantsAniList);
 				if (!matched) {
 					if (showNotice) {
 						new Notice(t('detail.community.noMatch', { source: wantsAniList ? 'AniList' : 'MAL' }));
@@ -177,7 +185,7 @@ export async function refreshCommunityRating(
 					return false;
 				}
 				// persist the new ID + externalLink before fetching the rating
-				const fresh = plugin.dataManager.getTitle(titleId);
+				const fresh = deps.titles.getTitle(titleId);
 				if (!fresh) return false;
 				if (wantsAniList) {
 					fresh.anilistId = matched.anilistId ?? 0;
@@ -186,7 +194,7 @@ export async function refreshCommunityRating(
 					fresh.malId = matched.malId;
 					fresh.externalLink = `https://myanimelist.net/anime/${fresh.malId}`;
 				}
-				await plugin.dataManager.updateTitle(fresh);
+				await deps.titles.updateTitle(fresh);
 				title = fresh;
 			} else {
 				// we already have the right ID — still make externalLink match the preferred source
@@ -195,17 +203,17 @@ export async function refreshCommunityRating(
 					: `https://myanimelist.net/anime/${title.malId}`;
 				if (title.externalLink !== expectedLink) {
 					title.externalLink = expectedLink;
-					await plugin.dataManager.updateTitle(title);
+					await deps.titles.updateTitle(title);
 				}
 			}
 		}
 
-		const result = await plugin.apiService.fetchCommunityRating(title, animeSource, group);
+		const result = await deps.api.fetchCommunityRating(title, animeSource, group);
 		if (!result) {
 			if (showNotice) new Notice(t('detail.community.fetchFailed'));
 			return false;
 		}
-		plugin.dataManager.updateCommunityRating(
+		deps.titles.updateCommunityRating(
 			titleId,
 			result.rating,
 			result.votes,
@@ -245,13 +253,13 @@ function isReasonableMatch(needle: string, hay: string): boolean {
 }
 
 async function searchForMatch(
-	plugin: HoardPlugin,
+	deps: CommunityRatingDeps,
 	title: HoardTitle,
 	wantsAniList: boolean,
 ): Promise<AnimeSearchResult | null> {
 	const results = wantsAniList
-		? await plugin.apiService.searchAniList(title.title)
-		: await plugin.apiService.searchAnime(title.title);
+		? await deps.api.searchAniList(title.title)
+		: await deps.api.searchAnime(title.title);
 	if (!results.length) return null;
 	const top = results[0]!;
 	if (isReasonableMatch(title.title, top.title)) return top;

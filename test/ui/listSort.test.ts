@@ -6,10 +6,12 @@ type Compare = (key: string, a: HoardTitle, b: HoardTitle) => number;
 
 // a minimal `this` for the comparator: numbers come straight off the fixture
 const host = Object.assign(Object.create(ListTab.prototype) as object, {
-	dataManager: {
-		getProgress: (t: HoardTitle) => (t as unknown as { p: number }).p,
-		calcTimeRemaining: (t: HoardTitle) => (t as unknown as { left: number }).left,
-		calcTimeWatched: (t: HoardTitle) => (t as unknown as { watched: number }).watched,
+	deps: {
+		titles: {
+			getProgress: (t: HoardTitle) => (t as unknown as { p: number }).p,
+			calcTimeRemaining: (t: HoardTitle) => (t as unknown as { left: number }).left,
+			calcTimeWatched: (t: HoardTitle) => (t as unknown as { watched: number }).watched,
+		},
 	},
 	getStatusIndex: (s: string) => ['Watching', 'Completed'].indexOf(s),
 });

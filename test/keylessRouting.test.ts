@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { effectiveMediaSource } from '../src/apiSources';
 import { LibraryIndex } from '../src/LibraryIndex';
 import { resultIdKeys } from '../src/titleSearch';
-import type HoardPlugin from '../src/main';
 import type { Game, MediaSearchResult } from '../src/types';
 import type { GameDetailsResult, GameSearchResult } from '../src/ApiService';
 import { AddGameModal } from '../src/AddGameModal';
@@ -21,8 +20,7 @@ describe('keyless watchlist routing', () => {
 
 	it('finds the stored note with that External ID as already in the library', () => {
 		const titles = [{ title: 'Other', malId: '', anilistId: '', tmdbId: '', tmdbMediaType: '', externalLink: 'https://www.imdb.com/title/tt0903747/' }];
-		const plugin = { dataManager: { getTitles: vi.fn(() => titles) } } as unknown as HoardPlugin;
-		const idx = LibraryIndex.build(plugin, ['watchlist']);
+		const idx = LibraryIndex.build({ watchlist: vi.fn(() => titles) as never }, ['watchlist']);
 		expect(idx.lookup(['imdb:tt0903747'], 'Unrelated')).toBe('Watchlist');
 	});
 });

@@ -2,9 +2,12 @@ import type { TabInstance } from './ui/TabInstance';
 import { setIcon, setTooltip } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { priorityLabel, statusLabel, typeLabel } from './i18n/labels';
-import type HoardPlugin from './main';
+import type { App } from 'obsidian';
 import type { DataManager } from './DataManager';
-import type { HoardTitle, HoardGroup, TagDefinition, SavedFilterPreset, Season } from './types';
+import type { HistoryManager } from './HistoryManager';
+import type { PosterService } from './PosterService';
+import type { SettingsReader, SettingsWriter } from './SettingsService';
+import type { HoardTitle, HoardGroup, TagDefinition, SavedFilterPreset, Season, CardStyleTab, ImportProgress, RowsShelfLayoutEntry } from './types';
 import { formatTime, formatDateDisplay, todayIso, getThemedColor, getDisplayPoster, getTitleCredits, getManualCredits, normalizeRowsLayout, ROWS_SHELVES, ROWS_EXCLUSIVE_SHELVES, sortByFavorited, migratePriorityExclude } from './types';
 import { searchItems, yearOf, type SearchFieldSpec } from './SearchQuery';
 import { renderSearchHelpButton } from './SearchHelpModal';
@@ -12,7 +15,7 @@ import { createDatePicker } from './DatePicker';
 import { renderCommunityRating, maybeAutoRefreshCommunityRating, refreshCommunityRating } from './CommunityRating';
 import { resolveRecentlyWatched } from './HistoryManager';
 import { AddTitleModal } from './AddTitleModal';
-import { AddFromUrlModal } from './AddFromUrlModal';
+import { AddFromUrlModal, type AddFromUrlModalDeps } from './AddFromUrlModal';
 import { AddTitleChoiceModal } from './AddTitleChoiceModal';
 import { renderSearchBox, openRenameGroupPrompt, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, renderViewDropdown, type SortFields } from './ui/TabToolbar';
 import { renderTypeBadge } from './ui/typeBadge';
@@ -24,7 +27,7 @@ import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, com
 import { renderHeaderToolbar } from './MobileToolbar';
 import { EditTitleModal } from './EditTitleModal';
 import { ConfirmModal } from './ConfirmModal';
-import { TitleDetailModal, GroupDetailModal, renderCreditsRows, renderCreditsRefreshButton } from './TitleDetailModal';
+import { TitleDetailModal, GroupDetailModal, renderCreditsRows, renderCreditsRefreshButton, type TitleDetailModalDeps } from './TitleDetailModal';
 import { AddCreditModal } from './AddCreditModal';
 import { appendMarkWatchedButton, isSingleEpisodeTitle } from './MarkWatchedButton';
 import { renderStarRating, ratingColor } from './StarRating';
@@ -33,7 +36,7 @@ import { VirtualScroller } from './VirtualScroller';
 import { LazyCardObserver } from './LazyCardObserver';
 import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from './PosterCard';
 import { renderShelf, renderShelfTitle, type ShelfSelect } from './RowsView';
-import { RowsCustomizeModal } from './RowsCustomizeModal';
+import { RowsCustomizeModal, type RowsCustomizeModalDeps } from './RowsCustomizeModal';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from './ui/TabFilters';
 
 
@@ -48,10 +51,25 @@ const itemKey = (item: DisplayItem): string => (item.kind === 'group' ? groupKey
 
 
 
+/**
+ * The Watchlist tab hosts the detail, add and edit modals, so its deps contain theirs. It drives most
+ * of the manager, so `titles` is the whole `DataManager` rather than a `Pick`.
+ */
+export interface ListTabDeps extends TitleDetailModalDeps, AddFromUrlModalDeps, RowsCustomizeModalDeps {
+	app: App;
+	settings: SettingsReader & SettingsWriter;
+	titles: DataManager;
+	api: TitleDetailModalDeps['api'] & AddFromUrlModalDeps['api'];
+	posters: Pick<PosterService, 'enqueue' | 'clearQueue'>;
+	history: Pick<HistoryManager, 'getEntries'>;
+	getCardMinWidth: () => number;
+	isCardTextUnder: (tab: CardStyleTab) => boolean;
+	/** The running bulk import, if any (shown as a progress bar in the header). */
+	importProgress: () => ImportProgress | null;
+}
+
 export class ListTab implements TabInstance {
 	private container: HTMLElement;
-	private plugin: HoardPlugin;
-	private dataManager: DataManager;
 
 	// preserved state
 	filterTypeExclude: Set<string> = new Set();
@@ -122,20 +140,18 @@ export class ListTab implements TabInstance {
 	// display: contents — lets selection changes rebuild just the buttons
 	private toolbarActionsEl: HTMLElement | null = null;
 
-	constructor(container: HTMLElement, plugin: HoardPlugin, dataManager: DataManager) {
+	constructor(container: HTMLElement, private deps: ListTabDeps) {
 		this.container = container;
-		this.plugin = plugin;
-		this.dataManager = dataManager;
-		const dv = plugin.settings.defaultWatchlistView;
+		const dv = deps.settings.get().defaultWatchlistView;
 		this.currentView = dv === 'list' ? 'list' : 'rows';
 		this.scrollPositionListener = () => {
 			this._lastScrollTop = this.container.scrollTop;
 		};
 		this.container.addEventListener('scroll', this.scrollPositionListener, { passive: true });
-		this.pinnedGroupId = dataManager.getPinnedGroupId();
+		this.pinnedGroupId = deps.titles.getPinnedGroupId();
 
 		// restore persisted filter state
-		const saved = plugin.settings.listFilters;
+		const saved = deps.settings.get().listFilters;
 		if (saved) {
 			this.filterTypeExclude     = new Set(saved.typeExclude     ?? []);
 			this.filterStatusExclude   = new Set(saved.statusExclude   ?? []);
@@ -144,7 +160,7 @@ export class ListTab implements TabInstance {
 			this.filterPriorityExclude = migratePriorityExclude(
 				saved.priorityExclude,
 				saved.priorityEmptyOnly,
-				plugin.settings.priorities,
+				deps.settings.get().priorities,
 			);
 			const ms = ListTab.migrateSortKey(saved.sort ?? 'dateAdded-newest');
 			this.sort.filterSort     = ms.key;
@@ -159,7 +175,7 @@ export class ListTab implements TabInstance {
 		}
 
 		// keep the preset button green while filters still match it
-		const savedPreset = dataManager.getSavedFilterPreset();
+		const savedPreset = deps.titles.getSavedFilterPreset();
 		if (savedPreset) {
 			const setsMatch = (a: Set<string>, b: string[]) =>
 				a.size === b.length && b.every((x) => a.has(x));
@@ -173,7 +189,7 @@ export class ListTab implements TabInstance {
 					Array.from(migratePriorityExclude(
 						savedPreset.priorityExclude,
 						savedPreset.priorityEmptyOnly,
-						plugin.settings.priorities,
+						deps.settings.get().priorities,
 					)),
 				) &&
 				(this.filterRatingEmptyOnly === (savedPreset.ratingEmptyOnly ?? false)) &&
@@ -190,7 +206,7 @@ export class ListTab implements TabInstance {
 	}
 
 	private saveFiltersToSettings(): void {
-		this.plugin.settings.listFilters = {
+		const listFilters = {
 			typeExclude:     Array.from(this.filterTypeExclude),
 			statusExclude:   Array.from(this.filterStatusExclude),
 			groupExclude:    Array.from(this.filterGroupExclude),
@@ -205,7 +221,7 @@ export class ListTab implements TabInstance {
 			groupsOnly:            this.filterGroupsOnly,
 			favoritesOnly:         this.filterFavoritesOnly,
 		};
-		void this.plugin.saveSettings();
+		void this.deps.settings.update((s) => { s.listFilters = listFilters; });
 	}
 
 	private hasActiveFilter(): boolean {
@@ -247,7 +263,7 @@ export class ListTab implements TabInstance {
 		this.filterPriorityExclude      = migratePriorityExclude(
 			preset.priorityExclude,
 			preset.priorityEmptyOnly,
-			this.plugin.settings.priorities,
+			this.deps.settings.get().priorities,
 		);
 		this.filterRatingEmptyOnly      = preset.ratingEmptyOnly      ?? false;
 		this.filterRecentlyArrivedOnly  = preset.recentlyArrivedOnly  ?? false;
@@ -295,7 +311,7 @@ export class ListTab implements TabInstance {
 		this.destroyVirtualScroll();
 		this.destroyRowsVirtual();
 		// flush the debounced episode save before the tab instance is lost
-		void this.dataManager.flushPendingSave();
+		void this.deps.titles.flushPendingSave();
 	}
 
 	render(): void {
@@ -342,7 +358,7 @@ export class ListTab implements TabInstance {
 				(searchMatched === null || searchMatched.has(t.id)) &&
 				this.titlePassesFilters(t));
 
-		const titles = this.dataManager.getTitles();
+		const titles = this.deps.titles.getTitles();
 		const visibleGroups = this.getVisibleRowsGroups(searchMatched, filtering);
 		// same count line as List/Cards, same slot
 		const countEl = this.renderCountLine(
@@ -358,10 +374,13 @@ export class ListTab implements TabInstance {
 			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
-			new RowsCustomizeModal(this.plugin.app, this.plugin, {
+			// the modal reorders this array in place, then persists it after every change
+			let layout: RowsShelfLayoutEntry[] = [];
+			new RowsCustomizeModal(this.deps, {
 				shelves: ROWS_SHELVES.map((sh) => ({ id: sh.id, label: t(`list.shelves.${sh.id}` as TranslationKey) })),
-				getLayout: () => this.plugin.settings.rowsLayout,
-				setLayout: (layout) => { this.plugin.settings.rowsLayout = layout; },
+				getLayout: () => this.deps.settings.get().rowsLayout,
+				setLayout: (next) => { layout = next; },
+				persist: () => void this.deps.settings.update((s) => { s.rowsLayout = layout; }),
 				// live update while the modal reorders shelves behind it
 				onChanged: () => {
 					if (this.currentView === 'rows') this.rerenderActiveView();
@@ -374,10 +393,10 @@ export class ListTab implements TabInstance {
 		const scroll = this.container.createDiv({ cls: 'hoard-rows-view__scroll-container' });
 		// one metrics source for the grids AND the shelf width — every call re-publishes it
 		const rowsMetrics = (w: number): GridMetrics => {
-			const m = computeGridMetrics(w, this.plugin.getCardMinWidth());
+			const m = computeGridMetrics(w, this.deps.getCardMinWidth());
 			setRowsCardWidth(scroll, m.cardWidth);
 			// text-under cells are poster + text block
-			if (this.plugin.isCardTextUnder('watchlist')) {
+			if (this.deps.isCardTextUnder('watchlist')) {
 				const cardHeight = m.cardHeight + POSTER_CARD_TEXT_H;
 				return { cols: m.cols, cardWidth: m.cardWidth, cardHeight, rowHeight: cardHeight + 12 };
 			}
@@ -481,7 +500,7 @@ export class ListTab implements TabInstance {
 		};
 
 		// user order + visibility (RowsCustomizeModal); normalized at read time so a stale layout can't drop a section
-		const layout = normalizeRowsLayout(this.plugin.settings.rowsLayout);
+		const layout = normalizeRowsLayout(this.deps.settings.get().rowsLayout);
 		// both grids off: one flat ungrouped grid (the old Cards view) at the first grid entry's position
 		const gridIds = new Set(['byType', 'byStatus']);
 		const anyGridEnabled = layout.some((e) => gridIds.has(e.id) && e.enabled);
@@ -521,7 +540,7 @@ export class ListTab implements TabInstance {
 			});
 			return;
 		}
-		const titleMap = new Map(this.dataManager.getTitles().map((t) => [t.id, t]));
+		const titleMap = new Map(this.deps.titles.getTitles().map((t) => [t.id, t]));
 		const strip = shelf.createDiv({ cls: 'hoard-rows-view__strip' });
 		for (const group of groups) {
 			const members = group.titleIds
@@ -536,10 +555,10 @@ export class ListTab implements TabInstance {
 	 * Cards/List rule (name match, or one member passing).
 	 */
 	private getVisibleRowsGroups(searchMatched: Set<string> | null, filtering: boolean): HoardGroup[] {
-		const groups = this.dataManager.getGroups();
+		const groups = this.deps.titles.getGroups();
 		if (!filtering) return groups;
 		const q = this.searchQuery.trim().toLowerCase();
-		const titleMap = new Map(this.dataManager.getTitles().map((t) => [t.id, t]));
+		const titleMap = new Map(this.deps.titles.getTitles().map((t) => [t.id, t]));
 		const titleFilterActive =
 			this.filterTypeExclude.size > 0 ||
 			this.filterStatusExclude.size > 0 ||
@@ -574,13 +593,13 @@ export class ListTab implements TabInstance {
 		mode: 'byType' | 'byStatus',
 	): void {
 		const byType = mode === 'byType';
-		const defs = byType ? this.plugin.settings.types : this.plugin.settings.statuses;
+		const defs = byType ? this.deps.settings.get().types : this.deps.settings.get().statuses;
 		const keyOf = (t: HoardTitle): string => (byType ? t.type : t.status);
 
 		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
 		section.createDiv({ cls: 'hoard-rows-view__grouped-title', text: byType ? t('list.shelves.byType') : t('list.shelves.byStatus') });
 
-		const titles = this.dataManager.getTitles();
+		const titles = this.deps.titles.getTitles();
 		let rendered = 0;
 		for (const def of defs) {
 			// buckets keep settings order; sorting only reorders within a bucket
@@ -664,7 +683,7 @@ export class ListTab implements TabInstance {
 		);
 		const today = ListTab.todayStamp();
 
-		const stored = this.dataManager.getRecommendedDaily();
+		const stored = this.deps.titles.getRecommendedDaily();
 		if (stored.date === today) {
 			const byId = new Map(pool.map((t) => [t.id, t]));
 			const picks = stored.ids
@@ -676,13 +695,13 @@ export class ListTab implements TabInstance {
 					pool.filter((t) => !used.has(t.id)),
 					ListTab.RECOMMENDED_COUNT - picks.length,
 				));
-				this.dataManager.setRecommendedDaily({ date: today, ids: picks.map((t) => t.id) });
+				this.deps.titles.setRecommendedDaily({ date: today, ids: picks.map((t) => t.id) });
 			}
 			return picks;
 		}
 
 		const picks = pickRandom(pool, ListTab.RECOMMENDED_COUNT);
-		this.dataManager.setRecommendedDaily({ date: today, ids: picks.map((t) => t.id) });
+		this.deps.titles.setRecommendedDaily({ date: today, ids: picks.map((t) => t.id) });
 		return picks;
 	}
 
@@ -691,7 +710,7 @@ export class ListTab implements TabInstance {
 	 * dateModified is deliberately NOT used — it bumps on any edit. Entries resolve by note id.
 	 */
 	private getRecentlyWatchedTitles(allTitles: HoardTitle[]): HoardTitle[] {
-		return resolveRecentlyWatched(this.plugin.historyManager.getEntries(), allTitles); // newest-first
+		return resolveRecentlyWatched(this.deps.history.getEntries(), allTitles); // newest-first
 	}
 
 	private buildCardElement(
@@ -719,17 +738,17 @@ export class ListTab implements TabInstance {
 			if (!titleId) continue;
 
 			if (titleById === null) {
-				titleById = new Map(this.dataManager.getTitles().map((t) => [t.id, t]));
+				titleById = new Map(this.deps.titles.getTitles().map((t) => [t.id, t]));
 			}
 			const title = titleById.get(titleId);
 			if (!title) continue;
 			// has a poster, or a lookup that is not due yet
-			if (!this.dataManager.lookupDue(title.id, 'poster')) continue;
+			if (!this.deps.titles.lookupDue(title.id, 'poster')) continue;
 
 			const placeholder = card.querySelector('.hoard-card__poster-placeholder');
 			placeholder?.addClass('is-loading');
 
-			void this.plugin.posterService.enqueue(title).then((url) => {
+			void this.deps.posters.enqueue(title).then((url) => {
 				placeholder?.removeClass('is-loading');
 				if (url) {
 					this.applyPosterToCard(card, url);
@@ -747,7 +766,7 @@ export class ListTab implements TabInstance {
 		this.cardsDisplayItems = [];
 		this.cardsObserver?.destroy();
 		this.cardsObserver = null;
-		this.plugin.posterService?.clearQueue();
+		this.deps.posters.clearQueue();
 	}
 
 	/**
@@ -765,10 +784,10 @@ export class ListTab implements TabInstance {
 		cardWidth?: number,
 		cardHeight?: number,
 	): void {
-		const typeDef = this.getTagDef(title.type, this.plugin.settings.types);
-		const statusDef = this.getTagDef(title.status, this.plugin.settings.statuses);
+		const typeDef = this.getTagDef(title.type, this.deps.settings.get().types);
+		const statusDef = this.getTagDef(title.status, this.deps.settings.get().statuses);
 		const typeColor = typeDef
-			? getThemedColor(title.type, typeDef.color, this.plugin.settings.colorTheme)
+			? getThemedColor(title.type, typeDef.color, this.deps.settings.get().colorTheme)
 			: '#888780';
 
 		const display = getDisplayPoster(title);
@@ -794,17 +813,17 @@ export class ListTab implements TabInstance {
 			selected: this.selectedItems.has(title.id),
 			statusLabel: statusDef ? statusLabel(title.status) : undefined,
 			statusColor: statusDef
-				? getThemedColor(title.status, statusDef.color, this.plugin.settings.colorTheme)
+				? getThemedColor(title.status, statusDef.color, this.deps.settings.get().colorTheme)
 				: undefined,
 			typeLabel: typeLabel(title.type),
 			typeColor,
 			year: title.releaseDate?.match(/^(\d{4})/)?.[1],
 			progressRatio,
-			textUnder: this.plugin.isCardTextUnder('watchlist'),
+			textUnder: this.deps.isCardTextUnder('watchlist'),
 			menuItems: [
 				{ label: t('list.card.editTitle'), onClick: () => this.openEditModalForTitle(title.id) },
 				{ label: t('list.card.refreshPoster'), onClick: (card) => this.refreshPosterForCard(card, title.id) },
-				{ label: t('list.card.refreshRating'), onClick: () => void refreshCommunityRating(this.plugin, title.id, null, true) },
+				{ label: t('list.card.refreshRating'), onClick: () => void refreshCommunityRating(this.deps, title.id, null, true) },
 			],
 			onClick: (card) => {
 				if (this.selectionMode) {
@@ -817,7 +836,7 @@ export class ListTab implements TabInstance {
 	}
 
 	private refreshPosterForCard(card: HTMLElement, titleId: string): void {
-		const fresh = this.dataManager.getTitle(titleId);
+		const fresh = this.deps.titles.getTitle(titleId);
 		if (!fresh) return;
 		card.dataset.needsPoster = 'true';
 
@@ -834,7 +853,7 @@ export class ListTab implements TabInstance {
 		}
 
 		// the explicit refresh replaces the poster in the note
-		void this.plugin.posterService.enqueue(fresh, true).then((url) => {
+		void this.deps.posters.enqueue(fresh, true).then((url) => {
 			placeholder?.removeClass('is-loading');
 			if (url) this.applyPosterToCard(card, url);
 		});
@@ -849,17 +868,17 @@ export class ListTab implements TabInstance {
 	): void {
 		const primaryType = members[0]?.type ?? '';
 		const typeDef = primaryType
-			? this.getTagDef(primaryType, this.plugin.settings.types)
+			? this.getTagDef(primaryType, this.deps.settings.get().types)
 			: undefined;
 		renderGroupCard(parent, {
-			app: this.plugin.app,
+			app: this.deps.app,
 			group,
 			members,
 			getCover: getDisplayPoster,
 			typeColor: typeDef
-				? getThemedColor(primaryType, typeDef.color, this.plugin.settings.colorTheme)
+				? getThemedColor(primaryType, typeDef.color, this.deps.settings.get().colorTheme)
 				: '#888780',
-			textUnder: this.plugin.isCardTextUnder('watchlist'),
+			textUnder: this.deps.isCardTextUnder('watchlist'),
 			selected: this.selectedItems.has(groupKey(group.id)),
 			cardHeight,
 			unit: 'title',
@@ -868,7 +887,7 @@ export class ListTab implements TabInstance {
 			onRename: () => this.openRenameGroupPrompt(group),
 			deleteMessage: t('list.deleteGroupConfirm', { name: group.name }),
 			onDelete: () => {
-				void this.dataManager.removeGroup(group.id).then(() => {
+				void this.deps.titles.removeGroup(group.id).then(() => {
 					this.expandedGroups.delete(group.id);
 					this.render();
 				});
@@ -878,7 +897,7 @@ export class ListTab implements TabInstance {
 					this.toggleCardSelection(card, groupKey(group.id));
 					return;
 				}
-				new GroupDetailModal(this.plugin.app, this.plugin, group, members, () => {
+				new GroupDetailModal(this.deps, group, members, () => {
 					this.render();
 				}, (name) => this.applyPersonSearch(name)).open();
 			},
@@ -886,23 +905,23 @@ export class ListTab implements TabInstance {
 	}
 
 	private openRenameGroupPrompt(group: HoardGroup): void {
-		openRenameGroupPrompt(this.plugin.app, group.name, (name) => {
-			void this.dataManager.updateGroup({ ...group, name }).then(() => this.render());
+		openRenameGroupPrompt(this.deps.app, group.name, (name) => {
+			void this.deps.titles.updateGroup({ ...group, name }).then(() => this.render());
 		});
 	}
 
 	private openEditModalForTitle(titleId: string): void {
-		const current = this.dataManager.getTitle(titleId);
+		const current = this.deps.titles.getTitle(titleId);
 		if (!current) return;
-		new EditTitleModal(this.plugin.app, this.plugin, this.dataManager, current, () => {
+		new EditTitleModal(this.deps, current, () => {
 			this.render();
 		}).open();
 	}
 
 	private openDetailModalForTitle(titleId: string): void {
-		const current = this.dataManager.getTitle(titleId);
+		const current = this.deps.titles.getTitle(titleId);
 		if (!current) return;
-		new TitleDetailModal(this.plugin.app, this.plugin, current, () => {
+		new TitleDetailModal(this.deps, current, () => {
 			this.render();
 		}, (name) => this.applyPersonSearch(name)).open();
 	}
@@ -919,8 +938,9 @@ export class ListTab implements TabInstance {
 		const header = this.container.createDiv({ cls: 'hoard-list__header' });
 
 		// import progress bar
-		if (this.plugin.importProgress) {
-			const { current, total, cancel } = this.plugin.importProgress;
+		const importProgress = this.deps.importProgress();
+		if (importProgress) {
+			const { current, total, cancel } = importProgress;
 			const progWrap = header.createDiv({ cls: 'hoard-import__header-progress' });
 			const track = progWrap.createDiv({ cls: 'hoard-import__header-track' });
 			const fill = track.createDiv({ cls: 'hoard-import__header-fill' });
@@ -1018,7 +1038,7 @@ export class ListTab implements TabInstance {
 	/** Toolbar action buttons. Desktop: inline after the search input; mobile: in the crossfading slot. */
 	private renderToolbarActions(controls: HTMLElement): void {
 		// saved filter preset (only when one is stored)
-		const preset = this.dataManager.getSavedFilterPreset();
+		const preset = this.deps.titles.getSavedFilterPreset();
 		this.savedFilterBtnEl = renderToolbarCore(controls, {
 			preset: preset && {
 				active: this.savedFilterActive,
@@ -1063,9 +1083,9 @@ export class ListTab implements TabInstance {
 	}
 
 	private openAddTitleChooser(): void {
-		new AddTitleChoiceModal(this.plugin.app, (choice) => {
+		new AddTitleChoiceModal(this.deps, (choice) => {
 			if (choice === 'url') {
-				new AddFromUrlModal(this.plugin.app, this.plugin, this.dataManager, () => {
+				new AddFromUrlModal(this.deps, () => {
 					this.render();
 				}).open();
 			} else {
@@ -1083,9 +1103,9 @@ export class ListTab implements TabInstance {
 			rerenderAll: () => this.render(),
 			registerCleanup: (fn) => this.activeCleanups.push(fn),
 			preset: {
-				exists: () => this.dataManager.getSavedFilterPreset() !== null,
+				exists: () => this.deps.titles.getSavedFilterPreset() !== null,
 				remove: async () => {
-					await this.dataManager.setSavedFilterPreset(null);
+					await this.deps.titles.setSavedFilterPreset(null);
 					this.savedFilterActive = false;
 				},
 			},
@@ -1107,23 +1127,23 @@ export class ListTab implements TabInstance {
 					sections: buildFilterSections({
 						lead: [{
 							label: t('list.filter.type'),
-							opts: this.plugin.settings.types.map((ty) => ty.name),
+							opts: this.deps.settings.get().types.map((ty) => ty.name),
 							formatOpt: typeLabel,
 							excludeSet: draft.typeExclude,
 						}],
-						statusOpts: this.plugin.settings.statuses.map((s) => s.name),
+						statusOpts: this.deps.settings.get().statuses.map((s) => s.name),
 						formatStatus: statusLabel,
 						// half options appear only when a title holds that exact rating
-						ratingOpts: buildRatingOpts(this.dataManager.getTitles().map((t) => t.rating)),
-						priorities: this.plugin.settings.priorities,
-						groupOpts: this.dataManager.getGroups().map((g) => g.name),
+						ratingOpts: buildRatingOpts(this.deps.titles.getTitles().map((t) => t.rating)),
+						priorities: this.deps.settings.get().priorities,
+						groupOpts: this.deps.titles.getGroups().map((g) => g.name),
 						draft,
 					}),
 					favorites: {
 						get: () => draft.filterFavoritesOnly,
 						set: (v) => { draft.filterFavoritesOnly = v; },
 					},
-					savePreset: () => this.dataManager.setSavedFilterPreset({
+					savePreset: () => this.deps.titles.setSavedFilterPreset({
 						typeExclude:     Array.from(draft.typeExclude),
 						statusExclude:   Array.from(draft.statusExclude),
 						groupExclude:    Array.from(draft.groupExclude),
@@ -1179,8 +1199,7 @@ export class ListTab implements TabInstance {
 				}
 				this.currentView = key;
 				// last-used persistence (the Upcoming pattern) — no separate default setting
-				this.plugin.settings.defaultWatchlistView = key;
-				void this.plugin.saveSettings();
+				void this.deps.settings.update((s) => { s.defaultWatchlistView = key; });
 				this.render();
 			},
 		});
@@ -1191,17 +1210,17 @@ export class ListTab implements TabInstance {
 	}
 
 	private renderActionBar(parent: HTMLElement): void {
-		const bar = renderActionBar(parent, this.plugin.app, {
+		const bar = renderActionBar(parent, this.deps.app, {
 			title: t('list.deleteSelected'),
 			selected: this.selectedItems,
 			message: (count) => t('list.deleteSelectedConfirm', { count }),
 			onConfirm: async () => {
-				const groupIds = new Map(this.dataManager.getGroups().map((g) => [groupKey(g.id), g.id]));
+				const groupIds = new Map(this.deps.titles.getGroups().map((g) => [groupKey(g.id), g.id]));
 				const titleIds: string[] = [];
 				for (const id of Array.from(this.selectedItems)) {
 					const groupId = groupIds.get(id);
 					if (groupId !== undefined) {
-						await this.dataManager.removeGroup(groupId);
+						await this.deps.titles.removeGroup(groupId);
 						this.expandedGroups.delete(groupId);
 					} else {
 						titleIds.push(id);
@@ -1209,7 +1228,7 @@ export class ListTab implements TabInstance {
 					}
 				}
 				if (titleIds.length > 0) {
-					await this.dataManager.removeTitlesBatch(titleIds);
+					await this.deps.titles.removeTitlesBatch(titleIds);
 				}
 				this.selectedItems.clear();
 				this.render();
@@ -1218,22 +1237,22 @@ export class ListTab implements TabInstance {
 
 		renderBatchStatusSelect(
 			bar,
-			this.plugin.settings.statuses.map((s) => s.name).filter((name) => name !== 'To be released'),
+			this.deps.settings.get().statuses.map((s) => s.name).filter((name) => name !== 'To be released'),
 			async (newStatus) => {
-				const groupIds = new Set(this.dataManager.getGroups().map((g) => groupKey(g.id)));
+				const groupIds = new Set(this.deps.titles.getGroups().map((g) => groupKey(g.id)));
 				const updated: HoardTitle[] = [];
 				for (const id of this.selectedItems) {
 					if (groupIds.has(id)) continue;
-					const t = this.dataManager.getTitle(id);
+					const t = this.deps.titles.getTitle(id);
 					if (!t) continue;
 					t.status = newStatus;
-					this.dataManager.updateTitleSilent(t);
+					this.deps.titles.updateTitleSilent(t);
 					updated.push(t);
 				}
 				if (updated.length > 0) {
-					await this.dataManager.save();
+					await this.deps.titles.save();
 					for (const t of updated) {
-						await this.dataManager.updateMarkdownFile(t);
+						await this.deps.titles.updateMarkdownFile(t);
 					}
 				}
 				this.render();
@@ -1241,7 +1260,7 @@ export class ListTab implements TabInstance {
 			statusLabel,
 		);
 
-		const allGroups = this.dataManager.getGroups();
+		const allGroups = this.deps.titles.getGroups();
 		const groupIds = new Set(allGroups.map((g) => groupKey(g.id)));
 		const selectedTitleIds = () => Array.from(this.selectedItems).filter((id) => !groupIds.has(id));
 		renderMoveToGroupSelect(bar, {
@@ -1249,7 +1268,7 @@ export class ListTab implements TabInstance {
 			disabled: Array.from(this.selectedItems).some((id) => groupIds.has(id)),
 			onMove: async (groupId) => {
 				for (const id of selectedTitleIds()) {
-					await this.dataManager.addTitleToGroup(groupId, id);
+					await this.deps.titles.addTitleToGroup(groupId, id);
 				}
 				this.selectedItems.clear();
 				this.selectionMode = false;
@@ -1257,12 +1276,12 @@ export class ListTab implements TabInstance {
 			},
 			onCreate: async (name) => {
 				const newGroup: HoardGroup = {
-					id: this.dataManager.generateGroupId(name),
+					id: this.deps.titles.generateGroupId(name),
 					name,
 					titleIds: selectedTitleIds(),
 					dateAdded: new Date().toISOString(),
 				};
-				await this.dataManager.addGroup(newGroup);
+				await this.deps.titles.addGroup(newGroup);
 				this.selectedItems.clear();
 				this.selectionMode = false;
 				this.render();
@@ -1274,7 +1293,7 @@ export class ListTab implements TabInstance {
 	// Modal helpers
 
 	private openAddTitleModal(): void {
-		new AddTitleModal(this.plugin.app, this.plugin, this.dataManager, () => {
+		new AddTitleModal(this.deps, () => {
 			this.render();
 		}).open();
 	}
@@ -1285,7 +1304,7 @@ export class ListTab implements TabInstance {
 		renderSearchBox(parent, {
 			value: this.searchQuery,
 			placeholder: t('list.searchPlaceholder'),
-			help: (host) => renderSearchHelpButton(host, this.plugin.app, t('app.tabs.watchlist'), () => this.searchFields()),
+			help: (host) => renderSearchHelpButton(host, this.deps.app, t('app.tabs.watchlist'), () => this.searchFields()),
 			onChange: (q) => { this.searchQuery = q; },
 			onCommit: () => this.rerenderActiveView(),
 		});
@@ -1584,9 +1603,9 @@ export class ListTab implements TabInstance {
 	// Display items (groups + top-level titles)
 
 	private getDisplayItems(): DisplayItem[] {
-		const groups = this.dataManager.getGroups();
-		const groupedIds = this.dataManager.getGroupedTitleIds();
-		const allTitles = this.dataManager.getTitles();
+		const groups = this.deps.titles.getGroups();
+		const groupedIds = this.deps.titles.getGroupedTitleIds();
+		const allTitles = this.deps.titles.getTitles();
 		const titleMap = new Map(allTitles.map((t) => [t.id, t]));
 		const q = this.searchQuery.trim().toLowerCase();
 		// one fuzzy pass for both top-level and member matching
@@ -1654,7 +1673,7 @@ export class ListTab implements TabInstance {
 
 	/** One comparator per sort key; groups aggregate their members. */
 	private buildDisplayComparators(): Record<string, Comparator<DisplayItem>> {
-		const dm = this.dataManager;
+		const dm = this.deps.titles;
 		const times = (dates: (string | null | undefined)[]): number[] =>
 			dates.filter((d): d is string => !!d).map((d) => new Date(d).getTime());
 		const name = byItem((t) => t.title, (_m, g) => g.name);
@@ -1740,7 +1759,7 @@ export class ListTab implements TabInstance {
 			}
 			this.expandedId = isExpanded ? null : title.id;
 			if (!isExpanded) {
-				this.collapsedSeasons = this.dataManager.getCollapsedSeasonsForTitle(title.id);
+				this.collapsedSeasons = this.deps.titles.getCollapsedSeasonsForTitle(title.id);
 			}
 			this.rerenderTable();
 		});
@@ -1766,7 +1785,7 @@ export class ListTab implements TabInstance {
 		const colTitle = row.createDiv({ cls: 'hoard-list__column-title' });
 		colTitle.createDiv({ cls: 'hoard-list__row-title-text', text: title.title });
 		const badgeRow = colTitle.createDiv({ cls: 'hoard-list__badge-row' });
-		renderTypeBadge(badgeRow, title.type, this.plugin.settings);
+		renderTypeBadge(badgeRow, title.type, this.deps.settings.get());
 		// release year after the type badge; omitted when unknown
 		const yearMatch = title.releaseDate?.match(/^(\d{4})/);
 		if (yearMatch) badgeRow.createSpan({ cls: 'hoard-list__row-year', text: yearMatch[1] });
@@ -1775,13 +1794,13 @@ export class ListTab implements TabInstance {
 		}
 		const barWrap = colTitle.createDiv({ cls: 'hoard-progress__wrap' });
 		const bar = barWrap.createDiv({ cls: 'hoard-progress__bar' });
-		bar.setCssProps({ '--hoard-progress-width': `${this.dataManager.getProgress(title)}%` });
+		bar.setCssProps({ '--hoard-progress-width': `${this.deps.titles.getProgress(title)}%` });
 	}
 
 	private renderPriorityCell(row: HTMLElement, priority: string | null): void {
 		const colPriority = row.createDiv({ cls: 'hoard-list__column-priority' });
 		if (!priority) return;
-		const priorityDef = this.getTagDef(priority, this.plugin.settings.priorities);
+		const priorityDef = this.getTagDef(priority, this.deps.settings.get().priorities);
 		const pBadge = colPriority.createSpan({ cls: 'hoard-badge__priority', text: priorityLabel(priority) });
 		if (priorityDef) pBadge.setCssProps({ '--hoard-badge-priority-color': priorityDef.color });
 	}
@@ -1793,12 +1812,12 @@ export class ListTab implements TabInstance {
 			return;
 		}
 		const ratingEl = colRating.createSpan({ cls: 'hoard-list__row-rating', text: format(rating) });
-		ratingEl.setCssProps({ '--hoard-list-row-rating-color': ratingColor(rating, this.plugin.settings.ratingSystem) });
+		ratingEl.setCssProps({ '--hoard-list-row-rating-color': ratingColor(rating, this.deps.settings.get().ratingSystem) });
 	}
 
 	/** Status badge (respects coloredTypeBadges); `fallbackColor` colors a status without a tag definition. */
 	private renderStatusCell(row: HTMLElement, status: string, label: string, fallbackColor?: string): void {
-		const colored = this.plugin.settings.coloredTypeBadges;
+		const colored = this.deps.settings.get().coloredTypeBadges;
 		const colStatus = row.createDiv({ cls: 'hoard-list__column-status' });
 		const statusBadge = colStatus.createSpan({
 			cls: colored ? 'hoard-badge' : 'hoard-badge__plain',
@@ -1807,9 +1826,9 @@ export class ListTab implements TabInstance {
 			attr: { title: label },
 		});
 		if (!colored) return;
-		const statusDef = this.getTagDef(status, this.plugin.settings.statuses);
+		const statusDef = this.getTagDef(status, this.deps.settings.get().statuses);
 		const color = statusDef?.color ?? fallbackColor;
-		if (color) statusBadge.setCssProps({ '--hoard-badge-color': getThemedColor(status, color, this.plugin.settings.colorTheme) });
+		if (color) statusBadge.setCssProps({ '--hoard-badge-color': getThemedColor(status, color, this.deps.settings.get().colorTheme) });
 	}
 
 	private renderTitlePinCell(row: HTMLElement, title: HoardTitle): void {
@@ -1827,19 +1846,19 @@ export class ListTab implements TabInstance {
 
 	/** Pins/unpins a title; pinning unpins every other pinned title first. */
 	private async toggleTitlePin(titleId: string): Promise<void> {
-		const current = this.dataManager.getTitle(titleId);
+		const current = this.deps.titles.getTitle(titleId);
 		if (!current) return;
 		const newPinned = !current.pinned;
 		if (newPinned) {
-			for (const other of this.dataManager.getTitles()) {
+			for (const other of this.deps.titles.getTitles()) {
 				if (other.id !== current.id && other.pinned) {
 					other.pinned = false;
-					await this.dataManager.updateTitle(other);
+					await this.deps.titles.updateTitle(other);
 				}
 			}
 		}
 		current.pinned = newPinned;
-		await this.dataManager.updateTitle(current);
+		await this.deps.titles.updateTitle(current);
 		this.rerenderTable();
 	}
 
@@ -1918,12 +1937,12 @@ export class ListTab implements TabInstance {
 
 		const primaryType = members[0]?.type ?? '';
 		if (primaryType) {
-			renderTypeBadge(colTitle, primaryType, this.plugin.settings);
+			renderTypeBadge(colTitle, primaryType, this.deps.settings.get());
 		}
 
 		const statsEl = colTitle.createDiv({ cls: 'hoard-group-header__stats' });
-		const timeWatched = members.reduce((s, t) => s + this.dataManager.calcTimeWatched(t), 0);
-		const timeLeft = members.reduce((s, t) => s + this.dataManager.calcTimeRemaining(t), 0);
+		const timeWatched = members.reduce((s, t) => s + this.deps.titles.calcTimeWatched(t), 0);
+		const timeLeft = members.reduce((s, t) => s + this.deps.titles.calcTimeRemaining(t), 0);
 		statsEl.createSpan({ text: t('ui.group.countTitle', { count: members.length }) });
 		statsEl.createSpan({ text: `  ·  ${t('list.stats.watched', { time: formatTime(timeWatched) })}` });
 		statsEl.createSpan({ text: `  ·  ${t('list.stats.left', { time: formatTime(timeLeft) })}` });
@@ -1966,7 +1985,7 @@ export class ListTab implements TabInstance {
 	private async commitGroupRename(group: HoardGroup, rawName: string): Promise<void> {
 		const newName = rawName.trim();
 		if (newName && newName !== group.name) {
-			await this.dataManager.updateGroup({ ...group, name: newName });
+			await this.deps.titles.updateGroup({ ...group, name: newName });
 		}
 		this.cancelGroupRename();
 	}
@@ -1993,8 +2012,8 @@ export class ListTab implements TabInstance {
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			new ConfirmModal(this.plugin.app, t('list.deleteGroupConfirm', { name: group.name }), () => {
-				void this.dataManager.removeGroup(group.id).then(() => {
+			new ConfirmModal(this.deps.app, t('list.deleteGroupConfirm', { name: group.name }), () => {
+				void this.deps.titles.removeGroup(group.id).then(() => {
 					this.expandedGroups.delete(group.id);
 					this.rerenderTable();
 				});
@@ -2013,13 +2032,13 @@ export class ListTab implements TabInstance {
 		grpPinIcon.addEventListener('click', (e) => {
 			e.stopPropagation();
 			this.pinnedGroupId = isGrpPinned ? null : group.id;
-			void this.dataManager.setPinnedGroupId(this.pinnedGroupId);
+			void this.deps.titles.setPinnedGroupId(this.pinnedGroupId);
 			// unpin any pinned title
 			if (this.pinnedGroupId) {
-				for (const t of this.dataManager.getTitles()) {
+				for (const t of this.deps.titles.getTitles()) {
 					if (t.pinned) {
 						t.pinned = false;
-						void this.dataManager.updateTitle(t);
+						void this.deps.titles.updateTitle(t);
 					}
 				}
 			}
@@ -2031,7 +2050,7 @@ export class ListTab implements TabInstance {
 
 	private getGroupProgress(members: HoardTitle[]): number {
 		const totalWatched = members.reduce((s, t) => s + t.watchedEpisodes.length, 0);
-		const totalEps = members.reduce((s, t) => s + this.dataManager.getEffectiveTotal(t), 0);
+		const totalEps = members.reduce((s, t) => s + this.deps.titles.getEffectiveTotal(t), 0);
 		if (totalEps === 0) return 0;
 		return Math.min(100, Math.round((totalWatched / totalEps) * 100));
 	}
@@ -2104,11 +2123,11 @@ export class ListTab implements TabInstance {
 
 		// credits rows; clicking a name filters this view via the search bar
 		const creditsWrap = accLeft.createDiv({ cls: 'hoard-accordion__credits' });
-		renderCreditsRefreshButton(creditsWrap, this.plugin, title, () => this.rerenderTable());
+		renderCreditsRefreshButton(creditsWrap, this.deps, title, () => this.rerenderTable());
 		renderCreditsRows(creditsWrap, title, {
 			onPersonClick: (name) => this.applyPersonSearch(name),
 			onAddCredits: (field) => {
-				new AddCreditModal(this.plugin.app, this.plugin, title, field, () =>
+				new AddCreditModal(this.deps, title, field, () =>
 					this.rerenderTable(),
 				).open();
 			},
@@ -2117,17 +2136,17 @@ export class ListTab implements TabInstance {
 					const remaining = getManualCredits(title, field).filter(
 						(n) => n.toLowerCase() !== name.toLowerCase(),
 					);
-					await this.dataManager.updateManualCredits(title.id, field, remaining);
+					await this.deps.titles.updateManualCredits(title.id, field, remaining);
 					this.rerenderTable();
 				})();
 			},
 		});
 
 		const watchedEps = title.watchedEpisodes.length;
-		const effectiveTotal = this.dataManager.getEffectiveTotal(title);
-		const timeWatched = this.dataManager.calcTimeWatched(title);
-		const timeLeft = this.dataManager.calcTimeRemainingForModal(title);
-		const progress = this.dataManager.getProgress(title);
+		const effectiveTotal = this.deps.titles.getEffectiveTotal(title);
+		const timeWatched = this.deps.titles.calcTimeWatched(title);
+		const timeLeft = this.deps.titles.calcTimeRemainingForModal(title);
+		const progress = this.deps.titles.getProgress(title);
 
 		const accRightGroup = accHeader.createDiv({ cls: 'hoard-accordion__right-group' });
 
@@ -2159,7 +2178,7 @@ export class ListTab implements TabInstance {
 	private renderSingleEpisodeBody(parent: HTMLElement, title: HoardTitle): void {
 		const row = parent.createDiv({ cls: 'hoard-accordion__movie-row' });
 		// the shared toggle writes status + watch date; the row just re-renders
-		appendMarkWatchedButton(this.dataManager, row, title.id, () => this.rerenderTable());
+		appendMarkWatchedButton(this.deps.titles, row, title.id, () => this.rerenderTable());
 	}
 
 	private renderEpisodesBody(parent: HTMLElement, title: HoardTitle): void {
@@ -2173,7 +2192,7 @@ export class ListTab implements TabInstance {
 		title.seasons.forEach((season, seasonIdx) => {
 			let isCollapsed = this.collapsedSeasons.has(seasonIdx);
 			const { seasonWrap, seasonHeader } = createSeasonHeader(
-				parent, season.name, seasonIdx, this.plugin.settings.seasonPalette,
+				parent, season.name, seasonIdx, this.deps.settings.get().seasonPalette,
 			);
 			seasonHeader.createSpan({ cls: 'hoard-accordion__season-episode-count', text: ListTab.seasonCountText(season) });
 			const chevron = seasonHeader.createSpan({
@@ -2199,7 +2218,7 @@ export class ListTab implements TabInstance {
 					seasonWrap.querySelector('.hoard-accordion__episode-grid')?.remove();
 				}
 				if (this.expandedId) {
-					void this.dataManager.persistCollapsedSeasons(this.expandedId, this.collapsedSeasons);
+					void this.deps.titles.persistCollapsedSeasons(this.expandedId, this.collapsedSeasons);
 				}
 			});
 		});
@@ -2213,19 +2232,19 @@ export class ListTab implements TabInstance {
 		renderEpisodeGrid(parent, {
 			getTitle: () => title,
 			season,
-			perSeason: this.plugin.settings.episodeNumbering === 'per-season',
+			perSeason: this.deps.settings.get().episodeNumbering === 'per-season',
 			labels: { clearAll: t('list.season.clearAll'), markAll: t('list.season.markAll') },
 			episodeTooltip: (epNum, isSkipped) => t(isSkipped ? 'list.episodeSkipped' : 'list.episode', { num: epNum }),
 			onFill: (seasonEps, markWatched, e) => {
 				e.stopPropagation();
 				// bulk: cheap via the notify path, which triggers a full re-render
-				void this.dataManager.markSeasonWatched(title.id, seasonEps, markWatched, season?.name).then(() => this.rerenderTable());
+				void this.deps.titles.markSeasonWatched(title.id, seasonEps, markWatched, season?.name).then(() => this.rerenderTable());
 			},
 			// click toggles watched only; skippedEpisodes comes from the Edit modal's season text
 			onEpisode: (epNum, e, refreshBox, refreshFillBtn) => {
 				e.stopPropagation();
 				const isWatched = title.watchedEpisodes.includes(epNum);
-				this.dataManager.applyEpisodeWatchedToggle(title.id, epNum, !isWatched);
+				this.deps.titles.applyEpisodeWatchedToggle(title.id, epNum, !isWatched);
 				refreshBox();
 				refreshFillBtn();
 				this.updateAccordionStats(e.currentTarget as HTMLElement, title, season);
@@ -2245,11 +2264,11 @@ export class ListTab implements TabInstance {
 		const accordion = box.closest('.hoard-accordion');
 		if (!accordion) return;
 
-		const timeLeft = this.dataManager.calcTimeRemainingForModal(title);
-		const timeWatched = this.dataManager.calcTimeWatched(title);
+		const timeLeft = this.deps.titles.calcTimeRemainingForModal(title);
+		const timeWatched = this.deps.titles.calcTimeWatched(title);
 		const watchedEps = title.watchedEpisodes.length;
-		const effectiveTotal = this.dataManager.getEffectiveTotal(title);
-		const progress = this.dataManager.getProgress(title);
+		const effectiveTotal = this.deps.titles.getEffectiveTotal(title);
+		const progress = this.deps.titles.getProgress(title);
 
 		const statValues = accordion.querySelectorAll<HTMLElement>('.hoard-accordion__stat-block .hoard-accordion__percent');
 		if (statValues[0]) statValues[0].textContent = formatTime(timeLeft);
@@ -2300,10 +2319,10 @@ export class ListTab implements TabInstance {
 			stopClickPropagation: true,
 			onChange: (iso) => {
 				void (async () => {
-					const t = this.dataManager.getTitle(title.id);
+					const t = this.deps.titles.getTitle(title.id);
 					if (!t) return;
 					t[field] = iso;
-					await this.dataManager.updateTitle(t);
+					await this.deps.titles.updateTitle(t);
 					this.rerenderTable();
 				})();
 			},
@@ -2329,15 +2348,15 @@ export class ListTab implements TabInstance {
 		// star clicks must not bubble up and toggle the accordion
 		starsWrap.addEventListener('click', (e) => e.stopPropagation());
 		renderStarRating(starsWrap, title.rating, {
-			allowHalf: this.plugin.settings.halfStarRatings ?? false,
-			tiers: this.plugin.settings.ratingSystem,
+			allowHalf: this.deps.settings.get().halfStarRatings ?? false,
+			tiers: this.deps.settings.get().ratingSystem,
 			showLabel: true,
 			onChange: (value) => {
 				void (async () => {
-					const t = this.dataManager.getTitle(title.id);
+					const t = this.deps.titles.getTitle(title.id);
 					if (!t) return;
 					t.rating = value;
-					await this.dataManager.updateTitle(t);
+					await this.deps.titles.updateTitle(t);
 					this.rerenderTable();
 				})();
 			},
@@ -2351,10 +2370,10 @@ export class ListTab implements TabInstance {
 				n = n.nextSibling;
 				toRemove.parentNode?.removeChild(toRemove);
 			}
-			renderCommunityRating(starsRow, this.plugin, title.id, rerenderCommunity);
+			renderCommunityRating(starsRow, this.deps, title.id, rerenderCommunity);
 		};
-		renderCommunityRating(starsRow, this.plugin, title.id, rerenderCommunity);
-		maybeAutoRefreshCommunityRating(this.plugin, title.id, rerenderCommunity);
+		renderCommunityRating(starsRow, this.deps, title.id, rerenderCommunity);
+		maybeAutoRefreshCommunityRating(this.deps, title.id, rerenderCommunity);
 
 		const notesRow = footer.createDiv({ cls: 'hoard-accordion__footer-row' });
 		const notesInput = notesRow.createEl('input', {
@@ -2365,10 +2384,10 @@ export class ListTab implements TabInstance {
 		notesInput.addEventListener('click', (e) => e.stopPropagation());
 		notesInput.addEventListener('change', () => {
 			void (async () => {
-				const t = this.dataManager.getTitle(title.id);
+				const t = this.deps.titles.getTitle(title.id);
 				if (!t) return;
 				t.notes = notesInput.value;
-				await this.dataManager.updateTitle(t);
+				await this.deps.titles.updateTitle(t);
 				this.rerenderTable();
 			})();
 		});
@@ -2382,7 +2401,7 @@ export class ListTab implements TabInstance {
 		const statusField = statusRow.createDiv({ cls: 'hoard-date-picker__field' });
 		statusField.createSpan({ cls: 'hoard-accordion__footer-label', text: t('list.footer.status') });
 		const statusSelect = statusField.createEl('select', { cls: 'hoard-input__select hoard-input__select--sm' });
-		for (const s of this.plugin.settings.statuses) {
+		for (const s of this.deps.settings.get().statuses) {
 			if (s.name === 'To be released') continue; // auto-managed; not user-selectable here
 			const opt = statusSelect.createEl('option', { text: statusLabel(s.name), value: s.name });
 			if (s.name === title.status) opt.selected = true;
@@ -2390,10 +2409,10 @@ export class ListTab implements TabInstance {
 		statusSelect.addEventListener('click', (e) => e.stopPropagation());
 		statusSelect.addEventListener('change', () => {
 			void (async () => {
-				const t = this.dataManager.getTitle(title.id);
+				const t = this.deps.titles.getTitle(title.id);
 				if (!t) return;
 				t.status = statusSelect.value;
-				await this.dataManager.updateTitle(t);
+				await this.deps.titles.updateTitle(t);
 				this.rerenderTable();
 			})();
 		});
@@ -2403,17 +2422,17 @@ export class ListTab implements TabInstance {
 		const prioritySelect = priField.createEl('select', { cls: 'hoard-input__select hoard-input__select--sm' });
 		// blank option clears the priority
 		prioritySelect.createEl('option', { text: t('list.footer.noPriority'), value: '' });
-		for (const p of this.plugin.settings.priorities) {
+		for (const p of this.deps.settings.get().priorities) {
 			const opt = prioritySelect.createEl('option', { text: priorityLabel(p.name), value: p.name });
 			if (p.name === title.priority) opt.selected = true;
 		}
 		prioritySelect.addEventListener('click', (e) => e.stopPropagation());
 		prioritySelect.addEventListener('change', () => {
 			void (async () => {
-				const t = this.dataManager.getTitle(title.id);
+				const t = this.deps.titles.getTitle(title.id);
 				if (!t) return;
 				t.priority = prioritySelect.value;
-				await this.dataManager.updateTitle(t);
+				await this.deps.titles.updateTitle(t);
 				this.rerenderTable();
 			})();
 		});
@@ -2428,12 +2447,12 @@ export class ListTab implements TabInstance {
 			stopClickPropagation: true,
 			onChange: (iso) => {
 				void (async () => {
-					const t = this.dataManager.getTitle(title.id);
+					const t = this.deps.titles.getTitle(title.id);
 					if (!t) return;
 					t.releaseDate = iso;
-					await this.dataManager.updateTitle(t);
+					await this.deps.titles.updateTitle(t);
 					// may flip the status to "To be released" and add/remove the Upcoming entry
-					await this.dataManager.applyReleaseDateChange(t);
+					await this.deps.titles.applyReleaseDateChange(t);
 					this.rerenderTable();
 				})();
 			},
@@ -2444,8 +2463,8 @@ export class ListTab implements TabInstance {
 		const deleteBtn = actionRow.createEl('button', { cls: 'hoard-accordion__delete-btn hoard-btn--danger', text: t('common.remove') });
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			new ConfirmModal(this.plugin.app, t('list.removeTitleConfirm', { title: title.title }), () => {
-				void this.dataManager.removeTitle(title.id).then(() => {
+			new ConfirmModal(this.deps.app, t('list.removeTitleConfirm', { title: title.title }), () => {
+				void this.deps.titles.removeTitle(title.id).then(() => {
 					this.expandedId = null;
 					this.rerenderTable();
 				});
@@ -2456,9 +2475,9 @@ export class ListTab implements TabInstance {
 		const editBtn = editBtnWrap.createEl('button', { cls: 'hoard-accordion__edit-btn', text: t('common.edit') });
 		editBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			const current = this.dataManager.getTitle(title.id);
+			const current = this.deps.titles.getTitle(title.id);
 			if (!current) return;
-			new EditTitleModal(this.plugin.app, this.plugin, this.dataManager, current, () => {
+			new EditTitleModal(this.deps, current, () => {
 				this.rerenderTable();
 			}).open();
 		});
@@ -2475,7 +2494,7 @@ export class ListTab implements TabInstance {
 
 	/** One comparator per sort key; `desc` flips an ascending one. */
 	private buildTitleComparators(): Record<string, TitleComparator> {
-		const dm = this.dataManager;
+		const dm = this.deps.titles;
 		const byTitle: TitleComparator = (a, b) => a.title.localeCompare(b.title);
 		const added = byNumber<HoardTitle>((t) => new Date(t.dateAdded).getTime());
 		const progress = byNumber<HoardTitle>((t) => dm.getProgress(t));
@@ -2520,11 +2539,11 @@ export class ListTab implements TabInstance {
 
 	/** Matching title ids, or null for an empty query. See SearchQuery.ts for the semantics. */
 	private getSearchMatchedIds(): Set<string> | null {
-		return searchItems(this.dataManager.getTitles(), { id: (t) => t.id, fields: this.searchFields() }, this.searchQuery);
+		return searchItems(this.deps.titles.getTitles(), { id: (t) => t.id, fields: this.searchFields() }, this.searchQuery);
 	}
 
 	private getFilteredSortedTitles(searchMatched?: Set<string> | null): HoardTitle[] {
-		let titles = this.dataManager.getTitles();
+		let titles = this.deps.titles.getTitles();
 
 		const matched = searchMatched !== undefined ? searchMatched : this.getSearchMatchedIds();
 		if (matched) {
@@ -2554,7 +2573,7 @@ export class ListTab implements TabInstance {
 
 	// Utilities
 
-	private getTagDef(name: string, tags: TagDefinition[]): TagDefinition | undefined {
+	private getTagDef(name: string, tags: readonly TagDefinition[]): TagDefinition | undefined {
 		return tags.find((t) => t.name === name);
 	}
 

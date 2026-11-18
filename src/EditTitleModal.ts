@@ -12,8 +12,8 @@ import {
 	titleField,
 	type GroupPickerState,
 } from './ui/FormCells';
-import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
+import type { SettingsReader } from './SettingsService';
 import type { HoardTitle, HoardGroup, Season } from './types';
 import { completedEpisodes } from './entryFactories';
 import { formatSeasonLine, parseSeasonLine, seasonsOf } from './storage/seasonText';
@@ -27,9 +27,16 @@ function seasonsToText(seasons: Season[]): string {
 	return seasons.map(formatSeasonLine).join('\n');
 }
 
+export interface EditTitleModalDeps {
+	app: App;
+	settings: SettingsReader;
+	titles: Pick<
+		DataManager,
+		'getTitles' | 'getGroups' | 'getGroup' | 'updateTitle' | 'updateGroup' | 'generateGroupId' | 'addTitleToGroup' | 'addGroup'
+	>;
+}
+
 export class EditTitleModal extends Modal {
-	private plugin: HoardPlugin;
-	private dataManager: DataManager;
 	private original: HoardTitle;
 	private onSaved: () => void;
 
@@ -52,15 +59,11 @@ export class EditTitleModal extends Modal {
 	private duplicates = createDuplicateGuard();
 
 	constructor(
-		app: App,
-		plugin: HoardPlugin,
-		dataManager: DataManager,
+		private deps: EditTitleModalDeps,
 		title: HoardTitle,
 		onSaved: () => void,
 	) {
-		super(app);
-		this.plugin = plugin;
-		this.dataManager = dataManager;
+		super(deps.app);
 		this.original = title;
 		this.onSaved = onSaved;
 
@@ -75,7 +78,7 @@ export class EditTitleModal extends Modal {
 		this.fieldTrailerUrl = title.manualTrailerUrl ?? '';
 		// seed the group dropdown with the title's current group
 		this.originalGroupId =
-			this.dataManager.getGroups().find((g) => g.titleIds.includes(title.id))?.id ?? '';
+			this.deps.titles.getGroups().find((g) => g.titleIds.includes(title.id))?.id ?? '';
 		this.group.selectedGroupId = this.originalGroupId;
 	}
 
@@ -97,7 +100,7 @@ export class EditTitleModal extends Modal {
 
 		titleField(content, this.fieldTitle, undefined, (v) => { this.fieldTitle = v; });
 
-		nameSelect(makeRow(t('edit.type')), this.plugin.settings.types.map((t) => t.name), this.fieldType,
+		nameSelect(makeRow(t('edit.type')), this.deps.settings.get().types.map((t) => t.name), this.fieldType,
 			(v) => { this.fieldType = v; }, false, typeLabel);
 
 		// total episodes + ep. duration paired on one row (episodes keeps its seasons skip/watch inline
@@ -165,7 +168,7 @@ export class EditTitleModal extends Modal {
 		});
 
 		// group assignment (move / create), seeded with the title's current group
-		renderGroupPicker(content, this.dataManager.getGroups(), this.group);
+		renderGroupPicker(content, this.deps.titles.getGroups(), this.group);
 
 		const seasonsRow = makeRow(t('edit.seasons'));
 		const seasonsHelp = seasonsRow.createDiv({ cls: 'hoard-modal__input-stack' });
@@ -220,7 +223,7 @@ export class EditTitleModal extends Modal {
 			return;
 		}
 
-		const isDuplicate = this.dataManager.getTitles().some(
+		const isDuplicate = this.deps.titles.getTitles().some(
 			(t) => t.id !== this.original.id && t.title.toLowerCase() === titleName.toLowerCase()
 		);
 		const blocked = blockDuplicate(this.contentEl, this.duplicates, {
@@ -251,7 +254,7 @@ export class EditTitleModal extends Modal {
 			manualTrailerUrl: this.fieldTrailerUrl.trim(),
 		};
 
-		await this.dataManager.updateTitle(updated);
+		await this.deps.titles.updateTitle(updated);
 
 		// group membership (move / create) — only act when the selection changed relative to the original
 		const newGroupName = this.group.newGroupName.trim();
@@ -259,22 +262,22 @@ export class EditTitleModal extends Modal {
 		if (groupChanged) {
 			// detach from the previous group first
 			if (this.originalGroupId) {
-				const old = this.dataManager.getGroup(this.originalGroupId);
+				const old = this.deps.titles.getGroup(this.originalGroupId);
 				if (old) {
 					old.titleIds = old.titleIds.filter((id) => id !== updated.id);
-					await this.dataManager.updateGroup(old);
+					await this.deps.titles.updateGroup(old);
 				}
 			}
 			if (newGroupName) {
 				const group: HoardGroup = {
-					id: this.dataManager.generateGroupId(newGroupName),
+					id: this.deps.titles.generateGroupId(newGroupName),
 					name: newGroupName,
 					titleIds: [updated.id],
 					dateAdded: new Date().toISOString(),
 				};
-				await this.dataManager.addGroup(group);
+				await this.deps.titles.addGroup(group);
 			} else if (this.group.selectedGroupId) {
-				await this.dataManager.addTitleToGroup(this.group.selectedGroupId, updated.id);
+				await this.deps.titles.addTitleToGroup(this.group.selectedGroupId, updated.id);
 			}
 			// else: moved to "— none —" — detached only
 		}

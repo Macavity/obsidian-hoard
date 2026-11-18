@@ -7,7 +7,7 @@ const groupModalOpened = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/RowsCustomizeModal', () => ({
 	RowsCustomizeModal: class {
-		constructor(_app: unknown, _plugin: unknown, opts: unknown) { customizeOpts = opts as CustomizeOpts; }
+		constructor(_deps: unknown, opts: unknown) { customizeOpts = opts as CustomizeOpts; }
 		open = vi.fn();
 	},
 }));

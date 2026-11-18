@@ -269,12 +269,12 @@ describe('a poster that fails to load', () => {
 
 describe('the card gate', () => {
 	const visible = async (setupEach: (dm: DataManager) => void) => {
-		const { tab, dm, plugin } = await setupListTab({ 'W/Movie/A.md': movieNote('A') });
+		const { tab, dm, posters } = await setupListTab({ 'W/Movie/A.md': movieNote('A') });
 		setupEach(dm);
 		const card = document.createElement('div');
 		card.dataset.titleId = 'Movie/A';
 		(tab as unknown as { handleCardsVisible(c: HTMLElement[]): void }).handleCardsVisible([card]);
-		return (plugin as unknown as { posterService: { enqueue: ReturnType<typeof vi.fn> } }).posterService.enqueue;
+		return posters.enqueue;
 	};
 
 	it('enqueues a title that was never looked up', async () => {

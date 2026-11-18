@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
+import { fakeSettings } from './helpers/fakeSettings';
 import { TitleDetailModal, renderCreditsRefreshButton } from '../src/TitleDetailModal';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
 import { t } from '../src/i18n';
@@ -44,19 +45,20 @@ function buildPlugin(stored: HoardTitle | null, over: Record<string, unknown> = 
 		hasTmdbKey: vi.fn(() => true),
 		hasOmdbKey: vi.fn(() => false),
 	};
-	const plugin = {
-		settings: { ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] },
-		dataManager,
-		apiService,
-		posterService: undefined,
+	const deps = {
+		app: {} as never,
+		settings: fakeSettings({ ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] }),
+		titles: dataManager,
+		api: apiService,
+		posters: { enqueue: () => Promise.resolve(null) },
 	};
-	return { plugin, dataManager, apiService };
+	return { deps, dataManager, apiService };
 }
 
 describe('TitleDetailModal title editing', () => {
 	function open(title: HoardTitle, stored: HoardTitle | null = title) {
 		const built = buildPlugin(stored);
-		const modal = new TitleDetailModal({} as never, built.plugin as never, title) as unknown as {
+		const modal = new TitleDetailModal(built.deps as never, title) as unknown as {
 			headerEl: HTMLElement | null;
 			contentEl: HTMLElement;
 			mobile: boolean;
@@ -183,9 +185,9 @@ describe('renderCreditsRefreshButton', () => {
 
 	const render = (id: string, stored: HoardTitle | null, fetched: LookupResult<{ director: string[]; cast: string[] }>, onDone = vi.fn()) => {
 		const title = mkTitle({ id });
-		const { plugin, dataManager, apiService } = buildPlugin(stored);
+		const { deps, dataManager, apiService } = buildPlugin(stored);
 		apiService.fetchCredits.mockResolvedValue(fetched);
-		renderCreditsRefreshButton(parent, plugin as never, title, onDone);
+		renderCreditsRefreshButton(parent, deps as never, title, onDone);
 		const btn = parent.querySelector('button.hoard-credits__refresh') as HTMLButtonElement;
 		return { btn, title, dataManager, apiService, onDone };
 	};
@@ -241,8 +243,8 @@ describe('renderCreditsRefreshButton', () => {
 		const first = render('r5', null, FAILED);
 		first.btn.click();
 		const second = document.createElement('div');
-		const { plugin } = buildPlugin(null);
-		renderCreditsRefreshButton(second, plugin as never, mkTitle({ id: 'r5' }), vi.fn());
+		const { deps } = buildPlugin(null);
+		renderCreditsRefreshButton(second, deps as never, mkTitle({ id: 'r5' }), vi.fn());
 		expect(second.querySelector('.hoard-credits__refresh')!.classList.contains('is-loading')).toBe(true);
 		await flush();
 	});

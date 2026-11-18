@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddFromUrlModal } from '../src/AddFromUrlModal';
 import { t } from '../src/i18n';
+import { fakeSettings } from './helpers/fakeSettings';
 import type { MediaSearchResult } from '../src/types';
 
 const created = vi.hoisted(() => ({ calls: [] as unknown[][], opened: 0 }));
@@ -26,13 +27,13 @@ function setup(activeApi: 'TMDB' | 'OMDb' = 'TMDB', hasKey = true) {
 		getTmdbMovieDetails: vi.fn(() => Promise.resolve<MediaSearchResult | null>(result({ trailerUrl: 'yt' }))),
 		getTmdbTvDetails: vi.fn(() => Promise.resolve<MediaSearchResult | null>(result({ mediaType: 'tv' }))),
 	};
-	const plugin = { settings: { activeApi }, apiService: api };
-	const modal = new AddFromUrlModal({} as never, plugin as never, {} as never, () => {});
+	const deps = { app: {} as never, settings: fakeSettings({ activeApi }), api, titles: {} } as never;
+	const modal = new AddFromUrlModal(deps, () => {});
 	modal.open();
 	const inputs = Array.from(modal.contentEl.querySelectorAll<HTMLInputElement>('input'));
 	const buttons = Array.from(modal.contentEl.querySelectorAll<HTMLButtonElement>('button'));
 	const error = (): HTMLElement => modal.contentEl.querySelector<HTMLElement>('.hoard-modal__error')!;
-	return { modal, api, imdb: inputs[0]!, tmdb: inputs[1]!, imdbBtn: buttons[0]!, tmdbBtn: buttons[1]!, error };
+	return { modal, api, deps, imdb: inputs[0]!, tmdb: inputs[1]!, imdbBtn: buttons[0]!, tmdbBtn: buttons[1]!, error };
 }
 
 beforeEach(() => { created.calls.length = 0; created.opened = 0; });
@@ -53,12 +54,14 @@ describe('AddFromUrlModal', () => {
 	});
 
 	it('looks an IMDb link up on TMDB and opens the add form as a movie', async () => {
-		const { imdb, imdbBtn, api } = setup('TMDB');
+		const { imdb, imdbBtn, api, deps } = setup('TMDB');
 		imdb.value = 'https://www.imdb.com/title/tt1375666/';
 		imdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(1));
+		// the add form gets the same deps, not a plugin
+		expect(created.calls[0]![0]).toBe(deps);
 		expect(api.getTmdbByImdbId).toHaveBeenCalledWith('tt1375666');
-		expect(created.calls[0]![4]).toMatchObject({
+		expect(created.calls[0]![2]).toMatchObject({
 			title: 'Inception', type: 'Movie', episodes: 1, duration: 148, releaseDate: '2010-07-16',
 			link: 'https://imdb.test/tt1', trailerUrl: '',
 		});
@@ -70,7 +73,7 @@ describe('AddFromUrlModal', () => {
 		imdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(1));
 		expect(api.getOmdbByImdbId).toHaveBeenCalledWith('tt0944947');
-		expect(created.calls[0]![4]).toMatchObject({ type: 'TV Show' });
+		expect(created.calls[0]![2]).toMatchObject({ type: 'TV Show' });
 	});
 
 	it('falls back to Cinemeta without a key, trying series then movie', async () => {
@@ -80,7 +83,7 @@ describe('AddFromUrlModal', () => {
 		await vi.waitFor(() => expect(created.opened).toBe(1));
 		expect(api.getCinemetaDetails).toHaveBeenNthCalledWith(1, 'tt0944947', 'tv');
 		expect(api.getOmdbByImdbId).not.toHaveBeenCalled();
-		expect(created.calls[0]![4]).toMatchObject({ type: 'TV Show' });
+		expect(created.calls[0]![2]).toMatchObject({ type: 'TV Show' });
 	});
 
 	it('prefers the series record over a foreign movie record for the same id', async () => {
@@ -90,7 +93,7 @@ describe('AddFromUrlModal', () => {
 		imdb.value = 'tt0903747';
 		imdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(1));
-		expect(created.calls[0]![4]).toMatchObject({ title: 'Real Series' });
+		expect(created.calls[0]![2]).toMatchObject({ title: 'Real Series' });
 	});
 
 	it('reports not found when the lookup resolves empty', async () => {
@@ -143,13 +146,13 @@ describe('AddFromUrlModal', () => {
 		tmdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(1));
 		expect(api.getTmdbMovieDetails).toHaveBeenCalledWith('27205');
-		expect(created.calls[0]![4]).toMatchObject({ type: 'Movie', trailerUrl: 'yt' });
+		expect(created.calls[0]![2]).toMatchObject({ type: 'Movie', trailerUrl: 'yt' });
 
 		const second = setup();
 		second.tmdb.value = 'https://www.themoviedb.org/TV/1396';
 		second.tmdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(2));
 		expect(second.api.getTmdbTvDetails).toHaveBeenCalledWith('1396');
-		expect(created.calls[1]![4]).toMatchObject({ type: 'TV Show' });
+		expect(created.calls[1]![2]).toMatchObject({ type: 'TV Show' });
 	});
 });

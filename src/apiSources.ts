@@ -11,7 +11,10 @@ export type KeyProbe = Pick<
 >;
 
 /** Chosen source if keyless or its key is set, else the keyless one. */
-export function effectiveMediaSource(settings: Pick<HoardPluginSettings, 'activeApi'>, api: KeyProbe): MediaSource {
+export function effectiveMediaSource(
+	settings: Pick<HoardPluginSettings, 'activeApi'>,
+	api: Pick<KeyProbe, 'hasOmdbKey' | 'hasTmdbKey'>,
+): MediaSource {
 	if (settings.activeApi === 'OMDb' && api.hasOmdbKey()) return 'omdb';
 	if (settings.activeApi === 'TMDB' && api.hasTmdbKey()) return 'tmdb';
 	return 'cinemeta';

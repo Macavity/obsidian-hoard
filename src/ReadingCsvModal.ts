@@ -96,8 +96,9 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 		return t(`csv.library.${this.kind}`);
 	}
 
-	constructor(app: App, plugin: HoardPlugin, private kind: ReadingCsvKind, mode: 'export' | 'import') {
-		super(app, plugin, mode);
+	// TODO(Task 6): replace the plugin with ReadingCsvModalDeps
+	constructor(app: App, protected plugin: HoardPlugin, private kind: ReadingCsvKind, mode: 'export' | 'import') {
+		super(app, mode);
 		this.schema = schemaFor(kind);
 	}
 

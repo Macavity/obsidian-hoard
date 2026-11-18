@@ -138,7 +138,7 @@ interface ApiProviderHandle {
 	setActive: (active: boolean | null) => void;
 	refreshStatus: () => void;
 }
-import { CsvModal } from './CsvModal';
+import { CsvModal, type CsvModalDeps } from './CsvModal';
 import { ReadingCsvChoiceModal } from './ReadingCsvChoiceModal';
 import { ReadingCsvModal } from './ReadingCsvModal';
 import { HoardView } from './HoardView';
@@ -186,6 +186,15 @@ export class HoardSettingsTab extends PluginSettingTab {
 			this.textSaveTimer = null;
 			void this.plugin.saveSettings();
 		}, 500);
+	}
+	// TODO(Task 8): the tab takes CsvModalDeps from its own deps instead of the plugin
+	private csvModalDeps(): CsvModalDeps {
+		return {
+			app: this.app,
+			settings: this.plugin.settingsService,
+			titles: this.plugin.dataManager,
+			setImportProgress: (progress) => { this.plugin.importProgress = progress; },
+		};
 	}
 	private activeSection: SettingsSection = 'general';
 	/** Teardown for an in-flight restore file picker; see openRestoreDialog. */
@@ -2503,7 +2512,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.csv.watchlistExportDesc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.exportButton')).onClick(() => {
-					new CsvModal(this.app, this.plugin, this.plugin.dataManager, 'export').open();
+					new CsvModal(this.csvModalDeps(), 'export').open();
 				}),
 			);
 
@@ -2512,7 +2521,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.csv.watchlistImportDesc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.importButton')).onClick(() => {
-					new CsvModal(this.app, this.plugin, this.plugin.dataManager, 'import').open();
+					new CsvModal(this.csvModalDeps(), 'import').open();
 				}),
 			);
 

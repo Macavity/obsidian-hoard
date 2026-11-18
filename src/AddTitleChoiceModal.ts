@@ -4,16 +4,20 @@ import { renderChoiceGrid } from './ui/choiceGrid';
 
 export type AddTitleChoice = 'url' | 'manual';
 
+export interface AddTitleChoiceModalDeps {
+	app: App;
+}
+
 /**
  * Chooser shown when adding a title to the Watchlist: Add from URL, or Add manually / via API. This
  * modal only routes — no form logic.
  */
 export class AddTitleChoiceModal extends Modal {
 	constructor(
-		app: App,
+		deps: AddTitleChoiceModalDeps,
 		private onChoice: (choice: AddTitleChoice) => void,
 	) {
-		super(app);
+		super(deps.app);
 	}
 
 	onOpen(): void {

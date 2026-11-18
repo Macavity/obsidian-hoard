@@ -15,6 +15,7 @@ import {
 	resolvePick,
 	searchTitles,
 	titlePickerBase,
+	type TitleSearchDeps,
 	type TitleSearchResult,
 } from './titleSearch';
 import { SearchFormModal, type SearchPickerOptions } from './ui/SearchFormModal';
@@ -40,8 +41,13 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 		this.onAdded = onAdded;
 	}
 
+	// TODO(Task 7): replace the plugin with MaybeAddModalDeps
+	private get searchDeps(): TitleSearchDeps {
+		return { settings: this.plugin.settingsService, api: this.plugin.apiService };
+	}
+
 	protected pickerOptions(): SearchPickerOptions<TitleSearchResult> {
-		return titlePickerBase(this.plugin, this.selectedType, (v) => {
+		return titlePickerBase(this.searchDeps, this.selectedType, (v) => {
 			this.selectedType = v;
 			this.renderForm();
 		});
@@ -52,7 +58,7 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 	}
 
 	protected async search(query: string, year: string): Promise<TitleSearchResult[]> {
-		const found = await searchTitles(this.plugin, this.selectedType, query, year);
+		const found = await searchTitles(this.searchDeps, this.selectedType, query, year);
 		if (found) return found;
 		new Notice(t('misc.maybeAdd.noApi', { type: this.selectedType }));
 		return [];
@@ -67,7 +73,7 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 	}
 
 	protected async selectResult(result: TitleSearchResult, isCurrent: () => boolean): Promise<void> {
-		if (await resolvePick(this.plugin, result, isCurrent, (pick) => fillMediaFields(this.media, pick))) this.renderForm();
+		if (await resolvePick(this.searchDeps, result, isCurrent, (pick) => fillMediaFields(this.media, pick))) this.renderForm();
 	}
 
 	protected renderForm(): void {

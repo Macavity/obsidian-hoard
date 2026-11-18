@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddTitleModal } from '../src/AddTitleModal';
+import { fakeSettings } from './helpers/fakeSettings';
 import type { HoardTitle, Season } from '../src/types';
 import type { LookupResult } from '../src/lookup';
 
@@ -26,18 +27,20 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 		addTitle: (entry: HoardTitle) => { added.push(structuredClone(entry)); return Promise.resolve(); },
 		recordLookup: vi.fn(),
 	};
-	const plugin = {
-		settings: { setFinishDateAutomatically: autoFinish, lastAddedType: '', typeApiMapping: {}, types: [] },
+	const settings = fakeSettings({ setFinishDateAutomatically: autoFinish, lastAddedType: '', typeApiMapping: {}, types: [] });
+	const deps = {
+		app: {} as never,
+		settings: settings as never,
+		titles: dataManager as never,
+		api: { fetchCommunityRating: () => Promise.resolve(null) } as never,
 		resolveDefaultAddType: () => 'Movie',
-		saveSettings: () => Promise.resolve(),
-		apiService: { fetchCommunityRating: () => Promise.resolve(null) },
 	};
-	const modal = new AddTitleModal({} as never, plugin as never, dataManager as never, () => {}, {
+	const modal = new AddTitleModal(deps, () => {}, {
 		title: ' Dark ', type: 'TV Show', episodes: prefill.episodes ?? 3, duration: 50, releaseDate: '2017-12-01',
 		link: 'https://example.test/dark', seasons: SEASONS,
 		trailerUrl: prefill.trailerUrl, director: prefill.director, cast: prefill.cast,
 	});
-	return { form: modal as unknown as Form, added, dataManager };
+	return { form: modal as unknown as Form, added, dataManager, settings };
 }
 
 const BASE = {
@@ -58,6 +61,13 @@ describe('AddTitleModal add', () => {
 		const { form, added } = setup();
 		await form.addTitle();
 		expect(added).toStrictEqual([BASE]);
+	});
+
+	it('remembers the added type through the settings service', async () => {
+		const { form, settings } = setup();
+		await form.addTitle();
+		expect(settings.update).toHaveBeenCalledOnce();
+		expect(settings.get().lastAddedType).toBe('TV Show');
 	});
 
 	it('carries credits, anime ids and the form fields when set', async () => {

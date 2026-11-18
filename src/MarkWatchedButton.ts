@@ -3,6 +3,9 @@ import type { HoardTitle } from './types';
 import { todayIso } from './types';
 import { t } from './i18n';
 
+/** What the button reads and writes. */
+export type MarkWatchedDeps = Pick<DataManager, 'getTitle' | 'updateTitle' | 'markEpisodeWatched'>;
+
 /**
  * True for titles with exactly one thing to tick, where the episode grid would render a lone "1"
  * box — those get the Mark-as-Watched button instead.
@@ -26,7 +29,7 @@ export function isSingleEpisodeTitle(title: HoardTitle): boolean {
  * @param onChanged Fired after the write lands, before the button repaints.
  */
 export function appendMarkWatchedButton(
-	dataManager: DataManager,
+	titles: MarkWatchedDeps,
 	parent: HTMLElement,
 	titleId: string,
 	onChanged: () => void,
@@ -39,7 +42,7 @@ export function appendMarkWatchedButton(
 	// watched whenever the movie counts as seen — its single episode is ticked, or the title was set to
 	// Completed elsewhere
 	const isWatched = (): boolean => {
-		const t = dataManager.getTitle(titleId);
+		const t = titles.getTitle(titleId);
 		return !!t && (t.watchedEpisodes.includes(1) || t.status === 'Completed');
 	};
 
@@ -56,8 +59,8 @@ export function appendMarkWatchedButton(
 		e.stopPropagation();
 		const next = !isWatched();
 		void (async () => {
-			await dataManager.markEpisodeWatched(titleId, 1, next);
-			await finalizeWatchedState(dataManager, titleId, next);
+			await titles.markEpisodeWatched(titleId, 1, next);
+			await finalizeWatchedState(titles, titleId, next);
 			onChanged();
 			paint();
 		})();
@@ -73,11 +76,11 @@ export function appendMarkWatchedButton(
  * common path stays a single save.
  */
 async function finalizeWatchedState(
-	dataManager: DataManager,
+	titles: MarkWatchedDeps,
 	titleId: string,
 	watched: boolean,
 ): Promise<void> {
-	const t = dataManager.getTitle(titleId);
+	const t = titles.getTitle(titleId);
 	if (!t) return;
 	const today = todayIso();
 	let dirty = false;
@@ -95,5 +98,5 @@ async function finalizeWatchedState(
 		t.dateFinished = null;
 		dirty = true;
 	}
-	if (dirty) await dataManager.updateTitle(t);
+	if (dirty) await titles.updateTitle(t);
 }

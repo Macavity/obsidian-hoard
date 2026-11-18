@@ -2,9 +2,8 @@ import type { TabInstance } from './ui/TabInstance';
 import { ItemView, Platform, setIcon, WorkspaceLeaf } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import type HoardPlugin from './main';
-import type { DataManager } from './DataManager';
 import { DashboardTab } from './DashboardTab';
-import { ListTab } from './ListTab';
+import { ListTab, type ListTabDeps } from './ListTab';
 import { AirtimeTab } from './AirtimeTab';
 import { ReadingTab } from './ReadingTab';
 import { GamesTab } from './GamesTab';
@@ -16,17 +15,27 @@ export const HOARD_VIEW_TYPE = 'hoard-view';
 
 export type TabName = 'dashboard' | 'watchlist' | 'upcoming' | 'reading' | 'games' | 'custom-lists' | 'drafts' | 'log';
 
+/**
+ * What the view and its tabs read, supplied by main.ts. Each tab takes only the part it declares in its
+ * own `<Tab>Deps`; a converted tab's deps are a supertype of this one, so `ctx.deps` passes straight in.
+ */
+export interface HoardViewDeps extends ListTabDeps {
+	/** True while the WatchLog import wizard replaces the tabs with a placeholder. */
+	importRunning: () => boolean;
+	/** TODO(Task 6-8): the tabs not converted yet still take the plugin; Task 9 removes this. */
+	plugin: HoardPlugin;
+}
+
 /** What a tab factory receives. `setBadge` updates the count badge on the tab's own button. */
 interface TabContext {
 	containerEl: HTMLElement;
-	plugin: HoardPlugin;
-	dataManager: DataManager;
+	deps: HoardViewDeps;
 	setBadge: (count: number) => void;
 }
 
 interface TabBadge {
 	/** Computes the badge count without the tab being open. */
-	count(plugin: HoardPlugin, dataManager: DataManager): number | Promise<number>;
+	count(deps: HoardViewDeps): number | Promise<number>;
 	/** When the count is recomputed: on every data change, or once the metadata cache has resolved. */
 	refreshOn: 'data-change' | 'metadata-resolved';
 }
@@ -49,25 +58,25 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.dashboard',
 		icon: 'layout-dashboard',
 		cls: 'hoard-dashboard',
-		create: (ctx) => new DashboardTab(ctx.containerEl, ctx.plugin, ctx.dataManager, ctx.plugin.readingDataManager),
+		create: (ctx) => new DashboardTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.titles, ctx.deps.plugin.readingDataManager),
 	},
 	{
 		name: 'watchlist',
 		label: 'app.tabs.watchlist',
 		icon: 'tv',
 		cls: 'hoard-list',
-		create: (ctx) => new ListTab(ctx.containerEl, ctx.plugin, ctx.dataManager),
+		create: (ctx) => new ListTab(ctx.containerEl, ctx.deps),
 	},
 	{
 		name: 'upcoming',
 		label: 'app.tabs.upcoming',
 		icon: 'calendar',
 		cls: 'hoard-airtime',
-		create: (ctx) => new AirtimeTab(ctx.containerEl, ctx.plugin, ctx.dataManager, ctx.setBadge),
+		create: (ctx) => new AirtimeTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.titles, ctx.setBadge),
 		badge: {
-			count: (plugin, dataManager) =>
-				AirtimeTab.getAiredDueCount(dataManager, plugin.readingDataManager, plugin.gameDataManager) +
-				AirtimeTab.getMaybeDueCount(dataManager),
+			count: ({ titles, plugin }) =>
+				AirtimeTab.getAiredDueCount(titles, plugin.readingDataManager, plugin.gameDataManager) +
+				AirtimeTab.getMaybeDueCount(titles),
 			refreshOn: 'data-change',
 		},
 	},
@@ -76,29 +85,29 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.reading',
 		icon: 'book-open',
 		cls: 'hoard-reading',
-		create: (ctx) => new ReadingTab(ctx.containerEl, ctx.plugin, ctx.plugin.readingDataManager),
+		create: (ctx) => new ReadingTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.plugin.readingDataManager),
 	},
 	{
 		name: 'games',
 		label: 'app.tabs.games',
 		icon: 'gamepad-2',
 		cls: 'hoard-games',
-		create: (ctx) => new GamesTab(ctx.containerEl, ctx.plugin, ctx.plugin.gameDataManager),
+		create: (ctx) => new GamesTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.plugin.gameDataManager),
 	},
 	{
 		name: 'custom-lists',
 		label: 'app.tabs.customLists',
 		icon: 'list',
 		cls: 'hoard-custom-lists',
-		create: (ctx) => new CustomListsTab(ctx.containerEl, ctx.plugin, ctx.dataManager),
+		create: (ctx) => new CustomListsTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.titles),
 	},
 	{
 		name: 'drafts',
 		label: 'app.tabs.drafts',
 		icon: 'square-pen',
-		create: (ctx) => new DraftsTab(ctx.containerEl, ctx.plugin, ctx.dataManager, ctx.setBadge),
+		create: (ctx) => new DraftsTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.titles, ctx.setBadge),
 		badge: {
-			count: (plugin, dataManager) => DraftsTab.computePendingCount(plugin, dataManager),
+			count: ({ plugin, titles }) => DraftsTab.computePendingCount(plugin, titles),
 			refreshOn: 'metadata-resolved',
 		},
 	},
@@ -107,13 +116,11 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.log',
 		icon: 'history',
 		cls: 'hoard-log',
-		create: (ctx) => new LogTab(ctx.containerEl, ctx.plugin),
+		create: (ctx) => new LogTab(ctx.containerEl, ctx.deps.plugin),
 	},
 ];
 
 export class HoardView extends ItemView {
-	private plugin: HoardPlugin;
-	private dataManager: DataManager;
 	private activeTab: TabName;
 	private activeInstance: TabInstance | null = null;
 	private tabButtons: Partial<Record<TabName, HTMLButtonElement>> = {};
@@ -128,10 +135,8 @@ export class HoardView extends ItemView {
 	private pinReleaseTimer: number | null = null;
 	private focusListenersBound = false;
 
-	constructor(leaf: WorkspaceLeaf, plugin: HoardPlugin, dataManager: DataManager) {
+	constructor(leaf: WorkspaceLeaf, private deps: HoardViewDeps) {
 		super(leaf);
-		this.plugin = plugin;
-		this.dataManager = dataManager;
 		// the panel always opens on the Dashboard tab
 		this.activeTab = 'dashboard';
 		// re-render in place so tab instances (and their state) are preserved
@@ -154,7 +159,7 @@ export class HoardView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		await super.onOpen();
-		this.dataManager.onChange(this.dataChangeListener);
+		this.deps.titles.onChange(this.dataChangeListener);
 		this.buildUI();
 
 		if (Platform.isMobile) {
@@ -297,7 +302,7 @@ export class HoardView extends ItemView {
 
 	async onClose(): Promise<void> {
 		await super.onClose();
-		this.dataManager.offChange(this.dataChangeListener);
+		this.deps.titles.offChange(this.dataChangeListener);
 		this.overflowObserver?.disconnect();
 		this.overflowObserver = null;
 		if (this.mobileResizeObserver) {
@@ -331,7 +336,7 @@ export class HoardView extends ItemView {
 	}
 
 	private applyColorTheme(root: HTMLElement): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
+		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
 		if (colorTheme === 'default') {
 			root.removeAttribute('data-theme');
 		} else {
@@ -374,7 +379,7 @@ export class HoardView extends ItemView {
 		// ready — gate on 'resolved' (which also fires for changes made while Obsidian was closed, avoiding
 		// a stale count). The direct call covers an already-resolved cache, where 'resolved' won't fire.
 		this.updateBadges('metadata-resolved');
-		this.registerEvent(this.plugin.app.metadataCache.on('resolved', () => {
+		this.registerEvent(this.deps.app.metadataCache.on('resolved', () => {
 			this.updateBadges('metadata-resolved');
 		}));
 	}
@@ -430,7 +435,7 @@ export class HoardView extends ItemView {
 		this.destroyActiveTab();
 		this.tabContentEl.empty();
 		this.stripTabClasses();
-		if (this.plugin.importRunning) {
+		if (this.deps.importRunning()) {
 			this.tabContentEl.createDiv({ text: t('onboarding.running') });
 			return;
 		}
@@ -440,8 +445,7 @@ export class HoardView extends ItemView {
 		this.activeTab = def.name;
 		this.activeInstance = def.create({
 			containerEl: this.tabContentEl,
-			plugin: this.plugin,
-			dataManager: this.dataManager,
+			deps: this.deps,
 			setBadge: (count) => this.setTabBadge(this.tabButtons[def.name] ?? null, t(def.label), count),
 		});
 		void this.activeInstance.render();
@@ -463,10 +467,10 @@ export class HoardView extends ItemView {
 	private refreshActiveTab(): void {
 		this.applyColorTheme(this.contentEl);
 		this.stripTabClasses();
-		if (!this.activeInstance || this.plugin.importRunning) {
+		if (!this.activeInstance || this.deps.importRunning()) {
 			this.renderTabContent();
 			// after the import placeholder the counts may have changed (imported notes)
-			if (!this.plugin.importRunning) this.updateBadges('data-change');
+			if (!this.deps.importRunning()) this.updateBadges('data-change');
 			return;
 		}
 		void this.activeInstance.render();
@@ -499,7 +503,7 @@ export class HoardView extends ItemView {
 			const { badge } = def;
 			const label = t(def.label);
 			const btn = this.tabButtons[def.name] ?? null;
-			const count = badge.count(this.plugin, this.dataManager);
+			const count = badge.count(this.deps);
 			// a plain number paints in the same frame; only async counts wait
 			if (typeof count === 'number') this.setTabBadge(btn, label, count);
 			else void count.then((n) => this.setTabBadge(btn, label, n));

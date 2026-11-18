@@ -25,8 +25,8 @@ describe('detail modals i18n', () => {
 		setLocale('de');
 		const parent = new El('root');
 		const title = makeTitle({ id: 'a' });
-		const plugin = { dataManager: { getTitle: () => title } };
-		renderCommunityRating(parent as never, plugin as never, 'a');
+		const deps = { titles: { getTitle: () => title } };
+		renderCommunityRating(parent as never, deps as never, 'a');
 		const texts = allText(parent);
 		expect(texts).toContain(de.detail.community.empty);
 		expect(texts).toContain(de.detail.community.refresh);
@@ -34,9 +34,9 @@ describe('detail modals i18n', () => {
 
 	it('renders the group modal header in German', () => {
 		setLocale('de');
-		const modal = new GroupDetailModal({} as never, {
-			settings: {},
-			dataManager: { getEffectiveTotal: () => 0 },
+		const modal = new GroupDetailModal({
+			app: {} as never,
+			titles: { getEffectiveTotal: () => 0 },
 		} as never, { name: 'Marvel' } as never, []);
 		(modal as unknown as { renderAll: () => void }).renderAll();
 		const texts = domText(modal.contentEl);

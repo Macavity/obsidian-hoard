@@ -1,11 +1,12 @@
 import { typeLabel } from '../i18n/labels';
+import type { DeepReadonly } from '../deepReadonly';
 import { getThemedColor, type HoardPluginSettings } from '../types';
 
 /** The small type badge: a themed coloured pill when `coloredTypeBadges` is on, plain text otherwise. */
 export function renderTypeBadge(
 	parent: HTMLElement,
 	typeName: string,
-	settings: Pick<HoardPluginSettings, 'types' | 'coloredTypeBadges' | 'colorTheme'>,
+	settings: DeepReadonly<Pick<HoardPluginSettings, 'types' | 'coloredTypeBadges' | 'colorTheme'>>,
 ): HTMLSpanElement {
 	const colored = settings.coloredTypeBadges;
 	const badge = parent.createSpan({

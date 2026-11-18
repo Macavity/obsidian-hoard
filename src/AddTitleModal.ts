@@ -1,6 +1,7 @@
 import { App, Notice } from 'obsidian';
-import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
+import type { ApiService } from './ApiService';
+import type { SettingsReader, SettingsWriter } from './SettingsService';
 import type { HoardTitle, HoardGroup, Season } from './types';
 import { getApiGroupForType, todayIso } from './types';
 import { completedEpisodes, newTitle } from './entryFactories';
@@ -17,6 +18,7 @@ import {
 	searchTitles,
 	titlePickerBase,
 	type TitlePick,
+	type TitleSearchDeps,
 	type TitleSearchResult,
 } from './titleSearch';
 import { SearchFormModal, type SearchPickerOptions } from './ui/SearchFormModal';
@@ -36,9 +38,20 @@ import {
 	type MediaFields,
 } from './ui/FormCells';
 
+export interface AddTitleModalDeps extends TitleSearchDeps {
+	app: App;
+	settings: SettingsReader & SettingsWriter;
+	titles: Pick<
+		DataManager,
+		| 'getTitles' | 'getGroups' | 'generateId' | 'generateGroupId' | 'addTitle' | 'addTitleToGroup' | 'addGroup'
+		| 'recordLookup' | 'updateCommunityRating'
+	>;
+	api: TitleSearchDeps['api'] & Pick<ApiService, 'fetchCommunityRating'>;
+	/** The type the form preselects (the user's default, or the last one used). */
+	resolveDefaultAddType: () => string;
+}
+
 export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
-	private plugin: HoardPlugin;
-	private dataManager: DataManager;
 	// gets the new entry — callers that don't care just ignore it
 	private onAdded: (entry: HoardTitle) => void;
 
@@ -67,9 +80,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 	private group: GroupPickerState = { selectedGroupId: '', newGroupName: '' };
 
 	constructor(
-		app: App,
-		plugin: HoardPlugin,
-		dataManager: DataManager,
+		private deps: AddTitleModalDeps,
 		onAdded: (entry: HoardTitle) => void,
 		prefill?: {
 			title?: string;
@@ -85,12 +96,10 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 			cast?: string[];
 		},
 	) {
-		super(app, t('add.title.heading'), ['hoard-add-modal']);
-		this.plugin = plugin;
-		this.dataManager = dataManager;
+		super(deps.app, t('add.title.heading'), ['hoard-add-modal']);
 		this.onAdded = onAdded;
 		// preselect the resolved default type; a prefill type (e.g. from URL detection) overrides it below
-		this.selectedType = this.plugin.resolveDefaultAddType() || this.selectedType;
+		this.selectedType = this.deps.resolveDefaultAddType() || this.selectedType;
 		if (prefill) {
 			this.selectedType = prefill.type;
 			if (prefill.title) {
@@ -110,7 +119,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 
 	protected pickerOptions(): SearchPickerOptions<TitleSearchResult> {
 		return {
-			...titlePickerBase(this.plugin, this.selectedType, (v) => {
+			...titlePickerBase(this.deps, this.selectedType, (v) => {
 				this.selectedType = v;
 				this.renderForm();
 			}),
@@ -120,17 +129,17 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 	}
 
 	protected async search(query: string, year: string): Promise<TitleSearchResult[]> {
-		return (await searchTitles(this.plugin, this.selectedType, query, year)) ?? [];
+		return (await searchTitles(this.deps, this.selectedType, query, year)) ?? [];
 	}
 
 	protected noApiMessage(): string | null {
-		if (getApiGroupForType(this.selectedType, this.plugin.settings.typeApiMapping) !== '') return null;
+		if (getApiGroupForType(this.selectedType, this.deps.settings.get().typeApiMapping) !== '') return null;
 		return t('add.title.noApi', { type: this.selectedType });
 	}
 
 	protected renderResult(host: HTMLElement, result: TitleSearchResult, select: (itemEl: HTMLElement) => void): HTMLElement {
-		if (!this.libIndex) this.libIndex = LibraryIndex.build(this.plugin, ['watchlist']);
-		const idKeys = resultIdKeys(result, effectiveMediaSource(this.plugin.settings, this.plugin.apiService));
+		if (!this.libIndex) this.libIndex = LibraryIndex.build({ watchlist: () => this.deps.titles.getTitles() }, ['watchlist']);
+		const idKeys = resultIdKeys(result, effectiveMediaSource(this.deps.settings.get(), this.deps.api));
 		return renderSearchResultRow(host, {
 			thumbUrl: result.posterUrl,
 			fallbackIcon: '🎬',
@@ -142,7 +151,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 	}
 
 	protected async selectResult(result: TitleSearchResult, isCurrent: () => boolean): Promise<void> {
-		if (await resolvePick(this.plugin, result, isCurrent, (pick) => this.applyPick(pick))) this.renderForm();
+		if (await resolvePick(this.deps, result, isCurrent, (pick) => this.applyPick(pick))) this.renderForm();
 	}
 
 	private applyPick(pick: TitlePick): void {
@@ -168,18 +177,18 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 
 		// status + priority paired 50/50 (status excludes "To be released" — it follows releaseDate)
 		const statusPriRow = form.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });
-		const statuses = this.plugin.settings.statuses.filter((s) => s.name !== 'To be released');
+		const statuses = this.deps.settings.get().statuses.filter((s) => s.name !== 'To be released');
 		nameSelect(makeCell(statusPriRow, t('add.status')), statuses.map((s) => s.name), this.fieldStatus,
 			(v) => { this.fieldStatus = v; }, false, statusLabel);
-		nameSelect(makeCell(statusPriRow, t('add.priority'), true), this.plugin.settings.priorities.map((p) => p.name),
+		nameSelect(makeCell(statusPriRow, t('add.priority'), true), this.deps.settings.get().priorities.map((p) => p.name),
 			this.fieldPriority, (v) => { this.fieldPriority = v; }, false, priorityLabel);
 
 		const ratingRow = makeRow(t('add.rating'));
 		const starsWrap = ratingRow.createDiv({ cls: 'hoard-star-rating--row' });
 		const paintStars = (): void => {
 			renderStarRating(starsWrap, this.fieldRating, {
-				allowHalf: this.plugin.settings.halfStarRatings ?? false,
-				tiers: this.plugin.settings.ratingSystem,
+				allowHalf: this.deps.settings.get().halfStarRatings ?? false,
+				tiers: this.deps.settings.get().ratingSystem,
 				showLabel: true,
 				onChange: (value) => { this.fieldRating = value; paintStars(); },
 			});
@@ -194,7 +203,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 			onChange: (iso) => { this.fieldDateStarted = iso ?? ''; },
 		});
 
-		renderGroupPicker(form, this.dataManager.getGroups(), this.group);
+		renderGroupPicker(form, this.deps.titles.getGroups(), this.group);
 
 		if (this.fieldSeasons.length > 0) {
 			const seasRow = makeRow(t('add.seasons'));
@@ -218,7 +227,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 			return;
 		}
 
-		const isDuplicate = this.dataManager.getTitles().some(
+		const isDuplicate = this.deps.titles.getTitles().some(
 			(t) => t.title.toLowerCase() === titleName.toLowerCase()
 		);
 		const blocked = blockDuplicate(this.contentEl, this.duplicates, {
@@ -232,14 +241,14 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		// added as Completed: every episode is ticked, and the finish date set when the setting asks for it
 		const allEpisodes = completedEpisodes(this.fieldStatus, this.media.episodes);
 		const entry = newTitle({
-			id: this.dataManager.generateId(titleName),
+			id: this.deps.titles.generateId(titleName),
 			title: titleName,
 			type: this.selectedType,
 			status: this.fieldStatus,
 			priority: this.fieldPriority,
 			rating: this.fieldRating,
 			dateStarted: this.fieldDateStarted || null,
-			dateFinished: allEpisodes && this.plugin.settings.setFinishDateAutomatically ? todayIso() : null,
+			dateFinished: allEpisodes && this.deps.settings.get().setFinishDateAutomatically ? todayIso() : null,
 			totalEpisodes: this.media.episodes,
 			episodeDuration: this.media.duration,
 			releaseDate: this.media.releaseDate || null,
@@ -258,35 +267,34 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 			anilistId: this.fieldAnilistId ?? undefined,
 		});
 
-		await this.dataManager.addTitle(entry);
-		if (this.fieldTrailer) this.dataManager.recordLookup(entry.id, 'trailer', this.fieldTrailer);
+		await this.deps.titles.addTitle(entry);
+		if (this.fieldTrailer) this.deps.titles.recordLookup(entry.id, 'trailer', this.fieldTrailer);
 
 		// remember the type actually used so "Last type used" can follow it
-		this.plugin.settings.lastAddedType = entry.type;
-		void this.plugin.saveSettings();
+		void this.deps.settings.update((s) => { s.lastAddedType = entry.type; });
 
 		// fire-and-forget community rating fetch (non-blocking)
 		void (async () => {
-			const animeSource = this.plugin.settings.animeApiSource ?? 'jikan';
-			const group = getApiGroupForType(entry.type, this.plugin.settings.typeApiMapping);
+			const animeSource = this.deps.settings.get().animeApiSource ?? 'jikan';
+			const group = getApiGroupForType(entry.type, this.deps.settings.get().typeApiMapping);
 			if (group === '') return;
-			const result = await this.plugin.apiService.fetchCommunityRating(entry, animeSource, group);
+			const result = await this.deps.api.fetchCommunityRating(entry, animeSource, group);
 			if (result) {
-				this.dataManager.updateCommunityRating(entry.id, result.rating, result.votes, result.source);
+				this.deps.titles.updateCommunityRating(entry.id, result.rating, result.votes, result.source);
 			}
 		})();
 
 		if (this.group.selectedGroupId) {
-			await this.dataManager.addTitleToGroup(this.group.selectedGroupId, entry.id);
+			await this.deps.titles.addTitleToGroup(this.group.selectedGroupId, entry.id);
 		} else if (this.group.newGroupName.trim()) {
 			const name = this.group.newGroupName.trim();
 			const group: HoardGroup = {
-				id: this.dataManager.generateGroupId(name),
+				id: this.deps.titles.generateGroupId(name),
 				name,
 				titleIds: [entry.id],
 				dateAdded: new Date().toISOString(),
 			};
-			await this.dataManager.addGroup(group);
+			await this.deps.titles.addGroup(group);
 		}
 
 		new Notice(t('add.added', { name: titleName }));

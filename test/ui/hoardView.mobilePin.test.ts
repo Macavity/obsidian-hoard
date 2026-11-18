@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Platform, WorkspaceLeaf } from 'obsidian';
 import { HoardView } from '../../src/HoardView';
+import { hoardViewDeps } from '../helpers/hoardViewDeps';
 
 const { Stub } = vi.hoisted(() => ({
 	Stub: class {
@@ -31,14 +32,7 @@ async function open(mobile: boolean) {
 		mockImplementation(fn: (el: HTMLElement, type: string, cb: EventListener) => void): void;
 	};
 	register.mockImplementation((el, type, cb) => el.addEventListener(type, cb));
-	const plugin = {
-		settings: { colorTheme: 'default' },
-		app: { metadataCache: { on: () => ({}) } },
-		readingDataManager: {},
-		gameDataManager: {},
-	};
-	const dm = { onChange: () => {}, offChange: () => {} };
-	const view = new HoardView(new WorkspaceLeaf(), plugin as never, dm as never);
+	const view = new HoardView(new WorkspaceLeaf(), hoardViewDeps());
 	document.body.appendChild(view.contentEl);
 	await view.onOpen();
 	const tabBar = view.contentEl.querySelector<HTMLElement>('.hoard-tab-bar')!;

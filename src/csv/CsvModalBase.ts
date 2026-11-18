@@ -1,7 +1,6 @@
 import { App, Modal, Notice } from 'obsidian';
 import { escapeCsvField, parseCSV, parseCsvDate } from './csvCore';
 import { t, type TranslationKey } from '../i18n';
-import type HoardPlugin from '../main';
 
 /** Fields every importable entry carries; the modals narrow `status` to their own set. */
 export interface CsvEntryBase {
@@ -165,7 +164,7 @@ export abstract class CsvModalBase<E extends CsvEntryBase> extends Modal {
 	private progressBarFill: HTMLElement | null = null;
 	private progressText: HTMLElement | null = null;
 
-	constructor(app: App, protected plugin: HoardPlugin, private mode: 'export' | 'import') {
+	constructor(app: App, private mode: 'export' | 'import') {
 		super(app);
 	}
 

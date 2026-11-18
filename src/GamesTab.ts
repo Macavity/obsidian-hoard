@@ -573,7 +573,7 @@ export class GamesTab implements TabInstance {
 			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
-			new RowsCustomizeModal(this.plugin.app, this.plugin, {
+			new RowsCustomizeModal({ app: this.plugin.app, settings: this.plugin.settingsService }, {
 				shelves: GAMES_ROWS_SHELVES.map((sh) => ({
 					id: sh.id,
 					label: t(`games.shelves.${sh.id === 'byType' ? 'byGenre' : sh.id}` as TranslationKey),

@@ -1,7 +1,8 @@
 // Real DataManager on a fake vault + a ListTab mounted in happy-dom.
 import { vi } from 'vitest';
 import { setupDataManager } from './setupDataManager';
-import { ListTab } from '../../src/ListTab';
+import { ListTab, type ListTabDeps } from '../../src/ListTab';
+import { fakeSettings } from './fakeSettings';
 import type { HoardPluginSettings, HoardTitle } from '../../src/types';
 
 // Obsidian's activeDocument (popout-aware document); common.ts stubs it with a bare object
@@ -21,19 +22,24 @@ export async function setupListTab(
 	view: 'list' | 'rows' = 'list',
 	enqueue: PosterEnqueue = () => Promise.resolve(null),
 ) {
-	const extra = {
-		posterService: { enqueue: vi.fn(enqueue), clearQueue: vi.fn() },
+	const env = await setupDataManager(files);
+	Object.assign(env.settings, { defaultWatchlistView: view, ...settings });
+	const settingsService = fakeSettings(env.settings);
+	const posters = { enqueue: vi.fn(enqueue), clearQueue: vi.fn() };
+	const deps = {
+		app: env.f.app,
+		settings: settingsService,
+		titles: env.dm,
+		api: {},
+		posters,
+		history: { getEntries: () => [] },
 		getCardMinWidth: () => 150,
 		isCardTextUnder: () => false,
-		historyManager: { getEntries: () => [] },
-		importProgress: undefined,
-		saveSettings: vi.fn(() => Promise.resolve()),
-	};
-	const env = await setupDataManager(files, extra);
-	Object.assign(env.plugin.settings, { defaultWatchlistView: view, ...settings });
-	Object.assign(env.plugin, extra, { dataManager: env.dm });
+		importProgress: () => null,
+		resolveDefaultAddType: () => 'Movie',
+	} as unknown as ListTabDeps;
 	const container = document.createElement('div');
 	document.body.appendChild(container);
-	const tab = new ListTab(container, env.plugin, env.dm);
-	return { ...env, tab, container };
+	const tab = new ListTab(container, deps);
+	return { ...env, tab, container, deps, posters, settingsService };
 }

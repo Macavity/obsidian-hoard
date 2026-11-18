@@ -20,13 +20,13 @@ function ratingTierIndex(rating: number): number {
 }
 
 /** Tier colour for a rating, or '' when unrated. */
-export function ratingColor(rating: number, tiers: RatingTier[]): string {
+export function ratingColor(rating: number, tiers: readonly RatingTier[]): string {
 	const idx = ratingTierIndex(rating);
 	return idx === 0 ? '' : (tiers[idx - 1]?.color ?? '');
 }
 
 /** Tier label for a rating, or the unrated label when 0. */
-function ratingLabel(rating: number, tiers: RatingTier[]): string {
+function ratingLabel(rating: number, tiers: readonly RatingTier[]): string {
 	const idx = ratingTierIndex(rating);
 	// unrated (0) is not part of the editable five tiers
 	return idx === 0 ? t('misc.starRating.unrated') : (tiers[idx - 1]?.label ?? '');
@@ -36,7 +36,7 @@ export interface StarRatingOptions {
 	/** When true, the left half of a star selects `.5` and the right half the whole star. */
 	allowHalf: boolean;
 	/** The five rating tiers (settings.ratingSystem) — drives per-star colour and the label. */
-	tiers: RatingTier[];
+	tiers: readonly RatingTier[];
 	/** When true, a trailing text label ("Poor" … "Masterpiece") is rendered after the stars. */
 	showLabel?: boolean;
 	/** Called with the chosen value (0–5, in 0.5 steps when allowHalf is on). */

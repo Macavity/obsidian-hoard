@@ -48,7 +48,7 @@ export interface FilterSectionsInput {
 	/** Display text of a status option (the stored value stays the filter key). */
 	formatStatus?: (status: string) => string;
 	ratingOpts: string[];
-	priorities: TagDefinition[];
+	priorities: readonly TagDefinition[];
 	/** Sections between Priority and Group (Games' Platform). */
 	middle?: FilterSection[];
 	groupOpts: string[];

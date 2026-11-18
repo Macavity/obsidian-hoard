@@ -1,7 +1,9 @@
 import { App, Modal } from 'obsidian';
-import type HoardPlugin from './main';
+import type { DataManager } from './DataManager';
+import type { SettingsReader } from './SettingsService';
 import { t } from './i18n';
 import { createIconButton } from './ui/IconButton';
+import { markViewRoot } from './ui/detailFrame';
 import type { HoardTitle, CreditsField } from './types';
 import { getDisplayCredits, getManualCredits, getTitleCredits } from './types';
 
@@ -26,8 +28,13 @@ const MAX_SUGGESTIONS = 12;
  * The staged list starts with the title's current manual entries, so the same modal removes them:
  * the commit replaces the whole manual array. Fetched credits are never touched here.
  */
+export interface AddCreditModalDeps {
+	app: App;
+	settings: SettingsReader;
+	titles: Pick<DataManager, 'getTitles' | 'updateManualCredits'>;
+}
+
 export class AddCreditModal extends Modal {
-	private plugin: HoardPlugin;
 	private title: HoardTitle;
 	private field: CreditsField;
 	private onSaved: () => void;
@@ -45,14 +52,12 @@ export class AddCreditModal extends Modal {
 	private saveBtn: HTMLButtonElement | null = null;
 
 	constructor(
-		app: App,
-		plugin: HoardPlugin,
+		private deps: AddCreditModalDeps,
 		title: HoardTitle,
 		field: CreditsField,
 		onSaved: () => void,
 	) {
-		super(app);
-		this.plugin = plugin;
+		super(deps.app);
 		this.title = title;
 		this.field = field;
 		this.onSaved = onSaved;
@@ -60,12 +65,9 @@ export class AddCreditModal extends Modal {
 		this.staged = [...this.initial];
 	}
 
-		onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
+	onOpen(): void {
+		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
 		this.titleEl.setText(this.field === 'director' ? t('add.credit.titleDirector') : t('add.credit.titleCast'));
-		this.contentEl.addClass('hoard-view');
 		this.contentEl.addClass('hoard-credits__modal');
 		this.renderBody();
 	}
@@ -88,7 +90,7 @@ export class AddCreditModal extends Modal {
 			else entry.castCount++;
 			pool.set(key, entry);
 		};
-		for (const t of this.plugin.dataManager.getTitles()) {
+		for (const t of this.deps.titles.getTitles()) {
 			for (const name of getTitleCredits(t, 'director')) add(name, 'director');
 			for (const name of getTitleCredits(t, 'cast')) add(name, 'cast');
 		}
@@ -327,7 +329,7 @@ export class AddCreditModal extends Modal {
 	}
 
 	private async commit(): Promise<void> {
-		await this.plugin.dataManager.updateManualCredits(this.title.id, this.field, this.staged);
+		await this.deps.titles.updateManualCredits(this.title.id, this.field, this.staged);
 		this.onSaved();
 		this.close();
 	}

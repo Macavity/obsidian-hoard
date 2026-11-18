@@ -18,7 +18,7 @@ function open(stored: RowsShelfLayoutEntry[], exclusiveGroups: string[][] | null
 		...(exclusiveGroups ? { exclusiveGroups } : {}),
 		persist: vi.fn(),
 	};
-	const modal = new RowsCustomizeModal({} as never, { settings: {} } as never, config);
+	const modal = new RowsCustomizeModal({ app: {} as never, settings: { get: () => ({}) } as never }, config);
 	modal.open();
 	const rows = (): HTMLElement[] => Array.from(modal.contentEl.querySelectorAll<HTMLElement>('.hoard-rows-customize__row'));
 	const names = (): string[] => rows().map((r) => r.querySelector('.hoard-rows-customize__name')!.textContent ?? '');

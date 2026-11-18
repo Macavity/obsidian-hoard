@@ -336,7 +336,10 @@ export class AddReadingModal extends Modal {
 		}
 		// books check Books, manga check Manga — the two libraries stay separate
 		if (!this.libIndex) {
-			this.libIndex = LibraryIndex.build(this.plugin, [this.mode === 'book' ? 'books' : 'manga']);
+			this.libIndex = LibraryIndex.build({
+				books: () => this.plugin.readingDataManager.getBooks(),
+				manga: () => this.plugin.readingDataManager.getMangaList(),
+			}, [this.mode === 'book' ? 'books' : 'manga']);
 		}
 		const libIndex = this.libIndex;
 		for (const r of results) {

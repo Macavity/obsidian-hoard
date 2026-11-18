@@ -1,6 +1,6 @@
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
-import { AddTitleModal } from './AddTitleModal';
+import { AddTitleModal, type AddTitleModalDeps } from './AddTitleModal';
 import { AddReadingModal } from './AddReadingModal';
 import { AddGameModal } from './AddGameModal';
 import { DraftChoiceModal } from './DraftChoiceModal';
@@ -27,7 +27,15 @@ export function openAddForTitle(opts: AddRouteOptions): void {
 
 	new DraftChoiceModal(plugin.app, title, (choice) => {
 		if (choice === 'watchlist') {
-			new AddTitleModal(plugin.app, plugin, dataManager, done, {
+			// TODO(Task 7): AddRouter takes AddTitleModalDeps instead of the plugin
+			const deps: AddTitleModalDeps = {
+				app: plugin.app,
+				settings: plugin.settingsService,
+				titles: dataManager,
+				api: plugin.apiService,
+				resolveDefaultAddType: () => plugin.resolveDefaultAddType(),
+			};
+			new AddTitleModal(deps, done, {
 				searchQuery: title,
 				title,
 				type: 'Anime',

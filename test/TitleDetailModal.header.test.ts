@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice, Platform } from 'obsidian';
+import { fakeSettings } from './helpers/fakeSettings';
 import { TitleDetailModal } from '../src/TitleDetailModal';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
 import { t } from '../src/i18n';
@@ -48,14 +49,15 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: LookupResult<
 		hasTmdbKey: vi.fn(() => o.tmdbKey ?? true),
 		hasOmdbKey: vi.fn(() => false),
 	};
-	const plugin = {
-		settings: { ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] },
-		dataManager,
-		apiService,
-		posterService: undefined,
+	const deps = {
+		app: {} as never,
+		settings: fakeSettings({ ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] }),
+		titles: dataManager,
+		api: apiService,
+		posters: { enqueue: () => Promise.resolve(null) },
 	};
 	(Platform as { isMobile: boolean }).isMobile = o.mobile ?? false;
-	const modal = new TitleDetailModal({} as never, plugin as never, title, undefined, o.onPerson ? () => {} : undefined);
+	const modal = new TitleDetailModal(deps as never, title, undefined, o.onPerson ? () => {} : undefined);
 	const x = modal as unknown as {
 		headerEl: HTMLElement | null;
 		contentEl: HTMLElement;
@@ -66,7 +68,7 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: LookupResult<
 		renderEpisodesSection: (p: HTMLElement) => void;
 		collapsedSeasons: Set<number>;
 	};
-	return { modal: x, dataManager, apiService, plugin };
+	return { modal: x, dataManager, apiService, deps };
 }
 
 function header(m: ReturnType<typeof build>['modal']): HTMLElement {
