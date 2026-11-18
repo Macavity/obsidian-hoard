@@ -5,7 +5,7 @@ import {
 	isScheduleValid,
 	resolveScheduleMode,
 	type ScheduleFormState,
-} from '../../src/ui/ScheduleForm';
+} from '../../src/shared/ui/ScheduleForm';
 
 const state = (over: Partial<ScheduleFormState> = {}): ScheduleFormState => ({
 	mode: 'single', recurrence: 'weekly', releaseDate: '', releaseTime: '', dayOfWeek: 6, dayOfMonth: 1, ...over,

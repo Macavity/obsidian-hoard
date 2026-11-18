@@ -7,8 +7,8 @@
 // value's* tier colour — a 5-star rating paints all five in tier 5's colour — and an optional
 // trailing label shows that tier's text. N and N.5 share tier N; 0 is the unrated state.
 
-import type { RatingTier } from './types';
-import { t } from './i18n';
+import type { RatingTier } from '../domain/types';
+import { t } from '../i18n';
 
 /**
  * Maps a rating to its tier index: 0 when unrated, else 1–5. A whole star shares a tier with the

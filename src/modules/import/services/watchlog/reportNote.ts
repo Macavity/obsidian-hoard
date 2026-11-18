@@ -1,5 +1,5 @@
 import { normalizePath, type App, type TFile } from 'obsidian';
-import type { VaultLayout } from '../../storage/VaultLayout';
+import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 

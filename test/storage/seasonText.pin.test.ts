@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { titleFromProperties } from '../../src/storage/titleCodec';
+import { titleFromProperties } from '../../src/shared/storage/titleCodec';
 
 // Pins how the title codec reads the lines of the Seasons property ("Name: N" with an optional skip list).
 

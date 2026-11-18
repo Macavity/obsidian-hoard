@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { HoardView } from '../src/HoardView';
+import { HoardView } from '../src/app/HoardView';
 
 type Guarded = { tabContentEl: HTMLElement; guardOverflow(): void };
 

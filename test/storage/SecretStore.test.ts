@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { SecretStore, SECRET_SETTINGS, type SecretBackend } from '../../src/storage/SecretStore';
+import { SecretStore, SECRET_SETTINGS, type SecretBackend } from '../../src/shared/storage/SecretStore';
 
 function backend(initial: Record<string, string> = {}) {
 	const m = new Map(Object.entries(initial));

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CustomListManager } from '../src/CustomListsTab';
+import { CustomListManager } from '../src/modules/custom-lists/ui/CustomListsTab';
 import { makeList, setupCustomLists } from './helpers/setupCustomLists';
 
 const DATA = '\n## Data\n```json\n{\n  "x": 1\n}\n```\n';

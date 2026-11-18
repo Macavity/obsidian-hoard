@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DataManager } from '../src/DataManager';
-import HoardPlugin from '../src/main';
+import { DataManager } from '../src/modules/watchlist/services/DataManager';
+import HoardPlugin from '../src/app/main';
 import { setupDataManager } from './helpers/setupDataManager';
 
 describe('DataManager registrations', () => {

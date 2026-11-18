@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale, t } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { ReadingCsvChoiceModal } from '../../src/ReadingCsvChoiceModal';
-import { SteamSyncModal } from '../../src/SteamSyncModal';
+import { setLocale, t } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { ReadingCsvChoiceModal } from '../../src/modules/reading/ui/ReadingCsvChoiceModal';
+import { SteamSyncModal } from '../../src/modules/games/ui/SteamSyncModal';
 import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import HoardPlugin from '../../../src/main';
-import type { WatchLogSources } from '../../../src/import/watchlog/detect';
+import HoardPlugin from '../../../src/app/main';
+import type { WatchLogSources } from '../../../src/modules/import/services/watchlog/detect';
 
 const hoisted = vi.hoisted(() => ({
 	order: [] as string[],
@@ -8,7 +8,7 @@ const hoisted = vi.hoisted(() => ({
 	sources: null as WatchLogSources | Error | null,
 }));
 
-vi.mock('../../../src/WatchLogOnboardingModal', () => ({
+vi.mock('../../../src/modules/import/ui/WatchLogOnboardingModal', () => ({
 	WatchLogOnboardingModal: class {
 		finished: Promise<void>;
 		constructor() {
@@ -17,7 +17,7 @@ vi.mock('../../../src/WatchLogOnboardingModal', () => ({
 		open(): void { hoisted.order.push('wizard:open'); }
 	},
 }));
-vi.mock('../../../src/import/watchlog/detect', () => ({
+vi.mock('../../../src/modules/import/services/watchlog/detect', () => ({
 	detectWatchLogSources: () => hoisted.sources instanceof Error ? Promise.reject(hoisted.sources) : Promise.resolve(hoisted.sources),
 }));
 

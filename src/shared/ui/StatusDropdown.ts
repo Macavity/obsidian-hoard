@@ -6,8 +6,8 @@
 // Watchlist / Games detail modals so their status / type / priority pills are one implementation —
 // and renderTagChips, the multi-select chip row used by the Games platform pickers.
 
-import type { TagDefinition } from './types';
-import { t } from './i18n';
+import type { TagDefinition } from '../domain/types';
+import { t } from '../i18n';
 
 export interface StatusDropdownOption {
 	value: string;

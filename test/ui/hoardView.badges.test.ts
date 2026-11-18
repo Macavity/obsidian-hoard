@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Platform, WorkspaceLeaf } from 'obsidian';
-import { HoardView } from '../../src/HoardView';
+import { HoardView } from '../../src/app/HoardView';
 import { qsa } from '../helpers/dom';
 import { hoardViewDeps } from '../helpers/hoardViewDeps';
 
@@ -13,19 +13,19 @@ const { Stub, pending, aired, maybe } = vi.hoisted(() => ({
 	maybe: vi.fn(() => 1),
 }));
 
-vi.mock('../../src/DashboardTab', () => ({ DashboardTab: Stub }));
-vi.mock('../../src/ListTab', () => ({ ListTab: Stub }));
-vi.mock('../../src/ReadingTab', () => ({ ReadingTab: Stub }));
-vi.mock('../../src/GamesTab', () => ({ GamesTab: Stub }));
-vi.mock('../../src/CustomListsTab', () => ({ CustomListsTab: Stub }));
-vi.mock('../../src/LogTab', () => ({ LogTab: Stub }));
-vi.mock('../../src/AirtimeTab', () => ({
+vi.mock('../../src/modules/dashboard/ui/DashboardTab', () => ({ DashboardTab: Stub }));
+vi.mock('../../src/modules/watchlist/ui/ListTab', () => ({ ListTab: Stub }));
+vi.mock('../../src/modules/reading/ui/ReadingTab', () => ({ ReadingTab: Stub }));
+vi.mock('../../src/modules/games/ui/GamesTab', () => ({ GamesTab: Stub }));
+vi.mock('../../src/modules/custom-lists/ui/CustomListsTab', () => ({ CustomListsTab: Stub }));
+vi.mock('../../src/modules/log/ui/LogTab', () => ({ LogTab: Stub }));
+vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
 	AirtimeTab: Object.assign(class extends Stub {}, {
 		getAiredDueCount: aired,
 		getMaybeDueCount: maybe,
 	}),
 }));
-vi.mock('../../src/DraftsTab', () => ({
+vi.mock('../../src/modules/drafts/ui/DraftsTab', () => ({
 	DraftsTab: Object.assign(class extends Stub {}, { computePendingCount: pending }),
 }));
 

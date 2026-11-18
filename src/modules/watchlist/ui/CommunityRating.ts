@@ -1,11 +1,11 @@
 import { Notice } from 'obsidian';
-import type { DataManager } from './DataManager';
-import type { SettingsReader } from './SettingsService';
-import type { HoardTitle, AnimeSearchResult } from './types';
-import { formatVoteCount, getApiGroupForType, getCommunityRating } from './types';
-import { apiErrorMessage, type ApiService } from './ApiService';
-import { t } from './i18n';
-import { createIconButton } from './ui/IconButton';
+import type { DataManager } from '../services/DataManager';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { HoardTitle, AnimeSearchResult } from '../../../shared/domain/types';
+import { formatVoteCount, getApiGroupForType, getCommunityRating } from '../../../shared/domain/types';
+import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
+import { t } from '../../../shared/i18n';
+import { createIconButton } from '../../../shared/ui/IconButton';
 
 /** What the community-rating helpers read and write. */
 export interface CommunityRatingDeps {

@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
 import { fakeSettings } from './helpers/fakeSettings';
-import { TitleDetailModal, renderCreditsRefreshButton } from '../src/TitleDetailModal';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
-import { t } from '../src/i18n';
-import { FAILED, found, type LookupResult } from '../src/lookup';
+import { TitleDetailModal, renderCreditsRefreshButton } from '../src/modules/watchlist/ui/TitleDetailModal';
+import { DEFAULT_SETTINGS, type HoardTitle } from '../src/shared/domain/types';
+import { t } from '../src/shared/i18n';
+import { FAILED, found, type LookupResult } from '../src/shared/api/lookup';
 
-vi.mock('../src/NoteLinkButton', () => ({
+vi.mock('../src/shared/ui/NoteLinkButton', () => ({
 	appendNoteLinkButton: (_app: unknown, parent: HTMLElement) => parent.createSpan({ cls: 'note-link-stub' }),
 }));
-vi.mock('../src/CommunityRating', () => ({
+vi.mock('../src/modules/watchlist/ui/CommunityRating', () => ({
 	renderCommunityRating: vi.fn(),
 	maybeAutoRefreshCommunityRating: vi.fn(),
 }));

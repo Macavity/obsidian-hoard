@@ -1,12 +1,12 @@
 import { App, Modal } from 'obsidian';
-import { t } from './i18n';
-import type { Game, AirtimeSchedule } from './types';
+import { t } from '../../../shared/i18n';
+import type { Game, AirtimeSchedule } from '../../../shared/domain/types';
 import {
 	type ScheduleFormState,
 	buildScheduleFromState,
 	initialScheduleState,
 	renderScheduleModal,
-} from './ui/ScheduleForm';
+} from '../../../shared/ui/ScheduleForm';
 
 export interface GameScheduleModalDeps {
 	app: App;

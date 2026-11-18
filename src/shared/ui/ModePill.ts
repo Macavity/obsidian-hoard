@@ -1,5 +1,5 @@
 import { setIcon } from 'obsidian';
-import { t } from './i18n';
+import { t } from '../i18n';
 
 /**
  * The game-modes segmented pill: Solo (red) · Co-op (green) · Multi (blue). Each segment carries a

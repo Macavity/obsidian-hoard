@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { openAddForTitle, type AddRouterDeps } from '../src/AddRouter';
+import { openAddForTitle, type AddRouterDeps } from '../src/app/AddRouter';
 
 const opened = vi.hoisted(() => ({
 	calls: [] as { kind: string; args: unknown[] }[],
@@ -7,7 +7,7 @@ const opened = vi.hoisted(() => ({
 	heading: undefined as string | undefined,
 }));
 
-vi.mock('../src/DraftChoiceModal', () => ({
+vi.mock('../src/modules/drafts/ui/DraftChoiceModal', () => ({
 	DraftChoiceModal: class {
 		constructor(_deps: unknown, _text: string, onChoice: (c: string) => void, heading?: string) {
 			opened.choose = onChoice;
@@ -16,13 +16,13 @@ vi.mock('../src/DraftChoiceModal', () => ({
 		open(): void {}
 	},
 }));
-vi.mock('../src/AddTitleModal', () => ({
+vi.mock('../src/modules/watchlist/ui/AddTitleModal', () => ({
 	AddTitleModal: class { constructor(...args: unknown[]) { opened.calls.push({ kind: 'title', args }); } open(): void {} },
 }));
-vi.mock('../src/AddGameModal', () => ({
+vi.mock('../src/modules/games/ui/AddGameModal', () => ({
 	AddGameModal: class { constructor(...args: unknown[]) { opened.calls.push({ kind: 'game', args }); } open(): void {} },
 }));
-vi.mock('../src/AddReadingModal', () => ({
+vi.mock('../src/modules/reading/ui/AddReadingModal', () => ({
 	AddReadingModal: class { constructor(...args: unknown[]) { opened.calls.push({ kind: 'reading', args }); } open(): void {} },
 }));
 

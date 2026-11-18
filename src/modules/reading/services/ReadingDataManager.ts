@@ -1,21 +1,21 @@
 import { TFile, getFrontMatterInfo, parseYaml, stringifyYaml } from 'obsidian';
 import type { App, EventRef } from 'obsidian';
-import type { SettingsReader } from './SettingsService';
-import type { HistoryManager } from './HistoryManager';
-import type { DataStores } from './DataManager';
-import type { Notify } from './storage/storageTypes';
-import type { EntryIndex } from './storage/EntryIndex';
-import type { LocalStore } from './storage/LocalStore';
-import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, updateFrontMatter, writeEntry } from './storage/noteWrite';
-import type { EntryWriteHooks, HeldEntries } from './storage/noteWrite';
-import { ChangeNotifier } from './changeListeners';
-import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
-import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
-import type { VaultLayout } from './storage/VaultLayout';
-import { FOLDERS } from './storage/VaultLayout';
-import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from './storage/properties';
-import { decodeBook, decodeManga, encodeBook, encodeManga } from './storage/readingCodec';
-import type { Fm } from './storage/storageTypes';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { HistoryManager } from '../../../shared/services/HistoryManager';
+import type { DataStores } from '../../watchlist/services/DataManager';
+import type { Notify } from '../../../shared/storage/storageTypes';
+import type { EntryIndex } from '../../../shared/storage/EntryIndex';
+import type { LocalStore } from '../../../shared/storage/LocalStore';
+import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
+import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
+import { ChangeNotifier } from '../../../shared/services/changeListeners';
+import { getBaseline, sameStoredState, setBaseline } from '../../../shared/storage/baseline';
+import { splitNested, type SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
+import type { VaultLayout } from '../../../shared/storage/VaultLayout';
+import { FOLDERS } from '../../../shared/storage/VaultLayout';
+import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from '../../../shared/storage/properties';
+import { decodeBook, decodeManga, encodeBook, encodeManga } from '../../../shared/storage/readingCodec';
+import type { Fm } from '../../../shared/storage/storageTypes';
 import {
 	Book,
 	Manga,
@@ -25,10 +25,10 @@ import {
 	DEFAULT_READING_SETTINGS,
 	isReleaseDateFuture,
 	todayIso,
-} from './types';
-import { omit, slugify } from './storage/sharedHelpers';
-import { readRecord } from './storage/read';
-import { readColumns, readReadingSettings } from './featureSettings';
+} from '../../../shared/domain/types';
+import { omit, slugify } from '../../../shared/storage/sharedHelpers';
+import { readRecord } from '../../../shared/storage/read';
+import { readColumns, readReadingSettings } from '../../../shared/domain/featureSettings';
 
 export type ReadingKind = 'book' | 'manga';
 

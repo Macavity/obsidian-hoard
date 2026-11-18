@@ -8,7 +8,7 @@
  * a draft object built fresh on open; onApply commits it.
  */
 
-import { t } from './i18n';
+import { t } from '../i18n';
 
 /** A boolean toggle row rendered inside a section, under its ◆ All row. */
 export interface FilterSpecialToggle {

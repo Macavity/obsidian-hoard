@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DraftsTab } from '../../src/DraftsTab';
+import { DraftsTab } from '../../src/modules/drafts/ui/DraftsTab';
 import { qsa } from '../helpers/dom';
 import { fakeSettings } from '../helpers/fakeSettings';
 

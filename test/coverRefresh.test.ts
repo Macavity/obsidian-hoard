@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { ApiService } from '../src/ApiService';
-import type { Game } from '../src/types';
-import { steamLibraryCover } from '../src/steamStoreApi';
+import type { ApiService } from '../src/shared/api/ApiService';
+import type { Game } from '../src/shared/domain/types';
+import { steamLibraryCover } from '../src/shared/api/steamStoreApi';
 import { parse } from 'yaml';
-import { refreshAllCovers, resolveGameCover, searchBooks, type CoverRefreshDeps } from '../src/coverRefresh';
-import { ApiCheckQueue } from '../src/apiCheckQueue';
+import { refreshAllCovers, resolveGameCover, searchBooks, type CoverRefreshDeps } from '../src/modules/covers/services/coverRefresh';
+import { ApiCheckQueue } from '../src/shared/api/apiCheckQueue';
 import { setupGames } from './helpers/setupGameDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
-import type { DataManager } from '../src/DataManager';
+import type { DataManager } from '../src/modules/watchlist/services/DataManager';
 import { setupDataManager } from './helpers/setupDataManager';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>

@@ -1,21 +1,21 @@
-import type { TabInstance } from './ui/TabInstance';
+import type { TabInstance } from '../../../shared/ui/TabInstance';
 import { App, Component, MarkdownRenderer, Modal, Notice, Platform, TFile, normalizePath, Setting, type EventRef, type TAbstractFile } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from './SettingsService';
-import type { DataManager } from './DataManager';
-import type { ReadingDataManager } from './ReadingDataManager';
-import type { GameDataManager } from './GameDataManager';
-import type { VaultLayout } from './storage/VaultLayout';
-import type { CustomListColumn, CustomListRow, CustomList } from './types';
-import { DEFAULT_FIELD_COLOR } from './types';
-import { ConfirmModal } from './ConfirmModal';
-import { openColorPicker, deriveFillColor, deriveBorderColor } from './ColorPicker';
-import { openStatusDropdown } from './StatusDropdown';
-import type { AddRouteOptions } from './AddRouter';
-import { cloneColumns, renderCancelSave, renderColumnsEditor } from './ui/ColumnsEditor';
-import { t } from './i18n';
-import { at } from './storage/read';
-import { createIconButton } from './ui/IconButton';
-import { statusLabel, typeLabel, readingStatusLabel } from './i18n/labels';
+import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
+import type { DataManager } from '../../watchlist/services/DataManager';
+import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
+import type { GameDataManager } from '../../games/services/GameDataManager';
+import type { VaultLayout } from '../../../shared/storage/VaultLayout';
+import type { CustomListColumn, CustomListRow, CustomList } from '../../../shared/domain/types';
+import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/types';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { openColorPicker, deriveFillColor, deriveBorderColor } from '../../../shared/ui/ColorPicker';
+import { openStatusDropdown } from '../../../shared/ui/StatusDropdown';
+import type { AddRouteOptions } from '../../../app/AddRouter';
+import { cloneColumns, renderCancelSave, renderColumnsEditor } from '../../../shared/ui/ColumnsEditor';
+import { t } from '../../../shared/i18n';
+import { at } from '../../../shared/storage/read';
+import { createIconButton } from '../../../shared/ui/IconButton';
+import { statusLabel, typeLabel, readingStatusLabel } from '../../../shared/i18n/labels';
 
 /** Row name, trimmed — the index signature types it loosely. */
 function rowName(row: CustomListRow): string {

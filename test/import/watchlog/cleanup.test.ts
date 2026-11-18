@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { planCleanup, runCleanup } from '../../../src/import/watchlog/cleanup';
-import { VaultLayout } from '../../../src/storage/VaultLayout';
-import { detectWatchLogSources } from '../../../src/import/watchlog/detect';
+import { planCleanup, runCleanup } from '../../../src/modules/import/services/watchlog/cleanup';
+import { VaultLayout } from '../../../src/shared/storage/VaultLayout';
+import { detectWatchLogSources } from '../../../src/modules/import/services/watchlog/detect';
 import { snapshot } from './helpers';
 import { setupCleanup } from './setupCleanup';
 import { WATCHLOG_NOTES } from './setupSchema1';

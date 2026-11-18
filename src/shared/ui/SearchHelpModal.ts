@@ -1,7 +1,7 @@
 import { App, Modal } from 'obsidian';
-import { createIconButton } from './ui/IconButton';
-import { t, type TranslationKey } from './i18n';
-import type { SearchFieldSpec } from './SearchQuery';
+import { createIconButton } from './IconButton';
+import { t, type TranslationKey } from '../i18n';
+import type { SearchFieldSpec } from '../domain/SearchQuery';
 
 /** A query rendered as coloured parts: v = value, f = field prefix, o = operator. */
 type Part = [kind: 'v' | 'f' | 'o' | 'p', text: string];

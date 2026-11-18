@@ -1,17 +1,17 @@
 import { Notice, Platform, PluginSettingTab, Setting, SliderComponent, normalizePath, setIcon, type Plugin } from 'obsidian';
-import { t, type TranslationKey } from './i18n';
-import { createIconButton } from './ui/IconButton';
-import { statusLabel, typeLabel, readingStatusLabel } from './i18n/labels';
-import { typeNameProblemText } from './ui/problemText';
-import { cardSizeToMinWidth } from './VirtualGrid';
-import type { HoardPluginSettings, TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from './types';
-import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType } from './types';
-import { readingStatusColor } from './readingColors';
-import { gamesKeyChip } from './ui/gamesKeyChip';
-import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from './apiSources';
-import { SteamSyncModal, type SteamSyncModalDeps } from './SteamSyncModal';
-import type { ApiService, SteamFailureReason } from './ApiService';
-import { FAILED } from './lookup';
+import { t, type TranslationKey } from '../../../shared/i18n';
+import { createIconButton } from '../../../shared/ui/IconButton';
+import { statusLabel, typeLabel, readingStatusLabel } from '../../../shared/i18n/labels';
+import { typeNameProblemText } from '../../../shared/ui/problemText';
+import { cardSizeToMinWidth } from '../../../shared/ui/VirtualGrid';
+import type { HoardPluginSettings, TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from '../../../shared/domain/types';
+import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType } from '../../../shared/domain/types';
+import { readingStatusColor } from '../../reading/ui/readingColors';
+import { gamesKeyChip } from '../../../shared/ui/gamesKeyChip';
+import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from '../../../shared/api/apiSources';
+import { SteamSyncModal, type SteamSyncModalDeps } from '../../games/ui/SteamSyncModal';
+import type { ApiService, SteamFailureReason } from '../../../shared/api/ApiService';
+import { FAILED } from '../../../shared/api/lookup';
 
 /** short status-line label per Steam failure (the modal shows the long form) */
 function steamFailureLabel(reason: SteamFailureReason): string {
@@ -137,25 +137,25 @@ interface ApiProviderHandle {
 	setActive: (active: boolean | null) => void;
 	refreshStatus: () => void;
 }
-import { CsvModal, type CsvModalDeps } from './CsvModal';
-import type { DataManager } from './DataManager';
-import type { ReadingDataManager } from './ReadingDataManager';
-import type { GameDataManager } from './GameDataManager';
-import type { VaultLayout } from './storage/VaultLayout';
-import type { BackupManagers } from './backup';
-import type { SettingsReader, SettingsWriter } from './SettingsService';
-import { ReadingCsvChoiceModal } from './ReadingCsvChoiceModal';
-import { ReadingCsvModal, type ReadingCsvModalDeps } from './ReadingCsvModal';
-import { HoardView } from './HoardView';
-import { CustomListManager, DefaultColumnsModal, type DefaultColumnsModalDeps } from './CustomListsTab';
-import { ConfirmModal } from './ConfirmModal';
-import { refreshAllCovers } from './coverRefresh';
-import { apiErrorMessage, apiErrorShort } from './ApiService';
-import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from './jikanBase';
-import { getDecision } from './import/watchlog/onboardingState';
-import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from './backup';
-import type { PosterService } from './PosterService';
-import { emitDataChanged } from './changeSignal';
+import { CsvModal, type CsvModalDeps } from '../../watchlist/ui/CsvModal';
+import type { DataManager } from '../../watchlist/services/DataManager';
+import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
+import type { GameDataManager } from '../../games/services/GameDataManager';
+import type { VaultLayout } from '../../../shared/storage/VaultLayout';
+import type { BackupManagers } from '../../backup/services/backup';
+import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
+import { ReadingCsvChoiceModal } from '../../reading/ui/ReadingCsvChoiceModal';
+import { ReadingCsvModal, type ReadingCsvModalDeps } from '../../reading/ui/ReadingCsvModal';
+import { HoardView } from '../../../app/HoardView';
+import { CustomListManager, DefaultColumnsModal, type DefaultColumnsModalDeps } from '../../custom-lists/ui/CustomListsTab';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { refreshAllCovers } from '../../covers/services/coverRefresh';
+import { apiErrorMessage, apiErrorShort } from '../../../shared/api/ApiService';
+import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from '../../../shared/api/jikanBase';
+import { getDecision } from '../../import/services/watchlog/onboardingState';
+import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../../backup/services/backup';
+import type { PosterService } from '../../../shared/api/PosterService';
+import { emitDataChanged } from '../../../shared/services/changeSignal';
 
 /** Chip for the MyAnimeList endpoint field: default, custom, or rejected and falling back. */
 function jikanEndpointStatus(raw: string): ChipStatus {

@@ -1,5 +1,5 @@
-import { formatTime } from '../types';
-import type { Game } from '../types';
+import { formatTime } from '../domain/types';
+import type { Game } from '../domain/types';
 import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { FmReader, airtimeProps, decodeAirtime } from './readingCodec';

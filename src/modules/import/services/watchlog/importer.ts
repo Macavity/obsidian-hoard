@@ -1,7 +1,7 @@
 import type { App } from 'obsidian';
-import type { LocalStore } from '../../storage/LocalStore';
-import type { VaultLayout } from '../../storage/VaultLayout';
-import type { WatchLogImporter } from '../../WatchLogOnboardingModal';
+import type { LocalStore } from '../../../../shared/storage/LocalStore';
+import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
+import type { WatchLogImporter } from '../../ui/WatchLogOnboardingModal';
 import { planCleanup, runCleanup } from './cleanup';
 import type { WatchLogSources } from './detect';
 import { importFork } from './importFork';

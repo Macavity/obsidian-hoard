@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { LocalStore } from '../../../src/storage/LocalStore';
+import { LocalStore } from '../../../src/shared/storage/LocalStore';
 import { createFakeApp } from '../../fakes/fakeApp';
-import { getDecision, pendingSources, setDecision } from '../../../src/import/watchlog/onboardingState';
-import type { ForkSource, OriginalSource } from '../../../src/import/watchlog/detect';
+import { getDecision, pendingSources, setDecision } from '../../../src/modules/import/services/watchlog/onboardingState';
+import type { ForkSource, OriginalSource } from '../../../src/modules/import/services/watchlog/detect';
 
 describe('onboardingState', () => {
 	it('pending = found and undecided', () => {

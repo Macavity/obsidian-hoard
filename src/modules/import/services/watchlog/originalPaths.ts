@@ -1,5 +1,5 @@
 import { normalizePath } from 'obsidian';
-import type { EntryKind } from '../../storage/storageTypes';
+import type { EntryKind } from '../../../../shared/storage/storageTypes';
 import { isRecord, type WatchLogData } from './schema1Types';
 
 /** WatchLog's defaults where its settings name no folder. */

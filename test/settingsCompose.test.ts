@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parse, stringify } from 'yaml';
 import { createFakeApp } from './fakes/fakeApp';
-import { LocalStore } from '../src/storage/LocalStore';
-import { SHARED_SETTING_KEYS, SharedConfigStore } from '../src/storage/SharedConfigStore';
-import { SECRET_KEYS } from '../src/storage/SecretStore';
-import { VaultLayout } from '../src/storage/VaultLayout';
-import { composeSettings, persistSettings } from '../src/settingsSplit';
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/types';
+import { LocalStore } from '../src/shared/storage/LocalStore';
+import { SHARED_SETTING_KEYS, SharedConfigStore } from '../src/shared/storage/SharedConfigStore';
+import { SECRET_KEYS } from '../src/shared/storage/SecretStore';
+import { VaultLayout } from '../src/shared/storage/VaultLayout';
+import { composeSettings, persistSettings } from '../src/shared/services/settingsSplit';
+import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/shared/domain/types';
 import { STORED } from './settingsCompose.fixture';
 
 type Loose = Record<string, unknown>;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { formatTime } from '../../src/types';
-import type { HoardTitle, Season } from '../../src/types';
+import { formatTime } from '../../src/shared/domain/types';
+import type { HoardTitle, Season } from '../../src/shared/domain/types';
 import { setupListTab, showNote } from '../helpers/setupListTab';
 
 interface Dom {

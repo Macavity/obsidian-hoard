@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddFromUrlModal } from '../src/AddFromUrlModal';
-import { t } from '../src/i18n';
+import { AddFromUrlModal } from '../src/modules/watchlist/ui/AddFromUrlModal';
+import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
-import type { MediaSearchResult } from '../src/types';
+import type { MediaSearchResult } from '../src/shared/domain/types';
 
 const created = vi.hoisted(() => ({ calls: [] as unknown[][], opened: 0 }));
-vi.mock('../src/AddTitleModal', () => ({
+vi.mock('../src/modules/watchlist/ui/AddTitleModal', () => ({
 	AddTitleModal: class {
 		constructor(...args: unknown[]) { created.calls.push(args); }
 		open(): void { created.opened++; }

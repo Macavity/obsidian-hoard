@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFakeApp } from '../fakes/fakeApp';
-import { VaultLayout } from '../../src/storage/VaultLayout';
-import { HistoryStore } from '../../src/storage/HistoryStore';
+import { VaultLayout } from '../../src/shared/storage/VaultLayout';
+import { HistoryStore } from '../../src/shared/storage/HistoryStore';
 
 const layout = () => new VaultLayout('W', () => []);
 const entry = (i: number, extra = {}) => ({

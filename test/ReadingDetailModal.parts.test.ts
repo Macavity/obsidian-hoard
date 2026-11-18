@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FuzzySuggestModal, Notice } from 'obsidian';
-import { ReadingDetailModal } from '../src/ReadingDetailModal';
-import { t } from '../src/i18n';
-import type { Book, Manga, ReadingCustomColumn } from '../src/types';
+import { ReadingDetailModal } from '../src/modules/reading/ui/ReadingDetailModal';
+import { t } from '../src/shared/i18n';
+import type { Book, Manga, ReadingCustomColumn } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;

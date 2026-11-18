@@ -1,11 +1,11 @@
-import { normalizeSettings } from './settingsNormalize';
-import { toRecord } from './storage/sharedHelpers';
-import type { HoardPluginSettings } from './types';
-import { SHARED_SETTING_KEYS } from './storage/SharedConfigStore';
-import type { SharedConfigStore } from './storage/SharedConfigStore';
-import type { LocalStore } from './storage/LocalStore';
-import { SECRET_KEYS } from './storage/SecretStore';
-import type { SecretStore, SecretValues } from './storage/SecretStore';
+import { normalizeSettings } from '../domain/settingsNormalize';
+import { toRecord } from '../storage/sharedHelpers';
+import type { HoardPluginSettings } from '../domain/types';
+import { SHARED_SETTING_KEYS } from '../storage/SharedConfigStore';
+import type { SharedConfigStore } from '../storage/SharedConfigStore';
+import type { LocalStore } from '../storage/LocalStore';
+import { SECRET_KEYS } from '../storage/SecretStore';
+import type { SecretStore, SecretValues } from '../storage/SecretStore';
 
 /** The base is synced: a secret key found there is never trusted. */
 function withoutSecrets(shared: Record<string, unknown>): Record<string, unknown> {

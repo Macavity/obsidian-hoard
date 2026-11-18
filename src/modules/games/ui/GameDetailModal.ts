@@ -1,20 +1,20 @@
 import { App, Modal, Notice, Platform, setIcon } from 'obsidian';
-import type { SettingsReader } from './SettingsService';
-import type { GameDataManager } from './GameDataManager';
-import { Game, GameGroup, GAME_AUTO_STATUS, formatTime, parsePlaytimeInput } from './types';
-import { buildPosterCard } from './PosterCard';
-import { rawgResizedCover, steamAppIdFromUrl, type ApiService } from './ApiService';
-import { renderStarRating } from './StarRating';
-import { renderTagPill, renderTagChips } from './StatusDropdown';
-import { ConfirmModal } from './ConfirmModal';
-import { renderModePill } from './ModePill';
-import { appendNoteLinkButton } from './NoteLinkButton';
-import { createDatePicker } from './DatePicker';
-import { pinModalFooter } from './StickyModal';
-import { t } from './i18n';
-import { gameStatusLabel, priorityLabel } from './i18n/labels';
-import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader } from './ui/detailShared';
-import { createFavoriteButton, markDetailRoot, markViewRoot } from './ui/detailFrame';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { GameDataManager } from '../services/GameDataManager';
+import { Game, GameGroup, GAME_AUTO_STATUS, formatTime, parsePlaytimeInput } from '../../../shared/domain/types';
+import { buildPosterCard } from '../../../shared/ui/PosterCard';
+import { rawgResizedCover, steamAppIdFromUrl, type ApiService } from '../../../shared/api/ApiService';
+import { renderStarRating } from '../../../shared/ui/StarRating';
+import { renderTagPill, renderTagChips } from '../../../shared/ui/StatusDropdown';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { renderModePill } from '../../../shared/ui/ModePill';
+import { appendNoteLinkButton } from '../../../shared/ui/NoteLinkButton';
+import { createDatePicker } from '../../../shared/ui/DatePicker';
+import { pinModalFooter } from '../../../shared/ui/StickyModal';
+import { t } from '../../../shared/i18n';
+import { gameStatusLabel, priorityLabel } from '../../../shared/i18n/labels';
+import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader } from '../../../shared/ui/detailShared';
+import { createFavoriteButton, markDetailRoot, markViewRoot } from '../../../shared/ui/detailFrame';
 
 /** Shared by GameDetailModal and GameGroupDetailModal, which opens it for a member. */
 export interface GameDetailModalDeps {

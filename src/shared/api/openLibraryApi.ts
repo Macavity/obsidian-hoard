@@ -1,5 +1,5 @@
 import type { BookSearchResult } from './ApiService';
-import { isRecord } from './storage/sharedHelpers';
+import { isRecord } from '../storage/sharedHelpers';
 
 const OPEN_LIBRARY_BASE = 'https://openlibrary.org';
 

@@ -1,16 +1,16 @@
 import {
 	COLUMN_TYPES, GAME_TBA_STATUS, defaultGamesSettings, getTitleCredits, parsePlaytimeInput,
-} from '../../types';
+} from '../../../../shared/domain/types';
 import type {
 	Game, GamesData, GamesSettings, HoardTitle, ReadingData, ReadingCustomColumn, TagDefinition,
-} from '../../types';
-import { readBook, readGame, readGameGroup, readManga } from '../../backupEntries';
-import { readGamesSettings, readReadingSettings } from '../../featureSettings';
-import { at, readList, readOneOf, readOptionalString, readRecord, readString, readStringList } from '../../storage/read';
-import { defined } from '../../storage/sharedHelpers';
-import { TITLE_PROPS } from '../../storage/properties';
+} from '../../../../shared/domain/types';
+import { readBook, readGame, readGameGroup, readManga } from '../../../backup/services/backupEntries';
+import { readGamesSettings, readReadingSettings } from '../../../../shared/domain/featureSettings';
+import { at, readList, readOneOf, readOptionalString, readRecord, readString, readStringList } from '../../../../shared/storage/read';
+import { defined } from '../../../../shared/storage/sharedHelpers';
+import { TITLE_PROPS } from '../../../../shared/storage/properties';
 import { WISHLIST, type WatchLogTitle } from './schema1Types';
-import type { Fm } from '../../storage/storageTypes';
+import type { Fm } from '../../../../shared/storage/storageTypes';
 
 // WatchLog's load-time corrections, applied once while converting its data.
 

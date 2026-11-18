@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFakeApp } from '../fakes/fakeApp';
-import { VaultLayout } from '../../src/storage/VaultLayout';
-import { getBaseline } from '../../src/storage/baseline';
-import type { ManagerNotice } from '../../src/storage/storageTypes';
+import { VaultLayout } from '../../src/shared/storage/VaultLayout';
+import { getBaseline } from '../../src/shared/storage/baseline';
+import type { ManagerNotice } from '../../src/shared/storage/storageTypes';
 import {
 	dropOldId, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, setChangedKeys, trashNote, writeEntry,
 	type EntryWriteHooks, type NoteIo,
-} from '../../src/storage/noteWrite';
+} from '../../src/shared/storage/noteWrite';
 
 afterEach(() => {
 	vi.restoreAllMocks();

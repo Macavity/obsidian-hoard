@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SteamSyncModal } from '../src/SteamSyncModal';
-import type { SteamOwnedGame } from '../src/ApiService';
-import { steamLibraryCover } from '../src/steamStoreApi';
-import { GAME_AUTO_STATUS, type Game, type SteamSyncUpdate } from '../src/types';
+import { SteamSyncModal } from '../src/modules/games/ui/SteamSyncModal';
+import type { SteamOwnedGame } from '../src/shared/api/ApiService';
+import { steamLibraryCover } from '../src/shared/api/steamStoreApi';
+import { GAME_AUTO_STATUS, type Game, type SteamSyncUpdate } from '../src/shared/domain/types';
 import { clickByText, shownNotices } from './helpers/csvWizard';
 import { fakeSettings } from './helpers/fakeSettings';
 
-type Details = Awaited<ReturnType<import('../src/ApiService').ApiService['getSteamAppDetails']>>;
+type Details = Awaited<ReturnType<import('../src/shared/api/ApiService').ApiService['getSteamAppDetails']>>;
 type Achievements = { earned: number; total: number } | null;
 
 const owned = (appId: string, name: string, playtimeMinutes = 0): SteamOwnedGame =>

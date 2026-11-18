@@ -1,11 +1,11 @@
 import { MarkdownPostProcessorContext } from 'obsidian';
-import type { SettingsReader } from './SettingsService';
-import type { DataManager } from './DataManager';
-import type { HoardTitle, HoardGroup, TagDefinition } from './types';
-import { formatTime, getThemedColor, formatDateDisplay, formatShortDateDisplay } from './types';
-import { t } from './i18n';
-import { statusLabel, typeLabel } from './i18n/labels';
-import { onDataChanged } from './changeSignal';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { DataManager } from '../../watchlist/services/DataManager';
+import type { HoardTitle, HoardGroup, TagDefinition } from '../../../shared/domain/types';
+import { formatTime, getThemedColor, formatDateDisplay, formatShortDateDisplay } from '../../../shared/domain/types';
+import { t } from '../../../shared/i18n';
+import { statusLabel, typeLabel } from '../../../shared/i18n/labels';
+import { onDataChanged } from '../../../shared/services/changeSignal';
 
 export interface NextRelease { titleName: string; type: string; releaseDate: string; daysUntil: number }
 

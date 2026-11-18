@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createFakeApp } from '../../fakes/fakeApp';
-import { VaultLayout } from '../../../src/storage/VaultLayout';
-import { managedFiles, managedFolders } from '../../../src/import/watchlog/paths';
+import { VaultLayout } from '../../../src/shared/storage/VaultLayout';
+import { managedFiles, managedFolders } from '../../../src/modules/import/services/watchlog/paths';
 
 describe('managed paths', () => {
 	it('lists type and fixed folders below the root', () => {

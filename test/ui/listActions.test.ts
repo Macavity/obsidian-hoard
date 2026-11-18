@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ListTab } from '../../src/ListTab';
+import { ListTab } from '../../src/modules/watchlist/ui/ListTab';
 import { fakeSettings } from '../helpers/fakeSettings';
-import * as ActionBar from '../../src/ui/ActionBar';
-import type { HoardTitle, SavedFilterPreset } from '../../src/types';
+import * as ActionBar from '../../src/shared/ui/ActionBar';
+import type { HoardTitle, SavedFilterPreset } from '../../src/shared/domain/types';
 
-vi.mock('../../src/ui/ActionBar', () => ({
+vi.mock('../../src/shared/ui/ActionBar', () => ({
 	renderActionBar: vi.fn(() => ({})),
 	renderBatchStatusSelect: vi.fn(),
 	renderMoveToGroupSelect: vi.fn(),

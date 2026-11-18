@@ -1,6 +1,6 @@
-import { t } from './i18n';
-import type { WatchLogSourceKind } from './import/watchlog/detect';
-import { generalErrors, type ImportReport, type ReviewItem } from './import/watchlog/report';
+import { t } from '../../../shared/i18n';
+import type { WatchLogSourceKind } from '../services/watchlog/detect';
+import { generalErrors, type ImportReport, type ReviewItem } from '../services/watchlog/report';
 
 /** Product names, not translated. */
 export const PLUGIN_NAME: Record<WatchLogSourceKind, string> = { original: 'WatchLog', fork: 'WatchLog Sync' };

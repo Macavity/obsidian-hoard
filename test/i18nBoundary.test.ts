@@ -7,26 +7,26 @@ import { describe, expect, it } from 'vitest';
 // stays free of i18n imports.
 const root = cwd();
 
-const storageFiles = readdirSync(join(root, 'src/storage'))
+const storageFiles = readdirSync(join(root, 'src/shared/storage'))
 	.filter((f) => f.endsWith('.ts'))
-	.map((f) => `src/storage/${f}`);
+	.map((f) => `src/shared/storage/${f}`);
 
 // the WatchLog import writes notes; its UI texts live in the onboarding modal only
-const importFiles = readdirSync(join(root, 'src/import/watchlog'))
+const importFiles = readdirSync(join(root, 'src/modules/import/services/watchlog'))
 	.filter((f) => f.endsWith('.ts'))
-	.map((f) => `src/import/watchlog/${f}`);
+	.map((f) => `src/modules/import/services/watchlog/${f}`);
 
 const files = [
 	...storageFiles,
 	...importFiles,
-	'src/types.ts',
-	'src/DataManager.ts',
-	'src/ReadingDataManager.ts',
-	'src/GameDataManager.ts',
-	'src/HistoryManager.ts',
-	'src/settingsSplit.ts',
-	'src/backup.ts',
-	'src/airtimeScheduler.ts',
+	'src/shared/domain/types.ts',
+	'src/modules/watchlist/services/DataManager.ts',
+	'src/modules/reading/services/ReadingDataManager.ts',
+	'src/modules/games/services/GameDataManager.ts',
+	'src/shared/services/HistoryManager.ts',
+	'src/shared/services/settingsSplit.ts',
+	'src/modules/backup/services/backup.ts',
+	'src/modules/airtime/services/airtimeScheduler.ts',
 ];
 
 describe('i18n import boundary', () => {

@@ -1,9 +1,9 @@
 import { Modal } from 'obsidian';
-import type { MediaSearchResult } from './types';
-import { apiErrorMessage, type ApiService } from './ApiService';
+import type { MediaSearchResult } from '../../../shared/domain/types';
+import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
 import { AddTitleModal, type AddTitleModalDeps } from './AddTitleModal';
-import { t } from './i18n';
-import { effectiveMediaSource } from './apiSources';
+import { t } from '../../../shared/i18n';
+import { effectiveMediaSource } from '../../../shared/api/apiSources';
 
 /** themoviedb.org/movie/27205-inception, /tv/1396, with or without slug and query */
 const TMDB_URL_RE = /themoviedb\.org\/(movie|tv)\/(\d+)/i;

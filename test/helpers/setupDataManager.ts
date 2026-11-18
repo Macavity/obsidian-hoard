@@ -1,9 +1,9 @@
 // FakeApp + storage stores + DataManager wired like main.ts: root 'W', watch types Movie / TV Show.
 import { createStores } from './common';
-import { DataManager } from '../../src/DataManager';
-import type { DataManagerDeps, PosterQueue, ReleaseDateTargets } from '../../src/DataManager';
-import { NOT_FOUND } from '../../src/lookup';
-import type { HoardTitle } from '../../src/types';
+import { DataManager } from '../../src/modules/watchlist/services/DataManager';
+import type { DataManagerDeps, PosterQueue, ReleaseDateTargets } from '../../src/modules/watchlist/services/DataManager';
+import { NOT_FOUND } from '../../src/shared/api/lookup';
+import type { HoardTitle } from '../../src/shared/domain/types';
 
 // browser globals the manager touches
 export async function setupDataManager(files: Record<string, string>, extra: Record<string, unknown> = {}) {

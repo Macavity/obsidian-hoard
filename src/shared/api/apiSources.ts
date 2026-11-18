@@ -1,5 +1,5 @@
 import type { ApiService } from './ApiService';
-import type { HoardPluginSettings } from './types';
+import type { HoardPluginSettings } from '../domain/types';
 
 export type MediaSource = 'cinemeta' | 'omdb' | 'tmdb';
 export type BookSource = 'openlibrary' | 'google';

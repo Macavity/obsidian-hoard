@@ -1,7 +1,7 @@
-import type { DataManager } from './DataManager';
-import type { HoardTitle } from './types';
-import { todayIso } from './types';
-import { t } from './i18n';
+import type { DataManager } from '../services/DataManager';
+import type { HoardTitle } from '../../../shared/domain/types';
+import { todayIso } from '../../../shared/domain/types';
+import { t } from '../../../shared/i18n';
 
 /** What the button reads and writes. */
 export type MarkWatchedDeps = Pick<DataManager, 'getTitle' | 'updateTitle' | 'markEpisodeWatched'>;

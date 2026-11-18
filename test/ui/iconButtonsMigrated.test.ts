@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { renderSearchBox } from '../../src/ui/TabToolbar';
-import { renderSearchHelpButton } from '../../src/SearchHelpModal';
-import { renderActionBar } from '../../src/ui/ActionBar';
-import { createDatePicker } from '../../src/DatePicker';
+import { renderSearchBox } from '../../src/shared/ui/TabToolbar';
+import { renderSearchHelpButton } from '../../src/shared/ui/SearchHelpModal';
+import { renderActionBar } from '../../src/shared/ui/ActionBar';
+import { createDatePicker } from '../../src/shared/ui/DatePicker';
 
 (globalThis as { activeDocument?: Document }).activeDocument = document;
 

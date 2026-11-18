@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_PROPERTY_NAMES, COMMON_PROPS, GAME_PROPS, READING_PROPS, TITLE_PROPS } from '../../src/storage/properties';
+import { ALL_PROPERTY_NAMES, COMMON_PROPS, GAME_PROPS, READING_PROPS, TITLE_PROPS } from '../../src/shared/storage/properties';
 
 describe('property names', () => {
 	it('are Title Case words with upper-case acronyms', () => {

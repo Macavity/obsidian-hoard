@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AddReadingModal, type ReadingMode } from '../src/AddReadingModal';
-import { t } from '../src/i18n';
+import { AddReadingModal, type ReadingMode } from '../src/modules/reading/ui/AddReadingModal';
+import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const flush = () => new Promise<void>((r) => setTimeout(r, 0));

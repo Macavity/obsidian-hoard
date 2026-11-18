@@ -1,7 +1,7 @@
 import { TFile, TFolder, type App } from 'obsidian';
-import { VaultLayout } from '../../storage/VaultLayout';
-import type { EntryKind } from '../../storage/storageTypes';
-import { renameTopLevelBlock, replaceInFolderPath } from '../../storage/baseFile';
+import { VaultLayout } from '../../../../shared/storage/VaultLayout';
+import type { EntryKind } from '../../../../shared/storage/storageTypes';
+import { renameTopLevelBlock, replaceInFolderPath } from '../../../../shared/storage/baseFile';
 import type { WatchLogSourceKind, WatchLogSources } from './detect';
 import { isListNote, originalFolders, originalNotePath } from './originalPaths';
 import { forkTarget, managedFiles, nestedHoardRoot } from './paths';

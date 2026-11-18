@@ -4,8 +4,8 @@ import type {
 	RowsShelfLayoutEntry, TagDefinition,
 } from './types';
 import { readTag } from './settingsNormalize';
-import { at, readList, readOneOf, readRecord, readString, readStringList } from './storage/read';
-import { defined, isRecord } from './storage/sharedHelpers';
+import { at, readList, readOneOf, readRecord, readString, readStringList } from '../storage/read';
+import { defined, isRecord } from '../storage/sharedHelpers';
 
 /** The `reading:` and `games:` settings blocks of the base and data.json, read field by field. */
 

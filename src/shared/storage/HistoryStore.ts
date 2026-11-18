@@ -1,5 +1,5 @@
 import { TFile, type App, type EventRef } from 'obsidian';
-import type { HistoryEntry } from '../HistoryManager';
+import type { HistoryEntry } from '../services/HistoryManager';
 import { formatHistoryLine, parseHistoryLine, type HistoryLine } from './historyLine';
 import type { VaultLayout } from './VaultLayout';
 

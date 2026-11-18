@@ -1,4 +1,4 @@
-import type { LocalStore } from '../../storage/LocalStore';
+import type { LocalStore } from '../../../../shared/storage/LocalStore';
 import type { WatchLogSourceKind, WatchLogSources } from './detect';
 
 export type ImportDecision = 'imported' | 'declined';

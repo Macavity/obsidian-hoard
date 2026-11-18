@@ -1,12 +1,12 @@
-import type { ApiService, BookSearchResult, GameSearchResult } from './ApiService';
-import type { ApiCheckQueue } from './apiCheckQueue';
-import type { GameDataManager } from './GameDataManager';
-import type { ReadingDataManager, ReadingKind } from './ReadingDataManager';
-import type { PosterService } from './PosterService';
-import type { DataManager } from './DataManager';
-import type { Book, Game, HoardPluginSettings, HoardTitle, Manga } from './types';
-import { effectiveBookSource, effectiveGameSource } from './apiSources';
-import { steamLibraryCover } from './steamStoreApi';
+import type { ApiService, BookSearchResult, GameSearchResult } from '../../../shared/api/ApiService';
+import type { ApiCheckQueue } from '../../../shared/api/apiCheckQueue';
+import type { GameDataManager } from '../../games/services/GameDataManager';
+import type { ReadingDataManager, ReadingKind } from '../../reading/services/ReadingDataManager';
+import type { PosterService } from '../../../shared/api/PosterService';
+import type { DataManager } from '../../watchlist/services/DataManager';
+import type { Book, Game, HoardPluginSettings, HoardTitle, Manga } from '../../../shared/domain/types';
+import { effectiveBookSource, effectiveGameSource } from '../../../shared/api/apiSources';
+import { steamLibraryCover } from '../../../shared/api/steamStoreApi';
 
 /** What the game cover lookups call on the API service. */
 export type GameCoverApi = Pick<

@@ -1,10 +1,10 @@
 import { parse, stringify } from 'yaml';
 import type { createFakeApp } from '../../fakes/fakeApp';
-import { VaultLayout } from '../../../src/storage/VaultLayout';
-import type { LocalStore } from '../../../src/storage/LocalStore';
-import { SharedConfigStore } from '../../../src/storage/SharedConfigStore';
-import { HistoryStore } from '../../../src/storage/HistoryStore';
-import type { ImportContext, WatchLogData } from '../../../src/import/watchlog/schema1Types';
+import { VaultLayout } from '../../../src/shared/storage/VaultLayout';
+import type { LocalStore } from '../../../src/shared/storage/LocalStore';
+import { SharedConfigStore } from '../../../src/shared/storage/SharedConfigStore';
+import { HistoryStore } from '../../../src/shared/storage/HistoryStore';
+import type { ImportContext, WatchLogData } from '../../../src/modules/import/services/watchlog/schema1Types';
 
 const yaml = { parse, stringify };
 

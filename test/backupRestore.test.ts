@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import data from './fixtures/data-v1.json';
 import { setupBackup } from './helpers/setupBackup';
-import { inferHistoryAction } from '../src/HistoryManager';
-import { DEFAULT_SETTINGS } from '../src/types';
-import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../src/backup';
+import { inferHistoryAction } from '../src/shared/services/HistoryManager';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/types';
+import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../src/modules/backup/services/backup';
 
 const BASE = 'hoard:\n  version: 1\n  statuses:\n    - name: Rewatch\n      color: "#123456"\n';
 

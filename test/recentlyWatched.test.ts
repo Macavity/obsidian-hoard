@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createFakeApp } from './fakes/fakeApp';
-import { VaultLayout } from '../src/storage/VaultLayout';
-import { HistoryStore } from '../src/storage/HistoryStore';
-import { resolveRecentlyWatched, type HistoryEntry } from '../src/HistoryManager';
+import { VaultLayout } from '../src/shared/storage/VaultLayout';
+import { HistoryStore } from '../src/shared/storage/HistoryStore';
+import { resolveRecentlyWatched, type HistoryEntry } from '../src/shared/services/HistoryManager';
 
 const t = (id: string, title: string, type = 'TV Show') => ({ id, title, type });
 let n = 0;

@@ -6,8 +6,8 @@
 // ReadingTab and AirtimeTab. The class prefix parameterises the CSS, so each tab keeps its styling.
 
 import { setIcon } from 'obsidian';
-import { createIconButton } from './ui/IconButton';
-import { t } from './i18n';
+import { createIconButton } from './IconButton';
+import { t } from '../i18n';
 
 export interface CardMenuItem {
 	label: string;

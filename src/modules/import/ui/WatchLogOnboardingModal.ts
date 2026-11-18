@@ -1,9 +1,9 @@
 import { App, Modal, Notice, type TFile } from 'obsidian';
-import { t } from './i18n';
-import type { SourceCounts, WatchLogSourceKind, WatchLogSources } from './import/watchlog/detect';
-import type { ImportDecision } from './import/watchlog/onboardingState';
-import { generalErrors, type ImportPhase, type ImportReport, type Progress, type ReviewItem } from './import/watchlog/report';
-import type { CleanupItem } from './import/watchlog/cleanup';
+import { t } from '../../../shared/i18n';
+import type { SourceCounts, WatchLogSourceKind, WatchLogSources } from '../services/watchlog/detect';
+import type { ImportDecision } from '../services/watchlog/onboardingState';
+import { generalErrors, type ImportPhase, type ImportReport, type Progress, type ReviewItem } from '../services/watchlog/report';
+import type { CleanupItem } from '../services/watchlog/cleanup';
 import { PLUGIN_NAME, REASONS, reasonLabel, reportMarkdown, reportStats, reviewDetail } from './WatchLogReport';
 
 /** Everything the wizard needs from the import logic; wired to the real implementation in main.ts. */

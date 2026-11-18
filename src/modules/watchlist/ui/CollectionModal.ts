@@ -1,18 +1,18 @@
 // TMDB collections (film series). Movies only — TV has no belongs_to_collection.
 
 import { App, Modal, Notice } from 'obsidian';
-import { t } from './i18n';
-import type { DataManager } from './DataManager';
-import type { ApiService } from './ApiService';
-import type { SettingsReader } from './SettingsService';
-import { newTitle } from './entryFactories';
-import { nonEmpty } from './storage/sharedHelpers';
+import { t } from '../../../shared/i18n';
+import type { DataManager } from '../services/DataManager';
+import type { ApiService } from '../../../shared/api/ApiService';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import { newTitle } from '../../../shared/domain/entryFactories';
+import { nonEmpty } from '../../../shared/storage/sharedHelpers';
 import type {
 	HoardTitle,
 	HoardGroup,
 	TmdbCollectionDetail,
 	TmdbCollectionPart,
-} from './types';
+} from '../../../shared/domain/types';
 import {
 	COLLECTION_NONE,
 	getCollectionId,
@@ -21,10 +21,10 @@ import {
 	getThemedColor,
 	getDisplayPoster,
 	getApiGroupForType,
-} from './types';
-import { buildPosterCard } from './PosterCard';
-import type { CardMenuContext } from './PosterCard';
-import { pinModalFooter } from './StickyModal';
+} from '../../../shared/domain/types';
+import { buildPosterCard } from '../../../shared/ui/PosterCard';
+import type { CardMenuContext } from '../../../shared/ui/PosterCard';
+import { pinModalFooter } from '../../../shared/ui/StickyModal';
 
 /** What resolving a title's TMDB collection reads and caches. */
 export interface ResolveCollectionDeps {

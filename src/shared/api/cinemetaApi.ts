@@ -1,6 +1,6 @@
 import { httpsOrEmpty } from './httpsUrl';
-import type { HoardTitle, MediaSearchResult, Season } from './types';
-import { at, readList, readOptionalNumber, readRecord, readString, readStringList } from './storage/read';
+import type { HoardTitle, MediaSearchResult, Season } from '../domain/types';
+import { at, readList, readOptionalNumber, readRecord, readString, readStringList } from '../storage/read';
 
 const CINEMETA_BASE = 'https://v3-cinemeta.strem.io';
 

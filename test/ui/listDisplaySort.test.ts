@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ListTab } from '../../src/ListTab';
-import type { HoardGroup, HoardTitle } from '../../src/types';
+import { ListTab } from '../../src/modules/watchlist/ui/ListTab';
+import type { HoardGroup, HoardTitle } from '../../src/shared/domain/types';
 
 type Item = { kind: 'title'; data: HoardTitle } | { kind: 'group'; data: HoardGroup; members: HoardTitle[] };
 type Compare = (key: string, a: Item, b: Item) => number;

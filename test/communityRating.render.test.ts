@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { renderCommunityRating } from '../src/CommunityRating';
+import { renderCommunityRating } from '../src/modules/watchlist/ui/CommunityRating';
 import { makeTitle } from './helpers/setupDataManager';
-import { t } from '../src/i18n';
-import type { HoardTitle } from '../src/types';
+import { t } from '../src/shared/i18n';
+import type { HoardTitle } from '../src/shared/domain/types';
 
 function render(title: HoardTitle | undefined): HTMLElement {
 	const parent = document.createElement('div');

@@ -1,13 +1,13 @@
 import type { App } from 'obsidian';
-import type { TabInstance } from './ui/TabInstance';
-import { t, type TranslationKey } from './i18n';
-import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from './i18n/labels';
-import { dayName, monthName } from './ui/dateNames';
-import { createIconButton } from './ui/IconButton';
-import type { HistoryEntry, HistoryManager } from './HistoryManager';
-import { inferHistoryAction, inferHistorySource } from './HistoryManager';
-import { ConfirmModal } from './ConfirmModal';
-import { getActiveDateFormat, type ReadingStatus } from './types';
+import type { TabInstance } from '../../../shared/ui/TabInstance';
+import { t, type TranslationKey } from '../../../shared/i18n';
+import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from '../../../shared/i18n/labels';
+import { dayName, monthName } from '../../../shared/ui/dateNames';
+import { createIconButton } from '../../../shared/ui/IconButton';
+import type { HistoryEntry, HistoryManager } from '../../../shared/services/HistoryManager';
+import { inferHistoryAction, inferHistorySource } from '../../../shared/services/HistoryManager';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { getActiveDateFormat, type ReadingStatus } from '../../../shared/domain/types';
 
 type SourceFilter = 'all' | 'Watchlist' | 'Reading' | 'Games';
 

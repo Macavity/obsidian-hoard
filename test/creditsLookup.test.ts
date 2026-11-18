@@ -1,9 +1,9 @@
 import { requestUrl } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService } from '../src/ApiService';
+import { ApiService } from '../src/shared/api/ApiService';
 import { fakeSettings } from './helpers/fakeSettings';
-import { TitleDetailModal } from '../src/TitleDetailModal';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
+import { TitleDetailModal } from '../src/modules/watchlist/ui/TitleDetailModal';
+import { DEFAULT_SETTINGS, type HoardTitle } from '../src/shared/domain/types';
 import { setupDataManager } from './helpers/setupDataManager';
 
 const sent = vi.mocked(requestUrl);

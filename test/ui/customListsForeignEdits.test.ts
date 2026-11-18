@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Notice, TFile } from 'obsidian';
 import { until } from '../helpers/common';
 import { makeList, setupCustomLists } from '../helpers/setupCustomLists';
-import { CustomListManager, CustomListsTab } from '../../src/CustomListsTab';
+import { CustomListManager, CustomListsTab } from '../../src/modules/custom-lists/ui/CustomListsTab';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 const PATH = 'W/CustomLists/Backlog.md';

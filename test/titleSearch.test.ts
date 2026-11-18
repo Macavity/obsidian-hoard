@@ -9,9 +9,9 @@ import {
 	resultIdKeys,
 	searchTitles,
 	type TitlePick,
-} from '../src/titleSearch';
-import type { AnimeSearchResult, MediaSearchResult } from '../src/types';
-import { SEARCH_RESULT_LIMIT } from '../src/ApiService';
+} from '../src/modules/watchlist/ui/titleSearch';
+import type { AnimeSearchResult, MediaSearchResult } from '../src/shared/domain/types';
+import { SEARCH_RESULT_LIMIT } from '../src/shared/api/ApiService';
 import { fakeSettings } from './helpers/fakeSettings';
 
 function makeDeps(rawSettings: Record<string, unknown>, keys: { omdb?: boolean; tmdb?: boolean } = {}) {

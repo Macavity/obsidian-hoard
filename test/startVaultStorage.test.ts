@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from './__mocks__/obsidian';
-import HoardPlugin from '../src/main';
-vi.mock('../src/import/watchlog/detect', () => ({
+import HoardPlugin from '../src/app/main';
+vi.mock('../src/modules/import/services/watchlog/detect', () => ({
 	detectWatchLogSources: () => Promise.resolve({ original: null, fork: null, hoardHasData: false }),
 }));
-import type { VaultLayout } from '../src/storage/VaultLayout';
+import type { VaultLayout } from '../src/shared/storage/VaultLayout';
 
 interface Harness {
 	plugin: HoardPlugin;

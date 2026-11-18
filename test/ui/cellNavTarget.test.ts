@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellNavTarget } from '../../src/CustomListsTab';
+import { cellNavTarget } from '../../src/modules/custom-lists/ui/CustomListsTab';
 
 // 3 rows, 4 editable cells per row
 describe('cellNavTarget', () => {

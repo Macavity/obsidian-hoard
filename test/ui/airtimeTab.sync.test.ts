@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Book, Game, Manga } from '../../src/types';
+import type { Book, Game, Manga } from '../../src/shared/domain/types';
 import { entry, isoOffset, makeTab, newWorld } from './airtimeTab.harness';
 
 const cap = vi.hoisted(() => ({ readingModals: [] as unknown[][] }));
-vi.mock('../../src/ReadingScheduleModal', () => ({ ReadingScheduleModal: class { constructor(...a: unknown[]) { cap.readingModals.push(a); } open(): void {} } }));
-vi.mock('../../src/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
-vi.mock('../../src/MaybeAddModal', () => ({ MaybeAddModal: class { open(): void {} } }));
-vi.mock('../../src/VirtualScroller', () => ({ VirtualScroller: class { addSection(): void {} attach(): void {} detach(): void {} destroy(): void {} } }));
+vi.mock('../../src/modules/airtime/ui/ReadingScheduleModal', () => ({ ReadingScheduleModal: class { constructor(...a: unknown[]) { cap.readingModals.push(a); } open(): void {} } }));
+vi.mock('../../src/shared/ui/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
+vi.mock('../../src/modules/airtime/ui/MaybeAddModal', () => ({ MaybeAddModal: class { open(): void {} } }));
+vi.mock('../../src/shared/ui/VirtualScroller', () => ({ VirtualScroller: class { addSection(): void {} attach(): void {} detach(): void {} destroy(): void {} } }));
 
 const book = (over: Partial<Book> = {}): Book => ({ id: 'b1', title: 'Dune', totalChapters: 10, releaseDate: null, ...over }) as unknown as Book;
 const manga = (over: Partial<Manga> = {}): Manga => ({ id: 'm1', title: 'Berserk', totalChapters: 1, totalVolumes: 1, releaseDate: null, ...over }) as unknown as Manga;

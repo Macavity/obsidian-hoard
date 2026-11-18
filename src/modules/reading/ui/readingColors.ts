@@ -1,4 +1,4 @@
-import { DEFAULT_READING_STATUS_COLORS, type ReadingStatus } from './types';
+import { DEFAULT_READING_STATUS_COLORS, type ReadingStatus } from '../../../shared/domain/types';
 
 /**
  * Badge colour for a reading status. The names are fixed, but the colours are user-editable

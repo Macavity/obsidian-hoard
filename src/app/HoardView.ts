@@ -1,14 +1,14 @@
-import type { TabInstance } from './ui/TabInstance';
+import type { TabInstance } from '../shared/ui/TabInstance';
 import { ItemView, Platform, setIcon, WorkspaceLeaf } from 'obsidian';
-import { t, type TranslationKey } from './i18n';
-import { DashboardTab, type DashboardTabDeps } from './DashboardTab';
-import { ListTab, type ListTabDeps } from './ListTab';
-import { AirtimeTab, type AirtimeTabDeps } from './AirtimeTab';
-import { ReadingTab, type ReadingTabDeps } from './ReadingTab';
-import { GamesTab, type GamesTabDeps } from './GamesTab';
-import { CustomListsTab, type CustomListsTabDeps } from './CustomListsTab';
-import { DraftsTab, type DraftsTabDeps } from './DraftsTab';
-import { LogTab, type LogTabDeps } from './LogTab';
+import { t, type TranslationKey } from '../shared/i18n';
+import { DashboardTab, type DashboardTabDeps } from '../modules/dashboard/ui/DashboardTab';
+import { ListTab, type ListTabDeps } from '../modules/watchlist/ui/ListTab';
+import { AirtimeTab, type AirtimeTabDeps } from '../modules/airtime/ui/AirtimeTab';
+import { ReadingTab, type ReadingTabDeps } from '../modules/reading/ui/ReadingTab';
+import { GamesTab, type GamesTabDeps } from '../modules/games/ui/GamesTab';
+import { CustomListsTab, type CustomListsTabDeps } from '../modules/custom-lists/ui/CustomListsTab';
+import { DraftsTab, type DraftsTabDeps } from '../modules/drafts/ui/DraftsTab';
+import { LogTab, type LogTabDeps } from '../modules/log/ui/LogTab';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createImporter } from '../../../src/import/watchlog/importer';
-import { getDecision } from '../../../src/import/watchlog/onboardingState';
-import { detectWatchLogSources } from '../../../src/import/watchlog/detect';
+import { createImporter } from '../../../src/modules/import/services/watchlog/importer';
+import { getDecision } from '../../../src/modules/import/services/watchlog/onboardingState';
+import { detectWatchLogSources } from '../../../src/modules/import/services/watchlog/detect';
 import { setupFork } from './setupFork';
 
 const FORK = {

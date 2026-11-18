@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDatePicker } from '../../src/DatePicker';
-import { setActiveDateFormat } from '../../src/types';
+import { createDatePicker } from '../../src/shared/ui/DatePicker';
+import { setActiveDateFormat } from '../../src/shared/domain/types';
 
 (globalThis as { activeDocument?: Document }).activeDocument = document;
 

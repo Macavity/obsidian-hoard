@@ -1,6 +1,6 @@
 import { TFile } from 'obsidian';
 import type { App, EventRef, TAbstractFile } from 'obsidian';
-import type { Book, Game, Manga, HoardTitle, ReadingCustomColumn } from '../types';
+import type { Book, Game, Manga, HoardTitle, ReadingCustomColumn } from '../domain/types';
 import type { LocalStore } from './LocalStore';
 import type { VaultLayout } from './VaultLayout';
 import { titleFromProperties } from './titleCodec';

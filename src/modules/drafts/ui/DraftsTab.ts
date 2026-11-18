@@ -1,14 +1,14 @@
-import type { TabInstance } from './ui/TabInstance';
+import type { TabInstance } from '../../../shared/ui/TabInstance';
 import Fuse from 'fuse.js';
 import type { App, EventRef } from 'obsidian';
-import { createIconButton } from './ui/IconButton';
-import type { SettingsReader } from './SettingsService';
-import type { DataManager } from './DataManager';
-import type { ReadingDataManager } from './ReadingDataManager';
-import type { GameDataManager } from './GameDataManager';
-import type { DraftPersistState } from './types';
-import type { AddRouteOptions } from './AddRouter';
-import { t } from './i18n';
+import { createIconButton } from '../../../shared/ui/IconButton';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { DataManager } from '../../watchlist/services/DataManager';
+import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
+import type { GameDataManager } from '../../games/services/GameDataManager';
+import type { DraftPersistState } from '../../../shared/domain/types';
+import type { AddRouteOptions } from '../../../app/AddRouter';
+import { t } from '../../../shared/i18n';
 
 /** Libraries a draft can already live in — used for the "In …" duplicate label. */
 type DraftLibrary = 'Watchlist' | 'Books' | 'Manga' | 'Games';

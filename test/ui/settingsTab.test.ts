@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { HoardSettingsTab } from '../../src/SettingsTab';
-import { DEFAULT_SETTINGS } from '../../src/types';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { HoardSettingsTab } from '../../src/modules/settings/ui/SettingsTab';
+import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
 import { tick } from '../helpers/common';
 import { fakeSettings } from '../helpers/fakeSettings';
 

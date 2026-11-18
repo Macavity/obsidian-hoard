@@ -1,5 +1,5 @@
 import { App, Modal, Notice } from 'obsidian';
-import { escapeCsvField, parseCSV, parseCsvDate } from './csvCore';
+import { escapeCsvField, parseCSV, parseCsvDate } from '../domain/csvCore';
 import { t, type TranslationKey } from '../i18n';
 
 /** Fields every importable entry carries; the modals narrow `status` to their own set. */

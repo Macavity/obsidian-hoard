@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { LocalStore } from '../../src/storage/LocalStore';
-import { SecretStore } from '../../src/storage/SecretStore';
+import { LocalStore } from '../../src/shared/storage/LocalStore';
+import { SecretStore } from '../../src/shared/storage/SecretStore';
 const plugin = (data: unknown) => { const p = { data, loadData: () => Promise.resolve(p.data), saveData: (d: unknown) => { p.data = d; return Promise.resolve(); } }; return p; };
 const secrets = () => { const m = new Map<string, string>(); return { m, store: new SecretStore({ getSecret: (id) => m.get(id) ?? null, setSecret: (id, v) => { m.set(id, v); } }) }; };
 describe('LocalStore', () => {

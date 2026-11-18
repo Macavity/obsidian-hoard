@@ -1,4 +1,4 @@
-import { apiErrorMessage } from '../ApiService';
+import { apiErrorMessage } from '../api/ApiService';
 import { t } from '../i18n';
 import { makeRow, nameSelect } from './FormCells';
 

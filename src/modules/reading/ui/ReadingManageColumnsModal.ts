@@ -1,13 +1,13 @@
 import { App, Modal, Notice } from 'obsidian';
-import { t } from './i18n';
-import { createIconButton } from './ui/IconButton';
-import type { SettingsReader } from './SettingsService';
-import type { ReadingDataManager, ReadingKind } from './ReadingDataManager';
-import { ReadingCustomColumn, DEFAULT_FIELD_COLOR } from './types';
-import { ConfirmModal } from './ConfirmModal';
-import { openColorPicker } from './ColorPicker';
-import { attachCardDrag, renderTypeSelect, type DragState } from './ui/ColumnsEditor';
-import { markViewRoot } from './ui/detailFrame';
+import { t } from '../../../shared/i18n';
+import { createIconButton } from '../../../shared/ui/IconButton';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { ReadingDataManager, ReadingKind } from '../services/ReadingDataManager';
+import { ReadingCustomColumn, DEFAULT_FIELD_COLOR } from '../../../shared/domain/types';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { openColorPicker } from '../../../shared/ui/ColorPicker';
+import { attachCardDrag, renderTypeSelect, type DragState } from '../../../shared/ui/ColumnsEditor';
+import { markViewRoot } from '../../../shared/ui/detailFrame';
 
 export interface ReadingManageColumnsModalDeps {
 	app: App;

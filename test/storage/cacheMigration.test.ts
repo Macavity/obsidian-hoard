@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { migrateNoneMarkers } from '../../src/storage/cacheMigration';
+import { migrateNoneMarkers } from '../../src/shared/storage/cacheMigration';
 
 const AT = '2026-11-16T00:00:00.000Z';
 const miss = { at: AT, result: 'notfound' };

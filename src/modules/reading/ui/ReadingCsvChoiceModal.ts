@@ -1,5 +1,5 @@
 import { App, Modal } from 'obsidian';
-import { t } from './i18n';
+import { t } from '../../../shared/i18n';
 
 export type ReadingCsvKind = 'book' | 'manga';
 

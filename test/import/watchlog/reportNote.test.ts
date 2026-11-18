@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createFakeApp } from '../../fakes/fakeApp';
-import { VaultLayout } from '../../../src/storage/VaultLayout';
-import { writeReportNote } from '../../../src/import/watchlog/reportNote';
+import { VaultLayout } from '../../../src/shared/storage/VaultLayout';
+import { writeReportNote } from '../../../src/modules/import/services/watchlog/reportNote';
 
 describe('writeReportNote', () => {
 	it('names the note by the local date and suffixes on collision', async () => {

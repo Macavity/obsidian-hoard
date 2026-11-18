@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
 import watchLogData from '../../fixtures/data-v1.json';
 import { setupSchema1 } from './setupSchema1';
-import { mergeSideFiles } from '../../../src/import/watchlog/schema1';
-import { registerTypes } from '../../../src/import/watchlog/registerTypes';
-import { prepareData } from '../../../src/import/watchlog/schema1Read';
+import { mergeSideFiles } from '../../../src/modules/import/services/watchlog/schema1';
+import { registerTypes } from '../../../src/modules/import/services/watchlog/registerTypes';
+import { prepareData } from '../../../src/modules/import/services/watchlog/schema1Read';
 import { importContext } from './helpers';
 import { createFakeApp } from '../../fakes/fakeApp';
-import { normalizeTitle } from '../../../src/import/watchlog/schema1Normalize';
-import { LocalStore } from '../../../src/storage/LocalStore';
+import { normalizeTitle } from '../../../src/modules/import/services/watchlog/schema1Normalize';
+import { LocalStore } from '../../../src/shared/storage/LocalStore';
 
 type Data = Record<string, unknown> & { titles: unknown[]; games: { games: unknown[]; groups: unknown[]; settings: Record<string, unknown> }; history: unknown[] };
 

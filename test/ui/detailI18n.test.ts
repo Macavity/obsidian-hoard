@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { renderCommunityRating } from '../../src/CommunityRating';
-import { GroupDetailModal, renderCreditsRows } from '../../src/TitleDetailModal';
-import { GameGroupDetailModal } from '../../src/GameDetailModal';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { renderCommunityRating } from '../../src/modules/watchlist/ui/CommunityRating';
+import { GroupDetailModal, renderCreditsRows } from '../../src/modules/watchlist/ui/TitleDetailModal';
+import { GameGroupDetailModal } from '../../src/modules/games/ui/GameDetailModal';
 import { El } from '../helpers/fakeEl';
 import { makeTitle } from '../helpers/setupDataManager';
 import { fakeSettings } from '../helpers/fakeSettings';

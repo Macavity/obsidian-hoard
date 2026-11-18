@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeF
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SEED_PATH, pluginDataDir, writeSeed } from "../scripts/lib/seed.mjs";
-import { pendingSources } from "../src/import/watchlog/onboardingState";
-import { LocalStore } from "../src/storage/LocalStore";
+import { pendingSources } from "../src/modules/import/services/watchlog/onboardingState";
+import { LocalStore } from "../src/shared/storage/LocalStore";
 
 const seed = JSON.parse(readFileSync(SEED_PATH, "utf8")) as unknown;
 

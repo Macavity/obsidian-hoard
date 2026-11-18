@@ -1,6 +1,6 @@
 import { t, type TranslationKey } from './index';
 import en from './en';
-import type { ReadingStatus } from '../types';
+import type { ReadingStatus } from '../domain/types';
 
 // Stored values are English and never change; these are the only place they become display text.
 // Unknown (user-defined) values are returned unchanged.

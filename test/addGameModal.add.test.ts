@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddGameModal } from '../src/AddGameModal';
-import type { Game } from '../src/types';
+import { AddGameModal } from '../src/modules/games/ui/AddGameModal';
+import type { Game } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const NOW = '2026-03-04T05:06:07.000Z';

@@ -8,7 +8,7 @@ vi.mock("../scripts/lib/plugin-toggle.mjs", () => ({
   withPluginDisabled: (fn: () => unknown) => (toggle.fail ? Promise.reject(new Error("cli timed out")) : Promise.resolve(fn())),
 }));
 const { prepareScenario, scenarioDir, RestoreError, EMPTY_DATA } = await import("./e2e/scenario.mjs");
-const { LocalStore } = await import("../src/storage/LocalStore");
+const { LocalStore } = await import("../src/shared/storage/LocalStore");
 
 function makeVault() {
   const root = mkdtempSync(join(tmpdir(), "scn-"));

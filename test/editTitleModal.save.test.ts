@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { EditTitleModal } from '../src/EditTitleModal';
+import { EditTitleModal } from '../src/modules/watchlist/ui/EditTitleModal';
 import { fakeSettings } from './helpers/fakeSettings';
-import type { HoardTitle } from '../src/types';
+import type { HoardTitle } from '../src/shared/domain/types';
 
 const ORIGINAL: HoardTitle = {
 	id: 'TV Show/Dark', title: 'Dark', type: 'TV Show', status: 'Completed', priority: '', review: 'Good', rating: 4, notes: 'n',

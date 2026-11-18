@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
-import { ReadingTab } from '../src/ReadingTab';
-import { t } from '../src/i18n';
-import type { Book, Manga, ReadingCustomColumn } from '../src/types';
+import { ReadingTab } from '../src/modules/reading/ui/ReadingTab';
+import { t } from '../src/shared/i18n';
+import type { Book, Manga, ReadingCustomColumn } from '../src/shared/domain/types';
 
-vi.mock('../src/PosterCard', () => ({
+vi.mock('../src/shared/ui/PosterCard', () => ({
 	openCardMenu: vi.fn(),
 	buildPosterCard: vi.fn(),
 	POSTER_CARD_TEXT_H: 40,
 }));
-import { openCardMenu } from '../src/PosterCard';
+import { openCardMenu } from '../src/shared/ui/PosterCard';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;

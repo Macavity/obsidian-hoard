@@ -1,9 +1,9 @@
 // Real DataManager on a fake vault + a ListTab mounted in happy-dom.
 import { vi } from 'vitest';
 import { setupDataManager } from './setupDataManager';
-import { ListTab, type ListTabDeps } from '../../src/ListTab';
+import { ListTab, type ListTabDeps } from '../../src/modules/watchlist/ui/ListTab';
 import { fakeSettings } from './fakeSettings';
-import type { HoardPluginSettings, HoardTitle } from '../../src/types';
+import type { HoardPluginSettings, HoardTitle } from '../../src/shared/domain/types';
 
 // Obsidian's activeDocument (popout-aware document); common.ts stubs it with a bare object
 (globalThis as { activeDocument?: Document }).activeDocument = document;

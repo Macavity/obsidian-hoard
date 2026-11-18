@@ -1,7 +1,7 @@
-import { toggleFilterPanel, type FilterPanelConfig, type FilterSection } from '../FilterPanel';
+import { toggleFilterPanel, type FilterPanelConfig, type FilterSection } from './FilterPanel';
 import { t } from '../i18n';
 import { priorityLabel } from '../i18n/labels';
-import { priorityFilterOpts, type TagDefinition } from '../types';
+import { priorityFilterOpts, type TagDefinition } from '../domain/types';
 
 /**
  * Rating filter options 1★ … 5★; a half option (½★ … 4½★) appears only when an item holds that

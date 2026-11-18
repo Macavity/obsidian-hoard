@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { setupDataManager } from './helpers/setupDataManager';
-import { ApiCheckQueue } from '../src/apiCheckQueue';
-import { ApiService } from '../src/ApiService';
-import type { LookupResult } from '../src/lookup';
-import type { EntryCache } from '../src/storage/storageTypes';
-import type { Season } from '../src/types';
+import { ApiCheckQueue } from '../src/shared/api/apiCheckQueue';
+import { ApiService } from '../src/shared/api/ApiService';
+import type { LookupResult } from '../src/shared/api/lookup';
+import type { EntryCache } from '../src/shared/storage/storageTypes';
+import type { Season } from '../src/shared/domain/types';
 
 type Airing = NonNullable<EntryCache['airing']>;
 const HOUR = 3_600_000;

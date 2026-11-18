@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
   "entry": [
-    "src/main.ts",
+    "src/app/main.ts",
     "src/styles/index.css",
     "scripts/*.mjs",
     "esbuild.config.mjs",

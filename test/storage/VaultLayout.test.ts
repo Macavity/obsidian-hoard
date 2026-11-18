@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { VaultLayout, safeTypeName, typeNameProblem } from '../../src/storage/VaultLayout';
+import { VaultLayout, safeTypeName, typeNameProblem } from '../../src/shared/storage/VaultLayout';
 const l = new VaultLayout('Journal/Hoard', () => ['Movie', 'TV Show']);
 describe('VaultLayout', () => {
   it('classifies entries', () => {

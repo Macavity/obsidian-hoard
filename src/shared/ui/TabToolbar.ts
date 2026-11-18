@@ -1,7 +1,7 @@
 import { Modal, setIcon, type App } from 'obsidian';
 import { createIconButton } from './IconButton';
-import type { ShelfSelect } from '../RowsView';
-import { toggleSortPopover, type SortState } from '../SortPopover';
+import type { ShelfSelect } from './RowsView';
+import { toggleSortPopover, type SortState } from './SortPopover';
 import { t } from '../i18n';
 
 export interface SearchBoxOptions {

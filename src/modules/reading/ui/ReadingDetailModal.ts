@@ -1,26 +1,26 @@
 import { Modal, Notice, Platform, TFile } from 'obsidian';
-import type { HistoryManager } from './HistoryManager';
+import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import {
 	Book, Manga, ReadingCustomColumn, ReadingStatus, SELECTABLE_READING_STATUSES,
 	DEFAULT_FIELD_COLOR, BookProgressUnit,
 	bookProgressUnit, bookUnitProgress, formatCount,
 	formatDateDisplay, todayIso,
-} from './types';
-import { createDatePicker } from './DatePicker';
-import { deriveFillColor, deriveBorderColor } from './ColorPicker';
-import { apiErrorMessage, type ApiService } from './ApiService';
-import { appendNoteLinkButton } from './NoteLinkButton';
-import { ConfirmModal } from './ConfirmModal';
-import { renderStarRating } from './StarRating';
+} from '../../../shared/domain/types';
+import { createDatePicker } from '../../../shared/ui/DatePicker';
+import { deriveFillColor, deriveBorderColor } from '../../../shared/ui/ColorPicker';
+import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
+import { appendNoteLinkButton } from '../../../shared/ui/NoteLinkButton';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { renderStarRating } from '../../../shared/ui/StarRating';
 import { VaultFilePicker } from './AddReadingModal';
 import { readingStatusColor, coverFallbackColor } from './readingColors';
-import { openStatusDropdown, renderSegmentedToggle } from './StatusDropdown';
+import { openStatusDropdown, renderSegmentedToggle } from '../../../shared/ui/StatusDropdown';
 import { ReadingManageColumnsModal, type ReadingManageColumnsModalDeps } from './ReadingManageColumnsModal';
-import { pinModalFooter } from './StickyModal';
-import { t } from './i18n';
-import { paintFavoriteButton, renderEditableTitle } from './ui/detailShared';
-import { createFavoriteButton, markDetailRoot, mobileRowClass } from './ui/detailFrame';
-import { readingStatusLabel } from './i18n/labels';
+import { pinModalFooter } from '../../../shared/ui/StickyModal';
+import { t } from '../../../shared/i18n';
+import { paintFavoriteButton, renderEditableTitle } from '../../../shared/ui/detailShared';
+import { createFavoriteButton, markDetailRoot, mobileRowClass } from '../../../shared/ui/detailFrame';
+import { readingStatusLabel } from '../../../shared/i18n/labels';
 
 interface ParsedQuote {
 	reference: string;

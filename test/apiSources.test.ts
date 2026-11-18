@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ApiService } from '../src/ApiService';
-import { effectiveBookSource, effectiveGameSource, effectiveMediaSource } from '../src/apiSources';
+import { ApiService } from '../src/shared/api/ApiService';
+import { effectiveBookSource, effectiveGameSource, effectiveMediaSource } from '../src/shared/api/apiSources';
 
 const keys = (has: Partial<Record<'omdb' | 'tmdb' | 'google' | 'rawg' | 'igdb', boolean>>) => ({
 	hasOmdbKey: () => !!has.omdb, hasTmdbKey: () => !!has.tmdb, hasGoogleBooksKey: () => !!has.google,

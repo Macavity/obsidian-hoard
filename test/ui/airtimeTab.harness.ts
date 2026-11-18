@@ -1,8 +1,8 @@
 
-import { AirtimeTab } from '../../src/AirtimeTab';
+import { AirtimeTab } from '../../src/modules/airtime/ui/AirtimeTab';
 import { fakeSettings } from '../helpers/fakeSettings';
-import type { AirtimeEntry, Book, Game, HoardTitle, Manga } from '../../src/types';
-import { DEFAULT_SETTINGS } from '../../src/types';
+import type { AirtimeEntry, Book, Game, HoardTitle, Manga } from '../../src/shared/domain/types';
+import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
 
 /** Modal constructor captures shared with the vi.mock factories of the airtime tests. */
 export interface Captures {

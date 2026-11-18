@@ -1,16 +1,16 @@
-import type { TabInstance } from './ui/TabInstance';
-import type { SettingsReader } from './SettingsService';
-import { t, type TranslationKey } from './i18n';
-import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from './i18n/labels';
-import en from './i18n/en';
-import type { DataManager } from './DataManager';
-import type { ReadingDataManager } from './ReadingDataManager';
-import type { GameDataManager } from './GameDataManager';
-import type { Book, Game, Manga, ReadingStatus, HoardTitle } from './types';
-import { formatTime, getTitleCredits, getReadingTypeColor, GAME_FINISHED_STATUS, bookPageEquivalents, formatCount } from './types';
-import type { CreditsField } from './types';
-import { renderTypeBadge } from './ui/typeBadge';
-import { createIconButton } from './ui/IconButton';
+import type { TabInstance } from '../../../shared/ui/TabInstance';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import { t, type TranslationKey } from '../../../shared/i18n';
+import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
+import en from '../../../shared/i18n/en';
+import type { DataManager } from '../../watchlist/services/DataManager';
+import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
+import type { GameDataManager } from '../../games/services/GameDataManager';
+import type { Book, Game, Manga, ReadingStatus, HoardTitle } from '../../../shared/domain/types';
+import { formatTime, getTitleCredits, getReadingTypeColor, GAME_FINISHED_STATUS, bookPageEquivalents, formatCount } from '../../../shared/domain/types';
+import type { CreditsField } from '../../../shared/domain/types';
+import { renderTypeBadge } from '../../../shared/ui/typeBadge';
+import { createIconButton } from '../../../shared/ui/IconButton';
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 45; // r=45
 

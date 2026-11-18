@@ -1,4 +1,4 @@
-import { createDatePicker } from '../DatePicker';
+import { createDatePicker } from './DatePicker';
 import { t } from '../i18n';
 
 /** A labelled form row: [label][fields...]. */

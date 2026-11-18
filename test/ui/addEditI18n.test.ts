@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { AddFromUrlModal } from '../../src/AddFromUrlModal';
-import { AddReadingModal } from '../../src/AddReadingModal';
-import { AddTitleChoiceModal } from '../../src/AddTitleChoiceModal';
-import { EditTitleModal } from '../../src/EditTitleModal';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { AddFromUrlModal } from '../../src/modules/watchlist/ui/AddFromUrlModal';
+import { AddReadingModal } from '../../src/modules/reading/ui/AddReadingModal';
+import { AddTitleChoiceModal } from '../../src/modules/watchlist/ui/AddTitleChoiceModal';
+import { EditTitleModal } from '../../src/modules/watchlist/ui/EditTitleModal';
 import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));

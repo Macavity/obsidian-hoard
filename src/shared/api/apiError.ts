@@ -1,5 +1,5 @@
 import { t, type TranslationKey } from '../i18n';
-import type { LookupResult } from '../lookup';
+import type { LookupResult } from './lookup';
 import { at, readString } from '../storage/read';
 
 /** Which service a failed request went to. */

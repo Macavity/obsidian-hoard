@@ -1,18 +1,18 @@
-import type { TabInstance } from './ui/TabInstance';
+import type { TabInstance } from '../../../shared/ui/TabInstance';
 import { App, Modal, Notice } from 'obsidian';
-import { t } from './i18n';
-import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from './i18n/labels';
-import { monthName } from './ui/dateNames';
-import { scheduleText } from './ui/scheduleText';
-import { createIconButton } from './ui/IconButton';
-import type { SettingsReader, SettingsWriter } from './SettingsService';
-import type { ApiService } from './ApiService';
-import type { PosterService } from './PosterService';
-import type { DataManager } from './DataManager';
-import type { ReadingDataManager } from './ReadingDataManager';
-import type { GameDataManager } from './GameDataManager';
-import type { HoardTitle, AirtimeEntry, AirtimeSchedule, MaybeTitle, Book, Manga, Game, ReadingStatus } from './types';
-import { getThemedColor, getReadingTypeColor, getDisplayPoster, isReleaseDateFuture, formatDateDisplay, todayIso, toIsoDate, GAME_AUTO_STATUS } from './types';
+import { t } from '../../../shared/i18n';
+import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
+import { monthName } from '../../../shared/ui/dateNames';
+import { scheduleText } from '../../../shared/ui/scheduleText';
+import { createIconButton } from '../../../shared/ui/IconButton';
+import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
+import type { ApiService } from '../../../shared/api/ApiService';
+import type { PosterService } from '../../../shared/api/PosterService';
+import type { DataManager } from '../../watchlist/services/DataManager';
+import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
+import type { GameDataManager } from '../../games/services/GameDataManager';
+import type { HoardTitle, AirtimeEntry, AirtimeSchedule, MaybeTitle, Book, Manga, Game, ReadingStatus } from '../../../shared/domain/types';
+import { getThemedColor, getReadingTypeColor, getDisplayPoster, isReleaseDateFuture, formatDateDisplay, todayIso, toIsoDate, GAME_AUTO_STATUS } from '../../../shared/domain/types';
 import {
 	type ScheduleFormState,
 	RECURRENCE_OPTIONS,
@@ -22,20 +22,20 @@ import {
 	renderCounterRow,
 	renderScheduleModal,
 	resolveScheduleMode,
-} from './ui/ScheduleForm';
-import { rawgResizedCover } from './ApiService';
-import { VirtualGrid, computeGridMetrics, type GridMetrics } from './VirtualGrid';
-import { VirtualScroller } from './VirtualScroller';
-import { LazyCardObserver } from './LazyCardObserver';
-import { openCardMenu } from './PosterCard';
-import { ConfirmModal } from './ConfirmModal';
+} from '../../../shared/ui/ScheduleForm';
+import { rawgResizedCover } from '../../../shared/api/ApiService';
+import { VirtualGrid, computeGridMetrics, type GridMetrics } from '../../../shared/ui/VirtualGrid';
+import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
+import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
+import { openCardMenu } from '../../../shared/ui/PosterCard';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 import { MaybeAddModal, type MaybeAddModalDeps } from './MaybeAddModal';
 import { ReadingScheduleModal, type ReadingScheduleModalDeps } from './ReadingScheduleModal';
 import { GameScheduleModal, type GameScheduleModalDeps } from './GameScheduleModal';
 import { UpcomingFinderModal, type UpcomingFinderItem, type UpcomingFinderModalDeps } from './UpcomingFinderModal';
-import { renderAddButton, renderSelectAllButton, renderViewDropdown } from './ui/TabToolbar';
-import { renderTypeBadge } from './ui/typeBadge';
-import { renderActionBar } from './ui/ActionBar';
+import { renderAddButton, renderSelectAllButton, renderViewDropdown } from '../../../shared/ui/TabToolbar';
+import { renderTypeBadge } from '../../../shared/ui/typeBadge';
+import { renderActionBar } from '../../../shared/ui/ActionBar';
 
 /**
  * A normalized Upcoming card subject — a watchlist title, a reading item or a game — so the

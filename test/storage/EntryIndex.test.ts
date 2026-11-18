@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFakeApp } from '../fakes/fakeApp';
-import { VaultLayout } from '../../src/storage/VaultLayout';
-import { LocalStore } from '../../src/storage/LocalStore';
-import { EntryIndex } from '../../src/storage/EntryIndex';
-import type { HoardTitle } from '../../src/types';
+import { VaultLayout } from '../../src/shared/storage/VaultLayout';
+import { LocalStore } from '../../src/shared/storage/LocalStore';
+import { EntryIndex } from '../../src/shared/storage/EntryIndex';
+import type { HoardTitle } from '../../src/shared/domain/types';
 import { until } from '../helpers/common';
 const note = (fm: string) => `---\n${fm}\n---\n\n## Notes\n`;
 async function setup(files: Record<string, string>) {

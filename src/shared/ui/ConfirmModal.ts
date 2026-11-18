@@ -1,5 +1,5 @@
 import { App, Modal } from 'obsidian';
-import { t } from './i18n';
+import { t } from '../i18n';
 
 /**
  * Optional third action between Confirm and Cancel — an alternative way out (e.g. "Switch to

@@ -1,4 +1,4 @@
-import { VirtualGrid, type VirtualGridCallbacks } from '../VirtualGrid';
+import { VirtualGrid, type VirtualGridCallbacks } from './VirtualGrid';
 
 /** Priority names, highest first; anything else (empty) sorts last. */
 export const PRIORITY_ORDER = ['High', 'Medium', 'Low'] as const;

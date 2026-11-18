@@ -1,12 +1,12 @@
 // FakeApp plus WatchLog data; `run` imports it through importWatchLogData below the Hoard root.
 import { createFakeApp } from '../../fakes/fakeApp';
-import { detectRoot } from '../../../src/storage/VaultLayout';
-import { SecretStore } from '../../../src/storage/SecretStore';
-import { LocalStore } from '../../../src/storage/LocalStore';
+import { detectRoot } from '../../../src/shared/storage/VaultLayout';
+import { SecretStore } from '../../../src/shared/storage/SecretStore';
+import { LocalStore } from '../../../src/shared/storage/LocalStore';
 import { importContext, typeNames } from './helpers';
-import type { OriginalSource } from '../../../src/import/watchlog/detect';
-import { importWatchLogData } from '../../../src/import/watchlog/schema1';
-import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
+import type { OriginalSource } from '../../../src/modules/import/services/watchlog/detect';
+import { importWatchLogData } from '../../../src/modules/import/services/watchlog/schema1';
+import type { WatchLogData } from '../../../src/modules/import/services/watchlog/schema1Types';
 
 /** Notes of the fixture entries at WatchLog's paths (the import ignores them: it writes below the Hoard root) (its frontmatter, no Hoard keys). */
 export const WATCHLOG_NOTES: Record<string, string> = {

@@ -1,15 +1,15 @@
 import { App, Notice } from 'obsidian';
-import type { DataManager } from './DataManager';
-import type { ApiService } from './ApiService';
-import type { SettingsReader, SettingsWriter } from './SettingsService';
-import type { HoardTitle, HoardGroup, Season } from './types';
-import { getApiGroupForType, todayIso } from './types';
-import { completedEpisodes, newTitle } from './entryFactories';
-import { nonEmpty } from './storage/sharedHelpers';
-import { t } from './i18n';
-import { found, type LookupResult } from './lookup';
-import { priorityLabel, statusLabel } from './i18n/labels';
-import { renderSearchResultRow } from './SearchThumbnail';
+import type { DataManager } from '../services/DataManager';
+import type { ApiService } from '../../../shared/api/ApiService';
+import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
+import type { HoardTitle, HoardGroup, Season } from '../../../shared/domain/types';
+import { getApiGroupForType, todayIso } from '../../../shared/domain/types';
+import { completedEpisodes, newTitle } from '../../../shared/domain/entryFactories';
+import { nonEmpty } from '../../../shared/storage/sharedHelpers';
+import { t } from '../../../shared/i18n';
+import { found, type LookupResult } from '../../../shared/api/lookup';
+import { priorityLabel, statusLabel } from '../../../shared/i18n/labels';
+import { renderSearchResultRow } from '../../../shared/ui/SearchThumbnail';
 import {
 	episodesLabel,
 	fillMediaFields,
@@ -21,12 +21,12 @@ import {
 	type TitleSearchDeps,
 	type TitleSearchResult,
 } from './titleSearch';
-import { SearchFormModal, type SearchPickerOptions } from './ui/SearchFormModal';
-import { LibraryIndex } from './LibraryIndex';
-import { effectiveMediaSource } from './apiSources';
-import { createDatePicker } from './DatePicker';
-import { renderStarRating } from './StarRating';
-import { blockDuplicate, createDuplicateGuard } from './ui/DuplicateGuard';
+import { SearchFormModal, type SearchPickerOptions } from '../../../shared/ui/SearchFormModal';
+import { LibraryIndex } from '../../../shared/services/LibraryIndex';
+import { effectiveMediaSource } from '../../../shared/api/apiSources';
+import { createDatePicker } from '../../../shared/ui/DatePicker';
+import { renderStarRating } from '../../../shared/ui/StarRating';
+import { blockDuplicate, createDuplicateGuard } from '../../../shared/ui/DuplicateGuard';
 import {
 	makeCell,
 	makeRow as makeFormRow,
@@ -36,7 +36,7 @@ import {
 	resetForm,
 	type GroupPickerState,
 	type MediaFields,
-} from './ui/FormCells';
+} from '../../../shared/ui/FormCells';
 
 export interface AddTitleModalDeps extends TitleSearchDeps {
 	app: App;

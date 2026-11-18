@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
-import { createFavoriteButton, markDetailRoot, mobileRowClass } from '../src/ui/detailFrame';
-import { createSeasonHeader } from '../src/ui/EpisodeGrid';
-import { createPosterPlaceholder, loadCardPoster } from '../src/PosterCard';
+import { createFavoriteButton, markDetailRoot, mobileRowClass } from '../src/shared/ui/detailFrame';
+import { createSeasonHeader } from '../src/shared/ui/EpisodeGrid';
+import { createPosterPlaceholder, loadCardPoster } from '../src/shared/ui/PosterCard';
 
 const platform = Platform as { isMobile: boolean };
 

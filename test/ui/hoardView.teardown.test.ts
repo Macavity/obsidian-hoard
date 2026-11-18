@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WorkspaceLeaf } from 'obsidian';
-import { HoardView } from '../../src/HoardView';
+import { HoardView } from '../../src/app/HoardView';
 import { hoardViewDeps } from '../helpers/hoardViewDeps';
 
 const { tab, destroyed } = vi.hoisted(() => {
@@ -15,16 +15,16 @@ const { tab, destroyed } = vi.hoisted(() => {
 	return { tab, destroyed };
 });
 
-vi.mock('../../src/DashboardTab', () => ({ DashboardTab: tab('dashboard', false) }));
-vi.mock('../../src/ListTab', () => ({ ListTab: tab('watchlist', true) }));
-vi.mock('../../src/ReadingTab', () => ({ ReadingTab: tab('reading', true) }));
-vi.mock('../../src/GamesTab', () => ({ GamesTab: tab('games', true) }));
-vi.mock('../../src/CustomListsTab', () => ({ CustomListsTab: tab('custom-lists', true) }));
-vi.mock('../../src/LogTab', () => ({ LogTab: tab('log', true) }));
-vi.mock('../../src/AirtimeTab', () => ({
+vi.mock('../../src/modules/dashboard/ui/DashboardTab', () => ({ DashboardTab: tab('dashboard', false) }));
+vi.mock('../../src/modules/watchlist/ui/ListTab', () => ({ ListTab: tab('watchlist', true) }));
+vi.mock('../../src/modules/reading/ui/ReadingTab', () => ({ ReadingTab: tab('reading', true) }));
+vi.mock('../../src/modules/games/ui/GamesTab', () => ({ GamesTab: tab('games', true) }));
+vi.mock('../../src/modules/custom-lists/ui/CustomListsTab', () => ({ CustomListsTab: tab('custom-lists', true) }));
+vi.mock('../../src/modules/log/ui/LogTab', () => ({ LogTab: tab('log', true) }));
+vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
 	AirtimeTab: tab('upcoming', true, { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 }),
 }));
-vi.mock('../../src/DraftsTab', () => ({
+vi.mock('../../src/modules/drafts/ui/DraftsTab', () => ({
 	DraftsTab: tab('drafts', true, { computePendingCount: () => Promise.resolve(0) }),
 }));
 

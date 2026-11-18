@@ -1,5 +1,5 @@
-import type { DeepReadonly } from './deepReadonly';
-import type { HoardPluginSettings } from './types';
+import type { DeepReadonly } from '../domain/deepReadonly';
+import type { HoardPluginSettings } from '../domain/types';
 
 export interface SettingsReader {
 	get(): DeepReadonly<HoardPluginSettings>;

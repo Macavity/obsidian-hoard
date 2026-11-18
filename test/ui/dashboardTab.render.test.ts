@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DashboardTab } from '../../src/DashboardTab';
-import type { DashboardTabDeps } from '../../src/DashboardTab';
+import { DashboardTab } from '../../src/modules/dashboard/ui/DashboardTab';
+import type { DashboardTabDeps } from '../../src/modules/dashboard/ui/DashboardTab';
 import { fakeSettings } from '../helpers/fakeSettings';
-import type { Book, Game, HoardTitle, Manga } from '../../src/types';
-import { DEFAULT_SETTINGS } from '../../src/types';
+import type { Book, Game, HoardTitle, Manga } from '../../src/shared/domain/types';
+import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
 import { qsa, textsOf as texts } from '../helpers/dom';
-import { t } from '../../src/i18n';
+import { t } from '../../src/shared/i18n';
 
 const title = (over: Partial<HoardTitle>): HoardTitle =>
 	({

@@ -1,13 +1,13 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { ReadingDataManager } from '../src/ReadingDataManager';
-import { GameDataManager } from '../src/GameDataManager';
+import { ReadingDataManager } from '../src/modules/reading/services/ReadingDataManager';
+import { GameDataManager } from '../src/modules/games/services/GameDataManager';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
-import type { HoardTitle } from '../src/types';
-import { PosterService } from '../src/PosterService';
-import { DEFAULT_SETTINGS } from '../src/types';
-import type { ApiService } from '../src/ApiService';
-import { NOT_FOUND, FAILED, NO_KEY, found } from '../src/lookup';
+import type { HoardTitle } from '../src/shared/domain/types';
+import { PosterService } from '../src/shared/api/PosterService';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/types';
+import type { ApiService } from '../src/shared/api/ApiService';
+import { NOT_FOUND, FAILED, NO_KEY, found } from '../src/shared/api/lookup';
 
 describe('DataManager on vault storage', () => {
 	it('adds a title as a note and keeps it out of data.json', async () => {

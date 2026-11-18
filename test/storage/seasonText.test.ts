@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatSeasonLine, formatSkipSpec, parseSeasonLine, seasonsOf, skippedEpisodes } from '../../src/storage/seasonText';
+import { formatSeasonLine, formatSkipSpec, parseSeasonLine, seasonsOf, skippedEpisodes } from '../../src/shared/storage/seasonText';
 
 describe('parseSeasonLine', () => {
 	it('reads the name and the episode count', () => {

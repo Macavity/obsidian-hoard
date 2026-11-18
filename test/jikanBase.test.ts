@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint, withoutCredentials } from '../src/jikanBase';
+import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint, withoutCredentials } from '../src/shared/api/jikanBase';
 
 const base = (raw: string | undefined) => resolveJikanEndpoint(raw).base;
 const decode = (header: string) =>

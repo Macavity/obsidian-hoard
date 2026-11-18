@@ -1,10 +1,10 @@
-import type { AirtimeEntry, AirtimeRecurrence, HoardGroup } from '../../types';
-import type { HistoryAction, HistoryEntry, HistorySource } from '../../HistoryManager';
-import { readMaybe } from '../../backupEntries';
+import type { AirtimeEntry, AirtimeRecurrence, HoardGroup } from '../../../../shared/domain/types';
+import type { HistoryAction, HistoryEntry, HistorySource } from '../../../../shared/services/HistoryManager';
+import { readMaybe } from '../../../backup/services/backupEntries';
 import {
 	at, readList, readOptionalNumber, readOptionalString, readRecord, readString, readStringList,
-} from '../../storage/read';
-import { defined, isRecord } from '../../storage/sharedHelpers';
+} from '../../../../shared/storage/read';
+import { defined, isRecord } from '../../../../shared/storage/sharedHelpers';
 import { isoOf, normalizeGames, normalizeReading, normalizeTitle, readEntries } from './schema1Normalize';
 import type { PreparedData, WatchLogTitle } from './schema1Types';
 

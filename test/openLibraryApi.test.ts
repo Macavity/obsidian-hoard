@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import search from './fixtures/openlibrary-search.json';
 import work from './fixtures/openlibrary-work.json';
-import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibraryCoverUrl, openLibrarySearchUrl, openLibraryWorkUrl } from '../src/openLibraryApi';
+import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibraryCoverUrl, openLibrarySearchUrl, openLibraryWorkUrl } from '../src/shared/api/openLibraryApi';
 
 describe('open library', () => {
 	it('builds urls', () => {

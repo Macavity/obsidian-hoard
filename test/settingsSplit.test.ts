@@ -2,12 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { parse, stringify } from 'yaml';
 import type { TFile } from 'obsidian';
 import { createFakeApp } from './fakes/fakeApp';
-import { SecretStore } from '../src/storage/SecretStore';
-import { LocalStore } from '../src/storage/LocalStore';
-import { SharedConfigStore } from '../src/storage/SharedConfigStore';
-import { VaultLayout } from '../src/storage/VaultLayout';
-import { composeSettings, persistSettings } from '../src/settingsSplit';
-import { DEFAULT_SETTINGS } from '../src/types';
+import { SecretStore } from '../src/shared/storage/SecretStore';
+import { LocalStore } from '../src/shared/storage/LocalStore';
+import { SharedConfigStore } from '../src/shared/storage/SharedConfigStore';
+import { VaultLayout } from '../src/shared/storage/VaultLayout';
+import { composeSettings, persistSettings } from '../src/shared/services/settingsSplit';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/types';
 
 /** A base whose hoard block holds no setting yet. */
 const BARE_BASE = 'hoard:\n  version: 1\n';

@@ -1,13 +1,13 @@
 import { TFile, parseYaml } from 'obsidian';
-import { renameTopLevelBlock } from '../../storage/baseFile';
-import { VaultLayout, detectRoot } from '../../storage/VaultLayout';
+import { renameTopLevelBlock } from '../../../../shared/storage/baseFile';
+import { VaultLayout, detectRoot } from '../../../../shared/storage/VaultLayout';
 import { forkBaseTypes, type ForkSource } from './detect';
 import { registerTypes } from './registerTypes';
 import { entryFolders, forkTarget, managedFiles, nestedHoardRoot } from './paths';
 import { emptyImportReport, type ImportReport, type Progress } from './report';
-import { updateFrontMatter } from '../../storage/noteWrite';
+import { updateFrontMatter } from '../../../../shared/storage/noteWrite';
 import { newName, translateProperties } from './propertyNames';
-import { SHARED_SETTING_KEYS } from '../../storage/SharedConfigStore';
+import { SHARED_SETTING_KEYS } from '../../../../shared/storage/SharedConfigStore';
 import { REMOVED_SETTINGS, type ImportContext } from './schema1Types';
 
 const TEXT_EXTENSIONS = new Set(['md', 'base', 'json', 'txt', 'csv', 'canvas']);

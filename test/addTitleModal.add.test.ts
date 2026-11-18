@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddTitleModal } from '../src/AddTitleModal';
+import { AddTitleModal } from '../src/modules/watchlist/ui/AddTitleModal';
 import { fakeSettings } from './helpers/fakeSettings';
-import type { HoardTitle, Season } from '../src/types';
-import type { LookupResult } from '../src/lookup';
+import type { HoardTitle, Season } from '../src/shared/domain/types';
+import type { LookupResult } from '../src/shared/api/lookup';
 
 // noon UTC: the local calendar day is 2026-03-04 in every timezone the suite runs in
 const NOW = '2026-03-04T12:00:00.000Z';

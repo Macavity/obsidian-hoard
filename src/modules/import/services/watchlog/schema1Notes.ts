@@ -1,5 +1,5 @@
 import { TFile, type App } from 'obsidian';
-import type { Fm, YamlIO } from '../../storage/storageTypes';
+import type { Fm, YamlIO } from '../../../../shared/storage/storageTypes';
 import type { ImportReport } from './report';
 import { isRecord } from './schema1Types';
 

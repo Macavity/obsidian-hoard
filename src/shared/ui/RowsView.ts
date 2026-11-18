@@ -3,7 +3,7 @@
 // the tab; only the DOM shape is shared. The virtualised per-section grids a Rows view mixes in are
 // driven by VirtualGrid + VirtualScroller, not by this module.
 
-import { t } from './i18n';
+import { t } from '../i18n';
 
 /**
  * Per-section select-all box, shown in the header while selection mode is on. Ids rather than DOM,

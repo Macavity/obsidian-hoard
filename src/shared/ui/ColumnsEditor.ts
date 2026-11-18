@@ -1,11 +1,11 @@
 import { App, Notice, setIcon, setTooltip } from 'obsidian';
-import type { CustomListColumn, CustomListRow } from '../types';
-import { DEFAULT_FIELD_COLOR } from '../types';
-import { ConfirmModal } from '../ConfirmModal';
+import type { CustomListColumn, CustomListRow } from '../domain/types';
+import { DEFAULT_FIELD_COLOR } from '../domain/types';
+import { ConfirmModal } from './ConfirmModal';
 import { t } from '../i18n';
 import { createIconButton } from './IconButton';
-import { openColorPicker, deriveFillColor, deriveBorderColor } from '../ColorPicker';
-import type { DeepReadonly } from '../deepReadonly';
+import { openColorPicker, deriveFillColor, deriveBorderColor } from './ColorPicker';
+import type { DeepReadonly } from '../domain/deepReadonly';
 
 /**
  * Aligns a column's option-colour map with its trimmed options on save: drops colours for

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Notice } from 'obsidian';
-import { setLocale, t } from '../src/i18n';
+import { setLocale, t } from '../src/shared/i18n';
 import { setupDataManager } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
 

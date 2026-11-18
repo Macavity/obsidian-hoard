@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { OLD_TO_NEW, translateProperties } from '../../../src/import/watchlog/propertyNames';
-import { ALL_PROPERTY_NAMES } from '../../../src/storage/properties';
-import { formatExternalId } from '../../../src/storage/externalId';
+import { OLD_TO_NEW, translateProperties } from '../../../src/modules/import/services/watchlog/propertyNames';
+import { ALL_PROPERTY_NAMES } from '../../../src/shared/storage/properties';
+import { formatExternalId } from '../../../src/shared/storage/externalId';
 
 /** Every frontmatter key Hoard 0.1 / WatchLog Sync could write or read (frozen copy of the 0.1 key lists). */
 const KEYS_0_1 = [

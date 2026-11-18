@@ -1,7 +1,7 @@
 import { App, Modal, Notice } from 'obsidian';
-import { t } from './i18n';
-import { typeLabel } from './i18n/labels';
-import { blockDuplicate, createDuplicateGuard } from './ui/DuplicateGuard';
+import { t } from '../../../shared/i18n';
+import { typeLabel } from '../../../shared/i18n/labels';
+import { blockDuplicate, createDuplicateGuard } from '../../../shared/ui/DuplicateGuard';
 import {
 	linkField,
 	makeCell,
@@ -11,12 +11,12 @@ import {
 	renderGroupPicker,
 	titleField,
 	type GroupPickerState,
-} from './ui/FormCells';
-import type { DataManager } from './DataManager';
-import type { SettingsReader } from './SettingsService';
-import type { HoardTitle, HoardGroup, Season } from './types';
-import { completedEpisodes } from './entryFactories';
-import { formatSeasonLine, parseSeasonLine, seasonsOf } from './storage/seasonText';
+} from '../../../shared/ui/FormCells';
+import type { DataManager } from '../services/DataManager';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { HoardTitle, HoardGroup, Season } from '../../../shared/domain/types';
+import { completedEpisodes } from '../../../shared/domain/entryFactories';
+import { formatSeasonLine, parseSeasonLine, seasonsOf } from '../../../shared/storage/seasonText';
 
 /** Seasons from the seasons box, one "Name: N" or "Name: N (skip list)" per line. No bounds are applied here. */
 function parseSeasonsText(text: string): Season[] {

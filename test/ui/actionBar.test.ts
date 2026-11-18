@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { renderMoveToGroupSelect } from '../../src/ui/ActionBar';
+import { renderMoveToGroupSelect } from '../../src/shared/ui/ActionBar';
 import { El } from '../helpers/fakeEl';
 
 function openInlineInput(onCreate: (name: string) => Promise<void>) {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService } from '../src/ApiService';
-import type { LookupResult } from '../src/lookup';
+import { ApiService } from '../src/shared/api/ApiService';
+import type { LookupResult } from '../src/shared/api/lookup';
 import { answerAll, respondWith, route, sent, urlOfCall } from './helpers/apiFailures';
 import { makeTitle } from './helpers/setupDataManager';
 

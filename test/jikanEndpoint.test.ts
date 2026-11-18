@@ -1,10 +1,10 @@
 import { requestUrl } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, apiSourceFromUrl } from '../src/ApiService';
-import { TENRAI_BASE, resolveJikanEndpoint } from '../src/jikanBase';
-import { PosterService } from '../src/PosterService';
-import { DEFAULT_SETTINGS } from '../src/types';
-import type { DataManager } from '../src/DataManager';
+import { ApiService, apiSourceFromUrl } from '../src/shared/api/ApiService';
+import { TENRAI_BASE, resolveJikanEndpoint } from '../src/shared/api/jikanBase';
+import { PosterService } from '../src/shared/api/PosterService';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/types';
+import type { DataManager } from '../src/modules/watchlist/services/DataManager';
 
 /** ApiService with its private request helper exposed for spying. */
 type ApiProbe = Pick<ApiService, 'searchManga' | 'searchAnime' | 'setJikanEndpoint' | 'pingJikan'> & {

@@ -5,7 +5,7 @@ import type { MediaSource } from './apiSources';
 import { TENRAI_BASE, type JikanEndpoint } from './jikanBase';
 import {
 	ApiError, apiLabel, httpError, lookupOfError, rethrowAuth, type ApiErrorReason, type ApiSource,
-} from './api/apiError';
+} from './apiError';
 import type {
 	AnimeSearchResult,
 	MediaSearchResult,
@@ -13,18 +13,18 @@ import type {
 	TmdbCollectionRef,
 	TmdbCollectionDetail,
 	Season,
-} from './types';
+} from '../domain/types';
 import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, explicitMediaKind, mapCinemetaSearch, type CinemetaKind } from './cinemetaApi';
 import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLibraryWorkUrl } from './openLibraryApi';
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
-import { normalizeCreditsForStore, imdbIdFromLink } from './types';
-import type { EntryCache } from './storage/storageTypes';
-import { at, readBoolean, readList, readNumber, readOptionalNumber, readOptionalString, readRecord, readString, readStringList } from './storage/read';
-import { isRecord } from './storage/sharedHelpers';
+import { normalizeCreditsForStore, imdbIdFromLink } from '../domain/types';
+import type { EntryCache } from '../storage/storageTypes';
+import { at, readBoolean, readList, readNumber, readOptionalNumber, readOptionalString, readRecord, readString, readStringList } from '../storage/read';
+import { isRecord } from '../storage/sharedHelpers';
 import { attempt, errorMessage, firstFound, found, FAILED, NOT_FOUND, NO_KEY, type LookupResult, type LookupSource } from './lookup';
 
-export { apiErrorMessage, apiErrorShort, lookupOfError } from './api/apiError';
-export type { ApiSource } from './api/apiError';
+export { apiErrorMessage, apiErrorShort, lookupOfError } from './apiError';
+export type { ApiSource } from './apiError';
 
 export type Airing = NonNullable<EntryCache['airing']>;
 

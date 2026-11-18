@@ -1,20 +1,20 @@
 import { App, Notice, setIcon } from 'obsidian';
-import type { SettingsReader } from './SettingsService';
-import type { GameDataManager } from './GameDataManager';
-import { rawgResizedCover, steamAppIdFromUrl, type ApiService, type GameDetailsResult, type GameSearchResult } from './ApiService';
-import type { GameCoverApi } from './coverRefresh';
-import { effectiveGameSource } from './apiSources';
-import { newGame } from './entryFactories';
-import { GameGroup, GAME_AUTO_STATUS } from './types';
-import { renderSearchResultRow } from './SearchThumbnail';
-import { t } from './i18n';
-import { gameStatusLabel, priorityLabel } from './i18n/labels';
-import { SearchFormModal, type SearchPickerOptions } from './ui/SearchFormModal';
-import { LibraryIndex, gameResultIdKeys } from './LibraryIndex';
-import { renderModePill } from './ModePill';
-import { renderTagChips } from './StatusDropdown';
-import { createDatePicker } from './DatePicker';
-import { blockDuplicate, createDuplicateGuard } from './ui/DuplicateGuard';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { GameDataManager } from '../services/GameDataManager';
+import { rawgResizedCover, steamAppIdFromUrl, type ApiService, type GameDetailsResult, type GameSearchResult } from '../../../shared/api/ApiService';
+import type { GameCoverApi } from '../../covers/services/coverRefresh';
+import { effectiveGameSource } from '../../../shared/api/apiSources';
+import { newGame } from '../../../shared/domain/entryFactories';
+import { GameGroup, GAME_AUTO_STATUS } from '../../../shared/domain/types';
+import { renderSearchResultRow } from '../../../shared/ui/SearchThumbnail';
+import { t } from '../../../shared/i18n';
+import { gameStatusLabel, priorityLabel } from '../../../shared/i18n/labels';
+import { SearchFormModal, type SearchPickerOptions } from '../../../shared/ui/SearchFormModal';
+import { LibraryIndex, gameResultIdKeys } from '../../../shared/services/LibraryIndex';
+import { renderModePill } from '../../../shared/ui/ModePill';
+import { renderTagChips } from '../../../shared/ui/StatusDropdown';
+import { createDatePicker } from '../../../shared/ui/DatePicker';
+import { blockDuplicate, createDuplicateGuard } from '../../../shared/ui/DuplicateGuard';
 import {
 	linkField,
 	makeCell,
@@ -26,7 +26,7 @@ import {
 	textInput,
 	titleField,
 	type GroupPickerState,
-} from './ui/FormCells';
+} from '../../../shared/ui/FormCells';
 
 /** Lowercased word tokens of a platform name, split into alpha and numeric. */
 function platformTokens(name: string): { alpha: Set<string>; num: Set<string> } {

@@ -1,14 +1,14 @@
 // Shared by the setup* helpers: browser globals, tick, and the store wiring used by every manager.
 import { parse, stringify } from 'yaml';
 import { createFakeApp } from '../fakes/fakeApp';
-import { VaultLayout } from '../../src/storage/VaultLayout';
-import { LocalStore } from '../../src/storage/LocalStore';
-import { SecretStore } from '../../src/storage/SecretStore';
-import { SharedConfigStore } from '../../src/storage/SharedConfigStore';
-import { EntryIndex } from '../../src/storage/EntryIndex';
-import { DEFAULT_SETTINGS } from '../../src/types';
-import type { ManagerNotice } from '../../src/storage/storageTypes';
-import type HoardPlugin from '../../src/main';
+import { VaultLayout } from '../../src/shared/storage/VaultLayout';
+import { LocalStore } from '../../src/shared/storage/LocalStore';
+import { SecretStore } from '../../src/shared/storage/SecretStore';
+import { SharedConfigStore } from '../../src/shared/storage/SharedConfigStore';
+import { EntryIndex } from '../../src/shared/storage/EntryIndex';
+import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
+import type { ManagerNotice } from '../../src/shared/storage/storageTypes';
+import type HoardPlugin from '../../src/app/main';
 
 // browser globals the managers touch
 const g = globalThis as Record<string, unknown>;

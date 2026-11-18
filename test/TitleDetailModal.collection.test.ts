@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
 import { fakeSettings } from './helpers/fakeSettings';
-import { TitleDetailModal } from '../src/TitleDetailModal';
-import { DEFAULT_SETTINGS, type HoardTitle, type TmdbCollectionDetail } from '../src/types';
-import { t } from '../src/i18n';
-import { resolveCollection, countMissing } from '../src/CollectionModal';
+import { TitleDetailModal } from '../src/modules/watchlist/ui/TitleDetailModal';
+import { DEFAULT_SETTINGS, type HoardTitle, type TmdbCollectionDetail } from '../src/shared/domain/types';
+import { t } from '../src/shared/i18n';
+import { resolveCollection, countMissing } from '../src/modules/watchlist/ui/CollectionModal';
 
-vi.mock('../src/CollectionModal', () => ({
+vi.mock('../src/modules/watchlist/ui/CollectionModal', () => ({
 	resolveCollection: vi.fn(),
 	countMissing: vi.fn(() => 0),
 	CollectionModal: class { open(): void {} },

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { toggleSortPopover, type SortPopoverConfig } from '../../src/SortPopover';
+import { toggleSortPopover, type SortPopoverConfig } from '../../src/shared/ui/SortPopover';
 
 (globalThis as { activeDocument?: Document }).activeDocument = document;
 

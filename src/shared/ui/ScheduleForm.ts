@@ -1,6 +1,6 @@
-import { createDatePicker } from '../DatePicker';
+import { createDatePicker } from './DatePicker';
 import { t } from '../i18n';
-import type { AirtimeSchedule, AirtimeRecurrence } from '../types';
+import type { AirtimeSchedule, AirtimeRecurrence } from '../domain/types';
 
 export type ScheduleMode = 'single' | 'recurring';
 

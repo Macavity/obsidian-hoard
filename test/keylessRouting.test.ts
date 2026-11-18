@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { effectiveMediaSource } from '../src/apiSources';
-import { LibraryIndex } from '../src/LibraryIndex';
-import { resultIdKeys } from '../src/titleSearch';
-import type { Game, MediaSearchResult } from '../src/types';
-import type { GameDetailsResult, GameSearchResult } from '../src/ApiService';
-import { AddGameModal } from '../src/AddGameModal';
+import { effectiveMediaSource } from '../src/shared/api/apiSources';
+import { LibraryIndex } from '../src/shared/services/LibraryIndex';
+import { resultIdKeys } from '../src/modules/watchlist/ui/titleSearch';
+import type { Game, MediaSearchResult } from '../src/shared/domain/types';
+import type { GameDetailsResult, GameSearchResult } from '../src/shared/api/ApiService';
+import { AddGameModal } from '../src/modules/games/ui/AddGameModal';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const row: MediaSearchResult = {

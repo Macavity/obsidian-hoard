@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildPosterCard, pinCardHeight, type PosterCardSpec } from '../src/PosterCard';
-import { openStatusDropdown } from '../src/StatusDropdown';
-import { openColorPicker } from '../src/ColorPicker';
+import { buildPosterCard, pinCardHeight, type PosterCardSpec } from '../src/shared/ui/PosterCard';
+import { openStatusDropdown } from '../src/shared/ui/StatusDropdown';
+import { openColorPicker } from '../src/shared/ui/ColorPicker';
 
 const prop = (el: Element | null, name: string): string => (el as HTMLElement).style.getPropertyValue(name);
 const ctx = (): { container: HTMLElement; cleanups: (() => void)[] } => ({ container: document.createElement('div'), cleanups: [] });

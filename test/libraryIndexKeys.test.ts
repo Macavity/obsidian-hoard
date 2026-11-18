@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LibraryIndex, bookResultIdKeys, gameResultIdKeys } from '../src/LibraryIndex';
+import { LibraryIndex, bookResultIdKeys, gameResultIdKeys } from '../src/shared/services/LibraryIndex';
 
 const book = { title: 'H', author: '', year: 0, totalPages: 0, coverUrl: '', googleBooksId: '', openLibraryId: '', releaseDate: '', url: '' };
 

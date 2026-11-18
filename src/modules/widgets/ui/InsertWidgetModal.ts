@@ -1,7 +1,7 @@
 import { App, FuzzySuggestModal } from 'obsidian';
-import type { HoardTitle } from './types';
-import { t } from './i18n';
-import { typeLabel } from './i18n/labels';
+import type { HoardTitle } from '../../../shared/domain/types';
+import { t } from '../../../shared/i18n';
+import { typeLabel } from '../../../shared/i18n/labels';
 
 export interface InsertWidgetModalDeps {
 	app: App;

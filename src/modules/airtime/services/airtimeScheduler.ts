@@ -1,7 +1,7 @@
-import type { AirtimeSchedule } from './types';
-import type { DataManager } from './DataManager';
-import type { ReadingDataManager } from './ReadingDataManager';
-import type { GameDataManager } from './GameDataManager';
+import type { AirtimeSchedule } from '../../../shared/domain/types';
+import type { DataManager } from '../../watchlist/services/DataManager';
+import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
+import type { GameDataManager } from '../../games/services/GameDataManager';
 
 export interface AirtimeSchedulerDeps {
 	dataManager: Pick<DataManager, 'getAirtimeEntries' | 'getTitle' | 'refreshAiring'>;

@@ -2,9 +2,9 @@
 import { vi } from 'vitest';
 import { createFakeApp } from '../fakes/fakeApp';
 import { fakeSettings } from './fakeSettings';
-import { CustomListsTab } from '../../src/CustomListsTab';
-import { VaultLayout } from '../../src/storage/VaultLayout';
-import { DEFAULT_SETTINGS, type CustomList, type HoardTitle } from '../../src/types';
+import { CustomListsTab } from '../../src/modules/custom-lists/ui/CustomListsTab';
+import { VaultLayout } from '../../src/shared/storage/VaultLayout';
+import { DEFAULT_SETTINGS, type CustomList, type HoardTitle } from '../../src/shared/domain/types';
 
 // Obsidian's activeDocument (popout-aware document)
 (globalThis as { activeDocument?: Document }).activeDocument = document;

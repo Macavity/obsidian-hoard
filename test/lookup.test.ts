@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { attempt, checkResultOf, errorMessage, FAILED, firstFound, found, NO_KEY, NOT_FOUND, type LookupSource } from '../src/lookup';
+import { attempt, checkResultOf, errorMessage, FAILED, firstFound, found, NO_KEY, NOT_FOUND, type LookupSource } from '../src/shared/api/lookup';
 
 const src = <T>(r: Awaited<ReturnType<LookupSource<T>>>): LookupSource<T> => vi.fn(() => Promise.resolve(r));
 

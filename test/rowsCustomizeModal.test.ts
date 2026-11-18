@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RowsCustomizeModal, type RowsCustomizeConfig } from '../src/RowsCustomizeModal';
-import type { RowsShelfLayoutEntry } from '../src/types';
+import { RowsCustomizeModal, type RowsCustomizeConfig } from '../src/shared/ui/RowsCustomizeModal';
+import type { RowsShelfLayoutEntry } from '../src/shared/domain/types';
 
 const shelves = [
 	{ id: 'a', label: 'Alpha' },

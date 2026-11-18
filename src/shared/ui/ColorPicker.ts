@@ -1,5 +1,5 @@
-import { FIELD_COLORS, DEFAULT_FIELD_COLOR } from './types';
-import { t } from './i18n';
+import { FIELD_COLORS, DEFAULT_FIELD_COLOR } from '../domain/types';
+import { t } from '../i18n';
 
 // ColorPicker — shared swatch-picker UI + fill/border colour derivation.
 //

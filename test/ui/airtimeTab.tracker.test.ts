@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from '../__mocks__/obsidian';
-import { t } from '../../src/i18n';
-import { statusLabel } from '../../src/i18n/labels';
-import { DEFAULT_SETTINGS, GAME_AUTO_STATUS } from '../../src/types';
-import type { Book, Game, Manga } from '../../src/types';
+import { t } from '../../src/shared/i18n';
+import { statusLabel } from '../../src/shared/i18n/labels';
+import { DEFAULT_SETTINGS, GAME_AUTO_STATUS } from '../../src/shared/domain/types';
+import type { Book, Game, Manga } from '../../src/shared/domain/types';
 import { qsa } from '../helpers/dom';
 import type { Captures } from './airtimeTab.harness';
 import { entry, isoOffset, makeTab, newWorld, title } from './airtimeTab.harness';
@@ -12,7 +12,7 @@ const cap = vi.hoisted<Captures>(() => ({
 	confirms: [], finders: [], readingModals: [], gameModals: [], forms: [],
 }));
 
-vi.mock('../../src/ConfirmModal', () => ({
+vi.mock('../../src/shared/ui/ConfirmModal', () => ({
 	ConfirmModal: class {
 		constructor(_app: unknown, message: string, onConfirm: () => void, extra?: { label: string; onClick: () => void }) {
 			cap.confirms.push({ message, onConfirm, extra });
@@ -20,7 +20,7 @@ vi.mock('../../src/ConfirmModal', () => ({
 		open(): void {}
 	},
 }));
-vi.mock('../../src/UpcomingFinderModal', () => ({
+vi.mock('../../src/modules/airtime/ui/UpcomingFinderModal', () => ({
 	UpcomingFinderModal: class {
 		constructor(_app: unknown, items: Captures['finders'][number]['items'], onPick: (i: unknown) => void) {
 			cap.finders.push({ items, onPick });
@@ -28,33 +28,33 @@ vi.mock('../../src/UpcomingFinderModal', () => ({
 		open(): void {}
 	},
 }));
-vi.mock('../../src/ReadingScheduleModal', () => ({
+vi.mock('../../src/modules/airtime/ui/ReadingScheduleModal', () => ({
 	ReadingScheduleModal: class {
 		constructor(...args: unknown[]) { cap.readingModals.push(args); }
 		open(): void {}
 	},
 }));
-vi.mock('../../src/GameScheduleModal', () => ({
+vi.mock('../../src/modules/airtime/ui/GameScheduleModal', () => ({
 	GameScheduleModal: class {
 		constructor(...args: unknown[]) { cap.gameModals.push(args); }
 		open(): void {}
 	},
 }));
-vi.mock('../../src/ui/ScheduleForm', async (orig) => ({
-	...(await orig<typeof import('../../src/ui/ScheduleForm')>()),
+vi.mock('../../src/shared/ui/ScheduleForm', async (orig) => ({
+	...(await orig<typeof import('../../src/shared/ui/ScheduleForm')>()),
 	renderScheduleModal: (_el: unknown, form: unknown, opts: Captures['forms'][number]['opts']) => {
 		cap.forms.push({ form, opts });
 	},
 }));
-vi.mock('../../src/VirtualScroller', () => ({
+vi.mock('../../src/shared/ui/VirtualScroller', () => ({
 	VirtualScroller: class {
 		addSection(): void {}
 		attach(): void {}
 		destroy(): void {}
 	},
 }));
-vi.mock('../../src/VirtualGrid', async (orig) => ({
-	...(await orig<typeof import('../../src/VirtualGrid')>()),
+vi.mock('../../src/shared/ui/VirtualGrid', async (orig) => ({
+	...(await orig<typeof import('../../src/shared/ui/VirtualGrid')>()),
 	VirtualGrid: class {
 		constructor(_s: unknown, grid: HTMLElement, count: number, cb: { buildItem: (i: number, w: number) => HTMLElement | null }) {
 			for (let i = 0; i < count; i++) {

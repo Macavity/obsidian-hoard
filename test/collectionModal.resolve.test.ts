@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { resolveCollection } from '../src/CollectionModal';
-import { COLLECTION_NONE, DEFAULT_SETTINGS, type HoardTitle, type TmdbCollectionDetail } from '../src/types';
+import { resolveCollection } from '../src/modules/watchlist/ui/CollectionModal';
+import { COLLECTION_NONE, DEFAULT_SETTINGS, type HoardTitle, type TmdbCollectionDetail } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
-import { FAILED, NO_KEY, NOT_FOUND, found, type LookupResult } from '../src/lookup';
+import { FAILED, NO_KEY, NOT_FOUND, found, type LookupResult } from '../src/shared/api/lookup';
 
 const detail: TmdbCollectionDetail = { id: 99, name: 'Dune Collection', parts: [] };
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { WidgetRenderer, findNextRelease, groupProgress } from '../src/WidgetRenderer';
-import type { HoardTitle } from '../src/types';
+import { WidgetRenderer, findNextRelease, groupProgress } from '../src/modules/widgets/ui/WidgetRenderer';
+import type { HoardTitle } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const t = (id: string, watched: number[], over: Partial<HoardTitle> = {}): HoardTitle =>

@@ -1,13 +1,13 @@
 import { App, Notice } from 'obsidian';
-import { t } from './i18n';
-import type { DataManager } from './DataManager';
-import type { MaybeTitle } from './types';
-import { formatDateDisplay } from './types';
+import { t } from '../../../shared/i18n';
+import type { DataManager } from '../../watchlist/services/DataManager';
+import type { MaybeTitle } from '../../../shared/domain/types';
+import { formatDateDisplay } from '../../../shared/domain/types';
 import {
 	renderMediaFields,
 	resetForm,
 	type MediaFields,
-} from './ui/FormCells';
+} from '../../../shared/ui/FormCells';
 import {
 	episodesLabel,
 	fillMediaFields,
@@ -16,8 +16,8 @@ import {
 	titlePickerBase,
 	type TitleSearchDeps,
 	type TitleSearchResult,
-} from './titleSearch';
-import { SearchFormModal, type SearchPickerOptions } from './ui/SearchFormModal';
+} from '../../watchlist/ui/titleSearch';
+import { SearchFormModal, type SearchPickerOptions } from '../../../shared/ui/SearchFormModal';
 
 export interface MaybeAddModalDeps extends TitleSearchDeps {
 	app: App;

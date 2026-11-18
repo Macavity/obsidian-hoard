@@ -1,6 +1,6 @@
 import { requestUrl } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService } from '../src/ApiService';
+import { ApiService } from '../src/shared/api/ApiService';
 import googleVolumes from './fixtures/google-books-volumes.json';
 import igdbGames from './fixtures/igdb-games.json';
 import jikanManga from './fixtures/jikan-manga.json';

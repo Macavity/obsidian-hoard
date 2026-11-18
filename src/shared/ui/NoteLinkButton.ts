@@ -1,5 +1,5 @@
 import { App, Notice, TFile, setIcon } from 'obsidian';
-import { t } from './i18n';
+import { t } from '../i18n';
 
 /**
  * The shared "Open note" file-text icon button used by the Watchlist and Reading detail modals.

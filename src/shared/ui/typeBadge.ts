@@ -1,6 +1,6 @@
 import { typeLabel } from '../i18n/labels';
-import type { DeepReadonly } from '../deepReadonly';
-import { getThemedColor, type HoardPluginSettings } from '../types';
+import type { DeepReadonly } from '../domain/deepReadonly';
+import { getThemedColor, type HoardPluginSettings } from '../domain/types';
 
 /** The small type badge: a themed coloured pill when `coloredTypeBadges` is on, plain text otherwise. */
 export function renderTypeBadge(

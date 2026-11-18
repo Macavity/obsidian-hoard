@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ReadingDetailModal } from '../src/ReadingDetailModal';
-import { readingStatusLabel } from '../src/i18n/labels';
-import { deriveBorderColor, deriveFillColor } from '../src/ColorPicker';
-import { t } from '../src/i18n';
-import { DEFAULT_FIELD_COLOR, formatCount, todayIso } from '../src/types';
-import type { Book, Manga, ReadingCustomColumn } from '../src/types';
+import { ReadingDetailModal } from '../src/modules/reading/ui/ReadingDetailModal';
+import { readingStatusLabel } from '../src/shared/i18n/labels';
+import { deriveBorderColor, deriveFillColor } from '../src/shared/ui/ColorPicker';
+import { t } from '../src/shared/i18n';
+import { DEFAULT_FIELD_COLOR, formatCount, todayIso } from '../src/shared/domain/types';
+import type { Book, Manga, ReadingCustomColumn } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
 
 // the shared DOM polyfills lack createSvg, which the arc gauges draw with

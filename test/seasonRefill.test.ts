@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { setupDataManager } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
-import type { LookupResult } from '../src/lookup';
-import type { Season } from '../src/types';
+import type { LookupResult } from '../src/shared/api/lookup';
+import type { Season } from '../src/shared/domain/types';
 
 const DARK = '---\nName: Dark\nType: TV Show\nStatus: Completed\nExternal ID: tmdb:tv:70523\nTotal Episodes: 16\n'
 	+ 'Watched Episodes: S01E01-E08, S02E01-E08\nProgress: 100\n---\n';

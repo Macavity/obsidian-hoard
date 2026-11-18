@@ -1,6 +1,6 @@
 import { Platform, setIcon } from 'obsidian';
-import { t } from './i18n';
-import { renderAddButton } from './ui/TabToolbar';
+import { t } from '../i18n';
+import { renderAddButton } from './TabToolbar';
 
 export interface MobileToolbarOptions {
 	/** The flex container row that holds the toolbar (e.g. hoard-toolbar__controls / hoard-reading__toolbar). */

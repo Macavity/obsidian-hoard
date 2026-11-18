@@ -1,12 +1,12 @@
 // All managers + HistoryManager (memory-only) sharing one FakeApp, wired like main.ts (root 'W').
 import { parse, stringify } from 'yaml';
 import { createStores } from './common';
-import { DataManager } from '../../src/DataManager';
-import { ReadingDataManager } from '../../src/ReadingDataManager';
-import { GameDataManager } from '../../src/GameDataManager';
-import { HistoryManager } from '../../src/HistoryManager';
-import { NO_KEY } from '../../src/lookup';
-import { HistoryStore } from '../../src/storage/HistoryStore';
+import { DataManager } from '../../src/modules/watchlist/services/DataManager';
+import { ReadingDataManager } from '../../src/modules/reading/services/ReadingDataManager';
+import { GameDataManager } from '../../src/modules/games/services/GameDataManager';
+import { HistoryManager } from '../../src/shared/services/HistoryManager';
+import { NO_KEY } from '../../src/shared/api/lookup';
+import { HistoryStore } from '../../src/shared/storage/HistoryStore';
 
 export async function setupBackup(files: Record<string, string>, secrets: Record<string, string> = {}) {
 	const { f, plugin, local, layout, shared, base } = await createStores(files, {

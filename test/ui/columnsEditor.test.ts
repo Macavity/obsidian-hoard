@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { App } from 'obsidian';
-import { cloneColumns, moveColumn, normalizeColumns, renderColumnsEditor, validateColumns } from '../../src/ui/ColumnsEditor';
-import type { CustomListColumn, CustomListRow } from '../../src/types';
+import { cloneColumns, moveColumn, normalizeColumns, renderColumnsEditor, validateColumns } from '../../src/shared/ui/ColumnsEditor';
+import type { CustomListColumn, CustomListRow } from '../../src/shared/domain/types';
 
 const col = (over: Partial<CustomListColumn> = {}): CustomListColumn => ({
 	id: 'c1', label: 'A', type: 'text', bold: false, italic: false, ...over,

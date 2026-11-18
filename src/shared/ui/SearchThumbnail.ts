@@ -1,4 +1,4 @@
-import { t } from './i18n';
+import { t } from '../i18n';
 
 /**
  * Renders a ~40×60 (2:3) cover thumbnail for an add-flow search-result row.

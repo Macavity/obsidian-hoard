@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import en from '../../src/i18n/en';
-import { ROWS_SHELVES } from '../../src/types';
+import en from '../../src/shared/i18n/en';
+import { ROWS_SHELVES } from '../../src/shared/domain/types';
 import { movieNote, showNote, setupListTab } from '../helpers/setupListTab';
 
 const q = (root: ParentNode, sel: string): HTMLElement => root.querySelector<HTMLElement>(sel)!;

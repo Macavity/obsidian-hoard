@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import type { HoardPluginSettings } from '../types';
+import type { HoardPluginSettings } from '../domain/types';
 
 /** Games settings group chip for a keyed provider: whether its credentials are filled in. */
 export function gamesKeyChip(

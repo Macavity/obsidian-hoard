@@ -1,9 +1,9 @@
 import { App, Modal, ToggleComponent } from 'obsidian';
-import type { SettingsReader } from './SettingsService';
-import { normalizeRowsLayout, shelvesExclude, type RowsShelfLayoutEntry } from './types';
-import { t } from './i18n';
-import { createIconButton } from './ui/IconButton';
-import { markViewRoot } from './ui/detailFrame';
+import type { SettingsReader } from '../services/SettingsService';
+import { normalizeRowsLayout, shelvesExclude, type RowsShelfLayoutEntry } from '../domain/types';
+import { t } from '../i18n';
+import { createIconButton } from './IconButton';
+import { markViewRoot } from './detailFrame';
 
 /** Wires the modal to one tab's shelf registry + persisted layout, so any tab
  *  with a Rows view (Watchlist today, others later) can reuse it. */

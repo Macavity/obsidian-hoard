@@ -1,7 +1,7 @@
 import { requestUrl } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, apiSourceFromUrl } from '../src/ApiService';
-import { TENRAI_BASE } from '../src/jikanBase';
+import { ApiService, apiSourceFromUrl } from '../src/shared/api/ApiService';
+import { TENRAI_BASE } from '../src/shared/api/jikanBase';
 import cinemetaSearch from './fixtures/cinemeta-search-series.json';
 import cinemetaMeta from './fixtures/cinemeta-meta-series.json';
 import openLibrarySearch from './fixtures/openlibrary-search.json';

@@ -1,15 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../src/CollageUtil', () => ({ renderGroupCollage: vi.fn() }));
-vi.mock('../../src/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
-vi.mock('../../src/PosterCard', async (importOriginal) => ({
-	...(await importOriginal<typeof import('../../src/PosterCard')>()),
+vi.mock('../../src/shared/ui/CollageUtil', () => ({ renderGroupCollage: vi.fn() }));
+vi.mock('../../src/shared/ui/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
+vi.mock('../../src/shared/ui/PosterCard', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../src/shared/ui/PosterCard')>()),
 	openCardMenu: vi.fn(),
 }));
 
-import { groupCountLabel, groupLetter, renderGroupCard, type GroupCardOptions } from '../../src/ui/GroupCard';
-import { renderGroupCollage } from '../../src/CollageUtil';
-import { openCardMenu } from '../../src/PosterCard';
+import { groupCountLabel, groupLetter, renderGroupCard, type GroupCardOptions } from '../../src/shared/ui/GroupCard';
+import { renderGroupCollage } from '../../src/shared/ui/CollageUtil';
+import { openCardMenu } from '../../src/shared/ui/PosterCard';
 
 /** Minimal element double: only what the group card touches. */
 class El {

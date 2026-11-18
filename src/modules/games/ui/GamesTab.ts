@@ -1,34 +1,34 @@
-import type { TabInstance } from './ui/TabInstance';
+import type { TabInstance } from '../../../shared/ui/TabInstance';
 import { Notice, TFile } from 'obsidian';
-import { t, type TranslationKey } from './i18n';
-import { gameStatusLabel } from './i18n/labels';
-import type { SettingsReader, SettingsWriter } from './SettingsService';
+import { t, type TranslationKey } from '../../../shared/i18n';
+import { gameStatusLabel } from '../../../shared/i18n/labels';
+import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
 import {
 	Game, GameGroup, GamesSavedFilterPreset, GAME_AUTO_STATUS, GAME_FINISHED_STATUS,
 	normalizeRowsLayout, GAMES_ROWS_SHELVES, ROWS_EXCLUSIVE_SHELVES, sortByFavorited,
 	migratePriorityExclude,
 	priorityExcludeMatches,
 	setsMatch,
-} from './types';
-import { searchItems, yearOf, type SearchFieldSpec } from './SearchQuery';
-import { renderSearchHelpButton } from './SearchHelpModal';
-import { RowsCustomizeModal, type RowsCustomizeModalDeps } from './RowsCustomizeModal';
-import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from './VirtualGrid';
-import { VirtualScroller } from './VirtualScroller';
-import { LazyCardObserver } from './LazyCardObserver';
-import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from './PosterCard';
-import { renderShelf, renderShelfTitle, type ShelfSelect } from './RowsView';
-import { renderSearchBox, openRenameGroupPrompt, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, type SortFields } from './ui/TabToolbar';
-import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from './ui/ActionBar';
-import { renderGroupCard } from './ui/GroupCard';
-import { createIconButton } from './ui/IconButton';
-import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from './ui/TabHelpers';
-import { renderHeaderToolbar } from './MobileToolbar';
-import { rawgResizedCover } from './ApiService';
-import { resolveGameCover, type GameCover } from './coverRefresh';
-import { effectiveGameSource } from './apiSources';
-import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from './ui/TabFilters';
-import { ConfirmModal } from './ConfirmModal';
+} from '../../../shared/domain/types';
+import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domain/SearchQuery';
+import { renderSearchHelpButton } from '../../../shared/ui/SearchHelpModal';
+import { RowsCustomizeModal, type RowsCustomizeModalDeps } from '../../../shared/ui/RowsCustomizeModal';
+import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from '../../../shared/ui/VirtualGrid';
+import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
+import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
+import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from '../../../shared/ui/PosterCard';
+import { renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
+import { renderSearchBox, openRenameGroupPrompt, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, type SortFields } from '../../../shared/ui/TabToolbar';
+import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from '../../../shared/ui/ActionBar';
+import { renderGroupCard } from '../../../shared/ui/GroupCard';
+import { createIconButton } from '../../../shared/ui/IconButton';
+import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from '../../../shared/ui/TabHelpers';
+import { renderHeaderToolbar } from '../../../shared/ui/MobileToolbar';
+import { rawgResizedCover } from '../../../shared/api/ApiService';
+import { resolveGameCover, type GameCover } from '../../covers/services/coverRefresh';
+import { effectiveGameSource } from '../../../shared/api/apiSources';
+import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../shared/ui/TabFilters';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 import { GameDetailModal, GameGroupDetailModal, gameGroupProgress, type GameDetailModalDeps } from './GameDetailModal';
 import { AddGameModal, type AddGameModalDeps } from './AddGameModal';
 

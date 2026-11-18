@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { setupDataManager } from './helpers/setupDataManager';
-import { runAirtimeScheduler } from '../src/airtimeScheduler';
-import type { LookupResult } from '../src/lookup';
-import type { EntryCache } from '../src/storage/storageTypes';
+import { runAirtimeScheduler } from '../src/modules/airtime/services/airtimeScheduler';
+import type { LookupResult } from '../src/shared/api/lookup';
+import type { EntryCache } from '../src/shared/storage/storageTypes';
 
 const SHOW = 'W/TV Show/C.md';
 const showNote = (extra = '') =>

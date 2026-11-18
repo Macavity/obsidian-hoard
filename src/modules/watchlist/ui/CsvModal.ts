@@ -1,14 +1,14 @@
 import type { App } from 'obsidian';
-import { CsvModalBase, rowsToCsv, type CsvExportRow, type CsvFieldDef, type CsvSelectOption } from './csv/CsvModalBase';
-import { safeTypeName } from './storage/VaultLayout';
-import { t } from './i18n';
-import { statusLabel, typeLabel } from './i18n/labels';
-import type { DataManager } from './DataManager';
-import type { SettingsReader, SettingsWriter } from './SettingsService';
-import type { HoardTitle, ImportProgress } from './types';
-import { getTitleCredits, normalizeManualCredits } from './types';
-import { completedEpisodes, newTitle } from './entryFactories';
-import { nonEmpty } from './storage/sharedHelpers';
+import { CsvModalBase, rowsToCsv, type CsvExportRow, type CsvFieldDef, type CsvSelectOption } from '../../../shared/ui/CsvModalBase';
+import { safeTypeName } from '../../../shared/storage/VaultLayout';
+import { t } from '../../../shared/i18n';
+import { statusLabel, typeLabel } from '../../../shared/i18n/labels';
+import type { DataManager } from '../services/DataManager';
+import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
+import type { HoardTitle, ImportProgress } from '../../../shared/domain/types';
+import { getTitleCredits, normalizeManualCredits } from '../../../shared/domain/types';
+import { completedEpisodes, newTitle } from '../../../shared/domain/entryFactories';
+import { nonEmpty } from '../../../shared/storage/sharedHelpers';
 
 /** studio list ⇄ one CSV cell; semicolons, since studio names contain commas */
 const STUDIO_SEP = '; ';

@@ -3,15 +3,15 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, relative, resolve, sep } from 'node:path';
 import { parse } from 'yaml';
-import { VaultLayout } from '../../src/storage/VaultLayout';
-import { LocalStore } from '../../src/storage/LocalStore';
+import { VaultLayout } from '../../src/shared/storage/VaultLayout';
+import { LocalStore } from '../../src/shared/storage/LocalStore';
 import { setupDataManager } from '../helpers/setupDataManager';
-import { titleFromProperties } from '../../src/storage/titleCodec';
-import { decodeBook, decodeManga } from '../../src/storage/readingCodec';
-import { decodeGame } from '../../src/storage/gameCodec';
-import { getDisplayPoster, getDisplayTrailer, getTitleCredits } from '../../src/types';
-import type { HoardTitle } from '../../src/types';
-import type { Decoded, EntryCache } from '../../src/storage/storageTypes';
+import { titleFromProperties } from '../../src/shared/storage/titleCodec';
+import { decodeBook, decodeManga } from '../../src/shared/storage/readingCodec';
+import { decodeGame } from '../../src/shared/storage/gameCodec';
+import { getDisplayPoster, getDisplayTrailer, getTitleCredits } from '../../src/shared/domain/types';
+import type { HoardTitle } from '../../src/shared/domain/types';
+import type { Decoded, EntryCache } from '../../src/shared/storage/storageTypes';
 
 /**
  * Readability check, not a snapshot: notes written by earlier versions keep decoding, and the values a card

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createFakeApp } from '../../fakes/fakeApp';
-import { LocalStore } from '../../../src/storage/LocalStore';
+import { LocalStore } from '../../../src/shared/storage/LocalStore';
 import data from '../../fixtures/data-v1.json';
 import { WATCHLOG_NOTES } from './setupSchema1';
 

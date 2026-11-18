@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { WidgetRenderer } from '../../src/WidgetRenderer';
-import type { HoardGroup, HoardTitle } from '../../src/types';
+import { WidgetRenderer } from '../../src/modules/widgets/ui/WidgetRenderer';
+import type { HoardGroup, HoardTitle } from '../../src/shared/domain/types';
 import { textsOf as text } from '../helpers/dom';
 import { fakeSettings } from '../helpers/fakeSettings';
 

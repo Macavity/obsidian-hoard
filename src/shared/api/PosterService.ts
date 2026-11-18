@@ -1,11 +1,11 @@
 import type { RequestUrlParam } from 'obsidian';
 import { explicitMediaKind, titleMediaKind } from './cinemetaApi';
-import type { DataManager } from './DataManager';
-import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from './types';
-import { getApiGroupForType } from './types';
+import type { DataManager } from '../../modules/watchlist/services/DataManager';
+import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from '../domain/types';
+import { getApiGroupForType } from '../domain/types';
 import { httpsOrEmpty } from './httpsUrl';
 import { found, attempt, firstFound, FAILED, NO_KEY, type LookupResult, type LookupSource } from './lookup';
-import { at, readList, readOptionalString, readString } from './storage/read';
+import { at, readList, readOptionalString, readString } from '../storage/read';
 import { jsonPost, lookupOfError, requestVia, type ApiService } from './ApiService';
 import { resolveJikanEndpoint, type JikanEndpoint } from './jikanBase';
 

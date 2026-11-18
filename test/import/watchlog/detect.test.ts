@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { createFakeApp } from '../../fakes/fakeApp';
 import { readFileSync } from 'node:fs';
-import { detectWatchLogSources, findWatchLogBase } from '../../../src/import/watchlog/detect';
+import { detectWatchLogSources, findWatchLogBase } from '../../../src/modules/import/services/watchlog/detect';
 import { snapshot } from './helpers';
-import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
+import type { WatchLogData } from '../../../src/modules/import/services/watchlog/schema1Types';
 
 const data = JSON.parse(readFileSync('test/fixtures/data-v1.json', 'utf8')) as WatchLogData;
 

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
 import watchLogData from '../../fixtures/data-v1.json';
 import { setupSchema1 } from './setupSchema1';
-import type { HoardTitle } from '../../../src/types';
-import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
+import type { HoardTitle } from '../../../src/shared/domain/types';
+import type { WatchLogData } from '../../../src/modules/import/services/watchlog/schema1Types';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>
 	parse(/^---\n([\s\S]*?)\n?---/.exec(src ?? '')?.[1] ?? '') as Record<string, unknown>;

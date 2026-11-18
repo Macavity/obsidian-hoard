@@ -4,7 +4,7 @@
  * any change closes the panel and reports the full new state. Used by ListTab and GamesTab.
  */
 
-import { t } from './i18n';
+import { t } from '../i18n';
 
 export interface SortState {
 	key: string;

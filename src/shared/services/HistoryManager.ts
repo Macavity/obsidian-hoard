@@ -1,5 +1,5 @@
-import { formatDateDisplay } from './types';
-import type { HistoryStore } from './storage/HistoryStore';
+import { formatDateDisplay } from '../domain/types';
+import type { HistoryStore } from '../storage/HistoryStore';
 
 export type HistorySource = 'Watchlist' | 'Reading' | 'Games';
 export type HistoryAction = 'added' | 'completed' | 'deleted' | 'status' | 'rating' | 'watched' | 'group';

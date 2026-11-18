@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseExternalId, formatExternalId, externalIdFromLink } from '../../src/storage/externalId';
+import { parseExternalId, formatExternalId, externalIdFromLink } from '../../src/shared/storage/externalId';
 describe('externalId', () => {
   it.each(['tmdb:tv:1399', 'tmdb:movie:27205', 'imdb:tt5843312', 'mal:anime:21', 'anilist:manga:30013', 'gbooks:zyTCAlFPjgYC', 'rawg:3498', 'igdb:1942'])(
     'round-trips %s', (s) => expect(formatExternalId(parseExternalId(s)!)).toBe(s));

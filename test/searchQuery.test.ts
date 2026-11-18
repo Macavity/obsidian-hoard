@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { searchItems, yearOf } from '../src/SearchQuery';
+import { searchItems, yearOf } from '../src/shared/domain/SearchQuery';
 import { FILMS, FILM_SEARCH } from './searchQuery.fixture';
 
 /** Sorted ids the query matches, or null when the query counts as "no search". */

@@ -1,4 +1,4 @@
-import type { AirtimeRecurrence, EntryAirtime, Season, TitleOverrides, HoardTitle } from '../types';
+import type { AirtimeRecurrence, EntryAirtime, Season, TitleOverrides, HoardTitle } from '../domain/types';
 import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId, Fm } from './storageTypes';
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
 import { externalIdFromLink, formatExternalId, parseExternalId } from './externalId';

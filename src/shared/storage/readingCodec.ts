@@ -1,5 +1,5 @@
-import { READING_STATUSES } from '../types';
-import type { Book, Manga, EntryAirtime, AirtimeRecurrence, ReadingCustomColumn, ReadingStatus } from '../types';
+import { READING_STATUSES } from '../domain/types';
+import type { Book, Manga, EntryAirtime, AirtimeRecurrence, ReadingCustomColumn, ReadingStatus } from '../domain/types';
 import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, READING_PROPS as R, customFieldKey } from './properties';

@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import { ConfirmModal } from '../ConfirmModal';
+import { ConfirmModal } from './ConfirmModal';
 import { createIconButton } from './IconButton';
 import { t } from '../i18n';
 

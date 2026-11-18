@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 import { setupGames } from './helpers/setupGameDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
-import { decodeGame } from '../src/storage/gameCodec';
-import { decodeBook } from '../src/storage/readingCodec';
+import { decodeGame } from '../src/shared/storage/gameCodec';
+import { decodeBook } from '../src/shared/storage/readingCodec';
 
 const FAV = 'Favorite: true\nDate Favorited: 2026-01-01T00:00:00.000Z\n';
 

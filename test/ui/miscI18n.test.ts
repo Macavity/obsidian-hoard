@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import { ConfirmModal } from '../../src/ConfirmModal';
+import { setLocale } from '../../src/shared/i18n';
+import { ConfirmModal } from '../../src/shared/ui/ConfirmModal';
 
 afterEach(() => {
 	setLocale('en');

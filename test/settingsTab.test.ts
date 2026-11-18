@@ -4,9 +4,9 @@ import { Notice as RealNotice } from 'obsidian';
 /** the mock records every string notice */
 const Notice = RealNotice as unknown as { shown: string[] };
 const gamesKeyChip = (source: 'rawg' | 'igdb', s: Record<string, string>) => realChip(source, s as never);
-import { HoardSettingsTab } from '../src/SettingsTab';
-import { gamesKeyChip as realChip } from '../src/ui/gamesKeyChip';
-import type { HoardTitle, TagDefinition } from '../src/types';
+import { HoardSettingsTab } from '../src/modules/settings/ui/SettingsTab';
+import { gamesKeyChip as realChip } from '../src/shared/ui/gamesKeyChip';
+import type { HoardTitle, TagDefinition } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
 
 /** The private members under test, reached through a cast. */

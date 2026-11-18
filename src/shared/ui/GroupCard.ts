@@ -1,9 +1,9 @@
 import type { App } from 'obsidian';
 import { t } from '../i18n';
 import { createIconButton } from './IconButton';
-import { renderGroupCollage } from '../CollageUtil';
-import { ConfirmModal } from '../ConfirmModal';
-import { openCardMenu, pinCardHeight } from '../PosterCard';
+import { renderGroupCollage } from './CollageUtil';
+import { ConfirmModal } from './ConfirmModal';
+import { openCardMenu, pinCardHeight } from './PosterCard';
 
 export interface GroupCardOptions<M> {
 	app: App;

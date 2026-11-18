@@ -1,19 +1,19 @@
 import { TFile, stringifyYaml } from 'obsidian';
 import type { App, EventRef } from 'obsidian';
-import type { SettingsReader } from './SettingsService';
-import type { HistoryManager } from './HistoryManager';
-import type { DataStores } from './DataManager';
-import type { Notify } from './storage/storageTypes';
-import type { EntryIndex } from './storage/EntryIndex';
-import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, updateFrontMatter, writeEntry } from './storage/noteWrite';
-import type { EntryWriteHooks, HeldEntries } from './storage/noteWrite';
-import { ChangeNotifier } from './changeListeners';
-import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
-import { splitNested, type SharedConfigStore } from './storage/SharedConfigStore';
-import type { VaultLayout } from './storage/VaultLayout';
-import { decodeGame, encodeGame } from './storage/gameCodec';
-import { COMMON_PROPS } from './storage/properties';
-import { extractNotes, replaceNotesSection } from './storage/noteBody';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { HistoryManager } from '../../../shared/services/HistoryManager';
+import type { DataStores } from '../../watchlist/services/DataManager';
+import type { Notify } from '../../../shared/storage/storageTypes';
+import type { EntryIndex } from '../../../shared/storage/EntryIndex';
+import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
+import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
+import { ChangeNotifier } from '../../../shared/services/changeListeners';
+import { getBaseline, sameStoredState, setBaseline } from '../../../shared/storage/baseline';
+import { splitNested, type SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
+import type { VaultLayout } from '../../../shared/storage/VaultLayout';
+import { decodeGame, encodeGame } from '../../../shared/storage/gameCodec';
+import { COMMON_PROPS } from '../../../shared/storage/properties';
+import { extractNotes, replaceNotesSection } from '../../../shared/storage/noteBody';
 import {
 	Game,
 	GameGroup,
@@ -27,10 +27,10 @@ import {
 	GAME_FINISHED_STATUS,
 	isReleaseDateFuture,
 	todayIso,
-} from './types';
-import { omit, sameJson, slugify, toRecord } from './storage/sharedHelpers';
-import { readRecord } from './storage/read';
-import { readGamesSettings } from './featureSettings';
+} from '../../../shared/domain/types';
+import { omit, sameJson, slugify, toRecord } from '../../../shared/storage/sharedHelpers';
+import { readRecord } from '../../../shared/storage/read';
+import { readGamesSettings } from '../../../shared/domain/featureSettings';
 
 const GAMES_FOLDER_PREFIX = 'Games/';
 

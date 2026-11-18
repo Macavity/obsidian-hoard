@@ -1,7 +1,7 @@
-import { AddTitleModal, type AddTitleModalDeps } from './AddTitleModal';
-import { AddReadingModal, type AddReadingModalDeps } from './AddReadingModal';
-import { AddGameModal, type AddGameModalDeps } from './AddGameModal';
-import { DraftChoiceModal, type DraftChoiceModalDeps } from './DraftChoiceModal';
+import { AddTitleModal, type AddTitleModalDeps } from '../modules/watchlist/ui/AddTitleModal';
+import { AddReadingModal, type AddReadingModalDeps } from '../modules/reading/ui/AddReadingModal';
+import { AddGameModal, type AddGameModalDeps } from '../modules/games/ui/AddGameModal';
+import { DraftChoiceModal, type DraftChoiceModalDeps } from '../modules/drafts/ui/DraftChoiceModal';
 
 export interface AddRouterDeps extends DraftChoiceModalDeps, AddTitleModalDeps, AddGameModalDeps, AddReadingModalDeps {
 	settings: AddTitleModalDeps['settings'];

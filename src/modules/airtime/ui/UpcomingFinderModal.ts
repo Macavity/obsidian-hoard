@@ -1,5 +1,5 @@
 import { App, FuzzySuggestModal } from 'obsidian';
-import { t } from './i18n';
+import { t } from '../../../shared/i18n';
 
 /** A unified finder entry spanning watchlist titles, reading items and games. */
 export interface UpcomingFinderItem {

@@ -1,4 +1,4 @@
-import type { RecommendedDaily, Season } from '../types';
+import type { RecommendedDaily, Season } from '../domain/types';
 import type { ApiCheckKind, ApiCheckResult, EntryCache, LocalData } from './storageTypes';
 import { defined, isRecord } from './sharedHelpers';
 import { at, readList, readRecord, readOneOf, readOptionalNumber, readOptionalString, readStringList } from './read';

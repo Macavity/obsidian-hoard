@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { WidgetRenderer } from '../../src/WidgetRenderer';
-import { CustomListsTab } from '../../src/CustomListsTab';
-import { DraftsTab } from '../../src/DraftsTab';
-import { InsertWidgetModal } from '../../src/InsertWidgetModal';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { WidgetRenderer } from '../../src/modules/widgets/ui/WidgetRenderer';
+import { CustomListsTab } from '../../src/modules/custom-lists/ui/CustomListsTab';
+import { DraftsTab } from '../../src/modules/drafts/ui/DraftsTab';
+import { InsertWidgetModal } from '../../src/modules/widgets/ui/InsertWidgetModal';
 import { El } from '../helpers/fakeEl';
 import { fakeSettings } from '../helpers/fakeSettings';
 

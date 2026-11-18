@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Modal, Notice } from './__mocks__/obsidian';
-import HoardPlugin from '../src/main';
-import { HoardView } from '../src/HoardView';
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/types';
+import HoardPlugin from '../src/app/main';
+import { HoardView } from '../src/app/HoardView';
+import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/shared/domain/types';
 
 const plugin = (props: Record<string, unknown>): HoardPlugin =>
 	Object.assign(Object.create(HoardPlugin.prototype) as HoardPlugin, props);

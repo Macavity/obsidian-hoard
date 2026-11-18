@@ -1,13 +1,13 @@
-import type { SettingsReader } from './SettingsService';
-import { t } from './i18n';
-import { typeLabel } from './i18n/labels';
-import type { MediaFields } from './ui/FormCells';
-import type { AnimeSearchResult, MediaSearchResult, Season } from './types';
-import { getApiGroupForType } from './types';
-import { animeResultIdKeys, mediaResultIdKeys } from './LibraryIndex';
-import { effectiveMediaSource, type MediaSource } from './apiSources';
-import { SEARCH_PAGE_SIZE, SEARCH_RESULT_LIMIT, type ApiService } from './ApiService';
-import { found, NOT_FOUND, type LookupResult } from './lookup';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import { t } from '../../../shared/i18n';
+import { typeLabel } from '../../../shared/i18n/labels';
+import type { MediaFields } from '../../../shared/ui/FormCells';
+import type { AnimeSearchResult, MediaSearchResult, Season } from '../../../shared/domain/types';
+import { getApiGroupForType } from '../../../shared/domain/types';
+import { animeResultIdKeys, mediaResultIdKeys } from '../../../shared/services/LibraryIndex';
+import { effectiveMediaSource, type MediaSource } from '../../../shared/api/apiSources';
+import { SEARCH_PAGE_SIZE, SEARCH_RESULT_LIMIT, type ApiService } from '../../../shared/api/ApiService';
+import { found, NOT_FOUND, type LookupResult } from '../../../shared/api/lookup';
 
 /** What searching and resolving a title pick reads. */
 export interface TitleSearchDeps {

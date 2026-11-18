@@ -2,13 +2,13 @@ import type { App } from 'obsidian';
 import type {
 	AirtimeEntry, DraftPersistState, GamesData, HoardGroup, HoardPluginSettings, HoardTitle, MaybeTitle,
 	ReadingData, RecommendedDaily, SavedFilterPreset,
-} from '../../types';
-import type { HistoryEntry } from '../../HistoryManager';
-import type { LocalStore } from '../../storage/LocalStore';
-import type { SharedConfigStore } from '../../storage/SharedConfigStore';
-import type { HistoryStore } from '../../storage/HistoryStore';
-import type { VaultLayout } from '../../storage/VaultLayout';
-import type { EntryKind, YamlIO } from '../../storage/storageTypes';
+} from '../../../../shared/domain/types';
+import type { HistoryEntry } from '../../../../shared/services/HistoryManager';
+import type { LocalStore } from '../../../../shared/storage/LocalStore';
+import type { SharedConfigStore } from '../../../../shared/storage/SharedConfigStore';
+import type { HistoryStore } from '../../../../shared/storage/HistoryStore';
+import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
+import type { EntryKind, YamlIO } from '../../../../shared/storage/storageTypes';
 import type { Progress } from './report';
 
 /** A title as WatchLog stored it; `manualPosterUrl` wins over `posterUrl`. */
@@ -65,5 +65,5 @@ export interface IdMaps {
 }
 
 export const WISHLIST = 'Wishlist';
-export { REMOVED_SETTINGS } from '../../settingsNormalize';
-export { isRecord } from '../../storage/sharedHelpers';
+export { REMOVED_SETTINGS } from '../../../../shared/domain/settingsNormalize';
+export { isRecord } from '../../../../shared/storage/sharedHelpers';

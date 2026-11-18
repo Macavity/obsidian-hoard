@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { GamesTab } from '../../src/GamesTab';
-import { GameDetailModal } from '../../src/GameDetailModal';
-import { defaultGamesSettings, DEFAULT_SETTINGS } from '../../src/types';
-import { ReadingManageColumnsModal } from '../../src/ReadingManageColumnsModal';
-import { ReadingTab } from '../../src/ReadingTab';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { GamesTab } from '../../src/modules/games/ui/GamesTab';
+import { GameDetailModal } from '../../src/modules/games/ui/GameDetailModal';
+import { defaultGamesSettings, DEFAULT_SETTINGS } from '../../src/shared/domain/types';
+import { ReadingManageColumnsModal } from '../../src/modules/reading/ui/ReadingManageColumnsModal';
+import { ReadingTab } from '../../src/modules/reading/ui/ReadingTab';
 import { El } from '../helpers/fakeEl';
 import { fakeSettings } from '../helpers/fakeSettings';
 

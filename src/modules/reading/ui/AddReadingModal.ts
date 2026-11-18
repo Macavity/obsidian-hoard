@@ -1,25 +1,25 @@
 import { App, FuzzySuggestModal, Modal, Notice, TFile } from 'obsidian';
-import type { SettingsReader } from './SettingsService';
-import type { ReadingDataManager } from './ReadingDataManager';
-import { newBook, newManga } from './entryFactories';
-import type { ApiService, BookSearchResult, MangaSearchResult } from './ApiService';
-import { apiErrorMessage } from './ApiService';
-import { renderSearchResultRow } from './SearchThumbnail';
-import { searchBooks, type BookSearchApi } from './coverRefresh';
-import { LibraryIndex, bookResultIdKeys, mangaResultIdKeys } from './LibraryIndex';
-import { renderStarRating } from './StarRating';
-import { createDatePicker } from './DatePicker';
-import { renderSegmentedToggle } from './StatusDropdown';
-import { t } from './i18n';
-import { readingStatusLabel } from './i18n/labels';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { ReadingDataManager } from '../services/ReadingDataManager';
+import { newBook, newManga } from '../../../shared/domain/entryFactories';
+import type { ApiService, BookSearchResult, MangaSearchResult } from '../../../shared/api/ApiService';
+import { apiErrorMessage } from '../../../shared/api/ApiService';
+import { renderSearchResultRow } from '../../../shared/ui/SearchThumbnail';
+import { searchBooks, type BookSearchApi } from '../../covers/services/coverRefresh';
+import { LibraryIndex, bookResultIdKeys, mangaResultIdKeys } from '../../../shared/services/LibraryIndex';
+import { renderStarRating } from '../../../shared/ui/StarRating';
+import { createDatePicker } from '../../../shared/ui/DatePicker';
+import { renderSegmentedToggle } from '../../../shared/ui/StatusDropdown';
+import { t } from '../../../shared/i18n';
+import { readingStatusLabel } from '../../../shared/i18n/labels';
 import {
 	Book,
 	BookProgressUnit,
 	Manga,
 	ReadingStatus,
 	SELECTABLE_READING_STATUSES,
-} from './types';
-import { markViewRoot } from './ui/detailFrame';
+} from '../../../shared/domain/types';
+import { markViewRoot } from '../../../shared/ui/detailFrame';
 
 export type ReadingMode = 'book' | 'manga';
 

@@ -1,5 +1,5 @@
-import { formatExternalId, parseExternalId } from '../../storage/externalId';
-import { AIRTIME_PROPS, COMMON_PROPS, GAME_PROPS, READING_PROPS, TITLE_PROPS } from '../../storage/properties';
+import { formatExternalId, parseExternalId } from '../../../../shared/storage/externalId';
+import { AIRTIME_PROPS, COMMON_PROPS, GAME_PROPS, READING_PROPS, TITLE_PROPS } from '../../../../shared/storage/properties';
 
 const C = COMMON_PROPS;
 const A = AIRTIME_PROPS;

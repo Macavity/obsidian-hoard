@@ -1,4 +1,4 @@
-import type { Season, DraftPersistState, SavedFilterPreset, RecommendedDaily } from '../types';
+import type { Season, DraftPersistState, SavedFilterPreset, RecommendedDaily } from '../domain/types';
 
 /** The four kinds of library entry, each backed by one note. */
 export type EntryKind = 'title' | 'book' | 'manga' | 'game';

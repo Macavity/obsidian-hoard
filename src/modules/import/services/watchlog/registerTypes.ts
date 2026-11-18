@@ -1,5 +1,5 @@
-import { DEFAULT_SETTINGS, type TagDefinition } from '../../types';
-import { at, readList, readOptionalString, readRecord, readString } from '../../storage/read';
+import { DEFAULT_SETTINGS, type TagDefinition } from '../../../../shared/domain/types';
+import { at, readList, readOptionalString, readRecord, readString } from '../../../../shared/storage/read';
 import type { ImportContext } from './schema1Types';
 
 const DEFAULT_COLOR = '#888780';

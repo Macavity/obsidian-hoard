@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { AddCreditModal } from '../src/AddCreditModal';
+import { AddCreditModal } from '../src/modules/watchlist/ui/AddCreditModal';
 import { fakeSettings } from './helpers/fakeSettings';
-import type { CreditsField, HoardTitle } from '../src/types';
+import type { CreditsField, HoardTitle } from '../src/shared/domain/types';
 
 const title = (over: Partial<HoardTitle>): HoardTitle => ({ id: 'x', title: 'X', ...over }) as HoardTitle;
 

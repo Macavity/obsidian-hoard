@@ -1,19 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GamesTab } from '../src/GamesTab';
-import { defaultGamesSettings, DEFAULT_SETTINGS, type Game, type GameGroup } from '../src/types';
-import { t } from '../src/i18n';
+import { GamesTab } from '../src/modules/games/ui/GamesTab';
+import { defaultGamesSettings, DEFAULT_SETTINGS, type Game, type GameGroup } from '../src/shared/domain/types';
+import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const groupModalOpened = vi.hoisted(() => vi.fn());
 
-vi.mock('../src/RowsCustomizeModal', () => ({
+vi.mock('../src/shared/ui/RowsCustomizeModal', () => ({
 	RowsCustomizeModal: class {
 		constructor(_deps: unknown, opts: unknown) { customizeOpts = opts as CustomizeOpts; }
 		open = vi.fn();
 	},
 }));
 
-vi.mock('../src/GameDetailModal', () => ({
+vi.mock('../src/modules/games/ui/GameDetailModal', () => ({
 	GameDetailModal: class { open = vi.fn(); },
 	GameGroupDetailModal: class { open = (): void => { groupModalOpened(); }; },
 	gameGroupProgress: () => 0,

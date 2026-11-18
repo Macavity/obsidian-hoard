@@ -1,5 +1,5 @@
-import type { HoardTitle } from '../../src/types';
-import type { EntryCache } from '../../src/storage/storageTypes';
+import type { HoardTitle } from '../../src/shared/domain/types';
+import type { EntryCache } from '../../src/shared/storage/storageTypes';
 
 /** A series with every optional field set. */
 export const fullTitle = (): HoardTitle => ({

@@ -13,8 +13,8 @@
  *   committed value is kept, so a typo can no longer write a non-ISO string into the data.
  */
 
-import { createIconButton } from './ui/IconButton';
-import { t } from './i18n';
+import { createIconButton } from './IconButton';
+import { t } from '../i18n';
 import {
 	dateFormatMask,
 	formatDateDisplay,
@@ -22,7 +22,7 @@ import {
 	parseDateInput,
 	parseReleaseDateInput,
 	todayIso,
-} from './types';
+} from '../domain/types';
 
 export interface DatePickerConfig {
 	/** Element the input is appended to. */

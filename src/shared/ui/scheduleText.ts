@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import { getActiveDateFormat, isoParts, type AirtimeSchedule } from '../types';
+import { getActiveDateFormat, isoParts, type AirtimeSchedule } from '../domain/types';
 import { dayName, monthShortName } from './dateNames';
 
 /** `25 Jul 2026` / `Jul 25, 2026` / `2026-07-25` by the date format setting; non-ISO input passes through. */
