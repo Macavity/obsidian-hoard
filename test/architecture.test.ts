@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { ESLint } from "eslint";
 import process from "node:process";
 
@@ -19,6 +19,11 @@ const errorsOf = async (code: string, filePath: string, rulePart: string) =>
 	(await lint(code, filePath)).filter((m) => m.ruleId?.includes(rulePart));
 
 describe("architecture lint rules", () => {
+	// The first lintText builds the TypeScript program for type-aware rules; on CI that exceeds the 5 s test timeout.
+	beforeAll(async () => {
+		await lint("export {};", UI_FILE);
+	}, 60_000);
+
 	it("rejects a UI file importing shared/storage", async () => {
 		const m = await errorsOf(`import { VaultStorage } from "../../../shared/storage/VaultStorage";\nexport const x = VaultStorage;`, UI_FILE, "no-restricted-imports");
 		expect(m).toHaveLength(1);
