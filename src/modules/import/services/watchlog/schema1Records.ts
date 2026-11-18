@@ -1,6 +1,6 @@
 import type { EntryAirtime } from '../../../../shared/domain/types';
 import type { HistoryEntry } from '../../../../shared/domain/types';
-import { toEntryAirtime } from '../../../watchlist/services/DataManager';
+import { toEntryAirtime } from '../../../../shared/domain/airtime';
 import { historyKey, type HistoryStore } from '../../../../shared/storage/HistoryStore';
 import { isoOf } from './schema1Normalize';
 import type { IdMaps, PreparedData, WatchLogData } from './schema1Types';

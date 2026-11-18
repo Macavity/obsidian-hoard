@@ -1,11 +1,11 @@
-import { READING_STATUSES } from '../../../shared/domain/types';
+import { READING_STATUSES } from '../domain/types';
 import type {
 	AirtimeRecurrence, Book, EntryAirtime, Game, GameGroup, HoardTitle, Manga, MaybeTitle, ReadingStatus, TitleOverrides,
-} from '../../../shared/domain/types';
-import { newBook, newGame, newManga, newTitle } from '../../../shared/domain/entryFactories';
-import { readSeason } from '../../../shared/storage/readCache';
-import { at, readList, readOptionalNumber, readOptionalString, readString, readStringList } from '../../../shared/domain/read';
-import { defined, isRecord } from '../../../shared/domain/sharedHelpers';
+} from '../domain/types';
+import { newBook, newGame, newManga, newTitle } from '../domain/entryFactories';
+import { readSeason } from './readCache';
+import { at, readList, readOptionalNumber, readOptionalString, readString, readStringList } from '../domain/read';
+import { defined, isRecord } from '../domain/sharedHelpers';
 
 /**
  * The entries of a backup, read field by field. An entry needs a text `id` and `title`; everything

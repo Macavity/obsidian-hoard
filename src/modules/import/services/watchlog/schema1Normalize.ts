@@ -4,7 +4,7 @@ import {
 import type {
 	Game, GamesData, GamesSettings, HoardTitle, ReadingData, ReadingCustomColumn, TagDefinition,
 } from '../../../../shared/domain/types';
-import { readBook, readGame, readGameGroup, readManga } from '../../../backup/services/backupEntries';
+import { readBook, readGame, readGameGroup, readManga } from '../../../../shared/storage/entryReaders';
 import { readGamesSettings, readReadingSettings } from '../../../../shared/domain/featureSettings';
 import { at, readList, readOneOf, readOptionalString, readRecord, readString, readStringList } from '../../../../shared/domain/read';
 import { defined } from '../../../../shared/domain/sharedHelpers';

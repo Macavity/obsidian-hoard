@@ -13,7 +13,7 @@ import { isRecord, toRecord } from '../../../shared/domain/sharedHelpers';
 import { at, readList, readRecord, readString } from '../../../shared/domain/read';
 import { normalizeSettings } from '../../../shared/domain/settingsNormalize';
 import { readColumns, readGamesSettings, readReadingSettings } from '../../../shared/domain/featureSettings';
-import { readBook, readGame, readGameGroup, readManga, readMaybe, readTitle } from './backupEntries';
+import { readBook, readGame, readGameGroup, readManga, readMaybe, readTitle } from '../../../shared/storage/entryReaders';
 
 export interface BackupManagers {
 	dataManager: DataManager;

@@ -2,6 +2,7 @@ import { App, TAbstractFile, TFile, stringifyYaml } from 'obsidian';
 import type { EventRef } from 'obsidian';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
+import { toEntryAirtime } from '../../../shared/domain/airtime';
 import type { DraftPersistState, Season, HoardTitle, HoardGroup, AirtimeEntry, AirtimeSchedule, EntryAirtime, MaybeTitle, RecommendedDaily, SavedFilterPreset, Book, Manga, Game } from '../../../shared/domain/types';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import { formatHistoryDate } from '../../../shared/services/HistoryManager';
@@ -67,19 +68,6 @@ const TITLE_KEYS: readonly string[] = [
 	...Object.values(TITLE_PROPS),
 	...AIRTIME_KEYS,
 ];
-
-/** The note-side schedule of an Upcoming entry; the 'once' date lives in the note's releaseDate. */
-export function toEntryAirtime(e: AirtimeEntry): EntryAirtime {
-	const s = e.schedule;
-	const a: EntryAirtime = { recurrence: s.recurrence };
-	const day = s.recurrence === 'weekly' ? s.dayOfWeek : s.recurrence === 'monthly' ? s.dayOfMonth : undefined;
-	if (day !== undefined) a.day = day;
-	if (s.releaseTime) a.time = s.releaseTime;
-	if (e.currentSeason !== undefined) a.season = e.currentSeason;
-	if (e.currentEpisode !== undefined) a.episode = e.currentEpisode;
-	if (e.lastAcknowledgedDate) a.acknowledged = e.lastAcknowledgedDate;
-	return a;
-}
 
 function scheduleOf(a: EntryAirtime, releaseDate: string | null): AirtimeSchedule {
 	const s: AirtimeSchedule = { recurrence: a.recurrence };

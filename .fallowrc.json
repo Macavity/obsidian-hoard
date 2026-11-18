@@ -287,9 +287,7 @@
           "shared-storage",
           "shared-domain",
           "shared-i18n",
-          "obsidian-mock",
-          "modules/backup",
-          "modules/watchlist"
+          "obsidian-mock"
         ]
       },
       {
@@ -332,7 +330,6 @@
           "modules/covers",
           "modules/custom-lists",
           "modules/games",
-          "modules/import",
           "modules/reading",
           "modules/watchlist"
         ]

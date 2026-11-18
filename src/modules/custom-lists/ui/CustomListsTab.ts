@@ -401,9 +401,6 @@ export class CustomListsTab implements TabInstance {
 	// generation counter guarding against stale renders
 	private renderGeneration = 0;
 
-	// per-list save queue preventing overlapping table + notes writes
-	private saveQueues: Map<string, Promise<void>> = new Map();
-
 	// kept for keyboard navigation (set at buildTable time)
 	private _countEl: HTMLElement | null = null;
 	private _tableContainer: HTMLElement | null = null;
@@ -473,14 +470,6 @@ export class CustomListsTab implements TabInstance {
 
 	addCleanup(fn: () => void): void {
 		this.activeCleanups.push(fn);
-	}
-
-	/** Serializes saves per list so notes + table writes don't overlap. */
-	saveSerialized(listName: string, saveFn: () => Promise<void>): Promise<void> {
-		const prev = this.saveQueues.get(listName) ?? Promise.resolve();
-		const next = prev.then(saveFn).catch((e) => console.error('[Hoard] custom-list save failed:', e));
-		this.saveQueues.set(listName, next);
-		return next;
 	}
 
 	async render(): Promise<void> {
