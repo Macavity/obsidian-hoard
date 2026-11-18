@@ -1,5 +1,5 @@
 import type { TabInstance } from '../../../shared/ui/TabInstance';
-import { App, Modal, Notice } from 'obsidian';
+import { App, Notice } from 'obsidian';
 import { t } from '../../../shared/i18n';
 import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
 import { monthName } from '../../../shared/ui/dateNames';
@@ -13,26 +13,18 @@ import type { ReadingDataManager } from '../../reading/services/ReadingDataManag
 import type { GameDataManager } from '../../games/services/GameDataManager';
 import type { HoardTitle, AirtimeEntry, AirtimeSchedule, MaybeTitle, Book, Manga, Game } from '../../../shared/domain/types';
 import { getThemedColor, getReadingTypeColor, getDisplayPoster, isReleaseDateFuture, formatDateDisplay, todayIso, toIsoDate, GAME_AUTO_STATUS } from '../../../shared/domain/types';
-import {
-	type ScheduleFormState,
-	RECURRENCE_OPTIONS,
-	buildScheduleFromState,
-	counterField,
-	initialScheduleState,
-	renderCounterRow,
-	renderScheduleModal,
-	resolveScheduleMode,
-} from '../../../shared/ui/ScheduleForm';
 import { rawgResizedCover } from '../../../shared/api/ApiService';
 import { VirtualGrid, computeGridMetrics, type GridMetrics } from '../../../shared/ui/VirtualGrid';
 import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
 import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
 import { openCardMenu } from '../../../shared/ui/PosterCard';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
-import { MaybeAddModal, type MaybeAddModalDeps } from './MaybeAddModal';
-import { ReadingScheduleModal, type ReadingScheduleModalDeps } from './ReadingScheduleModal';
-import { GameScheduleModal, type GameScheduleModalDeps } from './GameScheduleModal';
-import { UpcomingFinderModal, type UpcomingFinderItem, type UpcomingFinderModalDeps } from './UpcomingFinderModal';
+import { MaybeAddModal, type MaybeAddStore } from './MaybeAddModal';
+import { ReadingScheduleModal } from './ReadingScheduleModal';
+import { GameScheduleModal } from './GameScheduleModal';
+import { AirtimeScheduleModal } from './AirtimeScheduleModal';
+import { UpcomingFinderModal, type UpcomingFinderItem } from './UpcomingFinderModal';
+import type { TitleSearchApi } from '../../watchlist/ui/titleSearch';
 import { renderAddButton, renderSelectAllButton, renderViewDropdown } from '../../../shared/ui/TabToolbar';
 import { renderTypeBadge } from '../../../shared/ui/typeBadge';
 import { renderActionBar } from '../../../shared/ui/ActionBar';
@@ -266,13 +258,13 @@ function showTrackerCover(card: HTMLElement, img: HTMLImageElement, src: string)
 
 // AirtimeTab
 
-export interface AirtimeTabDeps
-	extends MaybeAddModalDeps, ReadingScheduleModalDeps, GameScheduleModalDeps, UpcomingFinderModalDeps, AirtimeScheduleModalDeps {
+export interface AirtimeTabDeps {
+	app: App;
 	settings: SettingsReader & SettingsWriter;
-	titles: DataManager;
+	titles: DataManager & MaybeAddStore;
 	reading: Pick<ReadingDataManager, 'getBook' | 'getManga' | 'getBooks' | 'getMangaList' | 'updateBook' | 'updateManga'>;
 	games: Pick<GameDataManager, 'getGame' | 'getGames' | 'getSettings' | 'updateGame'>;
-	api: MaybeAddModalDeps['api'] & Pick<ApiService, 'getAnimeScheduleByMalId'>;
+	api: TitleSearchApi & Pick<ApiService, 'getAnimeScheduleByMalId'>;
 	posters: Pick<PosterService, 'clearQueue' | 'enqueue'>;
 	getCardMinWidth: () => number;
 	isCardTextUnder: (tab: 'upcoming') => boolean;
@@ -585,7 +577,7 @@ export class AirtimeTab implements TabInstance {
 		const controls = headerEl.createDiv({ cls: 'hoard-toolbar__controls' });
 		const rightGroup = controls.createDiv({ cls: 'hoard-toolbar__controls-right' });
 		renderAddButton(rightGroup, () => {
-			new MaybeAddModal(this.deps, () => this.render()).open();
+			new MaybeAddModal(this.deps.app, this.deps.settings, this.deps.api, this.deps.titles, { onAdded: () => this.render() }).open();
 		});
 
 		if (maybeTitles.length === 0) {
@@ -813,7 +805,7 @@ export class AirtimeTab implements TabInstance {
 			return;
 		}
 
-		new UpcomingFinderModal(this.deps, items, (item) => {
+		new UpcomingFinderModal(this.deps.app, { items, onSelect: (item) => {
 			if (item.source === 'reading') {
 				const kind = item.kind ?? 'book';
 				const readItem = kind === 'book'
@@ -827,7 +819,7 @@ export class AirtimeTab implements TabInstance {
 				const title = this.deps.titles.getTitle(item.id);
 				if (title) void this.startAddWithTitle(title);
 			}
-		}).open();
+		} }).open();
 	}
 
 	private startAddWithGame(game: Game): void {
@@ -836,7 +828,7 @@ export class AirtimeTab implements TabInstance {
 				? { recurrence: 'once', releaseDate: game.releaseDate }
 				: null;
 
-		new GameScheduleModal(this.deps, game, prefilled, async (schedule) => {
+		new GameScheduleModal(this.deps.app, { game, existingSchedule: prefilled, onSave: async (schedule) => {
 			const entry: AirtimeEntry = {
 				id: this.deps.titles.generateGameAirtimeId(game.id),
 				titleId: game.id,
@@ -847,7 +839,7 @@ export class AirtimeTab implements TabInstance {
 			await this.deps.titles.addAirtimeEntry(entry);
 			await this.syncGameFromSchedule(game.id, schedule);
 			this.render();
-		}).open();
+		} }).open();
 	}
 
 	/**
@@ -872,16 +864,15 @@ export class AirtimeTab implements TabInstance {
 				? { recurrence: 'once', releaseDate: item.releaseDate }
 				: null;
 
-		new ReadingScheduleModal(
-			this.deps,
+		new ReadingScheduleModal(this.deps.app, {
 			item,
 			kind,
-			prefilled,
-			null,
-			null,
-			null,
-			null,
-			async (schedule, volume, chapter, totalVolumes, totalChapters) => {
+			existingSchedule: prefilled,
+			currentVolume: null,
+			currentChapter: null,
+			totalVolumes: null,
+			totalChapters: null,
+			onSave: async (schedule, volume, chapter, totalVolumes, totalChapters) => {
 				const entry: AirtimeEntry = {
 					id: this.deps.titles.generateReadingAirtimeId(item.id),
 					titleId: item.id,
@@ -898,7 +889,7 @@ export class AirtimeTab implements TabInstance {
 				await this.syncReadingItemFromSchedule(item.id, kind, schedule, totalVolumes, totalChapters);
 				this.render();
 			},
-		).open();
+		}).open();
 	}
 
 	/** Pushes schedule-derived totals / release date back onto the reading item. */
@@ -999,15 +990,14 @@ export class AirtimeTab implements TabInstance {
 			prefilled = { recurrence: 'once', releaseDate: title.releaseDate };
 		}
 
-		new AirtimeScheduleModal(
-			this.deps,
+		new AirtimeScheduleModal(this.deps.app, {
 			title,
-			prefilled,
-			null,
-			null,
-			null,
-			null,
-			async (schedule, season, episode, totalSeasons, totalEpisodes) => {
+			existingSchedule: prefilled,
+			currentSeason: null,
+			currentEpisode: null,
+			totalSeasons: null,
+			totalEpisodes: null,
+			onSave: async (schedule, season, episode, totalSeasons, totalEpisodes) => {
 				const entry: AirtimeEntry = {
 					id: this.deps.titles.generateAirtimeId(title.id),
 					titleId: title.id,
@@ -1024,7 +1014,7 @@ export class AirtimeTab implements TabInstance {
 
 				this.render();
 			},
-		).open();
+		}).open();
 	}
 
 	// Card list
@@ -1576,15 +1566,14 @@ export class AirtimeTab implements TabInstance {
 	private openEditWatchSchedule(entry: AirtimeEntry, initialMode?: 'single' | 'recurring'): void {
 		const title = this.deps.titles.getTitle(entry.titleId);
 		if (!title) return;
-		new AirtimeScheduleModal(
-			this.deps,
+		new AirtimeScheduleModal(this.deps.app, {
 			title,
-			{ ...entry.schedule },
-			entry.currentSeason ?? null,
-			entry.currentEpisode ?? null,
-			entry.totalSeasons ?? null,
-			entry.totalEpisodes ?? null,
-			async (schedule, season, episode, totalSeasons, totalEpisodes) => {
+			existingSchedule: { ...entry.schedule },
+			currentSeason: entry.currentSeason ?? null,
+			currentEpisode: entry.currentEpisode ?? null,
+			totalSeasons: entry.totalSeasons ?? null,
+			totalEpisodes: entry.totalEpisodes ?? null,
+			onSave: async (schedule, season, episode, totalSeasons, totalEpisodes) => {
 				entry.schedule = schedule;
 				entry.currentSeason = season ?? undefined;
 				entry.currentEpisode = episode ?? undefined;
@@ -1597,18 +1586,18 @@ export class AirtimeTab implements TabInstance {
 				this.render();
 			},
 			initialMode,
-		).open();
+		}).open();
 	}
 
 	private openEditGameSchedule(entry: AirtimeEntry): void {
 		const game = this.deps.games.getGame(entry.titleId);
 		if (!game) return;
-		new GameScheduleModal(this.deps, game, { ...entry.schedule }, async (schedule) => {
+		new GameScheduleModal(this.deps.app, { game, existingSchedule: { ...entry.schedule }, onSave: async (schedule) => {
 			entry.schedule = schedule;
 			await this.deps.titles.updateAirtimeEntry(entry);
 			await this.syncGameFromSchedule(entry.titleId, schedule);
 			this.render();
-		}).open();
+		} }).open();
 	}
 
 	private openEditReadingSchedule(entry: AirtimeEntry, initialMode?: 'single' | 'recurring'): void {
@@ -1616,16 +1605,15 @@ export class AirtimeTab implements TabInstance {
 		const item: Book | Manga | undefined =
 			kind === 'book' ? this.deps.reading.getBook(entry.titleId) : this.deps.reading.getManga(entry.titleId);
 		if (!item) return;
-		new ReadingScheduleModal(
-			this.deps,
+		new ReadingScheduleModal(this.deps.app, {
 			item,
 			kind,
-			{ ...entry.schedule },
-			entry.currentSeason ?? null,   // volume
-			entry.currentEpisode ?? null,  // chapter
-			entry.totalSeasons ?? null,    // total volumes
-			entry.totalEpisodes ?? null,   // total chapters
-			async (schedule, volume, chapter, totalVolumes, totalChapters) => {
+			existingSchedule: { ...entry.schedule },
+			currentVolume: entry.currentSeason ?? null,
+			currentChapter: entry.currentEpisode ?? null,
+			totalVolumes: entry.totalSeasons ?? null,
+			totalChapters: entry.totalEpisodes ?? null,
+			onSave: async (schedule, volume, chapter, totalVolumes, totalChapters) => {
 				entry.schedule = schedule;
 				entry.currentSeason = volume ?? undefined;
 				entry.currentEpisode = chapter ?? undefined;
@@ -1636,142 +1624,6 @@ export class AirtimeTab implements TabInstance {
 				this.render();
 			},
 			initialMode,
-		).open();
-	}
-}
-
-// AirtimeScheduleModal
-
-/** Without a schedule the title's shape only picks the DEFAULT mode; the toggle makes it overridable. */
-function defaultScheduleMode(title: HoardTitle): 'single' | 'recurring' {
-	return title.totalEpisodes <= 1 ? 'single' : 'recurring';
-}
-
-export interface AirtimeScheduleModalDeps {
-	app: App;
-}
-
-class AirtimeScheduleModal extends Modal {
-	private title: HoardTitle;
-	// UI state — Save assembles a fresh AirtimeSchedule from the fields the active mode/recurrence
-	// actually shows (buildSchedule), so a value left over from another mode can never leak in
-	// releaseDate is YYYY-MM-DD ('' = unset) — same format the Watchlist/Reading auto-import writes;
-	// releaseTime is HH:MM ('' = unset), local time
-	private form: ScheduleFormState;
-	private currentSeason: number | null;
-	private currentEpisode: number | null;
-	private totalSeasons: number | null;
-	private totalEpisodes: number | null;
-	private onSave: (
-		schedule: AirtimeSchedule,
-		season: number | null,
-		episode: number | null,
-		totalSeasons: number | null,
-		totalEpisodes: number | null,
-	) => Promise<void>;
-
-	constructor(
-		deps: AirtimeScheduleModalDeps,
-		title: HoardTitle,
-		existingSchedule: AirtimeSchedule | null,
-		currentSeason: number | null,
-		currentEpisode: number | null,
-		totalSeasons: number | null,
-		totalEpisodes: number | null,
-		onSave: (
-			schedule: AirtimeSchedule,
-			season: number | null,
-			episode: number | null,
-			totalSeasons: number | null,
-			totalEpisodes: number | null,
-		) => Promise<void>,
-		initialMode?: 'single' | 'recurring',
-	) {
-		super(deps.app);
-		this.title = title;
-		this.onSave = onSave;
-		this.form = initialScheduleState(
-			existingSchedule,
-			title.releaseDate,
-			resolveScheduleMode(existingSchedule, initialMode, defaultScheduleMode(title)),
-		);
-		this.currentSeason = currentSeason;
-		this.currentEpisode = currentEpisode;
-		this.totalSeasons = totalSeasons ?? (title.seasons.length > 0 ? title.seasons.length : null);
-		this.totalEpisodes = totalEpisodes ?? (title.totalEpisodes > 0 ? title.totalEpisodes : null);
-	}
-
-	onOpen(): void {
-		this.titleEl.setText(t('airtime.modal.title'));
-		this.contentEl.addClass('hoard-add-modal');
-		this.renderForm();
-	}
-
-	onClose(): void {
-		this.contentEl.empty();
-	}
-
-	/**
-	 * Local HH:MM → its JST (UTC+9) equivalent, accounting for the local offset so DST is handled.
-	 * Display only — the schedule stores the local time as entered.
-	 */
-	private localHHMMtoJST(localHHMM: string): string {
-		if (!localHHMM || !/^\d{2}:\d{2}$/.test(localHHMM)) return '—';
-		const [hStr, mStr] = localHHMM.split(':');
-		const h = parseInt(hStr ?? '0', 10);
-		const m = parseInt(mStr ?? '0', 10);
-		// a Date for today at the given local time
-		const now = new Date();
-		const local = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
-		// .getTime() is UTC epoch; add 9h for JST
-		const jstMs = local.getTime() + 9 * 60 * 60 * 1000;
-		const jst = new Date(jstMs);
-		// format in UTC — the JST offset is already added
-		const jh = jst.getUTCHours().toString().padStart(2, '0');
-		const jm = jst.getUTCMinutes().toString().padStart(2, '0');
-		return `${jh}:${jm}`;
-	}
-
-	/** Progress: one compact row — Season [2] of [3] · Episode [7] of [13]. */
-	private renderCounters(parent: HTMLElement): void {
-		renderCounterRow(parent, [
-			{
-				label: t('airtime.modal.season'),
-				current: counterField(t('airtime.modal.currentSeason'), this.currentSeason, (v) => { this.currentSeason = v; }, 1),
-				total: counterField(t('airtime.modal.totalSeasons'), this.totalSeasons, (v) => { this.totalSeasons = v; }, 1),
-			},
-			{
-				label: t('airtime.modal.episode'),
-				current: counterField(t('airtime.modal.nextEpisode'), this.currentEpisode, (v) => { this.currentEpisode = v; }, 1),
-				total: counterField(t('airtime.modal.totalEpisodes'), this.totalEpisodes, (v) => { this.totalEpisodes = v; }),
-			},
-		]);
-	}
-
-	private renderForm(): void {
-		renderScheduleModal(this.contentEl, this.form, {
-			withTime: true,
-			withRecurring: true,
-			recurrenceLabel: t('airtime.modal.airs'),
-			recurrenceOptions: RECURRENCE_OPTIONS,
-			modeLabels: [t('ui.schedule.single'), t('airtime.modal.recurringEpisodes')],
-			hint: (mode) => mode === 'single'
-				? t('airtime.modal.hintSingle')
-				: t('airtime.modal.hintRecurring'),
-			timeNote: (time) => time
-				? t('airtime.modal.timeNote', { time: this.localHHMMtoJST(time) })
-				: t('airtime.modal.timeNoteEmpty'),
-			renderCounters: (parent) => this.renderCounters(parent),
-			modal: this,
-			onSave: async () => {
-				await this.onSave(
-					buildScheduleFromState(this.form, true),
-					this.currentSeason,
-					this.currentEpisode,
-					this.totalSeasons,
-					this.totalEpisodes,
-				);
-			},
-		});
+		}).open();
 	}
 }

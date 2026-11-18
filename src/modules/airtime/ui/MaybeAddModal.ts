@@ -1,4 +1,5 @@
 import { App, Notice } from 'obsidian';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
 import { t } from '../../../shared/i18n';
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { MaybeTitle } from '../../../shared/domain/types';
@@ -14,33 +15,36 @@ import {
 	resolvePick,
 	searchTitles,
 	titlePickerBase,
-	type TitleSearchDeps,
+	type TitleSearchApi,
 	type TitleSearchResult,
 } from '../../watchlist/ui/titleSearch';
 import { SearchFormModal, type SearchPickerOptions } from '../../../shared/ui/SearchFormModal';
 
-export interface MaybeAddModalDeps extends TitleSearchDeps {
-	app: App;
-	titles: Pick<DataManager, 'generateMaybeId' | 'addMaybeTitle'>;
+export type MaybeAddStore = Pick<DataManager, 'generateMaybeId' | 'addMaybeTitle'>;
+
+export interface MaybeAddOptions {
+	onAdded: () => void;
 }
 
-export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
-	private onAdded: () => void;
+export type OpenMaybeAdd = (opts: MaybeAddOptions) => void;
 
+export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 	private selectedType = 'Anime';
 
 	private media: MediaFields = { title: '', episodes: 0, duration: 0, releaseDate: '', link: '' };
 
 	constructor(
-		private deps: MaybeAddModalDeps,
-		onAdded: () => void,
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly api: TitleSearchApi,
+		private readonly titles: MaybeAddStore,
+		private readonly opts: MaybeAddOptions,
 	) {
-		super(deps.app, t('misc.maybeAdd.title'), ['hoard-add-modal']);
-		this.onAdded = onAdded;
+		super(app, t('misc.maybeAdd.title'), ['hoard-add-modal']);
 	}
 
 	protected pickerOptions(): SearchPickerOptions<TitleSearchResult> {
-		return titlePickerBase(this.deps, this.selectedType, (v) => {
+		return titlePickerBase(this.settings, this.selectedType, (v) => {
 			this.selectedType = v;
 			this.renderForm();
 		});
@@ -51,7 +55,7 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 	}
 
 	protected async search(query: string, year: string): Promise<TitleSearchResult[]> {
-		const found = await searchTitles(this.deps, this.selectedType, query, year);
+		const found = await searchTitles(this.settings, this.api, this.selectedType, query, year);
 		if (found) return found;
 		new Notice(t('misc.maybeAdd.noApi', { type: this.selectedType }));
 		return [];
@@ -66,7 +70,7 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 	}
 
 	protected async selectResult(result: TitleSearchResult, isCurrent: () => boolean): Promise<void> {
-		if (await resolvePick(this.deps, result, isCurrent, (pick) => fillMediaFields(this.media, pick))) this.renderForm();
+		if (await resolvePick(this.settings, this.api, result, isCurrent, (pick) => fillMediaFields(this.media, pick))) this.renderForm();
 	}
 
 	protected renderForm(): void {
@@ -84,7 +88,7 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 		if (!titleName) { new Notice(t('misc.maybeAdd.titleRequired')); return; }
 
 		const entry: MaybeTitle = {
-			id: this.deps.titles.generateMaybeId(titleName),
+			id: this.titles.generateMaybeId(titleName),
 			title: titleName,
 			type: this.selectedType,
 			releaseDate: this.media.releaseDate || null,
@@ -93,9 +97,9 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 			episodeDuration: this.media.duration,
 			dateAdded: new Date().toISOString(),
 		};
-		await this.deps.titles.addMaybeTitle(entry);
+		await this.titles.addMaybeTitle(entry);
 		new Notice(t('misc.maybeAdd.added', { title: titleName }));
 		this.close();
-		this.onAdded();
+		this.opts.onAdded();
 	}
 }

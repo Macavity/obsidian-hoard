@@ -4,9 +4,13 @@ import { renderChoiceGrid } from '../../../shared/ui/choiceGrid';
 
 export type DraftAddChoice = 'watchlist' | 'book' | 'manga' | 'game';
 
-export interface DraftChoiceModalDeps {
-	app: App;
+export interface DraftChoiceOptions {
+	draftText: string;
+	onChoice: (choice: DraftAddChoice) => void;
+	heading?: string;
 }
+
+export type OpenDraftChoice = (opts: DraftChoiceOptions) => void;
 
 /**
  * Choice modal shown when adding a draft: four inline options (Watchlist / Book / Manga / Game),
@@ -14,12 +18,10 @@ export interface DraftChoiceModalDeps {
  */
 export class DraftChoiceModal extends Modal {
 	constructor(
-		deps: DraftChoiceModalDeps,
-		private draftText: string,
-		private onChoice: (choice: DraftAddChoice) => void,
-		private heading = t('misc.draftChoice.heading'),
+		app: App,
+		private readonly opts: DraftChoiceOptions,
 	) {
-		super(deps.app);
+		super(app);
 	}
 
 	onOpen(): void {
@@ -27,8 +29,8 @@ export class DraftChoiceModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass('hoard-draft-choice');
 
-		this.titleEl.setText(this.heading);
-		contentEl.createDiv({ cls: 'hoard-draft-choice__subtitle', text: this.draftText });
+		this.titleEl.setText(this.opts.heading ?? t('misc.draftChoice.heading'));
+		contentEl.createDiv({ cls: 'hoard-draft-choice__subtitle', text: this.opts.draftText });
 
 		renderChoiceGrid<DraftAddChoice>(
 			contentEl,
@@ -40,7 +42,7 @@ export class DraftChoiceModal extends Modal {
 			],
 			(choice) => {
 				this.close();
-				this.onChoice(choice);
+				this.opts.onChoice(choice);
 			},
 		);
 	}

@@ -49,7 +49,7 @@ function setup(opts: Opts = {}) {
 		applySteamSync: (u: SteamSyncUpdate[]) => { updates.push(...u); return Promise.resolve(u.length); },
 		addGame: (g: Game) => { added.push(g); return Promise.resolve(); },
 	};
-	const modal = new SteamSyncModal({ app: {}, ...plugin, games: gameData } as never);
+	const modal = new SteamSyncModal({} as never, plugin.settings as never, gameData as never, plugin.api as never);
 	return { modal, updates, added };
 }
 

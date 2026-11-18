@@ -4,7 +4,7 @@ import { ReadingTab } from '../src/modules/reading/ui/ReadingTab';
 import { READING_STATUSES, type Book, type Manga } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
 
-vi.mock('../src/shared/ui/ConfirmModal', () => ({ ConfirmModal: class { constructor(_a: unknown, _m: string, public onConfirm: () => void) {} open(): void { this.onConfirm(); } } }));
+vi.mock('../src/shared/ui/ConfirmModal', () => ({ ConfirmModal: class { constructor(_a: unknown, _m: string, public onConfirm: () => void) {} open(): void { this.onConfirm(); } }, confirmWith: () => () => {} }));
 vi.mock('../src/modules/reading/ui/ReadingManageColumnsModal', () => ({ ReadingManageColumnsModal: class { open(): void {} } }));
 
 interface Api {

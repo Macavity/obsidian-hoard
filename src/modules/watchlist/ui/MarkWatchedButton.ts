@@ -4,7 +4,7 @@ import { todayIso } from '../../../shared/domain/types';
 import { t } from '../../../shared/i18n';
 
 /** What the button reads and writes. */
-export type MarkWatchedDeps = Pick<DataManager, 'getTitle' | 'updateTitle' | 'markEpisodeWatched'>;
+export type MarkWatchedStore = Pick<DataManager, 'getTitle' | 'updateTitle' | 'markEpisodeWatched'>;
 
 /**
  * True for titles with exactly one thing to tick, where the episode grid would render a lone "1"
@@ -29,7 +29,7 @@ export function isSingleEpisodeTitle(title: HoardTitle): boolean {
  * @param onChanged Fired after the write lands, before the button repaints.
  */
 export function appendMarkWatchedButton(
-	titles: MarkWatchedDeps,
+	titles: MarkWatchedStore,
 	parent: HTMLElement,
 	titleId: string,
 	onChanged: () => void,
@@ -76,7 +76,7 @@ export function appendMarkWatchedButton(
  * common path stays a single save.
  */
 async function finalizeWatchedState(
-	titles: MarkWatchedDeps,
+	titles: MarkWatchedStore,
 	titleId: string,
 	watched: boolean,
 ): Promise<void> {

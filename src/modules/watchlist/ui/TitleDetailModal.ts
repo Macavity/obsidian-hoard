@@ -7,15 +7,15 @@ import type { HoardTitle, HoardGroup, Season, TagDefinition, CreditsField } from
 import { formatTime, todayIso, getThemedColor, getDisplayPoster, getDisplayTrailer, getApiGroupForType, getTitleCredits, getManualCredits, isCreditsUnfetched, CREDITS_INLINE_LIMIT, STUDIO_INLINE_LIMIT } from '../../../shared/domain/types';
 import { createDatePicker } from '../../../shared/ui/DatePicker';
 import type { DatePickerHandle } from '../../../shared/ui/DatePicker';
-import { AddCreditModal, type AddCreditModalDeps } from './AddCreditModal';
+import { AddCreditModal } from './AddCreditModal';
 import { appendNoteLinkButton } from '../../../shared/ui/NoteLinkButton';
 import { appendMarkWatchedButton, isSingleEpisodeTitle } from './MarkWatchedButton';
-import { EditTitleModal, type EditTitleModalDeps } from './EditTitleModal';
+import { EditTitleModal } from './EditTitleModal';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
-import { renderCommunityRating, maybeAutoRefreshCommunityRating, type CommunityRatingDeps } from './CommunityRating';
+import { renderCommunityRating, maybeAutoRefreshCommunityRating, type CommunityRatingApi } from './CommunityRating';
 import { renderTagPill } from '../../../shared/ui/StatusDropdown';
 import { renderStarRating } from '../../../shared/ui/StarRating';
-import { CollectionModal, resolveCollection, countMissing, type CollectionModalDeps } from './CollectionModal';
+import { CollectionModal, resolveCollection, countMissing, type CollectionApi } from './CollectionModal';
 import { pinModalFooter } from '../../../shared/ui/StickyModal';
 import { createSeasonHeader, renderEpisodeGrid } from '../../../shared/ui/EpisodeGrid';
 import type { TmdbCollectionDetail } from '../../../shared/domain/types';
@@ -39,23 +39,17 @@ const creditsBackfillInFlight = new Set<string>();
 const studioBackfillInFlight = new Set<string>();
 const trailerBackfillInFlight = new Set<string>();
 
-/** What the credits refresh button reads and writes. */
-export interface RefreshCreditsDeps {
-	settings: SettingsReader;
-	titles: Pick<DataManager, 'getTitle' | 'updateCredits' | 'recordLookup'>;
-	api: Pick<ApiService, 'fetchCredits' | 'hasOmdbKey' | 'hasTmdbKey'>;
-}
+/** The title store the credits refresh button reads and writes. */
+export type RefreshCreditsStore = Pick<DataManager, 'getTitle' | 'updateCredits' | 'recordLookup'>;
+/** The API methods the credits refresh button calls. */
+export type RefreshCreditsApi = Pick<ApiService, 'fetchCredits' | 'hasOmdbKey' | 'hasTmdbKey'>;
 
-/**
- * The detail modal drives most of the manager, so it takes the whole `DataManager`; the collaborators
- * it opens contribute their own deps (see their interfaces).
- */
-export interface TitleDetailModalDeps
-	extends AddCreditModalDeps, EditTitleModalDeps, CollectionModalDeps, CommunityRatingDeps, RefreshCreditsDeps {
+/** The detail modal drives most of the manager, so it takes the whole `DataManager`. */
+export interface TitleDetailModalDeps {
 	app: App;
 	settings: SettingsReader;
 	titles: DataManager;
-	api: CollectionModalDeps['api'] & CommunityRatingDeps['api'] & RefreshCreditsDeps['api']
+	api: CollectionApi & CommunityRatingApi & RefreshCreditsApi
 		& Pick<ApiService, 'fetchTrailer' | 'fetchStudio'>;
 	posters: Pick<PosterService, 'enqueue'>;
 }
@@ -332,10 +326,14 @@ export class TitleDetailModal extends Modal {
 	}
 
 	private openAddCredits(field: CreditsField): void {
-		new AddCreditModal(this.deps, this.title, field, () => {
-			this.markChanged();
-			this.refreshTitle();
-			this.renderCreditsSection();
+		new AddCreditModal(this.deps.app, this.deps.settings, this.deps.titles, {
+			title: this.title,
+			field,
+			onSaved: () => {
+				this.markChanged();
+				this.refreshTitle();
+				this.renderCreditsSection();
+			},
 		}).open();
 	}
 
@@ -350,7 +348,7 @@ export class TitleDetailModal extends Modal {
 	}
 
 	private renderCreditsRefreshButton(parent: HTMLElement): void {
-		renderCreditsRefreshButton(parent, this.deps, this.title, (changed) => {
+		renderCreditsRefreshButton(parent, this.deps.titles, this.deps.settings, this.deps.api, this.title, (changed) => {
 			if (changed) this.markChanged();
 			this.refreshTitle();
 			this.renderCreditsSection();
@@ -715,14 +713,14 @@ export class TitleDetailModal extends Modal {
 					toRemove.parentNode?.removeChild(toRemove);
 				}
 			}
-			renderCommunityRating(commHost, this.deps, this.title.id, rerenderCommunity);
+			renderCommunityRating(commHost, this.deps.titles, this.deps.settings, this.deps.api, this.title.id, rerenderCommunity);
 			this.renderTrailerControl(commHost);
 			this.refreshTitle();
 		};
-		renderCommunityRating(commHost, this.deps, this.title.id, rerenderCommunity);
+		renderCommunityRating(commHost, this.deps.titles, this.deps.settings, this.deps.api, this.title.id, rerenderCommunity);
 		// trailer at the tail of the row: rating badge → refresh → YouTube
 		this.renderTrailerControl(commHost);
-		maybeAutoRefreshCommunityRating(this.deps, this.title.id, rerenderCommunity);
+		maybeAutoRefreshCommunityRating(this.deps.titles, this.deps.settings, this.deps.api, this.title.id, rerenderCommunity);
 	}
 
 	/** Appends the trailer control (its own container) to the rating row. */
@@ -1073,8 +1071,11 @@ export class TitleDetailModal extends Modal {
 			const current = this.deps.titles.getTitle(this.title.id);
 			if (!current) return;
 			this.close();
-			new EditTitleModal(this.deps, current, () => {
-				if (this.onChanged) this.onChanged();
+			new EditTitleModal(this.deps.app, this.deps.settings, this.deps.titles, {
+				title: current,
+				onSaved: () => {
+					if (this.onChanged) this.onChanged();
+				},
 			}).open();
 		});
 	}
@@ -1083,7 +1084,7 @@ export class TitleDetailModal extends Modal {
 	private async maybeRenderCollectionButton(host: HTMLElement): Promise<void> {
 		let collection: TmdbCollectionDetail | null = null;
 		try {
-			collection = await resolveCollection(this.deps, this.title);
+			collection = await resolveCollection(this.deps.settings, this.deps.titles, this.deps.api, this.title);
 		} catch {
 			return;
 		}
@@ -1120,11 +1121,10 @@ export class TitleDetailModal extends Modal {
 		btn.setAttr('aria-label', label);
 
 		btn.addEventListener('click', () => {
-			new CollectionModal(
-				this.deps,
+			new CollectionModal(this.deps.app, this.deps.settings, this.deps.titles, this.deps.api, {
 				collection,
-				this.title.type,
-				(title) => {
+				movieType: this.title.type,
+				onOpenTitle: (title) => {
 					this.close();
 					new TitleDetailModal(
 						this.deps,
@@ -1135,12 +1135,12 @@ export class TitleDetailModal extends Modal {
 						this.onPersonClick,
 					).open();
 				},
-				() => {
+				onChanged: () => {
 					this.markChanged();
 					// this modal stays open behind — keep the count honest
 					if (host.isConnected) this.paintCollectionButton(host, collection);
 				},
-			).open();
+			}).open();
 		});
 	}
 }
@@ -1157,7 +1157,9 @@ const creditsRefreshInFlight = new Set<string>();
  */
 export function renderCreditsRefreshButton(
 	parent: HTMLElement,
-	deps: RefreshCreditsDeps,
+	titles: RefreshCreditsStore,
+	settings: SettingsReader,
+	api: RefreshCreditsApi,
 	title: HoardTitle,
 	onDone: (changed: boolean) => void,
 ): void {
@@ -1175,16 +1177,16 @@ export function renderCreditsRefreshButton(
 		void (async () => {
 			let changed = false;
 			try {
-				const t = deps.titles.getTitle(title.id) ?? title;
-				const result = await deps.api.fetchCredits(
+				const t = titles.getTitle(title.id) ?? title;
+				const result = await api.fetchCredits(
 					t,
-					effectiveMediaSource(deps.settings.get(), deps.api),
+					effectiveMediaSource(settings.get(), api),
 				);
 				if (result.status === 'found') {
-					await deps.titles.updateCredits(t.id, result.value.director, result.value.cast);
+					await titles.updateCredits(t.id, result.value.director, result.value.cast);
 					changed = true;
 				} else {
-					deps.titles.recordLookup(t.id, 'credits', result);
+					titles.recordLookup(t.id, 'credits', result);
 				}
 			} catch {
 				// persistence failed — stored fields stay as they were
@@ -1382,14 +1384,13 @@ export class GroupDetailModal extends Modal {
 				},
 				onEdit: () => {
 					this.close();
-					new EditTitleModal(
-						this.deps,
-						m,
-						() => {
+					new EditTitleModal(this.deps.app, this.deps.settings, this.deps.titles, {
+						title: m,
+						onSaved: () => {
 							this.changed = true;
 							if (this.onChanged) this.onChanged();
 						},
-					).open();
+					}).open();
 				},
 			});
 			grid.appendChild(card);

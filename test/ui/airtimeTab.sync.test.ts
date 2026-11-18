@@ -31,7 +31,7 @@ describe('startAddWithReading', () => {
 		const b = book();
 		const { tab, calls } = makeTab(newWorld({ books: [b] }));
 		(tab as unknown as { startAddWithReading: (i: Book, k: 'book') => void }).startAddWithReading(b, 'book');
-		const onSave = cap.readingModals.at(-1)!.at(-1) as (...a: unknown[]) => Promise<void>;
+		const onSave = (cap.readingModals.at(-1)![1] as { onSave: (...a: unknown[]) => Promise<void> }).onSave;
 		await onSave(once(isoOffset(3)), null, null, null, 12);
 		expect(calls.filter((c) => c.startsWith('addAirtimeEntry'))).toHaveLength(1);
 		expect(b.totalChapters).toBe(12);
@@ -177,7 +177,7 @@ describe('edit reading schedule save', () => {
 		const e = entry({ titleId: 'b1', source: 'reading', readingKind: 'book' });
 		const { tab, calls } = makeTab(newWorld({ books: [b], entries: [e] }));
 		(tab as unknown as { openEditReadingSchedule: (e: unknown) => void }).openEditReadingSchedule(e);
-		const save = cap.readingModals[0]![8] as (...a: unknown[]) => Promise<void>;
+		const save = (cap.readingModals[0]![1] as { onSave: (...a: unknown[]) => Promise<void> }).onSave;
 		await save(once(isoOffset(6)), 2, 7, null, 55);
 		expect(e.currentEpisode).toBe(7);
 		expect(b.totalChapters).toBe(55);

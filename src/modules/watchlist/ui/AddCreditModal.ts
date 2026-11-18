@@ -16,6 +16,16 @@ interface CreditSuggestion {
 
 const MAX_SUGGESTIONS = 12;
 
+export type AddCreditStore = Pick<DataManager, 'getTitles' | 'updateManualCredits'>;
+
+export interface AddCreditOptions {
+	title: HoardTitle;
+	field: CreditsField;
+	onSaved: () => void;
+}
+
+export type OpenAddCredit = (opts: AddCreditOptions) => void;
+
 /**
  * Adds missing directors / cast to a title by hand — the `+` on either credits row opens this.
  *
@@ -28,17 +38,7 @@ const MAX_SUGGESTIONS = 12;
  * The staged list starts with the title's current manual entries, so the same modal removes them:
  * the commit replaces the whole manual array. Fetched credits are never touched here.
  */
-export interface AddCreditModalDeps {
-	app: App;
-	settings: SettingsReader;
-	titles: Pick<DataManager, 'getTitles' | 'updateManualCredits'>;
-}
-
 export class AddCreditModal extends Modal {
-	private title: HoardTitle;
-	private field: CreditsField;
-	private onSaved: () => void;
-
 	/** Names already committed as manual — the baseline the save button diffs against. */
 	private readonly initial: string[];
 	private staged: string[];
@@ -52,22 +52,19 @@ export class AddCreditModal extends Modal {
 	private saveBtn: HTMLButtonElement | null = null;
 
 	constructor(
-		private deps: AddCreditModalDeps,
-		title: HoardTitle,
-		field: CreditsField,
-		onSaved: () => void,
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly titles: AddCreditStore,
+		private readonly opts: AddCreditOptions,
 	) {
-		super(deps.app);
-		this.title = title;
-		this.field = field;
-		this.onSaved = onSaved;
-		this.initial = [...getManualCredits(title, field)];
+		super(app);
+		this.initial = [...getManualCredits(opts.title, opts.field)];
 		this.staged = [...this.initial];
 	}
 
 	onOpen(): void {
-		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
-		this.titleEl.setText(this.field === 'director' ? t('add.credit.titleDirector') : t('add.credit.titleCast'));
+		markViewRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
+		this.titleEl.setText(this.opts.field === 'director' ? t('add.credit.titleDirector') : t('add.credit.titleCast'));
 		this.contentEl.addClass('hoard-credits__modal');
 		this.renderBody();
 	}
@@ -90,7 +87,7 @@ export class AddCreditModal extends Modal {
 			else entry.castCount++;
 			pool.set(key, entry);
 		};
-		for (const t of this.deps.titles.getTitles()) {
+		for (const t of this.titles.getTitles()) {
 			for (const name of getTitleCredits(t, 'director')) add(name, 'director');
 			for (const name of getTitleCredits(t, 'cast')) add(name, 'cast');
 		}
@@ -106,7 +103,7 @@ export class AddCreditModal extends Modal {
 		const cast = (): void => {
 			if (s.castCount > 0) parts.push(t('add.credit.castInTitles', { count: s.castCount }));
 		};
-		if (this.field === 'director') {
+		if (this.opts.field === 'director') {
 			director();
 			cast();
 		} else {
@@ -120,7 +117,7 @@ export class AddCreditModal extends Modal {
 	private isPresent(name: string): boolean {
 		const key = name.toLowerCase();
 		const fetched = getDisplayCredits(
-			this.field === 'director' ? this.title.director : this.title.cast,
+			this.opts.field === 'director' ? this.opts.title.director : this.opts.title.cast,
 		);
 		return (
 			fetched.some((n) => n.toLowerCase() === key) ||
@@ -135,7 +132,7 @@ export class AddCreditModal extends Modal {
 
 		content.createDiv({
 			cls: 'hoard-modal__info',
-			text: this.field === 'director' ? t('add.credit.infoDirector') : t('add.credit.infoCast'),
+			text: this.opts.field === 'director' ? t('add.credit.infoDirector') : t('add.credit.infoCast'),
 		});
 
 		const panes = content.createDiv({ cls: 'hoard-credits__panes' });
@@ -144,7 +141,7 @@ export class AddCreditModal extends Modal {
 		const searchPane = panes.createDiv({ cls: 'hoard-credits__pane hoard-credits__search-pane' });
 		this.searchInput = searchPane.createEl('input', {
 			cls: 'hoard-modal__input hoard-credits__search-input',
-			attr: { type: 'text', placeholder: this.field === 'director' ? t('add.credit.placeholderDirector') : t('add.credit.placeholderCast') },
+			attr: { type: 'text', placeholder: this.opts.field === 'director' ? t('add.credit.placeholderDirector') : t('add.credit.placeholderCast') },
 		});
 		this.searchInput.value = this.query;
 		this.searchInput.addEventListener('input', () => {
@@ -192,7 +189,7 @@ export class AddCreditModal extends Modal {
 			.sort((a, b) => {
 				// matching-field entries first, then by how widely the name is used
 				const rank = (s: CreditSuggestion): number =>
-					this.field === 'director' ? s.directorCount : s.castCount;
+					this.opts.field === 'director' ? s.directorCount : s.castCount;
 				const present = (s: CreditSuggestion): number => (this.isPresent(s.name) ? 1 : 0);
 				return (
 					present(a) - present(b) ||
@@ -206,7 +203,7 @@ export class AddCreditModal extends Modal {
 		// "Add <typed>" leads unless an existing name matches the query exactly
 		const exact = matches.some((s) => s.name.toLowerCase() === lower);
 		if (!exact) {
-			this.renderResultRow(list, q, this.field === 'director' ? t('add.credit.newNameDirector') : t('add.credit.newNameCast'), true);
+			this.renderResultRow(list, q, this.opts.field === 'director' ? t('add.credit.newNameDirector') : t('add.credit.newNameCast'), true);
 		}
 		for (const s of matches) {
 			this.renderResultRow(list, s.name, this.metaFor(s), false);
@@ -329,8 +326,8 @@ export class AddCreditModal extends Modal {
 	}
 
 	private async commit(): Promise<void> {
-		await this.deps.titles.updateManualCredits(this.title.id, this.field, this.staged);
-		this.onSaved();
+		await this.titles.updateManualCredits(this.opts.title.id, this.opts.field, this.staged);
+		this.opts.onSaved();
 		this.close();
 	}
 }

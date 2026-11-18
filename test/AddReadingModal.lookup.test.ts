@@ -37,11 +37,19 @@ function setup(mode: ReadingMode, over: ApiOver = {}, opts: { prefill?: string; 
 		generateBookId: () => 'b1',
 		addBook: vi.fn((b: unknown) => { added.push(b); return Promise.resolve(); }),
 	};
-	const deps = { app: {}, settings: fakeSettings({ booksApiSource: over.source ?? 'google' }), reading, api, searchBooks };
 	const initial = opts.initialState
 		? { id: 'x', state: { vaultPage: 'a.md' } as never }
 		: undefined;
-	const modal = new AddReadingModal(deps as never, mode, () => {}, initial, opts.prefill);
+	const modal = new AddReadingModal(
+		{} as never,
+		fakeSettings({ booksApiSource: over.source ?? 'google' }) as never,
+		reading as never,
+		{} as never,
+		{} as never,
+		searchBooks,
+		api as never,
+		{ mode, onSaved: () => {}, initial, prefillSearch: opts.prefill },
+	);
 	modal.open();
 	const results = () => modal.contentEl.querySelector('.hoard-modal__results') as HTMLElement;
 	const state = () => (modal as unknown as { state: Record<string, unknown> }).state;

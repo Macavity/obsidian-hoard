@@ -12,7 +12,7 @@ import {
 } from '../../../shared/domain/types';
 import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domain/SearchQuery';
 import { renderSearchHelpButton } from '../../../shared/ui/SearchHelpModal';
-import { RowsCustomizeModal, type RowsCustomizeModalDeps } from '../../../shared/ui/RowsCustomizeModal';
+import { RowsCustomizeModal } from '../../../shared/ui/RowsCustomizeModal';
 import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from '../../../shared/ui/VirtualGrid';
 import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
 import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
@@ -30,7 +30,7 @@ import { effectiveGameSource } from '../../../shared/api/apiSources';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../shared/ui/TabFilters';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 import { GameDetailModal, GameGroupDetailModal, gameGroupProgress, type GameDetailModalDeps } from './GameDetailModal';
-import { AddGameModal, type AddGameModalDeps } from './AddGameModal';
+import { AddGameModal, type AddGameApi } from './AddGameModal';
 
 /** One entry in the merged grid: an ungrouped game, or a group card with its resolved members. */
 type GameDisplayItem =
@@ -38,9 +38,9 @@ type GameDisplayItem =
 	| { kind: 'group'; data: GameGroup; members: Game[] };
 
 
-export interface GamesTabDeps extends AddGameModalDeps, GameDetailModalDeps, RowsCustomizeModalDeps {
+export interface GamesTabDeps extends GameDetailModalDeps {
 	settings: SettingsReader & SettingsWriter;
-	api: AddGameModalDeps['api'] & GameDetailModalDeps['api'];
+	api: AddGameApi & GameDetailModalDeps['api'];
 	/** Looks up a game's cover through the games APIs (covers module). */
 	resolveGameCover: typeof resolveGameCover;
 	getCardMinWidth: () => number;
@@ -570,7 +570,7 @@ export class GamesTab implements TabInstance {
 			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
-			new RowsCustomizeModal(this.deps, {
+			new RowsCustomizeModal(this.deps.app, this.deps.settings, {
 				shelves: GAMES_ROWS_SHELVES.map((sh) => ({
 					id: sh.id,
 					label: t(`games.shelves.${sh.id === 'byType' ? 'byGenre' : sh.id}` as TranslationKey),
@@ -1344,6 +1344,6 @@ export class GamesTab implements TabInstance {
 
 	/** Opens the API-assisted Add modal (the tab re-renders via its data listener). */
 	private openAddPrompt(): void {
-		new AddGameModal(this.deps, () => {}).open();
+		new AddGameModal(this.deps.app, this.deps.settings, this.deps.games, this.deps.api, { onAdded: () => {} }).open();
 	}
 }

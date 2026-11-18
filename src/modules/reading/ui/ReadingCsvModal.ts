@@ -88,30 +88,38 @@ function bookProgressUnit(entry: Partial<Book>): 'words' | 'pages' {
 
 // Modal
 
-export interface ReadingCsvModalDeps {
-	app: App;
-	reading: Pick<
-		ReadingDataManager,
-		'getBooks' | 'getMangaList' | 'generateBookId' | 'generateMangaId' | 'getSettings' | 'addBookBatch' | 'addMangaBatch' | 'notifyChange'
-	>;
+export type ReadingCsvStore = Pick<
+	ReadingDataManager,
+	'getBooks' | 'getMangaList' | 'generateBookId' | 'generateMangaId' | 'getSettings' | 'addBookBatch' | 'addMangaBatch' | 'notifyChange'
+>;
+
+export interface ReadingCsvOptions {
+	kind: ReadingCsvKind;
+	mode: 'export' | 'import';
 }
+
+export type OpenReadingCsv = (opts: ReadingCsvOptions) => void;
 
 export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 	private schema: ReadingSchema;
 
 	private get kindLabel(): string {
-		return t(`csv.library.${this.kind}`);
+		return t(`csv.library.${this.opts.kind}`);
 	}
 
-	constructor(private deps: ReadingCsvModalDeps, private kind: ReadingCsvKind, mode: 'export' | 'import') {
-		super(deps.app, mode);
-		this.schema = schemaFor(kind);
+	constructor(
+		app: App,
+		private readonly reading: ReadingCsvStore,
+		private readonly opts: ReadingCsvOptions,
+	) {
+		super(app, opts.mode);
+		this.schema = schemaFor(opts.kind);
 	}
 
 	private getItems(): (Book | Manga)[] {
-		return this.kind === 'book'
-			? this.deps.reading.getBooks()
-			: this.deps.reading.getMangaList();
+		return this.opts.kind === 'book'
+			? this.reading.getBooks()
+			: this.reading.getMangaList();
 	}
 
 	// Export
@@ -136,15 +144,15 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 	}
 
 	protected exportFilePrefix(): string {
-		return `hoard-${this.kind === 'book' ? 'books' : 'manga'}`;
+		return `hoard-${this.opts.kind === 'book' ? 'books' : 'manga'}`;
 	}
 
 	protected noneSelectedNotice(): string {
-		return t(`csv.notice.noItemsSelected.${this.kind}`);
+		return t(`csv.notice.noItemsSelected.${this.opts.kind}`);
 	}
 
 	protected exportedNotice(count: number): string {
-		return t(`csv.notice.exportedItems.${this.kind}`, { count });
+		return t(`csv.notice.exportedItems.${this.opts.kind}`, { count });
 	}
 
 	// Import schema
@@ -158,7 +166,7 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 	}
 
 	protected mapDescription(): string {
-		return t('csv.map.descReading', { kind: t(`csv.kind.${this.kind}`) });
+		return t('csv.map.descReading', { kind: t(`csv.kind.${this.opts.kind}`) });
 	}
 
 	protected mapNote(): string {
@@ -217,7 +225,7 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 		const common = this.commonFields(entry, defaultStatus);
 		return newBook({
 			...common,
-			id: this.deps.reading.generateBookId(common.title),
+			id: this.reading.generateBookId(common.title),
 			progressUnit: bookProgressUnit(entry),
 			pagesRead: entry.pagesRead,
 			totalPages: entry.totalPages,
@@ -232,7 +240,7 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 		const common = this.commonFields(entry, defaultStatus);
 		return newManga({
 			...common,
-			id: this.deps.reading.generateMangaId(common.title),
+			id: this.reading.generateMangaId(common.title),
 			volumesRead: entry.volumesRead,
 			totalVolumes: entry.totalVolumes,
 			malId: entry.malId,
@@ -240,17 +248,17 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 	}
 
 	protected async doImport(): Promise<void> {
-		const toImport = this.rowsToImport(t(`csv.notice.noItemsToImport.${this.kind}`));
+		const toImport = this.rowsToImport(t(`csv.notice.noItemsToImport.${this.opts.kind}`));
 		if (!toImport) return;
 
 		this.startImportUi(toImport.length);
 
-		const reading = this.deps.reading;
+		const reading = this.reading;
 		const defaultStatus: ReadingStatus = reading.getSettings().defaultStatus ?? 'Plan to Read';
 
 		let added = 0;
 		try {
-			added = this.kind === 'book'
+			added = this.opts.kind === 'book'
 				? await this.importInChunks(
 					toImport,
 					(r) => this.buildBook(r.entry, defaultStatus),
@@ -267,8 +275,8 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 		}
 
 		this.finishImportUi(added, toImport.length, {
-			cancelled: t(`csv.notice.importCancelledItems.${this.kind}`, { count: added }),
-			done: t(`csv.notice.importedItems.${this.kind}`, { count: added }),
+			cancelled: t(`csv.notice.importCancelledItems.${this.opts.kind}`, { count: added }),
+			done: t(`csv.notice.importedItems.${this.opts.kind}`, { count: added }),
 		});
 	}
 }

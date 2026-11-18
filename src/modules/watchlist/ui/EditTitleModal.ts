@@ -27,19 +27,19 @@ function seasonsToText(seasons: Season[]): string {
 	return seasons.map(formatSeasonLine).join('\n');
 }
 
-export interface EditTitleModalDeps {
-	app: App;
-	settings: SettingsReader;
-	titles: Pick<
-		DataManager,
-		'getTitles' | 'getGroups' | 'getGroup' | 'updateTitle' | 'updateGroup' | 'generateGroupId' | 'addTitleToGroup' | 'addGroup'
-	>;
+export type EditTitleStore = Pick<
+	DataManager,
+	'getTitles' | 'getGroups' | 'getGroup' | 'updateTitle' | 'updateGroup' | 'generateGroupId' | 'addTitleToGroup' | 'addGroup'
+>;
+
+export interface EditTitleOptions {
+	title: HoardTitle;
+	onSaved: () => void;
 }
 
-export class EditTitleModal extends Modal {
-	private original: HoardTitle;
-	private onSaved: () => void;
+export type OpenEditTitle = (opts: EditTitleOptions) => void;
 
+export class EditTitleModal extends Modal {
 	// editable state. Status, priority, rating, notes, the watch dates and the release date are
 	// deliberately absent — they're edited in the detail modal and the expanded row, and carry over
 	// untouched on save.
@@ -59,13 +59,13 @@ export class EditTitleModal extends Modal {
 	private duplicates = createDuplicateGuard();
 
 	constructor(
-		private deps: EditTitleModalDeps,
-		title: HoardTitle,
-		onSaved: () => void,
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly titles: EditTitleStore,
+		private readonly opts: EditTitleOptions,
 	) {
-		super(deps.app);
-		this.original = title;
-		this.onSaved = onSaved;
+		super(app);
+		const { title } = opts;
 
 		this.fieldTitle = title.title;
 		this.fieldType = title.type;
@@ -78,12 +78,12 @@ export class EditTitleModal extends Modal {
 		this.fieldTrailerUrl = title.manualTrailerUrl ?? '';
 		// seed the group dropdown with the title's current group
 		this.originalGroupId =
-			this.deps.titles.getGroups().find((g) => g.titleIds.includes(title.id))?.id ?? '';
+			this.titles.getGroups().find((g) => g.titleIds.includes(title.id))?.id ?? '';
 		this.group.selectedGroupId = this.originalGroupId;
 	}
 
 	onOpen(): void {
-		this.titleEl.setText(t('edit.heading', { title: this.original.title }));
+		this.titleEl.setText(t('edit.heading', { title: this.opts.title.title }));
 		this.contentEl.addClass('hoard-add-modal');
 		this.buildUI();
 	}
@@ -100,7 +100,7 @@ export class EditTitleModal extends Modal {
 
 		titleField(content, this.fieldTitle, undefined, (v) => { this.fieldTitle = v; });
 
-		nameSelect(makeRow(t('edit.type')), this.deps.settings.get().types.map((t) => t.name), this.fieldType,
+		nameSelect(makeRow(t('edit.type')), this.settings.get().types.map((t) => t.name), this.fieldType,
 			(v) => { this.fieldType = v; }, false, typeLabel);
 
 		// total episodes + ep. duration paired on one row (episodes keeps its seasons skip/watch inline
@@ -168,7 +168,7 @@ export class EditTitleModal extends Modal {
 		});
 
 		// group assignment (move / create), seeded with the title's current group
-		renderGroupPicker(content, this.deps.titles.getGroups(), this.group);
+		renderGroupPicker(content, this.titles.getGroups(), this.group);
 
 		const seasonsRow = makeRow(t('edit.seasons'));
 		const seasonsHelp = seasonsRow.createDiv({ cls: 'hoard-modal__input-stack' });
@@ -223,8 +223,8 @@ export class EditTitleModal extends Modal {
 			return;
 		}
 
-		const isDuplicate = this.deps.titles.getTitles().some(
-			(t) => t.id !== this.original.id && t.title.toLowerCase() === titleName.toLowerCase()
+		const isDuplicate = this.titles.getTitles().some(
+			(t) => t.id !== this.opts.title.id && t.title.toLowerCase() === titleName.toLowerCase()
 		);
 		const blocked = blockDuplicate(this.contentEl, this.duplicates, {
 			name: titleName,
@@ -240,7 +240,7 @@ export class EditTitleModal extends Modal {
 		// spreading the original carries their current values through, so a save can't clobber an edit made
 		// elsewhere
 		const updated: HoardTitle = {
-			...this.original,
+			...this.opts.title,
 			title: titleName,
 			type: this.fieldType,
 			review: this.fieldReview,
@@ -249,12 +249,12 @@ export class EditTitleModal extends Modal {
 			externalLink: this.fieldLink,
 			seasons,
 			// keep an already-Completed title fully ticked when its episode count changes here
-			watchedEpisodes: completedEpisodes(this.original.status, this.fieldEpisodes) ?? this.original.watchedEpisodes,
+			watchedEpisodes: completedEpisodes(this.opts.title.status, this.fieldEpisodes) ?? this.opts.title.watchedEpisodes,
 			posterUrl: this.fieldPosterUrl.trim(),
 			manualTrailerUrl: this.fieldTrailerUrl.trim(),
 		};
 
-		await this.deps.titles.updateTitle(updated);
+		await this.titles.updateTitle(updated);
 
 		// group membership (move / create) — only act when the selection changed relative to the original
 		const newGroupName = this.group.newGroupName.trim();
@@ -262,28 +262,28 @@ export class EditTitleModal extends Modal {
 		if (groupChanged) {
 			// detach from the previous group first
 			if (this.originalGroupId) {
-				const old = this.deps.titles.getGroup(this.originalGroupId);
+				const old = this.titles.getGroup(this.originalGroupId);
 				if (old) {
 					old.titleIds = old.titleIds.filter((id) => id !== updated.id);
-					await this.deps.titles.updateGroup(old);
+					await this.titles.updateGroup(old);
 				}
 			}
 			if (newGroupName) {
 				const group: HoardGroup = {
-					id: this.deps.titles.generateGroupId(newGroupName),
+					id: this.titles.generateGroupId(newGroupName),
 					name: newGroupName,
 					titleIds: [updated.id],
 					dateAdded: new Date().toISOString(),
 				};
-				await this.deps.titles.addGroup(group);
+				await this.titles.addGroup(group);
 			} else if (this.group.selectedGroupId) {
-				await this.deps.titles.addTitleToGroup(this.group.selectedGroupId, updated.id);
+				await this.titles.addTitleToGroup(this.group.selectedGroupId, updated.id);
 			}
 			// else: moved to "— none —" — detached only
 		}
 
 		new Notice(t('edit.updated', { name: titleName }));
 		this.close();
-		this.onSaved();
+		this.opts.onSaved();
 	}
 }

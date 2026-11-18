@@ -4,20 +4,25 @@ import { createIconButton } from '../../../shared/ui/IconButton';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
 import type { ReadingDataManager, ReadingKind } from '../services/ReadingDataManager';
 import { ReadingCustomColumn, DEFAULT_FIELD_COLOR } from '../../../shared/domain/types';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
 import { openColorPicker } from '../../../shared/ui/ColorPicker';
 import { attachCardDrag, renderTypeSelect, type DragState } from '../../../shared/ui/ColumnsEditor';
 import { markViewRoot } from '../../../shared/ui/detailFrame';
 
-export interface ReadingManageColumnsModalDeps {
-	app: App;
-	settings: SettingsReader;
-	reading: ReadingDataManager;
+export type ManageColumnsStore = Pick<
+	ReadingDataManager,
+	| 'getSettings' | 'updateSettings' | 'getBookColumns' | 'getMangaColumns' | 'isColumnNameTaken' | 'generateColumnId'
+	| 'addColumn' | 'updateColumn' | 'removeColumn' | 'reorderColumns'
+>;
+
+export interface ManageColumnsOptions {
+	kind: ReadingKind;
+	onChanged: () => void;
 }
 
+export type OpenManageColumns = (opts: ManageColumnsOptions) => void;
+
 export class ReadingManageColumnsModal extends Modal {
-	private kind: ReadingKind;
-	private onChanged: () => void;
 	private listEl: HTMLElement | null = null;
 	private styleGroupEl: HTMLElement | null = null;
 	private drag: DragState = { from: -1 };
@@ -25,17 +30,17 @@ export class ReadingManageColumnsModal extends Modal {
 	private busy = false;
 
 	constructor(
-		private deps: ReadingManageColumnsModalDeps,
-		kind: ReadingKind,
-		onChanged: () => void,
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly reading: ManageColumnsStore,
+		private readonly confirm: OpenConfirm,
+		private readonly opts: ManageColumnsOptions,
 	) {
-		super(deps.app);
-		this.kind = kind;
-		this.onChanged = onChanged;
+		super(app);
 	}
 
 	onOpen(): void {
-		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
+		markViewRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-reading-modal');
 		this.contentEl.addClass('hoard-reading-columns');
 		this.titleEl.setText(this.title());
@@ -43,7 +48,7 @@ export class ReadingManageColumnsModal extends Modal {
 	}
 
 	private title(): string {
-		return t(this.kind === 'book' ? 'reading.columns.titleBook' : 'reading.columns.titleManga');
+		return t(this.opts.kind === 'book' ? 'reading.columns.titleBook' : 'reading.columns.titleManga');
 	}
 
 	onClose(): void {
@@ -57,7 +62,7 @@ export class ReadingManageColumnsModal extends Modal {
 		const header = c.createDiv({ cls: 'hoard-reading-modal__header' });
 		header.createSpan({
 			cls: 'hoard-reading-modal__header-icon',
-			text: this.kind === 'book' ? '📖' : '📓',
+			text: this.opts.kind === 'book' ? '📖' : '📓',
 		});
 		header.createSpan({
 			cls: 'hoard-reading-modal__header-title',
@@ -83,8 +88,8 @@ export class ReadingManageColumnsModal extends Modal {
 	}
 
 	private renderStyleToggle(parent: HTMLElement): void {
-		const settings = this.deps.reading.getSettings();
-		const currentStyle = this.kind === 'book'
+		const settings = this.reading.getSettings();
+		const currentStyle = this.opts.kind === 'book'
 			? (settings.bookCustomFieldStyle ?? 'fill')
 			: (settings.mangaCustomFieldStyle ?? 'fill');
 
@@ -100,9 +105,9 @@ export class ReadingManageColumnsModal extends Modal {
 			});
 			btn.addEventListener('click', () => {
 				void (async () => {
-					const key = this.kind === 'book' ? 'bookCustomFieldStyle' : 'mangaCustomFieldStyle';
-					await this.deps.reading.updateSettings({ [key]: opt });
-					this.onChanged();
+					const key = this.opts.kind === 'book' ? 'bookCustomFieldStyle' : 'mangaCustomFieldStyle';
+					await this.reading.updateSettings({ [key]: opt });
+					this.opts.onChanged();
 					this.styleGroupEl?.querySelectorAll('.hoard-reading-columns__style-btn').forEach((b) => {
 						b.removeClass('is-active');
 					});
@@ -113,9 +118,9 @@ export class ReadingManageColumnsModal extends Modal {
 	}
 
 	private getColumns(): ReadingCustomColumn[] {
-		return this.kind === 'book'
-			? this.deps.reading.getBookColumns()
-			: this.deps.reading.getMangaColumns();
+		return this.opts.kind === 'book'
+			? this.reading.getBookColumns()
+			: this.reading.getMangaColumns();
 	}
 
 	private renderList(): void {
@@ -148,7 +153,7 @@ export class ReadingManageColumnsModal extends Modal {
 					return;
 				}
 				if (next === col.name) return;
-				if (this.deps.reading.isColumnNameTaken(this.kind, next, col.id)) {
+				if (this.reading.isColumnNameTaken(this.opts.kind, next, col.id)) {
 					new Notice(t('reading.columns.nameTaken'));
 					nameInput.value = col.name;
 					return;
@@ -188,14 +193,13 @@ export class ReadingManageColumnsModal extends Modal {
 
 			const delBtn = createIconButton(card, { icon: 'x', label: t('reading.columns.deleteField'), cls: 'hoard-edit-columns__card-delete' });
 			delBtn.addEventListener('click', () => {
-				new ConfirmModal(
-					this.app,
+				this.confirm(
 					t(
-						this.kind === 'book' ? 'reading.columns.deleteConfirmBook' : 'reading.columns.deleteConfirmManga',
+						this.opts.kind === 'book' ? 'reading.columns.deleteConfirmBook' : 'reading.columns.deleteConfirmManga',
 						{ name: col.name },
 					),
 					() => void this.deleteColumn(col.id),
-				).open();
+				);
 			});
 		});
 	}
@@ -254,7 +258,7 @@ export class ReadingManageColumnsModal extends Modal {
 				new Notice(t('reading.columns.enterName'));
 				return;
 			}
-			if (this.deps.reading.isColumnNameTaken(this.kind, name)) {
+			if (this.reading.isColumnNameTaken(this.opts.kind, name)) {
 				new Notice(t('reading.columns.nameTaken'));
 				return;
 			}
@@ -267,7 +271,7 @@ export class ReadingManageColumnsModal extends Modal {
 							.filter(Boolean)
 					: [];
 			const col: ReadingCustomColumn = {
-				id: this.deps.reading.generateColumnId(this.kind, name),
+				id: this.reading.generateColumnId(this.opts.kind, name),
 				name,
 				type,
 				options,
@@ -284,9 +288,9 @@ export class ReadingManageColumnsModal extends Modal {
 
 	private async addColumn(col: ReadingCustomColumn): Promise<void> {
 		if (this.busy) return;
-		await this.deps.reading.addColumn(this.kind, col);
+		await this.reading.addColumn(this.opts.kind, col);
 		this.renderList();
-		this.onChanged();
+		this.opts.onChanged();
 	}
 
 	private async updateColumn(col: ReadingCustomColumn): Promise<void> {
@@ -294,7 +298,7 @@ export class ReadingManageColumnsModal extends Modal {
 		this.busy = true;
 		this.setLocked(true);
 		try {
-			const { moved, skipped } = await this.deps.reading.updateColumn(this.kind, col);
+			const { moved, skipped } = await this.reading.updateColumn(this.opts.kind, col);
 			if (moved > 0) new Notice(t('reading.columns.renamed', { count: moved }));
 			if (skipped > 0) new Notice(t('reading.columns.renamedSkipped', { count: skipped }));
 		} finally {
@@ -302,7 +306,7 @@ export class ReadingManageColumnsModal extends Modal {
 			this.setLocked(false);
 		}
 		this.renderList();
-		this.onChanged();
+		this.opts.onChanged();
 	}
 
 	private setLocked(locked: boolean): void {
@@ -315,15 +319,15 @@ export class ReadingManageColumnsModal extends Modal {
 
 	private async deleteColumn(id: string): Promise<void> {
 		if (this.busy) return;
-		await this.deps.reading.removeColumn(this.kind, id);
+		await this.reading.removeColumn(this.opts.kind, id);
 		this.renderList();
-		this.onChanged();
+		this.opts.onChanged();
 	}
 
 	private async reorder(from: number, to: number): Promise<void> {
 		if (this.busy) return;
-		await this.deps.reading.reorderColumns(this.kind, from, to);
+		await this.reading.reorderColumns(this.opts.kind, from, to);
 		this.renderList();
-		this.onChanged();
+		this.opts.onChanged();
 	}
 }

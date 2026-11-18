@@ -6,8 +6,8 @@ import type { HoardTitle } from '../src/shared/domain/types';
 
 function render(title: HoardTitle | undefined): HTMLElement {
 	const parent = document.createElement('div');
-	const deps = { titles: { getTitle: () => title } };
-	renderCommunityRating(parent, deps as never, 'a');
+	const titles = { getTitle: () => title };
+	renderCommunityRating(parent, titles as never, {} as never, {} as never, 'a');
 	return parent;
 }
 

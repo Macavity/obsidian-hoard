@@ -9,12 +9,13 @@ import { Book, Manga, ReadingStatus, ReadingCustomColumn, ReadingSavedFilterPres
 import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domain/SearchQuery';
 import { renderSearchHelpButton } from '../../../shared/ui/SearchHelpModal';
 import { renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
-import { RowsCustomizeModal, type RowsCustomizeModalDeps } from '../../../shared/ui/RowsCustomizeModal';
-import { AddReadingModal, type AddReadingModalDeps } from './AddReadingModal';
+import { RowsCustomizeModal } from '../../../shared/ui/RowsCustomizeModal';
+import { AddReadingModal, type AddReadingApi } from './AddReadingModal';
+import type { searchBooks } from '../../covers/services/coverRefresh';
 import { ReadingDetailModal, type ReadingDetailModalDeps } from './ReadingDetailModal';
 import { coverFallbackColor, readingStatusColor } from './readingColors';
 import { ReadingManageColumnsModal } from './ReadingManageColumnsModal';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { ConfirmModal, confirmWith } from '../../../shared/ui/ConfirmModal';
 import { renderToolbarWithMobileToggle } from '../../../shared/ui/MobileToolbar';
 import { createIconButton } from '../../../shared/ui/IconButton';
 import { renderSearchBox, renderSelectionButtons } from '../../../shared/ui/TabToolbar';
@@ -116,8 +117,10 @@ function selectValueOf(item: Book | Manga, colId: string): string {
 	return v === undefined || v === null ? '' : String(v);
 }
 
-export interface ReadingTabDeps extends AddReadingModalDeps, ReadingDetailModalDeps, RowsCustomizeModalDeps {
-	api: AddReadingModalDeps['api'] & ReadingDetailModalDeps['api'];
+export interface ReadingTabDeps extends ReadingDetailModalDeps {
+	/** Book search through the configured source (covers module). */
+	searchBooks: typeof searchBooks;
+	api: AddReadingApi & ReadingDetailModalDeps['api'];
 	/** Cover lookups of the covers module. */
 	fetchReadingCoverById: typeof fetchReadingCoverById;
 	firstBookCover: typeof firstBookCover;
@@ -1113,7 +1116,7 @@ export class ReadingTab implements TabInstance {
 			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
-			new RowsCustomizeModal(this.deps, {
+			new RowsCustomizeModal(this.deps.app, this.deps.settings, {
 				shelves: READING_ROWS_SHELVES.map((sh) => ({ id: sh.id, label: t(`reading.shelves.${sh.id}` as TranslationKey) })),
 				getLayout: () => this.deps.reading.getSettings().rowsLayout,
 				setLayout: (layout) => { this.deps.reading.getSettings().rowsLayout = layout; },
@@ -1566,17 +1569,24 @@ export class ReadingTab implements TabInstance {
 
 	private openAddModal(): void {
 		new AddReadingModal(
-			this.deps,
-			this.activeSubTab === 'books' ? 'book' : 'manga',
-			() => this.renderContent(),
+			this.deps.app,
+			this.deps.settings,
+			this.deps.reading,
+			this.deps.app.vault,
+			this.deps.app.workspace,
+			this.deps.searchBooks,
+			this.deps.api,
+			{ mode: this.activeSubTab === 'books' ? 'book' : 'manga', onSaved: () => this.renderContent() },
 		).open();
 	}
 
 	private openManageColumns(): void {
 		new ReadingManageColumnsModal(
-			this.deps,
-			this.activeSubTab === 'books' ? 'book' : 'manga',
-			() => this.renderContent(),
+			this.deps.app,
+			this.deps.settings,
+			this.deps.reading,
+			confirmWith(this.deps.app),
+			{ kind: this.activeSubTab === 'books' ? 'book' : 'manga', onChanged: () => this.renderContent() },
 		).open();
 	}
 

@@ -36,7 +36,7 @@ import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
 import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
 import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from '../../../shared/ui/PosterCard';
 import { renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
-import { RowsCustomizeModal, type RowsCustomizeModalDeps } from '../../../shared/ui/RowsCustomizeModal';
+import { RowsCustomizeModal } from '../../../shared/ui/RowsCustomizeModal';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../shared/ui/TabFilters';
 
 
@@ -55,7 +55,7 @@ const itemKey = (item: DisplayItem): string => (item.kind === 'group' ? groupKey
  * The Watchlist tab hosts the detail, add and edit modals, so its deps contain theirs. It drives most
  * of the manager, so `titles` is the whole `DataManager` rather than a `Pick`.
  */
-export interface ListTabDeps extends TitleDetailModalDeps, AddFromUrlModalDeps, RowsCustomizeModalDeps {
+export interface ListTabDeps extends TitleDetailModalDeps, AddFromUrlModalDeps {
 	app: App;
 	settings: SettingsReader & SettingsWriter;
 	titles: DataManager;
@@ -367,7 +367,7 @@ export class ListTab implements TabInstance {
 		gearBtn.addEventListener('click', () => {
 			// the modal reorders this array in place, then persists it after every change
 			let layout: RowsShelfLayoutEntry[] = [];
-			new RowsCustomizeModal(this.deps, {
+			new RowsCustomizeModal(this.deps.app, this.deps.settings, {
 				shelves: ROWS_SHELVES.map((sh) => ({ id: sh.id, label: t(`list.shelves.${sh.id}` as TranslationKey) })),
 				getLayout: () => this.deps.settings.get().rowsLayout,
 				setLayout: (next) => { layout = next; },
@@ -814,7 +814,7 @@ export class ListTab implements TabInstance {
 			menuItems: [
 				{ label: t('list.card.editTitle'), onClick: () => this.openEditModalForTitle(title.id) },
 				{ label: t('list.card.refreshPoster'), onClick: (card) => this.refreshPosterForCard(card, title.id) },
-				{ label: t('list.card.refreshRating'), onClick: () => void refreshCommunityRating(this.deps, title.id, null, true) },
+				{ label: t('list.card.refreshRating'), onClick: () => void refreshCommunityRating(this.deps.titles, this.deps.settings, this.deps.api, title.id, null, true) },
 			],
 			onClick: (card) => {
 				if (this.selectionMode) {
@@ -904,8 +904,11 @@ export class ListTab implements TabInstance {
 	private openEditModalForTitle(titleId: string): void {
 		const current = this.deps.titles.getTitle(titleId);
 		if (!current) return;
-		new EditTitleModal(this.deps, current, () => {
-			this.render();
+		new EditTitleModal(this.deps.app, this.deps.settings, this.deps.titles, {
+			title: current,
+			onSaved: () => {
+				this.render();
+			},
 		}).open();
 	}
 
@@ -1074,14 +1077,16 @@ export class ListTab implements TabInstance {
 	}
 
 	private openAddTitleChooser(): void {
-		new AddTitleChoiceModal(this.deps, (choice) => {
-			if (choice === 'url') {
-				new AddFromUrlModal(this.deps, () => {
-					this.render();
-				}).open();
-			} else {
-				this.openAddTitleModal();
-			}
+		new AddTitleChoiceModal(this.deps.app, {
+			onChoice: (choice) => {
+				if (choice === 'url') {
+					new AddFromUrlModal(this.deps, () => {
+						this.render();
+					}).open();
+				} else {
+					this.openAddTitleModal();
+				}
+			},
 		}).open();
 	}
 
@@ -1284,9 +1289,14 @@ export class ListTab implements TabInstance {
 	// Modal helpers
 
 	private openAddTitleModal(): void {
-		new AddTitleModal(this.deps, () => {
-			this.render();
-		}).open();
+		new AddTitleModal(
+			this.deps.app,
+			this.deps.settings,
+			this.deps.titles,
+			this.deps.api,
+			this.deps.resolveDefaultAddType,
+			{ onAdded: () => this.render() },
+		).open();
 	}
 
 	// Search & controls
@@ -2114,13 +2124,15 @@ export class ListTab implements TabInstance {
 
 		// credits rows; clicking a name filters this view via the search bar
 		const creditsWrap = accLeft.createDiv({ cls: 'hoard-accordion__credits' });
-		renderCreditsRefreshButton(creditsWrap, this.deps, title, () => this.rerenderTable());
+		renderCreditsRefreshButton(creditsWrap, this.deps.titles, this.deps.settings, this.deps.api, title, () => this.rerenderTable());
 		renderCreditsRows(creditsWrap, title, {
 			onPersonClick: (name) => this.applyPersonSearch(name),
 			onAddCredits: (field) => {
-				new AddCreditModal(this.deps, title, field, () =>
-					this.rerenderTable(),
-				).open();
+				new AddCreditModal(this.deps.app, this.deps.settings, this.deps.titles, {
+					title,
+					field,
+					onSaved: () => this.rerenderTable(),
+				}).open();
 			},
 			onRemoveManual: (field, name) => {
 				void (async () => {
@@ -2361,10 +2373,10 @@ export class ListTab implements TabInstance {
 				n = n.nextSibling;
 				toRemove.parentNode?.removeChild(toRemove);
 			}
-			renderCommunityRating(starsRow, this.deps, title.id, rerenderCommunity);
+			renderCommunityRating(starsRow, this.deps.titles, this.deps.settings, this.deps.api, title.id, rerenderCommunity);
 		};
-		renderCommunityRating(starsRow, this.deps, title.id, rerenderCommunity);
-		maybeAutoRefreshCommunityRating(this.deps, title.id, rerenderCommunity);
+		renderCommunityRating(starsRow, this.deps.titles, this.deps.settings, this.deps.api, title.id, rerenderCommunity);
+		maybeAutoRefreshCommunityRating(this.deps.titles, this.deps.settings, this.deps.api, title.id, rerenderCommunity);
 
 		const notesRow = footer.createDiv({ cls: 'hoard-accordion__footer-row' });
 		const notesInput = notesRow.createEl('input', {
@@ -2468,8 +2480,11 @@ export class ListTab implements TabInstance {
 			e.stopPropagation();
 			const current = this.deps.titles.getTitle(title.id);
 			if (!current) return;
-			new EditTitleModal(this.deps, current, () => {
-				this.rerenderTable();
+			new EditTitleModal(this.deps.app, this.deps.settings, this.deps.titles, {
+				title: current,
+				onSaved: () => {
+					this.rerenderTable();
+				},
 			}).open();
 		});
 	}

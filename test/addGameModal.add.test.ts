@@ -23,7 +23,7 @@ function setup() {
 		addGame: (g: Game) => { added.push(g); return Promise.resolve(); },
 	};
 	const deps = { app: {}, settings: fakeSettings({ gamesApiSource: 'rawg', priorities: [] }), games: gameData, api: {} };
-	const modal = new AddGameModal(deps as never, () => {});
+	const modal = new AddGameModal(deps.app as never, deps.settings as never, deps.games as never, deps.api as never, { onAdded: () => {} });
 	return { form: modal as unknown as Form, added };
 }
 

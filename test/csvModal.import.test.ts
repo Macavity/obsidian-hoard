@@ -27,7 +27,7 @@ function setup(existing: string[] = []): Harness {
 		addTitleBatch: (chunk: HoardTitle[]) => { added.push(chunk); return Promise.resolve(); },
 		notifyChange: vi.fn(),
 	};
-	const modal = new CsvModal({ app: {} as never, settings: settingsService as never, titles: dataManager as never, setImportProgress }, 'import');
+	const modal = new CsvModal({} as never, settingsService as never, dataManager as never, setImportProgress, { mode: 'import' });
 	return { modal, added, settings, settingsService, setImportProgress };
 }
 

@@ -22,8 +22,8 @@ vi.mock('../../src/shared/ui/ConfirmModal', () => ({
 }));
 vi.mock('../../src/modules/airtime/ui/UpcomingFinderModal', () => ({
 	UpcomingFinderModal: class {
-		constructor(_app: unknown, items: Captures['finders'][number]['items'], onPick: (i: unknown) => void) {
-			cap.finders.push({ items, onPick });
+		constructor(_app: unknown, opts: { items: Captures['finders'][number]['items']; onSelect: (i: unknown) => void }) {
+			cap.finders.push({ items: opts.items, onPick: opts.onSelect });
 		}
 		open(): void {}
 	},
@@ -281,7 +281,7 @@ describe('tick flow', () => {
 		expect(c.extra!.label).toBe(t('airtime.actions.switchChapters'));
 		c.extra!.onClick();
 		expect(cap.readingModals).toHaveLength(1);
-		expect(cap.readingModals[0]!.at(-1)).toBe('recurring');
+		expect((cap.readingModals[0]![1] as { initialMode: string }).initialMode).toBe('recurring');
 		c.onConfirm();
 		await vi.waitFor(() => expect(b.status).toBe('Plan to Read'));
 		expect(calls.some((x) => x.startsWith('updateBook'))).toBe(true);

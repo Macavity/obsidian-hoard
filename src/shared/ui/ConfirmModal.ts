@@ -10,6 +10,14 @@ export interface ConfirmExtraButton {
 	onClick: () => void;
 }
 
+/** Opens a confirm dialog; lets a modal ask for confirmation without holding the App. */
+export type OpenConfirm = (message: string, onConfirm: () => void, extraButton?: ConfirmExtraButton) => void;
+
+/** Confirm dialog opener bound to an App; the wiring layer builds it so modals need no App of their own. */
+export function confirmWith(app: App): OpenConfirm {
+	return (message, onConfirm, extraButton) => new ConfirmModal(app, message, onConfirm, extraButton).open();
+}
+
 export class ConfirmModal extends Modal {
 	private message: string;
 	private onConfirm: () => void;

@@ -4,9 +4,11 @@ import { renderChoiceGrid } from '../../../shared/ui/choiceGrid';
 
 export type AddTitleChoice = 'url' | 'manual';
 
-export interface AddTitleChoiceModalDeps {
-	app: App;
+export interface AddTitleChoiceOptions {
+	onChoice: (choice: AddTitleChoice) => void;
 }
+
+export type OpenAddTitleChoice = (opts: AddTitleChoiceOptions) => void;
 
 /**
  * Chooser shown when adding a title to the Watchlist: Add from URL, or Add manually / via API. This
@@ -14,10 +16,10 @@ export interface AddTitleChoiceModalDeps {
  */
 export class AddTitleChoiceModal extends Modal {
 	constructor(
-		deps: AddTitleChoiceModalDeps,
-		private onChoice: (choice: AddTitleChoice) => void,
+		app: App,
+		private readonly opts: AddTitleChoiceOptions,
 	) {
-		super(deps.app);
+		super(app);
 	}
 
 	onOpen(): void {
@@ -35,7 +37,7 @@ export class AddTitleChoiceModal extends Modal {
 			],
 			(choice) => {
 				this.close();
-				this.onChoice(choice);
+				this.opts.onChoice(choice);
 			},
 		);
 	}

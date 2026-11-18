@@ -3,24 +3,26 @@ import type { HoardTitle } from '../../../shared/domain/types';
 import { t } from '../../../shared/i18n';
 import { typeLabel } from '../../../shared/i18n/labels';
 
-export interface InsertWidgetModalDeps {
-	app: App;
+export interface InsertWidgetOptions {
+	titles: HoardTitle[];
+	onSelect: (title: HoardTitle) => void;
 }
+
+export type OpenInsertWidget = (opts: InsertWidgetOptions) => void;
 
 /** Picks a title to insert into a note as a widget. */
 export class InsertWidgetModal extends FuzzySuggestModal<HoardTitle> {
-	private onSelect: (title: HoardTitle) => void;
-	private titles: HoardTitle[];
 
-	constructor(deps: InsertWidgetModalDeps, titles: HoardTitle[], onSelect: (title: HoardTitle) => void) {
-		super(deps.app);
-		this.titles = titles;
-		this.onSelect = onSelect;
+	constructor(
+		app: App,
+		private readonly opts: InsertWidgetOptions,
+	) {
+		super(app);
 		this.setPlaceholder(t('widget.insertPlaceholder'));
 	}
 
 	getItems(): HoardTitle[] {
-		return this.titles;
+		return this.opts.titles;
 	}
 
 	getItemText(title: HoardTitle): string {
@@ -28,6 +30,6 @@ export class InsertWidgetModal extends FuzzySuggestModal<HoardTitle> {
 	}
 
 	onChooseItem(title: HoardTitle): void {
-		this.onSelect(title);
+		this.opts.onSelect(title);
 	}
 }

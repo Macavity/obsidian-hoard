@@ -28,8 +28,8 @@ function setup(opts: Opts = {}) {
 		getTmdbCollection: vi.fn(() => Promise.resolve(detail)),
 	};
 	const updateTmdbIdentity = vi.fn();
-	const deps = { api, settings: fakeSettings(DEFAULT_SETTINGS), titles: { updateTmdbIdentity } };
-	return { api, updateTmdbIdentity, resolve: (t: HoardTitle) => resolveCollection(deps, t) };
+	const settings = fakeSettings(DEFAULT_SETTINGS);
+	return { api, updateTmdbIdentity, resolve: (t: HoardTitle) => resolveCollection(settings, { updateTmdbIdentity }, api, t) };
 }
 
 describe('resolveCollection', () => {

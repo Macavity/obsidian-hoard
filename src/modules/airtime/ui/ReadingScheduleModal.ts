@@ -17,9 +17,25 @@ function defaultMode(kind: 'book' | 'manga'): 'single' | 'recurring' {
 	return kind === 'book' ? 'single' : 'recurring';
 }
 
-export interface ReadingScheduleModalDeps {
-	app: App;
+export interface ReadingScheduleOptions {
+	item: Book | Manga;
+	kind: 'book' | 'manga';
+	existingSchedule: AirtimeSchedule | null;
+	currentVolume: number | null;
+	currentChapter: number | null;
+	totalVolumes: number | null;
+	totalChapters: number | null;
+	onSave: (
+		schedule: AirtimeSchedule,
+		volume: number | null,
+		chapter: number | null,
+		totalVolumes: number | null,
+		totalChapters: number | null,
+	) => Promise<void>;
+	initialMode?: 'single' | 'recurring';
 }
+
+export type OpenReadingSchedule = (opts: ReadingScheduleOptions) => void;
 
 /**
  * Schedule modal for Reading titles (Books & Manga). Mirrors AirtimeScheduleModal — Single release /
@@ -41,47 +57,26 @@ export class ReadingScheduleModal extends Modal {
 	private currentChapter: number | null;
 	private totalVolumes: number | null;
 	private totalChapters: number | null;
-	private onSave: (
-		schedule: AirtimeSchedule,
-		volume: number | null,
-		chapter: number | null,
-		totalVolumes: number | null,
-		totalChapters: number | null,
-	) => Promise<void>;
 
 	constructor(
-		deps: ReadingScheduleModalDeps,
-		item: Book | Manga,
-		kind: 'book' | 'manga',
-		existingSchedule: AirtimeSchedule | null,
-		currentVolume: number | null,
-		currentChapter: number | null,
-		totalVolumes: number | null,
-		totalChapters: number | null,
-		onSave: (
-			schedule: AirtimeSchedule,
-			volume: number | null,
-			chapter: number | null,
-			totalVolumes: number | null,
-			totalChapters: number | null,
-		) => Promise<void>,
-		initialMode?: 'single' | 'recurring',
+		app: App,
+		private readonly opts: ReadingScheduleOptions,
 	) {
-		super(deps.app);
+		super(app);
+		const { item, kind, existingSchedule } = opts;
 		this.kind = kind;
-		this.onSave = onSave;
 		this.form = initialScheduleState(
 			existingSchedule,
 			item.releaseDate,
-			resolveScheduleMode(existingSchedule, initialMode, defaultMode(kind)),
+			resolveScheduleMode(existingSchedule, opts.initialMode, defaultMode(kind)),
 		);
-		this.currentVolume = currentVolume;
-		this.currentChapter = currentChapter;
+		this.currentVolume = opts.currentVolume;
+		this.currentChapter = opts.currentChapter;
 		// pre-fill totals from the item's tracked counts when not yet set
 		const itemTotalChapters = item.totalChapters ?? 0;
 		const itemTotalVolumes = kind === 'manga' ? ((item as Manga).totalVolumes ?? 0) : 0;
-		this.totalChapters = totalChapters ?? (itemTotalChapters > 0 ? itemTotalChapters : null);
-		this.totalVolumes = totalVolumes ?? (itemTotalVolumes > 0 ? itemTotalVolumes : null);
+		this.totalChapters = opts.totalChapters ?? (itemTotalChapters > 0 ? itemTotalChapters : null);
+		this.totalVolumes = opts.totalVolumes ?? (itemTotalVolumes > 0 ? itemTotalVolumes : null);
 	}
 
 	onOpen(): void {
@@ -130,7 +125,7 @@ export class ReadingScheduleModal extends Modal {
 			renderCounters: (parent) => this.renderCounters(parent),
 			modal: this,
 			onSave: async () => {
-				await this.onSave(
+				await this.opts.onSave(
 					buildScheduleFromState(this.form, false),
 					this.currentVolume,
 					this.currentChapter,

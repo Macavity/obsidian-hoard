@@ -19,7 +19,7 @@ function setup(original: HoardTitle) {
 		getTitles: () => [original],
 		updateTitle: (t: HoardTitle) => { updated.push(structuredClone(t)); return Promise.resolve(); },
 	};
-	const modal = new EditTitleModal({ app: {} as never, settings: fakeSettings({ types: [] }) as never, titles: dataManager as never }, original, () => {});
+	const modal = new EditTitleModal({} as never, fakeSettings({ types: [] }) as never, dataManager as never, { title: original, onSaved: () => {} });
 	return { form: modal as unknown as Form, updated };
 }
 

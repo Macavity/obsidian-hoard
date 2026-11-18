@@ -8,12 +8,10 @@ import { newGame } from '../../../shared/domain/entryFactories';
 import { steamLibraryCover } from '../../../shared/api/steamStoreApi';
 import { markViewRoot } from '../../../shared/ui/detailFrame';
 
-export interface SteamSyncModalDeps {
-	app: App;
-	settings: SettingsReader;
-	games: Pick<GameDataManager, 'addGame' | 'applySteamSync' | 'generateGameId' | 'getGames' | 'getSettings'>;
-	api: Pick<ApiService, 'getSteamOwnedGames' | 'getSteamAchievements' | 'getSteamAppDetails'>;
-}
+export type SteamSyncGames = Pick<GameDataManager, 'addGame' | 'applySteamSync' | 'generateGameId' | 'getGames' | 'getSettings'>;
+export type SteamSyncApi = Pick<ApiService, 'getSteamOwnedGames' | 'getSteamAchievements' | 'getSteamAppDetails'>;
+
+export type OpenSteamSync = () => void;
 
 /**
  * Steam library sync.
@@ -38,12 +36,17 @@ export class SteamSyncModal extends Modal {
 	/** Set by onClose — separates "user stopped the run" from "the modal is gone". */
 	private disposed = false;
 
-	constructor(private deps: SteamSyncModalDeps) {
-		super(deps.app);
+	constructor(
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly games: SteamSyncGames,
+		private readonly api: SteamSyncApi,
+	) {
+		super(app);
 	}
 
 	onOpen(): void {
-		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
+		markViewRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-steam-sync');
 		void this.loadLibrary();
 	}
@@ -63,7 +66,7 @@ export class SteamSyncModal extends Modal {
 		c.createEl('h2', { text: t('steam.title') });
 		const status = c.createDiv({ cls: 'hoard-steam-sync__status', text: t('steam.fetching') });
 
-		const result = await this.deps.api.getSteamOwnedGames();
+		const result = await this.api.getSteamOwnedGames();
 		if (this.cancelled) return;
 
 		if (!result.ok) {
@@ -84,7 +87,7 @@ export class SteamSyncModal extends Modal {
 	 * normalized title. Only the title tier can be wrong, and it's the last resort.
 	 */
 	private matchAgainstLibrary(): void {
-		const games = this.deps.games.getGames();
+		const games = this.games.getGames();
 		const byAppId = new Map<string, Game>();
 		const byTitle = new Map<string, Game>();
 
@@ -273,7 +276,7 @@ export class SteamSyncModal extends Modal {
 			tick(t('steam.updating', { title: game.title }));
 			let achievements: { earned: number; total: number } | null = null;
 			if (this.syncAchievements) {
-				achievements = await this.deps.api.getSteamAchievements(steam.appId);
+				achievements = await this.api.getSteamAchievements(steam.appId);
 				tick(t('steam.achievementsFor', { title: game.title }));
 			}
 			updates.push({
@@ -285,22 +288,22 @@ export class SteamSyncModal extends Modal {
 			});
 		}
 
-		const updated = updates.length > 0 ? await this.deps.games.applySteamSync(updates) : 0;
+		const updated = updates.length > 0 ? await this.games.applySteamSync(updates) : 0;
 
 		// new games: one storefront call each, then create
 		let imported = 0;
 		for (const steam of newGames) {
 			if (this.cancelled) break;
 			tick(t('steam.importing', { title: steam.name }));
-			const details = await this.deps.api.getSteamAppDetails(steam.appId);
+			const details = await this.api.getSteamAppDetails(steam.appId);
 
 			let achievements: { earned: number; total: number } | null = null;
 			if (this.syncAchievements) {
-				achievements = await this.deps.api.getSteamAchievements(steam.appId);
+				achievements = await this.api.getSteamAchievements(steam.appId);
 				tick(t('steam.achievementsFor', { title: steam.name }));
 			}
 
-			await this.deps.games.addGame(this.buildGame(steam, details, achievements));
+			await this.games.addGame(this.buildGame(steam, details, achievements));
 			imported++;
 		}
 
@@ -318,7 +321,7 @@ export class SteamSyncModal extends Modal {
 		details: SteamAppDetails | null,
 		achievements: { earned: number; total: number } | null,
 	): Game {
-		const settings = this.deps.games.getSettings();
+		const settings = this.games.getSettings();
 		const title = details?.name || steam.name || `App ${steam.appId}`;
 
 		// genre: the first storefront genre matching a configured one, else the configured default — never
@@ -334,7 +337,7 @@ export class SteamSyncModal extends Modal {
 
 		// library data first; what the storefront and the achievements call returned lies over it
 		return newGame({
-			id: this.deps.games.generateGameId(title),
+			id: this.games.generateGameId(title),
 			title,
 			type: genre,
 			status,

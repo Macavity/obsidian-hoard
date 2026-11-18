@@ -32,12 +32,12 @@ describe('csv and steam i18n', () => {
 
 	it('shows a German Steam failure message', async () => {
 		setLocale('de');
-		const modal = new SteamSyncModal({
-			app: {},
-			settings: fakeSettings({}),
-			api: { getSteamOwnedGames: () => Promise.resolve({ ok: false, reason: 'empty' }) },
-			games: {},
-		} as never);
+		const modal = new SteamSyncModal(
+			{} as never,
+			fakeSettings({}) as never,
+			{} as never,
+			{ getSteamOwnedGames: () => Promise.resolve({ ok: false, reason: 'empty' }) } as never,
+		);
 		modal.onOpen();
 		await new Promise((r) => setTimeout(r, 0));
 		const texts = allText(modal.contentEl);

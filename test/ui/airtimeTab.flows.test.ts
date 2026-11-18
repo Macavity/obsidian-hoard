@@ -20,8 +20,8 @@ vi.mock('../../src/shared/ui/ConfirmModal', () => ({
 }));
 vi.mock('../../src/modules/airtime/ui/UpcomingFinderModal', () => ({
 	UpcomingFinderModal: class {
-		constructor(_app: unknown, items: Captures['finders'][number]['items'], onPick: (i: unknown) => void) {
-			cap.finders.push({ items, onPick });
+		constructor(_app: unknown, opts: { items: Captures['finders'][number]['items']; onSelect: (i: unknown) => void }) {
+			cap.finders.push({ items: opts.items, onPick: opts.onSelect });
 		}
 		open(): void {}
 	},
@@ -125,7 +125,7 @@ describe('add flow', () => {
 		pick({ source: 'reading', kind: 'manga', id: 'm1' });
 		pick({ source: 'reading', id: 'b1' });
 		pick({ source: 'reading', kind: 'book', id: 'nope' });
-		expect(cap.readingModals.map((a) => a[2])).toEqual(['book', 'manga', 'book']);
+		expect(cap.readingModals.map((a) => (a[1] as { kind: string }).kind)).toEqual(['book', 'manga', 'book']);
 		pick({ source: 'game', id: 'g1' });
 		pick({ source: 'game', id: 'nope' });
 		expect(cap.gameModals).toHaveLength(1);

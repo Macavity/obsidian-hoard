@@ -50,7 +50,9 @@ function setup(opts: Opts) {
 		}),
 		api: { getTmdbMovieDetails: (id: string) => Promise.resolve(opts.details[id] ?? null) },
 	};
-	const modal = new CollectionModal(deps as never, collection, 'Movie', () => {});
+	const modal = new CollectionModal(deps.app, deps.settings as never, deps.titles as never, deps.api as never, {
+		collection, movieType: 'Movie', onOpenTitle: () => {},
+	});
 	const internals = modal as unknown as { selected: Set<number>; createGroup: boolean; addSelected: () => Promise<void> };
 	return {
 		batches,

@@ -26,25 +26,30 @@ import { buildPosterCard } from '../../../shared/ui/PosterCard';
 import type { CardMenuContext } from '../../../shared/ui/PosterCard';
 import { pinModalFooter } from '../../../shared/ui/StickyModal';
 
-/** What resolving a title's TMDB collection reads and caches. */
-export interface ResolveCollectionDeps {
-	settings: SettingsReader;
-	titles: Pick<DataManager, 'updateTmdbIdentity'>;
-	api: Pick<
-		ApiService,
-		'hasTmdbKey' | 'searchTmdbMovieId' | 'findTmdbMovieIdByImdbId' | 'getTmdbCollection' | 'getTmdbMovieCollection'
-	>;
+/** The API methods resolving a title's TMDB collection calls. */
+export type CollectionResolveApi = Pick<
+	ApiService,
+	'hasTmdbKey' | 'searchTmdbMovieId' | 'findTmdbMovieIdByImdbId' | 'getTmdbCollection' | 'getTmdbMovieCollection'
+>;
+/** Where resolving a title's TMDB collection caches what it learns. */
+export type CollectionIdentityStore = Pick<DataManager, 'updateTmdbIdentity'>;
+
+export type CollectionStore = Pick<
+	DataManager,
+	| 'updateTmdbIdentity' | 'getTitles' | 'getGroups' | 'getEffectiveTotal' | 'generateId' | 'generateGroupId'
+	| 'addTitleBatch' | 'addGroup' | 'updateGroup' | 'notifyChange'
+>;
+export type CollectionApi = CollectionResolveApi & Pick<ApiService, 'getTmdbMovieDetails'>;
+
+export interface CollectionOptions {
+	collection: TmdbCollectionDetail;
+	movieType: string;
+	// injected — importing TitleDetailModal would cycle
+	onOpenTitle: (title: HoardTitle) => void;
+	onChanged?: () => void;
 }
 
-export interface CollectionModalDeps extends ResolveCollectionDeps {
-	app: App;
-	titles: Pick<
-		DataManager,
-		| 'updateTmdbIdentity' | 'getTitles' | 'getGroups' | 'getEffectiveTotal' | 'generateId' | 'generateGroupId'
-		| 'addTitleBatch' | 'addGroup' | 'updateGroup' | 'notifyChange'
-	>;
-	api: ResolveCollectionDeps['api'] & Pick<ApiService, 'getTmdbMovieDetails'>;
-}
+export type OpenCollection = (opts: CollectionOptions) => void;
 
 const TMDB_IMG_BASE = 'https://image.tmdb.org/t/p';
 const NOT_ADDED_COLOR = '#4b5563';
@@ -86,8 +91,11 @@ function matchLibraryTitle(
 }
 
 /** The TMDB movie id of a title: the stored one, else /find by IMDb id, else a title search. null = unresolved. */
-async function resolveMovieId(deps: ResolveCollectionDeps, title: HoardTitle): Promise<number | null> {
-	const api = deps.api;
+async function resolveMovieId(
+	titles: CollectionIdentityStore,
+	api: CollectionResolveApi,
+	title: HoardTitle,
+): Promise<number | null> {
 	// a tv id in tmdbId would query a random film — only a movie id is usable here
 	if (title.tmdbMediaType === 'movie' && title.tmdbId) return title.tmdbId;
 	const imdbId = imdbIdFromLink(title.externalLink);
@@ -96,33 +104,34 @@ async function resolveMovieId(deps: ResolveCollectionDeps, title: HoardTitle): P
 	const found = await api.findTmdbMovieIdByImdbId(imdbId);
 	if (found.status === 'found') return found.value;
 	// exact key said not-a-movie. Cache it or every series re-queries; a failed lookup caches nothing.
-	if (found.status === 'notfound') deps.titles.updateTmdbIdentity(title.id, null, COLLECTION_NONE);
+	if (found.status === 'notfound') titles.updateTmdbIdentity(title.id, null, COLLECTION_NONE);
 	return null;
 }
 
 // stored tmdbId -> /find by imdb id -> title search. Caches what it learns.
 export async function resolveCollection(
-	deps: ResolveCollectionDeps,
+	settings: SettingsReader,
+	titles: CollectionIdentityStore,
+	api: CollectionResolveApi,
 	title: HoardTitle,
 ): Promise<TmdbCollectionDetail | null> {
-	const api = deps.api;
 	if (!api.hasTmdbKey()) return null;
-	if (getApiGroupForType(title.type, deps.settings.get().typeApiMapping) !== 'movie') return null;
+	if (getApiGroupForType(title.type, settings.get().typeApiMapping) !== 'movie') return null;
 	if (isCollectionNone(title)) return null;
 
 	const known = getCollectionId(title);
 	if (known !== null) return api.getTmdbCollection(known);
 
-	const tmdbId = await resolveMovieId(deps, title);
+	const tmdbId = await resolveMovieId(titles, api, title);
 	if (!tmdbId) return null;
 
 	const lookup = await api.getTmdbMovieCollection(tmdbId);
 	if (lookup.status === 'failed' || lookup.status === 'nokey') return null;
 	if (lookup.status === 'notfound') {
-		deps.titles.updateTmdbIdentity(title.id, tmdbId, COLLECTION_NONE);
+		titles.updateTmdbIdentity(title.id, tmdbId, COLLECTION_NONE);
 		return null;
 	}
-	deps.titles.updateTmdbIdentity(title.id, tmdbId, lookup.value.id);
+	titles.updateTmdbIdentity(title.id, tmdbId, lookup.value.id);
 	return api.getTmdbCollection(lookup.value.id);
 }
 
@@ -131,8 +140,6 @@ export function countMissing(collection: TmdbCollectionDetail, titles: HoardTitl
 }
 
 export class CollectionModal extends Modal {
-	private collection: TmdbCollectionDetail;
-	private onChanged?: () => void;
 	private changed = false;
 
 	private parts: TmdbCollectionPart[] = [];
@@ -140,9 +147,6 @@ export class CollectionModal extends Modal {
 	private createGroup = false;
 	private isAdding = false;
 
-	private movieType: string;
-	// injected — importing TitleDetailModal would cycle
-	private onOpenTitle: (title: HoardTitle) => void;
 
 	private gridEl: HTMLElement | null = null;
 	private footerEl: HTMLElement | null = null;
@@ -150,17 +154,14 @@ export class CollectionModal extends Modal {
 	private cleanups: (() => void)[] = [];
 
 	constructor(
-		private deps: CollectionModalDeps,
-		collection: TmdbCollectionDetail,
-		movieType: string,
-		onOpenTitle: (title: HoardTitle) => void,
-		onChanged?: () => void,
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly titles: CollectionStore,
+		private readonly api: CollectionApi,
+		private readonly opts: CollectionOptions,
 	) {
-		super(deps.app);
-		this.collection = collection;
-		this.movieType = movieType;
-		this.onOpenTitle = onOpenTitle;
-		this.onChanged = onChanged;
+		super(app);
+		const { collection } = opts;
 
 		// oldest first, undated last
 		this.parts = [...(collection.parts ?? [])].sort((a, b) => {
@@ -174,7 +175,7 @@ export class CollectionModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
+		const colorTheme = this.settings.get().colorTheme ?? 'default';
 		this.modalEl.setAttribute('data-theme', colorTheme);
 		this.modalEl.addClass('hoard-collection__modal-shell');
 		this.contentEl.setAttribute('data-theme', colorTheme);
@@ -188,7 +189,7 @@ export class CollectionModal extends Modal {
 		for (const fn of this.cleanups) fn();
 		this.cleanups = [];
 		this.contentEl.empty();
-		if (this.changed && this.onChanged) this.onChanged();
+		if (this.changed && this.opts.onChanged) this.opts.onChanged();
 	}
 
 	private renderAll(): void {
@@ -206,29 +207,29 @@ export class CollectionModal extends Modal {
 	private renderHeader(): void {
 		const header = this.contentEl.createDiv({ cls: 'hoard-collection__header' });
 
-		const posterUrl = tmdbPoster(this.collection.poster_path, 'w185');
+		const posterUrl = tmdbPoster(this.opts.collection.poster_path, 'w185');
 		if (posterUrl) {
 			const cover = header.createDiv({ cls: 'hoard-collection__cover' });
 			const img = cover.createEl('img', { cls: 'hoard-collection__cover-img' });
 			img.src = posterUrl;
-			img.alt = this.collection.name;
+			img.alt = this.opts.collection.name;
 			img.decoding = 'async';
 			img.onerror = () => cover.addClass('hoard-hidden');
 		}
 
 		const left = header.createDiv({ cls: 'hoard-collection__header-left' });
-		left.createEl('h2', { cls: 'hoard-detail__title', text: this.collection.name });
+		left.createEl('h2', { cls: 'hoard-detail__title', text: this.opts.collection.name });
 		this.metaEl = left.createDiv({ cls: 'hoard-collection__meta' });
 		this.renderMeta();
 
-		if (this.collection.overview) {
-			left.createDiv({ cls: 'hoard-collection__overview', text: this.collection.overview });
+		if (this.opts.collection.overview) {
+			left.createDiv({ cls: 'hoard-collection__overview', text: this.opts.collection.overview });
 		}
 	}
 
 	private renderMeta(): void {
 		if (!this.metaEl) return;
-		const titles = this.deps.titles.getTitles();
+		const titles = this.titles.getTitles();
 		const owned = this.parts.filter((p) => matchLibraryTitle(p, titles)).length;
 		this.metaEl.setText(t('misc.collection.libraryCount', { owned, total: this.parts.length }));
 	}
@@ -238,8 +239,8 @@ export class CollectionModal extends Modal {
 		if (!grid) return;
 		grid.empty();
 
-		const settings = this.deps.settings.get();
-		const titles = this.deps.titles.getTitles();
+		const settings = this.settings.get();
+		const titles = this.titles.getTitles();
 		const menuCtx: CardMenuContext = { container: grid, cleanups: this.cleanups };
 
 		for (const part of this.parts) {
@@ -254,7 +255,7 @@ export class CollectionModal extends Modal {
 				const typeColor = typeDef
 					? getThemedColor(existing.type, typeDef.color, settings.colorTheme)
 					: NOT_ADDED_COLOR;
-				const total = this.deps.titles.getEffectiveTotal(existing);
+				const total = this.titles.getEffectiveTotal(existing);
 				const ratio =
 					existing.status === 'Completed'
 						? 1
@@ -279,7 +280,7 @@ export class CollectionModal extends Modal {
 						progressRatio: ratio,
 						onClick: () => {
 							this.close();
-							this.onOpenTitle(existing);
+							this.opts.onOpenTitle(existing);
 						},
 					},
 					menuCtx,
@@ -297,7 +298,7 @@ export class CollectionModal extends Modal {
 					selected: this.selected.has(part.id),
 					statusLabel: t('misc.collection.notAdded'),
 					statusColor: NOT_ADDED_COLOR,
-					typeLabel: this.movieType,
+					typeLabel: this.opts.movieType,
 					typeColor: NOT_ADDED_COLOR,
 					year: year || undefined,
 					onClick: (el) => this.toggleSelection(part.id, el),
@@ -328,7 +329,7 @@ export class CollectionModal extends Modal {
 		if (!footer) return;
 		footer.empty();
 
-		const titles = this.deps.titles.getTitles();
+		const titles = this.titles.getTitles();
 		const missing = this.parts.filter((p) => !matchLibraryTitle(p, titles));
 
 		const left = footer.createDiv({ cls: 'hoard-collection__footer-left' });
@@ -359,7 +360,7 @@ export class CollectionModal extends Modal {
 		groupCheck.addEventListener('change', () => {
 			this.createGroup = groupCheck.checked;
 		});
-		groupLabel.createSpan({ text: t('misc.collection.groupAs', { name: this.collection.name }) });
+		groupLabel.createSpan({ text: t('misc.collection.groupAs', { name: this.opts.collection.name }) });
 
 		const addBtn = footer.createEl('button', {
 			cls: 'hoard-btn hoard-btn--primary hoard-collection__add',
@@ -387,8 +388,8 @@ export class CollectionModal extends Modal {
 		// renderFooter detached the clicked button — re-query
 		const addBtn = this.footerEl?.querySelector<HTMLElement>('.hoard-collection__add') ?? null;
 
-		const api = this.deps.api;
-		const settings = this.deps.settings.get();
+		const api = this.api;
+		const settings = this.settings.get();
 		// shipped defaults may have been renamed away
 		const status =
 			settings.statuses.find((s) => s.name === 'Plan to watch')?.name ??
@@ -400,7 +401,7 @@ export class CollectionModal extends Modal {
 			'Medium';
 
 		// generateId only sees stored titles — dedupe within the batch too
-		const takenIds = new Set(this.deps.titles.getTitles().map((t) => t.id));
+		const takenIds = new Set(this.titles.getTitles().map((t) => t.id));
 		const entries: HoardTitle[] = [];
 		let failed = 0;
 
@@ -414,7 +415,7 @@ export class CollectionModal extends Modal {
 				continue;
 			}
 
-			let id = this.deps.titles.generateId(detail.title);
+			let id = this.titles.generateId(detail.title);
 			if (takenIds.has(id)) {
 				let n = 2;
 				while (takenIds.has(`${id}-${n}`)) n++;
@@ -425,7 +426,7 @@ export class CollectionModal extends Modal {
 			entries.push(newTitle({
 				id,
 				title: detail.title,
-				type: this.movieType,
+				type: this.opts.movieType,
 				status,
 				priority,
 				totalEpisodes: detail.episodes,
@@ -439,7 +440,7 @@ export class CollectionModal extends Modal {
 				manualTrailerUrl: '',
 				// both ids known — skips the ladder forever
 				tmdbId: part.id,
-				collectionId: this.collection.id,
+				collectionId: this.opts.collection.id,
 				director: nonEmpty(detail.director),
 				cast: nonEmpty(detail.cast),
 			}));
@@ -447,11 +448,11 @@ export class CollectionModal extends Modal {
 
 		if (entries.length > 0) {
 			// handles the future-release "To be released" + Upcoming routing
-			await this.deps.titles.addTitleBatch(entries);
+			await this.titles.addTitleBatch(entries);
 			if (this.createGroup) await this.createCollectionGroup(entries);
-			this.deps.titles.notifyChange();
+			this.titles.notifyChange();
 			this.changed = true;
-			if (this.onChanged) this.onChanged();
+			if (this.opts.onChanged) this.opts.onChanged();
 		}
 
 		this.isAdding = false;
@@ -464,7 +465,7 @@ export class CollectionModal extends Modal {
 					: t('misc.collection.fetchFailed'),
 			);
 		} else {
-			new Notice(t('misc.collection.added', { count: entries.length, name: this.collection.name }));
+			new Notice(t('misc.collection.added', { count: entries.length, name: this.opts.collection.name }));
 		}
 
 		this.renderGrid();
@@ -474,7 +475,7 @@ export class CollectionModal extends Modal {
 
 	// whole collection, not just the new entries
 	private async createCollectionGroup(added: HoardTitle[]): Promise<void> {
-		const titles = this.deps.titles.getTitles();
+		const titles = this.titles.getTitles();
 		const memberIds = new Set(added.map((t) => t.id));
 		for (const part of this.parts) {
 			const existing = matchLibraryTitle(part, titles);
@@ -482,23 +483,23 @@ export class CollectionModal extends Modal {
 		}
 		if (memberIds.size === 0) return;
 
-		const name = this.collection.name;
-		const existingGroup = this.deps.titles.getGroups().find((g) => g.name === name);
+		const name = this.opts.collection.name;
+		const existingGroup = this.titles.getGroups().find((g) => g.name === name);
 		if (existingGroup) {
 			// top up, don't duplicate
 			for (const id of memberIds) {
 				if (!existingGroup.titleIds.includes(id)) existingGroup.titleIds.push(id);
 			}
-			await this.deps.titles.updateGroup(existingGroup);
+			await this.titles.updateGroup(existingGroup);
 			return;
 		}
 
 		const group: HoardGroup = {
-			id: this.deps.titles.generateGroupId(name),
+			id: this.titles.generateGroupId(name),
 			name,
 			titleIds: [...memberIds],
 			dateAdded: new Date().toISOString(),
 		};
-		await this.deps.titles.addGroup(group);
+		await this.titles.addGroup(group);
 	}
 }

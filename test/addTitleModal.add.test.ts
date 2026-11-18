@@ -28,18 +28,21 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 		recordLookup: vi.fn(),
 	};
 	const settings = fakeSettings({ setFinishDateAutomatically: autoFinish, lastAddedType: '', typeApiMapping: {}, types: [] });
-	const deps = {
-		app: {} as never,
-		settings: settings as never,
-		titles: dataManager as never,
-		api: { fetchCommunityRating: () => Promise.resolve(null) } as never,
-		resolveDefaultAddType: () => 'Movie',
-	};
-	const modal = new AddTitleModal(deps, () => {}, {
-		title: ' Dark ', type: 'TV Show', episodes: prefill.episodes ?? 3, duration: 50, releaseDate: '2017-12-01',
-		link: 'https://example.test/dark', seasons: SEASONS,
-		trailerUrl: prefill.trailerUrl, director: prefill.director, cast: prefill.cast,
-	});
+	const modal = new AddTitleModal(
+		{} as never,
+		settings as never,
+		dataManager as never,
+		{ fetchCommunityRating: () => Promise.resolve(null) } as never,
+		() => 'Movie',
+		{
+			onAdded: () => {},
+			prefill: {
+				title: ' Dark ', type: 'TV Show', episodes: prefill.episodes ?? 3, duration: 50, releaseDate: '2017-12-01',
+				link: 'https://example.test/dark', seasons: SEASONS,
+				trailerUrl: prefill.trailerUrl, director: prefill.director, cast: prefill.cast,
+			},
+		},
+	);
 	return { form: modal as unknown as Form, added, dataManager, settings };
 }
 

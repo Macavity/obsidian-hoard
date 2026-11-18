@@ -26,8 +26,8 @@ describe('detail modals i18n', () => {
 		setLocale('de');
 		const parent = new El('root');
 		const title = makeTitle({ id: 'a' });
-		const deps = { titles: { getTitle: () => title } };
-		renderCommunityRating(parent as never, deps as never, 'a');
+		const titles = { getTitle: () => title };
+		renderCommunityRating(parent as never, titles as never, {} as never, {} as never, 'a');
 		const texts = allText(parent);
 		expect(texts).toContain(de.detail.community.empty);
 		expect(texts).toContain(de.detail.community.refresh);

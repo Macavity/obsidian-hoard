@@ -37,15 +37,16 @@ describe('reading and games i18n', () => {
 
 	it('renders the manage fields modal in German', () => {
 		setLocale('de');
-		const modal = new ReadingManageColumnsModal({
-			app: {},
-			settings: fakeSettings({}),
-			reading: {
+		const modal = new ReadingManageColumnsModal(
+			{} as never,
+			fakeSettings({}) as never,			{
 				getSettings: () => ({}),
 				getBookColumns: () => [],
 				getMangaColumns: () => [],
-			},
-		} as never, 'book', () => {});
+			} as never,
+			() => {},
+			{ kind: 'book', onChanged: () => {} },
+		);
 		const internals = modal as unknown as {
 			renderStyleToggle: (parent: El) => void;
 			renderList: () => void;

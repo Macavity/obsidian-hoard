@@ -1,7 +1,8 @@
-import { Modal } from 'obsidian';
+import { App, Modal } from 'obsidian';
+import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
 import type { MediaSearchResult } from '../../../shared/domain/types';
 import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
-import { AddTitleModal, type AddTitleModalDeps } from './AddTitleModal';
+import { AddTitleModal, type AddTitleApi, type AddTitleStore } from './AddTitleModal';
 import { t } from '../../../shared/i18n';
 import { effectiveMediaSource } from '../../../shared/api/apiSources';
 
@@ -9,8 +10,12 @@ import { effectiveMediaSource } from '../../../shared/api/apiSources';
 const TMDB_URL_RE = /themoviedb\.org\/(movie|tv)\/(\d+)/i;
 
 /** Opens the manual form with the looked-up title, so it carries the form's deps. */
-export interface AddFromUrlModalDeps extends AddTitleModalDeps {
-	api: AddTitleModalDeps['api'] & Pick<ApiService, 'getTmdbByImdbId' | 'getOmdbByImdbId' | 'hasTmdbKey'>;
+export interface AddFromUrlModalDeps {
+	app: App;
+	settings: SettingsReader & SettingsWriter;
+	titles: AddTitleStore;
+	api: AddTitleApi & Pick<ApiService, 'getTmdbByImdbId' | 'getOmdbByImdbId' | 'hasTmdbKey'>;
+	resolveDefaultAddType: () => string;
 }
 
 export class AddFromUrlModal extends Modal {
@@ -132,7 +137,13 @@ export class AddFromUrlModal extends Modal {
 			this.close();
 
 			const type = result.mediaType === 'movie' ? 'Movie' : 'TV Show';
-			new AddTitleModal(this.deps, this.onAdded, {
+			new AddTitleModal(
+				this.deps.app,
+				this.deps.settings,
+				this.deps.titles,
+				this.deps.api,
+				this.deps.resolveDefaultAddType,
+				{ onAdded: this.onAdded, prefill: {
 				title: result.title,
 				type,
 				episodes: result.episodes,
@@ -143,7 +154,8 @@ export class AddFromUrlModal extends Modal {
 				trailerUrl: result.trailerUrl ?? '',
 				director: result.director,
 				cast: result.cast,
-			}).open();
+			} },
+			).open();
 		} finally {
 			btn.disabled = false;
 			btn.textContent = t('common.add');

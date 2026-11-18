@@ -1,4 +1,4 @@
-import { App, FuzzySuggestModal, Modal, Notice, TFile } from 'obsidian';
+import { App, FuzzySuggestModal, Modal, Notice, TFile, type Vault, type Workspace } from 'obsidian';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
 import type { ReadingDataManager } from '../services/ReadingDataManager';
 import { newBook, newManga } from '../../../shared/domain/entryFactories';
@@ -99,20 +99,23 @@ export class VaultFilePicker extends FuzzySuggestModal<TFile> {
 	}
 }
 
-export interface AddReadingModalDeps {
-	app: App;
-	settings: SettingsReader;
-	reading: ReadingDataManager;
-	/** Book search through the configured source (covers module). */
-	searchBooks: typeof searchBooks;
-	api: BookSearchApi & Pick<ApiService, 'searchManga' | 'getMangaByMalId' | 'getGoogleBookById' | 'getOpenLibraryWork'>;
+type BookSearcher = typeof searchBooks;
+
+export type AddReadingApi = BookSearchApi & Pick<ApiService, 'searchManga' | 'getMangaByMalId' | 'getGoogleBookById' | 'getOpenLibraryWork'>;
+
+export interface AddReadingOptions {
+	mode: ReadingMode;
+	onSaved: () => void;
+	/** Set when editing an existing item. */
+	initial?: { state: ReadingFormState; id: string };
+	prefillSearch?: string;
 }
 
+export type OpenAddReading = (opts: AddReadingOptions) => void;
+
 export class AddReadingModal extends Modal {
-	private mode: ReadingMode;
 	private state: ReadingFormState;
 	private existingId: string | null;
-	private onSaved: () => void;
 	private starsWrap: HTMLElement | null = null;
 	private lookupResultsEl: HTMLElement | null = null;
 	private formEl: HTMLElement | null = null;
@@ -127,28 +130,31 @@ export class AddReadingModal extends Modal {
 	private libIndex: LibraryIndex | null = null;
 
 	constructor(
-		private deps: AddReadingModalDeps,
-		mode: ReadingMode,
-		onSaved: () => void,
-		initial?: { state: ReadingFormState; id: string },
-		prefillSearch?: string,
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly reading: ReadingDataManager,
+		private readonly vault: Pick<Vault, 'getAbstractFileByPath'>,
+		private readonly workspace: Pick<Workspace, 'getLeaf'>,
+		/** Book search through the configured source (covers module). */
+		private readonly searchBooks: BookSearcher,
+		private readonly api: AddReadingApi,
+		private readonly opts: AddReadingOptions,
 	) {
-		super(deps.app);
-		this.mode = mode;
+		super(app);
+		const { initial, prefillSearch } = opts;
 		this.state = initial ? { ...initial.state } : emptyFormState();
 		if (!initial) {
-			const defStatus = deps.reading.getSettings().defaultStatus;
+			const defStatus = reading.getSettings().defaultStatus;
 			if (defStatus) this.state.status = defStatus;
 		}
 		this.existingId = initial?.id ?? null;
-		this.onSaved = onSaved;
 		this.prefillSearch = prefillSearch ?? '';
 	}
 
 	onOpen(): void {
-		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
+		markViewRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-reading-modal');
-		this.contentEl.addClass(this.mode === 'book' ? 'hoard-reading-modal--book' : 'hoard-reading-modal--manga');
+		this.contentEl.addClass(this.opts.mode === 'book' ? 'hoard-reading-modal--book' : 'hoard-reading-modal--manga');
 		this.titleEl.setText(this.headerTitle());
 		this.buildUI();
 	}
@@ -160,9 +166,9 @@ export class AddReadingModal extends Modal {
 
 	private headerTitle(): string {
 		if (this.existingId) {
-			return this.mode === 'book' ? t('add.reading.editBook') : t('add.reading.editManga');
+			return this.opts.mode === 'book' ? t('add.reading.editBook') : t('add.reading.editManga');
 		}
-		return this.mode === 'book' ? t('add.reading.addBook') : t('add.reading.addManga');
+		return this.opts.mode === 'book' ? t('add.reading.addBook') : t('add.reading.addManga');
 	}
 
 	private buildUI(): void {
@@ -182,7 +188,7 @@ export class AddReadingModal extends Modal {
 		const left = row.createDiv({ cls: 'hoard-reading-modal__header-left' });
 		left.createSpan({
 			cls: 'hoard-reading-modal__header-icon',
-			text: this.mode === 'book' ? '📖' : '📓',
+			text: this.opts.mode === 'book' ? '📖' : '📓',
 		});
 		left.createSpan({
 			cls: 'hoard-reading-modal__header-title',
@@ -216,9 +222,9 @@ export class AddReadingModal extends Modal {
 	private openLinkedVaultPage(): void {
 		const path = this.state.vaultPage;
 		if (!path) return;
-		const file = this.app.vault.getAbstractFileByPath(path);
+		const file = this.vault.getAbstractFileByPath(path);
 		if (file instanceof TFile) {
-			void this.app.workspace.getLeaf('tab').openFile(file);
+			void this.workspace.getLeaf('tab').openFile(file);
 			this.close();
 		} else {
 			new Notice(t('add.reading.linkMissing'));
@@ -231,7 +237,7 @@ export class AddReadingModal extends Modal {
 			cls: 'hoard-modal__input hoard-reading-form__lookup-input',
 			attr: {
 				type: 'text',
-				placeholder: this.mode === 'book'
+				placeholder: this.opts.mode === 'book'
 					? t('add.reading.searchBook')
 					: t('add.reading.searchManga'),
 			},
@@ -282,7 +288,7 @@ export class AddReadingModal extends Modal {
 		this.lookupResultsEl.createDiv({ cls: 'hoard-modal__loading', text: t('ui.picker.searching') });
 
 		try {
-			const outcome = this.mode === 'book'
+			const outcome = this.opts.mode === 'book'
 				? await this.lookupBooks(query)
 				: await this.lookupManga(query);
 			if (gen !== this.lookupSearchGen) return;
@@ -308,14 +314,14 @@ export class AddReadingModal extends Modal {
 	}
 
 	private async lookupBooks(query: string): Promise<LookupOutcome> {
-		return { kind: 'books', results: await this.deps.searchBooks(this.deps.api, this.deps.settings.get(), query) };
+		return { kind: 'books', results: await this.searchBooks(this.api, this.settings.get(), query) };
 	}
 
 	private async lookupManga(query: string): Promise<LookupOutcome> {
 		if (!/^\d+$/.test(query)) {
-			return { kind: 'manga', results: await this.deps.api.searchManga(query) };
+			return { kind: 'manga', results: await this.api.searchManga(query) };
 		}
-		const single = await this.deps.api.getMangaByMalId(parseInt(query, 10));
+		const single = await this.api.getMangaByMalId(parseInt(query, 10));
 		return { kind: 'manga', results: single ? [single] : [] };
 	}
 
@@ -338,9 +344,9 @@ export class AddReadingModal extends Modal {
 		// books check Books, manga check Manga — the two libraries stay separate
 		if (!this.libIndex) {
 			this.libIndex = LibraryIndex.build({
-				books: () => this.deps.reading.getBooks(),
-				manga: () => this.deps.reading.getMangaList(),
-			}, [this.mode === 'book' ? 'books' : 'manga']);
+				books: () => this.reading.getBooks(),
+				manga: () => this.reading.getMangaList(),
+			}, [this.opts.mode === 'book' ? 'books' : 'manga']);
 		}
 		const libIndex = this.libIndex;
 		for (const r of results) {
@@ -376,7 +382,7 @@ export class AddReadingModal extends Modal {
 
 	private async enrichBook(r: BookSearchResult, gen: number): Promise<void> {
 		try {
-			const api = this.deps.api;
+			const api = this.api;
 			const detail = r.googleBooksId ? await api.getGoogleBookById(r.googleBooksId) : await api.getOpenLibraryWork(r.openLibraryId);
 			if (gen !== this.selectGen || !detail) return; // a newer selection superseded this one
 			if (r.googleBooksId) this.applyGoogleDetail(detail);
@@ -413,7 +419,7 @@ export class AddReadingModal extends Modal {
 		// search returns null chapters/volumes for ongoing titles — fetch detail only for the selected manga.
 		if (r.malId > 0) {
 			void (async () => {
-				const detail = await this.deps.api.getMangaByMalId(r.malId);
+				const detail = await this.api.getMangaByMalId(r.malId);
 				if (gen !== this.selectGen || !detail) return; // superseded or no data
 				this.state.totalChapters = detail.totalChapters > 0 ? detail.totalChapters : this.state.totalChapters;
 				this.state.totalVolumes = detail.totalVolumes > 0 ? detail.totalVolumes : this.state.totalVolumes;
@@ -450,7 +456,7 @@ export class AddReadingModal extends Modal {
 		const progressCol = grid.createDiv({ cls: 'hoard-reading-form__grid-column' });
 		const progressLabel = progressCol.createDiv({ cls: 'hoard-reading-modal__section-label' });
 		progressLabel.createSpan({ text: t('add.reading.progress') });
-		if (this.mode === 'book') {
+		if (this.opts.mode === 'book') {
 			progressLabel.addClass('hoard-reading-modal__section-label--row');
 			// Pages/Words switch: swaps which counter pair the form collects. The other unit's numbers stay in
 			// state, so flipping back is lossless.
@@ -467,7 +473,7 @@ export class AddReadingModal extends Modal {
 				},
 			});
 		}
-		if (this.mode === 'book') {
+		if (this.opts.mode === 'book') {
 			const inWords = this.state.progressUnit === 'words';
 			this.renderTwoNumberRow(
 				progressCol,
@@ -549,8 +555,8 @@ export class AddReadingModal extends Modal {
 	private renderStars(): void {
 		if (!this.starsWrap) return;
 		renderStarRating(this.starsWrap, this.state.rating, {
-			allowHalf: this.deps.settings.get().halfStarRatings ?? false,
-			tiers: this.deps.settings.get().ratingSystem,
+			allowHalf: this.settings.get().halfStarRatings ?? false,
+			tiers: this.settings.get().ratingSystem,
 			showLabel: true,
 			onChange: (value) => {
 				this.state.rating = value;
@@ -616,7 +622,7 @@ export class AddReadingModal extends Modal {
 
 	private saveButtonLabel(): string {
 		if (this.existingId) return t('add.saveChanges');
-		return this.mode === 'book' ? t('add.reading.addBook') : t('add.reading.addManga');
+		return this.opts.mode === 'book' ? t('add.reading.addBook') : t('add.reading.addManga');
 	}
 
 	private async save(): Promise<void> {
@@ -626,12 +632,12 @@ export class AddReadingModal extends Modal {
 			return;
 		}
 
-		if (this.mode === 'book') {
+		if (this.opts.mode === 'book') {
 			await this.saveBook(title);
 		} else {
 			await this.saveManga(title);
 		}
-		this.onSaved();
+		this.opts.onSaved();
 		this.close();
 	}
 
@@ -660,7 +666,7 @@ export class AddReadingModal extends Modal {
 
 	private async saveBook(title: string): Promise<void> {
 		if (this.existingId) {
-			const existing = this.deps.reading.getBook(this.existingId);
+			const existing = this.reading.getBook(this.existingId);
 			if (!existing) {
 				new Notice(t('add.reading.bookGone'));
 				return;
@@ -670,10 +676,10 @@ export class AddReadingModal extends Modal {
 				title,
 				...this.bookFormFields(),
 			};
-			await this.deps.reading.updateBook(updated);
+			await this.reading.updateBook(updated);
 		} else {
-			await this.deps.reading.addBook(newBook({
-				id: this.deps.reading.generateBookId(title),
+			await this.reading.addBook(newBook({
+				id: this.reading.generateBookId(title),
 				title,
 				...this.bookFormFields(),
 			}));
@@ -701,7 +707,7 @@ export class AddReadingModal extends Modal {
 
 	private async saveManga(title: string): Promise<void> {
 		if (this.existingId) {
-			const existing = this.deps.reading.getManga(this.existingId);
+			const existing = this.reading.getManga(this.existingId);
 			if (!existing) {
 				new Notice(t('add.reading.mangaGone'));
 				return;
@@ -711,10 +717,10 @@ export class AddReadingModal extends Modal {
 				title,
 				...this.mangaFormFields(),
 			};
-			await this.deps.reading.updateManga(updated);
+			await this.reading.updateManga(updated);
 		} else {
-			await this.deps.reading.addManga(newManga({
-				id: this.deps.reading.generateMangaId(title),
+			await this.reading.addManga(newManga({
+				id: this.reading.generateMangaId(title),
 				title,
 				...this.mangaFormFields(),
 			}));

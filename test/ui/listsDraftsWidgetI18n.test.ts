@@ -54,7 +54,7 @@ describe('widget i18n', () => {
 		const orig = proto.setPlaceholder;
 		proto.setPlaceholder = (p: string) => { placeholder = p; };
 		try {
-			new InsertWidgetModal({ app: {} as never }, [], () => {});
+			new InsertWidgetModal({} as never, { titles: [], onSelect: () => {} });
 		} finally {
 			proto.setPlaceholder = orig;
 		}

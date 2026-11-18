@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddFromUrlModal } from '../src/modules/watchlist/ui/AddFromUrlModal';
+import { AddFromUrlModal, type AddFromUrlModalDeps } from '../src/modules/watchlist/ui/AddFromUrlModal';
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 import type { MediaSearchResult } from '../src/shared/domain/types';
@@ -27,7 +27,7 @@ function setup(activeApi: 'TMDB' | 'OMDb' = 'TMDB', hasKey = true) {
 		getTmdbMovieDetails: vi.fn(() => Promise.resolve<MediaSearchResult | null>(result({ trailerUrl: 'yt' }))),
 		getTmdbTvDetails: vi.fn(() => Promise.resolve<MediaSearchResult | null>(result({ mediaType: 'tv' }))),
 	};
-	const deps = { app: {} as never, settings: fakeSettings({ activeApi }), api, titles: {} } as never;
+	const deps = { app: {} as never, settings: fakeSettings({ activeApi }), api, titles: {} } as never as AddFromUrlModalDeps;
 	const modal = new AddFromUrlModal(deps, () => {});
 	modal.open();
 	const inputs = Array.from(modal.contentEl.querySelectorAll<HTMLInputElement>('input'));
@@ -59,9 +59,12 @@ describe('AddFromUrlModal', () => {
 		imdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(1));
 		// the add form gets the same deps, not a plugin
-		expect(created.calls[0]![0]).toBe(deps);
+		expect(created.calls[0]![0]).toBe(deps.app);
+		expect(created.calls[0]![1]).toBe(deps.settings);
+		expect(created.calls[0]![2]).toBe(deps.titles);
+		expect(created.calls[0]![3]).toBe(deps.api);
 		expect(api.getTmdbByImdbId).toHaveBeenCalledWith('tt1375666');
-		expect(created.calls[0]![2]).toMatchObject({
+		expect((created.calls[0]!.at(-1) as { prefill: unknown }).prefill).toMatchObject({
 			title: 'Inception', type: 'Movie', episodes: 1, duration: 148, releaseDate: '2010-07-16',
 			link: 'https://imdb.test/tt1', trailerUrl: '',
 		});
@@ -73,7 +76,7 @@ describe('AddFromUrlModal', () => {
 		imdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(1));
 		expect(api.getOmdbByImdbId).toHaveBeenCalledWith('tt0944947');
-		expect(created.calls[0]![2]).toMatchObject({ type: 'TV Show' });
+		expect((created.calls[0]!.at(-1) as { prefill: unknown }).prefill).toMatchObject({ type: 'TV Show' });
 	});
 
 	it('falls back to Cinemeta without a key, trying series then movie', async () => {
@@ -83,7 +86,7 @@ describe('AddFromUrlModal', () => {
 		await vi.waitFor(() => expect(created.opened).toBe(1));
 		expect(api.getCinemetaDetails).toHaveBeenNthCalledWith(1, 'tt0944947', 'tv');
 		expect(api.getOmdbByImdbId).not.toHaveBeenCalled();
-		expect(created.calls[0]![2]).toMatchObject({ type: 'TV Show' });
+		expect((created.calls[0]!.at(-1) as { prefill: unknown }).prefill).toMatchObject({ type: 'TV Show' });
 	});
 
 	it('prefers the series record over a foreign movie record for the same id', async () => {
@@ -93,7 +96,7 @@ describe('AddFromUrlModal', () => {
 		imdb.value = 'tt0903747';
 		imdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(1));
-		expect(created.calls[0]![2]).toMatchObject({ title: 'Real Series' });
+		expect((created.calls[0]!.at(-1) as { prefill: unknown }).prefill).toMatchObject({ title: 'Real Series' });
 	});
 
 	it('reports not found when the lookup resolves empty', async () => {
@@ -146,13 +149,13 @@ describe('AddFromUrlModal', () => {
 		tmdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(1));
 		expect(api.getTmdbMovieDetails).toHaveBeenCalledWith('27205');
-		expect(created.calls[0]![2]).toMatchObject({ type: 'Movie', trailerUrl: 'yt' });
+		expect((created.calls[0]!.at(-1) as { prefill: unknown }).prefill).toMatchObject({ type: 'Movie', trailerUrl: 'yt' });
 
 		const second = setup();
 		second.tmdb.value = 'https://www.themoviedb.org/TV/1396';
 		second.tmdbBtn.click();
 		await vi.waitFor(() => expect(created.opened).toBe(2));
 		expect(second.api.getTmdbTvDetails).toHaveBeenCalledWith('1396');
-		expect(created.calls[1]![2]).toMatchObject({ type: 'TV Show' });
+		expect((created.calls[1]!.at(-1) as { prefill: unknown }).prefill).toMatchObject({ type: 'TV Show' });
 	});
 });

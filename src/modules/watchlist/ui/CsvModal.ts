@@ -125,20 +125,24 @@ export function missingTypeNames(
 
 // Modal
 
-export interface CsvModalDeps {
-	app: App;
-	settings: SettingsReader & SettingsWriter;
-	titles: Pick<DataManager, 'getTitles' | 'generateId' | 'addTitleBatch' | 'notifyChange'>;
-	/** Publishes the running import so the Watchlist header can show and cancel it. */
-	setImportProgress: (progress: ImportProgress | null) => void;
+export type CsvStore = Pick<DataManager, 'getTitles' | 'generateId' | 'addTitleBatch' | 'notifyChange'>;
+
+export interface CsvOptions {
+	mode: 'export' | 'import';
 }
+
+export type OpenCsv = (opts: CsvOptions) => void;
 
 export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 	constructor(
-		private deps: CsvModalDeps,
-		mode: 'export' | 'import',
+		app: App,
+		private readonly settings: SettingsReader & SettingsWriter,
+		private readonly titles: CsvStore,
+		/** Publishes the running import so the Watchlist header can show and cancel it. */
+		private readonly setImportProgress: (progress: ImportProgress | null) => void,
+		opts: CsvOptions,
 	) {
-		super(deps.app, mode);
+		super(app, opts.mode);
 	}
 
 	// Export
@@ -148,7 +152,7 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 	}
 
 	protected exportRows(): CsvExportRow[] {
-		return this.deps.titles.getTitles().map((title) => ({
+		return this.titles.getTitles().map((title) => ({
 			id: title.id,
 			title: title.title,
 			meta: `${typeLabel(title.type)} · ${statusLabel(title.status)}`,
@@ -156,7 +160,7 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 	}
 
 	protected exportSelection(ids: Set<string>): { csv: string; count: number } {
-		const toExport = this.deps.titles.getTitles().filter((t) => ids.has(t.id));
+		const toExport = this.titles.getTitles().filter((t) => ids.has(t.id));
 		return { csv: titlesToCsv(toExport), count: toExport.length };
 	}
 
@@ -195,7 +199,7 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 	}
 
 	protected existingTitles(): { title: string }[] {
-		return this.deps.titles.getTitles();
+		return this.titles.getTitles();
 	}
 
 	protected buildEntry(get: (fieldKey: string) => string): Partial<HoardTitle> | null {
@@ -219,15 +223,15 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 	// Value mapping: statuses and types come from the user's settings
 
 	protected isKnownStatus(status: string): boolean {
-		return this.deps.settings.get().statuses.some((s) => s.name === status);
+		return this.settings.get().statuses.some((s) => s.name === status);
 	}
 
 	protected statusChoices(): CsvSelectOption[] {
-		return this.deps.settings.get().statuses.map((s) => ({ value: s.name, label: statusLabel(s.name) }));
+		return this.settings.get().statuses.map((s) => ({ value: s.name, label: statusLabel(s.name) }));
 	}
 
 	protected collectUnknownTypes(): string[] {
-		const existing = new Set(this.deps.settings.get().types.map((t) => t.name));
+		const existing = new Set(this.settings.get().types.map((t) => t.name));
 		const unknown: string[] = [];
 		const seen = new Set<string>();
 		for (const r of this.importRows) {
@@ -241,7 +245,7 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 	}
 
 	protected renderTypeSection(el: HTMLElement, types: string[]): Record<string, HTMLSelectElement> {
-		const existingTypes = this.deps.settings.get().types.map((t) => t.name);
+		const existingTypes = this.settings.get().types.map((t) => t.name);
 		return this.renderValueSection(el, 'csv.fields.type', types, (sel, tv) => {
 			for (const name of existingTypes) {
 				sel.createEl('option', { value: name, text: typeLabel(name) });
@@ -264,7 +268,7 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 
 	protected afterValueMaps(r: { entry: Partial<HoardTitle>; isDuplicate: boolean }): void {
 		// re-check duplicate status after value resolution
-		r.isDuplicate = !!this.deps.titles.getTitles().find(
+		r.isDuplicate = !!this.titles.getTitles().find(
 			(t) => t.title.toLowerCase() === (r.entry.title ?? '').toLowerCase()
 		);
 	}
@@ -273,12 +277,12 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 
 	/** Creates the types the import introduces (marked CREATE_NEW_TYPE or missing); returns how many. */
 	private async createMissingTypes(toImport: { entry: Partial<HoardTitle> }[]): Promise<number> {
-		const theme = this.deps.settings.get().colorTheme ?? 'default';
-		const existing = this.deps.settings.get().types.map((t) => t.name);
+		const theme = this.settings.get().colorTheme ?? 'default';
+		const existing = this.settings.get().types.map((t) => t.name);
 		const typesToCreate = missingTypeNames(toImport.map((r) => r.entry), existing, this.typeValueMap);
 
 		if (typesToCreate.size > 0) {
-			await this.deps.settings.update((s) => {
+			await this.settings.update((s) => {
 				for (const typeName of typesToCreate) s.types.push({ name: typeName, color: randomAutoColor(theme) });
 			});
 		}
@@ -293,7 +297,7 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 
 		// expose progress to the Watchlist header
 		const cancelFn = (): void => { this.importCancelled = true; };
-		this.deps.setImportProgress({ current: 0, total: toImport.length, cancel: cancelFn });
+		this.setImportProgress({ current: 0, total: toImport.length, cancel: cancelFn });
 
 		const newTypes = await this.createMissingTypes(toImport);
 
@@ -303,18 +307,18 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 				toImport,
 				(r) => buildImportedTitle(
 						r.entry,
-						this.deps.titles.generateId(r.entry.title!.trim()),
-						this.deps.settings.get().types[0]?.name,
+						this.titles.generateId(r.entry.title!.trim()),
+						this.settings.get().types[0]?.name,
 					),
-				(chunk) => this.deps.titles.addTitleBatch(chunk),
+				(chunk) => this.titles.addTitleBatch(chunk),
 				(done) => {
-					this.deps.setImportProgress({ current: done, total: toImport.length, cancel: cancelFn });
+					this.setImportProgress({ current: done, total: toImport.length, cancel: cancelFn });
 				},
 			);
 		} finally {
 			this.isImporting = false;
-			this.deps.setImportProgress(null);
-			this.deps.titles.notifyChange();
+			this.setImportProgress(null);
+			this.titles.notifyChange();
 		}
 
 		this.finishImportUi(added, toImport.length, {

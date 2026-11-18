@@ -8,9 +8,13 @@ import {
 	renderScheduleModal,
 } from '../../../shared/ui/ScheduleForm';
 
-export interface GameScheduleModalDeps {
-	app: App;
+export interface GameScheduleOptions {
+	game: Game;
+	existingSchedule: AirtimeSchedule | null;
+	onSave: (schedule: AirtimeSchedule) => Promise<void>;
 }
+
+export type OpenGameSchedule = (opts: GameScheduleOptions) => void;
 
 /**
  * Schedule modal for Games — the single-release branch of AirtimeScheduleModal. A game releases
@@ -19,17 +23,13 @@ export interface GameScheduleModalDeps {
  */
 export class GameScheduleModal extends Modal {
 	private form: ScheduleFormState; // releaseDate: YYYY-MM-DD ('' = unset) — same format the Games auto-import writes
-	private onSave: (schedule: AirtimeSchedule) => Promise<void>;
 
 	constructor(
-		deps: GameScheduleModalDeps,
-		game: Game,
-		existingSchedule: AirtimeSchedule | null,
-		onSave: (schedule: AirtimeSchedule) => Promise<void>,
+		app: App,
+		private readonly opts: GameScheduleOptions,
 	) {
-		super(deps.app);
-		this.onSave = onSave;
-		this.form = initialScheduleState(existingSchedule, game.releaseDate, 'single');
+		super(app);
+		this.form = initialScheduleState(opts.existingSchedule, opts.game.releaseDate, 'single');
 	}
 
 	onOpen(): void {
@@ -49,7 +49,7 @@ export class GameScheduleModal extends Modal {
 			// the save side-effect, stated instead of silent
 			hint: () => t('misc.gameSchedule.hint'),
 			modal: this,
-			onSave: () => this.onSave(buildScheduleFromState(this.form, false)),
+			onSave: () => this.opts.onSave(buildScheduleFromState(this.form, false)),
 		});
 	}
 }

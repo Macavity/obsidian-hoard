@@ -1,15 +1,15 @@
-import { Notice, Platform, PluginSettingTab, Setting, SliderComponent, normalizePath, setIcon, type Plugin } from 'obsidian';
+import { Notice, Platform, PluginSettingTab, Setting, SliderComponent, normalizePath, setIcon, type App, type Plugin } from 'obsidian';
 import { t, type TranslationKey } from '../../../shared/i18n';
 import { createIconButton } from '../../../shared/ui/IconButton';
 import { statusLabel, typeLabel, readingStatusLabel } from '../../../shared/i18n/labels';
 import { typeNameProblemText } from '../../../shared/ui/problemText';
 import { cardSizeToMinWidth } from '../../../shared/ui/VirtualGrid';
-import type { HoardPluginSettings, TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from '../../../shared/domain/types';
+import type { CustomList, HoardPluginSettings, ImportProgress, TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from '../../../shared/domain/types';
 import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType } from '../../../shared/domain/types';
 import { readingStatusColor } from '../../reading/ui/readingColors';
 import { gamesKeyChip } from '../../../shared/ui/gamesKeyChip';
 import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from '../../../shared/api/apiSources';
-import { SteamSyncModal, type SteamSyncModalDeps } from '../../games/ui/SteamSyncModal';
+import { SteamSyncModal } from '../../games/ui/SteamSyncModal';
 import type { ApiService, SteamFailureReason } from '../../../shared/api/ApiService';
 import { FAILED } from '../../../shared/api/lookup';
 
@@ -137,16 +137,17 @@ interface ApiProviderHandle {
 	setActive: (active: boolean | null) => void;
 	refreshStatus: () => void;
 }
-import { CsvModal, type CsvModalDeps } from '../../watchlist/ui/CsvModal';
+import { CsvModal } from '../../watchlist/ui/CsvModal';
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
 import type { BackupManagers, buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../../backup/services/backup';
 import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
 import { ReadingCsvChoiceModal } from '../../reading/ui/ReadingCsvChoiceModal';
-import { ReadingCsvModal, type ReadingCsvModalDeps } from '../../reading/ui/ReadingCsvModal';
-import { DefaultColumnsModal, type DefaultColumnsModalDeps } from '../../custom-lists/ui/CustomListsTab';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { ReadingCsvModal } from '../../reading/ui/ReadingCsvModal';
+import { DefaultColumnsModal } from '../../custom-lists/ui/CustomListsTab';
+import type { CustomListManager } from '../../custom-lists/services/CustomListManager';
+import { ConfirmModal, confirmWith } from '../../../shared/ui/ConfirmModal';
 import type { CoverRefresher } from '../../covers/services/coverRefresh';
 import { apiErrorMessage, apiErrorShort } from '../../../shared/api/ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from '../../../shared/api/jikanBase';
@@ -178,8 +179,13 @@ const GAME_NAMES = { steam: 'Steam Store', rawg: 'RAWG', igdb: 'IGDB' } as const
 
 type SettingsSection = 'general' | 'api' | 'customize' | 'watchlist' | 'drafts' | 'custom-lists' | 'reading' | 'widgets' | 'quick-info';
 
-/** What the settings pane reads and changes, including the deps of every modal it opens. */
-export interface HoardSettingsTabDeps extends CsvModalDeps, ReadingCsvModalDeps, SteamSyncModalDeps, DefaultColumnsModalDeps {
+/** What the settings pane reads and changes. */
+export interface HoardSettingsTabDeps {
+	app: App;
+	/** Publishes the running import so the Watchlist header can show and cancel it. */
+	setImportProgress: (progress: ImportProgress | null) => void;
+	/** Opens the vault I/O of the lists; `onConflict` hears of writes refused because the note changed elsewhere. */
+	listManager: (onConflict?: (list: CustomList) => void) => CustomListManager;
 	settings: SettingsReader & SettingsWriter;
 	titles: DataManager;
 	reading: ReadingDataManager;
@@ -1642,7 +1648,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 						new Notice(t('settings.steam.sync.needCreds'));
 						return;
 					}
-					new SteamSyncModal(this.deps).open();
+					new SteamSyncModal(this.deps.app, this.deps.settings, this.deps.games, this.deps.api).open();
 				});
 			},
 		});
@@ -2472,7 +2478,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.csv.watchlistExportDesc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.exportButton')).onClick(() => {
-					new CsvModal(this.deps, 'export').open();
+					new CsvModal(this.deps.app, this.deps.settings, this.deps.titles, this.deps.setImportProgress, { mode: 'export' }).open();
 				}),
 			);
 
@@ -2481,7 +2487,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.csv.watchlistImportDesc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.importButton')).onClick(() => {
-					new CsvModal(this.deps, 'import').open();
+					new CsvModal(this.deps.app, this.deps.settings, this.deps.titles, this.deps.setImportProgress, { mode: 'import' }).open();
 				}),
 			);
 
@@ -2598,7 +2604,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				const count = (this.deps.settings.get().defaultCustomColumns ?? []).length;
 				b.setButtonText(t('settings.lists.columns.button', { count }));
 				b.onClick(() => {
-					new DefaultColumnsModal(this.deps).open();
+					new DefaultColumnsModal(this.deps.app, this.deps.settings, this.deps.listManager(), confirmWith(this.deps.app)).open();
 				});
 			});
 
@@ -2691,7 +2697,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.exportButton')).onClick(() => {
 					new ReadingCsvChoiceModal(this.app, 'export', (kind) => {
-						new ReadingCsvModal(this.deps, kind, 'export').open();
+						new ReadingCsvModal(this.deps.app, this.deps.reading, { kind, mode: 'export' }).open();
 					}).open();
 				}),
 			);
@@ -2702,7 +2708,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.importButton')).onClick(() => {
 					new ReadingCsvChoiceModal(this.app, 'import', (kind) => {
-						new ReadingCsvModal(this.deps, kind, 'import').open();
+						new ReadingCsvModal(this.deps.app, this.deps.reading, { kind, mode: 'import' }).open();
 					}).open();
 				}),
 			);

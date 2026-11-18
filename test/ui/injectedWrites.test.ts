@@ -45,7 +45,7 @@ describe('Custom lists settings access', () => {
 
 	it('stores the default columns through the settings service, once', async () => {
 		const settings = fakeSettings({ ...DEFAULT_SETTINGS });
-		const modal = new DefaultColumnsModal({ app: {} as never, settings, listManager: () => ({}) as never });
+		const modal = new DefaultColumnsModal({} as never, settings, {} as never, () => {});
 		const cols = [{ id: 'c1', label: 'Score', type: 'number' as const }];
 		await (modal as unknown as { handleSave(c: typeof cols): Promise<void> }).handleSave(cols);
 		expect(settings.update).toHaveBeenCalledOnce();

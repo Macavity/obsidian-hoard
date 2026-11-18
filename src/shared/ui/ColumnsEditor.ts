@@ -1,7 +1,7 @@
-import { App, Notice, setIcon, setTooltip } from 'obsidian';
+import { Notice, setIcon, setTooltip } from 'obsidian';
 import type { CustomListColumn, CustomListRow } from '../domain/types';
 import { DEFAULT_FIELD_COLOR } from '../domain/types';
-import { ConfirmModal } from './ConfirmModal';
+import type { OpenConfirm } from './ConfirmModal';
 import { t } from '../i18n';
 import { createIconButton } from './IconButton';
 import { openColorPicker, deriveFillColor, deriveBorderColor } from './ColorPicker';
@@ -125,7 +125,8 @@ export function normalizeColumns(cols: CustomListColumn[]): void {
 }
 
 export interface ColumnsEditorOptions {
-	app: App;
+	/** Asks before deleting a column that has data. */
+	confirm: OpenConfirm;
 	/** Existing rows: used to derive select options and to warn before deleting a column with data. */
 	rows: CustomListRow[];
 	/** Renders content above the column list. */
@@ -155,7 +156,7 @@ export function renderColumnsEditor(
 			listEl,
 			state.cols,
 			opts.rows,
-			opts.app,
+			opts.confirm,
 			(from, to) => { moveColumn(state.cols, from, to); renderCols(); },
 			(idx) => { state.cols.splice(idx, 1); rerenderAll(); },
 			rerenderAll,
@@ -200,7 +201,7 @@ function renderColumnList(
 	listEl: HTMLElement,
 	cols: CustomListColumn[],
 	existingRows: CustomListRow[],
-	app: App,
+	confirm: OpenConfirm,
 	onReorder: (from: number, to: number) => void,
 	onDelete: (idx: number) => void,
 	onTypeChange: () => void,
@@ -300,9 +301,9 @@ function renderColumnList(
 				return val !== undefined && val !== '' && val !== null;
 			});
 			if (hasData) {
-				new ConfirmModal(app, t('ui.columns.deleteConfirm', { label: col.label }), () => {
+				confirm(t('ui.columns.deleteConfirm', { label: col.label }), () => {
 					onDelete(idx);
-				}).open();
+				});
 			} else {
 				onDelete(idx);
 			}

@@ -28,7 +28,9 @@ function open(existing: HoardTitle[]) {
 		titles: { getTitles: () => existing, getEffectiveTotal: (t: HoardTitle) => t.totalEpisodes },
 		api: {},
 	};
-	const modal = new CollectionModal(deps as never, collection, 'Movie', onOpenTitle);
+	const modal = new CollectionModal(deps.app, deps.settings, deps.titles as never, deps.api as never, {
+		collection, movieType: 'Movie', onOpenTitle,
+	});
 	modal.open();
 	const cards = (): HTMLElement[] => Array.from(modal.contentEl.querySelectorAll<HTMLElement>('.hoard-card'));
 	const footerBtns = (): HTMLButtonElement[] => Array.from(modal.contentEl.querySelectorAll<HTMLButtonElement>('.hoard-collection__footer button'));

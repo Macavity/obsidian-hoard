@@ -187,7 +187,7 @@ describe('renderCreditsRefreshButton', () => {
 		const title = mkTitle({ id });
 		const { deps, dataManager, apiService } = buildPlugin(stored);
 		apiService.fetchCredits.mockResolvedValue(fetched);
-		renderCreditsRefreshButton(parent, deps as never, title, onDone);
+		renderCreditsRefreshButton(parent, deps.titles as never, deps.settings, deps.api, title, onDone);
 		const btn = parent.querySelector('button.hoard-credits__refresh') as HTMLButtonElement;
 		return { btn, title, dataManager, apiService, onDone };
 	};
@@ -244,7 +244,7 @@ describe('renderCreditsRefreshButton', () => {
 		first.btn.click();
 		const second = document.createElement('div');
 		const { deps } = buildPlugin(null);
-		renderCreditsRefreshButton(second, deps as never, mkTitle({ id: 'r5' }), vi.fn());
+		renderCreditsRefreshButton(second, deps.titles as never, deps.settings, deps.api, mkTitle({ id: 'r5' }), vi.fn());
 		expect(second.querySelector('.hoard-credits__refresh')!.classList.contains('is-loading')).toBe(true);
 		await flush();
 	});

@@ -11,27 +11,29 @@ export interface UpcomingFinderItem {
 	typeLabel: string;
 }
 
-export interface UpcomingFinderModalDeps {
-	app: App;
+export interface UpcomingFinderOptions {
+	items: UpcomingFinderItem[];
+	onSelect: (item: UpcomingFinderItem) => void;
 }
+
+export type OpenUpcomingFinder = (opts: UpcomingFinderOptions) => void;
 
 /**
  * The shared "+ add" finder for the Upcoming tab. Extends the watchlist finder to also surface
  * Reading items and Games, so any tracked title is added through the same pathway.
  */
 export class UpcomingFinderModal extends FuzzySuggestModal<UpcomingFinderItem> {
-	private items: UpcomingFinderItem[];
-	private onSelect: (item: UpcomingFinderItem) => void;
 
-	constructor(deps: UpcomingFinderModalDeps, items: UpcomingFinderItem[], onSelect: (item: UpcomingFinderItem) => void) {
-		super(deps.app);
-		this.items = items;
-		this.onSelect = onSelect;
+	constructor(
+		app: App,
+		private readonly opts: UpcomingFinderOptions,
+	) {
+		super(app);
 		this.setPlaceholder(t('misc.upcomingFinder.placeholder'));
 	}
 
 	getItems(): UpcomingFinderItem[] {
-		return this.items;
+		return this.opts.items;
 	}
 
 	getItemText(item: UpcomingFinderItem): string {
@@ -39,6 +41,6 @@ export class UpcomingFinderModal extends FuzzySuggestModal<UpcomingFinderItem> {
 	}
 
 	onChooseItem(item: UpcomingFinderItem): void {
-		this.onSelect(item);
+		this.opts.onSelect(item);
 	}
 }

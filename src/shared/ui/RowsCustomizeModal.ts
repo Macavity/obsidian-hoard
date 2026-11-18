@@ -26,10 +26,8 @@ export interface RowsCustomizeConfig {
 	persist: () => void;
 }
 
-export interface RowsCustomizeModalDeps {
-	app: App;
-	settings: SettingsReader;
-}
+/** Factory a parent tab receives to open the customize panel. */
+export type OpenRowsCustomize = (config: RowsCustomizeConfig) => void;
 
 /**
  * Customize panel for a Rows view's sections: reorder via up/down arrows (more reliable on touch
@@ -38,17 +36,19 @@ export interface RowsCustomizeModalDeps {
  * open Rows view re-renders live behind the modal.
  */
 export class RowsCustomizeModal extends Modal {
-	private config: RowsCustomizeConfig;
 	private layout: RowsShelfLayoutEntry[] = [];
 	private listEl: HTMLElement | null = null;
 
-	constructor(private deps: RowsCustomizeModalDeps, config: RowsCustomizeConfig) {
-		super(deps.app);
-		this.config = config;
+	constructor(
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly config: RowsCustomizeConfig,
+	) {
+		super(app);
 	}
 
 	onOpen(): void {
-		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
+		markViewRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-rows-customize');
 		this.titleEl.setText(t('list.rows.customize'));
 

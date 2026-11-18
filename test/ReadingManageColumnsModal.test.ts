@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
 import { t } from '../src/shared/i18n';
+import { confirmWith } from '../src/shared/ui/ConfirmModal';
 import { ReadingManageColumnsModal } from '../src/modules/reading/ui/ReadingManageColumnsModal';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
 import { tick } from './helpers/common';
@@ -13,7 +14,7 @@ async function openModal() {
 	await r.rdm.addColumn('book', { id: 'c1', name: 'Format', type: 'text', options: [] });
 	await r.rdm.addColumn('book', { id: 'c2', name: 'Year', type: 'number', options: [] });
 	const onChanged = vi.fn();
-	const modal = new ReadingManageColumnsModal({ app: r.f.app, settings: fakeSettings({}) as never, reading: r.rdm }, 'book', onChanged);
+	const modal = new ReadingManageColumnsModal(r.f.app, fakeSettings({}) as never, r.rdm, confirmWith(r.f.app), { kind: 'book', onChanged });
 	(modal as unknown as { build: () => void }).build();
 	return { ...r, modal, onChanged, el: modal.contentEl };
 }

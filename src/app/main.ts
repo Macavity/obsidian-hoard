@@ -223,17 +223,19 @@ export default class HoardPlugin extends Plugin {
 			name: t('app.commands.addTitle'),
 			callback: () => {
 				const deps = this.listTabDeps();
-				new AddTitleModal(deps, (entry) => {
-					// setting off = just reveal whatever tab was open, no modal
-					if (!(this.state.openWatchlistAfterAdd ?? true)) {
-						void this.activateView();
-						return;
-					}
-					void this.activateView('watchlist').then(() => {
-						// re-read: addTitle may have forced "To be released"
-						const fresh = this.dataManager.getTitle(entry.id) ?? entry;
-						new TitleDetailModal(deps, fresh).open();
-					});
+				new AddTitleModal(deps.app, deps.settings, deps.titles, deps.api, deps.resolveDefaultAddType, {
+					onAdded: (entry) => {
+						// setting off = just reveal whatever tab was open, no modal
+						if (!(this.state.openWatchlistAfterAdd ?? true)) {
+							void this.activateView();
+							return;
+						}
+						void this.activateView('watchlist').then(() => {
+							// re-read: addTitle may have forced "To be released"
+							const fresh = this.dataManager.getTitle(entry.id) ?? entry;
+							new TitleDetailModal(deps, fresh).open();
+						});
+					},
 				}).open();
 			},
 		});
@@ -251,10 +253,13 @@ export default class HoardPlugin extends Plugin {
 			name: t('app.commands.searchTitle'),
 			callback: () => {
 				const titles = this.dataManager.getTitles();
-				new InsertWidgetModal({ app: this.app }, titles, (title) => {
-					void this.activateView().then(() => {
-						new Notice(t('app.titleNotice', { title: title.title, type: typeLabel(title.type), status: statusLabel(title.status) }));
-					});
+				new InsertWidgetModal(this.app, {
+					titles,
+					onSelect: (title) => {
+						void this.activateView().then(() => {
+							new Notice(t('app.titleNotice', { title: title.title, type: typeLabel(title.type), status: statusLabel(title.status) }));
+						});
+					},
 				}).open();
 			},
 		});
@@ -740,12 +745,15 @@ export default class HoardPlugin extends Plugin {
 					return;
 				}
 				const isMini = selected.id === 'hoard-todo:mini';
-				new InsertWidgetModal({ app: this.app }, titles, (title) => {
-					if (isMini) {
-						editor.replaceSelection(`\`\`\`hoard-todo\n${title.title}\nmini\n\`\`\``);
-					} else {
-						editor.replaceSelection(`\`\`\`hoard-todo\n${title.title}\n\`\`\``);
-					}
+				new InsertWidgetModal(this.app, {
+					titles,
+					onSelect: (title) => {
+						if (isMini) {
+							editor.replaceSelection(`\`\`\`hoard-todo\n${title.title}\nmini\n\`\`\``);
+						} else {
+							editor.replaceSelection(`\`\`\`hoard-todo\n${title.title}\n\`\`\``);
+						}
+					},
 				}).open();
 			} else if (selected.id === 'hoard-stat:watched') {
 				editor.replaceSelection('```hoard-stat\nwatched\n```');

@@ -42,7 +42,7 @@ function setup(mode: ReadingMode, existingId?: string) {
 		addBook: record('addBook'), addManga: record('addManga'), updateBook: record('updateBook'), updateManga: record('updateManga'),
 	};
 	const initial = existingId ? { id: existingId, state: FORM } : undefined;
-	const modal = new AddReadingModal({ app: {}, settings: fakeSettings({}), reading: readingData } as never, mode, () => {}, initial);
+	const modal = new AddReadingModal({} as never, fakeSettings({}) as never, readingData as never, {} as never, {} as never, (() => Promise.resolve([])), {} as never, { mode, onSaved: () => {}, initial });
 	const internals = modal as unknown as { state: ReadingFormState; save: () => Promise<void> };
 	if (!existingId) internals.state = { ...FORM };
 	return { calls, save: () => internals.save() };

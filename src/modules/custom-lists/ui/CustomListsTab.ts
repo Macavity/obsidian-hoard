@@ -7,7 +7,7 @@ import type { GameDataManager } from '../../games/services/GameDataManager';
 import type { CustomListManager } from '../services/CustomListManager';
 import type { CustomListColumn, CustomListRow, CustomList } from '../../../shared/domain/types';
 import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/types';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { ConfirmModal, type OpenConfirm } from '../../../shared/ui/ConfirmModal';
 import { openColorPicker, deriveFillColor, deriveBorderColor } from '../../../shared/ui/ColorPicker';
 import { openStatusDropdown } from '../../../shared/ui/StatusDropdown';
 import type { AddRouteOptions } from '../../../shared/ui/addRoute';
@@ -104,7 +104,7 @@ class EditColumnsModal extends Modal {
 
 	private renderBody(): void {
 		renderColumnsEditor(this.contentEl, { cols: this.cols }, {
-			app: this.app,
+			confirm: (message, onConfirm, extra) => new ConfirmModal(this.app, message, onConfirm, extra).open(),
 			rows: this.list.rows,
 			renderHeader: (parent) => this.renderTabColorRow(parent),
 			newColumnId: (cols) => this.manager.generateColId([...this.list.columns.filter(c => !c.locked), ...cols]),
@@ -185,21 +185,19 @@ class EditColumnsModal extends Modal {
 
 // DefaultColumnsModal — for Settings
 
-export interface DefaultColumnsModalDeps {
-	app: App;
-	settings: SettingsReader & SettingsWriter;
-	/** Opens the vault I/O of the lists; `onConflict` hears of writes refused because the note changed elsewhere. */
-	listManager: (onConflict?: (list: CustomList) => void) => CustomListManager;
-}
+export type OpenDefaultColumns = () => void;
 
 export class DefaultColumnsModal extends Modal {
 	private cols: CustomListColumn[];
-	private manager: CustomListManager;
 
-	constructor(private deps: DefaultColumnsModalDeps) {
-		super(deps.app);
-		this.manager = deps.listManager();
-		this.cols = cloneColumns(deps.settings.get().defaultCustomColumns ?? []);
+	constructor(
+		app: App,
+		private readonly settings: SettingsReader & SettingsWriter,
+		private readonly manager: Pick<CustomListManager, 'generateColId'>,
+		private readonly confirm: OpenConfirm,
+	) {
+		super(app);
+		this.cols = cloneColumns(settings.get().defaultCustomColumns ?? []);
 	}
 
 	onOpen(): void {
@@ -211,7 +209,7 @@ export class DefaultColumnsModal extends Modal {
 
 	private renderBody(): void {
 		renderColumnsEditor(this.contentEl, { cols: this.cols }, {
-			app: this.app,
+			confirm: this.confirm,
 			rows: [],
 			renderHeader: (parent) => {
 				parent.createDiv({
@@ -226,7 +224,7 @@ export class DefaultColumnsModal extends Modal {
 	}
 
 	private async handleSave(cols: CustomListColumn[]): Promise<void> {
-		await this.deps.settings.update((s) => { s.defaultCustomColumns = cols; });
+		await this.settings.update((s) => { s.defaultCustomColumns = cols; });
 		new Notice(t('lists.defaultColumnsSaved'));
 		this.close();
 	}
@@ -375,7 +373,11 @@ class ListNameModal extends Modal {
 
 // CustomListsTab
 
-export interface CustomListsTabDeps extends DefaultColumnsModalDeps {
+export interface CustomListsTabDeps {
+	app: App;
+	settings: SettingsReader & SettingsWriter;
+	/** Opens the vault I/O of the lists; `onConflict` hears of writes refused because the note changed elsewhere. */
+	listManager: (onConflict?: (list: CustomList) => void) => CustomListManager;
 	titles: Pick<DataManager, 'getTitles' | 'calcTimeRemainingForModal'>;
 	reading: Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>;
 	games: Pick<GameDataManager, 'getGames'>;

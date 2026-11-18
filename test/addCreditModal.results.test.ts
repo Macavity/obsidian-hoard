@@ -12,7 +12,7 @@ function open(field: CreditsField, edited: Partial<HoardTitle>, others: Partial<
 		settings: fakeSettings({ colorTheme: 'default' }) as never,
 		titles: { getTitles: () => [editedTitle, ...others.map(title)], updateManualCredits: () => Promise.resolve() },
 	};
-	const modal = new AddCreditModal(deps, editedTitle, field, () => {});
+	const modal = new AddCreditModal(deps.app, deps.settings, deps.titles, { title: editedTitle, field, onSaved: () => {} });
 	modal.open();
 	const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credits__search-input')!;
 	const type = (q: string): void => {

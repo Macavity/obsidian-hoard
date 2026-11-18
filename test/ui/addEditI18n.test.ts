@@ -19,7 +19,7 @@ function allText(el: HTMLElement): string[] {
 describe('add and edit modals i18n', () => {
 	it('renders the add title chooser in German', () => {
 		setLocale('de');
-		const modal = new AddTitleChoiceModal({ app: {} as never }, () => {});
+		const modal = new AddTitleChoiceModal({} as never, { onChoice: () => {} });
 		modal.onOpen();
 		expect(modal.titleEl.textContent).toBe(de.add.choice.title);
 		expect(modal.titleEl.textContent).not.toBe('Add title');
@@ -41,9 +41,13 @@ describe('add and edit modals i18n', () => {
 	it('renders the edit title heading and buttons in German', () => {
 		setLocale('de');
 		const modal = new EditTitleModal(
-			{ app: {} as never, settings: fakeSettings({ types: [] }) as never, titles: { getGroups: () => [] } as never },
-			{ id: 'x', title: 'Dune', type: 'Movie', totalEpisodes: 1, episodeDuration: 0, externalLink: '', seasons: [], posterUrl: '' } as never,
-			() => {},
+			{} as never,
+			fakeSettings({ types: [] }) as never,
+			{ getGroups: () => [] } as never,
+			{
+				title: { id: 'x', title: 'Dune', type: 'Movie', totalEpisodes: 1, episodeDuration: 0, externalLink: '', seasons: [], posterUrl: '' } as never,
+				onSaved: () => {},
+			},
 		);
 		modal.onOpen();
 		expect(modal.titleEl.textContent).toBe('Bearbeiten: Dune');
@@ -54,8 +58,8 @@ describe('add and edit modals i18n', () => {
 
 	it('localizes the reading modal header title', () => {
 		setLocale('de');
-		const modal = new AddReadingModal({ app: {}, settings: fakeSettings({}), reading: {} } as never, 'book', () => {}, {
-			state: {} as never, id: 'b1',
+		const modal = new AddReadingModal({} as never, fakeSettings({}) as never, {} as never, {} as never, {} as never, (() => Promise.resolve([])), {} as never, {
+			mode: 'book', onSaved: () => {}, initial: { state: {} as never, id: 'b1' },
 		});
 		expect((modal as unknown as { headerTitle: () => string }).headerTitle()).toBe(de.add.reading.editBook);
 	});

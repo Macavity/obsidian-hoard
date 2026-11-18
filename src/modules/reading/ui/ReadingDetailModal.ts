@@ -1,4 +1,6 @@
-import { Modal, Notice, Platform, TFile } from 'obsidian';
+import { App, Modal, Notice, Platform, TFile } from 'obsidian';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { ReadingDataManager } from '../services/ReadingDataManager';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import {
 	Book, Manga, ReadingCustomColumn, ReadingStatus, SELECTABLE_READING_STATUSES,
@@ -10,12 +12,12 @@ import { createDatePicker } from '../../../shared/ui/DatePicker';
 import { deriveFillColor, deriveBorderColor } from '../../../shared/ui/ColorPicker';
 import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
 import { appendNoteLinkButton } from '../../../shared/ui/NoteLinkButton';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { ConfirmModal, confirmWith } from '../../../shared/ui/ConfirmModal';
 import { renderStarRating } from '../../../shared/ui/StarRating';
 import { VaultFilePicker } from './AddReadingModal';
 import { readingStatusColor, coverFallbackColor } from './readingColors';
 import { openStatusDropdown, renderSegmentedToggle } from '../../../shared/ui/StatusDropdown';
-import { ReadingManageColumnsModal, type ReadingManageColumnsModalDeps } from './ReadingManageColumnsModal';
+import { ReadingManageColumnsModal } from './ReadingManageColumnsModal';
 import { pinModalFooter } from '../../../shared/ui/StickyModal';
 import { t } from '../../../shared/i18n';
 import { paintFavoriteButton, renderEditableTitle } from '../../../shared/ui/detailShared';
@@ -101,7 +103,10 @@ function splitAtSlot(text: string, slot: string): [string, string] {
 	return at < 0 ? [text, ''] : [text.slice(0, at), text.slice(at + slot.length)];
 }
 
-export interface ReadingDetailModalDeps extends ReadingManageColumnsModalDeps {
+export interface ReadingDetailModalDeps {
+	app: App;
+	settings: SettingsReader;
+	reading: ReadingDataManager;
 	api: Pick<ApiService, 'hasGoogleBooksKey' | 'getGoogleBookById' | 'getMangaByMalId'>;
 	history: Pick<HistoryManager, 'log'>;
 }
@@ -1173,9 +1178,11 @@ export class ReadingDetailModal extends Modal {
 
 	private openManageColumns(): void {
 		new ReadingManageColumnsModal(
-			this.deps,
-			this.mode,
-			() => this.renderAll(),
+			this.deps.app,
+			this.deps.settings,
+			this.deps.reading,
+			confirmWith(this.deps.app),
+			{ kind: this.mode, onChanged: () => this.renderAll() },
 		).open();
 	}
 

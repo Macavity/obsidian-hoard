@@ -5,7 +5,10 @@ import type { Book, Manga } from '../../src/shared/domain/types';
 type Counters = { totalChapters: number | null; totalVolumes: number | null; currentVolume: number | null; currentChapter: number | null };
 
 const make = (item: Partial<Book & Manga>, kind: 'book' | 'manga', totals: [number | null, number | null] = [null, null]) =>
-	new ReadingScheduleModal({ app: {} as never }, item as Book, kind, null, 2, 5, totals[0], totals[1], async () => {}) as unknown as Counters;
+	new ReadingScheduleModal({} as never, {
+		item: item as Book, kind, existingSchedule: null, currentVolume: 2, currentChapter: 5,
+		totalVolumes: totals[0], totalChapters: totals[1], onSave: async () => {},
+	}) as unknown as Counters;
 
 describe('ReadingScheduleModal counters', () => {
 	it('keeps the given current counters', () => {
