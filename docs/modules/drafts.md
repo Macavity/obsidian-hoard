@@ -31,7 +31,7 @@ first. While the tab is open, `metadataCache.on('changed')` re-renders after 500
 A draft is pending when it is neither added nor dismissed and has no library match (Fuse over all
 titles, books, manga and games, threshold 0.35; matches show "In <library>" and are dimmed). The
 rule is implemented in two places that must agree: `renderUI` inside the tab, and the static
-DOM-free `computePendingCount`, which the `TABS` badge calls without opening the tab. The badge
+DOM-free `computePendingCount`, which the tab's badge calls without opening the tab. The badge
 refreshes on `metadata-resolved`, not on `hoard-data-changed`, because it needs the vault scan
 ([ui kit](../architecture/ui-kit.md)).
 

@@ -22,7 +22,7 @@ local:   device-local settings, never API keys (they live in secret storage)
 history: all entries
 ```
 
-- `buildBackup(managers)` reads through the manager APIs only; the backup deps built in
+- `buildBackup(managers)` reads through the manager APIs only; `backupManagers()` in
   [main.ts](../../src/app/main.ts) assembles managers, stores and an `importContext` (the
   [import wizard](import.md) writes through it; backup restore does not use it).
 - `buildBackup` drops the nine `SECRET_KEYS` from `local` (`withoutSecretSettings`), so neither export

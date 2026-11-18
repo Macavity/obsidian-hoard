@@ -61,7 +61,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 
 # Architecture
 
-- [Overview](architecture/overview.md): which zones and module edges exist, how dependencies are injected (Deps, ports, SettingsService), who may import whom, and which change channel drives the view versus the widgets.
+- [Overview](architecture/overview.md): which zones and module edges exist, how dependencies are injected (constructor parameters, factories and ports, wiring, SettingsService), who may import whom, and which change channel drives the view versus the widgets.
 - [Storage](architecture/storage.md): where each piece of state lives (notes, base, History.md, data.json) and how reads and writes propagate.
 - [API layer](architecture/api-layer.md): which services exist (keyless defaults and keyed upgrades), how the effective source is resolved, how errors and rate limits are handled, and how fetched data reaches cache and notes.
 - [Internationalisation](architecture/i18n.md): how to add a string, why stored values and storage messages are codes not text, and which tests enforce it.

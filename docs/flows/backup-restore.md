@@ -15,7 +15,7 @@ source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 
 Trigger: the Backup section of the settings tab ([SettingsTab.ts](../../src/modules/settings/ui/SettingsTab.ts),
 around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../../src/modules/backup/services/backup.ts);
-the backup deps built in [main.ts](../../src/app/main.ts) hand it every manager plus the stores.
+`backupManagers()` in [main.ts](../../src/app/main.ts) hand it every manager plus the stores.
 
 ## Export
 

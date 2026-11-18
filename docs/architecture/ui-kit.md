@@ -23,19 +23,19 @@ source:
   - src/shared/ui/IconButton.ts
   - src/styles/icon-button.css
   - src/styles/index.css
-source_commit: c2139714f49e30567e3dfe03abd65ca70cbbd056
+source_commit: 3af2a0a93a770228f04078f94f49628f3b36fd71
 ---
 
 # UI kit
 
 Tabs and modals are thin; shared behaviour lives in `src/shared/ui/`, feature UI in `src/modules/<x>/ui/`.
 **Boundary** (ESLint, [overview](overview.md)): UI never imports `shared/storage`, `app` or a `services/` file as a
-value (type imports only); it gets managers, API services and settings as constructor `Deps` (`deps.settings.get()` /
+value (type imports only); it gets managers, API services and settings as `private readonly` constructor parameters (`this.settings.get()` /
 `update()`), so no tab or modal can import a store, codec or index.
 
 ```mermaid
 flowchart TD
-  HV[HoardView + TABS] --> Tab[ListTab / GamesTab / ReadingTab / AirtimeTab]
+  HV[HoardView + tabs] --> Tab[ListTab / GamesTab / ReadingTab / AirtimeTab]
   Tab --> TB[TabToolbar + TabFilters + ActionBar]
   Tab --> SQ[SearchQuery]
   Tab --> VS[VirtualScroller] --> VG[VirtualGrid] --> PC[PosterCard / GroupCard]
@@ -46,10 +46,11 @@ flowchart TD
   Add --> LI[LibraryIndex] --> M
 ```
 
-## HoardView and the TABS registry
+## HoardView and its tab factories
 
-[HoardView.ts](../../src/app/HoardView.ts) holds `TABS` in tab-bar order; a `TabDefinition` has
-`create(ctx)` returning a [TabInstance](../../src/shared/ui/TabInstance.ts) (`render`, optional `destroy`),
+[HoardView.ts](../../src/app/HoardView.ts) takes `tabs: TabFactory[]` in tab-bar order (built by `hoardTabs` in
+[wiring/tabs.ts](../../src/app/wiring/tabs.ts)); a `TabFactory` has
+`create(container, setBadge)` returning a [TabInstance](../../src/shared/ui/TabInstance.ts) (`render`, optional `destroy`),
 an optional content class and an optional badge. `HoardView` calls `destroy` whenever it drops the
 active instance: on a tab switch, on a UI rebuild (`refreshUI` from the settings) and on view close.
 A **tab switch recreates** the instance (state lost); a **data change re-renders the same
@@ -125,7 +126,7 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (the injected `
 
 ## Where to change what
 
-A new tab: a `TabDefinition` in `TABS` plus `TabName`. Shared toolbar, filter or sort behaviour:
+A new tab: a `TabFactory` in `hoardTabs` (`src/app/wiring/tabs.ts`) plus `TabName`. Shared toolbar, filter or sort behaviour:
 `src/shared/ui/`. A new add modal: extend `SearchFormModal`, build a `LibraryIndex` and a
 `DuplicateGuard`. Grid geometry: `VirtualGrid.ts` / `VirtualScroller.ts`; card look:
 `PosterCard.ts` and the stylesheets in `src/styles/` (one per UI area, imported in cascade order by `index.css`). Search syntax: `SearchQuery.ts` and `SearchHelpModal.ts`.

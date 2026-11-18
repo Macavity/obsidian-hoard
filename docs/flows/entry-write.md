@@ -7,6 +7,7 @@ source:
   - src/modules/reading/services/ReadingDataManager.ts
   - src/modules/games/services/GameDataManager.ts
   - src/shared/storage/noteWrite.ts
+  - src/shared/services/EntryNotes.ts
   - src/shared/storage/EntryIndex.ts
   - src/shared/storage/titleCodec.ts
   - src/shared/storage/baseline.ts
@@ -30,7 +31,7 @@ what differs through `EntryWriteHooks`. The diagram shows the title path.
 | `unchanged`: nothing to write, copy made from the stored state | syncs the API cache; replaces the view of an existing slot | becomes the view, with a new slot if there was none (only when a baseline is known) | replaces the view of an existing slot |
 | after the pipeline | the `## Notes` body | nothing | nothing |
 
-`createNote`, `afterWrite` and `basedOnStored` stay in each manager; the hooks call them.
+The managers reach the vault through [EntryNotes](../../src/shared/services/EntryNotes.ts) (paths, ids, read, rename following, `updateProperties`); `createNote`, `afterWrite` and `basedOnStored` stay in each manager; the hooks call them.
 
 ```mermaid
 sequenceDiagram

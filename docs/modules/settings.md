@@ -77,7 +77,7 @@ are colour-only.
    back to the default. An entry in `RULES`
    ([settingsNormalize.ts](../../src/shared/domain/settingsNormalize.ts)) only when what the value says must be
    checked or migrated.
-3. A `Setting` or card in the matching `render*` of the tab, reading with `deps.settings.get()` and writing with `await deps.settings.update((s) => { s.x = … })` (or `stage` for text typed key by key; `flush` runs on unload). `update` persists once (`persistSettings`) and emits the change signal once; never save directly.
+3. A `Setting` or card in the matching `render*` of the tab, reading with `this.settings.get()` and writing with `await this.settings.update((s) => { s.x = … })` (or `stage` for text typed key by key; `flush` runs on unload). `update` persists once (`persistSettings`) and emits the change signal once; never save directly.
 4. Synced across devices? Add the key to `SHARED_SETTING_KEYS` (or `NESTED_SHARED_KEYS` for
    reading/games). Never a secret. Default is device-local. A new key or credential goes into
    `SECRET_SETTINGS` ([SecretStore.ts](../../src/shared/storage/SecretStore.ts)) instead.

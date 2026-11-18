@@ -4,6 +4,7 @@ title: Upcoming
 description: What the Upcoming tab shows, how it decides aired versus due, what a tick and a removal write, and how schedules are added.
 source:
   - src/modules/airtime/ui/AirtimeTab.ts
+  - src/modules/airtime/ui/AirtimeScheduleModal.ts
   - src/modules/watchlist/services/DataManager.ts
   - src/shared/ui/ScheduleForm.ts
   - src/modules/airtime/ui/ReadingScheduleModal.ts
@@ -52,7 +53,7 @@ entries the cached API pointer (`airing.nextSeason/nextEpisode`) overrides the n
 ## Adding and editing
 
 "+ Add" opens `UpcomingFinderModal` (fuzzy finder over titles, books, manga and games not yet
-tracked), then the schedule modal by source: `AirtimeScheduleModal` (inside `AirtimeTab.ts`:
+tracked), then the schedule modal by source: [AirtimeScheduleModal.ts](../../src/modules/airtime/ui/AirtimeScheduleModal.ts) (
 single or recurring, optional time), [ReadingScheduleModal.ts](../../src/modules/airtime/ui/ReadingScheduleModal.ts)
 (no time, volume and chapter counters), [GameScheduleModal.ts](../../src/modules/airtime/ui/GameScheduleModal.ts)
 (date only, also sets the game's `releaseDate`, future dates only). Shared form state and

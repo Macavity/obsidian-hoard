@@ -29,7 +29,7 @@ flowchart TD
 
 ## Steps
 
-1. `runAirtimeScheduler(deps, notified, now)` in
+1. `runAirtimeScheduler(dataManager, readingDataManager, gameDataManager, notify, notified, now)` in
    [airtimeScheduler.ts](../../src/modules/airtime/services/airtimeScheduler.ts) walks every `AirtimeEntry`
    ([airtime](../concepts/airtime.md)).
 2. **Due** = today's `HH:MM` has passed at most 12 hours ago (`AIRTIME_CATCH_UP_MINUTES`, catches a
@@ -45,7 +45,7 @@ flowchart TD
 6. `updateStatusBar` recounts `AirtimeTab.getAiredDueCount + getMaybeDueCount` on every tick and
    on `hoard-data-changed`; desktop only, hidden when the setting is off or the count is 0.
    Clicking opens the Upcoming tab.
-7. The Upcoming tab badge uses the same counts via the `TABS` registry (`refreshOn: 'data-change'`).
+7. The Upcoming tab badge uses the same counts via the `TabFactory` badge (`refreshOn: 'data-change'`).
 
 Failure points: a `releaseTime` not shaped `H:MM` / `HH:MM` never fires (digits are not
 range-checked); an entry whose subject no longer
