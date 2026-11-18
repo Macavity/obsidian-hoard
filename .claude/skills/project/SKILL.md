@@ -27,7 +27,7 @@ src/modules/<x>/
 
 Reference: `src/modules/watchlist/` (`ListTab` + `DataManager`). Conventions:
 
-- **K1 Deps by constructor, shape not origin.** Each class declares `<Name>Deps` in its own file with exactly what it needs (`settings: SettingsReader & SettingsWriter`, `titles: Pick<DataManager, 'getTitles'>`, small functions like `openAdd`). A parent's deps extend its children's and forward them. Never a `HoardPlugin` parameter, never a bundle object.
+- **K1 Deps by constructor, shape not origin.** Each class declares `<Name>Deps` in its own file with exactly what it needs (`settings: SettingsReader & SettingsWriter`, `titles: Pick<DataManager, 'getTitles'>`, small functions like `openAdd`). A Deps field is a `Pick<Manager, …>` or a consumer-owned interface; when a consumer uses more than ~8 methods of one manager it may take the whole class via `import type` (e.g. `ListTabDeps.titles`). A parent's deps extend its children's and forward them. Never a `HoardPlugin` parameter, never a bundle object.
 - **K2 Port belongs to the consumer.** If A needs B and B needs A, the consumer declares its own interface in its file; `app` wires the implementation structurally. No import edge, no module cycle. Entry types come from `shared/domain/types.ts`, never from a manager.
 - **K3 Settings** only through `SettingsService`: read `deps.settings.get()` (read-only view), change `await deps.settings.update((s) => { s.x = … })` (`stage` for text typed key by key, `flush` on unload). Never save directly.
 - **K4 Obsidian wants the plugin** (`registerEvent`, `register`, `PluginSettingTab`): inject the `Plugin` type or one bound function, never `HoardPlugin`.

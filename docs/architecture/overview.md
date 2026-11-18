@@ -62,13 +62,15 @@ flowchart TD
   imports are fine; pure helpers belong in `shared/domain`). `services/` must not import UI (`ui/`, `shared/ui`) nor use
   `Modal`, `Notice`, `Setting`, `PluginSettingTab`, `ItemView`, `Menu`; they report codes (`ManagerNotice`) and the UI shows them.
 - **Wiring only in app**: `new *Manager` / `new *Service` is an error outside `src/app/`.
-- **No inline config**: `eslint-disable` comments in `src/` are errors (`noInlineConfig`). Data layers read outside data from
+- **No inline config**: `eslint-disable` and `fallow-ignore` comments in `src/` are errors (`noInlineConfig`, `scripts/check-eslint-disables.mjs`); fallow exceptions need the maintainer's approval. Data layers read outside data from
   `unknown` (`no-unsafe-type-assertion`, see [storage](storage.md)).
 
 ## Injection and ports
 
 Every class or function declares in its own file a `<Name>Deps` interface with exactly what it needs, as the *shape*
-(`Pick<DataManager, 'getTitles'>`, small functions such as `registerEvent`), not as `HoardPlugin`. A parent's deps
+(`Pick<DataManager, 'getTitles'>`, small functions such as `registerEvent`), not as `HoardPlugin`. A Deps field is a
+`Pick<Manager, …>` or a consumer-owned interface; when a consumer uses more than ~8 methods of one manager it may take
+the whole class via `import type` (e.g. `ListTabDeps.titles`). A parent's deps
 extend its children's and forward them (a tab opening a modal passes the same deps on). `HoardPlugin` fields are private;
 `main.ts` builds the objects and hands each the structural subset.
 
@@ -78,7 +80,8 @@ extend its children's and forward them (a tab opening a modal passes the same de
 - **Settings**: [SettingsService](../../src/shared/services/SettingsService.ts) is the only access. `get()` returns a
   read-only view; `update(fn)` mutates, persists once (date format, type names, API keys, `persistSettings`) and emits the
   change signal once; `stage(fn)` does the same debounced for text typed key by key; `flush()` saves a pending stage on
-  unload. The plugin keeps the object as private `state`.
+  unload. The plugin keeps the object as private `state`. Exception: backup restore and the WatchLog import write
+  `local.data.settings` directly and then reload the settings (`loadSettings`).
 - **Obsidian needs the plugin** (`registerEvent`, `register`, settings tab): inject the `Plugin` type or one bound function.
 - **Tests** build classes directly with fakes (`test/fakes`, `test/helpers`), never a faked `HoardPlugin`.
 

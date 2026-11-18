@@ -81,5 +81,6 @@ sequenceDiagram
 - A failing wizard is caught inside `runOnboarding` (console error) and startup continues.
 - Type-name changes after start trigger `syncTypeNames` → `index.rebuild()`.
 
-Shutdown (`onunload`) flushes pending debounced note and cache writes synchronously, stops the
-index and the shared store, and flushes `LocalStore` last.
+Shutdown (`onunload`) flushes pending debounced note and cache writes synchronously, flushes the
+reading and game managers and a pending `SettingsService.stage`, stops the index and the shared
+store, and flushes `LocalStore` last.
