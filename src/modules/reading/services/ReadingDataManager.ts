@@ -12,7 +12,7 @@ import { ChangeNotifier } from '../../../shared/services/changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from '../../../shared/storage/baseline';
 import { splitNested, type SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
 import type { VaultLayout } from '../../../shared/storage/VaultLayout';
-import { FOLDERS } from '../../../shared/storage/VaultLayout';
+import { FOLDERS } from '../../../shared/domain/typeName';
 import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from '../../../shared/storage/properties';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from '../../../shared/storage/readingCodec';
 import type { Fm } from '../../../shared/storage/storageTypes';

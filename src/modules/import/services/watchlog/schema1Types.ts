@@ -3,7 +3,7 @@ import type {
 	AirtimeEntry, DraftPersistState, GamesData, HoardGroup, HoardPluginSettings, HoardTitle, MaybeTitle,
 	ReadingData, RecommendedDaily, SavedFilterPreset,
 } from '../../../../shared/domain/types';
-import type { HistoryEntry } from '../../../../shared/services/HistoryManager';
+import type { HistoryEntry } from '../../../../shared/domain/types';
 import type { LocalStore } from '../../../../shared/storage/LocalStore';
 import type { SharedConfigStore } from '../../../../shared/storage/SharedConfigStore';
 import type { HistoryStore } from '../../../../shared/storage/HistoryStore';

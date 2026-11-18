@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { LogTab } from '../../src/modules/log/ui/LogTab';
 import type { LogTabDeps } from '../../src/modules/log/ui/LogTab';
-import type { HistoryEntry } from '../../src/shared/services/HistoryManager';
+import type { HistoryEntry } from '../../src/shared/domain/types';
 import { qsa } from '../helpers/dom';
 
 afterEach(() => {

@@ -1,5 +1,5 @@
 import type { AirtimeEntry, AirtimeRecurrence, HoardGroup } from '../../../../shared/domain/types';
-import type { HistoryAction, HistoryEntry, HistorySource } from '../../../../shared/services/HistoryManager';
+import type { HistoryAction, HistoryEntry, HistorySource } from '../../../../shared/domain/types';
 import { readMaybe } from '../../../backup/services/backupEntries';
 import {
 	at, readList, readOptionalNumber, readOptionalString, readRecord, readString, readStringList,

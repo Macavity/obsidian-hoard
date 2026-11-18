@@ -6,7 +6,7 @@ import en from '../../../shared/i18n/en';
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
-import type { Book, Game, Manga, ReadingStatus, HoardTitle } from '../../../shared/domain/types';
+import type { Book, Game, Manga, HoardTitle } from '../../../shared/domain/types';
 import { formatTime, getTitleCredits, getReadingTypeColor, GAME_FINISHED_STATUS, bookPageEquivalents, formatCount } from '../../../shared/domain/types';
 import type { CreditsField } from '../../../shared/domain/types';
 import { renderTypeBadge } from '../../../shared/ui/typeBadge';
@@ -48,7 +48,7 @@ interface ReadingAggregate {
 /** Status of any library: watch statuses first, then reading, then game ones; user-defined values pass through. */
 function anyStatusLabel(status: string): string {
 	if (Object.prototype.hasOwnProperty.call(en.labels.status, status)) return statusLabel(status);
-	if (Object.prototype.hasOwnProperty.call(en.labels.readingStatus, status)) return readingStatusLabel(status as ReadingStatus);
+	if (Object.prototype.hasOwnProperty.call(en.labels.readingStatus, status)) return readingStatusLabel(status);
 	return gameStatusLabel(status);
 }
 

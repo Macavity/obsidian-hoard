@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import { typeNameProblem } from '../storage/VaultLayout';
+import { typeNameProblem } from '../domain/typeName';
 
 /** Localized text of why a type name is unusable, or null when it is fine. */
 export function typeNameProblemText(name: string): string | null {

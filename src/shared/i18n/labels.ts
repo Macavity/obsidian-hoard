@@ -1,6 +1,5 @@
 import { t, type TranslationKey } from './index';
 import en from './en';
-import type { ReadingStatus } from '../domain/types';
 
 // Stored values are English and never change; these are the only place they become display text.
 // Unknown (user-defined) values are returned unchanged.
@@ -17,7 +16,7 @@ export function typeLabel(type: string): string {
 	return label('type', type);
 }
 
-export function readingStatusLabel(status: ReadingStatus): string {
+export function readingStatusLabel(status: string): string {
 	return label('readingStatus', status);
 }
 

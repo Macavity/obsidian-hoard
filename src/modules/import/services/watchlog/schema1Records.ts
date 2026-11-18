@@ -1,5 +1,5 @@
 import type { EntryAirtime } from '../../../../shared/domain/types';
-import type { HistoryEntry } from '../../../../shared/services/HistoryManager';
+import type { HistoryEntry } from '../../../../shared/domain/types';
 import { toEntryAirtime } from '../../../watchlist/services/DataManager';
 import { historyKey, type HistoryStore } from '../../../../shared/storage/HistoryStore';
 import { isoOf } from './schema1Normalize';

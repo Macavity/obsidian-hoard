@@ -4,10 +4,11 @@ import { t, type TranslationKey } from '../../../shared/i18n';
 import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from '../../../shared/i18n/labels';
 import { dayName, monthName } from '../../../shared/ui/dateNames';
 import { createIconButton } from '../../../shared/ui/IconButton';
-import type { HistoryEntry, HistoryManager } from '../../../shared/services/HistoryManager';
+import type { HistoryManager } from '../../../shared/services/HistoryManager';
+import type { HistoryEntry } from '../../../shared/domain/types';
 import { inferHistoryAction, inferHistorySource } from '../../../shared/services/HistoryManager';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
-import { getActiveDateFormat, type ReadingStatus } from '../../../shared/domain/types';
+import { getActiveDateFormat } from '../../../shared/domain/types';
 
 type SourceFilter = 'all' | 'Watchlist' | 'Reading' | 'Games';
 
@@ -30,7 +31,7 @@ const SOURCE_COLORS: Record<string, string> = {
 
 /** The stored status of a history line, shown in the UI language: watch, reading, then game statuses; anything else as stored. */
 function storedStatusLabel(status: string): string {
-	for (const toLabel of [statusLabel, (s: string) => readingStatusLabel(s as ReadingStatus), gameStatusLabel]) {
+	for (const toLabel of [statusLabel, readingStatusLabel, gameStatusLabel]) {
 		const shown = toLabel(status);
 		if (shown !== status) return shown;
 	}

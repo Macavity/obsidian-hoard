@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setLocale, t } from '../../src/shared/i18n';
 import { actionLabel, formatDayHeader, titleFromEntry } from '../../src/modules/log/ui/LogTab';
-import type { HistoryAction, HistoryEntry } from '../../src/shared/services/HistoryManager';
+import type { HistoryAction, HistoryEntry } from '../../src/shared/domain/types';
 
 afterEach(() => {
 	setLocale('en');

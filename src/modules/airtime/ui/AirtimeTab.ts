@@ -11,7 +11,7 @@ import type { PosterService } from '../../../shared/api/PosterService';
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
-import type { HoardTitle, AirtimeEntry, AirtimeSchedule, MaybeTitle, Book, Manga, Game, ReadingStatus } from '../../../shared/domain/types';
+import type { HoardTitle, AirtimeEntry, AirtimeSchedule, MaybeTitle, Book, Manga, Game } from '../../../shared/domain/types';
 import { getThemedColor, getReadingTypeColor, getDisplayPoster, isReleaseDateFuture, formatDateDisplay, todayIso, toIsoDate, GAME_AUTO_STATUS } from '../../../shared/domain/types';
 import {
 	type ScheduleFormState,
@@ -232,7 +232,7 @@ function tickTooltip(r: ResolvedUpcoming, isFinalEpisode: boolean): string {
 /** The plan status a single-release tick reverts to, in the UI language of its library. */
 function planStatusLabel(r: ResolvedUpcoming): string {
 	if (r.unit === 'release') return gameStatusLabel(r.planStatus);
-	if (r.unit === 'chapter') return readingStatusLabel(r.planStatus as ReadingStatus);
+	if (r.unit === 'chapter') return readingStatusLabel(r.planStatus);
 	return statusLabel(r.planStatus);
 }
 

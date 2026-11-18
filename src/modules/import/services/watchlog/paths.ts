@@ -1,5 +1,6 @@
 import { normalizePath, type App, type TFile } from 'obsidian';
-import { FOLDERS, type VaultLayout } from '../../../../shared/storage/VaultLayout';
+import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
+import { FOLDERS } from '../../../../shared/domain/typeName';
 
 // '' (Hoard at the vault root) excludes nothing: a nested fork is never below it in the managed sense
 const inside = (path: string, folder: string): boolean => folder !== '' && (path === folder || path.startsWith(`${folder}/`));

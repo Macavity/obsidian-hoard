@@ -701,7 +701,7 @@ export class ReadingTab implements TabInstance {
 
 		// ── Status section (multi-select with "All") ──
 		this.addFilterSection(el, collapsed, 'Status', t('ui.filters.status'), (content) => {
-			controllers.push(this.addMultiSelectBody(content, READING_STATUSES, draft.statusExclude, (o) => readingStatusLabel(o as ReadingStatus)));
+			controllers.push(this.addMultiSelectBody(content, READING_STATUSES, draft.statusExclude, (o) => readingStatusLabel(o)));
 		});
 
 		// ── Rating section (single-select mode; not part of Select/Deselect all) ──

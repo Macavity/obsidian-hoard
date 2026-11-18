@@ -1,6 +1,6 @@
 import type { App } from 'obsidian';
 import { CsvModalBase, rowsToCsv, type CsvExportRow, type CsvFieldDef, type CsvSelectOption } from '../../../shared/ui/CsvModalBase';
-import { safeTypeName } from '../../../shared/storage/VaultLayout';
+import { safeTypeName } from '../../../shared/domain/typeName';
 import { t } from '../../../shared/i18n';
 import { statusLabel, typeLabel } from '../../../shared/i18n/labels';
 import type { DataManager } from '../services/DataManager';

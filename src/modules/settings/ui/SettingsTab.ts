@@ -1942,7 +1942,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		this.renderTagListSection(el, {
 			label: t('settings.tags.status'),
 			info: t('settings.tags.infoStatusLocked'),
-			display: (name) => readingStatusLabel(name as ReadingStatus),
+			display: (name) => readingStatusLabel(name),
 			getList: () => READING_STATUSES.map((name) => ({
 				name,
 				color: readingStatusColor(name, readingData.getSettings().statusColors),

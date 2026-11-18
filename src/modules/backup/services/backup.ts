@@ -1,7 +1,8 @@
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
-import type { HistoryEntry, HistoryManager } from '../../../shared/services/HistoryManager';
+import type { HistoryManager } from '../../../shared/services/HistoryManager';
+import type { HistoryEntry } from '../../../shared/domain/types';
 import { DEFAULT_SETTINGS, defaultGamesSettings } from '../../../shared/domain/types';
 import type { GamesData, MaybeTitle, ReadingData, HoardTitle } from '../../../shared/domain/types';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
