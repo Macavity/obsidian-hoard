@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ReadingDetailModal } from '../src/modules/reading/ui/ReadingDetailModal';
+import { newReadingDetail } from './helpers/newReadingDetail';
 import { t } from '../src/shared/i18n';
 import type { Book } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
@@ -13,7 +13,7 @@ function build(read: () => Promise<string | null>) {
 		readReadingNote: vi.fn(read),
 		appendQuote: vi.fn(() => Promise.resolve()),
 	};
-	const modal = new ReadingDetailModal({ settings: fakeSettings({}), api: {}, reading: readingData, app: {} } as never, 'book', 'b1', vi.fn());
+	const modal = newReadingDetail({ settings: fakeSettings({}), reading: readingData }, { mode: 'book', id: 'b1', onChanged: vi.fn() });
 	const m = modal as unknown as { renderQuotesSection: (i: Book) => void; contentEl: HTMLElement };
 	m.renderQuotesSection(book);
 	const list = () => m.contentEl.querySelector<HTMLElement>('.hoard-reading-quotes__list')!;

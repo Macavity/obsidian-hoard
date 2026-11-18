@@ -1,5 +1,5 @@
+import { newReadingTab } from './helpers/newReadingTab';
 import { describe, expect, it, vi } from 'vitest';
-import { ReadingTab } from '../src/modules/reading/ui/ReadingTab';
 import type { Book } from '../src/shared/domain/types';
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
@@ -25,7 +25,7 @@ function build(books: Book[], query = '') {
 	const container = document.createElement('div');
 	const content = document.createElement('div');
 	container.appendChild(content);
-	const tab = new ReadingTab(container, { app: {}, reading, settings: fakeSettings({}), isCardTextUnder: () => false, getCardMinWidth: () => 150 } as never) as unknown as Internals;
+	const tab = newReadingTab(container, { reading, settings: fakeSettings({}), isCardTextUnder: () => false, getCardMinWidth: () => 150 }) as unknown as Internals;
 	tab.contentEl = content;
 	tab.searchQuery = query;
 	tab.renderContent();

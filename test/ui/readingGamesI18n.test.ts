@@ -5,7 +5,7 @@ import { GamesTab } from '../../src/modules/games/ui/GamesTab';
 import { GameDetailModal } from '../../src/modules/games/ui/GameDetailModal';
 import { defaultGamesSettings, DEFAULT_SETTINGS } from '../../src/shared/domain/types';
 import { ReadingManageColumnsModal } from '../../src/modules/reading/ui/ReadingManageColumnsModal';
-import { ReadingTab } from '../../src/modules/reading/ui/ReadingTab';
+import { newReadingTab } from '../helpers/newReadingTab';
 import { El } from '../helpers/fakeEl';
 import { fakeSettings } from '../helpers/fakeSettings';
 
@@ -19,15 +19,14 @@ describe('reading and games i18n', () => {
 	it('renders the reading empty state in German', () => {
 		setLocale('de');
 		const container = new El('root');
-		const tab = new ReadingTab(container as never, {
-			app: {},
+		const tab = newReadingTab(container, {
 			settings: fakeSettings({}),
 			reading: {
 				onChange: () => {}, offChange: () => {},
 				getSettings: () => ({ defaultSubTab: 'books' }),
 				getBooks: () => [],
 			},
-		} as never);
+		});
 		(tab as unknown as { contentEl: El }).contentEl = container;
 		(tab as unknown as { renderContent: () => void }).renderContent();
 		const texts = allText(container);

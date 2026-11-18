@@ -1,5 +1,5 @@
+import { newReadingTab } from './helpers/newReadingTab';
 import { describe, expect, it, vi } from 'vitest';
-import { ReadingTab } from '../src/modules/reading/ui/ReadingTab';
 import type { Book, Manga, ReadingCustomColumn } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
 
@@ -37,7 +37,7 @@ function build(sub: 'books' | 'manga' = 'books', columns: ReadingCustomColumn[] 
 		updateMangaSilent: vi.fn(),
 		saveAndNotify: vi.fn(() => Promise.resolve()),
 	};
-	const tab = new ReadingTab(document.createElement('div'), { app: {}, reading, settings: fakeSettings({}) } as never) as unknown as Internals;
+	const tab = newReadingTab(document.createElement('div'), { reading, settings: fakeSettings({}) }) as unknown as Internals;
 	tab.activeSubTab = sub;
 	tab.renderContent = vi.fn();
 	tab.render = vi.fn();

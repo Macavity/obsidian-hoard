@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ReadingDetailModal } from '../src/modules/reading/ui/ReadingDetailModal';
+import { newReadingDetail } from './helpers/newReadingDetail';
 import { readingStatusLabel } from '../src/shared/i18n/labels';
 import { deriveBorderColor, deriveFillColor } from '../src/shared/ui/ColorPicker';
 import { t } from '../src/shared/i18n';
@@ -55,15 +55,14 @@ function build(o: Opts = {}) {
 		getGoogleBookById: vi.fn(() => Promise.resolve({ coverUrl: 'http://c/n.jpg' })),
 		getMangaByMalId: vi.fn(() => Promise.resolve({ coverUrl: 'http://c/m.jpg' })),
 	};
-	const deps = {
+	const parts = {
 		settings: fakeSettings({ showHintBanners: o.showHints ?? false }),
 		api: apiService,
 		history: { log },
 		reading: readingData,
-		app: {},
 	};
 	const onChanged = vi.fn();
-	const modal = new ReadingDetailModal(deps as never, mode, 'x', onChanged);
+	const modal = newReadingDetail(parts, { mode, id: 'x', onChanged });
 	const x = modal as unknown as {
 		contentEl: HTMLElement;
 		close: () => void;

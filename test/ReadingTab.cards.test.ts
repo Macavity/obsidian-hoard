@@ -1,3 +1,4 @@
+import { newReadingTab } from './helpers/newReadingTab';
 import { searchBooks, fetchReadingCoverById, firstBookCover } from '../src/modules/covers/services/coverRefresh';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
@@ -53,9 +54,9 @@ function build(sub: 'books' | 'manga', o: Opts = {}) {
 		getGoogleBookById: vi.fn(() => (o.coverFails ? Promise.reject(new Error('x')) : Promise.resolve({ coverUrl: o.cover ?? '' }))),
 		getMangaByMalId: vi.fn(() => (o.coverFails ? Promise.reject(new Error('x')) : Promise.resolve({ coverUrl: o.cover ?? '' }))),
 	};
-	const deps = { app: {}, api: apiService, reading: readingData, searchBooks, fetchReadingCoverById, firstBookCover, isCardTextUnder: () => o.textUnder ?? true, settings: fakeSettings({}) };
+	const deps = { api: apiService, reading: readingData, searchBooks, fetchReadingCoverById, firstBookCover, isCardTextUnder: () => o.textUnder ?? true, settings: fakeSettings({}) };
 	const container = document.createElement('div');
-	const tab = new ReadingTab(container, deps as never);
+	const tab = newReadingTab(container, deps);
 	(tab as unknown as { activeSubTab: string }).activeSubTab = sub;
 	const x = tab as unknown as {
 		renderBookCard: (g: HTMLElement, b: Book) => void;
@@ -206,7 +207,7 @@ describe('ReadingTab.refreshCover', () => {
 
 	it('refreshes an Open Library book without a Google key', async () => {
 		const { tab, readingData } = build('books', { hasKey: false, cover: 'http://c/ol.jpg' });
-		const api = (tab as unknown as { deps: { api: Record<string, unknown> } }).deps.api;
+		const api = (tab as unknown as { api: Record<string, unknown> }).api;
 		api.getOpenLibraryWork = vi.fn(() => Promise.resolve({ coverUrl: 'http://c/ol.jpg' }));
 		tab.refreshCover(book({ openLibraryId: 'OL1W' }));
 		await flush();
