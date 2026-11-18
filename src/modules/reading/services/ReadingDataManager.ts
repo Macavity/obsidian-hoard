@@ -1,8 +1,14 @@
 import { TFile, getFrontMatterInfo, parseYaml, stringifyYaml } from 'obsidian';
-import type { EventRef } from 'obsidian';
-import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
+import { dropOldId, rewriteOwnedKeys } from '../../../shared/storage/noteWrite';
 import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
-import { EntryManagerBase, type ManagerBase } from '../../../shared/services/EntryManagerBase';
+import { ChangeNotifier } from '../../../shared/services/changeListeners';
+import type { EntryNotes } from '../../../shared/services/EntryNotes';
+import type { HistoryManager } from '../../../shared/services/HistoryManager';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { EntryIndex } from '../../../shared/storage/EntryIndex';
+import type { LocalStore } from '../../../shared/storage/LocalStore';
+import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
+import type { Notify } from '../../../shared/storage/storageTypes';
 import { getBaseline, sameStoredState, setBaseline } from '../../../shared/storage/baseline';
 import { splitNested } from '../../../shared/storage/SharedConfigStore';
 import { FOLDERS } from '../../../shared/domain/typeName';
@@ -66,7 +72,7 @@ export interface ReadingUpcomingSync {
  * to the note via processFrontMatter and only touch keys whose encoded value changed. Reading
  * settings and table columns live in the shared config (Hoard.base).
  */
-export class ReadingDataManager extends EntryManagerBase {
+export class ReadingDataManager extends ChangeNotifier {
 
 	private settings: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
 	private bookColumns: ReadingCustomColumn[] = [];
@@ -80,20 +86,29 @@ export class ReadingDataManager extends EntryManagerBase {
 	// what a rename re-keys and a delete forgets
 	private held: HeldEntries<{ src: ReadingItem; view: ReadingItem }>;
 
+	private historyManager: HistoryManager | null = null;
+
 	constructor(
-		/** Bound to the plugin, so the handler is removed on unload. */
-		private readonly registerEvent: (ref: EventRef) => void,
+		private readonly notes: EntryNotes,
+		private readonly index: EntryIndex,
+		private readonly local: LocalStore,
+		private readonly shared: SharedConfigStore,
+		private readonly notify: Notify,
+		private readonly appSettings: SettingsReader,
 		private readonly upcoming: ReadingUpcomingSync,
-		...base: ManagerBase
 	) {
-		super(...base);
+		super();
 		this.held = { index: this.index, views: this.views, dirty: this.dirty };
+	}
+
+	setHistoryManager(hm: HistoryManager): void {
+		this.historyManager = hm;
 	}
 
 	/** After index.build() and shared.load(): follows index and shared-config changes. */
 	async init(): Promise<void> {
 		this.readShared();
-		registerRenameFollow(this.vault, this.registerEvent, this.held, this.layout);
+		this.notes.followRenames(this.held);
 		this.index.onChange((ids) => {
 			let touched = false;
 			for (const id of ids) {
@@ -227,10 +242,9 @@ export class ReadingDataManager extends EntryManagerBase {
 		this.mangaColumns = Array.isArray(mangaColumns) ? mangaColumns : [];
 		await this.saveShared();
 		this.readShared();
-		const layout = this.layout();
 		for (const [kind, list] of [['book', books], ['manga', manga]] as const) {
 			for (const item of list as ReadingItem[]) {
-				if (this.vault.getAbstractFileByPath(layout.notePath(kind, item.title))) continue;
+				if (this.notes.exists(this.notes.pathFor(kind, item.title))) continue;
 				await this.createNote(kind, { ...item });
 			}
 		}
@@ -252,7 +266,7 @@ export class ReadingDataManager extends EntryManagerBase {
 			item.coverUrl = url;
 			return;
 		}
-		const file = this.fileOf(id);
+		const file = this.notes.fileOf(id);
 		if (!file) return;
 		await this.processFrontMatter(file, kind, item, (raw) => {
 			const current = raw[COMMON_PROPS.cover];
@@ -322,7 +336,7 @@ export class ReadingDataManager extends EntryManagerBase {
 			...src,
 			customFields: { ...(src.customFields ?? {}) },
 			...(src.groups ? { groups: [...src.groups] } : {}),
-			vaultPage: this.layout().pathFromId(src.id),
+			vaultPage: this.notes.pathOf(src.id),
 		};
 		this.applyReleaseStatus(view);
 		this.views.set(src.id, { src, view });
@@ -464,8 +478,7 @@ export class ReadingDataManager extends EntryManagerBase {
 	}
 
 	private predictId(kind: ReadingKind, title: string): string {
-		const layout = this.layout();
-		return layout.idFromPath(freeNotePath(this.vault, layout.notePath(kind, title)));
+		return this.notes.nextId(kind, title);
 	}
 
 	// Shared update/remove flows
@@ -600,12 +613,12 @@ export class ReadingDataManager extends EntryManagerBase {
 		let moved = 0;
 		let skipped = 0;
 		for (const item of items) {
-			const file = this.fileOf(item.id);
+			const file = this.notes.fileOf(item.id);
 			// the file decides, not the metadata cache, which may lag behind a sync
 			if (!file || from === to || !(await this.fileHasKey(file, from))) continue;
 			let hit = false;
 			let conflict = false;
-			const ok = await updateFrontMatter(this.fileManager, file, this.notify, (fm: Fm) => {
+			const ok = await this.notes.updateProperties(file, (fm: Fm) => {
 				if (!(from in fm)) return;
 				if (to in fm) {
 					console.warn(`[Hoard] ${file.path} already has "${to}"; "${from}" stays`);
@@ -626,7 +639,7 @@ export class ReadingDataManager extends EntryManagerBase {
 
 	/** True when the note's properties, read from the file, contain `key`; unreadable YAML counts when it names the key. */
 	private async fileHasKey(file: TFile, key: string): Promise<boolean> {
-		const info = getFrontMatterInfo(await this.vault.read(file));
+		const info = getFrontMatterInfo(await this.notes.read(file));
 		if (!info.exists) return false;
 		try {
 			const fm: unknown = parseYaml(info.frontmatter);
@@ -686,14 +699,9 @@ export class ReadingDataManager extends EntryManagerBase {
 
 	/** Path of the note for `title`: the existing entry's note when there is one, else the path a new one gets. */
 	noteFilePath(kind: ReadingKind, title: string): string {
-		const layout = this.layout();
 		const list: ReadingItem[] = kind === 'book' ? this.index.books() : this.index.manga();
 		const hit = list.find((e) => e.title === title);
-		return hit ? layout.pathFromId(hit.id) : layout.notePath(kind, title);
-	}
-
-	private fileOf(id: string): TFile | null {
-		return noteFile(this.vault, this.layout().pathFromId(id));
+		return hit ? this.notes.pathOf(hit.id) : this.notes.pathFor(kind, title);
 	}
 
 	/** True when `item` was made from the stored state of its note (or nothing is stored yet). */
@@ -714,7 +722,7 @@ export class ReadingDataManager extends EntryManagerBase {
 		this.index.applyLocal(kind === 'book'
 			? { kind: 'book', entry: stored as Book }
 			: { kind: 'manga', entry: stored as Manga }, { background });
-		item.vaultPage = this.layout().pathFromId(item.id);
+		item.vaultPage = this.notes.pathOf(item.id);
 		if (!fresh) return;
 		this.views.set(item.id, { src: stored, view: item });
 		setBaseline(item, stored);
@@ -732,7 +740,7 @@ export class ReadingDataManager extends EntryManagerBase {
 		fn: (fm: Fm) => void,
 		background = false,
 	): Promise<boolean> {
-		return updateFrontMatter(this.fileManager, file, this.notify, (fm: Fm) => {
+		return this.notes.updateProperties(file, (fm: Fm) => {
 			fn(fm);
 			this.afterWrite(kind, item, { ...fm }, background);
 		});
@@ -740,15 +748,13 @@ export class ReadingDataManager extends EntryManagerBase {
 
 	/** Creates the note for a new entry; the entry's id becomes the note path. */
 	private async createNote(kind: ReadingKind, item: ReadingItem): Promise<void> {
-		const layout = this.layout();
-		const path = freeNotePath(this.vault, layout.notePath(kind, item.title));
-		await ensureFolder(this.vault, parentOf(path));
+		const { path, id } = await this.notes.reserve(kind, item.title);
 		const fm = this.encode(kind, item);
-		item.id = layout.idFromPath(path);
+		item.id = id;
 		// index first, so the create event finds nothing new
 		this.afterWrite(kind, item, fm);
 		try {
-			await this.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n\n\n## Quotes\n`);
+			await this.notes.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n\n\n## Quotes\n`);
 		} catch (e) {
 			this.index.removeLocal(item.id);
 			this.views.delete(item.id);
@@ -760,7 +766,7 @@ export class ReadingDataManager extends EntryManagerBase {
 	private writeHooks(kind: ReadingKind): EntryWriteHooks<ReadingItem> {
 		return {
 			baselineOf: (item) => getBaseline(item) ?? this.views.get(item.id)?.src ?? this.sourceOf(kind, item.id),
-			movedPath: (src, item) => (item.title !== src.title ? this.layout().notePath(kind, item.title) : null),
+			movedPath: (src, item) => (item.title !== src.title ? this.notes.pathFor(kind, item.title) : null),
 			moveId: (from, to) => dropOldId({ index: this.index, views: this.views, dirty: this.dirty }, from, to),
 			prepare: () => (x) => this.encode(kind, x),
 			afterWrite: (item, fm) => this.afterWrite(kind, item, fm),
@@ -775,27 +781,27 @@ export class ReadingDataManager extends EntryManagerBase {
 
 	/** Writes an entry to its note through the shared pipeline (`writeEntry`); creates the note when missing. */
 	private async writeItem(kind: ReadingKind, item: ReadingItem): Promise<void> {
-		await writeEntry({ vault: this.vault, fileManager: this.fileManager, layout: this.layout, notify: this.notify }, this.writeHooks(kind), item);
+		await this.notes.write(this.writeHooks(kind), item);
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		await deleteEntryNote(this.vault, this.fileManager, this.layout(), this.held, id);
+		await this.notes.remove(this.held, id);
 	}
 
 	/** Writes (creates or updates) the note file. Returns its path. */
 	async writeReadingNote(kind: ReadingKind, item: ReadingItem): Promise<string> {
 		await this.writeItem(kind, item);
-		return this.layout().pathFromId(item.id);
+		return this.notes.pathOf(item.id);
 	}
 
 	async ensureReadingNote(kind: ReadingKind, item: ReadingItem): Promise<string> {
-		if (this.fileOf(item.id)) return this.layout().pathFromId(item.id);
+		if (this.notes.fileOf(item.id)) return this.notes.pathOf(item.id);
 		return this.writeReadingNote(kind, item);
 	}
 
 	/** Creates the note file only if missing; true when one was created. */
 	async createReadingNoteIfMissing(kind: ReadingKind, item: ReadingItem): Promise<boolean> {
-		if (this.fileOf(item.id)) return false;
+		if (this.notes.fileOf(item.id)) return false;
 		await this.createNote(kind, item);
 		return true;
 	}
@@ -806,7 +812,7 @@ export class ReadingDataManager extends EntryManagerBase {
 	 * when missing — returns false. Used by the bulk "Rewrite all frontmatter" action.
 	 */
 	async rewriteFrontmatterIfExists(kind: ReadingKind, item: ReadingItem): Promise<boolean> {
-		const file = this.fileOf(item.id);
+		const file = this.notes.fileOf(item.id);
 		if (!file) return false;
 		const out = this.encode(kind, item);
 		const keep = new Set(this.index.invalidFields(item.id));
@@ -820,8 +826,8 @@ export class ReadingDataManager extends EntryManagerBase {
 	}
 
 	async readReadingNote(_kind: ReadingKind, item: ReadingItem): Promise<string | null> {
-		const file = this.fileOf(item.id);
-		return file ? this.vault.read(file) : null;
+		const file = this.notes.fileOf(item.id);
+		return file ? this.notes.read(file) : null;
 	}
 
 	/** Appends a `> [!quote]` callout to the ## Quotes section, creating it if missing. */
@@ -832,7 +838,7 @@ export class ReadingDataManager extends EntryManagerBase {
 		reference: string,
 	): Promise<void> {
 		await this.ensureReadingNote(kind, item);
-		const file = this.fileOf(item.id);
+		const file = this.notes.fileOf(item.id);
 		if (!file) return;
 
 		const refTrim = reference.trim();
@@ -843,7 +849,7 @@ export class ReadingDataManager extends EntryManagerBase {
 			.join('\n');
 		const callout = `> [!quote]${titlePart}\n${bodyLines}`;
 
-		await this.vault.process(file, (current) => {
+		await this.notes.process(file, (current) => {
 			const quotesMatch = current.match(/(^|\n)## Quotes[ \t]*\r?\n/);
 			if (quotesMatch && quotesMatch.index !== undefined) {
 				const insertAt = quotesMatch.index + quotesMatch[0].length;

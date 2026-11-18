@@ -6,6 +6,7 @@ import { LocalStore } from '../../src/shared/storage/LocalStore';
 import { SecretStore } from '../../src/shared/storage/SecretStore';
 import { SharedConfigStore } from '../../src/shared/storage/SharedConfigStore';
 import { EntryIndex } from '../../src/shared/storage/EntryIndex';
+import { EntryNotes } from '../../src/shared/services/EntryNotes';
 import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
 import type { ManagerNotice } from '../../src/shared/storage/storageTypes';
 import { DataManager } from '../../src/modules/watchlist/services/DataManager';
@@ -69,7 +70,8 @@ export async function createStores(files: Record<string, string>, opts: StoreOpt
 	index.start();
 	const stores = { index, local, shared, layout: () => layout, notify };
 	/** Stores plus what every manager takes besides them. */
-	const base = { ...stores, vault: f.app.vault, fileManager: f.app.fileManager, settings: { get: () => settings }, registerEvent: f.plugin.registerEvent };
+	const notes = new EntryNotes(f.app.vault, f.app.fileManager, () => layout, notify, f.plugin.registerEvent);
+	const base = { ...stores, notes, vault: f.app.vault, fileManager: f.app.fileManager, settings: { get: () => settings }, registerEvent: f.plugin.registerEvent };
 	return { f, plugin, settings, local, layout, shared, index, notices, stores, base };
 }
 
@@ -83,21 +85,19 @@ export function newDataManager(
 	releaseDates: ReleaseDateTargets,
 ): DataManager {
 	return new DataManager(
-		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify,
-		base.settings, api, posters, base.registerEvent, releaseDates,
+		base.notes, base.index, base.local, base.shared, base.notify,
+		base.settings, api, posters, releaseDates,
 	);
 }
 
 export function newReadingManager(base: StoreBase, upcoming: ReadingUpcomingSync): ReadingDataManager {
 	return new ReadingDataManager(
-		base.registerEvent, upcoming,
-		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify, base.settings,
+		base.notes, base.index, base.local, base.shared, base.notify, base.settings, upcoming,
 	);
 }
 
 export function newGameManager(base: StoreBase, upcoming: GameUpcomingSync): GameDataManager {
 	return new GameDataManager(
-		base.registerEvent, upcoming,
-		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify, base.settings,
+		base.notes, base.index, base.local, base.shared, base.notify, base.settings, upcoming,
 	);
 }

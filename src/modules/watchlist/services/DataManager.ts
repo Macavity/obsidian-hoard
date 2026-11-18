@@ -1,6 +1,7 @@
-import { TAbstractFile, TFile, stringifyYaml } from 'obsidian';
-import type { EventRef, FileManager, Vault } from 'obsidian';
+import { TFile, stringifyYaml } from 'obsidian';
+import type { TAbstractFile } from 'obsidian';
 import type { ApiService } from '../../../shared/api/ApiService';
+import type { EntryNotes } from '../../../shared/services/EntryNotes';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
 import { toEntryAirtime } from '../../../shared/domain/airtime';
 import type { DraftPersistState, Season, HoardTitle, HoardGroup, AirtimeEntry, AirtimeSchedule, EntryAirtime, MaybeTitle, RecommendedDaily, SavedFilterPreset, Book, Manga, Game } from '../../../shared/domain/types';
@@ -13,13 +14,12 @@ import type { AnyEntry, EntryIndex } from '../../../shared/storage/EntryIndex';
 import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBaseline } from '../../../shared/storage/baseline';
 import { ApiCheckQueue } from '../../../shared/api/apiCheckQueue';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
-import { ensureFolder, freeNotePath, noteFile, parentOf, retargetSlot, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
+import { retargetSlot, rewriteOwnedKeys } from '../../../shared/storage/noteWrite';
 import type { EntryWriteHooks } from '../../../shared/storage/noteWrite';
 import type { ApiCheckKind, ApiCheckResult, EntryCache, LookupKind, Notify } from '../../../shared/storage/storageTypes';
 import { checkResultOf, FAILED } from '../../../shared/api/lookup';
 import type { LookupResult } from '../../../shared/api/lookup';
 import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
-import type { VaultLayout } from '../../../shared/storage/VaultLayout';
 import { TITLE_CACHE_KEYS, titleFromProperties, titleToProperties, isMovie, seasonsPending, titleToCache } from '../../../shared/storage/titleCodec';
 import { externalIdFromLink } from '../../../shared/storage/externalId';
 import { decodeBook, decodeManga, encodeAirtime } from '../../../shared/storage/readingCodec';
@@ -105,19 +105,15 @@ export class DataManager extends ChangeNotifier {
 	}
 
 	constructor(
-		private readonly vault: Vault,
-		private readonly fileManager: FileManager,
+		private readonly entryNotes: EntryNotes,
 		private readonly index: EntryIndex,
 		private readonly local: LocalStore,
 		private readonly shared: SharedConfigStore,
-		private readonly layout: () => VaultLayout,
 		private readonly notify: Notify,
 		private readonly settings: SettingsReader,
 		private readonly api: Pick<ApiService, 'fetchAiring' | 'fetchSeasons'>,
 		/** Resolved per use: the poster service is created after the manager. */
 		private readonly posters: () => PosterQueue | null,
-		/** Bound to the plugin, so the handlers are removed on unload. */
-		private readonly registerEvent: (ref: EventRef) => void,
 		private readonly releaseDates: ReleaseDateTargets,
 	) {
 		super();
@@ -132,10 +128,7 @@ export class DataManager extends ChangeNotifier {
 			this.queueMissingSeasons(changed);
 			this.notifyListeners();
 		});
-		const { vault } = this;
-		this.registerEvent(vault.on('modify', (f) => void this.refreshNotes(f)));
-		this.registerEvent(vault.on('create', (f) => void this.refreshNotes(f)));
-		this.registerEvent(vault.on('rename', (f, oldPath) => this.onVaultRename(f, oldPath)));
+		this.entryNotes.watch((f) => void this.refreshNotes(f), (f, oldPath) => this.onVaultRename(f, oldPath));
 		this.queueMissingPosters(this.getTitles());
 		this.queueMissingSeasons(this.getTitles());
 		this.notifyListeners();
@@ -589,8 +582,7 @@ export class DataManager extends ChangeNotifier {
 	 * dropped, fields from `title`; its `## Notes` survive when `title` brings none.
 	 */
 	private async insertNote(title: HoardTitle): Promise<void> {
-		const layout = this.layout();
-		const id = layout.idFromPath(layout.notePath('title', title.title, title.type));
+		const id = this.entryNotes.idOf(this.entryNotes.pathFor('title', title.title, title.type));
 		const maybe = this.index.get(id);
 		if (maybe?.kind !== 'title' || !maybe.entry.maybe) {
 			await this.createNote(title);
@@ -1053,26 +1045,19 @@ export class DataManager extends ChangeNotifier {
 		if (!file) return false;
 		const id = e.entry.id;
 		const kind = e.kind;
-		try {
-			await this.fileManager.processFrontMatter(file, (raw: Record<string, unknown>) => {
-				for (const key of AIRTIME_KEYS) delete raw[key];
-				encodeAirtime(airtime, raw);
-				if (releaseDate) raw[COMMON_PROPS.releaseDate] = releaseDate;
-				const fm = { ...raw };
-				this.index.applyLocal(
-					kind === 'game'
-						? { kind, entry: decodeGame(id, fm).entry }
-						: kind === 'book'
-							? { kind, entry: decodeBook(id, fm, this.index.columns('book')).entry }
-							: { kind, entry: decodeManga(id, fm, this.index.columns('manga')).entry },
-				);
-			});
-			return true;
-		} catch (err) {
-			console.warn(`Hoard: could not update frontmatter of ${file.path}`, err);
-			this.notify({ code: 'invalidYaml', file: file.basename });
-			return false;
-		}
+		return this.entryNotes.updateProperties(file, (raw: Record<string, unknown>) => {
+			for (const key of AIRTIME_KEYS) delete raw[key];
+			encodeAirtime(airtime, raw);
+			if (releaseDate) raw[COMMON_PROPS.releaseDate] = releaseDate;
+			const fm = { ...raw };
+			this.index.applyLocal(
+				kind === 'game'
+					? { kind, entry: decodeGame(id, fm).entry }
+					: kind === 'book'
+						? { kind, entry: decodeBook(id, fm, this.index.columns('book')).entry }
+						: { kind, entry: decodeManga(id, fm, this.index.columns('manga')).entry },
+			);
+		});
 	}
 
 	// Maybe: title notes flagged `maybe: true`, kept out of getTitles()
@@ -1339,20 +1324,19 @@ export class DataManager extends ChangeNotifier {
 
 	async ensureFolders(): Promise<void> {
 		if (!this.settings.get().autoCreateFolders) return;
-		const layout = this.layout();
-		if (layout.root) await this.ensureFolder(layout.root);
+		if (this.entryNotes.root) await this.ensureFolder(this.entryNotes.root);
 		for (const type of this.settings.get().types) {
-			await this.ensureFolder(layout.folderFor('title', type.name));
+			await this.ensureFolder(this.entryNotes.folderFor('title', type.name));
 		}
 	}
 
 	async ensureFolder(path: string): Promise<void> {
-		await ensureFolder(this.vault, path);
+		await this.entryNotes.ensureFolder(path);
 	}
 
 	/** Path of the title's note: its id below the root. */
 	getNoteFilePath(title: HoardTitle): string {
-		return this.layout().pathFromId(title.id);
+		return this.entryNotes.pathOf(title.id);
 	}
 
 	/** Writes the title's note (creates it when missing). */
@@ -1364,7 +1348,7 @@ export class DataManager extends ChangeNotifier {
 	async readNotesFromFile(title: HoardTitle): Promise<string | null> {
 		const file = this.fileOf(title.id);
 		if (!file) return null;
-		const notes = extractNotes(await this.vault.read(file));
+		const notes = extractNotes(await this.entryNotes.read(file));
 		this.notes.set(title.id, notes ?? '');
 		return notes;
 	}
@@ -1398,7 +1382,7 @@ export class DataManager extends ChangeNotifier {
 	// Note I/O
 
 	private fileOf(id: string): TFile | null {
-		return noteFile(this.vault, this.layout().pathFromId(id));
+		return this.entryNotes.fileOf(id);
 	}
 
 	/**
@@ -1412,7 +1396,7 @@ export class DataManager extends ChangeNotifier {
 		fn: (fm: Record<string, unknown>) => void,
 		background = false,
 	): Promise<boolean> {
-		return updateFrontMatter(this.fileManager, file, this.notify, (fm: Record<string, unknown>) => {
+		return this.entryNotes.updateProperties(file, (fm: Record<string, unknown>) => {
 			fn(fm);
 			this.afterWrite(t, { ...fm }, background);
 		});
@@ -1420,21 +1404,19 @@ export class DataManager extends ChangeNotifier {
 
 	/** Creates the note for a new title; the title's id becomes the note path. */
 	private async createNote(title: HoardTitle): Promise<void> {
-		const layout = this.layout();
 		// without an API identity nothing can refetch the seasons: they belong in the note
 		const fetchable = !!title.tmdbId || !!title.malId || !!title.anilistId
 			|| externalIdFromLink(title.externalLink) !== null;
 		if (!fetchable && title.seasons.length > 0) title.seasonsOverride = true;
-		const path = freeNotePath(this.vault, layout.notePath('title', title.title, title.type));
-		await this.ensureFolder(parentOf(path));
+		const { path, id } = await this.entryNotes.reserve('title', title.title, title.type);
 		const fm = titleToProperties(title, this.getProgress(title), this.seasonsPending(title));
 		const notes = title.notes ?? '';
-		title.id = layout.idFromPath(path);
+		title.id = id;
 		this.notes.set(title.id, notes);
 		// index first, so the create event finds nothing new
 		this.afterWrite(title, fm);
 		try {
-			await this.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n\n${notes}\n`);
+			await this.entryNotes.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n\n${notes}\n`);
 		} catch (e) {
 			this.index.removeLocal(title.id);
 			this.views.delete(title.id);
@@ -1445,7 +1427,7 @@ export class DataManager extends ChangeNotifier {
 	/** What the write pipeline needs to know about a title. */
 	private readonly writeHooks: EntryWriteHooks<HoardTitle> = {
 		baselineOf: (t) => this.baselineOf(t),
-		movedPath: (src, t) => (t.title !== src.title || t.type !== src.type ? this.layout().notePath('title', t.title, t.type) : null),
+		movedPath: (src, t) => (t.title !== src.title || t.type !== src.type ? this.entryNotes.pathFor('title', t.title, t.type) : null),
 		moveId: (from, to) => this.moveId(from, to),
 		prepare: (t, src) => {
 			// edited seasons belong in the note, so they reach other devices (the cache stays per device)
@@ -1472,7 +1454,7 @@ export class DataManager extends ChangeNotifier {
 	 * not be read is left alone altogether.
 	 */
 	private async writeTitle(t: HoardTitle): Promise<void> {
-		const outcome = await writeEntry({ vault: this.vault, fileManager: this.fileManager, layout: this.layout, notify: this.notify }, this.writeHooks, t);
+		const outcome = await this.entryNotes.write(this.writeHooks, t);
 		if (outcome === 'created' || outcome === 'unreadable') return;
 		await this.writeNotesBody(t);
 	}
@@ -1489,7 +1471,7 @@ export class DataManager extends ChangeNotifier {
 		if (file && notes !== (getNotesBaseline(t) ?? current) && notes !== current) {
 			// set first: the modify event of this write then sees no change
 			this.notes.set(t.id, notes);
-			await this.vault.process(file, (content) => replaceNotesSection(content, notes));
+			await this.entryNotes.process(file, (content) => replaceNotesSection(content, notes));
 		}
 		setNotesBaseline(t, this.notes.get(t.id) ?? '');
 	}
@@ -1541,7 +1523,7 @@ export class DataManager extends ChangeNotifier {
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		await trashNote(this.vault, this.fileManager, this.layout().pathFromId(id));
+		await this.entryNotes.trash(id);
 		this.index.removeLocal(id);
 		this.local.deleteCache(id);
 		this.views.delete(id);
@@ -1585,15 +1567,15 @@ export class DataManager extends ChangeNotifier {
 	private async readNotes(id: string): Promise<void> {
 		const file = this.fileOf(id);
 		if (!file) return;
-		this.notes.set(id, extractNotes(await this.vault.cachedRead(file)) ?? '');
+		this.notes.set(id, extractNotes(await this.entryNotes.cachedRead(file)) ?? '');
 	}
 
 	/** Follows `## Notes` edits made outside the plugin. */
 	private async refreshNotes(file: TAbstractFile): Promise<void> {
 		if (!(file instanceof TFile)) return;
-		const c = this.layout().classify(file.path);
+		const c = this.entryNotes.classify(file.path);
 		if (c?.kind !== 'title') return;
-		const next = extractNotes(await this.vault.read(file)) ?? '';
+		const next = extractNotes(await this.entryNotes.read(file)) ?? '';
 		const prev = this.notes.get(c.id) ?? '';
 		if (next === prev) return;
 		this.notes.set(c.id, next);
@@ -1607,9 +1589,8 @@ export class DataManager extends ChangeNotifier {
 
 	private onVaultRename(file: TAbstractFile, oldPath: string): void {
 		if (!(file instanceof TFile)) return;
-		const layout = this.layout();
-		const from = layout.classify(oldPath)?.id;
-		const to = layout.classify(file.path)?.id;
+		const from = this.entryNotes.classify(oldPath)?.id;
+		const to = this.entryNotes.classify(file.path)?.id;
 		if (from === undefined || to === undefined || from === to || !this.notes.has(from)) return;
 		this.moveId(from, to);
 	}

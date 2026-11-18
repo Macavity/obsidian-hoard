@@ -46,7 +46,7 @@ import { toRecord } from '../shared/domain/sharedHelpers';
 import { resolveJikanEndpoint } from '../shared/api/jikanBase';
 import { emitDataChanged, onDataChanged } from '../shared/services/changeSignal';
 import { SettingsService } from '../shared/services/SettingsService';
-import type { ManagerBase } from '../shared/services/EntryManagerBase';
+import { EntryNotes } from '../shared/services/EntryNotes';
 
 /** Root folder created on a fresh install (no `.base` with a `hoard:` key found). */
 const DEFAULT_ROOT = 'Hoard';
@@ -78,47 +78,55 @@ export default class HoardPlugin extends Plugin {
 		(n) => this.notifyManager(n),
 	);
 	private index = new EntryIndex(this.app.vault, this.app.metadataCache, this.app.workspace, () => this.layout, this.local, (ref) => this.registerEvent(ref));
-	/** The leading collaborators every data manager takes. */
-	private managerBase: ManagerBase = [
+	private entryNotes = new EntryNotes(
 		this.app.vault,
 		this.app.fileManager,
+		() => this.layout,
+		(n) => this.notifyManager(n),
+		(ref) => this.registerEvent(ref),
+	);
+	// the managers reach each other through lambdas, so the construction order does not matter
+	private dataManager: DataManager = new DataManager(
+		this.entryNotes,
 		this.index,
 		this.local,
 		this.shared,
-		() => this.layout,
 		(n) => this.notifyManager(n),
 		this.settingsService,
-	];
-	// the managers reach each other through lambdas, so the construction order does not matter
-	private dataManager: DataManager = new DataManager(
-		...this.managerBase,
 		// apiService and posterService are replaced / created in onload
 		{
 			fetchAiring: (e) => this.apiService.fetchAiring(e),
 			fetchSeasons: (t) => this.apiService.fetchSeasons(t),
 		},
 		() => this.posterService ?? null,
-		(ref) => this.registerEvent(ref),
 		{
 			clearBookOrMangaReleaseDate: (kind, id) => this.readingDataManager.clearBookOrMangaReleaseDate(kind, id),
 			clearGameReleaseDate: (id) => this.gameDataManager.clearGameReleaseDate(id),
 		},
 	);
 	private readingDataManager: ReadingDataManager = new ReadingDataManager(
-		(ref) => this.registerEvent(ref),
+		this.entryNotes,
+		this.index,
+		this.local,
+		this.shared,
+		(n) => this.notifyManager(n),
+		this.settingsService,
 		{
 			autoAddReadingToUpcoming: (item, kind) => this.dataManager.autoAddReadingToUpcoming(item, kind),
 			removeReadingAirtimeEntries: (id) => this.dataManager.removeReadingAirtimeEntries(id),
 		},
-		...this.managerBase,
 	);
 	private gameDataManager: GameDataManager = new GameDataManager(
-		(ref) => this.registerEvent(ref),
+		this.entryNotes,
+		this.index,
+		this.local,
+		this.shared,
+		(n) => this.notifyManager(n),
+		this.settingsService,
 		{
 			autoAddGameToUpcoming: (g) => this.dataManager.autoAddGameToUpcoming(g),
 			removeGameAirtimeEntries: (id) => this.dataManager.removeGameAirtimeEntries(id),
 		},
-		...this.managerBase,
 	);
 	private apiService: ApiService = new ApiService('', '');
 	/** TMDB/OMDb key snapshot of the last settings save; null before onload set it */

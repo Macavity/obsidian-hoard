@@ -1,8 +1,15 @@
-import { TFile, stringifyYaml } from 'obsidian';
-import type { EventRef } from 'obsidian';
-import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
+import type { TFile } from 'obsidian';
+import { stringifyYaml } from 'obsidian';
+import { dropOldId } from '../../../shared/storage/noteWrite';
 import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
-import { EntryManagerBase, type ManagerBase } from '../../../shared/services/EntryManagerBase';
+import { ChangeNotifier } from '../../../shared/services/changeListeners';
+import type { EntryNotes } from '../../../shared/services/EntryNotes';
+import type { HistoryManager } from '../../../shared/services/HistoryManager';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { EntryIndex } from '../../../shared/storage/EntryIndex';
+import type { LocalStore } from '../../../shared/storage/LocalStore';
+import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
+import type { Notify } from '../../../shared/storage/storageTypes';
 import { getBaseline, sameStoredState, setBaseline } from '../../../shared/storage/baseline';
 import { splitNested } from '../../../shared/storage/SharedConfigStore';
 import { decodeGame, encodeGame } from '../../../shared/storage/gameCodec';
@@ -43,7 +50,7 @@ export interface GameUpcomingSync {
  * tracker and removed when the date passes or the game is deleted; applyReleaseStatus maintains the
  * auto "To be released" status.
  */
-export class GameDataManager extends EntryManagerBase {
+export class GameDataManager extends ChangeNotifier {
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from,
 	// `base` its normalized form: the baseline a write diffs against, so only changed fields reach the note.
@@ -54,19 +61,28 @@ export class GameDataManager extends EntryManagerBase {
 	private held: HeldEntries<{ src: Game; base: Game; view: Game }>;
 	private settingsCache: GamesSettings | null = null;
 
+	private historyManager: HistoryManager | null = null;
+
 	constructor(
-		/** Bound to the plugin, so the handler is removed on unload. */
-		private readonly registerEvent: (ref: EventRef) => void,
+		private readonly notes: EntryNotes,
+		private readonly index: EntryIndex,
+		private readonly local: LocalStore,
+		private readonly shared: SharedConfigStore,
+		private readonly notify: Notify,
+		private readonly appSettings: SettingsReader,
 		private readonly upcoming: GameUpcomingSync,
-		...base: ManagerBase
 	) {
-		super(...base);
+		super();
 		this.held = { index: this.index, views: this.views, dirty: this.dirty };
+	}
+
+	setHistoryManager(hm: HistoryManager): void {
+		this.historyManager = hm;
 	}
 
 	/** After index.build() and shared.load(): follows index and base changes, reconciles Upcoming. */
 	async init(): Promise<void> {
-		registerRenameFollow(this.vault, this.registerEvent, this.held, this.layout);
+		this.notes.followRenames(this.held);
 		this.index.onChange((ids) => {
 			let touched = false;
 			for (const id of ids) {
@@ -220,7 +236,7 @@ export class GameDataManager extends EntryManagerBase {
 	private normalized(src: Game): Game {
 		const g = structuredClone(src);
 		if (!g.status) g.status = this.getSettings().defaultStatus || 'Not started';
-		g.vaultPage = this.layout().pathFromId(g.id);
+		g.vaultPage = this.notes.pathOf(g.id);
 		return g;
 	}
 
@@ -387,7 +403,7 @@ export class GameDataManager extends EntryManagerBase {
 			game.coverUrl = url;
 			return;
 		}
-		const file = this.fileOf(id);
+		const file = this.notes.fileOf(id);
 		if (!file) return;
 		await this.processFrontMatter(file, game, (raw) => {
 			const current = raw[COMMON_PROPS.cover];
@@ -500,11 +516,7 @@ export class GameDataManager extends EntryManagerBase {
 
 	/** Path of the note a game with this title would get. */
 	noteFilePath(title: string): string {
-		return this.layout().notePath('game', title);
-	}
-
-	private fileOf(id: string): TFile | null {
-		return noteFile(this.vault, this.layout().pathFromId(id));
+		return this.notes.pathFor('game', title);
 	}
 
 	/** Frontmatter to store: the encoded game with the default status filled in. */
@@ -518,7 +530,7 @@ export class GameDataManager extends EntryManagerBase {
 	 * `background` marks an automatic fill (no user write).
 	 */
 	private async processFrontMatter(file: TFile, g: Game, fn: (fm: Record<string, unknown>) => void, background = false): Promise<boolean> {
-		return updateFrontMatter(this.fileManager, file, this.notify, (fm: Record<string, unknown>) => {
+		return this.notes.updateProperties(file, (fm: Record<string, unknown>) => {
 			fn(fm);
 			this.afterWrite(g, { ...fm }, background);
 		});
@@ -540,7 +552,7 @@ export class GameDataManager extends EntryManagerBase {
 		const fresh = this.basedOnStored(g);
 		const stored = decodeGame(g.id, fm).entry;
 		this.index.applyLocal({ kind: 'game', entry: stored }, { background });
-		g.vaultPage = this.layout().pathFromId(g.id);
+		g.vaultPage = this.notes.pathOf(g.id);
 		if (!fresh) return;
 		const base = this.normalized(stored);
 		this.views.set(g.id, { src: stored, base, view: g });
@@ -549,16 +561,14 @@ export class GameDataManager extends EntryManagerBase {
 
 	/** Creates the note for a new game; the game's id becomes the note path. */
 	private async createNote(game: Game): Promise<void> {
-		const layout = this.layout();
 		if (!game.status) game.status = this.getSettings().defaultStatus || 'Not started';
-		const path = freeNotePath(this.vault, layout.notePath('game', game.title));
-		await ensureFolder(this.vault, parentOf(path));
-		game.id = layout.idFromPath(path);
+		const { path, id } = await this.notes.reserve('game', game.title);
+		game.id = id;
 		const fm = this.encode(game);
 		// index first, so the create event finds nothing new
 		this.afterWrite(game, fm);
 		try {
-			await this.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n`);
+			await this.notes.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n`);
 		} catch (e) {
 			this.index.removeLocal(game.id);
 			this.views.delete(game.id);
@@ -572,7 +582,7 @@ export class GameDataManager extends EntryManagerBase {
 			const indexed = this.index.get(g.id);
 			return getBaseline(g) ?? this.views.get(g.id)?.base ?? (indexed?.kind === 'game' ? this.normalized(indexed.entry) : undefined);
 		},
-		movedPath: (src, g) => (g.title !== src.title ? this.layout().notePath('game', g.title) : null),
+		movedPath: (src, g) => (g.title !== src.title ? this.notes.pathFor('game', g.title) : null),
 		moveId: (from, to) => dropOldId({ index: this.index, views: this.views, dirty: this.dirty }, from, to),
 		prepare: () => (x) => this.encode(x),
 		afterWrite: (g, fm) => this.afterWrite(g, fm),
@@ -587,21 +597,21 @@ export class GameDataManager extends EntryManagerBase {
 
 	/** Writes a game to its note through the shared pipeline (`writeEntry`); creates the note when missing. */
 	private async writeGame(g: Game): Promise<void> {
-		await writeEntry({ vault: this.vault, fileManager: this.fileManager, layout: this.layout, notify: this.notify }, this.writeHooks, g);
+		await this.notes.write(this.writeHooks, g);
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		await deleteEntryNote(this.vault, this.fileManager, this.layout(), this.held, id);
+		await this.notes.remove(this.held, id);
 	}
 
 	async ensureGameNote(game: Game): Promise<string> {
-		if (!this.fileOf(game.id)) await this.createNote(game);
-		return this.layout().pathFromId(game.id);
+		if (!this.notes.fileOf(game.id)) await this.createNote(game);
+		return this.notes.pathOf(game.id);
 	}
 
 	async readGameNote(game: Game): Promise<string | null> {
-		const file = this.fileOf(game.id);
-		return file ? this.vault.read(file) : null;
+		const file = this.notes.fileOf(game.id);
+		return file ? this.notes.read(file) : null;
 	}
 
 	/** Reads the `## Notes` body back from the game's note; null when the file or section is absent. */
@@ -613,8 +623,8 @@ export class GameDataManager extends EntryManagerBase {
 	/** Replaces only the `## Notes` body, creating the note first when absent. */
 	async writeGameNotes(game: Game, notesBody: string): Promise<void> {
 		await this.ensureGameNote(game);
-		const file = this.fileOf(game.id);
+		const file = this.notes.fileOf(game.id);
 		if (!file) return;
-		await this.vault.process(file, (content) => replaceNotesSection(content, notesBody));
+		await this.notes.process(file, (content) => replaceNotesSection(content, notesBody));
 	}
 }

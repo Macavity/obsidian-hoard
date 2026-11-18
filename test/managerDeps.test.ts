@@ -2,13 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import HoardPlugin from '../src/app/main';
 import { setupDataManager } from './helpers/setupDataManager';
 import { newDataManager } from './helpers/common';
+import { EntryNotes } from '../src/shared/services/EntryNotes';
 
 describe('DataManager registrations', () => {
 	it('registers the vault rename handler through the injected registerEvent', async () => {
 		const registered: unknown[] = [];
 		const { f, base } = await setupDataManager({});
 		const spy = newDataManager(
-			{ ...base, registerEvent: (ref) => { registered.push(ref); } },
+			{ ...base, notes: new EntryNotes(f.app.vault, f.app.fileManager, base.layout, base.notify, (ref) => { registered.push(ref); }) },
 			{ fetchAiring: () => Promise.resolve({ status: 'nokey' }), fetchSeasons: () => Promise.resolve({ status: 'nokey' }) },
 			() => null,
 			{ clearBookOrMangaReleaseDate: () => Promise.resolve(), clearGameReleaseDate: () => Promise.resolve() },
