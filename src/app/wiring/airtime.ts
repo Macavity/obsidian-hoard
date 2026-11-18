@@ -26,8 +26,10 @@ export interface AirtimeCore {
 	host: AirtimeTabHost;
 }
 
-/** What the rest of the app opens: the Upcoming tab, which reports its count to the tab button. */
+/** What the rest of the app uses: the Upcoming tab, which reports its count to the tab button, and the due count without it. */
 export interface AirtimeUi {
+	/** Entries aired or maybe-due now; drives the tab badge and the status bar. */
+	countDue: () => number;
 	createAirtimeTab: (container: HTMLElement, setBadge: (count: number) => void) => AirtimeTab;
 }
 
@@ -36,6 +38,7 @@ export function airtimeUi(core: AirtimeCore): AirtimeUi {
 	const { app, settings, titles, reading, games, api, posters, host } = core;
 
 	return {
+		countDue: () => AirtimeTab.getAiredDueCount(titles, reading, games) + AirtimeTab.getMaybeDueCount(titles),
 		createAirtimeTab: (container, setBadge) => new AirtimeTab(
 			container, settings, titles, reading, games, api, posters, host,
 			{

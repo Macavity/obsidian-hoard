@@ -19,7 +19,7 @@ import { SecretStore, shouldShowSecretsNotice } from '../shared/storage/SecretSt
 import { SharedConfigStore } from '../shared/storage/SharedConfigStore';
 import { EntryIndex } from '../shared/storage/EntryIndex';
 import { HistoryStore } from '../shared/storage/HistoryStore';
-import { HoardView, HOARD_VIEW_TYPE, TabName, type HoardViewDeps } from './HoardView';
+import { HoardView, HOARD_VIEW_TYPE, TabName } from './HoardView';
 import { watchlistUi, type WatchlistUi } from './wiring/watchlist';
 import { readingUi, type ReadingUi } from './wiring/reading';
 import { gamesUi, type GamesUi } from './wiring/games';
@@ -28,14 +28,13 @@ import { customListsUi, type CustomListsUi } from './wiring/customLists';
 import { draftsUi, type DraftsUi } from './wiring/drafts';
 import { logUi, type LogUi } from './wiring/log';
 import { dashboardUi, type DashboardUi } from './wiring/dashboard';
+import { settingsUi } from './wiring/settings';
+import { hoardTabs } from './wiring/tabs';
+import { addRouteUi } from './wiring/addRoute';
 import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
 import { WidgetRenderer } from '../modules/widgets/ui/WidgetRenderer';
-import { HoardSettingsTab, type HoardSettingsTabDeps } from '../modules/settings/ui/SettingsTab';
-import { AirtimeTab } from '../modules/airtime/ui/AirtimeTab';
-import { openAddForTitle, type AddRouterDeps } from './AddRouter';
-import type { OpenAddRoute } from '../shared/ui/addRoute';
 import { runAirtimeScheduler } from '../modules/airtime/services/airtimeScheduler';
-import { buildBackup, parseBackup, restoreBackup, withoutSecrets, type BackupManagers } from '../modules/backup/services/backup';
+import type { BackupManagers } from '../modules/backup/services/backup';
 import { WatchLogOnboardingModal } from '../modules/import/ui/WatchLogOnboardingModal';
 import { detectWatchLogSources } from '../modules/import/services/watchlog/detect';
 import type { WatchLogSourceKind, WatchLogSources } from '../modules/import/services/watchlog/detect';
@@ -250,7 +249,12 @@ export default class HoardPlugin extends Plugin {
 			posters: this.posterService,
 			host: { ...host, markAirtimeHandled: (key) => this.markAirtimeHandled(key) },
 		});
-		const openAdd: OpenAddRoute = (opts) => openAddForTitle(this.addRouterDeps(), opts);
+		const openAdd = addRouteUi({
+			app: this.app,
+			openAddTitle: this.watchlist.openAddTitle,
+			openAddReading: this.reading.openAddReading,
+			openAddGame: this.games.openAddGame,
+		});
 		this.customLists = customListsUi({
 			app: this.app,
 			settings: this.settingsService,
@@ -280,9 +284,24 @@ export default class HoardPlugin extends Plugin {
 		// notes are read once the vault and metadata cache are ready
 		this.app.workspace.onLayoutReady(() => void this.startVaultStorage());
 
-		this.registerView(HOARD_VIEW_TYPE, (leaf) => {
-			return new HoardView(leaf, this.hoardViewDeps());
+		const tabs = hoardTabs({
+			dashboard: this.dashboard,
+			watchlist: this.watchlist,
+			airtime: this.airtime,
+			reading: this.reading,
+			games: this.games,
+			customLists: this.customLists,
+			drafts: this.drafts,
+			log: this.log,
 		});
+		this.registerView(HOARD_VIEW_TYPE, (leaf) => new HoardView(
+			leaf,
+			this.settingsService,
+			this.dataManager,
+			this.app.metadataCache,
+			tabs,
+			() => this.importRunning,
+		));
 
 		this.widgetRenderer = new WidgetRenderer(
 			this.settingsService,
@@ -346,7 +365,29 @@ export default class HoardPlugin extends Plugin {
 			},
 		});
 
-		this.addSettingTab(new HoardSettingsTab(this, this.settingsTabDeps()));
+		const settings = settingsUi({
+			app: this.app,
+			settings: this.settingsService,
+			titles: this.dataManager,
+			reading: this.readingDataManager,
+			games: this.gameDataManager,
+			api: this.apiService,
+			layout: () => this.getLayout(),
+			backupManagers: () => this.backupManagers(),
+			coverRefresher: this.coverRefresher,
+			createListManager: this.listManager,
+			openDefaultColumns: this.customLists.openDefaultColumns,
+			host: {
+				setImportProgress: (progress) => { this.importProgress = progress; },
+				watchLogImported: () => (['original', 'fork'] as const).some((k) => getDecision(this.local, k) === 'imported'),
+				openWatchLogImport: (startAt) => this.openWatchLogImport(startAt),
+				reloadSettings: () => this.loadSettings(),
+				applyCardSizeCssVar: () => this.applyCardSizeCssVar(),
+				updateStatusBar: () => this.updateStatusBar(),
+				refreshOpenViews: () => this.refreshOpenViews(),
+			},
+		});
+		this.addSettingTab(settings.createSettingsTab(this));
 
 		this.setupStatusBar();
 		// keep the status bar in sync with data edits (no new timer: the 60s airtime interval drives the
@@ -363,68 +404,6 @@ export default class HoardPlugin extends Plugin {
 			(name) => new Notice(t('lists.corrupt', { name })),
 			onConflict,
 		);
-
-	/** What the settings pane and the modals it opens read and change. */
-	private settingsTabDeps(): HoardSettingsTabDeps {
-		return {
-			app: this.app,
-			settings: this.settingsService,
-			titles: this.dataManager,
-			reading: this.readingDataManager,
-			games: this.gameDataManager,
-			api: this.apiService,
-			posters: this.posterService,
-			layout: () => this.getLayout(),
-			listManager: this.listManager,
-			backupManagers: () => this.backupManagers(),
-			buildBackup,
-			parseBackup,
-			restoreBackup,
-			withoutSecrets,
-			coverRefresher: this.coverRefresher,
-			watchLogImported: () => (['original', 'fork'] as const).some((k) => getDecision(this.local, k) === 'imported'),
-			openWatchLogImport: (startAt) => this.openWatchLogImport(startAt),
-			reloadSettings: () => this.loadSettings(),
-			applyCardSizeCssVar: () => this.applyCardSizeCssVar(),
-			updateStatusBar: () => this.updateStatusBar(),
-			refreshOpenViews: () => this.refreshOpenViews(),
-			setImportProgress: (progress) => { this.importProgress = progress; },
-		};
-	}
-
-	/** For the tab host only; each tab narrows it to what it uses. */
-	private hoardViewDeps(): HoardViewDeps {
-		return {
-			app: this.app,
-			settings: this.settingsService,
-			titles: this.dataManager,
-			createDashboardTab: (container) => this.dashboard.createDashboardTab(container),
-			createLogTab: (container) => this.log.createLogTab(container),
-			createListTab: (container) => this.watchlist.createListTab(container),
-			createReadingTab: (container) => this.reading.createReadingTab(container),
-			createGamesTab: (container) => this.games.createGamesTab(container),
-			createAirtimeTab: (container, setBadge) => this.airtime.createAirtimeTab(container, setBadge),
-			createCustomListsTab: (container) => this.customLists.createCustomListsTab(container),
-			createDraftsTab: (container, setBadge) => this.drafts.createDraftsTab(container, setBadge),
-			countPendingDrafts: () => this.drafts.countPending(),
-			reading: this.readingDataManager,
-			games: this.gameDataManager,
-			importRunning: () => this.importRunning,
-		};
-	}
-
-	/** What the Add chooser and the Add modals it opens read. */
-	private addRouterDeps(): AddRouterDeps {
-		return {
-			app: this.app,
-			settings: this.settingsService,
-			reading: this.readingDataManager,
-			games: this.gameDataManager,
-			api: this.apiService,
-			openAddTitle: this.watchlist.openAddTitle,
-			searchBooks,
-		};
-	}
 
 	private refreshOpenViews(): void {
 		for (const leaf of this.app.workspace.getLeavesOfType(HOARD_VIEW_TYPE)) {
@@ -692,9 +671,7 @@ export default class HoardPlugin extends Plugin {
 			el.hide();
 			return;
 		}
-		const count =
-			AirtimeTab.getAiredDueCount(this.dataManager, this.readingDataManager, this.gameDataManager) +
-			AirtimeTab.getMaybeDueCount(this.dataManager);
+		const count = this.airtime.countDue();
 		if (count <= 0) {
 			el.hide();
 			return;

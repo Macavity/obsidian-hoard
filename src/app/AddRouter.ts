@@ -1,68 +1,48 @@
-import type { App } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../shared/services/SettingsService';
-import type { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
-import type { GameDataManager } from '../modules/games/services/GameDataManager';
-import type { searchBooks } from '../modules/covers/services/coverRefresh';
 import type { OpenAddTitle } from '../modules/watchlist/ui/AddTitleModal';
-import { AddReadingModal, type AddReadingApi } from '../modules/reading/ui/AddReadingModal';
-import { AddGameModal, type AddGameApi } from '../modules/games/ui/AddGameModal';
-import type { AddRouteOptions } from '../shared/ui/addRoute';
-import { DraftChoiceModal } from '../modules/drafts/ui/DraftChoiceModal';
-
-export interface AddRouterDeps {
-	app: App;
-	settings: SettingsReader & SettingsWriter;
-	reading: ReadingDataManager;
-	games: GameDataManager;
-	api: AddGameApi & AddReadingApi;
-	openAddTitle: OpenAddTitle;
-	searchBooks: typeof searchBooks;
-}
+import type { OpenAddReading } from '../modules/reading/ui/AddReadingModal';
+import type { OpenAddGame } from '../modules/games/ui/AddGameModal';
+import type { OpenDraftChoice } from '../modules/drafts/ui/DraftChoiceModal';
+import type { OpenAddRoute } from '../shared/ui/addRoute';
 
 /**
- * Opens the Watchlist / Book / Manga / Game chooser for a loose title string, then the matching Add
+ * Builds the Watchlist / Book / Manga / Game chooser for a loose title string, then the matching Add
  * modal with that title prefilled. Shared by the Drafts cards and the Custom Lists rows so the four
  * routes live in one place.
  */
-export function openAddForTitle(deps: AddRouterDeps, opts: AddRouteOptions): void {
-	const { title, onAdded, heading } = opts;
-	const done = (): void => onAdded?.();
+export function createAddRoute(
+	openDraftChoice: OpenDraftChoice,
+	openAddTitle: OpenAddTitle,
+	openAddReading: OpenAddReading,
+	openAddGame: OpenAddGame,
+): OpenAddRoute {
+	return (opts) => {
+		const { title, onAdded, heading } = opts;
+		const done = (): void => onAdded?.();
 
-	new DraftChoiceModal(deps.app, {
-		draftText: title,
-		heading,
-		onChoice: (choice) => {
-			if (choice === 'watchlist') {
-				deps.openAddTitle({
-					onAdded: done,
-					prefill: {
-						searchQuery: title,
-						title,
-						type: 'Anime',
-						episodes: 0,
-						duration: 0,
-						releaseDate: '',
-						link: '',
-						seasons: [],
-					},
-				});
-			} else if (choice === 'game') {
-				new AddGameModal(deps.app, deps.settings, deps.games, deps.api, {
-					onAdded: done,
-					prefill: { searchQuery: title, title },
-				}).open();
-			} else {
-				new AddReadingModal(
-					deps.app,
-					deps.settings,
-					deps.reading,
-					deps.app.vault,
-					deps.app.workspace,
-					deps.searchBooks,
-					deps.api,
-					{ mode: choice, onSaved: done, prefillSearch: title },
-				).open();
-			}
-		},
-	}).open();
+		openDraftChoice({
+			draftText: title,
+			heading,
+			onChoice: (choice) => {
+				if (choice === 'watchlist') {
+					openAddTitle({
+						onAdded: done,
+						prefill: {
+							searchQuery: title,
+							title,
+							type: 'Anime',
+							episodes: 0,
+							duration: 0,
+							releaseDate: '',
+							link: '',
+							seasons: [],
+						},
+					});
+				} else if (choice === 'game') {
+					openAddGame({ onAdded: done, prefill: { searchQuery: title, title } });
+				} else {
+					openAddReading({ mode: choice, onSaved: done, prefillSearch: title });
+				}
+			},
+		});
+	};
 }

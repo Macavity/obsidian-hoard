@@ -1,48 +1,31 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { WorkspaceLeaf } from 'obsidian';
-import { HoardView } from '../../src/app/HoardView';
-import { hoardViewDeps } from '../helpers/hoardViewDeps';
+import { afterEach, describe, expect, it } from 'vitest';
+import type { HoardView } from '../../src/app/HoardView';
+import type { TabInstance } from '../../src/shared/ui/TabInstance';
+import { newHoardView } from '../helpers/newHoardView';
 
-const { tab, destroyed } = vi.hoisted(() => {
-	const destroyed: string[] = [];
-	const tab = (name: string, withDestroy: boolean, statics: Record<string, unknown> = {}) => {
-		class Stub {
-			render(): void {}
-		}
-		if (withDestroy) (Stub.prototype as { destroy?: () => void }).destroy = () => { destroyed.push(name); };
-		return Object.assign(Stub, statics);
-	};
-	return { tab, destroyed };
+const destroyed: string[] = [];
+
+/** A tab that records its teardown, or none when it has no destroy (the dashboard). */
+const tab = (name: string, withDestroy: boolean) => (): TabInstance => ({
+	render: () => {},
+	...(withDestroy ? { destroy: () => { destroyed.push(name); } } : {}),
 });
-
-vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
-	AirtimeTab: { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 },
-}));
 
 afterEach(() => { destroyed.length = 0; });
 
 async function open(): Promise<HoardView> {
-	const WatchlistStub = tab('watchlist', true);
-	const ReadingStub = tab('reading', true);
-	const GamesStub = tab('games', true);
-	const AirtimeStub = tab('upcoming', true);
-	const CustomListsStub = tab('custom-lists', true);
-	const DraftsStub = tab('drafts', true);
-	const DashboardStub = tab('dashboard', false);
-	const LogStub = tab('log', true);
-	const deps = {
-		...hoardViewDeps(),
-		createListTab: () => new WatchlistStub(),
-		createReadingTab: () => new ReadingStub(),
-		createGamesTab: () => new GamesStub(),
-		createAirtimeTab: () => new AirtimeStub(),
-		createCustomListsTab: () => new CustomListsStub(),
-		createDraftsTab: () => new DraftsStub(),
-		createDashboardTab: () => new DashboardStub(),
-		createLogTab: () => new LogStub(),
-		countPendingDrafts: () => Promise.resolve(0),
-	} as never;
-	const view = new HoardView(new WorkspaceLeaf(), deps);
+	const view = newHoardView({
+		create: {
+			watchlist: tab('watchlist', true),
+			reading: tab('reading', true),
+			games: tab('games', true),
+			upcoming: tab('upcoming', true),
+			'custom-lists': tab('custom-lists', true),
+			drafts: tab('drafts', true),
+			dashboard: tab('dashboard', false),
+			log: tab('log', true),
+		},
+	});
 	await view.onOpen();
 	return view;
 }

@@ -1,20 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Platform, WorkspaceLeaf } from 'obsidian';
-import { HoardView } from '../../src/app/HoardView';
+import { Platform } from 'obsidian';
 import { qsa } from '../helpers/dom';
-import { hoardViewDeps } from '../helpers/hoardViewDeps';
+import { newHoardView } from '../helpers/newHoardView';
 
 const { pending, aired, maybe } = vi.hoisted(() => ({
 	pending: vi.fn(() => Promise.resolve(4)),
 	aired: vi.fn(() => 2),
 	maybe: vi.fn(() => 1),
-}));
-
-vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
-	AirtimeTab: {
-		getAiredDueCount: aired,
-		getMaybeDueCount: maybe,
-	},
 }));
 
 afterEach(() => {
@@ -26,7 +18,13 @@ afterEach(() => {
 
 async function open() {
 	let resolved: () => void = () => {};
-	const view = new HoardView(new WorkspaceLeaf(), hoardViewDeps((cb) => { resolved = cb; }, { countPendingDrafts: pending }));
+	const view = newHoardView({
+		onResolved: (cb) => { resolved = cb; },
+		badges: {
+			upcoming: { count: () => aired() + maybe(), refreshOn: 'data-change' },
+			drafts: { count: () => pending(), refreshOn: 'metadata-resolved' },
+		},
+	});
 	await view.onOpen();
 	const tabs = (): HTMLButtonElement[] => qsa<HTMLButtonElement>(view.contentEl, '.hoard-tab-bar__btn');
 	const label = (name: string): string | undefined => tabs().find((b) => b.textContent?.startsWith(name))?.textContent ?? undefined;

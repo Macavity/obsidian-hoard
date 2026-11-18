@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Platform, WorkspaceLeaf } from 'obsidian';
+import { Platform } from 'obsidian';
 import { HoardView } from '../../src/app/HoardView';
-import { hoardViewDeps } from '../helpers/hoardViewDeps';
-
-vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
-	AirtimeTab: { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 },
-}));
+import { newHoardView } from '../helpers/newHoardView';
 
 const PINNED = 'hoard-view__tab-content--pinned';
 const HEIGHT_VAR = '--hoard-view-pinned-tab-height';
@@ -17,7 +13,7 @@ async function open(mobile: boolean) {
 		mockImplementation(fn: (el: HTMLElement, type: string, cb: EventListener) => void): void;
 	};
 	register.mockImplementation((el, type, cb) => el.addEventListener(type, cb));
-	const view = new HoardView(new WorkspaceLeaf(), hoardViewDeps());
+	const view = newHoardView();
 	document.body.appendChild(view.contentEl);
 	await view.onOpen();
 	const tabBar = view.contentEl.querySelector<HTMLElement>('.hoard-tab-bar')!;
