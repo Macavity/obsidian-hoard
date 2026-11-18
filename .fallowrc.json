@@ -65,5 +65,368 @@
   },
   "rules": {
     "css-dead-surface": "off"
+  },
+  "boundaries": {
+    "zones": [
+      {
+        "name": "obsidian-mock",
+        "patterns": [
+          "test/__mocks__/obsidian.ts"
+        ]
+      },
+      {
+        "name": "test",
+        "patterns": [
+          "test/**"
+        ]
+      },
+      {
+        "name": "app",
+        "patterns": [
+          "src/app/**"
+        ]
+      },
+      {
+        "name": "modules",
+        "patterns": [
+          "src/modules/**"
+        ],
+        "autoDiscover": [
+          "src/modules"
+        ]
+      },
+      {
+        "name": "shared-ui",
+        "patterns": [
+          "src/shared/ui/**"
+        ]
+      },
+      {
+        "name": "shared-services",
+        "patterns": [
+          "src/shared/services/**"
+        ]
+      },
+      {
+        "name": "shared-api",
+        "patterns": [
+          "src/shared/api/**"
+        ]
+      },
+      {
+        "name": "shared-storage",
+        "patterns": [
+          "src/shared/storage/**"
+        ]
+      },
+      {
+        "name": "shared-domain",
+        "patterns": [
+          "src/shared/domain/**"
+        ]
+      },
+      {
+        "name": "shared-i18n",
+        "patterns": [
+          "src/shared/i18n/**"
+        ]
+      },
+      {
+        "name": "styles",
+        "patterns": [
+          "src/styles/**"
+        ]
+      },
+      {
+        "name": "tooling",
+        "patterns": [
+          "scripts/**",
+          "*.mjs",
+          "vitest.config.ts"
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "from": "test",
+        "allow": [
+          "app",
+          "modules",
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "styles",
+          "obsidian-mock",
+          "tooling"
+        ]
+      },
+      {
+        "from": "app",
+        "allow": [
+          "modules",
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "styles",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "modules/airtime",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/backup",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/covers",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "modules/custom-lists",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/dashboard",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/drafts",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/games",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/covers",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/import",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/backup",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/log",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "modules/reading",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/covers",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/settings",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/backup",
+          "modules/covers",
+          "modules/custom-lists",
+          "modules/games",
+          "modules/import",
+          "modules/reading",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/watchlist",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "modules/widgets",
+        "allow": [
+          "shared-ui",
+          "shared-services",
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "shared-ui",
+        "allow": [
+          "shared-services",
+          "shared-api",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "shared-services",
+        "allow": [
+          "shared-api",
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "shared-api",
+        "allow": [
+          "shared-storage",
+          "shared-domain",
+          "shared-i18n",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "shared-storage",
+        "allow": [
+          "shared-domain",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "shared-domain",
+        "allow": [
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "shared-i18n",
+        "allow": [
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "styles",
+        "allow": []
+      },
+      {
+        "from": "obsidian-mock",
+        "allow": []
+      },
+      {
+        "from": "tooling",
+        "allow": [
+          "obsidian-mock"
+        ]
+      }
+    ],
+    "coverage": {
+      "requireAllFiles": true
+    }
   }
 }
