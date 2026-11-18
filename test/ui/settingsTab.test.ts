@@ -20,7 +20,7 @@ function makeTab(over: Record<string, unknown> = {}, section = 'general') {
 		app: {},
 		settings: fakeSettings({ ...DEFAULT_SETTINGS }),
 		layout: () => ({ root: 'W' }),
-		backupManagers: () => ({ storage: { local: { data: { ui: {} } } } }),
+		watchLogImported: () => false,
 		...over,
 	};
 	const tab = new HoardSettingsTab({} as never, deps as never);
@@ -61,7 +61,7 @@ describe('settings tab i18n', () => {
 describe('settings tab WatchLog import rows', () => {
 	const rows = (ui: Record<string, unknown>): string[] => {
 		setLocale('en');
-		const { render, root } = makeTab({ backupManagers: () => ({ storage: { local: { data: { ui } } } }) });
+		const { render, root } = makeTab({ watchLogImported: () => Object.keys(ui).length > 0 });
 		render();
 		return allText(root);
 	};

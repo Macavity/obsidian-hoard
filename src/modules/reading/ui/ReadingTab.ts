@@ -3,7 +3,7 @@ import { Notice } from 'obsidian';
 import { t, type TranslationKey } from '../../../shared/i18n';
 import { readingStatusLabel } from '../../../shared/i18n/labels';
 import { apiErrorMessage } from '../../../shared/api/ApiService';
-import { fetchReadingCoverById, firstBookCover, searchBooks } from '../../covers/services/coverRefresh';
+import type { fetchReadingCoverById, firstBookCover } from '../../covers/services/coverRefresh';
 import type { ReadingKind } from '../services/ReadingDataManager';
 import { Book, Manga, ReadingStatus, ReadingCustomColumn, ReadingSavedFilterPreset, READING_STATUSES, SELECTABLE_READING_STATUSES, normalizeRowsLayout, READING_ROWS_SHELVES, bookUnitProgress, formatCount, sortByFavorited } from '../../../shared/domain/types';
 import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domain/SearchQuery';
@@ -118,6 +118,9 @@ function selectValueOf(item: Book | Manga, colId: string): string {
 
 export interface ReadingTabDeps extends AddReadingModalDeps, ReadingDetailModalDeps, RowsCustomizeModalDeps {
 	api: AddReadingModalDeps['api'] & ReadingDetailModalDeps['api'];
+	/** Cover lookups of the covers module. */
+	fetchReadingCoverById: typeof fetchReadingCoverById;
+	firstBookCover: typeof firstBookCover;
 	getCardMinWidth: () => number;
 	isCardTextUnder: (tab: 'reading') => boolean;
 }
@@ -1296,15 +1299,15 @@ export class ReadingTab implements TabInstance {
 	private async resolveBookCover(book: Book): Promise<{ url: string; sourceId: string }> {
 		const api = this.deps.api;
 		if (book.googleBooksId || book.openLibraryId) {
-			return { url: await fetchReadingCoverById(api, 'book', book), sourceId: '' };
+			return { url: await this.deps.fetchReadingCoverById(api, 'book', book), sourceId: '' };
 		}
-		const results = await searchBooks(api, this.deps.settings.get(), book.author ? `${book.title} ${book.author}` : book.title);
-		return firstBookCover(results[0]);
+		const results = await this.deps.searchBooks(api, this.deps.settings.get(), book.author ? `${book.title} ${book.author}` : book.title);
+		return this.deps.firstBookCover(results[0]);
 	}
 
 	private async resolveMangaCover(manga: Manga): Promise<{ url: string; sourceId: string }> {
 		const api = this.deps.api;
-		if (manga.malId) return { url: await fetchReadingCoverById(api, 'manga', manga), sourceId: '' };
+		if (manga.malId) return { url: await this.deps.fetchReadingCoverById(api, 'manga', manga), sourceId: '' };
 		const first = (await api.searchManga(manga.title))[0];
 		if (!first?.coverUrl || !first.malId) return { url: '', sourceId: '' };
 		return { url: first.coverUrl, sourceId: String(first.malId) };
@@ -1498,7 +1501,7 @@ export class ReadingTab implements TabInstance {
 			}
 			void (async () => {
 				try {
-					const coverUrl = await fetchReadingCoverById(this.deps.api, 'book', book);
+					const coverUrl = await this.deps.fetchReadingCoverById(this.deps.api, 'book', book);
 					if (!coverUrl) {
 						new Notice(t('reading.notices.coverFetchFailed'));
 						return;
@@ -1519,7 +1522,7 @@ export class ReadingTab implements TabInstance {
 			}
 			void (async () => {
 				try {
-					const coverUrl = await fetchReadingCoverById(this.deps.api, 'manga', manga);
+					const coverUrl = await this.deps.fetchReadingCoverById(this.deps.api, 'manga', manga);
 					if (!coverUrl) {
 						new Notice(t('reading.notices.coverFetchFailed'));
 						return;

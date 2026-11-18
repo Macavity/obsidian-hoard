@@ -1,3 +1,4 @@
+import { searchBooks, fetchReadingCoverById, firstBookCover } from '../src/modules/covers/services/coverRefresh';
 import { describe, expect, it, vi } from 'vitest';
 import { AddReadingModal, type ReadingMode } from '../src/modules/reading/ui/AddReadingModal';
 import { t } from '../src/shared/i18n';
@@ -36,7 +37,7 @@ function setup(mode: ReadingMode, over: ApiOver = {}, opts: { prefill?: string; 
 		generateBookId: () => 'b1',
 		addBook: vi.fn((b: unknown) => { added.push(b); return Promise.resolve(); }),
 	};
-	const deps = { app: {}, settings: fakeSettings({ booksApiSource: over.source ?? 'google' }), reading, api };
+	const deps = { app: {}, settings: fakeSettings({ booksApiSource: over.source ?? 'google' }), reading, api, searchBooks };
 	const initial = opts.initialState
 		? { id: 'x', state: { vaultPage: 'a.md' } as never }
 		: undefined;

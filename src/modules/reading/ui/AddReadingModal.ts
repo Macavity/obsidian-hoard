@@ -5,7 +5,7 @@ import { newBook, newManga } from '../../../shared/domain/entryFactories';
 import type { ApiService, BookSearchResult, MangaSearchResult } from '../../../shared/api/ApiService';
 import { apiErrorMessage } from '../../../shared/api/ApiService';
 import { renderSearchResultRow } from '../../../shared/ui/SearchThumbnail';
-import { searchBooks, type BookSearchApi } from '../../covers/services/coverRefresh';
+import type { searchBooks, BookSearchApi } from '../../covers/services/coverRefresh';
 import { LibraryIndex, bookResultIdKeys, mangaResultIdKeys } from '../../../shared/services/LibraryIndex';
 import { renderStarRating } from '../../../shared/ui/StarRating';
 import { createDatePicker } from '../../../shared/ui/DatePicker';
@@ -103,6 +103,8 @@ export interface AddReadingModalDeps {
 	app: App;
 	settings: SettingsReader;
 	reading: ReadingDataManager;
+	/** Book search through the configured source (covers module). */
+	searchBooks: typeof searchBooks;
 	api: BookSearchApi & Pick<ApiService, 'searchManga' | 'getMangaByMalId' | 'getGoogleBookById' | 'getOpenLibraryWork'>;
 }
 
@@ -306,7 +308,7 @@ export class AddReadingModal extends Modal {
 	}
 
 	private async lookupBooks(query: string): Promise<LookupOutcome> {
-		return { kind: 'books', results: await searchBooks(this.deps.api, this.deps.settings.get(), query) };
+		return { kind: 'books', results: await this.deps.searchBooks(this.deps.api, this.deps.settings.get(), query) };
 	}
 
 	private async lookupManga(query: string): Promise<LookupOutcome> {

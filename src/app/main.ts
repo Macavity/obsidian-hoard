@@ -1,4 +1,5 @@
 import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, getLanguage, parseYaml, setIcon, stringifyYaml } from 'obsidian';
+import { refreshAllCovers, resolveGameCover, fetchReadingCoverById, firstBookCover, searchBooks } from '../modules/covers/services/coverRefresh';
 import { CustomListManager } from '../modules/custom-lists/services/CustomListManager';
 import { setLocale, t } from '../shared/i18n';
 import { statusLabel, typeLabel } from '../shared/i18n/labels';
@@ -28,7 +29,7 @@ import { HoardSettingsTab, type HoardSettingsTabDeps } from '../modules/settings
 import { AirtimeTab } from '../modules/airtime/ui/AirtimeTab';
 import { openAddForTitle, type AddRouterDeps } from './AddRouter';
 import { runAirtimeScheduler } from '../modules/airtime/services/airtimeScheduler';
-import type { BackupManagers } from '../modules/backup/services/backup';
+import { buildBackup, parseBackup, restoreBackup, withoutSecrets, type BackupManagers } from '../modules/backup/services/backup';
 import { WatchLogOnboardingModal } from '../modules/import/ui/WatchLogOnboardingModal';
 import { detectWatchLogSources } from '../modules/import/services/watchlog/detect';
 import type { WatchLogSourceKind, WatchLogSources } from '../modules/import/services/watchlog/detect';
@@ -291,6 +292,12 @@ export default class HoardPlugin extends Plugin {
 			layout: () => this.getLayout(),
 			listManager: this.listManager,
 			backupManagers: () => this.backupManagers(),
+			buildBackup,
+			parseBackup,
+			restoreBackup,
+			withoutSecrets,
+			refreshAllCovers,
+			watchLogImported: () => (['original', 'fork'] as const).some((k) => getDecision(this.local, k) === 'imported'),
 			openWatchLogImport: (startAt) => this.openWatchLogImport(startAt),
 			reloadSettings: () => this.loadSettings(),
 			applyCardSizeCssVar: () => this.applyCardSizeCssVar(),
@@ -309,6 +316,10 @@ export default class HoardPlugin extends Plugin {
 			games: this.gameDataManager,
 			importRunning: () => this.importRunning,
 			listManager: this.listManager,
+			resolveGameCover,
+			fetchReadingCoverById,
+			firstBookCover,
+			searchBooks,
 			markAirtimeHandled: (key) => this.markAirtimeHandled(key),
 			openAdd: (opts) => openAddForTitle(this.addRouterDeps(), opts),
 		};
@@ -321,6 +332,7 @@ export default class HoardPlugin extends Plugin {
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
 			api: this.apiService,
+			searchBooks,
 		};
 	}
 

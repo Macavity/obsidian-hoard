@@ -25,7 +25,7 @@ import { createIconButton } from '../../../shared/ui/IconButton';
 import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from '../../../shared/ui/TabHelpers';
 import { renderHeaderToolbar } from '../../../shared/ui/MobileToolbar';
 import { rawgResizedCover } from '../../../shared/api/ApiService';
-import { resolveGameCover, type GameCover } from '../../covers/services/coverRefresh';
+import type { resolveGameCover, GameCover } from '../../covers/services/coverRefresh';
 import { effectiveGameSource } from '../../../shared/api/apiSources';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../shared/ui/TabFilters';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
@@ -41,6 +41,8 @@ type GameDisplayItem =
 export interface GamesTabDeps extends AddGameModalDeps, GameDetailModalDeps, RowsCustomizeModalDeps {
 	settings: SettingsReader & SettingsWriter;
 	api: AddGameModalDeps['api'] & GameDetailModalDeps['api'];
+	/** Looks up a game's cover through the games APIs (covers module). */
+	resolveGameCover: typeof resolveGameCover;
 	getCardMinWidth: () => number;
 	isCardTextUnder: (tab: 'games') => boolean;
 }
@@ -1261,7 +1263,7 @@ export class GamesTab implements TabInstance {
 
 	private resolveCover(game: Game): Promise<GameCover> {
 		const api = this.deps.api;
-		return resolveGameCover(api, effectiveGameSource(this.deps.settings.get(), api), game);
+		return this.deps.resolveGameCover(api, effectiveGameSource(this.deps.settings.get(), api), game);
 	}
 
 	private applyCoverToCard(card: HTMLElement, url: string): void {

@@ -142,17 +142,15 @@ import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
 import type { VaultLayout } from '../../../shared/storage/VaultLayout';
-import type { BackupManagers } from '../../backup/services/backup';
+import type { BackupManagers, buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../../backup/services/backup';
 import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
 import { ReadingCsvChoiceModal } from '../../reading/ui/ReadingCsvChoiceModal';
 import { ReadingCsvModal, type ReadingCsvModalDeps } from '../../reading/ui/ReadingCsvModal';
 import { DefaultColumnsModal, type DefaultColumnsModalDeps } from '../../custom-lists/ui/CustomListsTab';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
-import { refreshAllCovers } from '../../covers/services/coverRefresh';
+import type { refreshAllCovers } from '../../covers/services/coverRefresh';
 import { apiErrorMessage, apiErrorShort } from '../../../shared/api/ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from '../../../shared/api/jikanBase';
-import { getDecision } from '../../import/services/watchlog/onboardingState';
-import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../../backup/services/backup';
 import type { PosterService } from '../../../shared/api/PosterService';
 import { emitDataChanged } from '../../../shared/services/changeSignal';
 
@@ -192,6 +190,14 @@ export interface HoardSettingsTabDeps extends CsvModalDeps, ReadingCsvModalDeps,
 	layout: () => Pick<VaultLayout, 'root' | 'customListsFolder'>;
 	/** Everything backup export and restore (and the WatchLog decisions) read. */
 	backupManagers: () => BackupManagers;
+	buildBackup: typeof buildBackup;
+	parseBackup: typeof parseBackup;
+	restoreBackup: typeof restoreBackup;
+	withoutSecrets: typeof withoutSecrets;
+	/** Bulk cover refresh of the covers module. */
+	refreshAllCovers: typeof refreshAllCovers;
+	/** A WatchLog source was imported earlier (the cleanup row is only offered then). */
+	watchLogImported: () => boolean;
 	openWatchLogImport: (startAt: 'found' | 'cleanup') => Promise<void>;
 	/** Re-composes the settings after a backup restore replaced the stored ones. */
 	reloadSettings: () => Promise<void>;
@@ -642,7 +648,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setName(t('onboarding.settings.importButton'))
 			.setDesc(t('onboarding.settings.importDesc'))
 			.addButton((b) => b.setButtonText(t('onboarding.settings.importButton')).onClick(() => void this.deps.openWatchLogImport('found')));
-		if (!(['original', 'fork'] as const).some((k) => getDecision(this.deps.backupManagers().storage.local, k) === 'imported')) return;
+		if (!this.deps.watchLogImported()) return;
 		new Setting(el)
 			.setName(t('onboarding.settings.cleanupButton'))
 			.setDesc(t('onboarding.settings.cleanupDesc'))
@@ -655,12 +661,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const filename = `hoard-backup-${dateStr}.json`;
 
 		// notes, shared settings, log and the device-local settings; API keys stay in secret storage and are not exported
-		const backup = buildBackup(this.deps.backupManagers());
+		const backup = this.deps.buildBackup(this.deps.backupManagers());
 
 		// on mobile a browser download lands in an inaccessible sandbox — write into the vault
 		// instead (the folder syncs; withoutSecrets guards stray keys); desktop keeps the download path
 		if (Platform.isMobile) {
-			await this.exportBackupToVault(filename, JSON.stringify(withoutSecrets(backup), null, 2));
+			await this.exportBackupToVault(filename, JSON.stringify(this.deps.withoutSecrets(backup), null, 2));
 			return;
 		}
 		const json = JSON.stringify(backup, null, 2);
@@ -733,7 +739,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				cleanupInput();
-				const result = parseBackup(e.target?.result as string);
+				const result = this.deps.parseBackup(e.target?.result as string);
 				if ('error' in result) {
 					new Notice(t('settings.backup.restore.invalid', { error: t(`settings.backup.restore.errors.${result.error}`) }));
 					return;
@@ -741,7 +747,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				// validated as a whole before anything is written
 				new ConfirmModal(this.app, t('settings.backup.restore.confirm'), () => {
 					void (async () => {
-						await restoreBackup(this.deps.backupManagers(), result.backup);
+						await this.deps.restoreBackup(this.deps.backupManagers(), result.backup);
 						await this.deps.reloadSettings();
 						emitDataChanged();
 						new Notice(t('settings.backup.restore.done'));
@@ -755,7 +761,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 	private async refetchAllPosters(): Promise<void> {
 		const d = this.deps;
-		const res = await refreshAllCovers({
+		const res = await this.deps.refreshAllCovers({
 			api: d.api,
 			gamesApiSource: effectiveGameSource(d.settings.get(), d.api),
 			dataManager: d.titles,

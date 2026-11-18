@@ -1,3 +1,4 @@
+import { searchBooks, fetchReadingCoverById, firstBookCover } from '../src/modules/covers/services/coverRefresh';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
 import { ReadingTab } from '../src/modules/reading/ui/ReadingTab';
@@ -52,7 +53,7 @@ function build(sub: 'books' | 'manga', o: Opts = {}) {
 		getGoogleBookById: vi.fn(() => (o.coverFails ? Promise.reject(new Error('x')) : Promise.resolve({ coverUrl: o.cover ?? '' }))),
 		getMangaByMalId: vi.fn(() => (o.coverFails ? Promise.reject(new Error('x')) : Promise.resolve({ coverUrl: o.cover ?? '' }))),
 	};
-	const deps = { app: {}, api: apiService, reading: readingData, isCardTextUnder: () => o.textUnder ?? true, settings: fakeSettings({}) };
+	const deps = { app: {}, api: apiService, reading: readingData, searchBooks, fetchReadingCoverById, firstBookCover, isCardTextUnder: () => o.textUnder ?? true, settings: fakeSettings({}) };
 	const container = document.createElement('div');
 	const tab = new ReadingTab(container, deps as never);
 	(tab as unknown as { activeSubTab: string }).activeSubTab = sub;
