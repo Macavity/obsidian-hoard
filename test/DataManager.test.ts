@@ -156,14 +156,13 @@ describe('DataManager on vault storage', () => {
 	});
 
 	it('removing a derived book or game entry clears its release date', async () => {
-		const { dm, f, plugin, index, shared, local, layout } = await setupDataManager({
+		const { dm, f, plugin, base } = await setupDataManager({
 			'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',
 			'W/Games/Halo.md': '---\nName: Halo\nType: game\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',
 		});
-		const deps = { index, local, shared, layout: () => layout, notify: () => {} };
 		const p = plugin as unknown as Record<string, unknown>;
-		p.readingDataManager = new ReadingDataManager(plugin, deps);
-		p.gameDataManager = new GameDataManager(plugin, deps);
+		p.readingDataManager = new ReadingDataManager({ ...base, upcoming: dm });
+		p.gameDataManager = new GameDataManager({ ...base, upcoming: dm });
 		await (p.readingDataManager as ReadingDataManager).init();
 		await (p.gameDataManager as GameDataManager).init();
 		const entries = dm.getAirtimeEntries();
@@ -210,12 +209,11 @@ describe('DataManager on vault storage', () => {
 	});
 
 	it('removing a manual card of a future book keeps its release date', async () => {
-		const { dm, f, plugin, index, shared, local, layout } = await setupDataManager({
+		const { dm, f, plugin, base } = await setupDataManager({
 			'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: To be released\nRelease Date: 2099-01-01\nAirtime Recurrence: monthly\nAirtime Day: 5\n---\n',
 		});
-		const deps = { index, local, shared, layout: () => layout, notify: () => {} };
 		const p = plugin as unknown as Record<string, unknown>;
-		p.readingDataManager = new ReadingDataManager(plugin, deps);
+		p.readingDataManager = new ReadingDataManager({ ...base, upcoming: dm });
 		await (p.readingDataManager as ReadingDataManager).init();
 		const [entry] = dm.getAirtimeEntries();
 		expect(entry!.schedule.recurrence).toBe('monthly');

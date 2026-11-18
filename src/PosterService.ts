@@ -28,8 +28,11 @@ interface QueueItem {
 	overwrite: boolean;
 }
 
+/** What the poster fetch records and persists on the watchlist. */
+export type PosterTitles = Pick<DataManager, 'recordLookup' | 'updatePosterUrl' | 'lookupDue'>;
+
 export class PosterService {
-	private dataManager: DataManager;
+	private dataManager: PosterTitles;
 	private getSettings: () => HoardPluginSettings;
 	private queue: QueueItem[] = [];
 	private isProcessing = false;
@@ -37,7 +40,7 @@ export class PosterService {
 	private getApi?: () => ApiService;
 
 	constructor(
-		dataManager: DataManager,
+		dataManager: PosterTitles,
 		getSettings: () => HoardPluginSettings,
 		getApi?: () => ApiService,
 	) {

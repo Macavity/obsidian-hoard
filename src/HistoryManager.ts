@@ -1,4 +1,3 @@
-import type HoardPlugin from './main';
 import { formatDateDisplay } from './types';
 import type { HistoryStore } from './storage/HistoryStore';
 
@@ -105,7 +104,7 @@ export class HistoryManager {
 	private listeners: (() => void)[] = [];
 
 	/** Without a store the log is memory-only (before the vault storage is wired). */
-	constructor(private plugin: HoardPlugin, private store: HistoryStore | null = null) {}
+	constructor(private store: HistoryStore | null = null) {}
 
 	/** Reads History.md (from the vault) into memory. */
 	async load(): Promise<void> {

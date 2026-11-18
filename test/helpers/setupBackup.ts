@@ -5,19 +5,42 @@ import { DataManager } from '../../src/DataManager';
 import { ReadingDataManager } from '../../src/ReadingDataManager';
 import { GameDataManager } from '../../src/GameDataManager';
 import { HistoryManager } from '../../src/HistoryManager';
+import { NO_KEY } from '../../src/lookup';
 import { HistoryStore } from '../../src/storage/HistoryStore';
 
 export async function setupBackup(files: Record<string, string>, secrets: Record<string, string> = {}) {
-	const { f, plugin, local, layout, shared, stores } = await createStores(files, {
+	const { f, plugin, local, layout, shared, base } = await createStores(files, {
 		types: ['Movie', 'TV Show'],
 		loadShared: true,
 		secrets,
 		pluginExtra: { posterService: { enqueue: () => Promise.resolve(null) } },
 	});
-	const dataManager = new DataManager(plugin, stores);
-	const readingDataManager = new ReadingDataManager(plugin, stores);
-	const gameDataManager = new GameDataManager(plugin, stores);
-	const historyManager = new HistoryManager(plugin, null);
+	// ports are lambdas, like in main.ts: construction order does not matter
+	const dataManager: DataManager = new DataManager({
+		...base,
+		api: { fetchAiring: () => Promise.resolve(NO_KEY), fetchSeasons: () => Promise.resolve(NO_KEY) },
+		posters: () => ({ enqueue: () => Promise.resolve(null) }),
+		registerEvent: f.plugin.registerEvent,
+		releaseDates: {
+			clearBookOrMangaReleaseDate: (kind, id) => readingDataManager.clearBookOrMangaReleaseDate(kind, id),
+			clearGameReleaseDate: (id) => gameDataManager.clearGameReleaseDate(id),
+		},
+	});
+	const readingDataManager: ReadingDataManager = new ReadingDataManager({
+		...base,
+		upcoming: {
+			autoAddReadingToUpcoming: (i, k) => dataManager.autoAddReadingToUpcoming(i, k),
+			removeReadingAirtimeEntries: (id) => dataManager.removeReadingAirtimeEntries(id),
+		},
+	});
+	const gameDataManager: GameDataManager = new GameDataManager({
+		...base,
+		upcoming: {
+			autoAddGameToUpcoming: (g) => dataManager.autoAddGameToUpcoming(g),
+			removeGameAirtimeEntries: (id) => dataManager.removeGameAirtimeEntries(id),
+		},
+	});
+	const historyManager = new HistoryManager(null);
 	const p = plugin as unknown as Record<string, unknown>;
 	p.dataManager = dataManager;
 	p.readingDataManager = readingDataManager;

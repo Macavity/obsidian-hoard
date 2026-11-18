@@ -3,9 +3,12 @@ import { createStores } from './common';
 import { ReadingDataManager } from '../../src/ReadingDataManager';
 import type { Book, Manga } from '../../src/types';
 
+/** Reading without an Upcoming tracker behind it. */
+const noUpcoming = { autoAddReadingToUpcoming: () => Promise.resolve(), removeReadingAirtimeEntries: () => Promise.resolve() };
+
 export async function setupReadingDataManager(files: Record<string, string>) {
-	const { f, plugin, local, shared, index, stores, notices } = await createStores(files, { createBase: true });
-	const rdm = new ReadingDataManager(plugin, stores);
+	const { f, local, shared, index, base, notices } = await createStores(files, { createBase: true });
+	const rdm = new ReadingDataManager({ ...base, upcoming: noUpcoming });
 	await rdm.init();
 	return { rdm, f, local, index, shared, notices };
 }

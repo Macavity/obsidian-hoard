@@ -1,5 +1,7 @@
 import { App, TAbstractFile, TFile, stringifyYaml } from 'obsidian';
-import type HoardPlugin from './main';
+import type { EventRef } from 'obsidian';
+import type { ApiService } from './ApiService';
+import type { SettingsReader } from './SettingsService';
 import type { DraftPersistState, Season, HoardTitle, HoardGroup, AirtimeEntry, AirtimeSchedule, EntryAirtime, MaybeTitle, RecommendedDaily, SavedFilterPreset, Book, Manga, Game } from './types';
 import type { HistoryManager } from './HistoryManager';
 import { formatHistoryDate } from './HistoryManager';
@@ -34,6 +36,28 @@ export interface DataStores {
 	layout: () => VaultLayout;
 	notify: Notify;
 }
+
+/** Where DataManager hands titles that need a poster (the PosterService). */
+export interface PosterQueue {
+	enqueue(t: HoardTitle): Promise<unknown>;
+}
+
+/** Release date removal for reading items and games, which their own managers own (history, release-status rules). */
+export interface ReleaseDateTargets {
+	clearBookOrMangaReleaseDate(kind: 'book' | 'manga', id: string): Promise<void>;
+	clearGameReleaseDate(id: string): Promise<void>;
+}
+
+export type DataManagerDeps = DataStores & {
+	app: App;
+	settings: SettingsReader;
+	api: Pick<ApiService, 'fetchAiring' | 'fetchSeasons'>;
+	/** Resolved per use: the poster service is created after the manager. */
+	posters: () => PosterQueue | null;
+	/** Bound to the plugin, so the handlers are removed on unload. */
+	registerEvent: (ref: EventRef) => void;
+	releaseDates: ReleaseDateTargets;
+};
 
 const AIRTIME_KEYS: readonly string[] = Object.values(AIRTIME_PROPS);
 
@@ -77,7 +101,7 @@ const API_CHECK_KINDS: readonly ApiCheckKind[] = ['airing', 'seasons', 'poster',
  * the LocalStore cache; writes go to the note via processFrontMatter and only touch what changed.
  */
 export class DataManager {
-	private plugin: HoardPlugin;
+	private deps: DataManagerDeps;
 	private app: App;
 	private index: EntryIndex;
 	private local: LocalStore;
@@ -116,14 +140,14 @@ export class DataManager {
 		this.historyManager = hm;
 	}
 
-	constructor(plugin: HoardPlugin, stores: DataStores) {
-		this.notify = stores.notify;
-		this.plugin = plugin;
-		this.app = plugin.app;
-		this.index = stores.index;
-		this.local = stores.local;
-		this.shared = stores.shared;
-		this.layout = stores.layout;
+	constructor(deps: DataManagerDeps) {
+		this.deps = deps;
+		this.notify = deps.notify;
+		this.app = deps.app;
+		this.index = deps.index;
+		this.local = deps.local;
+		this.shared = deps.shared;
+		this.layout = deps.layout;
 	}
 
 	/** After index.build(): reads note bodies and follows index/vault changes. */
@@ -136,9 +160,9 @@ export class DataManager {
 			this.notifyListeners();
 		});
 		const { vault } = this.app;
-		this.plugin.registerEvent(vault.on('modify', (f) => void this.refreshNotes(f)));
-		this.plugin.registerEvent(vault.on('create', (f) => void this.refreshNotes(f)));
-		this.plugin.registerEvent(vault.on('rename', (f, oldPath) => this.onVaultRename(f, oldPath)));
+		this.deps.registerEvent(vault.on('modify', (f) => void this.refreshNotes(f)));
+		this.deps.registerEvent(vault.on('create', (f) => void this.refreshNotes(f)));
+		this.deps.registerEvent(vault.on('rename', (f, oldPath) => this.onVaultRename(f, oldPath)));
 		this.queueMissingPosters(this.getTitles());
 		this.queueMissingSeasons(this.getTitles());
 		this.notifyListeners();
@@ -149,7 +173,7 @@ export class DataManager {
 	 * to the poster queue, once per id and session.
 	 */
 	private queueMissingPosters(titles: HoardTitle[]): void {
-		const service = this.plugin.posterService;
+		const service = this.deps.posters();
 		if (!service) return;
 		for (const t of titles) {
 			if (t.maybe || this.posterRequested.has(t.id)) continue;
@@ -177,7 +201,6 @@ export class DataManager {
 
 	/** Queues a season fetch for titles that lack seasons and whose last check is past its deadline. */
 	private queueMissingSeasons(titles: HoardTitle[]): void {
-		if (!this.plugin.apiService) return;
 		for (const t of titles) {
 			if (t.maybe || this.seasonsInFlight.has(t.id) || !this.seasonsMissing(t) || !this.apiCheckDue(t.id, 'seasons', false)) continue;
 			void this.refillSeasons(t);
@@ -194,7 +217,7 @@ export class DataManager {
 		try {
 			let outcome: LookupResult<Season[]> = FAILED;
 			try {
-				outcome = await this.apiQueue.enqueue(() => this.plugin.apiService.fetchSeasons(t));
+				outcome = await this.apiQueue.enqueue(() => this.deps.api.fetchSeasons(t));
 			} catch {
 				// stays pending until the deadline
 			}
@@ -974,7 +997,7 @@ export class DataManager {
 		if (e?.kind !== 'title' || this.airingInFlight.has(id) || !this.apiCheckDue(id, 'airing', force)) return;
 		this.airingInFlight.add(id);
 		try {
-			const outcome = await this.apiQueue.enqueue(() => this.plugin.apiService.fetchAiring(e.entry));
+			const outcome = await this.apiQueue.enqueue(() => this.deps.api.fetchAiring(e.entry));
 			if (this.index.get(id)?.kind !== 'title') return;
 			// a found airing is recorded as 'ok' (checkResultOf records nothing for found)
 			this.recordApiCheck(id, 'airing', checkResultOf(outcome) ?? 'ok', outcome.status === 'found' ? { airing: outcome.value } : {});
@@ -1036,20 +1059,8 @@ export class DataManager {
 
 	/** Reading / game release date removal through their managers (history, release-status rules). */
 	private async clearReleaseDate(e: AnyEntry): Promise<void> {
-		if (e.kind === 'book' || e.kind === 'manga') {
-			const rdm = this.plugin.readingDataManager;
-			const item = e.kind === 'book' ? rdm?.getBook(e.entry.id) : rdm?.getManga(e.entry.id);
-			if (!rdm || !item) return;
-			item.releaseDate = null;
-			if (e.kind === 'book') await rdm.updateBook(item as Book);
-			else await rdm.updateManga(item as Manga);
-		} else if (e.kind === 'game') {
-			const gdm = this.plugin.gameDataManager;
-			const game = gdm?.getGame(e.entry.id);
-			if (!gdm || !game) return;
-			game.releaseDate = null;
-			await gdm.updateGame(game);
-		}
+		if (e.kind === 'book' || e.kind === 'manga') await this.deps.releaseDates.clearBookOrMangaReleaseDate(e.kind, e.entry.id);
+		else if (e.kind === 'game') await this.deps.releaseDates.clearGameReleaseDate(e.entry.id);
 	}
 
 	/**
@@ -1292,7 +1303,7 @@ export class DataManager {
 	private applyAutoCompleteRules(title: HoardTitle): void {
 		const effectiveTotal = this.getEffectiveTotal(title);
 		if (
-			this.plugin.settings.autoCompleteOnLastEpisode &&
+			this.deps.settings.get().autoCompleteOnLastEpisode &&
 			effectiveTotal > 0 &&
 			title.watchedEpisodes.length >= effectiveTotal
 		) {
@@ -1301,7 +1312,7 @@ export class DataManager {
 				// match updateTitle(): completed titles drop priority
 				title.priority = '';
 			}
-			if (this.plugin.settings.setFinishDateAutomatically && !title.dateFinished) {
+			if (this.deps.settings.get().setFinishDateAutomatically && !title.dateFinished) {
 				title.dateFinished = todayIso();
 			}
 		} else if (title.status === 'Completed' && title.watchedEpisodes.length < effectiveTotal) {
@@ -1382,10 +1393,10 @@ export class DataManager {
 	// Folder management
 
 	async ensureFolders(): Promise<void> {
-		if (!this.plugin.settings.autoCreateFolders) return;
+		if (!this.deps.settings.get().autoCreateFolders) return;
 		const layout = this.layout();
 		if (layout.root) await this.ensureFolder(layout.root);
-		for (const type of this.plugin.settings.types) {
+		for (const type of this.deps.settings.get().types) {
 			await this.ensureFolder(layout.folderFor('title', type.name));
 		}
 	}

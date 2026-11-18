@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { setupDataManager } from './helpers/setupDataManager';
 import { ApiCheckQueue } from '../src/apiCheckQueue';
-import { DataManager } from '../src/DataManager';
 import { ApiService } from '../src/ApiService';
 import type { LookupResult } from '../src/lookup';
 import type { EntryCache } from '../src/storage/storageTypes';
@@ -76,12 +75,12 @@ describe('API checks in DataManager', () => {
 
 	it('persists a transient failure and honours it after a restart', async () => {
 		const fetchAiring = vi.fn((): Promise<LookupResult<Airing>> => Promise.resolve({ status: 'failed' }));
-		const { dm, local, plugin, index, shared, layout } = await setup({ 'W/TV Show/C.md': show(1) }, fetchAiring);
+		const { dm, local, newDm } = await setup({ 'W/TV Show/C.md': show(1) }, fetchAiring);
 		vi.useFakeTimers({ now: START });
 		await dm.refreshAiring('TV Show/C');
 		expect(local.getCache('TV Show/C')?.apiCheck?.airing).toEqual({ at: START.toISOString(), result: 'transient' });
 
-		const restarted = new DataManager(plugin, { index, local, shared, layout: () => layout, notify: () => {} });
+		const restarted = newDm();
 		vi.setSystemTime(new Date(START.getTime() + 59 * 60_000));
 		await restarted.refreshAiring('TV Show/C');
 		expect(fetchAiring).toHaveBeenCalledTimes(1);
@@ -129,12 +128,12 @@ describe('API checks in DataManager', () => {
 	it('season refill: failure is persisted, not retried within the deadline, even after a restart', async () => {
 		const fetchSeasons = vi.fn((): Promise<LookupResult<Season[]>> => Promise.resolve({ status: 'failed' }));
 		const note = '---\nName: Dark\nType: TV Show\nExternal ID: tmdb:tv:70523\nWatched Episodes: S01E01\n---\n';
-		const { dm, local, plugin, index, shared, layout } = await setupDataManager({ 'W/TV Show/Dark.md': note }, { apiService: { fetchSeasons } });
+		const { dm, local, newDm } = await setupDataManager({ 'W/TV Show/Dark.md': note }, { apiService: { fetchSeasons } });
 		await vi.waitFor(() => expect(local.getCache('TV Show/Dark')?.apiCheck?.seasons?.result).toBe('transient'));
 		expect(fetchSeasons).toHaveBeenCalledTimes(1);
 		await dm.markEpisodeWatched('TV Show/Dark', 3, false);
 		expect(fetchSeasons).toHaveBeenCalledTimes(1);
-		const restarted = new DataManager(plugin, { index, local, shared, layout: () => layout, notify: () => {} });
+		const restarted = newDm();
 		await restarted.init();
 		await new Promise((r) => setTimeout(r, 50));
 		expect(fetchSeasons).toHaveBeenCalledTimes(1);

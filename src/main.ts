@@ -67,31 +67,57 @@ export default class HoardPlugin extends Plugin {
 		(n) => this.notifyManager(n),
 	);
 	private index = new EntryIndex(this.app, () => this.layout, this.local, (ref) => this.registerEvent(ref));
-	dataManager: DataManager = new DataManager(this, {
+	// the managers reach each other through lambdas, so the construction order does not matter
+	dataManager: DataManager = new DataManager({
 		index: this.index,
 		local: this.local,
 		shared: this.shared,
 		layout: () => this.layout,
 		notify: (n) => this.notifyManager(n),
+		app: this.app,
+		settings: this.settingsService,
+		// apiService and posterService are replaced / created in onload
+		api: {
+			fetchAiring: (e) => this.apiService.fetchAiring(e),
+			fetchSeasons: (t) => this.apiService.fetchSeasons(t),
+		},
+		posters: () => this.posterService ?? null,
+		registerEvent: (ref) => this.registerEvent(ref),
+		releaseDates: {
+			clearBookOrMangaReleaseDate: (kind, id) => this.readingDataManager.clearBookOrMangaReleaseDate(kind, id),
+			clearGameReleaseDate: (id) => this.gameDataManager.clearGameReleaseDate(id),
+		},
 	});
-	readingDataManager: ReadingDataManager = new ReadingDataManager(this, {
+	readingDataManager: ReadingDataManager = new ReadingDataManager({
 		index: this.index,
 		local: this.local,
 		shared: this.shared,
 		layout: () => this.layout,
 		notify: (n) => this.notifyManager(n),
+		app: this.app,
+		settings: this.settingsService,
+		upcoming: {
+			autoAddReadingToUpcoming: (item, kind) => this.dataManager.autoAddReadingToUpcoming(item, kind),
+			removeReadingAirtimeEntries: (id) => this.dataManager.removeReadingAirtimeEntries(id),
+		},
 	});
-	gameDataManager: GameDataManager = new GameDataManager(this, {
+	gameDataManager: GameDataManager = new GameDataManager({
 		index: this.index,
 		local: this.local,
 		shared: this.shared,
 		layout: () => this.layout,
 		notify: (n) => this.notifyManager(n),
+		app: this.app,
+		settings: this.settingsService,
+		upcoming: {
+			autoAddGameToUpcoming: (g) => this.dataManager.autoAddGameToUpcoming(g),
+			removeGameAirtimeEntries: (id) => this.dataManager.removeGameAirtimeEntries(id),
+		},
 	});
 	apiService: ApiService = new ApiService('', '');
 	/** TMDB/OMDb key snapshot of the last settings save; null before onload set it */
 	private apiKeys: string | null = null;
-	historyManager: HistoryManager = new HistoryManager(this, new HistoryStore(
+	historyManager: HistoryManager = new HistoryManager(new HistoryStore(
 		this.app,
 		() => this.layout,
 		(ref) => this.registerEvent(ref),

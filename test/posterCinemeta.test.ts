@@ -3,13 +3,12 @@ import { requestUrl } from 'obsidian';
 import { PosterService } from '../src/PosterService';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
 import { ApiService } from '../src/ApiService';
-import type { DataManager } from '../src/DataManager';
 
 function setup(api: Partial<ApiService>, keys: { tmdbApiKey?: string; omdbApiKey?: string } = {}) {
 	const updatePosterUrl = vi.fn().mockResolvedValue(undefined);
 	const recordLookup = vi.fn();
 	const svc = new PosterService(
-		{ updatePosterUrl, recordLookup, lookupDue: () => true } as unknown as DataManager,
+		{ updatePosterUrl, recordLookup, lookupDue: () => true },
 		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', ...keys, typeApiMapping: { Doc: 'movie' } }),
 		() => api as ApiService,
 	);
@@ -123,7 +122,7 @@ describe('PosterService not-due titles', () => {
     const searchCinemeta = vi.fn().mockResolvedValue([]);
     const recordLookup = vi.fn();
     const svc = new PosterService(
-      { updatePosterUrl: vi.fn(), recordLookup, lookupDue: () => false } as unknown as DataManager,
+      { updatePosterUrl: vi.fn(), recordLookup, lookupDue: () => false },
       () => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', typeApiMapping: {} }),
       () => ({ searchCinemeta }) as unknown as ApiService,
     );

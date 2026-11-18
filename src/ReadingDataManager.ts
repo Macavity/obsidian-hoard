@@ -1,6 +1,6 @@
 import { TFile, getFrontMatterInfo, parseYaml, stringifyYaml } from 'obsidian';
 import type { App } from 'obsidian';
-import type HoardPlugin from './main';
+import type { SettingsReader } from './SettingsService';
 import type { HistoryManager } from './HistoryManager';
 import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
@@ -67,8 +67,21 @@ export interface ColumnMoveResult {
 	skipped: number;
 }
 
+/** What Reading needs from the Upcoming tracker; its owner is wired in by the plugin. */
+export interface ReadingUpcomingSync {
+	autoAddReadingToUpcoming(item: ReadingItem, kind: ReadingKind): Promise<void>;
+	removeReadingAirtimeEntries(id: string): Promise<void>;
+}
+
+export type ReadingDataManagerDeps = DataStores & {
+	app: App;
+	settings: SettingsReader;
+	upcoming: ReadingUpcomingSync;
+};
+
 export class ReadingDataManager {
-	private plugin: HoardPlugin;
+	private appSettings: SettingsReader;
+	private upcoming: ReadingUpcomingSync;
 	private app: App;
 	private index: EntryIndex;
 	private local: LocalStore;
@@ -88,14 +101,15 @@ export class ReadingDataManager {
 	// ids changed via the *Silent updaters, written on the next saveAndNotify()
 	private dirty: Set<string> = new Set();
 
-	constructor(plugin: HoardPlugin, stores: DataStores) {
-		this.plugin = plugin;
-		this.app = plugin.app;
-		this.index = stores.index;
-		this.local = stores.local;
-		this.shared = stores.shared;
-		this.layout = stores.layout;
-		this.notify = stores.notify;
+	constructor(deps: ReadingDataManagerDeps) {
+		this.appSettings = deps.settings;
+		this.upcoming = deps.upcoming;
+		this.app = deps.app;
+		this.index = deps.index;
+		this.local = deps.local;
+		this.shared = deps.shared;
+		this.layout = deps.layout;
+		this.notify = deps.notify;
 	}
 
 	setHistoryManager(hm: HistoryManager): void {
@@ -122,11 +136,8 @@ export class ReadingDataManager {
 		});
 		// additive reconcile: every future-dated item gets an Upcoming entry. Never removes, so
 		// manually-scheduled recurring entries survive reloads.
-		const dm = this.plugin.dataManager;
-		if (dm) {
-			for (const b of this.getBooks()) if (isReleaseDateFuture(b.releaseDate)) await dm.autoAddReadingToUpcoming(b, 'book');
-			for (const m of this.getMangaList()) if (isReleaseDateFuture(m.releaseDate)) await dm.autoAddReadingToUpcoming(m, 'manga');
-		}
+		for (const b of this.getBooks()) if (isReleaseDateFuture(b.releaseDate)) await this.upcoming.autoAddReadingToUpcoming(b, 'book');
+		for (const m of this.getMangaList()) if (isReleaseDateFuture(m.releaseDate)) await this.upcoming.autoAddReadingToUpcoming(m, 'manga');
 		this.notifyListeners();
 	}
 
@@ -332,12 +343,10 @@ export class ReadingDataManager {
 	 * Upcoming tracker and leaves once the date passes or is cleared.
 	 */
 	private async syncUpcoming(item: ReadingItem, kind: ReadingKind): Promise<void> {
-		const dm = this.plugin.dataManager;
-		if (!dm) return;
 		if (isReleaseDateFuture(item.releaseDate)) {
-			await dm.autoAddReadingToUpcoming(item, kind);
+			await this.upcoming.autoAddReadingToUpcoming(item, kind);
 		} else {
-			await dm.removeReadingAirtimeEntries(item.id);
+			await this.upcoming.removeReadingAirtimeEntries(item.id);
 		}
 	}
 
@@ -384,6 +393,21 @@ export class ReadingDataManager {
 			`${book.title} (Book) was added`,
 			{ source: 'Reading', action: 'added', titleName: book.title, titleId: book.id },
 		);
+	}
+
+	/** Clears the release date through updateBook / updateManga (history, release-status rules). */
+	async clearBookOrMangaReleaseDate(kind: 'book' | 'manga', id: string): Promise<void> {
+		if (kind === 'book') {
+			const book = this.getBook(id);
+			if (!book) return;
+			book.releaseDate = null;
+			await this.updateBook(book);
+		} else {
+			const manga = this.getManga(id);
+			if (!manga) return;
+			manga.releaseDate = null;
+			await this.updateManga(manga);
+		}
 	}
 
 	async updateBook(updated: Book): Promise<void> {
@@ -498,7 +522,7 @@ export class ReadingDataManager {
 		if (src.status !== updated.status) {
 			const act = updated.status === 'Completed' ? 'completed' as const : 'status' as const;
 			// mirror the watch behavior: stamp today's finish date on the transition to Completed
-			if (updated.status === 'Completed' && this.plugin.settings.setFinishDateAutomatically && !updated.dateFinished) {
+			if (updated.status === 'Completed' && this.appSettings.get().setFinishDateAutomatically && !updated.dateFinished) {
 				updated.dateFinished = todayIso();
 			}
 			void this.historyManager?.log(
@@ -536,7 +560,7 @@ export class ReadingDataManager {
 		const item = kind === 'book' ? this.getBook(id) : this.getManga(id);
 		await this.deleteNote(id);
 		this.notifyListeners();
-		await this.plugin.dataManager?.removeReadingAirtimeEntries(id);
+		await this.upcoming.removeReadingAirtimeEntries(id);
 		if (item) {
 			void this.historyManager?.log(
 				`${item.title} (${label}) was deleted`,
@@ -549,7 +573,7 @@ export class ReadingDataManager {
 		const items = ids.map((id) => (kind === 'book' ? this.getBook(id) : this.getManga(id))).filter((x): x is ReadingItem => !!x);
 		for (const id of ids) await this.deleteNote(id).catch(() => {});
 		this.notifyListeners();
-		for (const id of ids) await this.plugin.dataManager?.removeReadingAirtimeEntries(id);
+		for (const id of ids) await this.upcoming.removeReadingAirtimeEntries(id);
 		for (const item of items) {
 			void this.historyManager?.log(
 				`${item.title} (${label}) was deleted`,

@@ -1,5 +1,6 @@
 import { TFile, stringifyYaml } from 'obsidian';
-import type HoardPlugin from './main';
+import type { App } from 'obsidian';
+import type { SettingsReader } from './SettingsService';
 import type { HistoryManager } from './HistoryManager';
 import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
@@ -42,8 +43,22 @@ const GAMES_FOLDER_PREFIX = 'Games/';
  * tracker and removed when the date passes or the game is deleted; applyReleaseStatus maintains the
  * auto "To be released" status.
  */
+/** What Games needs from the Upcoming tracker; its owner is wired in by the plugin. */
+export interface GameUpcomingSync {
+	autoAddGameToUpcoming(g: Game): Promise<void>;
+	removeGameAirtimeEntries(id: string): Promise<void>;
+}
+
+export type GameDataManagerDeps = DataStores & {
+	app: App;
+	settings: SettingsReader;
+	upcoming: GameUpcomingSync;
+};
+
 export class GameDataManager {
-	private plugin: HoardPlugin;
+	private app: App;
+	private appSettings: SettingsReader;
+	private upcoming: GameUpcomingSync;
 	private index: EntryIndex;
 	private local: DataStores['local'];
 	private shared: SharedConfigStore;
@@ -59,13 +74,15 @@ export class GameDataManager {
 	private dirty = new Set<string>();
 	private settingsCache: GamesSettings | null = null;
 
-	constructor(plugin: HoardPlugin, stores: DataStores) {
-		this.notify = stores.notify;
-		this.plugin = plugin;
-		this.index = stores.index;
-		this.local = stores.local;
-		this.shared = stores.shared;
-		this.layout = stores.layout;
+	constructor(deps: GameDataManagerDeps) {
+		this.notify = deps.notify;
+		this.app = deps.app;
+		this.appSettings = deps.settings;
+		this.upcoming = deps.upcoming;
+		this.index = deps.index;
+		this.local = deps.local;
+		this.shared = deps.shared;
+		this.layout = deps.layout;
 	}
 
 	setHistoryManager(hm: HistoryManager): void {
@@ -89,18 +106,13 @@ export class GameDataManager {
 		});
 		// additive reconcile: every future-dated game gets an Upcoming entry. Never removes, so
 		// manually-scheduled entries survive reloads.
-		const dm = this.plugin.dataManager;
-		if (dm) {
-			for (const g of this.getGames()) if (isReleaseDateFuture(g.releaseDate)) await dm.autoAddGameToUpcoming(g);
-		}
+		for (const g of this.getGames()) if (isReleaseDateFuture(g.releaseDate)) await this.upcoming.autoAddGameToUpcoming(g);
 		this.notifyListeners();
 	}
 
 	private async syncUpcoming(game: Game): Promise<void> {
-		const dm = this.plugin.dataManager;
-		if (!dm) return;
-		if (isReleaseDateFuture(game.releaseDate)) await dm.autoAddGameToUpcoming(game);
-		else await dm.removeGameAirtimeEntries(game.id);
+		if (isReleaseDateFuture(game.releaseDate)) await this.upcoming.autoAddGameToUpcoming(game);
+		else await this.upcoming.removeGameAirtimeEntries(game.id);
 	}
 
 	/**
@@ -273,6 +285,14 @@ export class GameDataManager {
 		);
 	}
 
+	/** Clears the release date through updateGame (history, release-status rules). */
+	async clearGameReleaseDate(id: string): Promise<void> {
+		const game = this.getGame(id);
+		if (!game) return;
+		game.releaseDate = null;
+		await this.updateGame(game);
+	}
+
 	async updateGame(input: Game): Promise<void> {
 		input.dateModified = new Date().toISOString();
 		this.applyReleaseStatus(input);
@@ -287,7 +307,7 @@ export class GameDataManager {
 		if (old.status !== updated.status) {
 			const act = updated.status === GAME_FINISHED_STATUS ? 'completed' as const : 'status' as const;
 			// mirror the watch behavior: stamp today's finish date on the transition to Finished
-			if (updated.status === GAME_FINISHED_STATUS && this.plugin.settings.setFinishDateAutomatically && !updated.dateFinished) {
+			if (updated.status === GAME_FINISHED_STATUS && this.appSettings.get().setFinishDateAutomatically && !updated.dateFinished) {
 				updated.dateFinished = todayIso();
 			}
 			void this.historyManager?.log(
@@ -326,7 +346,7 @@ export class GameDataManager {
 	async removeGame(id: string): Promise<void> {
 		const game = this.getGame(id);
 		await this.deleteNote(id);
-		await this.plugin.dataManager?.removeGameAirtimeEntries(id);
+		await this.upcoming.removeGameAirtimeEntries(id);
 		this.notifyListeners();
 		if (game) {
 			void this.historyManager?.log(
@@ -347,7 +367,7 @@ export class GameDataManager {
 		for (let i = 0; i < toDelete.length; i += CHUNK) {
 			await Promise.all(toDelete.slice(i, i + CHUNK).map((g) => this.deleteNote(g.id).catch(() => {})));
 		}
-		for (const id of ids) await this.plugin.dataManager?.removeGameAirtimeEntries(id);
+		for (const id of ids) await this.upcoming.removeGameAirtimeEntries(id);
 		this.notifyListeners();
 		for (const game of toDelete) {
 			void this.historyManager?.log(
@@ -522,7 +542,7 @@ export class GameDataManager {
 	}
 
 	private fileOf(id: string): TFile | null {
-		return noteFile(this.plugin.app, this.layout().pathFromId(id));
+		return noteFile(this.app, this.layout().pathFromId(id));
 	}
 
 	/** Frontmatter to store: the encoded game with the default status filled in. */
@@ -536,7 +556,7 @@ export class GameDataManager {
 	 * `background` marks an automatic fill (no user write).
 	 */
 	private async processFrontMatter(file: TFile, g: Game, fn: (fm: Record<string, unknown>) => void, background = false): Promise<boolean> {
-		return updateFrontMatter(this.plugin.app, file, this.notify, (fm: Record<string, unknown>) => {
+		return updateFrontMatter(this.app, file, this.notify, (fm: Record<string, unknown>) => {
 			fn(fm);
 			this.afterWrite(g, { ...fm }, background);
 		});
@@ -569,14 +589,14 @@ export class GameDataManager {
 	private async createNote(game: Game): Promise<void> {
 		const layout = this.layout();
 		if (!game.status) game.status = this.getSettings().defaultStatus || 'Not started';
-		const path = freeNotePath(this.plugin.app, layout.notePath('game', game.title));
-		await ensureFolder(this.plugin.app, parentOf(path));
+		const path = freeNotePath(this.app, layout.notePath('game', game.title));
+		await ensureFolder(this.app, parentOf(path));
 		game.id = layout.idFromPath(path);
 		const fm = this.encode(game);
 		// index first, so the create event finds nothing new
 		this.afterWrite(game, fm);
 		try {
-			await this.plugin.app.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n`);
+			await this.app.vault.create(path, `---\n${stringifyYaml(fm)}---\n\n## Notes\n`);
 		} catch (e) {
 			this.index.removeLocal(game.id);
 			this.views.delete(game.id);
@@ -605,11 +625,11 @@ export class GameDataManager {
 
 	/** Writes a game to its note through the shared pipeline (`writeEntry`); creates the note when missing. */
 	private async writeGame(g: Game): Promise<void> {
-		await writeEntry({ app: this.plugin.app, layout: this.layout, notify: this.notify }, this.writeHooks, g);
+		await writeEntry({ app: this.app, layout: this.layout, notify: this.notify }, this.writeHooks, g);
 	}
 
 	private async deleteNote(id: string): Promise<void> {
-		await trashNote(this.plugin.app, this.layout().pathFromId(id));
+		await trashNote(this.app, this.layout().pathFromId(id));
 		this.index.removeLocal(id);
 		this.views.delete(id);
 		this.dirty.delete(id);
@@ -622,7 +642,7 @@ export class GameDataManager {
 
 	async readGameNote(game: Game): Promise<string | null> {
 		const file = this.fileOf(game.id);
-		return file ? this.plugin.app.vault.read(file) : null;
+		return file ? this.app.vault.read(file) : null;
 	}
 
 	/** Reads the `## Notes` body back from the game's note; null when the file or section is absent. */
@@ -636,6 +656,6 @@ export class GameDataManager {
 		await this.ensureGameNote(game);
 		const file = this.fileOf(game.id);
 		if (!file) return;
-		await this.plugin.app.vault.process(file, (content) => replaceNotesSection(content, notesBody));
+		await this.app.vault.process(file, (content) => replaceNotesSection(content, notesBody));
 	}
 }

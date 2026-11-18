@@ -6,11 +6,10 @@ import type { EntryCache } from '../src/storage/storageTypes';
 
 const SHOW = 'W/TV Show/C.md';
 const showNote = (extra = '') =>
-	`---\nName: C\nType: TV Show\nExternal ID: tmdb:tv:1399\nAirtime Recurrence: daily\nAirtime Time: 20:15\nAirtime Season: 2\nAirtime Episode: 5\n${extra}---\n`;
+	`---\nName: C\nType: TV Show\nExternal ID: tmdb:tv:1399\nSeasons:\n  - "S1: 8"\nAirtime Recurrence: daily\nAirtime Time: 20:15\nAirtime Season: 2\nAirtime Episode: 5\n${extra}---\n`;
 
 async function setup(files: Record<string, string>, fetchAiring = vi.fn((): Promise<LookupResult<NonNullable<EntryCache['airing']>>> => Promise.resolve({ status: 'notfound' }))) {
-	const s = await setupDataManager(files);
-	(s.plugin as unknown as Record<string, unknown>).apiService = { fetchAiring };
+	const s = await setupDataManager(files, { apiService: { fetchAiring } });
 	return { ...s, fetchAiring };
 }
 

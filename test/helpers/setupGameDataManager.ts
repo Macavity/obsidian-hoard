@@ -6,16 +6,14 @@ import type { Game } from '../../src/types';
 
 export async function setupGames(files: Record<string, string>) {
 	const airtime = { added: [] as string[], removed: [] as string[] };
-	const { f, plugin, local, shared, index, stores, notices } = await createStores(files, {
-		loadShared: true,
-		pluginExtra: {
-			dataManager: {
-				autoAddGameToUpcoming: (game: Game) => { airtime.added.push(game.id); return Promise.resolve(); },
-				removeGameAirtimeEntries: (id: string) => { airtime.removed.push(id); return Promise.resolve(); },
-			},
+	const { f, local, shared, index, base, notices } = await createStores(files, { loadShared: true });
+	const gdm = new GameDataManager({
+		...base,
+		upcoming: {
+			autoAddGameToUpcoming: (game: Game) => { airtime.added.push(game.id); return Promise.resolve(); },
+			removeGameAirtimeEntries: (id: string) => { airtime.removed.push(id); return Promise.resolve(); },
 		},
 	});
-	const gdm = new GameDataManager(plugin, stores);
 	await gdm.init();
 	return { gdm, f, local, index, shared, airtime, notices };
 }
