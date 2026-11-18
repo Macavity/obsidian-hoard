@@ -3,10 +3,10 @@ type: Module
 title: Widgets
 description: The hoard code-block widgets rendered inside notes, how they stay live, and how the insert command builds them.
 source:
-  - src/WidgetRenderer.ts
-  - src/InsertWidgetModal.ts
-  - src/main.ts
-  - src/import/watchlog/widgets.ts
+  - src/modules/widgets/ui/WidgetRenderer.ts
+  - src/modules/widgets/ui/InsertWidgetModal.ts
+  - src/app/main.ts
+  - src/modules/import/services/watchlog/widgets.ts
 source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
@@ -17,7 +17,7 @@ are listed in the README; the mechanism is here.
 
 ## Registration
 
-`WidgetRenderer` ([WidgetRenderer.ts](../../src/WidgetRenderer.ts)) is built in `onload` and calls
+`WidgetRenderer` ([WidgetRenderer.ts](../../src/modules/widgets/ui/WidgetRenderer.ts)) is built in `onload` and calls
 `registerMarkdownCodeBlockProcessor` once per language: `hoard` (block body `id: <entry id>`),
 `hoard-todo` (title name, optional `mini`), `hoard-stat` (`watched`, `completed`, `remaining`,
 `time`, `time completed full`), `hoard-upcoming` (`next`), `hoard-now`, `hoard-now-next`.
@@ -36,16 +36,16 @@ is picked, so `theme.css` themes `.hoard-widget` outside the view; it applies on
 
 ## Inserting
 
-The command `insert-widget` (`openWidgetPalette` in [main.ts](../../src/main.ts)) opens a
+The command `insert-widget` (`openWidgetPalette` in [main.ts](../../src/app/main.ts)) opens a
 `FuzzySuggestModal` with one entry per widget variant; the todo variants then open
-`InsertWidgetModal` ([InsertWidgetModal.ts](../../src/InsertWidgetModal.ts)) to pick a title and
+`InsertWidgetModal` ([InsertWidgetModal.ts](../../src/modules/widgets/ui/InsertWidgetModal.ts)) to pick a title and
 insert the fence at the cursor with `editor.replaceSelection`.
 
 ## WatchLog fences
 
 WatchLog's `watchlog` and `wl-*` fences are never rendered. They are renamed only when the user picks the
 widget step of the import cleanup ([flows/watchlog-import](../flows/watchlog-import.md)):
-`rewriteWidgetFences` in [widgets.ts](../../src/import/watchlog/widgets.ts) renames the opening
+`rewriteWidgetFences` in [widgets.ts](../../src/modules/import/services/watchlog/widgets.ts) renames the opening
 fence (also indented or quoted), attributes after the language stay.
 
 ## Where to change what

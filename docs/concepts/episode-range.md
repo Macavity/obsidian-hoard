@@ -3,10 +3,10 @@ type: Domain
 title: Episode range
 description: The S01E01-E12 notation in watched and skipped properties, and how it maps to absolute episode numbers.
 source:
-  - src/storage/episodeRange.ts
-  - src/storage/titleCodec.ts
-  - src/storage/seasonText.ts
-  - src/types.ts
+  - src/shared/storage/episodeRange.ts
+  - src/shared/storage/titleCodec.ts
+  - src/shared/domain/seasonText.ts
+  - src/shared/domain/types.ts
 source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
@@ -14,7 +14,7 @@ source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 
 Progress is stored in the note as text, not as a number list: `Watched Episodes: S01E01-E12, S02E05`.
 In memory a title holds `watchedEpisodes: number[]` as **absolute, 1-based episode numbers across
-all seasons**; the two forms are converted by [episodeRange.ts](../../src/storage/episodeRange.ts).
+all seasons**; the two forms are converted by [episodeRange.ts](../../src/shared/storage/episodeRange.ts).
 
 - Token grammar: `S<n>E<m>`, same-season range `S01E01-E12`, cross-season range `S01E11-S02E02`
   (needs known seasons). Case-insensitive, comma-separated, `MAX_EPISODE = 10000` guards expansion.
@@ -25,10 +25,10 @@ all seasons**; the two forms are converted by [episodeRange.ts](../../src/storag
 
 ## Seasons the mapping uses
 
-`mappingSeasons` in [titleCodec.ts](../../src/storage/titleCodec.ts): the title's seasons, else one
+`mappingSeasons` in [titleCodec.ts](../../src/shared/storage/titleCodec.ts): the title's seasons, else one
 implicit "Season 1" of `totalEpisodes`. Seasons come from the note (`Seasons` lines `Name: N`,
 optional `(skip spec)`, sets `seasonsOverride`) or from the [entry cache](entry-cache.md) (API).
-That line format is read in one place, [seasonText.ts](../../src/storage/seasonText.ts), for the note
+That line format is read in one place, [seasonText.ts](../../src/shared/domain/seasonText.ts), for the note
 and for the edit form's seasons box. The bounds differ on purpose: the codec rejects all seasons of
 a note when a count exceeds `MAX_EPISODE` or a skipped episode lies beyond its season; the edit form
 applies none. In both, a skip entry that is neither a number nor `from-to` (`1-2-3`, `x`) is ignored.

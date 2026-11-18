@@ -3,11 +3,11 @@ type: Domain
 title: Airtime
 description: The airtime* note properties, AirtimeEntry versus derived release cards, and the acknowledgement rule.
 source:
-  - src/types.ts
-  - src/storage/titleCodec.ts
-  - src/storage/readingCodec.ts
-  - src/DataManager.ts
-  - src/airtimeScheduler.ts
+  - src/shared/domain/types.ts
+  - src/shared/storage/titleCodec.ts
+  - src/shared/storage/readingCodec.ts
+  - src/modules/watchlist/services/DataManager.ts
+  - src/modules/airtime/services/airtimeScheduler.ts
 source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
@@ -17,8 +17,8 @@ Two things feed the Upcoming tab:
 
 1. **A manual schedule** stored on the entry's note as `Airtime Recurrence` (`once | daily | weekly |
    monthly`), `Airtime Day`, `Airtime Time`, `Airtime Season`, `Airtime Episode`, `Airtime Acknowledged`.
-   Decoded into `EntryAirtime` by the codecs (titles in [titleCodec](../../src/storage/titleCodec.ts),
-   reading and games via `decodeAirtime` in [readingCodec](../../src/storage/readingCodec.ts)).
+   Decoded into `EntryAirtime` by the codecs (titles in [titleCodec](../../src/shared/storage/titleCodec.ts),
+   reading and games via `decodeAirtime` in [readingCodec](../../src/shared/storage/readingCodec.ts)).
    The two disagree on empty values: a title keeps an empty `Airtime Time` as a value and reports
    an empty `Airtime Recurrence` as invalid; reading and games read both as not set.
    A `once` schedule keeps its date in the note's `Release Date`.
@@ -42,7 +42,7 @@ or game; `schedule` with recurrence, day, time, release date). The entry id is g
 
 ## Scheduler
 
-[airtimeScheduler.ts](../../src/airtimeScheduler.ts) runs once a minute: an entry notifies once per
+[airtimeScheduler.ts](../../src/modules/airtime/services/airtimeScheduler.ts) runs once a minute: an entry notifies once per
 day on the first tick at or after its `HH:MM`, within a 12-hour catch-up window; recurring watch
 schedules get their airing pointer refreshed (forced on the notifying tick). It never writes a note.
 See [flows/airtime-notifications](../flows/airtime-notifications.md).

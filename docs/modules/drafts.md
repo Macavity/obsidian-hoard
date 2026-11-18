@@ -3,18 +3,18 @@ type: Module
 title: Drafts
 description: How tagged lines in vault notes become add candidates, why the pending count is computed twice, and what is persisted.
 source:
-  - src/DraftsTab.ts
-  - src/DraftChoiceModal.ts
-  - src/AddRouter.ts
-  - src/HoardView.ts
-  - src/DataManager.ts
+  - src/modules/drafts/ui/DraftsTab.ts
+  - src/modules/drafts/ui/DraftChoiceModal.ts
+  - src/app/AddRouter.ts
+  - src/app/HoardView.ts
+  - src/modules/watchlist/services/DataManager.ts
 source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
 ---
 
 # Drafts
 
 An inbox: the user writes `#hoard Some Title` anywhere in the vault; the Drafts tab
-([DraftsTab.ts](../../src/DraftsTab.ts)) lists those titles and routes each into Watchlist, Books,
+([DraftsTab.ts](../../src/modules/drafts/ui/DraftsTab.ts)) lists those titles and routes each into Watchlist, Books,
 Manga or Games. Drafts are not entries and have no note; only triage state is persisted.
 
 ## Scan
@@ -37,7 +37,7 @@ refreshes on `metadata-resolved`, not on `hoard-data-changed`, because it needs 
 
 ## Actions and persistence
 
-- Add: `openAddForTitle` ([AddRouter.ts](../../src/AddRouter.ts), shared with custom lists) opens
+- Add: `openAddForTitle` ([AddRouter.ts](../../src/app/AddRouter.ts), shared with custom lists) opens
   `DraftChoiceModal` (watchlist, book, manga, game) and the matching add modal prefilled with the
   title. After adding, `draftsAfterAdding` decides: `remove` dismisses, `keep` (default) marks the
   card "Added".

@@ -3,18 +3,18 @@ type: Flow
 title: WatchLog import
 description: The user-driven WatchLog import wizard step by step (detect, found, import, result, cleanup, done), when it opens at startup and what each decision means.
 source:
-  - src/WatchLogOnboardingModal.ts
-  - src/import/watchlog/detect.ts
-  - src/import/watchlog/onboardingState.ts
-  - src/import/watchlog/importer.ts
-  - src/import/watchlog/importFork.ts
-  - src/import/watchlog/importOriginal.ts
-  - src/import/watchlog/cleanup.ts
-  - src/import/watchlog/reportNote.ts
-  - src/WatchLogReport.ts
-  - src/main.ts
-  - src/import/watchlog/registerTypes.ts
-  - src/import/watchlog/schema1Read.ts
+  - src/modules/import/ui/WatchLogOnboardingModal.ts
+  - src/modules/import/services/watchlog/detect.ts
+  - src/modules/import/services/watchlog/onboardingState.ts
+  - src/modules/import/services/watchlog/importer.ts
+  - src/modules/import/services/watchlog/importFork.ts
+  - src/modules/import/services/watchlog/importOriginal.ts
+  - src/modules/import/services/watchlog/cleanup.ts
+  - src/modules/import/services/watchlog/reportNote.ts
+  - src/modules/import/ui/WatchLogReport.ts
+  - src/app/main.ts
+  - src/modules/import/services/watchlog/registerTypes.ts
+  - src/modules/import/services/watchlog/schema1Read.ts
 source_commit: 24cd6e5
 ---
 
@@ -23,7 +23,7 @@ source_commit: 24cd6e5
 Hoard never touches WatchLog data on its own: it starts as a fresh install in its own root and only
 *offers* the import. Trigger: `startVaultStorage` ([startup](startup.md)) or the settings entry
 `openWatchLogImport`. User-visible behaviour: [README](../../README.md#importing-from-watchlog). Only
-`src/import/watchlog/` and the wizard know WatchLog names ([modules/import](../modules/import.md)). The
+`src/modules/import/services/watchlog/` and the wizard know WatchLog names ([modules/import](../modules/import.md)). The
 schema-1 `data.json` is read from `unknown` (`prepareData`): an entry without id and title is reported
 and skipped, a wrong-typed field is dropped, and the import goes on.
 
@@ -74,7 +74,7 @@ flowchart TD
 
 ## Decisions
 
-Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts](../../src/import/watchlog/onboardingState.ts)):
+Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts](../../src/modules/import/services/watchlog/onboardingState.ts)):
 `imported` or `declined`. A kind is pending while it has no decision.
 
 - **Later** closes the wizard, writes nothing, so the next start asks again.
@@ -89,7 +89,7 @@ Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts]
 2. **import**: kinds run in order fork, original, each producing an `ImportReport`
    (`created`, `filled`, `review` items, `errors`). The modal cannot be closed while it runs. Both are
    **copies**: the source is never written and existing Hoard values are never overwritten.
-   - *fork* ([importFork.ts](../../src/import/watchlog/importFork.ts)): every file in the managed folders
+   - *fork* ([importFork.ts](../../src/modules/import/services/watchlog/importFork.ts)): every file in the managed folders
      plus `History.md` is copied below Hoard's root with its relative path; an existing target is only
      reported (`exists`). Copied entry notes (type, Books, Manga, Games folders) then get their 0.1
      property names translated in place (`translateProperties`, [modules/import](../modules/import.md));
@@ -97,7 +97,7 @@ Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts]
      Hoard base exists (reported). Device settings, cache and the draft / reading / games UI state fill
      only what Hoard lacks; the fork cache's `'none'` markers become `notfound` checks first
      ([entry cache](../concepts/entry-cache.md#reading-datajson)).
-   - *original* ([importOriginal.ts](../../src/import/watchlog/importOriginal.ts)): schema-1 data
+   - *original* ([importOriginal.ts](../../src/modules/import/services/watchlog/importOriginal.ts)): schema-1 data
      (side files `reading.json` / `history.json` merged for very old installs) goes through
      `importWatchLogData`, which writes notes through the normal codecs: new notes take the body of
      WatchLog's own note when it exists, existing Hoard notes get only missing keys (a differing Hoard
@@ -108,7 +108,7 @@ Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts]
    - Both: Watchlist types the source knows and Hoard's base lacks are appended (`registerTypes`,
      matched by name, Hoard's own types and colors stay), so their notes are indexed.
 3. **result**: counts per kind, review items (`exists`, `kept-value`, `error`) as links that open the
-   file, with a translated detail ([WatchLogReport.ts](../../src/WatchLogReport.ts)), and **Save
+   file, with a translated detail ([WatchLogReport.ts](../../src/modules/import/ui/WatchLogReport.ts)), and **Save
    report**: the same content rendered as Markdown in the UI language, with `[path](encoded)` links
    (paths may contain `[`, `]`, `#`), written as `WatchLog-Import YYYY-MM-DD.md` (local date) in Hoard's
    root, numbered when taken. Failed kinds show the errors, a retry button, and block cleanup. One

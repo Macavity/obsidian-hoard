@@ -3,24 +3,24 @@ type: Architecture
 title: UI kit
 description: How HoardView hosts tabs, which shared building blocks tabs and modals compose, the CSS conventions, and the UI boundary towards storage.
 source:
-  - src/HoardView.ts
-  - src/ui/TabInstance.ts
-  - src/ui/TabToolbar.ts
-  - src/ui/TabFilters.ts
-  - src/ui/SearchFormModal.ts
-  - src/ui/SearchPicker.ts
-  - src/ui/DuplicateGuard.ts
-  - src/VirtualGrid.ts
-  - src/VirtualScroller.ts
-  - src/LazyCardObserver.ts
-  - src/PosterCard.ts
-  - src/SearchQuery.ts
-  - src/LibraryIndex.ts
-  - src/ui/problemText.ts
-  - src/ui/detailShared.ts
-  - src/ui/detailFrame.ts
-  - src/ui/typeBadge.ts
-  - src/ui/IconButton.ts
+  - src/app/HoardView.ts
+  - src/shared/ui/TabInstance.ts
+  - src/shared/ui/TabToolbar.ts
+  - src/shared/ui/TabFilters.ts
+  - src/shared/ui/SearchFormModal.ts
+  - src/shared/ui/SearchPicker.ts
+  - src/shared/ui/DuplicateGuard.ts
+  - src/shared/ui/VirtualGrid.ts
+  - src/shared/ui/VirtualScroller.ts
+  - src/shared/ui/LazyCardObserver.ts
+  - src/shared/ui/PosterCard.ts
+  - src/shared/domain/SearchQuery.ts
+  - src/shared/services/LibraryIndex.ts
+  - src/shared/ui/problemText.ts
+  - src/shared/ui/detailShared.ts
+  - src/shared/ui/detailFrame.ts
+  - src/shared/ui/typeBadge.ts
+  - src/shared/ui/IconButton.ts
   - src/styles/icon-button.css
   - src/styles/index.css
 source_commit: c2139714f49e30567e3dfe03abd65ca70cbbd056
@@ -28,12 +28,10 @@ source_commit: c2139714f49e30567e3dfe03abd65ca70cbbd056
 
 # UI kit
 
-Tabs and modals are thin; shared behaviour lives in `src/ui/` and a few top-level helpers.
-**Boundary**: UI depends on the managers, never on storage. Verified by grepping `src/storage/`
-imports: outside managers, the import module (`src/import/watchlog/`) and `main.ts`, only `settingsSplit.ts` and `backup.ts`
-(settings persistence), `ApiService.ts` (a type) and two pure helpers (`typeNameProblem` behind
-`ui/problemText.ts`, `safeTypeName` in the CSV modal) touch it. No tab or modal imports a store, codec or
-index.
+Tabs and modals are thin; shared behaviour lives in `src/shared/ui/`, feature UI in `src/modules/<x>/ui/`.
+**Boundary** (ESLint, [overview](overview.md)): UI never imports `shared/storage`, `app` or a `services/` file as a
+value (type imports only); it gets managers, API services and settings as constructor `Deps` (`deps.settings.get()` /
+`update()`), so no tab or modal can import a store, codec or index.
 
 ```mermaid
 flowchart TD
@@ -50,8 +48,8 @@ flowchart TD
 
 ## HoardView and the TABS registry
 
-[HoardView.ts](../../src/HoardView.ts) holds `TABS` in tab-bar order; a `TabDefinition` has
-`create(ctx)` returning a [TabInstance](../../src/ui/TabInstance.ts) (`render`, optional `destroy`),
+[HoardView.ts](../../src/app/HoardView.ts) holds `TABS` in tab-bar order; a `TabDefinition` has
+`create(ctx)` returning a [TabInstance](../../src/shared/ui/TabInstance.ts) (`render`, optional `destroy`),
 an optional content class and an optional badge. `HoardView` calls `destroy` whenever it drops the
 active instance: on a tab switch, on a UI rebuild (`refreshUI` from the settings) and on view close.
 A **tab switch recreates** the instance (state lost); a **data change re-renders the same
@@ -61,11 +59,11 @@ computed without the tab open and refresh on `data-change` (Upcoming) or `metada
 re-applies the colour theme and rebuilds. On mobile a `ResizeObserver` pins an explicit height on
 the tab content because the WebView freezes flex heights when the keyboard opens; while an editor
 inside the tab has focus the height is pinned to the smallest value seen and released on focusout.
-While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.importRunning`) `renderTabContent` renders only an "import running" line instead of the tab, and data changes re-render that placeholder rather than a tab instance.
+While the [WatchLog wizard](../flows/watchlog-import.md) is open (the injected `importRunning()`) `renderTabContent` renders only an "import running" line instead of the tab, and data changes re-render that placeholder rather than a tab instance.
 
 ## Shared pieces
 
-- **Toolbar** ([TabToolbar.ts](../../src/ui/TabToolbar.ts), [TabFilters.ts](../../src/ui/TabFilters.ts)):
+- **Toolbar** ([TabToolbar.ts](../../src/shared/ui/TabToolbar.ts), [TabFilters.ts](../../src/shared/ui/TabFilters.ts)):
   search box (per-keystroke store, debounced commit re-renders), `renderToolbarCore` (saved
   filter, Filters, Sorting, action bar while a selection exists), filter dropdown building a draft
   per click and committing on Apply, sorting popover, view switch, add button. Selection mode works
@@ -85,7 +83,7 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.import
   draws the card; `POSTER_CARD_TEXT_H` must match the CSS. A card built elsewhere reuses its parts:
   `createPosterPlaceholder` (letter tile) and `loadCardPoster` (sets the image, marks the card
   `has-poster` on load, hands a broken image to the caller).
-- **Search language** (`searchItems` in [SearchQuery.ts](../../src/SearchQuery.ts)): Fuse index
+- **Search language** (`searchItems` in [SearchQuery.ts](../../src/shared/domain/SearchQuery.ts)): Fuse index
   over declared fields; bare tokens fuzzy and ANDed, `"quoted"` exact, `field:value` scoped (an
   unknown prefix stays text, so `Re:Zero` works), `field:>n` and friends numeric, `a | b` ORs,
   `-token` excludes. Empty query returns null, meaning "no search". The query is lexed, then turned
@@ -99,7 +97,7 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.import
   (season wrap, header and palette-coloured badge of the accordion), `scheduleText` and `dateNames` (localized dates), `problemText`.
 - **Form primitives**: rows and cells in `ui/FormCells.ts`, `DatePicker`, `StarRating`,
   `StatusDropdown`, `ConfirmModal`, `StickyModal` (sticky footer in detail modals).
-- **Icon buttons** ([IconButton.ts](../../src/ui/IconButton.ts)): `createIconButton(parent,
+- **Icon buttons** ([IconButton.ts](../../src/shared/ui/IconButton.ts)): `createIconButton(parent,
   { icon, label, cls?, variant? })` builds a `type="button"` with a Lucide icon, `aria-label` and
   tooltip from the same label, base class `hoard-icon-btn` plus `--framed` (bordered) or `--sm`
   (16px inline). **Every icon-only button goes through it**, no text glyphs (`×`, `+`, `⋮`, `↻`);
@@ -128,6 +126,6 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (`plugin.import
 ## Where to change what
 
 A new tab: a `TabDefinition` in `TABS` plus `TabName`. Shared toolbar, filter or sort behaviour:
-`src/ui/`. A new add modal: extend `SearchFormModal`, build a `LibraryIndex` and a
+`src/shared/ui/`. A new add modal: extend `SearchFormModal`, build a `LibraryIndex` and a
 `DuplicateGuard`. Grid geometry: `VirtualGrid.ts` / `VirtualScroller.ts`; card look:
 `PosterCard.ts` and the stylesheets in `src/styles/` (one per UI area, imported in cascade order by `index.css`). Search syntax: `SearchQuery.ts` and `SearchHelpModal.ts`.

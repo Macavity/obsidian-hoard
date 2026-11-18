@@ -3,16 +3,16 @@ type: Module
 title: Dashboard
 description: What the dashboard counts as watched, where its numbers come from, and how the layout differs on mobile.
 source:
-  - src/DashboardTab.ts
-  - src/HoardView.ts
-  - src/DataManager.ts
+  - src/modules/dashboard/ui/DashboardTab.ts
+  - src/app/HoardView.ts
+  - src/modules/watchlist/services/DataManager.ts
   - src/styles/dashboard.css
 source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
 ---
 
 # Dashboard
 
-Read-only overview and the tab the panel opens on. [DashboardTab.ts](../../src/DashboardTab.ts)
+Read-only overview and the tab the panel opens on. [DashboardTab.ts](../../src/modules/dashboard/ui/DashboardTab.ts)
 persists nothing; `render()` precomputes titles by type, planned titles, books, manga, games and
 the reading aggregates once, then draws cards, "More statistics", suggestions and the recent lists.
 `CollageUtil.ts` is not used here.

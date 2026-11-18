@@ -3,19 +3,19 @@ type: Flow
 title: Backup and restore
 description: What a backup file contains, which copy loses the API keys, and in which order a restore writes.
 source:
-  - src/backup.ts
-  - src/SettingsTab.ts
-  - src/main.ts
-  - src/backupEntries.ts
-  - src/featureSettings.ts
+  - src/modules/backup/services/backup.ts
+  - src/modules/settings/ui/SettingsTab.ts
+  - src/app/main.ts
+  - src/shared/storage/entryReaders.ts
+  - src/shared/domain/featureSettings.ts
 source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
 # Backup and restore
 
-Trigger: the Backup section of the settings tab ([SettingsTab.ts](../../src/SettingsTab.ts),
-around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../../src/backup.ts);
-`plugin.backupManagers()` hands it every manager plus the stores.
+Trigger: the Backup section of the settings tab ([SettingsTab.ts](../../src/modules/settings/ui/SettingsTab.ts),
+around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../../src/modules/backup/services/backup.ts);
+the backup deps built in [main.ts](../../src/app/main.ts) hand it every manager plus the stores.
 
 ## Export
 

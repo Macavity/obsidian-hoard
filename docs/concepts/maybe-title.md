@@ -3,9 +3,9 @@ type: Domain
 title: Maybe title
 description: What a Maybe note is, how it differs from a library title, and how it is promoted.
 source:
-  - src/types.ts
-  - src/storage/titleCodec.ts
-  - src/DataManager.ts
+  - src/shared/domain/types.ts
+  - src/shared/storage/titleCodec.ts
+  - src/modules/watchlist/services/DataManager.ts
 source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 ---
 
@@ -13,9 +13,9 @@ source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
 
 A **Maybe** is a title the user is considering but has not added to the library: a note in the
 same type folder with the property `Maybe: true`. It is decoded like any title
-([titleCodec](../../src/storage/titleCodec.ts) sets `title.maybe`), but
+([titleCodec](../../src/shared/storage/titleCodec.ts) sets `title.maybe`), but
 `DataManager.getTitles()` excludes it; `getMaybeTitles()` lists Maybe notes as `MaybeTitle`
-([types.ts](../../src/types.ts)).
+([types.ts](../../src/shared/domain/types.ts)).
 
 - `addMaybeTitle` creates the note (id = note path), `removeMaybeTitle` trashes it.
 - **Promotion**: `addTitle` for a title whose note path already holds a Maybe note takes that note

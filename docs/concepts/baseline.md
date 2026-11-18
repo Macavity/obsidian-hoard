@@ -3,8 +3,8 @@ type: Domain
 title: Baseline
 description: How a UI copy remembers the stored state it came from, so a write only touches what that copy changed.
 source:
-  - src/storage/baseline.ts
-  - src/DataManager.ts
+  - src/shared/storage/baseline.ts
+  - src/modules/watchlist/services/DataManager.ts
 source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
@@ -13,7 +13,7 @@ source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 Tabs and modals work on **mutable copies** of entries (`DataManager.viewOf`). Several copies may
 exist, a note may change on disk meanwhile (sync, hand edit), and a stale copy must not undo that.
 The baseline is the answer: each copy carries, in a symbol property, the stored state it was made
-from ([baseline.ts](../../src/storage/baseline.ts): `setBaseline`, `getBaseline`, and
+from ([baseline.ts](../../src/shared/storage/baseline.ts): `setBaseline`, `getBaseline`, and
 `setNotesBaseline` for the `## Notes` body, which lives outside the properties).
 
 The symbol property is enumerable so it survives object spread, but `Object.keys`, JSON and

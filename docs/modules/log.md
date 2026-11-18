@@ -3,11 +3,11 @@ type: Module
 title: Log
 description: What the activity log records, how the Log tab and the Recently Watched shelf read it, and where to change the wording.
 source:
-  - src/HistoryManager.ts
-  - src/storage/HistoryStore.ts
-  - src/storage/historyLine.ts
-  - src/LogTab.ts
-  - src/DataManager.ts
+  - src/shared/services/HistoryManager.ts
+  - src/shared/storage/HistoryStore.ts
+  - src/shared/storage/historyLine.ts
+  - src/modules/log/ui/LogTab.ts
+  - src/modules/watchlist/services/DataManager.ts
 source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
 ---
 
@@ -21,9 +21,9 @@ synced like any note.
 
 | Piece | File | Role |
 |---|---|---|
-| `HistoryManager` | [HistoryManager.ts](../../src/HistoryManager.ts) | in-memory entries (max 1000), `log()`, `deleteEntry`, `restore`, change listeners |
-| `HistoryStore` | [HistoryStore.ts](../../src/storage/HistoryStore.ts) | file I/O: parse, append, replace, cap; ignores own writes |
-| `LogTab` | [LogTab.ts](../../src/LogTab.ts) | virtualised timeline grouped by day, source filter, per-entry delete |
+| `HistoryManager` | [HistoryManager.ts](../../src/shared/services/HistoryManager.ts) | in-memory entries (max 1000), `log()`, `deleteEntry`, `restore`, change listeners |
+| `HistoryStore` | [HistoryStore.ts](../../src/shared/storage/HistoryStore.ts) | file I/O: parse, append, replace, cap; ignores own writes |
+| `LogTab` | [LogTab.ts](../../src/modules/log/ui/LogTab.ts) | virtualised timeline grouped by day, source filter, per-entry delete |
 | callers | `DataManager`, `ReadingDataManager`, `GameDataManager` | `logChanges`, `logCompleted`, `logEpisodeWatched` and the add/delete/group paths |
 
 ## How it works

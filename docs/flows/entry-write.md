@@ -3,15 +3,15 @@ type: Flow
 title: Entry write
 description: What happens between a user edit in a tab or modal and the note on disk, and how the UI learns about it without a double render.
 source:
-  - src/DataManager.ts
-  - src/ReadingDataManager.ts
-  - src/GameDataManager.ts
-  - src/storage/noteWrite.ts
-  - src/storage/EntryIndex.ts
-  - src/storage/titleCodec.ts
-  - src/storage/baseline.ts
-  - src/storage/noteBody.ts
-  - src/storage/LocalStore.ts
+  - src/modules/watchlist/services/DataManager.ts
+  - src/modules/reading/services/ReadingDataManager.ts
+  - src/modules/games/services/GameDataManager.ts
+  - src/shared/storage/noteWrite.ts
+  - src/shared/storage/EntryIndex.ts
+  - src/shared/storage/titleCodec.ts
+  - src/shared/storage/baseline.ts
+  - src/shared/storage/noteBody.ts
+  - src/shared/storage/LocalStore.ts
 source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
@@ -19,7 +19,7 @@ source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 
 Trigger: a tab or modal mutates its copy of an entry and calls `updateTitle` / `updateBook` /
 `updateGame` (or a silent variant plus `save()`). All three managers write through one pipeline,
-`writeEntry` in [noteWrite.ts](../../src/storage/noteWrite.ts) (steps 2 to 4 below), and tell it
+`writeEntry` in [noteWrite.ts](../../src/shared/storage/noteWrite.ts) (steps 2 to 4 below), and tell it
 what differs through `EntryWriteHooks`. The diagram shows the title path.
 
 | Hook | Titles | Books and manga | Games |

@@ -3,16 +3,16 @@ type: Flow
 title: Airtime notifications
 description: How the once-a-minute scheduler turns schedules into notices, badge counts and the status bar counter.
 source:
-  - src/airtimeScheduler.ts
-  - src/main.ts
-  - src/DataManager.ts
-  - src/HoardView.ts
+  - src/modules/airtime/services/airtimeScheduler.ts
+  - src/app/main.ts
+  - src/modules/watchlist/services/DataManager.ts
+  - src/app/HoardView.ts
 source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # Airtime notifications
 
-Trigger: `startAirtimeScheduler` in [main.ts](../../src/main.ts) runs one pass at load and every
+Trigger: `startAirtimeScheduler` in [main.ts](../../src/app/main.ts) runs one pass at load and every
 60 s (`registerInterval`). The Upcoming tab can also tick an entry by hand and calls
 `markAirtimeHandled` so the scheduler does not fire twice.
 
@@ -30,7 +30,7 @@ flowchart TD
 ## Steps
 
 1. `runAirtimeScheduler(deps, notified, now)` in
-   [airtimeScheduler.ts](../../src/airtimeScheduler.ts) walks every `AirtimeEntry`
+   [airtimeScheduler.ts](../../src/modules/airtime/services/airtimeScheduler.ts) walks every `AirtimeEntry`
    ([airtime](../concepts/airtime.md)).
 2. **Due** = today's `HH:MM` has passed at most 12 hours ago (`AIRTIME_CATCH_UP_MINUTES`, catches a
    sleeping machine without a burst after a long sleep) and the recurrence matches today

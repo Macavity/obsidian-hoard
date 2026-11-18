@@ -3,35 +3,37 @@ type: Module
 title: Reading
 description: How books and manga differ in model and progress, the release-status and custom-column rules, and where CSV and quotes live.
 source:
-  - src/ReadingDataManager.ts
-  - src/storage/readingCodec.ts
-  - src/storage/properties.ts
-  - src/storage/EntryIndex.ts
-  - src/ReadingTab.ts
-  - src/ReadingDetailModal.ts
-  - src/AddReadingModal.ts
-  - src/ReadingManageColumnsModal.ts
-  - src/ReadingCsvModal.ts
-  - src/ReadingScheduleModal.ts
-  - src/csv/csvCore.ts
-  - src/coverRefresh.ts
-  - src/csv/CsvModalBase.ts
-  - src/entryFactories.ts
+  - src/modules/reading/services/ReadingDataManager.ts
+  - src/shared/storage/readingCodec.ts
+  - src/shared/storage/properties.ts
+  - src/shared/storage/EntryIndex.ts
+  - src/modules/reading/ui/ReadingTab.ts
+  - src/modules/reading/ui/ReadingDetailModal.ts
+  - src/modules/reading/ui/AddReadingModal.ts
+  - src/modules/reading/ui/ReadingManageColumnsModal.ts
+  - src/modules/reading/ui/ReadingCsvModal.ts
+  - src/modules/airtime/ui/ReadingScheduleModal.ts
+  - src/shared/domain/csvCore.ts
+  - src/modules/covers/services/coverRefresh.ts
+  - src/shared/ui/CsvModalBase.ts
+  - src/shared/domain/entryFactories.ts
 source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
 ---
 
 # Reading
 
-One note per book (`Books/`) or manga (`Manga/`). [ReadingDataManager.ts](../../src/ReadingDataManager.ts)
-owns the copies, writes, history and Upcoming sync; [readingCodec.ts](../../src/storage/readingCodec.ts)
+One note per book (`Books/`) or manga (`Manga/`). [ReadingDataManager.ts](../../src/modules/reading/services/ReadingDataManager.ts)
+owns the copies, writes, history and Upcoming sync; [readingCodec.ts](../../src/shared/storage/readingCodec.ts)
 maps properties to `Book` / `Manga`. Writes follow [flows/entry-write](../flows/entry-write.md)
 (`writeItem`, `afterWrite`, [baseline](../concepts/baseline.md)); the UI is
-[ReadingTab.ts](../../src/ReadingTab.ts) (sub-tabs books/manga, shelves, virtual grid),
-[AddReadingModal.ts](../../src/AddReadingModal.ts) (Open Library or Google Books for books via `searchBooks`, MAL via Jikan for manga),
-[ReadingDetailModal.ts](../../src/ReadingDetailModal.ts), [ReadingManageColumnsModal.ts](../../src/ReadingManageColumnsModal.ts)
+[ReadingTab.ts](../../src/modules/reading/ui/ReadingTab.ts) (sub-tabs books/manga, shelves, virtual grid),
+[AddReadingModal.ts](../../src/modules/reading/ui/AddReadingModal.ts) (Open Library or Google Books for books via `searchBooks`, MAL via Jikan for manga),
+[ReadingDetailModal.ts](../../src/modules/reading/ui/ReadingDetailModal.ts), [ReadingManageColumnsModal.ts](../../src/modules/reading/ui/ReadingManageColumnsModal.ts)
 and the CSV modals opened from the settings tab. `ReadingCsvModal` and the watchlist's `CsvModal` both extend
-[CsvModalBase.ts](../../src/csv/CsvModalBase.ts), which owns the wizard (export selection, upload, header
+[CsvModalBase.ts](../../src/shared/ui/CsvModalBase.ts), which owns the wizard (export selection, upload, header
 mapping, value mapping, duplicate preview, batch import); subclasses supply fields, labels and `doImport`.
+
+Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pending edit, so an edit not yet written survives a rename ([entry id](../concepts/entry-id.md)).
 
 ## Model
 
@@ -67,7 +69,7 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
   can end up under the old key (`Custom <old>`); nothing is lost.
 - **Quotes** are not indexed: the detail modal parses `## Quotes` for `> [!quote] <reference>`
   callouts; `appendQuote` inserts newest first and creates the section when missing.
-- **Book search** is keyless: `searchBooks` ([coverRefresh.ts](../../src/coverRefresh.ts)) uses
+- **Book search** is keyless: `searchBooks` ([coverRefresh.ts](../../src/modules/covers/services/coverRefresh.ts)) uses
   Google Books when `booksApiSource` is `google` and a key is set, else Open Library
   ([api layer](../architecture/api-layer.md)); there is no "key required" panel. A pick sets
   `googleBooksId` or `openLibraryId`, then a background `enrichBook` fetches the full record: Google
@@ -90,7 +92,7 @@ mapping, value mapping, duplicate preview, batch import); subclasses supply fiel
 | Change | Place |
 |---|---|
 | Property names, defaults when reading a note, validation | `readingCodec.ts` |
-| Defaults of a new book or manga | `newBook`, `newManga` in [entryFactories.ts](../../src/entryFactories.ts); the WatchLog import keeps its own |
+| Defaults of a new book or manga | `newBook`, `newManga` in [entryFactories.ts](../../src/shared/domain/entryFactories.ts); the WatchLog import keeps its own |
 | Status list and colours | `READING_STATUSES`, `DEFAULT_READING_STATUS_COLORS` in `types.ts`, `readingColors.ts` |
 | Release and Upcoming rules | `applyReleaseStatus`, `syncUpcoming` in the manager |
 | Auto-complete | `applyAutoComplete` in `ReadingDetailModal.ts` |

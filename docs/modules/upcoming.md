@@ -3,19 +3,19 @@ type: Module
 title: Upcoming
 description: What the Upcoming tab shows, how it decides aired versus due, what a tick and a removal write, and how schedules are added.
 source:
-  - src/AirtimeTab.ts
-  - src/DataManager.ts
-  - src/ui/ScheduleForm.ts
-  - src/ReadingScheduleModal.ts
-  - src/GameScheduleModal.ts
-  - src/UpcomingFinderModal.ts
-  - src/types.ts
+  - src/modules/airtime/ui/AirtimeTab.ts
+  - src/modules/watchlist/services/DataManager.ts
+  - src/shared/ui/ScheduleForm.ts
+  - src/modules/airtime/ui/ReadingScheduleModal.ts
+  - src/modules/airtime/ui/GameScheduleModal.ts
+  - src/modules/airtime/ui/UpcomingFinderModal.ts
+  - src/shared/domain/types.ts
 source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
 ---
 
 # Upcoming
 
-The tab `AirtimeTab` ([AirtimeTab.ts](../../src/AirtimeTab.ts)) has no store: every row is an
+The tab `AirtimeTab` ([AirtimeTab.ts](../../src/modules/airtime/ui/AirtimeTab.ts)) has no store: every row is an
 `AirtimeEntry` computed by `DataManager.getAirtimeEntries()` from note properties, see
 [airtime](../concepts/airtime.md) for manual versus derived entries and the writes. Notifications
 and the status bar are in [flows/airtime-notifications](../flows/airtime-notifications.md).
@@ -44,7 +44,7 @@ entries the cached API pointer (`airing.nextSeason/nextEpisode`) overrides the n
 - `confirmTick`: a single release removes the entry and reverts the status to the plan status;
   the final unit (`currentEpisode >= totalUnits`) removes the entry and leaves the status; otherwise
   `tickAirtimeEntry` writes `airtimeAcknowledged` and, without an API pointer, increments the
-  episode. It also calls `plugin.markAirtimeHandled` so the scheduler does not notify again.
+  episode. It also calls the injected `markAirtimeHandled` so the scheduler does not notify again.
 - Removal rules (`removeAirtimeEntriesBatch`): a manual schedule drops only its `airtime*`
   keys, a derived card clears the release date through the owning manager, which then applies
   its release-status rule.
@@ -53,10 +53,10 @@ entries the cached API pointer (`airing.nextSeason/nextEpisode`) overrides the n
 
 "+ Add" opens `UpcomingFinderModal` (fuzzy finder over titles, books, manga and games not yet
 tracked), then the schedule modal by source: `AirtimeScheduleModal` (inside `AirtimeTab.ts`:
-single or recurring, optional time), [ReadingScheduleModal.ts](../../src/ReadingScheduleModal.ts)
-(no time, volume and chapter counters), [GameScheduleModal.ts](../../src/GameScheduleModal.ts)
+single or recurring, optional time), [ReadingScheduleModal.ts](../../src/modules/airtime/ui/ReadingScheduleModal.ts)
+(no time, volume and chapter counters), [GameScheduleModal.ts](../../src/modules/airtime/ui/GameScheduleModal.ts)
 (date only, also sets the game's `releaseDate`, future dates only). Shared form state and
-recurrence options live in [ScheduleForm.ts](../../src/ui/ScheduleForm.ts).
+recurrence options live in [ScheduleForm.ts](../../src/shared/ui/ScheduleForm.ts).
 
 ## Where to change what
 

@@ -3,15 +3,15 @@ type: Flow
 title: Add title
 description: From the Add modal's search box to a new note, including API routing, the in-library marker and the duplicate guard.
 source:
-  - src/AddTitleModal.ts
-  - src/ui/SearchFormModal.ts
-  - src/ui/DuplicateGuard.ts
-  - src/titleSearch.ts
-  - src/apiSources.ts
-  - src/LibraryIndex.ts
-  - src/DataManager.ts
-  - src/entryFactories.ts
-  - src/lookup.ts
+  - src/modules/watchlist/ui/AddTitleModal.ts
+  - src/shared/ui/SearchFormModal.ts
+  - src/shared/ui/DuplicateGuard.ts
+  - src/modules/watchlist/ui/titleSearch.ts
+  - src/shared/api/apiSources.ts
+  - src/shared/services/LibraryIndex.ts
+  - src/modules/watchlist/services/DataManager.ts
+  - src/shared/domain/entryFactories.ts
+  - src/shared/api/lookup.ts
 source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
@@ -42,12 +42,12 @@ sequenceDiagram
 
 ## Steps
 
-1. **Skeleton**: `SearchFormModal` ([ui/SearchFormModal.ts](../../src/ui/SearchFormModal.ts))
+1. **Skeleton**: `SearchFormModal` ([ui/SearchFormModal.ts](../../src/shared/ui/SearchFormModal.ts))
    mounts a `SearchPicker` above a form and asks the subclass for picker options, `search`,
    `noApiMessage`, `renderResult`, `selectResult`, `renderForm`. A prefilled query searches at once.
-2. **Routing**: `searchTitles` ([titleSearch.ts](../../src/titleSearch.ts)) maps the selected type
+2. **Routing**: `searchTitles` ([titleSearch.ts](../../src/modules/watchlist/ui/titleSearch.ts)) maps the selected type
    through `typeApiMapping` to anime (Jikan or AniList) or movie/series, where
-   `effectiveMediaSource` ([apiSources.ts](../../src/apiSources.ts)) picks Cinemeta, OMDb or TMDB:
+   `effectiveMediaSource` ([apiSources.ts](../../src/shared/api/apiSources.ts)) picks Cinemeta, OMDb or TMDB:
    the chosen one if keyed, else keyless Cinemeta, so Movie and TV Show always search. The "No API
    configured" panel (`noApiMessage`) now only shows for a custom type with no entry in
    `typeApiMapping`. The default type comes from `resolveDefaultAddType`.
@@ -64,10 +64,10 @@ sequenceDiagram
    A pasted IMDb link (`AddFromUrlModal`) resolves the same way and opens this modal prefilled,
    without a poster.
 5. **Submit**: `addTitle` requires a name, then `blockDuplicate`
-   ([ui/DuplicateGuard.ts](../../src/ui/DuplicateGuard.ts)) warns on a same-name title with
+   ([ui/DuplicateGuard.ts](../../src/shared/ui/DuplicateGuard.ts)) warns on a same-name title with
    Continue/Cancel (Continue lets the next attempt pass once). "To be released" is not selectable;
    it follows the release date. The entry comes from `newTitle`
-   ([entryFactories.ts](../../src/entryFactories.ts)), which owns the defaults of a new title; the
+   ([entryFactories.ts](../../src/shared/domain/entryFactories.ts)), which owns the defaults of a new title; the
    modal passes only its form fields. A `Completed` add marks all episodes watched
    (`completedEpisodes`) and may set the finish date.
 6. **Write**: `DataManager.addTitle` creates the note (or takes over a

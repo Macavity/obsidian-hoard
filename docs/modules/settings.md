@@ -3,38 +3,38 @@ type: Module
 title: Settings
 description: How the settings tab is organised, how the API cards and type validation work, and the checklist for adding a setting.
 source:
-  - src/SettingsTab.ts
-  - src/settingsSplit.ts
-  - src/settingsNormalize.ts
-  - src/storage/SharedConfigStore.ts
-  - src/storage/VaultLayout.ts
-  - src/types.ts
-  - src/main.ts
-  - src/apiSources.ts
-  - src/ui/problemText.ts
-  - src/storage/SecretStore.ts
-  - src/featureSettings.ts
-  - src/storage/read.ts
+  - src/modules/settings/ui/SettingsTab.ts
+  - src/shared/services/settingsSplit.ts
+  - src/shared/domain/settingsNormalize.ts
+  - src/shared/storage/SharedConfigStore.ts
+  - src/shared/storage/VaultLayout.ts
+  - src/shared/domain/types.ts
+  - src/app/main.ts
+  - src/shared/api/apiSources.ts
+  - src/shared/ui/problemText.ts
+  - src/shared/storage/SecretStore.ts
+  - src/shared/domain/featureSettings.ts
+  - src/shared/domain/read.ts
 source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
 ---
 
 # Settings
 
-One `HoardPluginSettings` object (`plugin.settings`), composed from defaults, `data.json` and the
+One `HoardPluginSettings` object (owned by the plugin as private `state`; everything else reaches it through [SettingsService](../../src/shared/services/SettingsService.ts)), composed from defaults, `data.json` and the
 base and persisted back by the whitelist; that split, the rules in `normalizeSettings` and the
 diff-only write in `persistSettings` are in [shared vs local](../concepts/shared-vs-local.md).
 API keys, Steam id, IGDB credentials and `jikanBaseUrl` are not in `data.json` but in Obsidian's secret
-storage: `loadSettings` merges them in, `saveSettings` writes them through `SecretStore`
+storage: `loadSettings` merges them in, `persistAll` (what `SettingsService.update` runs) writes them through `SecretStore`
 ([shared vs local](../concepts/shared-vs-local.md)).
 Reading and games keep their own settings objects in their managers, split the same way
 (`splitNested`); their stored blocks are read field by field by `readReadingSettings` /
-`readGamesSettings` ([featureSettings.ts](../../src/featureSettings.ts)), which backup restore uses too. `main.ts` wraps the two in `loadSettings` / `saveSettings`; a changed TMDB or
+`readGamesSettings` ([featureSettings.ts](../../src/shared/domain/featureSettings.ts)), which backup restore uses too. `main.ts` wraps the two in `loadSettings` / `persistAll`; a changed TMDB or
 OMDb key also re-arms "no key" API checks; a synced base change re-composes and dispatches
 `hoard-data-changed`.
 
 ## The tab
 
-[SettingsTab.ts](../../src/SettingsTab.ts) renders one section at a time (nav: General, API,
+[SettingsTab.ts](../../src/modules/settings/ui/SettingsTab.ts) renders one section at a time (nav: General, API,
 Customize, Watchlist, Drafts, Custom lists, Reading, Widgets, Quick Info; icon-only on mobile).
 Two helpers build every card: `settingsGroup` (accent header with a live status chip, variant
 classes spelled out in `SETTINGS_GROUP_CLASSES` for the dead-CSS lint) and `sgCard` (sub-card with
@@ -53,7 +53,7 @@ Cinemeta), `booksApiSource` (`openlibrary | google`), `animeApiSource`, `gamesAp
 (`steam | rawg | igdb`, default Steam). All are device-local. The keyless choice shows a "{name} · no
 key needed" chip; a keyed choice without its key falls back at runtime through
 `effectiveMediaSource` / `effectiveBookSource` / `effectiveGameSource`
-([apiSources.ts](../../src/apiSources.ts)), the chip shows "key needed" and `fallbackHint` adds
+([apiSources.ts](../../src/shared/api/apiSources.ts)), the chip shows "key needed" and `fallbackHint` adds
 "Uses {source} until a key is set." Stored values are never rewritten by the fallback.
 `renderTypeApiMapping` routes custom types to the anime or movie API, with
 Anime, Movie and TV Show locked.
@@ -61,7 +61,7 @@ Anime, Movie and TV Show locked.
 ## Types as folders
 
 A type name is a folder under the root, so the tag editor validates with `typeNameProblem`
-([VaultLayout.ts](../../src/storage/VaultLayout.ts)): a `{ reason: 'reserved' | 'unsafe' }` code (text from
+([VaultLayout.ts](../../src/shared/storage/VaultLayout.ts)): a `{ reason: 'reserved' | 'unsafe' }` code (text from
 `typeNameProblemText` in `ui/problemText.ts`) when `safeTypeName` would change
 the input (unsafe characters, leading dots, Windows device names, or a reserved folder such as
 Books, Manga, Games, CustomLists). Built-in types (`LOCKED_TYPES`) cannot be removed; statuses
@@ -69,18 +69,18 @@ are colour-only.
 
 ## Adding a setting
 
-1. `HoardPluginSettings` and `DEFAULT_SETTINGS` in [types.ts](../../src/types.ts). The default is
+1. `HoardPluginSettings` and `DEFAULT_SETTINGS` in [types.ts](../../src/shared/domain/types.ts). The default is
    not optional: a key without one counts as unknown and passes through unchecked.
 2. Nothing for a value whose kind is all that can be wrong: a stored value of another kind than the
    default's falls back to the default. List elements are checked too: invalid ones are dropped, and if
    what is left breaks the setting's own rule (five rating tiers, a non-empty list) the whole value falls
    back to the default. An entry in `RULES`
-   ([settingsNormalize.ts](../../src/settingsNormalize.ts)) only when what the value says must be
+   ([settingsNormalize.ts](../../src/shared/domain/settingsNormalize.ts)) only when what the value says must be
    checked or migrated.
-3. A `Setting` or card in the matching `render*` of the tab, saving through `plugin.saveSettings()`.
+3. A `Setting` or card in the matching `render*` of the tab, reading with `deps.settings.get()` and writing with `await deps.settings.update((s) => { s.x = … })` (or `stage` for text typed key by key; `flush` runs on unload). `update` persists once (`persistSettings`) and emits the change signal once; never save directly.
 4. Synced across devices? Add the key to `SHARED_SETTING_KEYS` (or `NESTED_SHARED_KEYS` for
    reading/games). Never a secret. Default is device-local. A new key or credential goes into
-   `SECRET_SETTINGS` ([SecretStore.ts](../../src/storage/SecretStore.ts)) instead.
-5. Needs a live effect? Call `emitDataChanged()` as neighbouring settings do. Not a dispatch on
+   `SECRET_SETTINGS` ([SecretStore.ts](../../src/shared/storage/SecretStore.ts)) instead.
+5. Needs a live effect? `update` already emits the change signal; nothing to call. Not a dispatch on
    `activeDocument`: the settings tab runs in its own window since Obsidian 1.15
    ([overview](../architecture/overview.md#the-change-signal)).

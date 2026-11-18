@@ -3,10 +3,10 @@ type: Module
 title: Custom lists
 description: How a custom list is stored as a note with a JSON block, what a column and a row are, and how the auto time column is filled.
 source:
-  - src/CustomListsTab.ts
-  - src/ui/ColumnsEditor.ts
-  - src/storage/VaultLayout.ts
-  - src/types.ts
+  - src/modules/custom-lists/ui/CustomListsTab.ts
+  - src/shared/ui/ColumnsEditor.ts
+  - src/shared/storage/VaultLayout.ts
+  - src/shared/domain/types.ts
 source_commit: 295a691
 ---
 
@@ -15,9 +15,9 @@ source_commit: 295a691
 Free-form tables (name, typed columns, rows) beside the typed libraries. A list is one note under
 `<root>/CustomLists/`; the folder is excluded from entry classification, so lists have no
 [entry id](../concepts/entry-id.md), no codec and no place in `EntryIndex`. Everything lives in
-[CustomListsTab.ts](../../src/CustomListsTab.ts): the tab, `CustomListManager` (all file I/O,
+[CustomListsTab.ts](../../src/modules/custom-lists/ui/CustomListsTab.ts): the tab, `CustomListManager` (all file I/O,
 also used by the settings tab for default columns), `EditColumnsModal` / `DefaultColumnsModal`
-(both render [ColumnsEditor.ts](../../src/ui/ColumnsEditor.ts)), `NotesModal`, `ImportListModal`
+(both render [ColumnsEditor.ts](../../src/shared/ui/ColumnsEditor.ts)), `NotesModal`, `ImportListModal`
 (paste TSV) and clipboard export (Markdown or TSV).
 
 ## File format

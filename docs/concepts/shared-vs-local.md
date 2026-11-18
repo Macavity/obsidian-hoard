@@ -3,27 +3,27 @@ type: Domain
 title: Shared vs local settings
 description: Which settings sync through Hoard.base, which stay in data.json, which live in secret storage, and why an API key never reaches the base.
 source:
-  - src/storage/SharedConfigStore.ts
-  - src/settingsSplit.ts
-  - src/settingsNormalize.ts
-  - src/storage/LocalStore.ts
-  - src/storage/storageTypes.ts
-  - src/storage/SecretStore.ts
+  - src/shared/storage/SharedConfigStore.ts
+  - src/shared/services/settingsSplit.ts
+  - src/shared/domain/settingsNormalize.ts
+  - src/shared/storage/LocalStore.ts
+  - src/shared/storage/storageTypes.ts
+  - src/shared/storage/SecretStore.ts
 source_commit: cda80ae35181b2c9dfc2b412818e2a0ca596a18f
 ---
 
 # Shared vs local settings
 
-Settings are one object in memory (`plugin.settings`) but three places on disk:
+Settings are one object in memory (owned by the plugin, read and changed only through [SettingsService](../../src/shared/services/SettingsService.ts): `get`, `update`, `stage`, `flush`) but three places on disk:
 
 | Where | What | Synced |
 |---|---|---|
 | `hoard:` block in `<root>/Hoard.base` | the vocabulary every device needs to read and write the same notes: `types`, `statuses`, `reviews`, `priorities`, `halfStarRatings`, `typeApiMapping`, `episodeNumbering`, `defaultCustomColumns`, `autoCompleteOnLastEpisode`, `setFinishDateAutomatically`, plus inside `reading`: `defaultStatus`, `bookColumns`, `mangaColumns`; inside `games`: `defaultStatus`, `statuses`, `types`, `platforms` | yes |
-| `data.json` of the plugin ([LocalStore](../../src/storage/LocalStore.ts)) | everything else: colours, palettes, layouts, saved filters, UI state, the [entry cache](entry-cache.md) | no |
-| Obsidian secret storage (`app.secretStorage`, [SecretStore](../../src/storage/SecretStore.ts)) | the nine `SECRET_SETTINGS`: OMDb, TMDB, Google Books, RAWG, Steam API keys, IGDB client id and secret, Steam id, `jikanBaseUrl` (may carry a login), under fixed ids `hoard-*` | no, per device |
+| `data.json` of the plugin ([LocalStore](../../src/shared/storage/LocalStore.ts)) | everything else: colours, palettes, layouts, saved filters, UI state, the [entry cache](entry-cache.md) | no |
+| Obsidian secret storage (`app.secretStorage`, [SecretStore](../../src/shared/storage/SecretStore.ts)) | the nine `SECRET_SETTINGS`: OMDb, TMDB, Google Books, RAWG, Steam API keys, IGDB client id and secret, Steam id, `jikanBaseUrl` (may carry a login), under fixed ids `hoard-*` | no, per device |
 
 The whitelist is `SHARED_SETTING_KEYS` and `NESTED_SHARED_KEYS` in
-[SharedConfigStore.ts](../../src/storage/SharedConfigStore.ts). `pick()` applies it on every read and
+[SharedConfigStore.ts](../../src/shared/storage/SharedConfigStore.ts). `pick()` applies it on every read and
 write, so the plugin never writes an unlisted key into the base, whatever the caller passes. An unlisted
 top-level key someone put into the block by hand is preserved on update, not purged (so a key
 pasted there stays synced until removed by hand); only `RETIRED_KEYS` (`ratingSystem`,
@@ -34,8 +34,8 @@ the whole object is replaced, so unlisted nested keys do not survive.
 
 - `composeSettings(local, shared, secrets)` = `DEFAULT_SETTINGS` ← local ← secrets ← shared (shared
   wins), except that secret keys found in the base are dropped (`withoutSecrets`)
-  ([settingsSplit.ts](../../src/settingsSplit.ts)). The merged record is cloned and handed to
-  `normalizeSettings` ([settingsNormalize.ts](../../src/settingsNormalize.ts)), which runs every known
+  ([settingsSplit.ts](../../src/shared/services/settingsSplit.ts)). The merged record is cloned and handed to
+  `normalizeSettings` ([settingsNormalize.ts](../../src/shared/domain/settingsNormalize.ts)), which runs every known
   key through one rule with a fresh copy of its default to fall back on. A key named in `RULES` has
   its own rule (date format, watchlist view, the non-empty lists, the five rating tiers, the statuses
   with their two migrations, the merged list-filter and card-text records, the reading badge
@@ -50,7 +50,7 @@ the whole object is replaced, so unlisted nested keys do not survive.
   keys it computes what differs from "defaults + current base" and calls `SharedConfigStore.update`
   with only those. No difference means no write to the base.
 - `SharedConfigStore.update` patches only the `hoard:` block; the rest of the base file
-  (filters, views) stays byte-identical ([baseFile.ts](../../src/storage/baseFile.ts)). An unreadable
+  (filters, views) stays byte-identical ([baseFile.ts](../../src/shared/storage/baseFile.ts)). An unreadable
   block is left alone and reported through the injected `Notify` (`sharedConfigUnreadable`).
 - The store watches `modify` on the base; an own write echoes back identical content and is ignored
   by comparing canonical JSON, a foreign change reloads and re-composes settings.

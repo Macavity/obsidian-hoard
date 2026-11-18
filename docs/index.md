@@ -38,7 +38,7 @@ Read [values](values.md) first; every rule below serves one of them.
 
 ```mermaid
 flowchart TD
-  main[main.ts] --> View[HoardView: 8 tabs]
+  main[app/main.ts wires all] --> View[HoardView: 8 tabs]
   main --> Widgets[WidgetRenderer]
   View --> Managers[Data / Reading / Game managers]
   Widgets --> Managers
@@ -61,7 +61,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 
 # Architecture
 
-- [Overview](architecture/overview.md): which layers exist, who may depend on whom, and what the `hoard-data-changed` event ties together.
+- [Overview](architecture/overview.md): which zones and module edges exist, how dependencies are injected (Deps, ports, SettingsService), who may import whom, and which change channel drives the view versus the widgets.
 - [Storage](architecture/storage.md): where each piece of state lives (notes, base, History.md, data.json) and how reads and writes propagate.
 - [API layer](architecture/api-layer.md): which services exist (keyless defaults and keyed upgrades), how the effective source is resolved, how errors and rate limits are handled, and how fetched data reaches cache and notes.
 - [Internationalisation](architecture/i18n.md): how to add a string, why stored values and storage messages are codes not text, and which tests enforce it.
@@ -73,7 +73,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Watchlist](modules/watchlist.md): what the movies/TV/anime domain does, who owns what, and where to change a title behaviour.
 - [Reading](modules/reading.md): how books and manga are modelled, searched (Open Library or Google Books), written, imported and exported.
 - [Games](modules/games.md): how games are modelled and searched (Steam Store by default), how Steam sync and cover resolution work.
-- [Upcoming](modules/upcoming.md): how the airtime tab derives its entries, counts what is due and writes schedules back.
+- [Upcoming](modules/upcoming.md): how the airtime module's tab derives its entries, counts what is due and writes schedules back.
 - [Custom lists](modules/custom-lists.md): how user-defined tables are stored as notes and edited inline, and why a foreign edit is never overwritten.
 - [Drafts](modules/drafts.md): how tagged lines in vault notes become add candidates and how the badge is counted.
 - [Dashboard](modules/dashboard.md): what the dashboard computes and from which managers.

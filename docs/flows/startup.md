@@ -3,18 +3,18 @@ type: Flow
 title: Startup
 description: What happens from plugin load to a ready library, including fresh install, second device and the WatchLog import offer.
 source:
-  - src/main.ts
-  - src/storage/LocalStore.ts
-  - src/storage/SharedConfigStore.ts
-  - src/storage/VaultLayout.ts
-  - src/storage/EntryIndex.ts
-  - src/settingsSplit.ts
+  - src/app/main.ts
+  - src/shared/storage/LocalStore.ts
+  - src/shared/storage/SharedConfigStore.ts
+  - src/shared/storage/VaultLayout.ts
+  - src/shared/storage/EntryIndex.ts
+  - src/shared/services/settingsSplit.ts
 source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
 ---
 
 # Startup
 
-Trigger: Obsidian enables the plugin. Two phases in [main.ts](../../src/main.ts): `onload` runs
+Trigger: Obsidian enables the plugin. Two phases in [main.ts](../../src/app/main.ts): `onload` runs
 with only `data.json` (its first call is `setLocale(getLanguage())`, see [i18n](../architecture/i18n.md)), `startVaultStorage` runs once the workspace layout is ready (vault and
 metadata cache usable).
 
