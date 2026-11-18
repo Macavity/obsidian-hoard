@@ -1,9 +1,6 @@
 import type { ApiService, BookSearchResult, GameSearchResult } from '../../../shared/api/ApiService';
 import type { ApiCheckQueue } from '../../../shared/api/apiCheckQueue';
-import type { GameDataManager } from '../../games/services/GameDataManager';
-import type { ReadingDataManager, ReadingKind } from '../../reading/services/ReadingDataManager';
 import type { PosterService } from '../../../shared/api/PosterService';
-import type { DataManager } from '../../watchlist/services/DataManager';
 import type { Book, Game, HoardPluginSettings, HoardTitle, Manga } from '../../../shared/domain/types';
 import { effectiveBookSource, effectiveGameSource } from '../../../shared/api/apiSources';
 import { steamLibraryCover } from '../../../shared/api/steamStoreApi';
@@ -85,19 +82,37 @@ async function bookCoverById(api: ReadingCoverApi, book: Book): Promise<string> 
 }
 
 /** The cover of a book (Open Library or Google Books id) or manga (MAL id); '' without id or cover. Throws on API errors. */
-export async function fetchReadingCoverById(api: ReadingCoverApi, kind: ReadingKind, item: Book | Manga): Promise<string> {
+export async function fetchReadingCoverById(api: ReadingCoverApi, kind: 'book' | 'manga', item: Book | Manga): Promise<string> {
 	if (kind === 'book') return bookCoverById(api, item as Book);
 	const malId = (item as Manga).malId;
 	return malId ? (await api.getMangaByMalId(Number(malId)))?.coverUrl ?? '' : '';
 }
 
+/** What the bulk refresh reads of the watchlist. */
+export interface CoverTitles { getTitles(): HoardTitle[] }
+/** What the bulk refresh reads and writes of books and manga. */
+export interface CoverReadingData {
+	getBooks(): Book[];
+	getMangaList(): Manga[];
+	getBook(id: string): Book | undefined;
+	getManga(id: string): Manga | undefined;
+	updateBook(updated: Book): Promise<void>;
+	updateManga(updated: Manga): Promise<void>;
+}
+/** What the bulk refresh reads and writes of games. */
+export interface CoverGameData {
+	getGames(): Game[];
+	getGame(id: string): Game | undefined;
+	updateGame(updated: Game): Promise<void>;
+}
+
 export interface CoverRefreshDeps {
 	api: GameCoverApi & ReadingCoverApi & BookSearchApi;
 	gamesApiSource: 'steam' | 'rawg' | 'igdb';
-	dataManager: Pick<DataManager, 'getTitles'>;
+	dataManager: CoverTitles;
 	posterService: Pick<PosterService, 'enqueue'>;
-	readingData: Pick<ReadingDataManager, 'getBooks' | 'getMangaList' | 'getBook' | 'getManga' | 'updateBook' | 'updateManga'>;
-	gameData: Pick<GameDataManager, 'getGames' | 'getGame' | 'updateGame'>;
+	readingData: CoverReadingData;
+	gameData: CoverGameData;
 	queue: Pick<ApiCheckQueue, 'enqueue'>;
 	/** called once with the number of entries to process */
 	onStart?: (total: number) => void;

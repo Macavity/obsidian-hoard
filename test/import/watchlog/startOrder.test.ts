@@ -36,7 +36,7 @@ function setup(sources: WatchLogSources | Error) {
 		local: { data: { ui: {} } },
 		app: { vault: { getFiles: () => [], cachedRead: () => Promise.resolve('') } },
 		applySharedSettings: track('applySettings'),
-		backupManagers: () => ({ storage: { importContext: () => ({}) } }),
+		importContext: () => ({}),
 		shared: { deferBase: () => {}, load: track('shared.load'), onChange: () => {}, ensureFilter: () => Promise.resolve('ok'), start: () => {} },
 		index: { onLocalWrite: () => {}, build: track('index:build'), sweepCache: () => {}, start: () => {} },
 		historyManager: { start: track('h') },

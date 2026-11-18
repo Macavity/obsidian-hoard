@@ -7,7 +7,6 @@ import { DEFAULT_SETTINGS, defaultGamesSettings } from '../../../shared/domain/t
 import type { GamesData, MaybeTitle, ReadingData, HoardTitle } from '../../../shared/domain/types';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
-import type { ImportContext } from '../../import/services/watchlog/schema1Types';
 import { withoutCredentials } from '../../../shared/api/jikanBase';
 import { SECRET_KEYS } from '../../../shared/storage/SecretStore';
 import { isRecord, toRecord } from '../../../shared/domain/sharedHelpers';
@@ -24,7 +23,6 @@ export interface BackupManagers {
 	storage: {
 		local: LocalStore;
 		shared: SharedConfigStore;
-		importContext(): ImportContext;
 	};
 }
 

@@ -33,6 +33,7 @@ import { detectWatchLogSources } from '../modules/import/services/watchlog/detec
 import type { WatchLogSourceKind, WatchLogSources } from '../modules/import/services/watchlog/detect';
 import { createImporter } from '../modules/import/services/watchlog/importer';
 import { getDecision, pendingSources } from '../modules/import/services/watchlog/onboardingState';
+import type { ImportContext } from '../modules/import/services/watchlog/schema1Types';
 import { composeSettings, persistSettings } from '../shared/services/settingsSplit';
 import { toRecord } from '../shared/domain/sharedHelpers';
 import { resolveJikanEndpoint } from '../shared/api/jikanBase';
@@ -412,7 +413,7 @@ export default class HoardPlugin extends Plugin {
 		const importer = createImporter({
 			app: this.app,
 			local: this.local,
-			ctx: () => this.backupManagers().storage.importContext(),
+			ctx: () => this.importContext(),
 			layout: () => this.layout,
 			openFile: (path) => {
 				const file = this.app.vault.getFileByPath(path);
@@ -499,15 +500,19 @@ export default class HoardPlugin extends Plugin {
 			storage: {
 				local: this.local,
 				shared: this.shared,
-				importContext: () => ({
-					app: this.app,
-					local: this.local,
-					shared: this.shared,
-					history: new HistoryStore(this.app, () => this.layout),
-					yaml: this.yaml,
-					layout: this.layout,
-				}),
 			},
+		};
+	}
+
+	/** What the WatchLog import writes into. */
+	private importContext(): ImportContext {
+		return {
+			app: this.app,
+			local: this.local,
+			shared: this.shared,
+			history: new HistoryStore(this.app, () => this.layout),
+			yaml: this.yaml,
+			layout: this.layout,
 		};
 	}
 
