@@ -5,6 +5,7 @@ import type { SharedConfigStore } from '../storage/SharedConfigStore';
 import type { Notify } from '../storage/storageTypes';
 import type { VaultLayout } from '../storage/VaultLayout';
 import { ChangeNotifier } from './changeListeners';
+import type { HistoryManager } from './HistoryManager';
 import type { SettingsReader } from './SettingsService';
 
 /** The leading constructor arguments every data manager takes; the wiring layer spreads them. */
@@ -22,6 +23,7 @@ export abstract class EntryManagerBase extends ChangeNotifier {
 	protected readonly layout: () => VaultLayout;
 	protected readonly notify: Notify;
 	protected readonly appSettings: SettingsReader;
+	protected historyManager: HistoryManager | null = null;
 
 	protected constructor(...[vault, fileManager, index, local, shared, layout, notify, appSettings]: ManagerBase) {
 		super();
@@ -33,5 +35,9 @@ export abstract class EntryManagerBase extends ChangeNotifier {
 		this.layout = layout;
 		this.notify = notify;
 		this.appSettings = appSettings;
+	}
+
+	setHistoryManager(hm: HistoryManager): void {
+		this.historyManager = hm;
 	}
 }

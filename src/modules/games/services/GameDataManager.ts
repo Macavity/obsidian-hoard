@@ -1,6 +1,5 @@
 import { TFile, stringifyYaml } from 'obsidian';
 import type { EventRef } from 'obsidian';
-import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
 import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
 import { EntryManagerBase, type ManagerBase } from '../../../shared/services/EntryManagerBase';
@@ -45,7 +44,6 @@ export interface GameUpcomingSync {
  * auto "To be released" status.
  */
 export class GameDataManager extends EntryManagerBase {
-	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from,
 	// `base` its normalized form: the baseline a write diffs against, so only changed fields reach the note.
@@ -64,10 +62,6 @@ export class GameDataManager extends EntryManagerBase {
 	) {
 		super(...base);
 		this.held = { index: this.index, views: this.views, dirty: this.dirty };
-	}
-
-	setHistoryManager(hm: HistoryManager): void {
-		this.historyManager = hm;
 	}
 
 	/** After index.build() and shared.load(): follows index and base changes, reconciles Upcoming. */

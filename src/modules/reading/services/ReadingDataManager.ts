@@ -1,6 +1,5 @@
 import { TFile, getFrontMatterInfo, parseYaml, stringifyYaml } from 'obsidian';
 import type { EventRef } from 'obsidian';
-import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
 import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
 import { EntryManagerBase, type ManagerBase } from '../../../shared/services/EntryManagerBase';
@@ -68,7 +67,6 @@ export interface ReadingUpcomingSync {
  * settings and table columns live in the shared config (Hoard.base).
  */
 export class ReadingDataManager extends EntryManagerBase {
-	private historyManager: HistoryManager | null = null;
 
 	private settings: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
 	private bookColumns: ReadingCustomColumn[] = [];
@@ -90,10 +88,6 @@ export class ReadingDataManager extends EntryManagerBase {
 	) {
 		super(...base);
 		this.held = { index: this.index, views: this.views, dirty: this.dirty };
-	}
-
-	setHistoryManager(hm: HistoryManager): void {
-		this.historyManager = hm;
 	}
 
 	/** After index.build() and shared.load(): follows index and shared-config changes. */
