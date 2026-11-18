@@ -1,32 +1,41 @@
 import { App, Modal } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../../shared/services/SettingsService';
 import type { MediaSearchResult } from '../../../shared/domain/types';
 import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
-import { AddTitleModal, type AddTitleApi, type AddTitleStore } from './AddTitleModal';
+import type { OpenAddTitle } from './AddTitleModal';
 import { t } from '../../../shared/i18n';
 import { effectiveMediaSource } from '../../../shared/api/apiSources';
 
 /** themoviedb.org/movie/27205-inception, /tv/1396, with or without slug and query */
 const TMDB_URL_RE = /themoviedb\.org\/(movie|tv)\/(\d+)/i;
 
-/** Opens the manual form with the looked-up title, so it carries the form's deps. */
-export interface AddFromUrlModalDeps {
-	app: App;
-	settings: SettingsReader & SettingsWriter;
-	titles: AddTitleStore;
-	api: AddTitleApi & Pick<ApiService, 'getTmdbByImdbId' | 'getOmdbByImdbId' | 'hasTmdbKey'>;
-	resolveDefaultAddType: () => string;
+/** The lookups a pasted IMDb or TMDB link resolves through. */
+export type AddFromUrlApi = Pick<
+	ApiService,
+	| 'getTmdbByImdbId' | 'getOmdbByImdbId' | 'hasTmdbKey' | 'hasOmdbKey' | 'getCinemetaDetails'
+	| 'getTmdbMovieDetails' | 'getTmdbTvDetails'
+>;
+
+export interface AddFromUrlOptions {
+	/** Runs after the looked-up title was added through the manual form. */
+	onAdded: () => void;
 }
 
+export type OpenAddFromUrl = (opts: AddFromUrlOptions) => void;
+
 export class AddFromUrlModal extends Modal {
-	private onAdded: () => void;
 	private imdbInput: HTMLInputElement | null = null;
 	private tmdbInput: HTMLInputElement | null = null;
 	private errorEl: HTMLElement | null = null;
 
-	constructor(private deps: AddFromUrlModalDeps, onAdded: () => void) {
-		super(deps.app);
-		this.onAdded = onAdded;
+	constructor(
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly api: AddFromUrlApi,
+		private readonly openAddTitle: OpenAddTitle,
+		private readonly opts: AddFromUrlOptions,
+	) {
+		super(app);
 	}
 
 	onOpen(): void {
@@ -88,8 +97,8 @@ export class AddFromUrlModal extends Modal {
 	private async lookupImdb(): Promise<MediaSearchResult | null | 'invalid'> {
 		const match = (this.imdbInput?.value.trim() ?? '').match(/tt\d+/);
 		if (!match) return 'invalid';
-		const api = this.deps.api;
-		const source = effectiveMediaSource(this.deps.settings.get(), api);
+		const api = this.api;
+		const source = effectiveMediaSource(this.settings.get(), api);
 		if (source === 'tmdb') return api.getTmdbByImdbId(match[0]);
 		if (source === 'omdb') return api.getOmdbByImdbId(match[0]);
 		// Cinemeta is keyed by kind, and an IMDb link doesn't say which: series first, then movie (the movie endpoint answers series ids with a foreign film)
@@ -100,11 +109,11 @@ export class AddFromUrlModal extends Modal {
 	private async lookupTmdb(): Promise<MediaSearchResult | null | 'invalid' | 'nokey'> {
 		const match = (this.tmdbInput?.value.trim() ?? '').match(TMDB_URL_RE);
 		if (!match) return 'invalid';
-		if (!this.deps.api.hasTmdbKey()) return 'nokey';
+		if (!this.api.hasTmdbKey()) return 'nokey';
 		const [, kind, id] = match;
 		return kind!.toLowerCase() === 'movie'
-			? this.deps.api.getTmdbMovieDetails(id!)
-			: this.deps.api.getTmdbTvDetails(id!);
+			? this.api.getTmdbMovieDetails(id!)
+			: this.api.getTmdbTvDetails(id!);
 	}
 
 	private async handleAdd(
@@ -137,25 +146,21 @@ export class AddFromUrlModal extends Modal {
 			this.close();
 
 			const type = result.mediaType === 'movie' ? 'Movie' : 'TV Show';
-			new AddTitleModal(
-				this.deps.app,
-				this.deps.settings,
-				this.deps.titles,
-				this.deps.api,
-				this.deps.resolveDefaultAddType,
-				{ onAdded: this.onAdded, prefill: {
-				title: result.title,
-				type,
-				episodes: result.episodes,
-				duration: result.episodeDuration,
-				releaseDate: result.releaseDate,
-				link: result.url,
-				seasons: result.seasons,
-				trailerUrl: result.trailerUrl ?? '',
-				director: result.director,
-				cast: result.cast,
-			} },
-			).open();
+			this.openAddTitle({
+				onAdded: this.opts.onAdded,
+				prefill: {
+					title: result.title,
+					type,
+					episodes: result.episodes,
+					duration: result.episodeDuration,
+					releaseDate: result.releaseDate,
+					link: result.url,
+					seasons: result.seasons,
+					trailerUrl: result.trailerUrl ?? '',
+					director: result.director,
+					cast: result.cast,
+				},
+			});
 		} finally {
 			btn.disabled = false;
 			btn.textContent = t('common.add');

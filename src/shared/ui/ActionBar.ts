@@ -1,5 +1,4 @@
-import type { App } from 'obsidian';
-import { ConfirmModal } from './ConfirmModal';
+import type { OpenConfirm } from './ConfirmModal';
 import { createIconButton } from './IconButton';
 import { t } from '../i18n';
 
@@ -15,7 +14,7 @@ export interface DeleteSelectedOptions {
 }
 
 /** The selection action bar with its red ✕, which asks for confirmation before running `onConfirm`. */
-export function renderActionBar(parent: HTMLElement, app: App, opts: DeleteSelectedOptions): HTMLElement {
+export function renderActionBar(parent: HTMLElement, confirm: OpenConfirm, opts: DeleteSelectedOptions): HTMLElement {
 	const bar = parent.createDiv({ cls: 'hoard-action-bar' });
 	const deleteBtn = createIconButton(bar, {
 		icon: 'x',
@@ -24,7 +23,7 @@ export function renderActionBar(parent: HTMLElement, app: App, opts: DeleteSelec
 	});
 	deleteBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
-		new ConfirmModal(app, opts.message(opts.selected.size), () => { void opts.onConfirm(); }).open();
+		confirm(opts.message(opts.selected.size), () => { void opts.onConfirm(); });
 	});
 	return bar;
 }

@@ -20,9 +20,7 @@ import { SharedConfigStore } from '../shared/storage/SharedConfigStore';
 import { EntryIndex } from '../shared/storage/EntryIndex';
 import { HistoryStore } from '../shared/storage/HistoryStore';
 import { HoardView, HOARD_VIEW_TYPE, TabName, type HoardViewDeps } from './HoardView';
-import type { ListTabDeps } from '../modules/watchlist/ui/ListTab';
-import { AddTitleModal } from '../modules/watchlist/ui/AddTitleModal';
-import { TitleDetailModal } from '../modules/watchlist/ui/TitleDetailModal';
+import { watchlistUi, type WatchlistUi } from './wiring/watchlist';
 import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
 import { WidgetRenderer } from '../modules/widgets/ui/WidgetRenderer';
 import { HoardSettingsTab, type HoardSettingsTabDeps } from '../modules/settings/ui/SettingsTab';
@@ -133,6 +131,7 @@ export default class HoardPlugin extends Plugin {
 		(ref) => this.registerEvent(ref),
 	));
 	private posterService!: PosterService;
+	private watchlist!: WatchlistUi;
 	private coverRefresher!: CoverRefresher;
 	private widgetRenderer?: WidgetRenderer;
 
@@ -193,6 +192,21 @@ export default class HoardPlugin extends Plugin {
 			this.dataManager.apiQueue,
 		);
 
+		this.watchlist = watchlistUi({
+			app: this.app,
+			settings: this.settingsService,
+			titles: this.dataManager,
+			api: this.apiService,
+			posters: this.posterService,
+			history: this.historyManager,
+			host: {
+				getCardMinWidth: () => this.getCardMinWidth(),
+				isCardTextUnder: (tab) => this.isCardTextUnder(tab),
+				importProgress: () => this.importProgress,
+			},
+			resolveDefaultAddType: () => this.resolveDefaultAddType(),
+		});
+
 		this.startAirtimeScheduler();
 		// notes are read once the vault and metadata cache are ready
 		this.app.workspace.onLayoutReady(() => void this.startVaultStorage());
@@ -222,8 +236,7 @@ export default class HoardPlugin extends Plugin {
 			id: 'add-title',
 			name: t('app.commands.addTitle'),
 			callback: () => {
-				const deps = this.listTabDeps();
-				new AddTitleModal(deps.app, deps.settings, deps.titles, deps.api, deps.resolveDefaultAddType, {
+				this.watchlist.openAddTitle({
 					onAdded: (entry) => {
 						// setting off = just reveal whatever tab was open, no modal
 						if (!(this.state.openWatchlistAfterAdd ?? true)) {
@@ -233,10 +246,10 @@ export default class HoardPlugin extends Plugin {
 						void this.activateView('watchlist').then(() => {
 							// re-read: addTitle may have forced "To be released"
 							const fresh = this.dataManager.getTitle(entry.id) ?? entry;
-							new TitleDetailModal(deps, fresh).open();
+							this.watchlist.openTitleDetail({ title: fresh });
 						});
 					},
-				}).open();
+				});
 			},
 		});
 
@@ -270,22 +283,6 @@ export default class HoardPlugin extends Plugin {
 		// keep the status bar in sync with data edits (no new timer: the 60s airtime interval drives the
 		// time-based refresh).
 		this.register(onDataChanged(() => this.updateStatusBar()));
-	}
-
-	/** What the Watchlist tab and the modals it opens read; the add-title command shares it. */
-	private listTabDeps(): ListTabDeps {
-		return {
-			app: this.app,
-			settings: this.settingsService,
-			titles: this.dataManager,
-			api: this.apiService,
-			posters: this.posterService,
-			history: this.historyManager,
-			getCardMinWidth: () => this.getCardMinWidth(),
-			isCardTextUnder: (tab) => this.isCardTextUnder(tab),
-			importProgress: () => this.importProgress,
-			resolveDefaultAddType: () => this.resolveDefaultAddType(),
-		};
 	}
 
 	/** Vault I/O of the custom lists; a corrupt list file is reported with a notice. */
@@ -329,9 +326,15 @@ export default class HoardPlugin extends Plugin {
 	/** For the tab host only; each tab narrows it to what it uses. */
 	private hoardViewDeps(): HoardViewDeps {
 		return {
-			...this.listTabDeps(),
-			api: this.apiService, // listTabDeps() narrows it to the Watchlist's needs
+			app: this.app,
+			settings: this.settingsService,
+			titles: this.dataManager,
+			api: this.apiService,
+			posters: this.posterService,
 			history: this.historyManager,
+			getCardMinWidth: () => this.getCardMinWidth(),
+			isCardTextUnder: (tab) => this.isCardTextUnder(tab),
+			createListTab: (container) => this.watchlist.createListTab(container),
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
 			importRunning: () => this.importRunning,
@@ -348,10 +351,12 @@ export default class HoardPlugin extends Plugin {
 	/** What the Add chooser and the Add modals it opens read. */
 	private addRouterDeps(): AddRouterDeps {
 		return {
-			...this.listTabDeps(),
+			app: this.app,
+			settings: this.settingsService,
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
-			api: this.apiService, // listTabDeps() narrows it to the Watchlist's needs
+			api: this.apiService,
+			openAddTitle: this.watchlist.openAddTitle,
 			searchBooks,
 		};
 	}

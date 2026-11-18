@@ -3,7 +3,7 @@ import type { SettingsReader, SettingsWriter } from '../shared/services/Settings
 import type { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../modules/games/services/GameDataManager';
 import type { searchBooks } from '../modules/covers/services/coverRefresh';
-import { AddTitleModal, type AddTitleApi, type AddTitleStore } from '../modules/watchlist/ui/AddTitleModal';
+import type { OpenAddTitle } from '../modules/watchlist/ui/AddTitleModal';
 import { AddReadingModal, type AddReadingApi } from '../modules/reading/ui/AddReadingModal';
 import { AddGameModal, type AddGameApi } from '../modules/games/ui/AddGameModal';
 import type { AddRouteOptions } from '../shared/ui/addRoute';
@@ -12,11 +12,10 @@ import { DraftChoiceModal } from '../modules/drafts/ui/DraftChoiceModal';
 export interface AddRouterDeps {
 	app: App;
 	settings: SettingsReader & SettingsWriter;
-	titles: AddTitleStore;
 	reading: ReadingDataManager;
 	games: GameDataManager;
-	api: AddTitleApi & AddGameApi & AddReadingApi;
-	resolveDefaultAddType: () => string;
+	api: AddGameApi & AddReadingApi;
+	openAddTitle: OpenAddTitle;
 	searchBooks: typeof searchBooks;
 }
 
@@ -34,7 +33,7 @@ export function openAddForTitle(deps: AddRouterDeps, opts: AddRouteOptions): voi
 		heading,
 		onChoice: (choice) => {
 			if (choice === 'watchlist') {
-				new AddTitleModal(deps.app, deps.settings, deps.titles, deps.api, deps.resolveDefaultAddType, {
+				deps.openAddTitle({
 					onAdded: done,
 					prefill: {
 						searchQuery: title,
@@ -46,7 +45,7 @@ export function openAddForTitle(deps: AddRouterDeps, opts: AddRouteOptions): voi
 						link: '',
 						seasons: [],
 					},
-				}).open();
+				});
 			} else if (choice === 'game') {
 				new AddGameModal(deps.app, deps.settings, deps.games, deps.api, {
 					onAdded: done,

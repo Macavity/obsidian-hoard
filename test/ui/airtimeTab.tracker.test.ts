@@ -19,6 +19,9 @@ vi.mock('../../src/shared/ui/ConfirmModal', () => ({
 		}
 		open(): void {}
 	},
+	confirmWith: () => (message: string, onConfirm: () => void, extra?: { label: string; onClick: () => void }) => {
+		cap.confirms.push({ message, onConfirm, extra });
+	},
 }));
 vi.mock('../../src/modules/airtime/ui/UpcomingFinderModal', () => ({
 	UpcomingFinderModal: class {

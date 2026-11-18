@@ -50,6 +50,14 @@ export function renderSearchBox(parent: HTMLElement, opts: SearchBoxOptions): HT
 	return input;
 }
 
+/** Opens the rename-group prompt; lets a tab ask for a new name without holding the App. */
+export type OpenRenameGroup = (current: string, onSave: (name: string) => void) => void;
+
+/** Rename prompt opener bound to an App; the wiring layer builds it. */
+export function renameGroupWith(app: App): OpenRenameGroup {
+	return (current, onSave) => openRenameGroupPrompt(app, current, onSave);
+}
+
 /** Modal with one text input; Save (or Enter) hands the trimmed name over when it changed. */
 export function openRenameGroupPrompt(app: App, current: string, onSave: (name: string) => void): void {
 	const modal = new Modal(app);

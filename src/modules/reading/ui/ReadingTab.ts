@@ -7,7 +7,7 @@ import type { fetchReadingCoverById, firstBookCover } from '../../covers/service
 import type { ReadingKind } from '../services/ReadingDataManager';
 import { Book, Manga, ReadingStatus, ReadingCustomColumn, ReadingSavedFilterPreset, READING_STATUSES, SELECTABLE_READING_STATUSES, normalizeRowsLayout, READING_ROWS_SHELVES, bookUnitProgress, formatCount, sortByFavorited } from '../../../shared/domain/types';
 import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domain/SearchQuery';
-import { renderSearchHelpButton } from '../../../shared/ui/SearchHelpModal';
+import { renderSearchHelpButton, searchHelpWith } from '../../../shared/ui/SearchHelpModal';
 import { renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
 import { RowsCustomizeModal } from '../../../shared/ui/RowsCustomizeModal';
 import { AddReadingModal, type AddReadingApi } from './AddReadingModal';
@@ -267,7 +267,7 @@ export class ReadingTab implements TabInstance {
 			onChange: (q) => { this.searchQuery = q; },
 			onCommit: () => this.renderContent(),
 			debounceMs: 200,
-			help: (host) => renderSearchHelpButton(host, this.deps.app, t(this.activeSubTab === 'books' ? 'reading.tabs.books' : 'reading.tabs.manga'), () => this.searchFields()),
+			help: (host) => renderSearchHelpButton(host, searchHelpWith(this.deps.app), t(this.activeSubTab === 'books' ? 'reading.tabs.books' : 'reading.tabs.manga'), () => this.searchFields()),
 		});
 	}
 

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
 import { fakeSettings } from './helpers/fakeSettings';
-import { TitleDetailModal } from '../src/modules/watchlist/ui/TitleDetailModal';
+import { newTitleDetail } from './helpers/newTitleDetail';
 import { DEFAULT_SETTINGS, type HoardTitle, type TmdbCollectionDetail } from '../src/shared/domain/types';
 import { t } from '../src/shared/i18n';
 import { resolveCollection, countMissing } from '../src/modules/watchlist/ui/CollectionModal';
@@ -18,11 +18,10 @@ const collection = (parts: number): TmdbCollectionDetail =>
 
 function build() {
 	const deps = {
-		app: {} as never,
 		settings: fakeSettings({ ...DEFAULT_SETTINGS }),
 		titles: { getCollapsedSeasonsForTitle: () => new Set<number>(), getTitles: () => [title] },
 	};
-	const modal = new TitleDetailModal(deps as never, title) as unknown as {
+	const modal = newTitleDetail(deps, { title }) as unknown as {
 		maybeRenderCollectionButton: (host: HTMLElement) => Promise<void>;
 	};
 	const footer = document.createElement('div');

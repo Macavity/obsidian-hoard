@@ -24,14 +24,14 @@ describe('migrated icon buttons', () => {
 
 	it('search help button carries the help-circle icon', () => {
 		const wrap = document.createElement('div');
-		const btn = renderSearchHelpButton(wrap, {} as never, 'Tab', () => []);
+		const btn = renderSearchHelpButton(wrap, vi.fn(), 'Tab', () => []);
 		expect(btn.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(btn.getAttribute('data-icon')).toBe('help-circle');
 	});
 
 	it('selection action bar delete is an x icon button', () => {
 		const parent = document.createElement('div');
-		const bar = renderActionBar(parent, {} as never, { title: 'Delete', selected: new Set(['a']), message: () => 'm', onConfirm: () => Promise.resolve() });
+		const bar = renderActionBar(parent, vi.fn(), { title: 'Delete', selected: new Set(['a']), message: () => 'm', onConfirm: () => Promise.resolve() });
 		const btn = bar.querySelector<HTMLButtonElement>('button.hoard-group-header__action-btn--delete')!;
 		expect(btn.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(btn.getAttribute('data-icon')).toBe('x');

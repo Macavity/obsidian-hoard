@@ -1,7 +1,9 @@
 // Real DataManager on a fake vault + a ListTab mounted in happy-dom.
 import { vi } from 'vitest';
 import { setupDataManager } from './setupDataManager';
-import { ListTab, type ListTabDeps } from '../../src/modules/watchlist/ui/ListTab';
+import { ListTab, type ListTabHost, type ListTabModals } from '../../src/modules/watchlist/ui/ListTab';
+import { confirmWith } from '../../src/shared/ui/ConfirmModal';
+import { RowsCustomizeModal } from '../../src/shared/ui/RowsCustomizeModal';
 import { fakeSettings } from './fakeSettings';
 import type { HoardPluginSettings, HoardTitle } from '../../src/shared/domain/types';
 
@@ -26,20 +28,25 @@ export async function setupListTab(
 	Object.assign(env.settings, { defaultWatchlistView: view, ...settings });
 	const settingsService = fakeSettings(env.settings);
 	const posters = { enqueue: vi.fn(enqueue), clearQueue: vi.fn() };
-	const deps = {
-		app: env.f.app,
-		settings: settingsService,
-		titles: env.dm,
-		api: {},
-		posters,
-		history: { getEntries: () => [] },
-		getCardMinWidth: () => 150,
-		isCardTextUnder: () => false,
-		importProgress: () => null,
-		resolveDefaultAddType: () => 'Movie',
-	} as unknown as ListTabDeps;
+	const modals = {
+		openAddTitleChoice: vi.fn(),
+		openAddTitle: vi.fn(),
+		openAddFromUrl: vi.fn(),
+		openTitleDetail: vi.fn(),
+		openGroupDetail: vi.fn(),
+		openEditTitle: vi.fn(),
+		openAddCredit: vi.fn(),
+		// real dialogs: tests drive them through the DOM
+		openRowsCustomize: (config) => new RowsCustomizeModal(env.f.app, settingsService, config).open(),
+		renameGroup: vi.fn(),
+		searchHelp: vi.fn(),
+		confirm: confirmWith(env.f.app),
+	} satisfies ListTabModals;
+	const host: ListTabHost = { getCardMinWidth: () => 150, isCardTextUnder: () => false, importProgress: () => null };
 	const container = document.createElement('div');
 	document.body.appendChild(container);
-	const tab = new ListTab(container, deps);
-	return { ...env, tab, container, deps, posters, settingsService };
+	const tab = new ListTab(
+		container, settingsService, env.dm, {} as never, posters, { getEntries: () => [] }, host, modals,
+	);
+	return { ...env, tab, container, modals, host, posters, settingsService };
 }

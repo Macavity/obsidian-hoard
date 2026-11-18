@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
 import { fakeSettings } from './helpers/fakeSettings';
-import { TitleDetailModal, renderCreditsRefreshButton } from '../src/modules/watchlist/ui/TitleDetailModal';
+import { renderCreditsRefreshButton } from '../src/modules/watchlist/ui/TitleDetailModal';
+import { newTitleDetail } from './helpers/newTitleDetail';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/shared/domain/types';
 import { t } from '../src/shared/i18n';
 import { FAILED, found, type LookupResult } from '../src/shared/api/lookup';
@@ -46,7 +47,6 @@ function buildPlugin(stored: HoardTitle | null, over: Record<string, unknown> = 
 		hasOmdbKey: vi.fn(() => false),
 	};
 	const deps = {
-		app: {} as never,
 		settings: fakeSettings({ ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] }),
 		titles: dataManager,
 		api: apiService,
@@ -58,7 +58,7 @@ function buildPlugin(stored: HoardTitle | null, over: Record<string, unknown> = 
 describe('TitleDetailModal title editing', () => {
 	function open(title: HoardTitle, stored: HoardTitle | null = title) {
 		const built = buildPlugin(stored);
-		const modal = new TitleDetailModal(built.deps as never, title) as unknown as {
+		const modal = newTitleDetail(built.deps, { title }) as unknown as {
 			headerEl: HTMLElement | null;
 			contentEl: HTMLElement;
 			mobile: boolean;

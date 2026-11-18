@@ -11,7 +11,7 @@ import {
 	setsMatch,
 } from '../../../shared/domain/types';
 import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domain/SearchQuery';
-import { renderSearchHelpButton } from '../../../shared/ui/SearchHelpModal';
+import { renderSearchHelpButton, searchHelpWith } from '../../../shared/ui/SearchHelpModal';
 import { RowsCustomizeModal } from '../../../shared/ui/RowsCustomizeModal';
 import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from '../../../shared/ui/VirtualGrid';
 import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
@@ -28,7 +28,7 @@ import { rawgResizedCover } from '../../../shared/api/ApiService';
 import type { resolveGameCover, GameCover } from '../../covers/services/coverRefresh';
 import { effectiveGameSource } from '../../../shared/api/apiSources';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../shared/ui/TabFilters';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { ConfirmModal, confirmWith } from '../../../shared/ui/ConfirmModal';
 import { GameDetailModal, GameGroupDetailModal, gameGroupProgress, type GameDetailModalDeps } from './GameDetailModal';
 import { AddGameModal, type AddGameApi } from './AddGameModal';
 
@@ -893,7 +893,7 @@ export class GamesTab implements TabInstance {
 		renderSearchBox(parent, {
 			value: this.searchQuery,
 			placeholder: t('games.searchPlaceholder'),
-			help: (host) => renderSearchHelpButton(host, this.deps.app, t('app.tabs.games'), () => this.searchFields()),
+			help: (host) => renderSearchHelpButton(host, searchHelpWith(this.deps.app), t('app.tabs.games'), () => this.searchFields()),
 			onChange: (q) => { this.searchQuery = q; },
 			onCommit: () => this.renderContent(),
 		});
@@ -1097,7 +1097,7 @@ export class GamesTab implements TabInstance {
 	}
 
 	private renderActionBar(parent: HTMLElement): void {
-		const bar = renderActionBar(parent, this.deps.app, {
+		const bar = renderActionBar(parent, confirmWith(this.deps.app), {
 			title: t('games.deleteSelected'),
 			selected: this.selectedIds,
 			message: (count) => t('games.deleteSelectedConfirm', { count }),
@@ -1297,7 +1297,7 @@ export class GamesTab implements TabInstance {
 		const settings = this.deps.games.getSettings();
 		const primaryType = members[0]?.type ?? '';
 		renderGroupCard(parent, {
-			app: this.deps.app,
+			confirm: confirmWith(this.deps.app),
 			group,
 			members,
 			getCover: (g) => rawgResizedCover(g.coverUrl),

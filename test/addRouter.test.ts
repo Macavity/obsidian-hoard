@@ -16,9 +16,6 @@ vi.mock('../src/modules/drafts/ui/DraftChoiceModal', () => ({
 		open(): void {}
 	},
 }));
-vi.mock('../src/modules/watchlist/ui/AddTitleModal', () => ({
-	AddTitleModal: class { constructor(...args: unknown[]) { opened.calls.push({ kind: 'title', args }); } open(): void {} },
-}));
 vi.mock('../src/modules/games/ui/AddGameModal', () => ({
 	AddGameModal: class { constructor(...args: unknown[]) { opened.calls.push({ kind: 'game', args }); } open(): void {} },
 }));
@@ -27,7 +24,10 @@ vi.mock('../src/modules/reading/ui/AddReadingModal', () => ({
 }));
 
 describe('openAddForTitle', () => {
-	const deps = { app: {} } as unknown as AddRouterDeps;
+	const deps = {
+		app: {},
+		openAddTitle: (opts: unknown) => { opened.calls.push({ kind: 'title', args: [deps.app, opts] }); },
+	} as unknown as AddRouterDeps;
 
 	function route(choice: string): { kind: string; args: unknown[] } {
 		opened.calls.length = 0;

@@ -1,12 +1,11 @@
-import type { App } from 'obsidian';
 import { t } from '../i18n';
 import { createIconButton } from './IconButton';
 import { renderGroupCollage } from './CollageUtil';
-import { ConfirmModal } from './ConfirmModal';
+import type { OpenConfirm } from './ConfirmModal';
 import { openCardMenu, pinCardHeight } from './PosterCard';
 
 export interface GroupCardOptions<M> {
-	app: App;
+	confirm: OpenConfirm;
 	group: { id: string; name: string };
 	members: readonly M[];
 	/** Cover url of a member, for the collage. */
@@ -56,7 +55,7 @@ function renderGroupMenuButton<M>(card: HTMLElement, opts: GroupCardOptions<M>):
 			{ label: t('ui.group.editName'), onClick: opts.onRename },
 			{
 				label: t('ui.group.delete'),
-				onClick: () => { new ConfirmModal(opts.app, opts.deleteMessage, opts.onDelete).open(); },
+				onClick: () => { opts.confirm(opts.deleteMessage, opts.onDelete); },
 			},
 		], { container: opts.container, cleanups: opts.cleanups });
 	});

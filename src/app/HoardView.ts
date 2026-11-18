@@ -2,13 +2,14 @@ import type { TabInstance } from '../shared/ui/TabInstance';
 import { ItemView, Platform, setIcon, WorkspaceLeaf } from 'obsidian';
 import { t, type TranslationKey } from '../shared/i18n';
 import { DashboardTab, type DashboardTabDeps } from '../modules/dashboard/ui/DashboardTab';
-import { ListTab, type ListTabDeps } from '../modules/watchlist/ui/ListTab';
 import { AirtimeTab, type AirtimeTabDeps } from '../modules/airtime/ui/AirtimeTab';
 import { ReadingTab, type ReadingTabDeps } from '../modules/reading/ui/ReadingTab';
 import { GamesTab, type GamesTabDeps } from '../modules/games/ui/GamesTab';
 import { CustomListsTab, type CustomListsTabDeps } from '../modules/custom-lists/ui/CustomListsTab';
 import { DraftsTab, type DraftsTabDeps } from '../modules/drafts/ui/DraftsTab';
 import { LogTab, type LogTabDeps } from '../modules/log/ui/LogTab';
+import type { DataManager } from '../modules/watchlist/services/DataManager';
+import type { CardStyleTab } from '../shared/domain/types';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';
 
@@ -19,12 +20,14 @@ export type TabName = 'dashboard' | 'watchlist' | 'upcoming' | 'reading' | 'game
  * own `<Tab>Deps`; a converted tab's deps are a supertype of this one, so `ctx.deps` passes straight in.
  */
 export interface HoardViewDeps
-	extends ListTabDeps, ReadingTabDeps, GamesTabDeps, AirtimeTabDeps, DashboardTabDeps, CustomListsTabDeps, DraftsTabDeps, LogTabDeps {
-	settings: ListTabDeps['settings'];
-	titles: ListTabDeps['titles'];
-	history: ListTabDeps['history'] & ReadingTabDeps['history'] & LogTabDeps['history'];
-	api: ListTabDeps['api'] & ReadingTabDeps['api'] & GamesTabDeps['api'] & AirtimeTabDeps['api'];
-	isCardTextUnder: ListTabDeps['isCardTextUnder'] & AirtimeTabDeps['isCardTextUnder'];
+	extends ReadingTabDeps, GamesTabDeps, AirtimeTabDeps, DashboardTabDeps, CustomListsTabDeps, DraftsTabDeps, LogTabDeps {
+	settings: ReadingTabDeps['settings'] & GamesTabDeps['settings'];
+	titles: DataManager;
+	history: ReadingTabDeps['history'] & LogTabDeps['history'];
+	api: ReadingTabDeps['api'] & GamesTabDeps['api'] & AirtimeTabDeps['api'];
+	isCardTextUnder: (tab: CardStyleTab) => boolean;
+	/** Builds the Watchlist tab; wired in `src/app/wiring/watchlist.ts`. */
+	createListTab: (container: HTMLElement) => TabInstance;
 	reading: ReadingTabDeps['reading'];
 	games: GamesTabDeps['games'];
 	/** True while the WatchLog import wizard replaces the tabs with a placeholder. */
@@ -70,7 +73,7 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.watchlist',
 		icon: 'tv',
 		cls: 'hoard-list',
-		create: (ctx) => new ListTab(ctx.containerEl, ctx.deps),
+		create: (ctx) => ctx.deps.createListTab(ctx.containerEl),
 	},
 	{
 		name: 'upcoming',

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice, Platform } from 'obsidian';
 import { fakeSettings } from './helpers/fakeSettings';
-import { TitleDetailModal } from '../src/modules/watchlist/ui/TitleDetailModal';
+import { newTitleDetail } from './helpers/newTitleDetail';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/shared/domain/types';
 import { t } from '../src/shared/i18n';
 import type { LookupResult } from '../src/shared/api/lookup';
@@ -50,14 +50,13 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: LookupResult<
 		hasOmdbKey: vi.fn(() => false),
 	};
 	const deps = {
-		app: {} as never,
 		settings: fakeSettings({ ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] }),
 		titles: dataManager,
 		api: apiService,
 		posters: { enqueue: () => Promise.resolve(null) },
 	};
 	(Platform as { isMobile: boolean }).isMobile = o.mobile ?? false;
-	const modal = new TitleDetailModal(deps as never, title, undefined, o.onPerson ? () => {} : undefined);
+	const modal = newTitleDetail(deps, { title, onPersonClick: o.onPerson ? () => {} : undefined });
 	const x = modal as unknown as {
 		headerEl: HTMLElement | null;
 		contentEl: HTMLElement;

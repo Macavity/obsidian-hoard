@@ -7,15 +7,14 @@ import type { HoardTitle, HoardGroup, Season, TagDefinition, CreditsField } from
 import { formatTime, todayIso, getThemedColor, getDisplayPoster, getDisplayTrailer, getApiGroupForType, getTitleCredits, getManualCredits, isCreditsUnfetched, CREDITS_INLINE_LIMIT, STUDIO_INLINE_LIMIT } from '../../../shared/domain/types';
 import { createDatePicker } from '../../../shared/ui/DatePicker';
 import type { DatePickerHandle } from '../../../shared/ui/DatePicker';
-import { AddCreditModal } from './AddCreditModal';
-import { appendNoteLinkButton } from '../../../shared/ui/NoteLinkButton';
+import type { AddCreditOptions } from './AddCreditModal';
+import { appendNoteLinkButton, type NoteFiles } from '../../../shared/ui/NoteLinkButton';
 import { appendMarkWatchedButton, isSingleEpisodeTitle } from './MarkWatchedButton';
-import { EditTitleModal } from './EditTitleModal';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import type { EditTitleOptions, OpenEditTitle } from './EditTitleModal';
 import { renderCommunityRating, maybeAutoRefreshCommunityRating, type CommunityRatingApi } from './CommunityRating';
 import { renderTagPill } from '../../../shared/ui/StatusDropdown';
 import { renderStarRating } from '../../../shared/ui/StarRating';
-import { CollectionModal, resolveCollection, countMissing, type CollectionApi } from './CollectionModal';
+import { resolveCollection, countMissing, type CollectionApi, type CollectionOptions } from './CollectionModal';
 import { pinModalFooter } from '../../../shared/ui/StickyModal';
 import { createSeasonHeader, renderEpisodeGrid } from '../../../shared/ui/EpisodeGrid';
 import type { TmdbCollectionDetail } from '../../../shared/domain/types';
@@ -44,14 +43,28 @@ export type RefreshCreditsStore = Pick<DataManager, 'getTitle' | 'updateCredits'
 /** The API methods the credits refresh button calls. */
 export type RefreshCreditsApi = Pick<ApiService, 'fetchCredits' | 'hasOmdbKey' | 'hasTmdbKey'>;
 
-/** The detail modal drives most of the manager, so it takes the whole `DataManager`. */
-export interface TitleDetailModalDeps {
-	app: App;
-	settings: SettingsReader;
-	titles: DataManager;
-	api: CollectionApi & CommunityRatingApi & RefreshCreditsApi
-		& Pick<ApiService, 'fetchTrailer' | 'fetchStudio'>;
-	posters: Pick<PosterService, 'enqueue'>;
+/** The API methods the detail modal calls itself and hands to its credits, rating and collection parts. */
+export type TitleDetailApi = CollectionApi & CommunityRatingApi & RefreshCreditsApi
+	& Pick<ApiService, 'fetchTrailer' | 'fetchStudio'>;
+
+export interface TitleDetailOptions {
+	title: HoardTitle;
+	/** Runs on close when something changed. */
+	onChanged?: () => void;
+	/** Click on a credit name; unset renders the names as plain text. */
+	onPersonClick?: (name: string) => void;
+}
+
+export type OpenTitleDetail = (opts: TitleDetailOptions) => void;
+
+/** The dialogs the detail modal opens; the wiring layer builds them, so the modal needs none of their collaborators. */
+export interface TitleDetailModals {
+	openAddCredit(opts: AddCreditOptions): void;
+	openEditTitle(opts: EditTitleOptions): void;
+	openCollection(opts: CollectionOptions): void;
+	/** Opens another detail modal (a collection member). */
+	openTitleDetail(opts: TitleDetailOptions): void;
+	confirm(message: string, onConfirm: () => void): void;
 }
 
 export class TitleDetailModal extends Modal {
@@ -77,21 +90,26 @@ export class TitleDetailModal extends Modal {
 	private datePickerEl: DatePickerHandle | null = null;
 	private refreshDateDimmed: (() => void) | null = null;
 
+	/** The detail modal drives most of the manager, so it takes the whole `DataManager`. */
 	constructor(
-		private deps: TitleDetailModalDeps,
-		title: HoardTitle,
-		onChanged?: () => void,
-		onPersonClick?: (name: string) => void,
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly titles: DataManager,
+		private readonly api: TitleDetailApi,
+		private readonly posters: Pick<PosterService, 'enqueue'>,
+		private readonly files: NoteFiles,
+		private readonly modals: TitleDetailModals,
+		opts: TitleDetailOptions,
 	) {
-		super(deps.app);
-		this.title = title;
-		this.onChanged = onChanged;
-		this.onPersonClick = onPersonClick;
-		this.collapsedSeasons = deps.titles.getCollapsedSeasonsForTitle(title.id);
+		super(app);
+		this.title = opts.title;
+		this.onChanged = opts.onChanged;
+		this.onPersonClick = opts.onPersonClick;
+		this.collapsedSeasons = titles.getCollapsedSeasonsForTitle(opts.title.id);
 	}
 
 	onOpen(): void {
-		markDetailRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
+		markDetailRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
 		this.mobile = Platform.isMobile;
 		this.contentEl.toggleClass('hoard-detail--mobile', this.mobile);
 		this.renderAll();
@@ -109,7 +127,7 @@ export class TitleDetailModal extends Modal {
 	}
 
 	private refreshTitle(): void {
-		const fresh = this.deps.titles.getTitle(this.title.id);
+		const fresh = this.titles.getTitle(this.title.id);
 		if (fresh) this.title = fresh;
 	}
 
@@ -196,9 +214,9 @@ export class TitleDetailModal extends Modal {
 
 		// open the per-title .md note; the shared helper builds the button and handles failure
 		appendNoteLinkButton(
-			this.app,
+			this.files,
 			badgeRow,
-			this.deps.titles.getNoteFilePath(this.title),
+			this.titles.getNoteFilePath(this.title),
 			() => this.close(),
 		);
 
@@ -243,7 +261,7 @@ export class TitleDetailModal extends Modal {
 			if (done) return;
 			done = true;
 			const val = input.value.trim();
-			const curr = this.deps.titles.getTitle(this.title.id);
+			const curr = this.titles.getTitle(this.title.id);
 			if (!val || !curr || val === curr.title) {
 				this.renderTitleDisplay(wrap);
 				return;
@@ -251,7 +269,7 @@ export class TitleDetailModal extends Modal {
 			void (async () => {
 				curr.title = val;
 				// moves the note file too — updateMarkdownFile trashes the path it last wrote for this id
-				await this.deps.titles.updateTitle(curr);
+				await this.titles.updateTitle(curr);
 				this.refreshTitle();
 				this.markChanged();
 				// the note-link button captured the old path; rebuild the header
@@ -275,9 +293,9 @@ export class TitleDetailModal extends Modal {
 
 	// Type
 	private typeColor(name: string): string {
-		const def = this.getTagDef(name, this.deps.settings.get().types);
+		const def = this.getTagDef(name, this.settings.get().types);
 		return def
-			? getThemedColor(name, def.color, this.deps.settings.get().colorTheme)
+			? getThemedColor(name, def.color, this.settings.get().colorTheme)
 			: '#888780';
 	}
 
@@ -289,17 +307,17 @@ export class TitleDetailModal extends Modal {
 			color: this.typeColor(this.title.type),
 			tooltip: t('detail.clickToChangeType'),
 			container: this.contentEl,
-			options: this.deps.settings.get().types.map((def) => ({ value: def.name, label: typeLabel(def.name) })),
+			options: this.settings.get().types.map((def) => ({ value: def.name, label: typeLabel(def.name) })),
 			getOptionColor: (name) => this.typeColor(name),
 			onSelect: (name) => void this.saveType(name),
 		});
 	}
 
 	private async saveType(type: string): Promise<void> {
-		const t = this.deps.titles.getTitle(this.title.id);
+		const t = this.titles.getTitle(this.title.id);
 		if (!t || t.type === type) return;
 		t.type = type;
-		await this.deps.titles.updateTitle(t);
+		await this.titles.updateTitle(t);
 		this.refreshTitle();
 		this.markChanged();
 		// the type drives the note folder and the placeholder colour, so the whole header is rebuilt
@@ -326,7 +344,7 @@ export class TitleDetailModal extends Modal {
 	}
 
 	private openAddCredits(field: CreditsField): void {
-		new AddCreditModal(this.deps.app, this.deps.settings, this.deps.titles, {
+		this.modals.openAddCredit({
 			title: this.title,
 			field,
 			onSaved: () => {
@@ -334,21 +352,21 @@ export class TitleDetailModal extends Modal {
 				this.refreshTitle();
 				this.renderCreditsSection();
 			},
-		}).open();
+		});
 	}
 
 	private async removeManualCredit(field: CreditsField, name: string): Promise<void> {
 		const remaining = getManualCredits(this.title, field).filter(
 			(n) => n.toLowerCase() !== name.toLowerCase(),
 		);
-		await this.deps.titles.updateManualCredits(this.title.id, field, remaining);
+		await this.titles.updateManualCredits(this.title.id, field, remaining);
 		this.markChanged();
 		this.refreshTitle();
 		this.renderCreditsSection();
 	}
 
 	private renderCreditsRefreshButton(parent: HTMLElement): void {
-		renderCreditsRefreshButton(parent, this.deps.titles, this.deps.settings, this.deps.api, this.title, (changed) => {
+		renderCreditsRefreshButton(parent, this.titles, this.settings, this.api, this.title, (changed) => {
 			if (changed) this.markChanged();
 			this.refreshTitle();
 			this.renderCreditsSection();
@@ -361,29 +379,29 @@ export class TitleDetailModal extends Modal {
 	 * as a lookup check, which sets when a later open may retry.
 	 */
 	private maybeBackfillCredits(): void {
-		const t = this.deps.titles.getTitle(this.title.id);
-		if (!t || !this.deps.titles.lookupDue(t.id, 'credits') || creditsBackfillInFlight.has(t.id)) return;
+		const t = this.titles.getTitle(this.title.id);
+		if (!t || !this.titles.lookupDue(t.id, 'credits') || creditsBackfillInFlight.has(t.id)) return;
 		creditsBackfillInFlight.add(t.id);
 		void (async () => {
 			try {
-				const result = await this.deps.api.fetchCredits(
+				const result = await this.api.fetchCredits(
 					t,
-					effectiveMediaSource(this.deps.settings.get(), this.deps.api),
+					effectiveMediaSource(this.settings.get(), this.api),
 				);
 				if (result.status === 'found') {
 					// only absent fields are filled
 					const director = isCreditsUnfetched(t.director) ? result.value.director : t.director!;
 					const cast = isCreditsUnfetched(t.cast) ? result.value.cast : t.cast!;
-					await this.deps.titles.updateCredits(t.id, director, cast);
+					await this.titles.updateCredits(t.id, director, cast);
 					// one side still empty: the source has no more, so check again only after the notfound deadline
 					const complete = !isCreditsUnfetched(director) && !isCreditsUnfetched(cast);
-					this.deps.titles.recordLookup(t.id, 'credits', complete ? result : NOT_FOUND);
+					this.titles.recordLookup(t.id, 'credits', complete ? result : NOT_FOUND);
 				} else {
-					this.deps.titles.recordLookup(t.id, 'credits', result);
+					this.titles.recordLookup(t.id, 'credits', result);
 				}
 			} catch {
 				// the fetch or its persistence failed: retry after the transient deadline
-				this.deps.titles.recordLookup(t.id, 'credits', FAILED);
+				this.titles.recordLookup(t.id, 'credits', FAILED);
 			} finally {
 				creditsBackfillInFlight.delete(t.id);
 			}
@@ -397,18 +415,18 @@ export class TitleDetailModal extends Modal {
 	 * recorded while the last check is still fresh; otherwise how the lookup ended is recorded.
 	 */
 	private async maybeBackfillTrailer(): Promise<void> {
-		const t = this.deps.titles.getTitle(this.title.id);
-		if (!t || !this.deps.titles.lookupDue(t.id, 'trailer') || trailerBackfillInFlight.has(t.id)) return;
+		const t = this.titles.getTitle(this.title.id);
+		if (!t || !this.titles.lookupDue(t.id, 'trailer') || trailerBackfillInFlight.has(t.id)) return;
 		trailerBackfillInFlight.add(t.id);
 		try {
-			const settings = this.deps.settings.get();
-			const result = await this.deps.api.fetchTrailer(
+			const settings = this.settings.get();
+			const result = await this.api.fetchTrailer(
 				t, settings.animeApiSource ?? 'jikan', getApiGroupForType(t.type, settings.typeApiMapping),
 			);
-			if (result.status === 'found') this.deps.titles.updateTrailerUrl(t.id, result.value);
-			else this.deps.titles.recordLookup(t.id, 'trailer', result);
+			if (result.status === 'found') this.titles.updateTrailerUrl(t.id, result.value);
+			else this.titles.recordLookup(t.id, 'trailer', result);
 		} catch {
-			this.deps.titles.recordLookup(t.id, 'trailer', FAILED);
+			this.titles.recordLookup(t.id, 'trailer', FAILED);
 		} finally {
 			trailerBackfillInFlight.delete(t.id);
 		}
@@ -460,27 +478,27 @@ export class TitleDetailModal extends Modal {
 
 	/** One-time studio backfill; a miss is recorded as a lookup check, which sets when a later open may retry. */
 	private maybeBackfillStudio(): void {
-		const t = this.deps.titles.getTitle(this.title.id);
-		if (!t || !this.deps.titles.lookupDue(t.id, 'studio') || studioBackfillInFlight.has(t.id)) return;
-		const group = getApiGroupForType(t.type, this.deps.settings.get().typeApiMapping);
+		const t = this.titles.getTitle(this.title.id);
+		if (!t || !this.titles.lookupDue(t.id, 'studio') || studioBackfillInFlight.has(t.id)) return;
+		const group = getApiGroupForType(t.type, this.settings.get().typeApiMapping);
 		studioBackfillInFlight.add(t.id);
 		void (async () => {
 			try {
-				const result = await this.deps.api.fetchStudio(
+				const result = await this.api.fetchStudio(
 					t,
-					this.deps.settings.get().animeApiSource ?? 'jikan',
+					this.settings.get().animeApiSource ?? 'jikan',
 					group,
 				);
 				if (result.status === 'found') {
 					const { studio, tmdbId, tmdbMediaType } = result.value;
-					await this.deps.titles.updateStudio(t.id, studio, tmdbId, tmdbMediaType);
+					await this.titles.updateStudio(t.id, studio, tmdbId, tmdbMediaType);
 				} else {
 					// movie studios without a TMDB key arrive here as nokey
-					this.deps.titles.recordLookup(t.id, 'studio', result);
+					this.titles.recordLookup(t.id, 'studio', result);
 				}
 			} catch {
 				// retried after the transient deadline
-				this.deps.titles.recordLookup(t.id, 'studio', FAILED);
+				this.titles.recordLookup(t.id, 'studio', FAILED);
 			} finally {
 				studioBackfillInFlight.delete(t.id);
 			}
@@ -493,9 +511,9 @@ export class TitleDetailModal extends Modal {
 	// letter placeholder. Reserves its aspect-ratio space from first paint.
 	private renderCover(parent: HTMLElement): void {
 		const cover = parent.createDiv({ cls: 'hoard-detail__cover' });
-		const typeDef = this.getTagDef(this.title.type, this.deps.settings.get().types);
+		const typeDef = this.getTagDef(this.title.type, this.settings.get().types);
 		const typeColor = typeDef
-			? getThemedColor(this.title.type, typeDef.color, this.deps.settings.get().colorTheme)
+			? getThemedColor(this.title.type, typeDef.color, this.settings.get().colorTheme)
 			: '#888780';
 
 		const placeholder = cover.createDiv({ cls: 'hoard-detail__cover-placeholder' });
@@ -520,7 +538,7 @@ export class TitleDetailModal extends Modal {
 			img.onerror = showPlaceholder;
 		} else if (this.title.posterUrl === '') {
 			placeholder.addClass('is-loading');
-			void this.deps.posters.enqueue(this.title).then((url) => {
+			void this.posters.enqueue(this.title).then((url) => {
 				placeholder.removeClass('is-loading');
 				if (url) showImg(url);
 			});
@@ -531,11 +549,11 @@ export class TitleDetailModal extends Modal {
 		if (!this.statsBoxEl) return;
 		this.statsBoxEl.empty();
 		const entry = this.title;
-		const timeLeft = this.deps.titles.calcTimeRemainingForModal(entry);
-		const timeWatched = this.deps.titles.calcTimeWatched(entry);
+		const timeLeft = this.titles.calcTimeRemainingForModal(entry);
+		const timeWatched = this.titles.calcTimeWatched(entry);
 		const watchedEps = entry.watchedEpisodes.length;
-		const effectiveTotal = this.deps.titles.getEffectiveTotal(entry);
-		const progress = this.deps.titles.getProgress(entry);
+		const effectiveTotal = this.titles.getEffectiveTotal(entry);
+		const progress = this.titles.getProgress(entry);
 
 		// mobile: plain "2h 15m left · 0m watched · 0/1 eps" line, then a full-width bar and its caption
 		if (this.mobile) {
@@ -607,7 +625,7 @@ export class TitleDetailModal extends Modal {
 			const row = this.episodesSectionEl.createDiv({ cls: 'hoard-accordion__movie-row' });
 			// the shared toggle owns the status → Completed and watch-date writes; this only mirrors them back
 			// into the open modal
-			appendMarkWatchedButton(this.deps.titles, row, entry.id, () => {
+			appendMarkWatchedButton(this.titles, row, entry.id, () => {
 				this.refreshTitle();
 				this.markChanged();
 				this.renderStatsBox();
@@ -625,7 +643,7 @@ export class TitleDetailModal extends Modal {
 		entry.seasons.forEach((season, seasonIdx) => {
 			let isCollapsed = this.collapsedSeasons.has(seasonIdx);
 			const { seasonWrap, seasonHeader } = createSeasonHeader(
-				this.episodesSectionEl!, season.name, seasonIdx, this.deps.settings.get().seasonPalette,
+				this.episodesSectionEl!, season.name, seasonIdx, this.settings.get().seasonPalette,
 			);
 			const skipCount = (season.skippedEpisodes ?? []).length;
 			seasonHeader.createSpan({
@@ -655,7 +673,7 @@ export class TitleDetailModal extends Modal {
 					chevron.classList.remove('is-open');
 					seasonWrap.querySelector('.hoard-accordion__episode-grid')?.remove();
 				}
-				void this.deps.titles.persistCollapsedSeasons(this.title.id, this.collapsedSeasons);
+				void this.titles.persistCollapsedSeasons(this.title.id, this.collapsedSeasons);
 			});
 		});
 	}
@@ -664,10 +682,10 @@ export class TitleDetailModal extends Modal {
 		renderEpisodeGrid(parent, {
 			getTitle: () => this.title,
 			season,
-			perSeason: this.deps.settings.get().episodeNumbering === 'per-season',
+			perSeason: this.settings.get().episodeNumbering === 'per-season',
 			...episodeGridText(),
 			onFill: (seasonEps, markWatched) => {
-				void this.deps.titles
+				void this.titles
 					.markSeasonWatched(this.title.id, seasonEps, markWatched, season?.name)
 					.then(() => {
 						this.refreshTitle();
@@ -678,7 +696,7 @@ export class TitleDetailModal extends Modal {
 			},
 			onEpisode: (epNum, _e, refreshBox, refreshFillBtn) => {
 				const isWatched = this.title.watchedEpisodes.includes(epNum);
-				this.deps.titles.applyEpisodeWatchedToggle(this.title.id, epNum, !isWatched);
+				this.titles.applyEpisodeWatchedToggle(this.title.id, epNum, !isWatched);
 				this.refreshTitle();
 				this.markChanged();
 				refreshBox();
@@ -713,14 +731,14 @@ export class TitleDetailModal extends Modal {
 					toRemove.parentNode?.removeChild(toRemove);
 				}
 			}
-			renderCommunityRating(commHost, this.deps.titles, this.deps.settings, this.deps.api, this.title.id, rerenderCommunity);
+			renderCommunityRating(commHost, this.titles, this.settings, this.api, this.title.id, rerenderCommunity);
 			this.renderTrailerControl(commHost);
 			this.refreshTitle();
 		};
-		renderCommunityRating(commHost, this.deps.titles, this.deps.settings, this.deps.api, this.title.id, rerenderCommunity);
+		renderCommunityRating(commHost, this.titles, this.settings, this.api, this.title.id, rerenderCommunity);
 		// trailer at the tail of the row: rating badge → refresh → YouTube
 		this.renderTrailerControl(commHost);
-		maybeAutoRefreshCommunityRating(this.deps.titles, this.deps.settings, this.deps.api, this.title.id, rerenderCommunity);
+		maybeAutoRefreshCommunityRating(this.titles, this.settings, this.api, this.title.id, rerenderCommunity);
 	}
 
 	/** Appends the trailer control (its own container) to the rating row. */
@@ -737,7 +755,7 @@ export class TitleDetailModal extends Modal {
 	 */
 	private paintTrailerControl(container: HTMLElement): void {
 		container.empty();
-		const title = this.deps.titles.getTitle(this.title.id) ?? this.title;
+		const title = this.titles.getTitle(this.title.id) ?? this.title;
 		const url = getDisplayTrailer(title);
 		const btn = this.renderTrailerButton(container, url ? t('detail.trailer.watch') : t('detail.trailer.fetch'));
 		if (!url) btn.addClass('hoard-trailer-btn--fetch');
@@ -773,22 +791,22 @@ export class TitleDetailModal extends Modal {
 	private async refreshTrailer(btn: HTMLElement, container: HTMLElement): Promise<void> {
 		// the class blocks pointer clicks only; Enter/Space still reach a focused button
 		if (btn.classList.contains('is-loading')) return;
-		const title = this.deps.titles.getTitle(this.title.id);
+		const title = this.titles.getTitle(this.title.id);
 		if (!title) return;
 		btn.addClass('is-loading');
 		try {
-			const animeSource = this.deps.settings.get().animeApiSource ?? 'jikan';
-			const group = getApiGroupForType(title.type, this.deps.settings.get().typeApiMapping);
-			const result = await this.deps.api.fetchTrailer(title, animeSource, group);
+			const animeSource = this.settings.get().animeApiSource ?? 'jikan';
+			const group = getApiGroupForType(title.type, this.settings.get().typeApiMapping);
+			const result = await this.api.fetchTrailer(title, animeSource, group);
 			if (result.status === 'found') {
-				this.deps.titles.updateTrailerUrl(title.id, result.value);
+				this.titles.updateTrailerUrl(title.id, result.value);
 				this.paintTrailerControl(container);
 				return;
 			}
-			this.deps.titles.recordLookup(title.id, 'trailer', result);
+			this.titles.recordLookup(title.id, 'trailer', result);
 			new Notice(t(trailerMissKey(result.status)));
 		} catch {
-			this.deps.titles.recordLookup(title.id, 'trailer', FAILED);
+			this.titles.recordLookup(title.id, 'trailer', FAILED);
 			new Notice(t('notices.api.requestFailed'));
 		}
 		btn.removeClass('is-loading');
@@ -797,15 +815,15 @@ export class TitleDetailModal extends Modal {
 	private renderStars(): void {
 		if (!this.starsWrapEl) return;
 		renderStarRating(this.starsWrapEl, this.title.rating, {
-			allowHalf: this.deps.settings.get().halfStarRatings ?? false,
-			tiers: this.deps.settings.get().ratingSystem,
+			allowHalf: this.settings.get().halfStarRatings ?? false,
+			tiers: this.settings.get().ratingSystem,
 			showLabel: true,
 			onChange: (value) => {
 				void (async () => {
-					const t = this.deps.titles.getTitle(this.title.id);
+					const t = this.titles.getTitle(this.title.id);
 					if (!t) return;
 					t.rating = value;
-					await this.deps.titles.updateTitle(t);
+					await this.titles.updateTitle(t);
 					this.refreshTitle();
 					this.markChanged();
 					this.renderStars();
@@ -836,7 +854,7 @@ export class TitleDetailModal extends Modal {
 
 		// pull the on-disk `## Notes` body in, so edits made directly in the .md show here. Skipped once
 		// the user starts typing.
-		void this.deps.titles.readNotesFromFile(this.title).then((fileNotes) => {
+		void this.titles.readNotesFromFile(this.title).then((fileNotes) => {
 			if (fileNotes === null || this.notesEditedByUser) return;
 			if (fileNotes !== textarea.value) {
 				textarea.value = fileNotes;
@@ -849,10 +867,10 @@ export class TitleDetailModal extends Modal {
 		textarea.addEventListener('blur', () => {
 			if (textarea.value === this.title.notes) return;
 			void (async () => {
-				const t = this.deps.titles.getTitle(this.title.id);
+				const t = this.titles.getTitle(this.title.id);
 				if (!t) return;
 				t.notes = textarea.value;
-				await this.deps.titles.updateTitle(t);
+				await this.titles.updateTitle(t);
 				this.refreshTitle();
 				this.markChanged();
 			})();
@@ -889,11 +907,11 @@ export class TitleDetailModal extends Modal {
 			lenient: true,
 			onChange: (iso) => {
 				void (async () => {
-					const t = this.deps.titles.getTitle(this.title.id);
+					const t = this.titles.getTitle(this.title.id);
 					if (!t) return;
 					t.releaseDate = iso;
-					await this.deps.titles.updateTitle(t);
-					await this.deps.titles.applyReleaseDateChange(t);
+					await this.titles.updateTitle(t);
+					await this.titles.applyReleaseDateChange(t);
 					this.refreshTitle();
 					this.markChanged();
 					// applyReleaseDateChange may normalize the stored value
@@ -923,10 +941,10 @@ export class TitleDetailModal extends Modal {
 			value: this.title[field],
 			onChange: (iso) => {
 				void (async () => {
-					const t = this.deps.titles.getTitle(this.title.id);
+					const t = this.titles.getTitle(this.title.id);
 					if (!t) return;
 					t[field] = iso;
-					await this.deps.titles.updateTitle(t);
+					await this.titles.updateTitle(t);
 					this.refreshTitle();
 					this.markChanged();
 					refreshDimmed();
@@ -947,9 +965,9 @@ export class TitleDetailModal extends Modal {
 
 	// Status
 	private statusColor(name: string): string {
-		const def = this.getTagDef(name, this.deps.settings.get().statuses);
+		const def = this.getTagDef(name, this.settings.get().statuses);
 		return def
-			? getThemedColor(name, def.color, this.deps.settings.get().colorTheme)
+			? getThemedColor(name, def.color, this.settings.get().colorTheme)
 			: '#888780';
 	}
 
@@ -961,7 +979,7 @@ export class TitleDetailModal extends Modal {
 			color: this.statusColor(this.title.status),
 			tooltip: t('detail.clickToChangeStatus'),
 			container: this.contentEl,
-			options: this.deps.settings.get().statuses
+			options: this.settings.get().statuses
 				.filter((s) => s.name !== 'To be released')
 				.map((s) => ({ value: s.name, label: statusLabel(s.name) })),
 			getOptionColor: (name) => this.statusColor(name),
@@ -970,19 +988,19 @@ export class TitleDetailModal extends Modal {
 	}
 
 	private async saveStatus(status: string): Promise<void> {
-		const t = this.deps.titles.getTitle(this.title.id);
+		const t = this.titles.getTitle(this.title.id);
 		if (!t) return;
 		t.status = status;
-		await this.deps.titles.updateTitle(t);
+		await this.titles.updateTitle(t);
 		this.refreshTitle();
 		this.markChanged();
 	}
 
 	// Priority
 	private priorityColor(name: string): string {
-		const def = this.getTagDef(name, this.deps.settings.get().priorities);
+		const def = this.getTagDef(name, this.settings.get().priorities);
 		return def
-			? getThemedColor(name, def.color, this.deps.settings.get().colorTheme)
+			? getThemedColor(name, def.color, this.settings.get().colorTheme)
 			: '#888780';
 	}
 
@@ -997,7 +1015,7 @@ export class TitleDetailModal extends Modal {
 			tooltip: t('detail.clickToChangePriority'),
 			container: this.contentEl,
 			options: [
-				...this.deps.settings.get().priorities.map((p) => ({ value: p.name, label: priorityLabel(p.name) })),
+				...this.settings.get().priorities.map((p) => ({ value: p.name, label: priorityLabel(p.name) })),
 				{ value: '', label: t('list.footer.noPriority') },
 			],
 			getOptionColor: (name) => (name ? this.priorityColor(name) : null),
@@ -1006,10 +1024,10 @@ export class TitleDetailModal extends Modal {
 	}
 
 	private async savePriority(priority: string): Promise<void> {
-		const t = this.deps.titles.getTitle(this.title.id);
+		const t = this.titles.getTitle(this.title.id);
 		if (!t) return;
 		t.priority = priority;
-		await this.deps.titles.updateTitle(t);
+		await this.titles.updateTitle(t);
 		this.refreshTitle();
 		this.markChanged();
 	}
@@ -1023,16 +1041,15 @@ export class TitleDetailModal extends Modal {
 			text: t('common.remove'),
 		});
 		removeBtn.addEventListener('click', () => {
-			new ConfirmModal(
-				this.deps.app,
+			this.modals.confirm(
 				t('list.removeTitleConfirm', { title: this.title.title }),
 				() => {
-					void this.deps.titles.removeTitle(this.title.id).then(() => {
+					void this.titles.removeTitle(this.title.id).then(() => {
 						this.markChanged();
 						this.close();
 					});
 				},
-			).open();
+			);
 		});
 
 		// favorite heart, centered by the footer's space-between. Updates in place, no re-render.
@@ -1048,7 +1065,7 @@ export class TitleDetailModal extends Modal {
 			if (writing) return;
 			writing = true;
 			// the write replaces the view, so repaint from the fresh one once it is done
-			void this.deps.titles.setFavorite(this.title.id, !this.title.favorite).catch(() => {
+			void this.titles.setFavorite(this.title.id, !this.title.favorite).catch(() => {
 				new Notice(t('detail.favorite.failed'));
 			}).finally(() => {
 				writing = false;
@@ -1068,15 +1085,15 @@ export class TitleDetailModal extends Modal {
 			text: t('common.edit'),
 		});
 		editBtn.addEventListener('click', () => {
-			const current = this.deps.titles.getTitle(this.title.id);
+			const current = this.titles.getTitle(this.title.id);
 			if (!current) return;
 			this.close();
-			new EditTitleModal(this.deps.app, this.deps.settings, this.deps.titles, {
+			this.modals.openEditTitle({
 				title: current,
 				onSaved: () => {
 					if (this.onChanged) this.onChanged();
 				},
-			}).open();
+			});
 		});
 	}
 
@@ -1084,7 +1101,7 @@ export class TitleDetailModal extends Modal {
 	private async maybeRenderCollectionButton(host: HTMLElement): Promise<void> {
 		let collection: TmdbCollectionDetail | null = null;
 		try {
-			collection = await resolveCollection(this.deps.settings, this.deps.titles, this.deps.api, this.title);
+			collection = await resolveCollection(this.settings, this.titles, this.api, this.title);
 		} catch {
 			return;
 		}
@@ -1097,7 +1114,7 @@ export class TitleDetailModal extends Modal {
 
 	private paintCollectionButton(host: HTMLElement, collection: TmdbCollectionDetail): void {
 		host.empty();
-		const missing = countMissing(collection, this.deps.titles.getTitles());
+		const missing = countMissing(collection, this.titles.getTitles());
 
 		const btn = host.createEl('button', {
 			cls: 'hoard-detail__collection-btn',
@@ -1121,26 +1138,25 @@ export class TitleDetailModal extends Modal {
 		btn.setAttr('aria-label', label);
 
 		btn.addEventListener('click', () => {
-			new CollectionModal(this.deps.app, this.deps.settings, this.deps.titles, this.deps.api, {
+			this.modals.openCollection({
 				collection,
 				movieType: this.title.type,
 				onOpenTitle: (title) => {
 					this.close();
-					new TitleDetailModal(
-						this.deps,
+					this.modals.openTitleDetail({
 						title,
-						() => {
+						onChanged: () => {
 							if (this.onChanged) this.onChanged();
 						},
-						this.onPersonClick,
-					).open();
+						onPersonClick: this.onPersonClick,
+					});
 				},
 				onChanged: () => {
 					this.markChanged();
 					// this modal stays open behind — keep the count honest
 					if (host.isConnected) this.paintCollectionButton(host, collection);
 				},
-			}).open();
+			});
 		});
 	}
 }
@@ -1327,6 +1343,16 @@ export function renderCreditsRows(
 }
 
 // Group detail modal
+export interface GroupDetailOptions {
+	group: HoardGroup;
+	members: HoardTitle[];
+	/** Runs on close when a member changed. */
+	onChanged?: () => void;
+	onPersonClick?: (name: string) => void;
+}
+
+export type OpenGroupDetail = (opts: GroupDetailOptions) => void;
+
 export class GroupDetailModal extends Modal {
 	private group: HoardGroup;
 	private members: HoardTitle[];
@@ -1335,21 +1361,23 @@ export class GroupDetailModal extends Modal {
 	private changed = false;
 
 	constructor(
-		private deps: TitleDetailModalDeps,
-		group: HoardGroup,
-		members: HoardTitle[],
-		onChanged?: () => void,
-		onPersonClick?: (name: string) => void,
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly titles: Pick<DataManager, 'getEffectiveTotal'>,
+		private readonly posters: Pick<PosterService, 'enqueue'>,
+		private readonly openTitleDetail: OpenTitleDetail,
+		private readonly openEditTitle: OpenEditTitle,
+		opts: GroupDetailOptions,
 	) {
-		super(deps.app);
-		this.group = group;
-		this.members = members;
-		this.onChanged = onChanged;
-		this.onPersonClick = onPersonClick;
+		super(app);
+		this.group = opts.group;
+		this.members = opts.members;
+		this.onChanged = opts.onChanged;
+		this.onPersonClick = opts.onPersonClick;
 	}
 
 	onOpen(): void {
-		markDetailRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
+		markDetailRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
 		this.renderAll();
 	}
 
@@ -1361,7 +1389,7 @@ export class GroupDetailModal extends Modal {
 	private renderAll(): void {
 		this.contentEl.empty();
 		const totalEps = this.members.reduce(
-			(s, m) => s + this.deps.titles.getEffectiveTotal(m),
+			(s, m) => s + this.titles.getEffectiveTotal(m),
 			0,
 		);
 		const watchedEps = this.members.reduce((s, m) => s + m.watchedEpisodes.length, 0);
@@ -1374,23 +1402,27 @@ export class GroupDetailModal extends Modal {
 
 		const grid = this.contentEl.createDiv({ cls: 'hoard-card-grid hoard-detail__group-grid' });
 		for (const m of this.members) {
-			const card = buildTitleCardElement(this.deps, m, {
+			const card = buildTitleCardElement(this.settings, this.posters, m, {
 				onOpenDetail: () => {
 					this.close();
-					new TitleDetailModal(this.deps, m, () => {
-						this.changed = true;
-						if (this.onChanged) this.onChanged();
-					}, this.onPersonClick).open();
+					this.openTitleDetail({
+						title: m,
+						onChanged: () => {
+							this.changed = true;
+							if (this.onChanged) this.onChanged();
+						},
+						onPersonClick: this.onPersonClick,
+					});
 				},
 				onEdit: () => {
 					this.close();
-					new EditTitleModal(this.deps.app, this.deps.settings, this.deps.titles, {
+					this.openEditTitle({
 						title: m,
 						onSaved: () => {
 							this.changed = true;
 							if (this.onChanged) this.onChanged();
 						},
-					}).open();
+					});
 				},
 			});
 			grid.appendChild(card);
@@ -1402,11 +1434,12 @@ export class GroupDetailModal extends Modal {
 // member tiles look identical. Posters with no cached URL are fetched eagerly here — a group modal
 // has a small, finite member count.
 function buildTitleCardElement(
-	deps: Pick<TitleDetailModalDeps, 'settings' | 'posters'>,
+	settingsReader: SettingsReader,
+	posters: Pick<PosterService, 'enqueue'>,
 	title: HoardTitle,
 	handlers: { onOpenDetail: () => void; onEdit: () => void },
 ): HTMLElement {
-	const settings = deps.settings.get();
+	const settings = settingsReader.get();
 	const typeDef = settings.types.find((d) => d.name === title.type);
 	const statusDef = settings.statuses.find((d) => d.name === title.status);
 	const typeColor = typeDef
@@ -1436,7 +1469,7 @@ function buildTitleCardElement(
 		img.onerror = showPlaceholder;
 	} else if (title.posterUrl === '') {
 		placeholder.addClass('is-loading');
-		void deps.posters.enqueue(title).then((url) => {
+		void posters.enqueue(title).then((url) => {
 			placeholder.removeClass('is-loading');
 			if (url) showImg(url);
 		});

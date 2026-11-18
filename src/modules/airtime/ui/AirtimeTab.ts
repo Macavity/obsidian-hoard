@@ -18,7 +18,7 @@ import { VirtualGrid, computeGridMetrics, type GridMetrics } from '../../../shar
 import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
 import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
 import { openCardMenu } from '../../../shared/ui/PosterCard';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { ConfirmModal, confirmWith } from '../../../shared/ui/ConfirmModal';
 import { MaybeAddModal, type MaybeAddStore } from './MaybeAddModal';
 import { ReadingScheduleModal } from './ReadingScheduleModal';
 import { GameScheduleModal } from './GameScheduleModal';
@@ -753,7 +753,7 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	private renderActionBar(parent: HTMLElement): void {
-		renderActionBar(parent, this.deps.app, {
+		renderActionBar(parent, confirmWith(this.deps.app), {
 			title: t('airtime.actions.removeFromUpcoming'),
 			selected: this.selectedItems,
 			message: (count) => t('airtime.confirm.removeSelected', { count }),

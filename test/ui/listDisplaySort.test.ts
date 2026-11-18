@@ -7,13 +7,11 @@ type Compare = (key: string, a: Item, b: Item) => number;
 
 const host = Object.assign(Object.create(ListTab.prototype) as object, {
 	STATUS_ORDER: ['Watching', 'Plan to watch', 'Completed', 'To be released', 'Dropped'],
-	deps: {
-		titles: {
-			getProgress: (t: HoardTitle) => (t as unknown as { p: number }).p,
-			calcTimeRemaining: (t: HoardTitle) => (t as unknown as { left: number }).left,
-			calcTimeWatched: (t: HoardTitle) => (t as unknown as { watched: number }).watched,
-			getEffectiveTotal: (t: HoardTitle) => (t as unknown as { total: number }).total,
-		},
+	titles: {
+		getProgress: (t: HoardTitle) => (t as unknown as { p: number }).p,
+		calcTimeRemaining: (t: HoardTitle) => (t as unknown as { left: number }).left,
+		calcTimeWatched: (t: HoardTitle) => (t as unknown as { watched: number }).watched,
+		getEffectiveTotal: (t: HoardTitle) => (t as unknown as { total: number }).total,
 	},
 });
 const compare = (key: string, a: Item, b: Item): number =>

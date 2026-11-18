@@ -116,13 +116,21 @@ class SearchHelpModal<T> extends Modal {
 	}
 }
 
+/** Opens the search help dialog for a tab; lets a tab show it without holding the App. */
+export type OpenSearchHelp = <T>(tabLabel: string, fields: SearchFieldSpec<T>[]) => void;
+
+/** Search help opener bound to an App; the wiring layer builds it. */
+export function searchHelpWith(app: App): OpenSearchHelp {
+	return (tabLabel, fields) => new SearchHelpModal(app, tabLabel, fields).open();
+}
+
 /**
  * Adds the "?" button to a search wrapper. One call per tab, so the three search bars keep their own
  * debounce and rerender wiring.
  */
 export function renderSearchHelpButton<T>(
 	wrap: HTMLElement,
-	app: App,
+	openHelp: OpenSearchHelp,
 	tabLabel: string,
 	fields: () => SearchFieldSpec<T>[],
 ): HTMLElement {
@@ -132,7 +140,7 @@ export function renderSearchHelpButton<T>(
 		cls: 'hoard-search-help__btn',
 	});
 	btn.addEventListener('click', () => {
-		new SearchHelpModal(app, tabLabel, fields()).open();
+		openHelp(tabLabel, fields());
 	});
 	return btn;
 }

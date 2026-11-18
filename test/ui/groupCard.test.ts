@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../src/shared/ui/CollageUtil', () => ({ renderGroupCollage: vi.fn() }));
-vi.mock('../../src/shared/ui/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
 vi.mock('../../src/shared/ui/PosterCard', async (importOriginal) => ({
 	...(await importOriginal<typeof import('../../src/shared/ui/PosterCard')>()),
 	openCardMenu: vi.fn(),
@@ -53,7 +52,7 @@ class El {
 }
 
 const opts = (over: Partial<GroupCardOptions<string>> = {}): GroupCardOptions<string> => ({
-	app: {} as never,
+	confirm: vi.fn(),
 	group: { id: 'g1', name: 'zelda' },
 	members: ['a', 'b'],
 	getCover: (m) => m,

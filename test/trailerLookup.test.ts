@@ -2,7 +2,7 @@ import { requestUrl } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService } from '../src/shared/api/ApiService';
 import { fakeSettings } from './helpers/fakeSettings';
-import { TitleDetailModal } from '../src/modules/watchlist/ui/TitleDetailModal';
+import { newTitleDetail } from './helpers/newTitleDetail';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../src/shared/domain/types';
 import { setupDataManager } from './helpers/setupDataManager';
 
@@ -141,8 +141,7 @@ describe('maybeBackfillTrailer', () => {
 	const NOTE = '---\nName: Dune\nType: Movie\nExternal ID: tmdb:movie:438631\nCover: https://p/x.jpg\n---\n';
 	const open = async (api: ApiService) => {
 		const { dm } = await setupDataManager({ 'W/Movie/Dune.md': NOTE });
-		const deps = { app: {} as never, settings: fakeSettings({ ...DEFAULT_SETTINGS }), titles: dm, api, posters: { enqueue: () => Promise.resolve(null) } };
-		const modal = new TitleDetailModal(deps, dm.getTitle('Movie/Dune')!);
+		const modal = newTitleDetail({ settings: fakeSettings({ ...DEFAULT_SETTINGS }), titles: dm, api }, { title: dm.getTitle('Movie/Dune')! });
 		const backfill = () => (modal as unknown as { maybeBackfillTrailer: () => Promise<void> }).maybeBackfillTrailer();
 		return { dm, backfill };
 	};

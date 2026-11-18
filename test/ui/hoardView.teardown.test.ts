@@ -16,7 +16,6 @@ const { tab, destroyed } = vi.hoisted(() => {
 });
 
 vi.mock('../../src/modules/dashboard/ui/DashboardTab', () => ({ DashboardTab: tab('dashboard', false) }));
-vi.mock('../../src/modules/watchlist/ui/ListTab', () => ({ ListTab: tab('watchlist', true) }));
 vi.mock('../../src/modules/reading/ui/ReadingTab', () => ({ ReadingTab: tab('reading', true) }));
 vi.mock('../../src/modules/games/ui/GamesTab', () => ({ GamesTab: tab('games', true) }));
 vi.mock('../../src/modules/custom-lists/ui/CustomListsTab', () => ({ CustomListsTab: tab('custom-lists', true) }));
@@ -31,7 +30,9 @@ vi.mock('../../src/modules/drafts/ui/DraftsTab', () => ({
 afterEach(() => { destroyed.length = 0; });
 
 async function open(): Promise<HoardView> {
-	const view = new HoardView(new WorkspaceLeaf(), hoardViewDeps());
+	const WatchlistStub = tab('watchlist', true);
+	const deps = { ...hoardViewDeps(), createListTab: () => new WatchlistStub() } as never;
+	const view = new HoardView(new WorkspaceLeaf(), deps);
 	await view.onOpen();
 	return view;
 }

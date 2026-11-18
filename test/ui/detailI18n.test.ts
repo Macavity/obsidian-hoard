@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setLocale } from '../../src/shared/i18n';
 import de from '../../src/shared/i18n/de';
 import { renderCommunityRating } from '../../src/modules/watchlist/ui/CommunityRating';
@@ -35,10 +35,10 @@ describe('detail modals i18n', () => {
 
 	it('renders the group modal header in German', () => {
 		setLocale('de');
-		const modal = new GroupDetailModal({
-			app: {} as never,
-			titles: { getEffectiveTotal: () => 0 },
-		} as never, { name: 'Marvel' } as never, []);
+		const modal = new GroupDetailModal(
+			{} as never, {} as never, { getEffectiveTotal: () => 0 }, {} as never, vi.fn(), vi.fn(),
+			{ group: { name: 'Marvel' } as never, members: [] },
+		);
 		(modal as unknown as { renderAll: () => void }).renderAll();
 		const texts = domText(modal.contentEl);
 		expect(texts).toContain('0 Titel');

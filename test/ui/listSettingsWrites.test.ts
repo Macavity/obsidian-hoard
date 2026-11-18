@@ -42,9 +42,9 @@ describe('ListTab settings access', () => {
 
 describe('ListTab import progress', () => {
 	it('shows the running import and cancels it from the header', async () => {
-		const { tab, container, deps } = await setupListTab(files);
+		const { tab, container, host } = await setupListTab(files);
 		const cancel = vi.fn();
-		deps.importProgress = () => ({ current: 3, total: 8, cancel });
+		host.importProgress = () => ({ current: 3, total: 8, cancel });
 		tab.render();
 		expect(q(container, '.hoard-import__header-text').textContent).toBe('3 / 8');
 		q(container, '.hoard-import__header-progress button').click();

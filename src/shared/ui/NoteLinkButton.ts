@@ -1,5 +1,11 @@
-import { App, Notice, TFile, setIcon } from 'obsidian';
+import { Notice, TFile, setIcon, type Vault, type Workspace } from 'obsidian';
 import { t } from '../i18n';
+
+/** What opening a note needs: a vault lookup and a leaf to open it in. */
+export interface NoteFiles {
+	vault: Pick<Vault, 'getAbstractFileByPath'>;
+	workspace: Pick<Workspace, 'getLeaf'>;
+}
 
 /**
  * The shared "Open note" file-text icon button used by the Watchlist and Reading detail modals.
@@ -10,7 +16,7 @@ import { t } from '../i18n';
  * @param onOpen Optional callback after a successful open (e.g. close the modal).
  */
 export function appendNoteLinkButton(
-	app: App,
+	files: NoteFiles,
 	parent: HTMLElement,
 	target: TFile | string,
 	onOpen?: () => void,
@@ -23,12 +29,12 @@ export function appendNoteLinkButton(
 	noteIcon.addEventListener('click', (e) => {
 		e.stopPropagation();
 		const file =
-			target instanceof TFile ? target : app.vault.getAbstractFileByPath(target);
+			target instanceof TFile ? target : files.vault.getAbstractFileByPath(target);
 		if (!(file instanceof TFile)) {
 			new Notice(t('misc.noteLink.notFound'));
 			return;
 		}
-		void app.workspace.getLeaf().openFile(file);
+		void files.workspace.getLeaf().openFile(file);
 		onOpen?.();
 	});
 	return noteIcon;

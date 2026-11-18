@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setLocale } from '../../src/shared/i18n';
 import de from '../../src/shared/i18n/de';
 import { AddFromUrlModal } from '../../src/modules/watchlist/ui/AddFromUrlModal';
@@ -30,7 +30,7 @@ describe('add and edit modals i18n', () => {
 
 	it('renders the add from URL modal in German', () => {
 		setLocale('de');
-		const modal = new AddFromUrlModal({ app: {} as never } as never, () => {});
+		const modal = new AddFromUrlModal({} as never, {} as never, {} as never, vi.fn(), { onAdded: () => {} });
 		modal.onOpen();
 		expect(modal.titleEl.textContent).toBe(de.add.choice.fromUrl);
 		const texts = allText(modal.contentEl);
