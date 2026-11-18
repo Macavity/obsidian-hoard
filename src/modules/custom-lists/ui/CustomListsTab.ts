@@ -1,5 +1,5 @@
 import type { TabInstance } from '../../../shared/ui/TabInstance';
-import { App, Component, MarkdownRenderer, Modal, Notice, Platform, normalizePath, Setting, type EventRef, type TAbstractFile } from 'obsidian';
+import { App, Component, Modal, Notice, Platform, normalizePath, Setting, type EventRef, type TAbstractFile, type Vault } from 'obsidian';
 import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
@@ -7,10 +7,10 @@ import type { GameDataManager } from '../../games/services/GameDataManager';
 import type { CustomListManager } from '../services/CustomListManager';
 import type { CustomListColumn, CustomListRow, CustomList } from '../../../shared/domain/types';
 import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/types';
-import { ConfirmModal, type OpenConfirm } from '../../../shared/ui/ConfirmModal';
+import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
 import { openColorPicker, deriveFillColor, deriveBorderColor } from '../../../shared/ui/ColorPicker';
 import { openStatusDropdown } from '../../../shared/ui/StatusDropdown';
-import type { AddRouteOptions } from '../../../shared/ui/addRoute';
+import type { OpenAddRoute } from '../../../shared/ui/addRoute';
 import { cloneColumns, renderCancelSave, renderColumnsEditor } from '../../../shared/ui/ColumnsEditor';
 import { t } from '../../../shared/i18n';
 import { createIconButton } from '../../../shared/ui/IconButton';
@@ -71,9 +71,15 @@ const DEFAULT_COL_WIDTH = 140;
 
 // EditColumnsModal
 
-class EditColumnsModal extends Modal {
+export interface EditColumnsOptions {
+	list: CustomList;
+	onSave: (columns: CustomListColumn[]) => Promise<void>;
+}
+
+export type OpenEditColumns = (opts: EditColumnsOptions) => void;
+
+export class EditColumnsModal extends Modal {
 	private list: CustomList;
-	private manager: CustomListManager;
 	private onSave: (columns: CustomListColumn[]) => Promise<void>;
 	private cols: CustomListColumn[];
 	private tabColor: string | undefined;
@@ -83,14 +89,14 @@ class EditColumnsModal extends Modal {
 
 	constructor(
 		app: App,
-		list: CustomList,
-		manager: CustomListManager,
-		onSave: (columns: CustomListColumn[]) => Promise<void>,
+		private readonly manager: Pick<CustomListManager, 'generateColId'>,
+		private readonly confirm: OpenConfirm,
+		opts: EditColumnsOptions,
 	) {
 		super(app);
+		const { list } = opts;
 		this.list = list;
-		this.manager = manager;
-		this.onSave = onSave;
+		this.onSave = opts.onSave;
 		this.tabColor = list.tabColor;
 		this.cols = cloneColumns(list.columns.filter(c => !c.locked));
 	}
@@ -104,7 +110,7 @@ class EditColumnsModal extends Modal {
 
 	private renderBody(): void {
 		renderColumnsEditor(this.contentEl, { cols: this.cols }, {
-			confirm: (message, onConfirm, extra) => new ConfirmModal(this.app, message, onConfirm, extra).open(),
+			confirm: this.confirm,
 			rows: this.list.rows,
 			renderHeader: (parent) => this.renderTabColorRow(parent),
 			newColumnId: (cols) => this.manager.generateColId([...this.list.columns.filter(c => !c.locked), ...cols]),
@@ -232,16 +238,34 @@ export class DefaultColumnsModal extends Modal {
 
 // NotesModal — edits a list's notes in a textarea
 
-class NotesModal extends Modal {
+export interface NotesOptions {
+	listName: string;
+	initialNotes: string;
+	/** Resolves false when nothing was saved; the modal then stays open with the typed text. */
+	onSave: (notes: string) => Promise<boolean>;
+}
+
+export type OpenNotes = (opts: NotesOptions) => void;
+
+/** Renders Markdown into an element; the wiring layer binds it to the app. */
+export type RenderMarkdown = (source: string, el: HTMLElement, component: Component) => Promise<void>;
+
+export class NotesModal extends Modal {
 	private previewComponent = new Component();
+	private readonly listName: string;
+	private readonly initialNotes: string;
+	private readonly onSave: (notes: string) => Promise<boolean>;
 
 	constructor(
 		app: App,
-		private listName: string,
-		private initialNotes: string,
-		/** Resolves false when nothing was saved; the modal then stays open with the typed text. */
-		private onSave: (notes: string) => Promise<boolean>,
-	) { super(app); }
+		private readonly renderMarkdown: RenderMarkdown,
+		opts: NotesOptions,
+	) {
+		super(app);
+		this.listName = opts.listName;
+		this.initialNotes = opts.initialNotes;
+		this.onSave = opts.onSave;
+	}
 
 	onOpen(): void {
 		this.previewComponent.load();
@@ -282,7 +306,7 @@ class NotesModal extends Modal {
 			editBtn.removeClass('is-active');
 			previewBtn.addClass('is-active');
 			const source = textarea.value.trim() || '*No notes yet.*';
-			await MarkdownRenderer.render(this.app, source, previewArea, '', this.previewComponent);
+			await this.renderMarkdown(source, previewArea, this.previewComponent);
 		};
 
 		editBtn.addEventListener('click', showEdit);
@@ -325,12 +349,22 @@ function wrapSelection(ta: HTMLTextAreaElement, before: string, after: string): 
 
 // ListNameModal — text-input modal (window.prompt() is blocked in Electron)
 
-class ListNameModal extends Modal {
-	constructor(
-		app: App,
-		private existingNames: string[],
-		private onSubmit: (name: string) => void,
-	) { super(app); }
+export interface ListNameOptions {
+	existingNames: string[];
+	onSubmit: (name: string) => void;
+}
+
+export type OpenListName = (opts: ListNameOptions) => void;
+
+export class ListNameModal extends Modal {
+	private readonly existingNames: string[];
+	private readonly onSubmit: (name: string) => void;
+
+	constructor(app: App, opts: ListNameOptions) {
+		super(app);
+		this.existingNames = opts.existingNames;
+		this.onSubmit = opts.onSubmit;
+	}
 
 	onOpen(): void {
 		this.titleEl.setText(t('lists.newList'));
@@ -373,16 +407,20 @@ class ListNameModal extends Modal {
 
 // CustomListsTab
 
-export interface CustomListsTabDeps {
-	app: App;
-	settings: SettingsReader & SettingsWriter;
-	/** Opens the vault I/O of the lists; `onConflict` hears of writes refused because the note changed elsewhere. */
-	listManager: (onConflict?: (list: CustomList) => void) => CustomListManager;
-	titles: Pick<DataManager, 'getTitles' | 'calcTimeRemainingForModal'>;
-	reading: Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>;
-	games: Pick<GameDataManager, 'getGames'>;
-	openAdd: (opts: AddRouteOptions) => void;
+/** The dialogs the Custom Lists tab opens; the wiring layer builds them, so the tab needs none of their collaborators. */
+export interface CustomListsTabModals {
+	openListName: OpenListName;
+	openEditColumns: OpenEditColumns;
+	openNotes: OpenNotes;
+	openExportFormat: OpenExportFormat;
+	openImportList: OpenImportList;
+	/** Opens the Add chooser for a loose title. */
+	openAdd: OpenAddRoute;
+	confirm: OpenConfirm;
 }
+
+/** Opens the vault I/O of the lists; `onConflict` hears of writes refused because the note changed elsewhere. */
+export type CreateListManager = (onConflict?: (list: CustomList) => void) => CustomListManager;
 
 export class CustomListsTab implements TabInstance {
 	private container: HTMLElement;
@@ -407,10 +445,19 @@ export class CustomListsTab implements TabInstance {
 	private _countEl: HTMLElement | null = null;
 	private _tableContainer: HTMLElement | null = null;
 
-	constructor(container: HTMLElement, private deps: CustomListsTabDeps) {
+	constructor(
+		container: HTMLElement,
+		private readonly settings: SettingsReader & SettingsWriter,
+		createListManager: CreateListManager,
+		private readonly vault: Pick<Vault, 'on' | 'offref'>,
+		private readonly titles: Pick<DataManager, 'getTitles' | 'calcTimeRemainingForModal'>,
+		private readonly reading: Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>,
+		private readonly games: Pick<GameDataManager, 'getGames'>,
+		private readonly modals: CustomListsTabModals,
+	) {
 		this.container = container;
-		this.manager = deps.listManager((list) => this.onSaveConflict(list));
-		this.modifyRef = deps.app.vault.on('modify', (file) => void this.onVaultModify(file));
+		this.manager = createListManager((list) => this.onSaveConflict(list));
+		this.modifyRef = vault.on('modify', (file) => void this.onVaultModify(file));
 	}
 
 	private modifyRef: EventRef | null;
@@ -438,7 +485,7 @@ export class CustomListsTab implements TabInstance {
 
 	/** listNames merged with the persisted tab order (new lists appended at the end). */
 	private applyTabOrder(names: string[]): string[] {
-		const saved = this.deps.settings.get().customListTabOrder ?? [];
+		const saved = this.settings.get().customListTabOrder ?? [];
 		const ordered = saved.filter(n => names.includes(n));
 		const unordered = names.filter(n => !ordered.includes(n));
 		return [...ordered, ...unordered];
@@ -446,7 +493,7 @@ export class CustomListsTab implements TabInstance {
 
 	/** View close: stop listening to the vault and tear down the inline editor. */
 	destroy(): void {
-		if (this.modifyRef) this.deps.app.vault.offref(this.modifyRef);
+		if (this.modifyRef) this.vault.offref(this.modifyRef);
 		this.modifyRef = null;
 		this.teardownEditor();
 	}
@@ -568,7 +615,7 @@ export class CustomListsTab implements TabInstance {
 				this.listNames.splice(fromIdx, 1);
 				this.listNames.splice(toIdx, 0, dragFromName);
 				const order = [...this.listNames];
-				void this.deps.settings.update((s) => { s.customListTabOrder = order; }).then(() => void this.render());
+				void this.settings.update((s) => { s.customListTabOrder = order; }).then(() => void this.render());
 			});
 		}
 
@@ -608,8 +655,8 @@ export class CustomListsTab implements TabInstance {
 	}
 
 	private promptCreateList(): void {
-		new ListNameModal(this.deps.app, this.listNames, (trimmed) => {
-			const defaultCols = (this.deps.settings.get().defaultCustomColumns ?? [])
+		this.modals.openListName({ existingNames: this.listNames, onSubmit: (trimmed) => {
+			const defaultCols = (this.settings.get().defaultCustomColumns ?? [])
 				.map(c => ({
 					...c,
 					id: c.id,
@@ -619,11 +666,9 @@ export class CustomListsTab implements TabInstance {
 
 			const newList: CustomList = { name: trimmed, columns: defaultCols, rows: [], notes: '' };
 
-			new EditColumnsModal(
-				this.deps.app,
-				newList,
-				this.manager,
-				async (cols) => {
+			this.modals.openEditColumns({
+				list: newList,
+				onSave: async (cols) => {
 					newList.columns = cols;
 					await this.manager.saveList(newList);
 					this.activeListName = trimmed;
@@ -633,18 +678,18 @@ export class CustomListsTab implements TabInstance {
 					this.duplicatedRowIds.clear();
 					await this.render();
 				},
-			).open();
-		}).open();
+			});
+		} });
 	}
 
 	private deleteList(name: string): void {
-		new ConfirmModal(this.deps.app, t('lists.deleteConfirm', { name }), () => {
+		this.modals.confirm(t('lists.deleteConfirm', { name }), () => {
 			void (async () => {
 				await this.manager.deleteList(name);
 				if (this.activeListName === name) { this.activeListName = null; this.currentList = null; }
 				await this.render();
 			})();
-		}).open();
+		});
 	}
 
 	private buildListView(list: CustomList): void {
@@ -656,12 +701,11 @@ export class CustomListsTab implements TabInstance {
 
 		const notesBtn = toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.notes') });
 		notesBtn.addEventListener('click', () => {
-			new NotesModal(
-				this.deps.app,
-				list.name,
-				list.notes,
-				(notes) => this.manager.saveNotes(list, notes),
-			).open();
+			this.modals.openNotes({
+				listName: list.name,
+				initialNotes: list.notes,
+				onSave: (notes) => this.manager.saveNotes(list, notes),
+			});
 		});
 
 		const sortBtn = toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.sort') });
@@ -681,11 +725,9 @@ export class CustomListsTab implements TabInstance {
 
 		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.tableSettings') })
 			.addEventListener('click', () => {
-				new EditColumnsModal(
-					this.deps.app,
+				this.modals.openEditColumns({
 					list,
-					this.manager,
-					async (cols) => {
+					onSave: async (cols) => {
 						const colIds = new Set(cols.map(c => c.id));
 						for (const row of list.rows) {
 							for (const key of Object.keys(row)) {
@@ -703,7 +745,7 @@ export class CustomListsTab implements TabInstance {
 						await this.manager.saveList(list);
 						await this.render();
 					},
-				).open();
+				});
 			});
 
 		const searchWrap = view.createDiv({ cls: 'hoard-search-box' });
@@ -724,7 +766,7 @@ export class CustomListsTab implements TabInstance {
 			}, 250);
 		});
 
-		if (this.deps.settings.get().showHintBanners) {
+		if (this.settings.get().showHintBanners) {
 			view.createDiv({
 				cls: 'hoard-custom-lists__draft-banner',
 				text: `⚠ ${t('lists.draftBanner')}`,
@@ -795,20 +837,20 @@ export class CustomListsTab implements TabInstance {
 	}
 
 	private exportToClipboard(list: CustomList): void {
-		new ExportFormatModal(this.deps.app, (format) => {
+		this.modals.openExportFormat({ onChoose: (format) => {
 			const data = this.gatherExportData(list);
 			const text = format === 'tsv' ? this.buildTsv(data) : this.buildMarkdown(data);
 			navigator.clipboard.writeText(text)
 				.then(() => new Notice(t('lists.copied')))
 				.catch(() => new Notice(t('lists.copyFailed')));
-		}).open();
+		} });
 	}
 
 	private openImport(list: CustomList): void {
-		new ImportListModal(this.deps.app, list, this.manager, async () => {
+		this.modals.openImportList({ list, onApplied: async () => {
 			await this.manager.saveList(list);
 			await this.render();
-		}).open();
+		} });
 	}
 
 	private getFilteredSortedRows(list: CustomList): CustomListRow[] {
@@ -898,7 +940,7 @@ export class CustomListsTab implements TabInstance {
 			const target = list.rows.find((r) => r.id === rowId);
 			const name = target ? rowName(target) : '';
 			if (!name) return;
-			this.deps.openAdd({
+			this.modals.openAdd({
 				title: name,
 				heading: t('lists.addTitle'),
 			});
@@ -1211,12 +1253,12 @@ export class CustomListsTab implements TabInstance {
 			const q = input.value.toLowerCase();
 			if (!q) return;
 			// suggestions come from every library: Watchlist, Reading (Books + Manga) and Games
-			const reading = this.deps.reading;
+			const reading = this.reading;
 			const suggestions: { title: string; meta: string }[] = [
-				...this.deps.titles.getTitles().map(ti => ({ title: ti.title, meta: `${typeLabel(ti.type)} · ${statusLabel(ti.status)}` })),
+				...this.titles.getTitles().map(ti => ({ title: ti.title, meta: `${typeLabel(ti.type)} · ${statusLabel(ti.status)}` })),
 				...reading.getBooks().map(b => ({ title: b.title, meta: `${t('lists.book')} · ${readingStatusLabel(b.status)}` })),
 				...reading.getMangaList().map(m => ({ title: m.title, meta: `${t('lists.manga')} · ${readingStatusLabel(m.status)}` })),
-				...this.deps.games.getGames().map(g => ({ title: g.title, meta: `${t('lists.game')} · ${g.status}` })),
+				...this.games.getGames().map(g => ({ title: g.title, meta: `${t('lists.game')} · ${g.status}` })),
 			]
 				.filter(s => s.title.toLowerCase().includes(q))
 				.slice(0, 10);
@@ -1420,7 +1462,7 @@ export class CustomListsTab implements TabInstance {
 	// Auto-populate time column
 
 	private autoPopulateTimeColumn(list: CustomList, col: CustomListColumn): void {
-		const titles = this.deps.titles.getTitles();
+		const titles = this.titles.getTitles();
 		for (const row of list.rows) {
 			const rowName = String(row['name'] ?? '').trim();
 			if (!rowName) continue;
@@ -1429,7 +1471,7 @@ export class CustomListsTab implements TabInstance {
 				row[col.id] = 'Not found';
 				continue;
 			}
-			const remainingMinutes = this.deps.titles.calcTimeRemainingForModal(match);
+			const remainingMinutes = this.titles.calcTimeRemainingForModal(match);
 			row[col.id] = remainingMinutes;
 		}
 	}
@@ -1488,12 +1530,18 @@ export class CustomListsTab implements TabInstance {
 
 // ExportFormatModal — export format chooser
 
-class ExportFormatModal extends Modal {
+export interface ExportFormatOptions {
+	onChoose: (format: 'tsv' | 'md') => void;
+}
+
+export type OpenExportFormat = (opts: ExportFormatOptions) => void;
+
+export class ExportFormatModal extends Modal {
 	private onChoose: (format: 'tsv' | 'md') => void;
 
-	constructor(app: App, onChoose: (format: 'tsv' | 'md') => void) {
+	constructor(app: App, opts: ExportFormatOptions) {
 		super(app);
-		this.onChoose = onChoose;
+		this.onChoose = opts.onChoose;
 	}
 
 	onOpen(): void {
@@ -1539,9 +1587,15 @@ interface ImportAnalysis {
 /** Target of one pasted column: the row name or a list column. */
 type ImportSlot = CustomListColumn | 'name';
 
-class ImportListModal extends Modal {
+export interface ImportListOptions {
+	list: CustomList;
+	onApplied: () => Promise<void>;
+}
+
+export type OpenImportList = (opts: ImportListOptions) => void;
+
+export class ImportListModal extends Modal {
 	private list: CustomList;
-	private manager: CustomListManager;
 	private onApplied: () => Promise<void>;
 
 	private textarea!: HTMLTextAreaElement;
@@ -1549,11 +1603,14 @@ class ImportListModal extends Modal {
 	private addBtn!: HTMLButtonElement;
 	private firstRowIsHeader = true;
 
-	constructor(app: App, list: CustomList, manager: CustomListManager, onApplied: () => Promise<void>) {
+	constructor(
+		app: App,
+		private readonly manager: Pick<CustomListManager, 'generateColId' | 'generateRowId'>,
+		opts: ImportListOptions,
+	) {
 		super(app);
-		this.list = list;
-		this.manager = manager;
-		this.onApplied = onApplied;
+		this.list = opts.list;
+		this.onApplied = opts.onApplied;
 	}
 
 	onOpen(): void {

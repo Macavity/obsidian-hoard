@@ -3,7 +3,6 @@ import { Notice, TFile } from 'obsidian';
 import { until } from '../helpers/common';
 import { makeList, setupCustomLists } from '../helpers/setupCustomLists';
 import { CustomListManager } from '../../src/modules/custom-lists/services/CustomListManager';
-import { CustomListsTab } from '../../src/modules/custom-lists/ui/CustomListsTab';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 const PATH = 'W/CustomLists/Backlog.md';
@@ -101,9 +100,9 @@ describe('custom list foreign edits', () => {
 	});
 
 	it('stops listening once destroyed', async () => {
-		const { f, deps } = await setupCustomLists([makeList()]);
+		const { f, newTab } = await setupCustomLists([makeList()]);
 		const container = document.body.appendChild(document.createElement('div'));
-		const tab = new CustomListsTab(container, deps as never);
+		const tab = newTab(container);
 		await tab.render();
 		tab.destroy();
 		const file = f.app.vault.getAbstractFileByPath(PATH) as TFile;
@@ -115,9 +114,9 @@ describe('custom list foreign edits', () => {
 
 describe('CustomListManager notes writes', () => {
 	it('refuses to overwrite notes changed elsewhere and keeps them', async () => {
-		const { f, deps } = await setupCustomLists([makeList({ notes: 'old' })]);
+		const { f, env } = await setupCustomLists([makeList({ notes: 'old' })]);
 		const conflicts: string[] = [];
-		const manager = new CustomListManager(deps.app.vault, deps.app.fileManager, deps.layout, () => {}, (l) => conflicts.push(l.name));
+		const manager = new CustomListManager(env.app.vault, env.app.fileManager, env.layout, () => {}, (l) => conflicts.push(l.name));
 		const list = (await manager.loadList('Backlog'))!;
 		f.files.set(PATH, f.files.get(PATH)!.replace('## Notes\nold', '## Notes\nfrom phone'));
 
@@ -127,8 +126,8 @@ describe('CustomListManager notes writes', () => {
 	});
 
 	it('writes notes when the note is unchanged and keeps saving afterwards', async () => {
-		const { f, deps } = await setupCustomLists([makeList({ notes: 'old' })]);
-		const manager = new CustomListManager(deps.app.vault, deps.app.fileManager, deps.layout, () => {});
+		const { f, env } = await setupCustomLists([makeList({ notes: 'old' })]);
+		const manager = new CustomListManager(env.app.vault, env.app.fileManager, env.layout, () => {});
 		const list = (await manager.loadList('Backlog'))!;
 
 		expect(await manager.saveNotes(list, 'mine')).toBe(true);
@@ -201,9 +200,9 @@ describe('review follow-ups', () => {
 	});
 
 	it('reports notes saved into a list deleted elsewhere', async () => {
-		const { f, deps } = await setupCustomLists([makeList()]);
+		const { f, env } = await setupCustomLists([makeList()]);
 		const conflicts: string[] = [];
-		const manager = new CustomListManager(deps.app.vault, deps.app.fileManager, deps.layout, () => {}, (l) => conflicts.push(l.name));
+		const manager = new CustomListManager(env.app.vault, env.app.fileManager, env.layout, () => {}, (l) => conflicts.push(l.name));
 		const list = (await manager.loadList('Backlog'))!;
 		f.files.delete(PATH);
 		(f.app.vault as unknown as { getAbstractFileByPath: (p: string) => unknown }).getAbstractFileByPath = () => null;
@@ -212,8 +211,8 @@ describe('review follow-ups', () => {
 	});
 
 	it('adds a ## Notes section when the note has none', async () => {
-		const { f, deps } = await setupCustomLists([makeList()]);
-		const manager = new CustomListManager(deps.app.vault, deps.app.fileManager, deps.layout, () => {});
+		const { f, env } = await setupCustomLists([makeList()]);
+		const manager = new CustomListManager(env.app.vault, env.app.fileManager, env.layout, () => {});
 		f.files.set(PATH, f.files.get(PATH)!.replace('## Notes\n\n\n', ''));
 		const list = (await manager.loadList('Backlog'))!;
 		expect(await manager.saveNotes(list, 'mine')).toBe(true);

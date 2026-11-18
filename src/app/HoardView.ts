@@ -5,7 +5,6 @@ import { DashboardTab, type DashboardTabDeps } from '../modules/dashboard/ui/Das
 import { AirtimeTab } from '../modules/airtime/ui/AirtimeTab';
 import type { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../modules/games/services/GameDataManager';
-import { CustomListsTab, type CustomListsTabDeps } from '../modules/custom-lists/ui/CustomListsTab';
 import { DraftsTab, type DraftsTabDeps } from '../modules/drafts/ui/DraftsTab';
 import { LogTab, type LogTabDeps } from '../modules/log/ui/LogTab';
 import type { SettingsReader, SettingsWriter } from '../shared/services/SettingsService';
@@ -20,7 +19,7 @@ export type TabName = 'dashboard' | 'watchlist' | 'upcoming' | 'reading' | 'game
  * own `<Tab>Deps`; a converted tab's deps are a supertype of this one, so `ctx.deps` passes straight in.
  */
 export interface HoardViewDeps
-	extends DashboardTabDeps, CustomListsTabDeps, DraftsTabDeps, LogTabDeps {
+	extends DashboardTabDeps, DraftsTabDeps, LogTabDeps {
 	settings: SettingsReader & SettingsWriter;
 	titles: DataManager;
 	history: LogTabDeps['history'];
@@ -31,6 +30,8 @@ export interface HoardViewDeps
 	/** Builds the Reading tab; wired in `src/app/wiring/reading.ts`. */
 	createReadingTab: (container: HTMLElement) => TabInstance;
 	reading: ReadingDataManager;
+	/** Builds the Custom Lists tab; wired in `src/app/wiring/customLists.ts`. */
+	createCustomListsTab: (container: HTMLElement) => TabInstance;
 	/** Builds the Games tab; wired in `src/app/wiring/games.ts`. */
 	createGamesTab: (container: HTMLElement) => TabInstance;
 	games: GameDataManager;
@@ -111,7 +112,7 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.customLists',
 		icon: 'list',
 		cls: 'hoard-custom-lists',
-		create: (ctx) => new CustomListsTab(ctx.containerEl, ctx.deps),
+		create: (ctx) => ctx.deps.createCustomListsTab(ctx.containerEl),
 	},
 	{
 		name: 'drafts',

@@ -11,9 +11,9 @@ afterEach(() => {
 
 describe('custom list saves go through vault.process', () => {
 	it('saveList on an existing list uses process, not modify', async () => {
-		const { f, deps, tab } = await setupCustomLists([makeList()]);
+		const { f, env, tab } = await setupCustomLists([makeList()]);
 		tab.destroy(); // its modify listener reads the note; only the manager's own reads count here
-		const manager = new CustomListManager(deps.app.vault, deps.app.fileManager, deps.layout, () => {});
+		const manager = new CustomListManager(env.app.vault, env.app.fileManager, env.layout, () => {});
 		const list = (await manager.loadList('Backlog'))!;
 		const process = vi.spyOn(f.app.vault, 'process');
 		const modify = vi.spyOn(f.app.vault, 'modify');
@@ -28,8 +28,8 @@ describe('custom list saves go through vault.process', () => {
 	});
 
 	it('saveNotes replaces only the notes section and keeps ## Data byte-identical', async () => {
-		const { f, deps } = await setupCustomLists([makeList()]);
-		const manager = new CustomListManager(deps.app.vault, deps.app.fileManager, deps.layout, () => {});
+		const { f, env } = await setupCustomLists([makeList()]);
+		const manager = new CustomListManager(env.app.vault, env.app.fileManager, env.layout, () => {});
 		const path = [...f.files.keys()].find((p) => p.endsWith('/Backlog.md'))!;
 		f.files.set(path, `# Backlog\n\n## Notes\nold\n${DATA}`);
 		const list = (await manager.loadList('Backlog'))!;
@@ -42,8 +42,8 @@ describe('custom list saves go through vault.process', () => {
 	});
 
 	it('saveNotes adds a ## Notes heading before ## Data when there is none', async () => {
-		const { f, deps } = await setupCustomLists([makeList()]);
-		const manager = new CustomListManager(deps.app.vault, deps.app.fileManager, deps.layout, () => {});
+		const { f, env } = await setupCustomLists([makeList()]);
+		const manager = new CustomListManager(env.app.vault, env.app.fileManager, env.layout, () => {});
 		const path = [...f.files.keys()].find((p) => p.endsWith('/Backlog.md'))!;
 		const original = `# Backlog\n${DATA}`;
 		f.files.set(path, original);
@@ -54,9 +54,9 @@ describe('custom list saves go through vault.process', () => {
 
 describe('custom list data block', () => {
 	const load = async (data: string) => {
-		const { f, deps, tab } = await setupCustomLists([makeList()]);
+		const { f, env, tab } = await setupCustomLists([makeList()]);
 		tab.destroy();
-		const manager = new CustomListManager(deps.app.vault, deps.app.fileManager, deps.layout, () => {});
+		const manager = new CustomListManager(env.app.vault, env.app.fileManager, env.layout, () => {});
 		const path = [...f.files.keys()].find((p) => p.endsWith('/Backlog.md'))!;
 		f.files.set(path, `# Backlog
 

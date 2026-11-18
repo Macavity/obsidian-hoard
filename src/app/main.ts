@@ -24,6 +24,7 @@ import { watchlistUi, type WatchlistUi } from './wiring/watchlist';
 import { readingUi, type ReadingUi } from './wiring/reading';
 import { gamesUi, type GamesUi } from './wiring/games';
 import { airtimeUi, type AirtimeUi } from './wiring/airtime';
+import { customListsUi, type CustomListsUi } from './wiring/customLists';
 import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
 import { WidgetRenderer } from '../modules/widgets/ui/WidgetRenderer';
 import { HoardSettingsTab, type HoardSettingsTabDeps } from '../modules/settings/ui/SettingsTab';
@@ -138,6 +139,7 @@ export default class HoardPlugin extends Plugin {
 	private reading!: ReadingUi;
 	private games!: GamesUi;
 	private airtime!: AirtimeUi;
+	private customLists!: CustomListsUi;
 	private coverRefresher!: CoverRefresher;
 	private widgetRenderer?: WidgetRenderer;
 
@@ -240,6 +242,15 @@ export default class HoardPlugin extends Plugin {
 			api: this.apiService,
 			posters: this.posterService,
 			host: { ...host, markAirtimeHandled: (key) => this.markAirtimeHandled(key) },
+		});
+		this.customLists = customListsUi({
+			app: this.app,
+			settings: this.settingsService,
+			createListManager: this.listManager,
+			titles: this.dataManager,
+			reading: this.readingDataManager,
+			games: this.gameDataManager,
+			openAdd: (opts) => openAddForTitle(this.addRouterDeps(), opts),
 		});
 
 		this.startAirtimeScheduler();
@@ -369,10 +380,10 @@ export default class HoardPlugin extends Plugin {
 			createReadingTab: (container) => this.reading.createReadingTab(container),
 			createGamesTab: (container) => this.games.createGamesTab(container),
 			createAirtimeTab: (container, setBadge) => this.airtime.createAirtimeTab(container, setBadge),
+			createCustomListsTab: (container) => this.customLists.createCustomListsTab(container),
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
 			importRunning: () => this.importRunning,
-			listManager: this.listManager,
 			openAdd: (opts) => openAddForTitle(this.addRouterDeps(), opts),
 		};
 	}

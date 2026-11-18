@@ -7,3 +7,6 @@ export interface AddRouteOptions {
 	/** Chooser heading — "Add draft" from Drafts, "Add title" elsewhere. */
 	heading?: string;
 }
+
+/** Opens the Add chooser for a loose title; wired in `src/app/AddRouter.ts`. */
+export type OpenAddRoute = (opts: AddRouteOptions) => void;

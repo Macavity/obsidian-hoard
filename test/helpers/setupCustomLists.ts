@@ -2,7 +2,7 @@
 import { vi } from 'vitest';
 import { createFakeApp } from '../fakes/fakeApp';
 import { fakeSettings } from './fakeSettings';
-import { CustomListsTab } from '../../src/modules/custom-lists/ui/CustomListsTab';
+import { customListsUi } from '../../src/app/wiring/customLists';
 import { CustomListManager } from '../../src/modules/custom-lists/services/CustomListManager';
 import { VaultLayout } from '../../src/shared/storage/VaultLayout';
 import { DEFAULT_SETTINGS, type CustomList, type HoardTitle } from '../../src/shared/domain/types';
@@ -44,25 +44,34 @@ export async function setupCustomLists(lists: CustomList[], titles: Partial<Hoar
 	};
 	const settingsService = fakeSettings({ ...DEFAULT_SETTINGS });
 	const openAdd = vi.fn();
-	const deps = {
+	/** What the tab was built from; `reading` and `games` stay mutable so a test can fill them. */
+	const env = {
 		app: f.app,
-		settings: settingsService,
 		layout: () => layout,
-		titles: dataManager,
 		reading: { getBooks: () => [], getMangaList: () => [] },
 		games: { getGames: () => [] },
-		openAdd,
-		listManager: (onConflict?: (list: CustomList) => void) =>
-			new CustomListManager(f.app.vault, f.app.fileManager, () => layout, () => {}, onConflict),
 	};
+	const createListManager = (onConflict?: (list: CustomList) => void) =>
+		new CustomListManager(f.app.vault, f.app.fileManager, () => layout, () => {}, onConflict);
+	// the real dialogs, built by the wiring the plugin uses
+	const ui = customListsUi({
+		app: f.app,
+		settings: settingsService,
+		createListManager,
+		titles: dataManager as never,
+		reading: env.reading as never,
+		games: env.games as never,
+		openAdd,
+	});
+	const newTab = (el: HTMLElement) => ui.createCustomListsTab(el);
 	const container = document.createElement('div');
 	document.body.appendChild(container);
-	const tab = new CustomListsTab(container, deps as never);
+	const tab = newTab(container);
 	await tab.render();
 	const stored = (name: string): CustomList => {
 		const content = f.files.get(`${layout.customListsFolder}/${name}.md`)!;
 		const json = /```json\n([\s\S]*?)\n```/.exec(content)![1]!;
 		return { ...makeList(), ...(JSON.parse(json) as Partial<CustomList>), name };
 	};
-	return { f, deps, settingsService, openAdd, dataManager, container, tab, stored };
+	return { f, env, settingsService, openAdd, dataManager, container, tab, newTab, stored };
 }
