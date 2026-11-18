@@ -7,6 +7,8 @@ import {
 	Game, GameGroup, GamesSavedFilterPreset, GAME_AUTO_STATUS, GAME_FINISHED_STATUS,
 	normalizeRowsLayout, GAMES_ROWS_SHELVES, ROWS_EXCLUSIVE_SHELVES, sortByFavorited,
 	migratePriorityExclude,
+	priorityExcludeMatches,
+	setsMatch,
 } from './types';
 import { searchItems, yearOf, type SearchFieldSpec } from './SearchQuery';
 import { renderSearchHelpButton } from './SearchHelpModal';
@@ -126,20 +128,11 @@ export class GamesTab implements TabInstance {
 		// keep the preset button green while filters still match it
 		const savedPreset = deps.games.getSavedFilterPreset();
 		if (savedPreset) {
-			const setsMatch = (a: Set<string>, b: string[]): boolean =>
-				a.size === b.length && b.every((x) => a.has(x));
 			this.savedFilterActive =
 				setsMatch(this.filterGenreExclude, savedPreset.genreExclude) &&
 				setsMatch(this.filterStatusExclude, savedPreset.statusExclude) &&
 				setsMatch(this.filterRatingExclude, savedPreset.ratingExclude) &&
-				setsMatch(
-					this.filterPriorityExclude,
-					Array.from(migratePriorityExclude(
-						savedPreset.priorityExclude,
-						savedPreset.priorityEmptyOnly,
-						deps.settings.get().priorities,
-					)),
-				) &&
+				priorityExcludeMatches(this.filterPriorityExclude, savedPreset, deps.settings.get().priorities) &&
 				setsMatch(this.filterPlatformExclude, savedPreset.platformExclude) &&
 				setsMatch(this.filterGroupExclude, savedPreset.groupExclude ?? []) &&
 				(this.filterRatingEmptyOnly === (savedPreset.ratingEmptyOnly ?? false)) &&

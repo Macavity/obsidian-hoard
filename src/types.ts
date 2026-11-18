@@ -1163,6 +1163,20 @@ export function migratePriorityExclude(
 	return new Set(exclude ?? []);
 }
 
+/** True when the live exclude set holds exactly the saved values (order ignored). */
+export function setsMatch(live: ReadonlySet<string>, saved: readonly string[]): boolean {
+	return live.size === saved.length && saved.every((x) => live.has(x));
+}
+
+/** Whether the live priority exclude set equals a saved preset's (migrating the legacy empty-only toggle). */
+export function priorityExcludeMatches(
+	live: ReadonlySet<string>,
+	preset: { priorityExclude?: readonly string[]; priorityEmptyOnly?: boolean },
+	priorities: readonly TagDefinition[],
+): boolean {
+	return setsMatch(live, Array.from(migratePriorityExclude(preset.priorityExclude, preset.priorityEmptyOnly, priorities)));
+}
+
 /** Badge color for a Reading type (Book / Manga), from settings.readingTypeColors. */
 export function getReadingTypeColor(
 	kind: 'book' | 'manga',

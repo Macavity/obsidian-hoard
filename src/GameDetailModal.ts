@@ -14,7 +14,7 @@ import { pinModalFooter } from './StickyModal';
 import { t } from './i18n';
 import { gameStatusLabel, priorityLabel } from './i18n/labels';
 import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader } from './ui/detailShared';
-import { createFavoriteButton, markDetailRoot } from './ui/detailFrame';
+import { createFavoriteButton, markDetailRoot, markViewRoot } from './ui/detailFrame';
 
 /** Shared by GameDetailModal and GameGroupDetailModal, which opens it for a member. */
 export interface GameDetailModalDeps {
@@ -60,11 +60,8 @@ export class GameDetailModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
+		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
 		this.modalEl.addClass('hoard-game-detail');
-		this.contentEl.addClass('hoard-view');
 		this.render();
 
 		// notes live in the note file's ## Notes section — loaded async so edits made directly in the .md
@@ -891,9 +888,9 @@ export class GameGroupDetailModal extends Modal {
 	}
 
 	onClose(): void {
-		this.contentEl.empty();
 		for (const fn of this.cleanups) fn();
 		this.cleanups = [];
+		this.contentEl.empty();
 	}
 
 	private renderAll(): void {

@@ -19,6 +19,7 @@ import {
 	ReadingStatus,
 	SELECTABLE_READING_STATUSES,
 } from './types';
+import { markViewRoot } from './ui/detailFrame';
 
 export type ReadingMode = 'book' | 'manga';
 
@@ -143,10 +144,7 @@ export class AddReadingModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
+		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-reading-modal');
 		this.contentEl.addClass(this.mode === 'book' ? 'hoard-reading-modal--book' : 'hoard-reading-modal--manga');
 		this.titleEl.setText(this.headerTitle());

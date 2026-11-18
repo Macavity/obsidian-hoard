@@ -8,7 +8,7 @@ import type { HistoryManager } from './HistoryManager';
 import type { PosterService } from './PosterService';
 import type { SettingsReader, SettingsWriter } from './SettingsService';
 import type { HoardTitle, HoardGroup, TagDefinition, SavedFilterPreset, Season, CardStyleTab, ImportProgress, RowsShelfLayoutEntry } from './types';
-import { formatTime, formatDateDisplay, todayIso, getThemedColor, getDisplayPoster, getTitleCredits, getManualCredits, normalizeRowsLayout, ROWS_SHELVES, ROWS_EXCLUSIVE_SHELVES, sortByFavorited, migratePriorityExclude } from './types';
+import { formatTime, formatDateDisplay, todayIso, getThemedColor, getDisplayPoster, getTitleCredits, getManualCredits, normalizeRowsLayout, ROWS_SHELVES, ROWS_EXCLUSIVE_SHELVES, sortByFavorited, migratePriorityExclude, priorityExcludeMatches, setsMatch } from './types';
 import { searchItems, yearOf, type SearchFieldSpec } from './SearchQuery';
 import { renderSearchHelpButton } from './SearchHelpModal';
 import { createDatePicker } from './DatePicker';
@@ -177,21 +177,12 @@ export class ListTab implements TabInstance {
 		// keep the preset button green while filters still match it
 		const savedPreset = deps.titles.getSavedFilterPreset();
 		if (savedPreset) {
-			const setsMatch = (a: Set<string>, b: string[]) =>
-				a.size === b.length && b.every((x) => a.has(x));
 			this.savedFilterActive =
 				setsMatch(this.filterTypeExclude, savedPreset.typeExclude) &&
 				setsMatch(this.filterStatusExclude, savedPreset.statusExclude) &&
 				setsMatch(this.filterGroupExclude, savedPreset.groupExclude) &&
 				setsMatch(this.filterRatingExclude, savedPreset.ratingExclude) &&
-				setsMatch(
-					this.filterPriorityExclude,
-					Array.from(migratePriorityExclude(
-						savedPreset.priorityExclude,
-						savedPreset.priorityEmptyOnly,
-						deps.settings.get().priorities,
-					)),
-				) &&
+				priorityExcludeMatches(this.filterPriorityExclude, savedPreset, deps.settings.get().priorities) &&
 				(this.filterRatingEmptyOnly === (savedPreset.ratingEmptyOnly ?? false)) &&
 				(this.filterRecentlyArrivedOnly === (savedPreset.recentlyArrivedOnly ?? false)) &&
 				(this.filterGroupsOnly === (savedPreset.groupsOnly ?? false)) &&

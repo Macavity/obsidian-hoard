@@ -6,6 +6,7 @@ import { t } from './i18n';
 import { steamAppIdFromUrl, type ApiService, type SteamAppDetails, type SteamOwnedGame, type SteamFailureReason } from './ApiService';
 import { newGame } from './entryFactories';
 import { steamLibraryCover } from './steamStoreApi';
+import { markViewRoot } from './ui/detailFrame';
 
 export interface SteamSyncModalDeps {
 	app: App;
@@ -42,10 +43,7 @@ export class SteamSyncModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
+		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-steam-sync');
 		void this.loadLibrary();
 	}

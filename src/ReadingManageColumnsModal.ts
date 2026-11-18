@@ -7,6 +7,7 @@ import { ReadingCustomColumn, DEFAULT_FIELD_COLOR } from './types';
 import { ConfirmModal } from './ConfirmModal';
 import { openColorPicker } from './ColorPicker';
 import { attachCardDrag, renderTypeSelect, type DragState } from './ui/ColumnsEditor';
+import { markViewRoot } from './ui/detailFrame';
 
 export interface ReadingManageColumnsModalDeps {
 	app: App;
@@ -34,10 +35,7 @@ export class ReadingManageColumnsModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
-		this.modalEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.setAttribute('data-theme', colorTheme);
-		this.contentEl.addClass('hoard-view');
+		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-reading-modal');
 		this.contentEl.addClass('hoard-reading-columns');
 		this.titleEl.setText(this.title());

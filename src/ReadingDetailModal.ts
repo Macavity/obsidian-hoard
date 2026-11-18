@@ -162,6 +162,12 @@ export class ReadingDetailModal extends Modal {
 		const item = this.getItem();
 		if (!item) return;
 
+		await this.persistDraft(item);
+		this.onChanged();
+	}
+
+	/** Writes the draft counters onto the item, applies auto-complete and logs the change. */
+	private async persistDraft(item: Book | Manga): Promise<void> {
 		if (this.mode === 'book') {
 			const book = item as Book;
 			const updated: Book = {
@@ -184,7 +190,6 @@ export class ReadingDetailModal extends Modal {
 		}
 
 		this.logProgressChange(item);
-		this.onChanged();
 	}
 
 	private logProgressChange(item: Book | Manga): void {
@@ -1439,28 +1444,7 @@ export class ReadingDetailModal extends Modal {
 		const item = this.getItem();
 		if (!item) return;
 
-		if (this.mode === 'book') {
-			const book = item as Book;
-			const updated: Book = {
-				...book,
-				pagesRead: this.draft.pagesRead,
-				wordsRead: this.draft.wordsRead,
-				chaptersRead: this.draft.chaptersRead,
-			};
-			this.applyAutoComplete(updated);
-			await this.deps.reading.updateBook(updated);
-		} else {
-			const manga = item as Manga;
-			const updated: Manga = {
-				...manga,
-				chaptersRead: this.draft.chaptersRead,
-				volumesRead: this.draft.volumesRead,
-			};
-			this.applyAutoComplete(updated);
-			await this.deps.reading.updateManga(updated);
-		}
-
-		this.logProgressChange(item);
+		await this.persistDraft(item);
 		this.openSnapshot = { ...this.draft };
 
 		new Notice(t('detail.reading.progressUpdated'));
