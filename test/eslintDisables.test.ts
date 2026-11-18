@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { findBoundaryIgnores, findDisableIssues } from "../scripts/lib/eslint-disables.mjs";
+import { findDisableIssues, findFallowIgnores } from "../scripts/lib/eslint-disables.mjs";
 
 describe("eslint-disable checks", () => {
   it("accepts a directive with a -- description", () => {
@@ -39,14 +39,19 @@ describe("eslint-disable checks", () => {
     expect(findDisableIssues(["// eslint is great", "let x;"])).toEqual([]);
   });
 
-  it("reports a fallow-ignore of a boundary violation", () => {
-    const line = "// fallow-ignore-next-line boundary-violation";
-    expect(findBoundaryIgnores([line])).toEqual([
-      { line: 1, content: line, problem: "fallow-ignore of a boundary violation (see docs/architecture/overview.md)" },
+  it.each([
+    "// fallow-ignore-next-line",
+    "// fallow-ignore-file",
+    "// fallow-ignore-next-line boundary-violation",
+    "// fallow-ignore-next-line unused-export",
+    "// fallow-ignore-file circular-dependency",
+  ])("rejects every fallow-ignore form: %s", (line) => {
+    expect(findFallowIgnores([line])).toEqual([
+      { line: 1, content: line, problem: "fallow exceptions need the maintainer's approval (see docs/architecture/overview.md)" },
     ]);
   });
 
-  it("lets other fallow-ignore comments pass", () => {
-    expect(findBoundaryIgnores(["// fallow-ignore-next-line unused-export"])).toEqual([]);
+  it("lets lines without fallow-ignore pass", () => {
+    expect(findFallowIgnores(["// fallow is great", "let x;"])).toEqual([]);
   });
 });

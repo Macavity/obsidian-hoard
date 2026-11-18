@@ -71,7 +71,7 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          changed="$(git diff --name-only "origin/${BASE_REF}...HEAD" -- eslint.config.mjs .fallowrc.json tsconfig.json)"
+          changed="$(git diff --name-only "origin/${BASE_REF}...HEAD" -- eslint.config.mjs .fallowrc.json tsconfig.json scripts/lib/eslint-disables.mjs scripts/check-eslint-disables.mjs test/architecture.test.ts)"
           if [ -z "$changed" ]; then
             echo "No architecture rule files changed."
             exit 0
