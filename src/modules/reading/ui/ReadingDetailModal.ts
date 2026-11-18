@@ -18,7 +18,7 @@ import { openStatusDropdown, renderSegmentedToggle } from '../../../shared/ui/St
 import type { ManageColumnsOptions } from './ReadingManageColumnsModal';
 import { pinModalFooter } from '../../../shared/ui/StickyModal';
 import { t } from '../../../shared/i18n';
-import { paintFavoriteButton, renderEditableTitle } from '../../../shared/ui/detailShared';
+import { paintFavoriteButton, renderEditableTitle, wireInlineEdit } from '../../../shared/ui/detailShared';
 import { createFavoriteButton, markDetailRoot, mobileRowClass } from '../../../shared/ui/detailFrame';
 import { readingStatusLabel } from '../../../shared/i18n/labels';
 
@@ -355,13 +355,7 @@ export class ReadingDetailModal extends Modal {
 				this.renderTitleDisplay(wrap);
 			})();
 		};
-		input.addEventListener('blur', commit);
-		input.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-			else if (e.key === 'Escape') { e.preventDefault(); this.renderTitleDisplay(wrap); }
-		});
-		input.focus();
-		input.select();
+		wireInlineEdit(input, commit, () => this.renderTitleDisplay(wrap));
 	}
 
 	private renderAuthorDisplay(wrap: HTMLElement): void {
@@ -398,13 +392,7 @@ export class ReadingDetailModal extends Modal {
 				this.renderAuthorDisplay(wrap);
 			})();
 		};
-		input.addEventListener('blur', commit);
-		input.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-			else if (e.key === 'Escape') { e.preventDefault(); this.renderAuthorDisplay(wrap); }
-		});
-		input.focus();
-		input.select();
+		wireInlineEdit(input, commit, () => this.renderAuthorDisplay(wrap));
 	}
 
 	private renderStatusBadge(wrap: HTMLElement): void {
@@ -839,13 +827,7 @@ export class ReadingDetailModal extends Modal {
 					renderLabel();
 				})();
 			};
-			totalInput.addEventListener('blur', commit);
-			totalInput.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter') { e.preventDefault(); totalInput.blur(); }
-				else if (e.key === 'Escape') { e.preventDefault(); committed = true; renderLabel(); }
-			});
-			totalInput.focus();
-			totalInput.select();
+			wireInlineEdit(totalInput, commit, () => { committed = true; renderLabel(); });
 		};
 
 		renderLabel();
@@ -1330,19 +1312,10 @@ export class ReadingDetailModal extends Modal {
 				this.renderCustomValueDisplay(cell, fresh ?? item, col, fresh?.customFields?.[col.id]);
 			});
 		};
-		input.addEventListener('blur', commit);
-		input.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') {
-				e.preventDefault();
-				input.blur();
-			} else if (e.key === 'Escape') {
-				e.preventDefault();
-				const fresh = this.getItem();
-				this.renderCustomValueDisplay(cell, fresh ?? item, col, fresh?.customFields?.[col.id]);
-			}
+		wireInlineEdit(input, commit, () => {
+			const fresh = this.getItem();
+			this.renderCustomValueDisplay(cell, fresh ?? item, col, fresh?.customFields?.[col.id]);
 		});
-		input.focus();
-		input.select();
 	}
 
 	private async saveCustomField(

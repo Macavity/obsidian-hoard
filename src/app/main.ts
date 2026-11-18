@@ -1,3 +1,4 @@
+import type { FileManager, Vault } from 'obsidian';
 import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, getLanguage, parseYaml, setIcon, stringifyYaml } from 'obsidian';
 import { CoverRefresher, resolveGameCover, fetchReadingCoverById, firstBookCover, searchBooks } from '../modules/covers/services/coverRefresh';
 import { CustomListManager } from '../modules/custom-lists/services/CustomListManager';
@@ -45,10 +46,14 @@ import { composeSettings, persistSettings } from '../shared/services/settingsSpl
 import { toRecord } from '../shared/domain/sharedHelpers';
 import { resolveJikanEndpoint } from '../shared/api/jikanBase';
 import { emitDataChanged, onDataChanged } from '../shared/services/changeSignal';
-import { SettingsService } from '../shared/services/SettingsService';
+import { SettingsService, type SettingsReader } from '../shared/services/SettingsService';
+import type { Notify } from '../shared/storage/storageTypes';
 
 /** Root folder created on a fresh install (no `.base` with a `hoard:` key found). */
 const DEFAULT_ROOT = 'Hoard';
+
+/** Constructor prefix shared by the three data managers. */
+type ManagerBase = [Vault, FileManager, EntryIndex, LocalStore, SharedConfigStore, () => VaultLayout, Notify, SettingsReader];
 
 export default class HoardPlugin extends Plugin {
 	// a copy: lists edited in place before the first load must not change the defaults
@@ -77,8 +82,8 @@ export default class HoardPlugin extends Plugin {
 		(n) => this.notifyManager(n),
 	);
 	private index = new EntryIndex(this.app.vault, this.app.metadataCache, this.app.workspace, () => this.layout, this.local, (ref) => this.registerEvent(ref));
-	// the managers reach each other through lambdas, so the construction order does not matter
-	private dataManager: DataManager = new DataManager(
+	/** The leading collaborators every data manager takes. */
+	private managerBase: ManagerBase = [
 		this.app.vault,
 		this.app.fileManager,
 		this.index,
@@ -87,6 +92,10 @@ export default class HoardPlugin extends Plugin {
 		() => this.layout,
 		(n) => this.notifyManager(n),
 		this.settingsService,
+	];
+	// the managers reach each other through lambdas, so the construction order does not matter
+	private dataManager: DataManager = new DataManager(
+		...this.managerBase,
 		// apiService and posterService are replaced / created in onload
 		{
 			fetchAiring: (e) => this.apiService.fetchAiring(e),
@@ -100,14 +109,7 @@ export default class HoardPlugin extends Plugin {
 		},
 	);
 	private readingDataManager: ReadingDataManager = new ReadingDataManager(
-		this.app.vault,
-		this.app.fileManager,
-		this.index,
-		this.local,
-		this.shared,
-		() => this.layout,
-		(n) => this.notifyManager(n),
-		this.settingsService,
+		...this.managerBase,
 		(ref) => this.registerEvent(ref),
 		{
 			autoAddReadingToUpcoming: (item, kind) => this.dataManager.autoAddReadingToUpcoming(item, kind),
@@ -115,14 +117,7 @@ export default class HoardPlugin extends Plugin {
 		},
 	);
 	private gameDataManager: GameDataManager = new GameDataManager(
-		this.app.vault,
-		this.app.fileManager,
-		this.index,
-		this.local,
-		this.shared,
-		() => this.layout,
-		(n) => this.notifyManager(n),
-		this.settingsService,
+		...this.managerBase,
 		(ref) => this.registerEvent(ref),
 		{
 			autoAddGameToUpcoming: (g) => this.dataManager.autoAddGameToUpcoming(g),

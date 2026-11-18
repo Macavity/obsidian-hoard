@@ -48,3 +48,19 @@ export function episodeGridText(): {
 			t(isSkipped ? 'list.episodeSkipped' : 'list.episode', { num: epNum }),
 	};
 }
+
+/** Inline text editor: blur commits, Enter blurs, Escape runs `cancel`; focuses and selects the text. */
+export function wireInlineEdit(input: HTMLInputElement, commit: () => void, cancel: () => void): void {
+	input.addEventListener('blur', commit);
+	input.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			input.blur();
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			cancel();
+		}
+	});
+	input.focus();
+	input.select();
+}

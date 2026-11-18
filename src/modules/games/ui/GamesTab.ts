@@ -17,7 +17,7 @@ import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } f
 import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
 import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
 import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from '../../../shared/ui/PosterCard';
-import { renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
+import { renderRowsLayout, renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
 import { renderSearchBox, type OpenRenameGroup, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, type SortFields } from '../../../shared/ui/TabToolbar';
 import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from '../../../shared/ui/ActionBar';
 import { renderGroupCard } from '../../../shared/ui/GroupCard';
@@ -716,21 +716,7 @@ export class GamesTab implements TabInstance {
 		// user order + visibility: with BOTH grouped grids off, the flat "All games" grid renders at the
 		// first grid entry's position
 		const layout = normalizeRowsLayout(this.games.getSettings().rowsLayout, GAMES_ROWS_SHELVES);
-		const gridIds = new Set(['byType', 'byStatus']);
-		const anyGridEnabled = layout.some((e) => gridIds.has(e.id) && e.enabled);
-		const anyShelfEnabled = layout.some((e) => !gridIds.has(e.id) && e.enabled);
-		let flatRendered = false;
-		for (const entry of layout) {
-			if (!anyGridEnabled && gridIds.has(entry.id)) {
-				if (!flatRendered) {
-					flatRendered = true;
-					this.renderAllGamesSection(scroll, anyShelfEnabled, items);
-				}
-				continue;
-			}
-			if (!entry.enabled) continue;
-			shelfRenderers[entry.id]?.();
-		}
+		renderRowsLayout(layout, shelfRenderers, (anyShelfEnabled) => this.renderAllGamesSection(scroll, anyShelfEnabled, items));
 
 		observer.observeNew(scroll);
 		scroller.attach(this.persistentScrollTop);

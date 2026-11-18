@@ -22,7 +22,7 @@ import { t } from '../../../shared/i18n';
 import { FAILED, NOT_FOUND } from '../../../shared/api/lookup';
 import { effectiveMediaSource } from '../../../shared/api/apiSources';
 import { createIconButton } from '../../../shared/ui/IconButton';
-import { paintFavoriteButton, renderGroupDetailHeader, episodeGridText } from '../../../shared/ui/detailShared';
+import { paintFavoriteButton, renderGroupDetailHeader, episodeGridText, wireInlineEdit } from '../../../shared/ui/detailShared';
 import { createFavoriteButton, markDetailRoot } from '../../../shared/ui/detailFrame';
 import { createPosterPlaceholder } from '../../../shared/ui/PosterCard';
 import { priorityLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
@@ -276,19 +276,10 @@ export class TitleDetailModal extends Modal {
 				this.renderHeaderBody();
 			})();
 		};
-		input.addEventListener('blur', commit);
-		input.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') {
-				e.preventDefault();
-				input.blur();
-			} else if (e.key === 'Escape') {
-				e.preventDefault();
-				done = true;
-				this.renderTitleDisplay(wrap);
-			}
+		wireInlineEdit(input, commit, () => {
+			done = true;
+			this.renderTitleDisplay(wrap);
 		});
-		input.focus();
-		input.select();
 	}
 
 	// Type

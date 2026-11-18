@@ -13,7 +13,7 @@ import { createDatePicker } from '../../../shared/ui/DatePicker';
 import { pinModalFooter } from '../../../shared/ui/StickyModal';
 import { t } from '../../../shared/i18n';
 import { gameStatusLabel, priorityLabel } from '../../../shared/i18n/labels';
-import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader } from '../../../shared/ui/detailShared';
+import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader, wireInlineEdit } from '../../../shared/ui/detailShared';
 import { createFavoriteButton, markDetailRoot, markViewRoot } from '../../../shared/ui/detailFrame';
 
 export type GameDetailApi = Pick<ApiService, 'hasSteamCredentials' | 'getSteamOwnedGames' | 'getSteamAchievements'>;
@@ -244,13 +244,7 @@ export class GameDetailModal extends Modal {
 			if (val) this.draft.title = val;
 			this.renderTitleDisplay(wrap);
 		};
-		input.addEventListener('blur', commit);
-		input.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-			else if (e.key === 'Escape') { e.preventDefault(); this.renderTitleDisplay(wrap); }
-		});
-		input.focus();
-		input.select();
+		wireInlineEdit(input, commit, () => this.renderTitleDisplay(wrap));
 	}
 
 	private renderDeveloperDisplay(wrap: HTMLElement): void {
@@ -274,13 +268,7 @@ export class GameDetailModal extends Modal {
 			this.draft.developer = input.value.trim();
 			this.renderDeveloperDisplay(wrap);
 		};
-		input.addEventListener('blur', commit);
-		input.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-			else if (e.key === 'Escape') { e.preventDefault(); this.renderDeveloperDisplay(wrap); }
-		});
-		input.focus();
-		input.select();
+		wireInlineEdit(input, commit, () => this.renderDeveloperDisplay(wrap));
 	}
 
 	// Badge row (Status / Type / Priority pills + note link)

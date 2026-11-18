@@ -85,3 +85,29 @@ export function renderShelf<T>(
 		renderCard(strip, item);
 	}
 }
+
+/**
+ * Renders the shelves in layout order. With both grouped grids off, `renderFlat` (the flat
+ * ungrouped grid) takes the first grid entry's position; `anyShelfEnabled` tells it whether shelves follow.
+ */
+export function renderRowsLayout(
+	layout: ReadonlyArray<{ id: string; enabled: boolean }>,
+	shelfRenderers: Record<string, () => void>,
+	renderFlat: (anyShelfEnabled: boolean) => void,
+): void {
+	const gridIds = new Set(['byType', 'byStatus']);
+	const anyGridEnabled = layout.some((e) => gridIds.has(e.id) && e.enabled);
+	const anyShelfEnabled = layout.some((e) => !gridIds.has(e.id) && e.enabled);
+	let flatRendered = false;
+	for (const entry of layout) {
+		if (!anyGridEnabled && gridIds.has(entry.id)) {
+			if (!flatRendered) {
+				flatRendered = true;
+				renderFlat(anyShelfEnabled);
+			}
+			continue;
+		}
+		if (!entry.enabled) continue;
+		shelfRenderers[entry.id]?.();
+	}
+}

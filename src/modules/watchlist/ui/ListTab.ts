@@ -33,7 +33,7 @@ import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } f
 import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
 import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
 import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from '../../../shared/ui/PosterCard';
-import { renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
+import { renderRowsLayout, renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
 import type { RowsCustomizeConfig } from '../../../shared/ui/RowsCustomizeModal';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../shared/ui/TabFilters';
 
@@ -70,6 +70,16 @@ export interface ListTabModals {
 	renameGroup: OpenRenameGroup;
 	searchHelp: OpenSearchHelp;
 	confirm(message: string, onConfirm: () => void): void;
+}
+
+/** Titles of a group that still exist. */
+function groupMembers(group: HoardGroup, titleMap: Map<string, HoardTitle>): HoardTitle[] {
+	return group.titleIds.map((id) => titleMap.get(id)).filter((t): t is HoardTitle => t !== undefined);
+}
+
+/** A search hits the group name or one of its members. */
+function groupMatchesSearch(group: HoardGroup, members: HoardTitle[], q: string, matched: Set<string>): boolean {
+	return group.name.toLowerCase().includes(q) || members.some((m) => matched.has(m.id));
 }
 
 /** It drives most of the manager, so `titles` is the whole `DataManager` rather than a `Pick`. */
@@ -505,21 +515,7 @@ export class ListTab implements TabInstance {
 		// user order + visibility (RowsCustomizeModal); normalized at read time so a stale layout can't drop a section
 		const layout = normalizeRowsLayout(this.settings.get().rowsLayout);
 		// both grids off: one flat ungrouped grid (the old Cards view) at the first grid entry's position
-		const gridIds = new Set(['byType', 'byStatus']);
-		const anyGridEnabled = layout.some((e) => gridIds.has(e.id) && e.enabled);
-		const anyShelfEnabled = layout.some((e) => !gridIds.has(e.id) && e.enabled);
-		let flatRendered = false;
-		for (const entry of layout) {
-			if (!anyGridEnabled && gridIds.has(entry.id)) {
-				if (!flatRendered) {
-					flatRendered = true;
-					this.renderAllItemsSection(scroll, anyShelfEnabled);
-				}
-				continue;
-			}
-			if (!entry.enabled) continue;
-			shelfRenderers[entry.id]?.();
-		}
+		renderRowsLayout(layout, shelfRenderers, (anyShelfEnabled) => this.renderAllItemsSection(scroll, anyShelfEnabled));
 
 		// eager shelf cards now; the grids register theirs as windows materialise
 		observer.observeNew(scroll);
@@ -572,13 +568,8 @@ export class ListTab implements TabInstance {
 			this.filterFavoritesOnly;
 		return groups.filter((group) => {
 			if (this.filterGroupExclude.size > 0 && this.filterGroupExclude.has(group.name)) return false;
-			const members = group.titleIds
-				.map((id) => titleMap.get(id))
-				.filter((t): t is HoardTitle => t !== undefined);
-			if (searchMatched) {
-				const nameMatch = group.name.toLowerCase().includes(q);
-				if (!nameMatch && !members.some((m) => searchMatched.has(m.id))) return false;
-			}
+			const members = groupMembers(group, titleMap);
+			if (searchMatched && !groupMatchesSearch(group, members, q, searchMatched)) return false;
 			if (titleFilterActive && !members.some((m) => this.titlePassesFilters(m))) return false;
 			return true;
 		});
@@ -1630,16 +1621,10 @@ export class ListTab implements TabInstance {
 		for (const group of groups) {
 			if (this.filterGroupExclude.size > 0 && this.filterGroupExclude.has(group.name)) continue;
 
-			const members = group.titleIds
-				.map((id) => titleMap.get(id))
-				.filter((t): t is HoardTitle => t !== undefined);
+			const members = groupMembers(group, titleMap);
 
 			// search hits the group name or a member
-			if (searchMatched) {
-				const nameMatch = group.name.toLowerCase().includes(q);
-				const memberMatch = members.some((m) => searchMatched.has(m.id));
-				if (!nameMatch && !memberMatch) continue;
-			}
+			if (searchMatched && !groupMatchesSearch(group, members, q, searchMatched)) continue;
 
 			const anyFilterActive = this.filterTypeExclude.size > 0 ||
 				this.filterStatusExclude.size > 0 ||
