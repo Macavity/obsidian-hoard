@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import { ESLint } from "eslint";
 
 // Layer rules inside modules (docs/architecture/overview.md). Real file paths, so type-aware linting resolves them.
+// With CI=true typescript-eslint infers single-run mode, which assumes file contents never differ from disk; the
+// lintText calls below lint code that is not on disk under those paths, so single-run mode reports nothing.
+process.env.TSESTREE_SINGLE_RUN = "false";
 const eslint = new ESLint();
 const UI_FILE = "src/modules/watchlist/ui/ListTab.ts";
 const SERVICE_FILE = "src/modules/watchlist/services/DataManager.ts";
