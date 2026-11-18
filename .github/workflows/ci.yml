@@ -57,3 +57,30 @@ jobs:
           command: ${{ github.event_name == 'pull_request' && 'audit' || '' }}
           comment: ${{ github.event_name == 'pull_request' }}
           score: true
+
+  rules-changed:
+    name: Architecture rules changed
+    # Informational only: never fails, just makes rule edits visible in review.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Flag changes to architecture rule files
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          changed="$(git diff --name-only "origin/${BASE_REF}...HEAD" -- eslint.config.mjs .fallowrc.json tsconfig.json)"
+          if [ -z "$changed" ]; then
+            echo "No architecture rule files changed."
+            exit 0
+          fi
+          {
+            echo "### Architecture rules changed"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          while IFS= read -r f; do
+            echo "::warning file=${f}::Architecture rules changed"
+            echo "- \`${f}\`" >> "$GITHUB_STEP_SUMMARY"
+          done <<< "$changed"
