@@ -24,6 +24,7 @@ import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } f
 import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
 import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
 import { openCardMenu } from '../../../shared/ui/PosterCard';
+
 type SubTab = 'books' | 'manga';
 
 // built-in sort keys, plus dynamic `custom:<columnId>` keys for custom fields
@@ -117,7 +118,9 @@ function selectValueOf(item: Book | Manga, colId: string): string {
 
 export interface ReadingTabDeps extends AddReadingModalDeps, ReadingDetailModalDeps, RowsCustomizeModalDeps {
 	api: AddReadingModalDeps['api'] & ReadingDetailModalDeps['api'];
-	fetchReadingCoverById: typeof fetchReadingCoverById; firstBookCover: typeof firstBookCover;
+	/** Cover lookups of the covers module. */
+	fetchReadingCoverById: typeof fetchReadingCoverById;
+	firstBookCover: typeof firstBookCover;
 	getCardMinWidth: () => number;
 	isCardTextUnder: (tab: 'reading') => boolean;
 }

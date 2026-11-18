@@ -154,6 +154,14 @@ export default defineConfig([
     // Services report codes (ManagerNotice); they never show UI.
     files: ["src/modules/*/services/**/*.ts"],
     rules: {
+      // Named imports are caught below; a namespace or default import would reach the same UI classes.
+      "no-restricted-syntax": ["error", ...STYLE_SELECTORS, {
+        selector: "ImportDeclaration[source.value='obsidian'] > :matches(ImportNamespaceSpecifier, ImportDefaultSpecifier)",
+        message: `Services must not use Obsidian UI classes: import only what you need by name, and report a code (ManagerNotice) instead of showing UI. ${ARCH_DOC}`,
+      }, {
+        selector: "NewExpression[callee.name=/(Manager|Service)$/]",
+        message: `Do not construct a Manager or Service here: take it as a constructor dependency and let src/app wire it. ${ARCH_DOC}`,
+      }],
       "@typescript-eslint/no-restricted-imports": ["error", {
         paths: [{
           name: "obsidian",

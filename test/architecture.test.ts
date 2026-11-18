@@ -48,6 +48,24 @@ describe("architecture lint rules", () => {
 		expect(m).toHaveLength(1);
 	});
 
+	it("rejects a service importing obsidian as namespace or default", async () => {
+		const ns = await errorsOf(`import * as obsidian from "obsidian";\nexport const x = obsidian;`, SERVICE_FILE, "no-restricted-syntax");
+		expect(ns).toHaveLength(1);
+		expect(ns[0]?.message).toContain("docs/architecture/overview.md");
+		const def = await errorsOf(`import obsidian from "obsidian";\nexport const x = obsidian;`, SERVICE_FILE, "no-restricted-syntax");
+		expect(def).toHaveLength(1);
+	});
+
+	it("still allows a service to import non-UI names from obsidian", async () => {
+		const m = await errorsOf(`import { normalizePath } from "obsidian";\nexport const x = normalizePath;`, SERVICE_FILE, "no-restricted-");
+		expect(m).toEqual([]);
+	});
+
+	it("allows a UI file to import shared/services as a value", async () => {
+		const m = await errorsOf(`import { SettingsService } from "../../../shared/services/SettingsService";\nexport const x = SettingsService;`, UI_FILE, "no-restricted-imports");
+		expect(m).toEqual([]);
+	});
+
 	it("rejects new DataManager() inside a module file", async () => {
 		const m = await errorsOf(`class DataManager {}\nexport const x = new DataManager();`, SERVICE_FILE, "no-restricted-syntax");
 		expect(m).toHaveLength(1);

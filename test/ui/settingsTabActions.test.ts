@@ -50,6 +50,7 @@ function makeTab(over: Record<string, unknown> = {}, app: unknown = {}) {
 		app,
 		settings: settingsService,
 		layout: () => ({ root: 'W' }),
+		refreshOpenViews: vi.fn(),
 		setImportProgress: (progress: typeof state.importProgress) => { state.importProgress = progress; },
 		...over,
 	};
@@ -111,10 +112,7 @@ describe('theme picker', () => {
 	});
 
 	it('saves the clicked theme, moves the selection and refreshes open views', async () => {
-		const refreshUI = vi.fn();
-		const { priv, settings, deps } = makeTab({
-			app: { workspace: { getLeavesOfType: () => [{ view: { refreshUI } }, { view: {} }] } },
-		});
+		const { priv, settings, deps } = makeTab();
 		deps.settings = emitting(settings);
 		const changed = vi.fn();
 		document.addEventListener('hoard-data-changed', changed);
@@ -127,12 +125,13 @@ describe('theme picker', () => {
 		expect(settings.colorTheme).toBe('bluez');
 		expect(cards.map((c) => c.classList.contains('is-selected'))).toEqual([false, false, true]);
 		expect(onPicked).toHaveBeenLastCalledWith('Bluez');
+		expect(deps.refreshOpenViews).toHaveBeenCalledOnce();
 		expect(changed).toHaveBeenCalled();
 		document.removeEventListener('hoard-data-changed', changed);
 	});
 
 	it('refreshes the main window when the click happens in the settings window', async () => {
-		const { priv, settings, deps } = makeTab({ app: { workspace: { getLeavesOfType: () => [] } } });
+		const { priv, settings, deps } = makeTab();
 		deps.settings = emitting(settings);
 		const changed = vi.fn();
 		document.addEventListener('hoard-data-changed', changed);
@@ -148,6 +147,7 @@ describe('theme picker', () => {
 			vi.stubGlobal('activeDocument', document);
 			document.removeEventListener('hoard-data-changed', changed);
 		}
+		expect(deps.refreshOpenViews).toHaveBeenCalled();
 		expect(changed).toHaveBeenCalled();
 	});
 

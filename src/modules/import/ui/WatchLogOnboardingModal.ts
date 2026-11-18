@@ -1,22 +1,12 @@
-import { App, Modal, Notice, type TFile } from 'obsidian';
+import { App, Modal, Notice } from 'obsidian';
 import { t } from '../../../shared/i18n';
-import type { SourceCounts, WatchLogSourceKind, WatchLogSources } from '../services/watchlog/detect';
-import type { ImportDecision } from '../services/watchlog/onboardingState';
+import type { WatchLogImporter } from '../services/watchlog/importer';
+import type { SourceCounts, WatchLogSourceKind } from '../services/watchlog/detect';
 import { generalErrors, type ImportPhase, type ImportReport, type Progress, type ReviewItem } from '../../../shared/domain/importReport';
 import type { CleanupItem } from '../services/watchlog/cleanup';
 import { PLUGIN_NAME, REASONS, reasonLabel, reportMarkdown, reportStats, reviewDetail } from './WatchLogReport';
 
-/** Everything the wizard needs from the import logic; wired to the real implementation in main.ts. */
-export interface WatchLogImporter {
-	sources: WatchLogSources;
-	run(kind: WatchLogSourceKind, progress: Progress): Promise<ImportReport>;
-	plan(imported: WatchLogSourceKind[]): Promise<CleanupItem[]>;
-	cleanup(items: CleanupItem[]): Promise<{ done: number; errors: string[] }>;
-	/** Writes the rendered report as a note. */
-	writeReport(markdown: string): Promise<TFile>;
-	decide(kind: WatchLogSourceKind, d: ImportDecision): void;
-	openFile(path: string): void;
-}
+export type { WatchLogImporter };
 
 export type WizardStep = 'found' | 'import' | 'result' | 'cleanup' | 'done';
 

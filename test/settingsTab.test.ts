@@ -98,6 +98,7 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 		reading,
 		games: { getSettings: () => ({ savedFilterPreset: preset }) },
 		api,
+		refreshOpenViews: vi.fn(),
 		setImportProgress: (p: typeof state.importProgress) => { state.importProgress = p; },
 	};
 	const tab = new HoardSettingsTab({} as never, deps as never);
@@ -222,7 +223,7 @@ describe('HoardSettingsTab games filter refs', () => {
 
 describe('HoardSettingsTab theme picker', () => {
 	it('marks the current theme and switches on click', async () => {
-		const { tab, settings, settingsService } = makeTab();
+		const { tab, settings, settingsService, deps } = makeTab();
 		const picked = vi.fn();
 		const el = document.createElement('div');
 		tab.renderThemePicker(el, picked);
@@ -235,6 +236,7 @@ describe('HoardSettingsTab theme picker', () => {
 		expect(cards[1]!.classList.contains('is-selected')).toBe(true);
 		expect(cards[0]!.classList.contains('is-selected')).toBe(false);
 		expect(settingsService.update).toHaveBeenCalled();
+		expect(deps.refreshOpenViews).toHaveBeenCalledOnce();
 	});
 });
 
