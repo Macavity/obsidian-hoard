@@ -1,10 +1,11 @@
 import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, getLanguage, parseYaml, setIcon, stringifyYaml } from 'obsidian';
+import { CustomListManager } from '../modules/custom-lists/services/CustomListManager';
 import { setLocale, t } from '../shared/i18n';
 import { statusLabel, typeLabel } from '../shared/i18n/labels';
 import type { ManagerNotice } from '../shared/storage/storageTypes';
 import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, HoardPluginSettings, setActiveDateFormat } from '../shared/domain/types';
 import { cardSizeToMinWidth } from '../shared/ui/VirtualGrid';
-import type { CardStyleTab, ImportProgress } from '../shared/domain/types';
+import type { CardStyleTab, CustomList, ImportProgress } from '../shared/domain/types';
 import { DataManager } from '../modules/watchlist/services/DataManager';
 import { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
 import { GameDataManager } from '../modules/games/services/GameDataManager';
@@ -269,6 +270,14 @@ export default class HoardPlugin extends Plugin {
 		};
 	}
 
+	/** Vault I/O of the custom lists; a corrupt list file is reported with a notice. */
+	private listManager = (onConflict?: (list: CustomList) => void): CustomListManager =>
+		new CustomListManager({
+			app: this.app,
+			layout: () => this.getLayout(),
+			onCorrupt: (name) => new Notice(t('lists.corrupt', { name })),
+		}, onConflict);
+
 	/** What the settings pane and the modals it opens read and change. */
 	private settingsTabDeps(): HoardSettingsTabDeps {
 		return {
@@ -280,6 +289,7 @@ export default class HoardPlugin extends Plugin {
 			api: this.apiService,
 			posters: this.posterService,
 			layout: () => this.getLayout(),
+			listManager: this.listManager,
 			backupManagers: () => this.backupManagers(),
 			openWatchLogImport: (startAt) => this.openWatchLogImport(startAt),
 			reloadSettings: () => this.loadSettings(),
@@ -298,7 +308,7 @@ export default class HoardPlugin extends Plugin {
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
 			importRunning: () => this.importRunning,
-			layout: () => this.getLayout(),
+			listManager: this.listManager,
 			markAirtimeHandled: (key) => this.markAirtimeHandled(key),
 			openAdd: (opts) => openAddForTitle(this.addRouterDeps(), opts),
 		};

@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 import { createFakeApp } from '../fakes/fakeApp';
 import { fakeSettings } from './fakeSettings';
 import { CustomListsTab } from '../../src/modules/custom-lists/ui/CustomListsTab';
+import { CustomListManager } from '../../src/modules/custom-lists/services/CustomListManager';
 import { VaultLayout } from '../../src/shared/storage/VaultLayout';
 import { DEFAULT_SETTINGS, type CustomList, type HoardTitle } from '../../src/shared/domain/types';
 
@@ -51,6 +52,8 @@ export async function setupCustomLists(lists: CustomList[], titles: Partial<Hoar
 		reading: { getBooks: () => [], getMangaList: () => [] },
 		games: { getGames: () => [] },
 		openAdd,
+		listManager: (onConflict?: (list: CustomList) => void) =>
+			new CustomListManager({ app: f.app, layout: () => layout, onCorrupt: () => {} }, onConflict),
 	};
 	const container = document.createElement('div');
 	document.body.appendChild(container);

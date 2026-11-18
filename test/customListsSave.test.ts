@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CustomListManager } from '../src/modules/custom-lists/ui/CustomListsTab';
+import { CustomListManager } from '../src/modules/custom-lists/services/CustomListManager';
 import { makeList, setupCustomLists } from './helpers/setupCustomLists';
 
 const DATA = '\n## Data\n```json\n{\n  "x": 1\n}\n```\n';
@@ -13,7 +13,7 @@ describe('custom list saves go through vault.process', () => {
 	it('saveList on an existing list uses process, not modify', async () => {
 		const { f, deps, tab } = await setupCustomLists([makeList()]);
 		tab.destroy(); // its modify listener reads the note; only the manager's own reads count here
-		const manager = new CustomListManager(deps);
+		const manager = new CustomListManager({ ...deps, onCorrupt: () => {} });
 		const list = (await manager.loadList('Backlog'))!;
 		const process = vi.spyOn(f.app.vault, 'process');
 		const modify = vi.spyOn(f.app.vault, 'modify');
@@ -29,7 +29,7 @@ describe('custom list saves go through vault.process', () => {
 
 	it('saveNotes replaces only the notes section and keeps ## Data byte-identical', async () => {
 		const { f, deps } = await setupCustomLists([makeList()]);
-		const manager = new CustomListManager(deps);
+		const manager = new CustomListManager({ ...deps, onCorrupt: () => {} });
 		const path = [...f.files.keys()].find((p) => p.endsWith('/Backlog.md'))!;
 		f.files.set(path, `# Backlog\n\n## Notes\nold\n${DATA}`);
 		const list = (await manager.loadList('Backlog'))!;
@@ -43,7 +43,7 @@ describe('custom list saves go through vault.process', () => {
 
 	it('saveNotes adds a ## Notes heading before ## Data when there is none', async () => {
 		const { f, deps } = await setupCustomLists([makeList()]);
-		const manager = new CustomListManager(deps);
+		const manager = new CustomListManager({ ...deps, onCorrupt: () => {} });
 		const path = [...f.files.keys()].find((p) => p.endsWith('/Backlog.md'))!;
 		const original = `# Backlog\n${DATA}`;
 		f.files.set(path, original);
@@ -56,7 +56,7 @@ describe('custom list data block', () => {
 	const load = async (data: string) => {
 		const { f, deps, tab } = await setupCustomLists([makeList()]);
 		tab.destroy();
-		const manager = new CustomListManager(deps);
+		const manager = new CustomListManager({ ...deps, onCorrupt: () => {} });
 		const path = [...f.files.keys()].find((p) => p.endsWith('/Backlog.md'))!;
 		f.files.set(path, `# Backlog
 

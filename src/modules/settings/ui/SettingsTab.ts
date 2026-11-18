@@ -146,7 +146,7 @@ import type { BackupManagers } from '../../backup/services/backup';
 import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
 import { ReadingCsvChoiceModal } from '../../reading/ui/ReadingCsvChoiceModal';
 import { ReadingCsvModal, type ReadingCsvModalDeps } from '../../reading/ui/ReadingCsvModal';
-import { CustomListManager, DefaultColumnsModal, type DefaultColumnsModalDeps } from '../../custom-lists/ui/CustomListsTab';
+import { DefaultColumnsModal, type DefaultColumnsModalDeps } from '../../custom-lists/ui/CustomListsTab';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 import { refreshAllCovers } from '../../covers/services/coverRefresh';
 import { apiErrorMessage, apiErrorShort } from '../../../shared/api/ApiService';
@@ -2617,7 +2617,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.lists.folder.desc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.folders.createNow.button')).onClick(async () => {
-					const manager = new CustomListManager(this.deps);
+					const manager = this.deps.listManager();
 					await manager.ensureFolder();
 					new Notice(t('settings.lists.folder.done'));
 				}),
