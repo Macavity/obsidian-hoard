@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setLocale } from '../../src/shared/i18n';
 import de from '../../src/shared/i18n/de';
-import { HoardSettingsTab } from '../../src/modules/settings/ui/SettingsTab';
+import { newSettingsTab } from '../helpers/newSettingsTab';
 import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
 import { tick } from '../helpers/common';
 import { fakeSettings } from '../helpers/fakeSettings';
@@ -16,14 +16,14 @@ function allText(el: Element): string[] {
 }
 
 function makeTab(over: Record<string, unknown> = {}, section = 'general') {
-	const deps = {
+	const fakes = {
 		app: {},
 		settings: fakeSettings({ ...DEFAULT_SETTINGS }),
 		layout: () => ({ root: 'W' }),
 		watchLogImported: () => false,
 		...over,
 	};
-	const tab = new HoardSettingsTab({} as never, deps as never);
+	const tab = newSettingsTab(fakes);
 	(tab as unknown as { activeSection: string }).activeSection = section;
 	const root = tab.containerEl;
 	// the tab renders through its own display(); the structural type sidesteps the base-class deprecation

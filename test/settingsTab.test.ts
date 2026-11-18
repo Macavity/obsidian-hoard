@@ -4,7 +4,7 @@ import { Notice as RealNotice } from 'obsidian';
 /** the mock records every string notice */
 const Notice = RealNotice as unknown as { shown: string[] };
 const gamesKeyChip = (source: 'rawg' | 'igdb', s: Record<string, string>) => realChip(source, s as never);
-import { HoardSettingsTab } from '../src/modules/settings/ui/SettingsTab';
+import { newSettingsTab } from './helpers/newSettingsTab';
 import { gamesKeyChip as realChip } from '../src/shared/ui/gamesKeyChip';
 import type { HoardTitle, TagDefinition } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
@@ -90,7 +90,7 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 		}),
 	};
 	const app = { vault, workspace: { getLeavesOfType: () => [{ view: {} }] } };
-	const deps = {
+	const fakes = {
 		app,
 		settings: settingsService,
 		layout: () => ({ root: over.root ?? 'Hoard' }),
@@ -101,8 +101,8 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 		refreshOpenViews: vi.fn(),
 		setImportProgress: (p: typeof state.importProgress) => { state.importProgress = p; },
 	};
-	const tab = new HoardSettingsTab({} as never, deps as never);
-	return { tab: tab as unknown as Internals, deps, state, settingsService, api, preset, dm, reading, app, adapter, written, settings };
+	const tab = newSettingsTab(fakes);
+	return { tab: tab as unknown as Internals, fakes, state, settingsService, api, preset, dm, reading, app, adapter, written, settings };
 }
 
 beforeEach(() => { Notice.shown.length = 0; vi.stubGlobal('activeDocument', document); });
@@ -223,7 +223,7 @@ describe('HoardSettingsTab games filter refs', () => {
 
 describe('HoardSettingsTab theme picker', () => {
 	it('marks the current theme and switches on click', async () => {
-		const { tab, settings, settingsService, deps } = makeTab();
+		const { tab, settings, settingsService, fakes } = makeTab();
 		const picked = vi.fn();
 		const el = document.createElement('div');
 		tab.renderThemePicker(el, picked);
@@ -236,7 +236,7 @@ describe('HoardSettingsTab theme picker', () => {
 		expect(cards[1]!.classList.contains('is-selected')).toBe(true);
 		expect(cards[0]!.classList.contains('is-selected')).toBe(false);
 		expect(settingsService.update).toHaveBeenCalled();
-		expect(deps.refreshOpenViews).toHaveBeenCalledOnce();
+		expect(fakes.refreshOpenViews).toHaveBeenCalledOnce();
 	});
 });
 

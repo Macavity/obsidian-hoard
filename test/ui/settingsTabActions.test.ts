@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
-import { HoardSettingsTab } from '../../src/modules/settings/ui/SettingsTab';
+import { newSettingsTab } from '../helpers/newSettingsTab';
 import { DEFAULT_SETTINGS, type HoardTitle } from '../../src/shared/domain/types';
 import { until } from '../helpers/common';
 import { makeTitle } from '../helpers/setupDataManager';
@@ -37,25 +37,25 @@ function settings() {
 	};
 }
 
-/** Builds the tab on fake deps; `over` replaces or adds deps (titles, reading, api, ...). */
+/** Builds the tab on fake fakes; `over` replaces or adds fakes (titles, reading, api, ...). */
 /** The real service over the fake settings, so a change reaches the main window like in the plugin. */
 const emitting = (live: ReturnType<typeof settings>) =>
 	new SettingsService(() => live, () => Promise.resolve(), emitDataChanged);
 
-function makeTab(over: Record<string, unknown> = {}, app: unknown = {}) {
+function makeTab(over: Record<string, unknown> = {}, app: unknown = {}, liveSettings = false) {
 	const live = settings();
 	const settingsService = fakeSettings(live);
 	const state = { importProgress: null as null | { cancel: () => void } };
-	const deps: Record<string, unknown> = {
+	const fakes: Record<string, unknown> = {
 		app,
-		settings: settingsService,
+		settings: liveSettings ? emitting(live) : settingsService,
 		layout: () => ({ root: 'W' }),
 		refreshOpenViews: vi.fn(),
 		setImportProgress: (progress: typeof state.importProgress) => { state.importProgress = progress; },
 		...over,
 	};
-	const tab = new HoardSettingsTab({} as never, deps as never);
-	return { tab, priv: tab as unknown as Private, settings: live, settingsService, state, deps };
+	const tab = newSettingsTab(fakes);
+	return { tab, priv: tab as unknown as Private, settings: live, settingsService, state, fakes };
 }
 
 beforeEach(() => { shown.length = 0; });
@@ -112,8 +112,7 @@ describe('theme picker', () => {
 	});
 
 	it('saves the clicked theme, moves the selection and refreshes open views', async () => {
-		const { priv, settings, deps } = makeTab();
-		deps.settings = emitting(settings);
+		const { priv, settings, fakes } = makeTab({}, {}, true);
 		const changed = vi.fn();
 		document.addEventListener('hoard-data-changed', changed);
 		const el = document.createElement('div');
@@ -125,14 +124,13 @@ describe('theme picker', () => {
 		expect(settings.colorTheme).toBe('bluez');
 		expect(cards.map((c) => c.classList.contains('is-selected'))).toEqual([false, false, true]);
 		expect(onPicked).toHaveBeenLastCalledWith('Bluez');
-		expect(deps.refreshOpenViews).toHaveBeenCalledOnce();
+		expect(fakes.refreshOpenViews).toHaveBeenCalledOnce();
 		expect(changed).toHaveBeenCalled();
 		document.removeEventListener('hoard-data-changed', changed);
 	});
 
 	it('refreshes the main window when the click happens in the settings window', async () => {
-		const { priv, settings, deps } = makeTab();
-		deps.settings = emitting(settings);
+		const { priv, fakes } = makeTab({}, {}, true);
 		const changed = vi.fn();
 		document.addEventListener('hoard-data-changed', changed);
 		// Obsidian 1.15: the settings live in their own window, which has the focus during the click
@@ -147,7 +145,7 @@ describe('theme picker', () => {
 			vi.stubGlobal('activeDocument', document);
 			document.removeEventListener('hoard-data-changed', changed);
 		}
-		expect(deps.refreshOpenViews).toHaveBeenCalled();
+		expect(fakes.refreshOpenViews).toHaveBeenCalled();
 		expect(changed).toHaveBeenCalled();
 	});
 
@@ -450,14 +448,14 @@ describe('regenerate notes', () => {
 	});
 
 	it('creates missing notes for titles, books and manga and summarises', async () => {
-		const { priv, deps, wrap, fill, text } = setup(
+		const { priv, fakes, wrap, fill, text } = setup(
 			[makeTitle({ id: 'a' }), makeTitle({ id: 'b' })], [{ id: 'book' }], [{ id: 'm' }],
 			[true, false, true, true],
 		);
 		await priv.runRegenerate(wrap, fill, text);
 		expect(fill.style.getPropertyValue('--hoard-csv-progress-width')).toBe('100%');
 		expect(text.textContent).toContain('3');
-		expect((deps as unknown as { reading: { createReadingNoteIfMissing: ReturnType<typeof vi.fn> } })
+		expect((fakes as unknown as { reading: { createReadingNoteIfMissing: ReturnType<typeof vi.fn> } })
 			.reading.createReadingNoteIfMissing).toHaveBeenCalledWith('manga', { id: 'm' });
 	});
 
@@ -514,7 +512,7 @@ describe('bulk frontmatter rewrite', () => {
 		const cancel = ctx.state.importProgress!.cancel;
 		cancel();
 		await run;
-		const rewrite = (ctx.deps as unknown as { titles: { rewriteFrontmatterIfExists: ReturnType<typeof vi.fn> } })
+		const rewrite = (ctx.fakes as unknown as { titles: { rewriteFrontmatterIfExists: ReturnType<typeof vi.fn> } })
 			.titles.rewriteFrontmatterIfExists;
 		expect(rewrite.mock.calls.length).toBeLessThan(30);
 		expect(shown.at(-1)).toContain('ancel');
