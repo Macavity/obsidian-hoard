@@ -25,7 +25,7 @@ export interface StubTabOptions {
 }
 
 /** The eight tabs in tab-bar order, each rendering nothing unless replaced. */
-export function stubTabs(opts: StubTabOptions = {}): TabFactory[] {
+function stubTabs(opts: StubTabOptions = {}): TabFactory[] {
 	return TAB_SHAPE.map((shape) => ({
 		...shape,
 		create: opts.create?.[shape.name] ?? stubTab,

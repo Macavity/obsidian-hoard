@@ -136,14 +136,15 @@ interface ApiProviderHandle {
 	setActive: (active: boolean | null) => void;
 	refreshStatus: () => void;
 }
-import type { CsvOptions } from '../../watchlist/ui/CsvModal';
+import type { OpenCsv } from '../../watchlist/ui/CsvModal';
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
 import type { BackupFile, parseBackup } from '../../backup/services/backup';
 import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
+import type { OpenSteamSync } from '../../games/ui/SteamSyncModal';
 import type { ReadingCsvKind } from '../../reading/ui/ReadingCsvChoiceModal';
-import type { ReadingCsvOptions } from '../../reading/ui/ReadingCsvModal';
+import type { OpenReadingCsv } from '../../reading/ui/ReadingCsvModal';
 import type { CoverRefresher } from '../../covers/services/coverRefresh';
 import { apiErrorMessage, apiErrorShort } from '../../../shared/api/ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from '../../../shared/api/jikanBase';
@@ -203,11 +204,11 @@ export interface SettingsTabBackup {
 /** The dialogs the settings pane opens; built in `src/app/wiring/settings.ts`. */
 export interface SettingsTabModals {
 	confirm(message: string, onConfirm: () => void): void;
-	openCsv(opts: CsvOptions): void;
+	openCsv: OpenCsv;
 	/** Asks book or manga, then reports the choice. */
 	openReadingCsvChoice(mode: 'export' | 'import', onChoice: (kind: ReadingCsvKind) => void): void;
-	openReadingCsv(opts: ReadingCsvOptions): void;
-	openSteamSync(): void;
+	openReadingCsv: OpenReadingCsv;
+	openSteamSync: OpenSteamSync;
 	openDefaultColumns(): void;
 }
 
