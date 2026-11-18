@@ -289,6 +289,22 @@ export interface AirtimeTabModals {
 	confirm: OpenConfirm;
 }
 
+/** True when the entry's subject is gone; reading items and games are only checked when their manager is at hand. */
+function isOrphan(
+	entry: AirtimeEntry,
+	titleIds: Set<string>,
+	reading: Pick<ReadingDataManager, 'getBook' | 'getManga'> | undefined,
+	games: Pick<GameDataManager, 'getGame'> | undefined,
+): boolean {
+	if (entry.source === 'game') return !!games && !games.getGame(entry.titleId);
+	if (entry.source === 'reading') {
+		if (!reading) return false;
+		const item = (entry.readingKind ?? 'book') === 'book' ? reading.getBook(entry.titleId) : reading.getManga(entry.titleId);
+		return !item;
+	}
+	return !titleIds.has(entry.titleId);
+}
+
 export class AirtimeTab implements TabInstance {
 	private container: HTMLElement;
 	private onCountChange?: (count: number) => void;
@@ -431,27 +447,10 @@ export class AirtimeTab implements TabInstance {
 		readingDataManager?: Pick<ReadingDataManager, 'getBook' | 'getManga'>,
 		gameDataManager?: Pick<GameDataManager, 'getGame'>,
 	): number {
-		const allEntries = dataManager.getAirtimeEntries();
-		const titles = dataManager.getTitles();
-		const titleMap = new Map(titles.map((t) => [t.id, t]));
+		const titleIds = new Set(dataManager.getTitles().map((t) => t.id));
 		let count = 0;
-		for (const entry of allEntries) {
-			if (entry.source === 'reading') {
-				// verify the reading item still exists (skip orphans) when we have the manager
-				if (readingDataManager) {
-					const kind = entry.readingKind ?? 'book';
-					const item = kind === 'book'
-						? readingDataManager.getBook(entry.titleId)
-						: readingDataManager.getManga(entry.titleId);
-					if (!item) continue;
-				}
-			} else if (entry.source === 'game') {
-				// same orphan check for games
-				if (gameDataManager && !gameDataManager.getGame(entry.titleId)) continue;
-			} else {
-				const title = titleMap.get(entry.titleId);
-				if (!title) continue;
-			}
+		for (const entry of dataManager.getAirtimeEntries()) {
+			if (isOrphan(entry, titleIds, readingDataManager, gameDataManager)) continue;
 			// same rule as resolveEntry, so the due count matches what the cards/rows show
 			const isSingle = entry.schedule.recurrence === 'once';
 			const cd = getDetailedCountdown(entry.schedule, isSingle, entry.lastAcknowledgedDate);

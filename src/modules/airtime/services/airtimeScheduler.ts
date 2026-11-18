@@ -1,4 +1,4 @@
-import type { AirtimeSchedule } from '../../../shared/domain/types';
+import type { AirtimeEntry, AirtimeSchedule } from '../../../shared/domain/types';
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
@@ -32,24 +32,33 @@ export function runAirtimeScheduler(
 		// deduplicate: only fire once per entry per day
 		const notifKey = `${entry.id}-${today}`;
 		const fire = due && !notified.has(notifKey);
-		const isWatch = entry.source !== 'reading' && entry.source !== 'game';
-		if (isWatch && entry.schedule.recurrence !== 'once') void dataManager.refreshAiring(entry.titleId, fire);
+		if (isRecurringWatch(entry)) void dataManager.refreshAiring(entry.titleId, fire);
 		if (!fire) continue;
 		notified.add(notifKey);
-
-		// resolve the entry's subject — a watch title, a reading item, or a game
-		let name: string | undefined;
-		if (entry.source === 'game') {
-			name = gameDataManager.getGame(entry.titleId)?.title;
-		} else if (entry.source === 'reading') {
-			name = (entry.readingKind ?? 'book') === 'book'
-				? readingDataManager.getBook(entry.titleId)?.title
-				: readingDataManager.getManga(entry.titleId)?.title;
-		} else {
-			name = dataManager.getTitle(entry.titleId)?.title;
-		}
+		const name = subjectName(entry, dataManager, readingDataManager, gameDataManager);
 		if (name !== undefined) notify(name);
 	}
+}
+
+function isRecurringWatch(entry: AirtimeEntry): boolean {
+	return entry.source !== 'reading' && entry.source !== 'game' && entry.schedule.recurrence !== 'once';
+}
+
+/** The title of the entry's subject: a watch title, a reading item, or a game. */
+function subjectName(
+	entry: AirtimeEntry,
+	dataManager: Pick<DataManager, 'getTitle'>,
+	readingDataManager: Pick<ReadingDataManager, 'getBook' | 'getManga'>,
+	gameDataManager: Pick<GameDataManager, 'getGame'>,
+): string | undefined {
+	if (entry.source === 'game') return gameDataManager.getGame(entry.titleId)?.title;
+	if (entry.source === 'reading') {
+		const item = (entry.readingKind ?? 'book') === 'book'
+			? readingDataManager.getBook(entry.titleId)
+			: readingDataManager.getManga(entry.titleId);
+		return item?.title;
+	}
+	return dataManager.getTitle(entry.titleId)?.title;
 }
 
 /** True when today's `HH:MM` has passed, at most AIRTIME_CATCH_UP_MINUTES ago. */
