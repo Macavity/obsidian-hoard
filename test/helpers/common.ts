@@ -90,14 +90,14 @@ export function newDataManager(
 
 export function newReadingManager(base: StoreBase, upcoming: ReadingUpcomingSync): ReadingDataManager {
 	return new ReadingDataManager(
-		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify,
-		base.settings, base.registerEvent, upcoming,
+		base.registerEvent, upcoming,
+		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify, base.settings,
 	);
 }
 
 export function newGameManager(base: StoreBase, upcoming: GameUpcomingSync): GameDataManager {
 	return new GameDataManager(
-		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify,
-		base.settings, base.registerEvent, upcoming,
+		base.registerEvent, upcoming,
+		base.vault, base.fileManager, base.index, base.local, base.shared, base.layout, base.notify, base.settings,
 	);
 }

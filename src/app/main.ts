@@ -1,4 +1,3 @@
-import type { FileManager, Vault } from 'obsidian';
 import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, getLanguage, parseYaml, setIcon, stringifyYaml } from 'obsidian';
 import { CoverRefresher, resolveGameCover, fetchReadingCoverById, firstBookCover, searchBooks } from '../modules/covers/services/coverRefresh';
 import { CustomListManager } from '../modules/custom-lists/services/CustomListManager';
@@ -46,14 +45,11 @@ import { composeSettings, persistSettings } from '../shared/services/settingsSpl
 import { toRecord } from '../shared/domain/sharedHelpers';
 import { resolveJikanEndpoint } from '../shared/api/jikanBase';
 import { emitDataChanged, onDataChanged } from '../shared/services/changeSignal';
-import { SettingsService, type SettingsReader } from '../shared/services/SettingsService';
-import type { Notify } from '../shared/storage/storageTypes';
+import { SettingsService } from '../shared/services/SettingsService';
+import type { ManagerBase } from '../shared/services/EntryManagerBase';
 
 /** Root folder created on a fresh install (no `.base` with a `hoard:` key found). */
 const DEFAULT_ROOT = 'Hoard';
-
-/** Constructor prefix shared by the three data managers. */
-type ManagerBase = [Vault, FileManager, EntryIndex, LocalStore, SharedConfigStore, () => VaultLayout, Notify, SettingsReader];
 
 export default class HoardPlugin extends Plugin {
 	// a copy: lists edited in place before the first load must not change the defaults
@@ -109,20 +105,20 @@ export default class HoardPlugin extends Plugin {
 		},
 	);
 	private readingDataManager: ReadingDataManager = new ReadingDataManager(
-		...this.managerBase,
 		(ref) => this.registerEvent(ref),
 		{
 			autoAddReadingToUpcoming: (item, kind) => this.dataManager.autoAddReadingToUpcoming(item, kind),
 			removeReadingAirtimeEntries: (id) => this.dataManager.removeReadingAirtimeEntries(id),
 		},
+		...this.managerBase,
 	);
 	private gameDataManager: GameDataManager = new GameDataManager(
-		...this.managerBase,
 		(ref) => this.registerEvent(ref),
 		{
 			autoAddGameToUpcoming: (g) => this.dataManager.autoAddGameToUpcoming(g),
 			removeGameAirtimeEntries: (id) => this.dataManager.removeGameAirtimeEntries(id),
 		},
+		...this.managerBase,
 	);
 	private apiService: ApiService = new ApiService('', '');
 	/** TMDB/OMDb key snapshot of the last settings save; null before onload set it */

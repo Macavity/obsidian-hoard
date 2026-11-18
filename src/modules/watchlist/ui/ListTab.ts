@@ -437,8 +437,6 @@ export class ListTab implements TabInstance {
 		// the 10 newest overall, not the 10 newest matches
 		const titleCard = (strip: HTMLElement, t: HoardTitle): void =>
 			this.renderTitleCard(strip, t, cardWidth);
-		const sel = (items: { id: string }[]): ShelfSelect | undefined =>
-			this.shelfSelect(items.map((i) => i.id));
 		const shelfRenderers: Record<string, () => void> = {
 			favorites: () => {
 				// newest favorite first — this shelf ignores the tab sort
@@ -448,7 +446,7 @@ export class ListTab implements TabInstance {
 				renderShelf(
 					scroll, t('list.shelves.favorites'), favorites,
 					t('list.empty.favorites'),
-					filtering, titleCard, sel(favorites),
+					filtering, titleCard, this.shelfSelect(favorites.map((i) => i.id)),
 				);
 			},
 			recommended: () => {
@@ -456,7 +454,7 @@ export class ListTab implements TabInstance {
 				renderShelf(
 					scroll, t('list.shelves.recommended'), recommended,
 					t('list.empty.recommended'),
-					filtering, titleCard, sel(recommended),
+					filtering, titleCard, this.shelfSelect(recommended.map((i) => i.id)),
 				);
 			},
 			// ISO timestamps, so string compare sorts chronologically
@@ -468,7 +466,7 @@ export class ListTab implements TabInstance {
 				renderShelf(
 					scroll, t('list.shelves.recentlyAdded'), recentlyAdded,
 					t('list.empty.recentlyAdded'),
-					filtering, titleCard, sel(recentlyAdded),
+					filtering, titleCard, this.shelfSelect(recentlyAdded.map((i) => i.id)),
 				);
 			},
 			recentlyWatched: () => {
@@ -476,7 +474,7 @@ export class ListTab implements TabInstance {
 				renderShelf(
 					scroll, t('list.shelves.recentlyWatched'), recentlyWatched,
 					t('list.empty.recentlyWatched'),
-					filtering, titleCard, sel(recentlyWatched),
+					filtering, titleCard, this.shelfSelect(recentlyWatched.map((i) => i.id)),
 				);
 			},
 			groups: () => {
@@ -499,7 +497,7 @@ export class ListTab implements TabInstance {
 				renderShelf(
 					scroll, t('list.shelves.recentlyReleased'), recentlyReleased,
 					t('list.empty.recentlyReleased'),
-					filtering, titleCard, sel(recentlyReleased),
+					filtering, titleCard, this.shelfSelect(recentlyReleased.map((i) => i.id)),
 				);
 			},
 			// the grouped grids are regular layout entries, so they sit anywhere — the windowing

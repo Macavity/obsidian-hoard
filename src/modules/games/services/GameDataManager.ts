@@ -1,16 +1,11 @@
 import { TFile, stringifyYaml } from 'obsidian';
-import type { EventRef, FileManager, Vault } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { EventRef } from 'obsidian';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { Notify } from '../../../shared/storage/storageTypes';
-import type { EntryIndex } from '../../../shared/storage/EntryIndex';
-import type { LocalStore } from '../../../shared/storage/LocalStore';
 import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
 import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
-import { ChangeNotifier } from '../../../shared/services/changeListeners';
+import { EntryManagerBase, type ManagerBase } from '../../../shared/services/EntryManagerBase';
 import { getBaseline, sameStoredState, setBaseline } from '../../../shared/storage/baseline';
-import { splitNested, type SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
-import type { VaultLayout } from '../../../shared/storage/VaultLayout';
+import { splitNested } from '../../../shared/storage/SharedConfigStore';
 import { decodeGame, encodeGame } from '../../../shared/storage/gameCodec';
 import { COMMON_PROPS } from '../../../shared/storage/properties';
 import { extractNotes, replaceNotesSection } from '../../../shared/storage/noteBody';
@@ -49,7 +44,7 @@ export interface GameUpcomingSync {
  * tracker and removed when the date passes or the game is deleted; applyReleaseStatus maintains the
  * auto "To be released" status.
  */
-export class GameDataManager extends ChangeNotifier {
+export class GameDataManager extends EntryManagerBase {
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from,
@@ -62,20 +57,13 @@ export class GameDataManager extends ChangeNotifier {
 	private settingsCache: GamesSettings | null = null;
 
 	constructor(
-		private readonly vault: Vault,
-		private readonly fileManager: FileManager,
-		private readonly index: EntryIndex,
-		private readonly local: LocalStore,
-		private readonly shared: SharedConfigStore,
-		private readonly layout: () => VaultLayout,
-		private readonly notify: Notify,
-		private readonly appSettings: SettingsReader,
 		/** Bound to the plugin, so the handler is removed on unload. */
 		private readonly registerEvent: (ref: EventRef) => void,
 		private readonly upcoming: GameUpcomingSync,
+		...base: ManagerBase
 	) {
-		super();
-		this.held = { index, views: this.views, dirty: this.dirty };
+		super(...base);
+		this.held = { index: this.index, views: this.views, dirty: this.dirty };
 	}
 
 	setHistoryManager(hm: HistoryManager): void {

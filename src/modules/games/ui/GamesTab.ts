@@ -638,8 +638,6 @@ export class GamesTab implements TabInstance {
 		const gameCard = (strip: HTMLElement, g: Game): void =>
 			this.renderGameCard(strip, g, cardW);
 		this.shelfSelectRefreshers = [];
-		const sel = (items: { id: string }[]): ShelfSelect | undefined =>
-			this.shelfSelect(items.map((i) => i.id));
 
 		// section builders keyed by rowsLayout id — each computes its own list (so a disabled section
 		// costs nothing), then hides non-matching games: Recently Added stays the 10 newest overall, not
@@ -651,7 +649,7 @@ export class GamesTab implements TabInstance {
 				renderShelf(
 					scroll, t('games.shelves.favorites'), favorites,
 					t('games.shelves.emptyFavorites'),
-					filtering, gameCard, sel(favorites),
+					filtering, gameCard, this.shelfSelect(favorites.map((i) => i.id)),
 				);
 			},
 			recommended: () => {
@@ -659,7 +657,7 @@ export class GamesTab implements TabInstance {
 				renderShelf(
 					scroll, t('games.shelves.recommended'), recommended,
 					t('games.shelves.emptyRecommended'),
-					filtering, gameCard, sel(recommended),
+					filtering, gameCard, this.shelfSelect(recommended.map((i) => i.id)),
 				);
 			},
 			recentlyAdded: () => {
@@ -670,7 +668,7 @@ export class GamesTab implements TabInstance {
 				renderShelf(
 					scroll, t('games.shelves.recentlyAdded'), recentlyAdded,
 					t('games.shelves.emptyRecentlyAdded'),
-					filtering, gameCard, sel(recentlyAdded),
+					filtering, gameCard, this.shelfSelect(recentlyAdded.map((i) => i.id)),
 				);
 			},
 			recentlyPlayed: () => {
@@ -678,7 +676,7 @@ export class GamesTab implements TabInstance {
 				renderShelf(
 					scroll, t('games.shelves.recentlyPlayed'), recentlyPlayed,
 					t('games.shelves.emptyRecentlyPlayed'),
-					filtering, gameCard, sel(recentlyPlayed),
+					filtering, gameCard, this.shelfSelect(recentlyPlayed.map((i) => i.id)),
 				);
 			},
 			groups: () => {
@@ -701,7 +699,7 @@ export class GamesTab implements TabInstance {
 				renderShelf(
 					scroll, t('games.shelves.recentlyReleased'), recentlyReleased,
 					t('games.shelves.emptyRecentlyReleased'),
-					filtering, gameCard, sel(recentlyReleased),
+					filtering, gameCard, this.shelfSelect(recentlyReleased.map((i) => i.id)),
 				);
 			},
 			// the grouped grids are mutually exclusive (normalizeRowsLayout guarantees it)

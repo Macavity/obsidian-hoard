@@ -1,16 +1,11 @@
 import { TFile, getFrontMatterInfo, parseYaml, stringifyYaml } from 'obsidian';
-import type { EventRef, FileManager, Vault } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { EventRef } from 'obsidian';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { Notify } from '../../../shared/storage/storageTypes';
-import type { EntryIndex } from '../../../shared/storage/EntryIndex';
-import type { LocalStore } from '../../../shared/storage/LocalStore';
 import { deleteEntryNote, dropOldId, registerRenameFollow, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, updateFrontMatter, writeEntry } from '../../../shared/storage/noteWrite';
 import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
-import { ChangeNotifier } from '../../../shared/services/changeListeners';
+import { EntryManagerBase, type ManagerBase } from '../../../shared/services/EntryManagerBase';
 import { getBaseline, sameStoredState, setBaseline } from '../../../shared/storage/baseline';
-import { splitNested, type SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
-import type { VaultLayout } from '../../../shared/storage/VaultLayout';
+import { splitNested } from '../../../shared/storage/SharedConfigStore';
 import { FOLDERS } from '../../../shared/domain/typeName';
 import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from '../../../shared/storage/properties';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from '../../../shared/storage/readingCodec';
@@ -72,7 +67,7 @@ export interface ReadingUpcomingSync {
  * to the note via processFrontMatter and only touch keys whose encoded value changed. Reading
  * settings and table columns live in the shared config (Hoard.base).
  */
-export class ReadingDataManager extends ChangeNotifier {
+export class ReadingDataManager extends EntryManagerBase {
 	private historyManager: HistoryManager | null = null;
 
 	private settings: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
@@ -88,20 +83,13 @@ export class ReadingDataManager extends ChangeNotifier {
 	private held: HeldEntries<{ src: ReadingItem; view: ReadingItem }>;
 
 	constructor(
-		private readonly vault: Vault,
-		private readonly fileManager: FileManager,
-		private readonly index: EntryIndex,
-		private readonly local: LocalStore,
-		private readonly shared: SharedConfigStore,
-		private readonly layout: () => VaultLayout,
-		private readonly notify: Notify,
-		private readonly appSettings: SettingsReader,
 		/** Bound to the plugin, so the handler is removed on unload. */
 		private readonly registerEvent: (ref: EventRef) => void,
 		private readonly upcoming: ReadingUpcomingSync,
+		...base: ManagerBase
 	) {
-		super();
-		this.held = { index, views: this.views, dirty: this.dirty };
+		super(...base);
+		this.held = { index: this.index, views: this.views, dirty: this.dirty };
 	}
 
 	setHistoryManager(hm: HistoryManager): void {

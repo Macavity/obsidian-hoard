@@ -83,6 +83,21 @@ const COUNTDOWN_KIND_CLASSES: Record<DetailedCountdown['kind'], string> = {
 
 type TrackerCardData = { entry: AirtimeEntry; r: ResolvedUpcoming; countdown: DetailedCountdown };
 
+/** What both card layouts derive from an entry: movie or series, last episode, tick button shown. */
+function cardFlags(entry: AirtimeEntry, r: ResolvedUpcoming, countdown: DetailedCountdown) {
+	const isMovie = r.isSingle;
+	const totalEps = r.totalUnits;
+	const isFinalEpisode =
+		!isMovie &&
+		entry.currentEpisode !== undefined &&
+		totalEps > 0 &&
+		entry.currentEpisode >= totalEps;
+	const showTick =
+		(isMovie && countdown.kind === 'due') ||
+		(!isMovie && countdown.kind === 'aired');
+	return { isMovie, isFinalEpisode, showTick };
+}
+
 /**
  * True when the scheduled HH:MM has already passed today. No releaseTime ⇒ the whole day counts
  * as passed (show aired/due).
@@ -1101,17 +1116,7 @@ export class AirtimeTab implements TabInstance {
 		r: ResolvedUpcoming,
 		countdown: DetailedCountdown,
 	): void {
-		const isMovie = r.isSingle;
-		const totalEps = r.totalUnits;
-		const isFinalEpisode =
-			!isMovie &&
-			entry.currentEpisode !== undefined &&
-			totalEps > 0 &&
-			entry.currentEpisode >= totalEps;
-
-		const showTick =
-			(isMovie && countdown.kind === 'due') ||
-			(!isMovie && countdown.kind === 'aired');
+		const { isMovie, isFinalEpisode, showTick } = cardFlags(entry, r, countdown);
 
 		let cardCls = 'hoard-airtime__card';
 		if (countdown.kind === 'aired' || countdown.kind === 'due') {
@@ -1368,16 +1373,7 @@ export class AirtimeTab implements TabInstance {
 
 	private buildTrackerCard(data: TrackerCardData, cardWidth: number): HTMLElement {
 		const { entry, r, countdown } = data;
-		const isMovie = r.isSingle;
-		const totalEps = r.totalUnits;
-		const isFinalEpisode =
-			!isMovie &&
-			entry.currentEpisode !== undefined &&
-			totalEps > 0 &&
-			entry.currentEpisode >= totalEps;
-		const showTick =
-			(isMovie && countdown.kind === 'due') ||
-			(!isMovie && countdown.kind === 'aired');
+		const { isMovie, isFinalEpisode, showTick } = cardFlags(entry, r, countdown);
 
 		const cell = createDiv({ cls: 'hoard-tracker__cell' });
 		cell.dataset.entryId = entry.id;
