@@ -87,12 +87,81 @@
         ]
       },
       {
-        "name": "modules",
+        "name": "modules/airtime",
         "patterns": [
-          "src/modules/**"
-        ],
-        "autoDiscover": [
-          "src/modules"
+          "src/modules/airtime/**"
+        ]
+      },
+      {
+        "name": "modules/backup",
+        "patterns": [
+          "src/modules/backup/**"
+        ]
+      },
+      {
+        "name": "modules/covers",
+        "patterns": [
+          "src/modules/covers/**"
+        ]
+      },
+      {
+        "name": "modules/custom-lists",
+        "patterns": [
+          "src/modules/custom-lists/**"
+        ]
+      },
+      {
+        "name": "modules/dashboard",
+        "patterns": [
+          "src/modules/dashboard/**"
+        ]
+      },
+      {
+        "name": "modules/drafts",
+        "patterns": [
+          "src/modules/drafts/**"
+        ]
+      },
+      {
+        "name": "modules/games",
+        "patterns": [
+          "src/modules/games/**"
+        ]
+      },
+      {
+        "name": "modules/import",
+        "patterns": [
+          "src/modules/import/**"
+        ]
+      },
+      {
+        "name": "modules/log",
+        "patterns": [
+          "src/modules/log/**"
+        ]
+      },
+      {
+        "name": "modules/reading",
+        "patterns": [
+          "src/modules/reading/**"
+        ]
+      },
+      {
+        "name": "modules/settings",
+        "patterns": [
+          "src/modules/settings/**"
+        ]
+      },
+      {
+        "name": "modules/watchlist",
+        "patterns": [
+          "src/modules/watchlist/**"
+        ]
+      },
+      {
+        "name": "modules/widgets",
+        "patterns": [
+          "src/modules/widgets/**"
         ]
       },
       {
@@ -151,7 +220,19 @@
         "from": "test",
         "allow": [
           "app",
-          "modules",
+          "modules/airtime",
+          "modules/backup",
+          "modules/covers",
+          "modules/custom-lists",
+          "modules/dashboard",
+          "modules/drafts",
+          "modules/games",
+          "modules/import",
+          "modules/log",
+          "modules/reading",
+          "modules/settings",
+          "modules/watchlist",
+          "modules/widgets",
           "shared-ui",
           "shared-services",
           "shared-api",
@@ -166,7 +247,19 @@
       {
         "from": "app",
         "allow": [
-          "modules",
+          "modules/airtime",
+          "modules/backup",
+          "modules/covers",
+          "modules/custom-lists",
+          "modules/dashboard",
+          "modules/drafts",
+          "modules/games",
+          "modules/import",
+          "modules/log",
+          "modules/reading",
+          "modules/settings",
+          "modules/watchlist",
+          "modules/widgets",
           "shared-ui",
           "shared-services",
           "shared-api",

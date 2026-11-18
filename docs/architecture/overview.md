@@ -47,6 +47,9 @@ flowchart TD
 - **Shared layer order** (fallow zones, each may import only what is listed): `shared/ui` → services, api, domain,
   i18n; `shared/services` → api, storage, domain, i18n; `shared/api` → storage, domain, i18n; `shared/storage` →
   domain only (free of i18n: [i18n](i18n.md)); `shared/domain` and `shared/i18n` → nothing (leaf zones). `app` may import everything; nothing imports `app`.
+- **One zone per module**, declared explicitly (`modules/<x>` with pattern `src/modules/<x>/**`), not via
+  `autoDiscover`: `fallow audit` analyses the base branch with the current config, and an `autoDiscover` folder the
+  base lacks makes the whole config invalid. `coverage.requireAllFiles` fails a new module that has no zone yet.
 - **Module edges** (a module may import only itself, `shared` and the modules listed; anything else fails
   `pnpm quality`). Modules without edges: watchlist, import, log, covers.
 

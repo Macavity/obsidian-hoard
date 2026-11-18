@@ -36,7 +36,7 @@ Reference: `src/modules/watchlist/` (`ListTab` + `DataManager`). Conventions:
 
 The authority is `eslint.config.mjs` and `.fallowrc.json`; this list is a summary. Changing either is a reviewed rule change (CI job `rules-changed` flags it) and needs the maintainer's approval.
 
-**New module:** create `src/modules/<x>/{ui,services}/`; fallow `autoDiscover` picks the zone up, but add a `from: "modules/<x>"` rule in `.fallowrc.json` (allowed: shared zones plus needed module edges); wire it in `src/app/main.ts` (and a `TABS` entry in `HoardView.ts` for a tab); update the wiki.
+**New module:** create `src/modules/<x>/{ui,services}/`; add a zone `modules/<x>` (pattern `src/modules/<x>/**`) and a `from: "modules/<x>"` rule in `.fallowrc.json` (allowed: shared zones plus needed module edges), and list it in the `test` and `app` rules; zones are explicit, not `autoDiscover`, so `fallow audit` against an older base without the folder still runs (`requireAllFiles` fails a module without zone); wire it in `src/app/main.ts` (and a `TABS` entry in `HoardView.ts` for a tab); update the wiki.
 **New module edge:** add the target to the `allow` list of the importing module in `.fallowrc.json`. First try a consumer-owned port (K2); an edge must not create a cycle.
 
 ## The note is the record
