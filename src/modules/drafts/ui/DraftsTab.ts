@@ -43,9 +43,9 @@ export interface DraftsNotes {
 	workspace: Pick<Workspace, 'openLinkText'>;
 }
 
-type DraftTitles = Pick<DataManager, 'getDrafts' | 'getTitles'>;
-type DraftReading = Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>;
-type DraftGames = Pick<GameDataManager, 'getGames'>;
+export type DraftTitles = Pick<DataManager, 'getDrafts' | 'getTitles'>;
+export type DraftReading = Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>;
+export type DraftGames = Pick<GameDataManager, 'getGames'>;
 
 export class DraftsTab implements TabInstance {
 	private containerEl: HTMLElement;

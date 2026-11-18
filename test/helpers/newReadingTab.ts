@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 import { ReadingTab, type ReadingTabModals } from '../../src/modules/reading/ui/ReadingTab';
 
 /** Spy dialogs; `confirm` accepts at once, like a user clicking through. */
-export const spyReadingModals = (over: Partial<ReadingTabModals> = {}): ReadingTabModals => ({
+const spyReadingModals = (over: Partial<ReadingTabModals> = {}): ReadingTabModals => ({
 	openAddReading: vi.fn(),
 	openManageColumns: vi.fn(),
 	openDetail: vi.fn(),
@@ -13,7 +13,7 @@ export const spyReadingModals = (over: Partial<ReadingTabModals> = {}): ReadingT
 });
 
 /** The collaborators a test hands to the tab; anything unused stays an empty fake. */
-interface TabParts {
+export interface ReadingTabParts {
 	settings: unknown;
 	reading: unknown;
 	api?: unknown;
@@ -25,7 +25,7 @@ interface TabParts {
 	modals?: Partial<ReadingTabModals>;
 }
 
-export function newReadingTab(container: unknown, parts: TabParts): ReadingTab {
+export function newReadingTab(container: unknown, parts: ReadingTabParts): ReadingTab {
 	return new ReadingTab(
 		container as HTMLElement,
 		parts.settings as never,

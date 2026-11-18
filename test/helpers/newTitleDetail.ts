@@ -6,7 +6,7 @@ import {
 } from '../../src/modules/watchlist/ui/TitleDetailModal';
 
 /** Spy dialogs for a detail modal; replace single entries to assert on them. */
-export const spyModals = (): { [K in keyof TitleDetailModals]: ReturnType<typeof vi.fn> } => ({
+const spyModals = (): { [K in keyof TitleDetailModals]: ReturnType<typeof vi.fn> } => ({
 	openAddCredit: vi.fn(),
 	openEditTitle: vi.fn(),
 	openCollection: vi.fn(),
@@ -15,7 +15,7 @@ export const spyModals = (): { [K in keyof TitleDetailModals]: ReturnType<typeof
 });
 
 /** The collaborators a test hands to the modal; anything unused stays an empty fake. */
-interface DetailParts {
+export interface TitleDetailParts {
 	settings: unknown;
 	titles: unknown;
 	api?: unknown;
@@ -23,7 +23,7 @@ interface DetailParts {
 	modals?: Partial<TitleDetailModals>;
 }
 
-export function newTitleDetail(parts: DetailParts, opts: TitleDetailOptions): TitleDetailModal {
+export function newTitleDetail(parts: TitleDetailParts, opts: TitleDetailOptions): TitleDetailModal {
 	return new TitleDetailModal(
 		{} as never,
 		parts.settings as never,

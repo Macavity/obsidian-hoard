@@ -42,7 +42,7 @@ type GameDisplayItem =
 
 export type GamesTabApi = GameCoverApi;
 
-type ResolveGameCover = typeof resolveGameCover;
+export type ResolveGameCover = typeof resolveGameCover;
 
 export interface GamesTabHost {
 	getCardMinWidth(): number;

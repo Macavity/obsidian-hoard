@@ -99,7 +99,7 @@ export class VaultFilePicker extends FuzzySuggestModal<TFile> {
 	}
 }
 
-type BookSearcher = typeof searchBooks;
+export type BookSearcher = typeof searchBooks;
 
 export type AddReadingApi = BookSearchApi & Pick<ApiService, 'searchManga' | 'getMangaByMalId' | 'getGoogleBookById' | 'getOpenLibraryWork'>;
 

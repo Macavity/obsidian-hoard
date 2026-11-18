@@ -73,7 +73,7 @@ export async function createStores(files: Record<string, string>, opts: StoreOpt
 	return { f, plugin, settings, local, layout, shared, index, notices, stores, base };
 }
 
-type StoreBase = Awaited<ReturnType<typeof createStores>>['base'];
+export type StoreBase = Awaited<ReturnType<typeof createStores>>['base'];
 
 /** A DataManager on the stores of `createStores`; the ports are the caller's. */
 export function newDataManager(

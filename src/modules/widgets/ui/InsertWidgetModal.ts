@@ -8,8 +8,6 @@ export interface InsertWidgetOptions {
 	onSelect: (title: HoardTitle) => void;
 }
 
-export type OpenInsertWidget = (opts: InsertWidgetOptions) => void;
-
 /** Picks a title to insert into a note as a widget. */
 export class InsertWidgetModal extends FuzzySuggestModal<HoardTitle> {
 

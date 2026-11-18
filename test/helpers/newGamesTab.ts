@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 import { GamesTab, type GamesTabModals } from '../../src/modules/games/ui/GamesTab';
 
 /** Spy dialogs; `confirm` accepts at once, like a user clicking through. */
-export const spyGamesModals = (over: Partial<GamesTabModals> = {}): GamesTabModals => ({
+const spyGamesModals = (over: Partial<GamesTabModals> = {}): GamesTabModals => ({
 	openAddGame: vi.fn(),
 	openGameDetail: vi.fn(),
 	openGroupDetail: vi.fn(),
@@ -14,7 +14,7 @@ export const spyGamesModals = (over: Partial<GamesTabModals> = {}): GamesTabModa
 });
 
 /** The collaborators a test hands to the tab; anything unused stays an empty fake. */
-interface TabParts {
+export interface GamesTabParts {
 	settings: unknown;
 	games: unknown;
 	api?: unknown;
@@ -25,7 +25,7 @@ interface TabParts {
 	modals?: Partial<GamesTabModals>;
 }
 
-export function newGamesTab(container: unknown, parts: TabParts): GamesTab {
+export function newGamesTab(container: unknown, parts: GamesTabParts): GamesTab {
 	return new GamesTab(
 		container as HTMLElement,
 		parts.settings as never,

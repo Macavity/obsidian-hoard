@@ -59,7 +59,7 @@ export function renameGroupWith(app: App): OpenRenameGroup {
 }
 
 /** Modal with one text input; Save (or Enter) hands the trimmed name over when it changed. */
-export function openRenameGroupPrompt(app: App, current: string, onSave: (name: string) => void): void {
+function openRenameGroupPrompt(app: App, current: string, onSave: (name: string) => void): void {
 	const modal = new Modal(app);
 	modal.titleEl.setText(t('ui.toolbar.renameGroup'));
 	const input = modal.contentEl.createEl('input', {

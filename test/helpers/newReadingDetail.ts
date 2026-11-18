@@ -6,14 +6,14 @@ import {
 } from '../../src/modules/reading/ui/ReadingDetailModal';
 
 /** Spy dialogs for a detail modal; replace single entries to assert on them. */
-export const spyReadingDetailModals = (): { [K in keyof ReadingDetailModals]: ReturnType<typeof vi.fn> } => ({
+const spyReadingDetailModals = (): { [K in keyof ReadingDetailModals]: ReturnType<typeof vi.fn> } => ({
 	openManageColumns: vi.fn(),
 	pickVaultFile: vi.fn(),
 	confirm: vi.fn(),
 });
 
 /** The collaborators a test hands to the modal; anything unused stays an empty fake. */
-interface DetailParts {
+export interface ReadingDetailParts {
 	settings: unknown;
 	reading: unknown;
 	api?: unknown;
@@ -22,7 +22,7 @@ interface DetailParts {
 	modals?: Partial<ReadingDetailModals>;
 }
 
-export function newReadingDetail(parts: DetailParts, opts: ReadingDetailOptions): ReadingDetailModal {
+export function newReadingDetail(parts: ReadingDetailParts, opts: ReadingDetailOptions): ReadingDetailModal {
 	return new ReadingDetailModal(
 		{} as never,
 		parts.settings as never,
