@@ -51,9 +51,10 @@ function build(o: Setup = {}) {
 		getRecommendedDaily: () => ({ date: '', ids: [] as string[] }),
 		setRecommendedDaily: vi.fn(),
 	};
+	const settingsService = fakeSettings({ ...DEFAULT_SETTINGS, gamesFilters: o.favoritesOnly ? { favoritesOnly: true } : undefined });
 	const deps = {
 		app: {},
-		settings: fakeSettings({ ...DEFAULT_SETTINGS, gamesFilters: o.favoritesOnly ? { favoritesOnly: true } : undefined }),
+		settings: settingsService,
 		games: gameData,
 		api: {},
 		isCardTextUnder: () => false,
@@ -67,7 +68,7 @@ function build(o: Setup = {}) {
 	internals.contentEl = content;
 	if (o.query) internals.searchQuery = o.query;
 	internals.renderContent();
-	return { tab, content, internals };
+	return { tab, content, internals, settingsService };
 }
 
 const only = (ids: string[]) => ['favorites', 'recommended', 'recentlyAdded', 'recentlyPlayed', 'groups', 'recentlyReleased', 'byType', 'byStatus']
@@ -190,5 +191,15 @@ describe('GamesTab.renderContent', () => {
 		expect(content.querySelector('.hoard-rows-view__strip')!.textContent).toContain('Zelda');
 		card!.click();
 		expect(groupModalOpened).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('GamesTab settings access', () => {
+	it('writes the live filters through the settings service, once per change', () => {
+		const { tab, settingsService } = build();
+		(tab as unknown as { filterGenreExclude: Set<string> }).filterGenreExclude.add('RPG');
+		(tab as unknown as { persistFilters(): void }).persistFilters();
+		expect(settingsService.update).toHaveBeenCalledOnce();
+		expect((settingsService.get().gamesFilters as { genreExclude?: string[] } | undefined)?.genreExclude).toEqual(['RPG']);
 	});
 });

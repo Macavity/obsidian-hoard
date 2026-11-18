@@ -1,10 +1,10 @@
+import type { App } from 'obsidian';
 import type { TabInstance } from './ui/TabInstance';
 import { t, type TranslationKey } from './i18n';
 import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from './i18n/labels';
 import { dayName, monthName } from './ui/dateNames';
 import { createIconButton } from './ui/IconButton';
-import type HoardPlugin from './main';
-import type { HistoryEntry } from './HistoryManager';
+import type { HistoryEntry, HistoryManager } from './HistoryManager';
 import { inferHistoryAction, inferHistorySource } from './HistoryManager';
 import { ConfirmModal } from './ConfirmModal';
 import { getActiveDateFormat, type ReadingStatus } from './types';
@@ -128,9 +128,13 @@ interface VirtualRow {
 const ROW_HEIGHT = 32;
 const HEADER_HEIGHT = 40;
 
+export interface LogTabDeps {
+	app: App;
+	history: Pick<HistoryManager, 'onChange' | 'offChange' | 'getEntries' | 'deleteEntry'>;
+}
+
 export class LogTab implements TabInstance {
 	private container: HTMLElement;
-	private plugin: HoardPlugin;
 	private sourceFilter: SourceFilter = 'all';
 
 	private scrollContainer: HTMLElement | null = null;
@@ -148,16 +152,15 @@ export class LogTab implements TabInstance {
 	// scroll offset to restore after a delete re-render
 	private pendingScroll: number | null = null;
 
-	constructor(container: HTMLElement, plugin: HoardPlugin) {
+	constructor(container: HTMLElement, private deps: LogTabDeps) {
 		this.container = container;
-		this.plugin = plugin;
-		plugin.historyManager?.onChange(this.onHistoryChange);
+		deps.history.onChange(this.onHistoryChange);
 	}
 
 	// History.md changed outside the plugin; a tab that left the DOM unsubscribes itself
 	private onHistoryChange = (): void => {
 		if (!this.container.isConnected) {
-			this.plugin.historyManager?.offChange(this.onHistoryChange);
+			this.deps.history.offChange(this.onHistoryChange);
 			return;
 		}
 		this.pendingScroll = this.scrollContainer?.scrollTop ?? null;
@@ -165,7 +168,7 @@ export class LogTab implements TabInstance {
 	};
 
 	destroy(): void {
-		this.plugin.historyManager?.offChange(this.onHistoryChange);
+		this.deps.history.offChange(this.onHistoryChange);
 		this.destroyVirtualScroll();
 	}
 
@@ -176,7 +179,7 @@ export class LogTab implements TabInstance {
 
 		this.renderFilterBar();
 
-		const allEntries = this.plugin.historyManager?.getEntries() ?? [];
+		const allEntries = this.deps.history.getEntries();
 		const filtered = this.sourceFilter === 'all'
 			? allEntries
 			: allEntries.filter((e) => inferHistorySource(e) === this.sourceFilter);
@@ -387,13 +390,11 @@ export class LogTab implements TabInstance {
 
 	private confirmDelete(entry: HistoryEntry): void {
 		new ConfirmModal(
-			this.plugin.app,
+			this.deps.app,
 			t('dashboard.log.confirmDelete', { title: titleFromEntry(entry), action: actionLabel(entry) }),
 			() => {
-				const hm = this.plugin.historyManager;
-				if (!hm) return;
 				this.pendingScroll = this.scrollContainer?.scrollTop ?? null;
-				void hm.deleteEntry(entry.id).then(() => this.render());
+				void this.deps.history.deleteEntry(entry.id).then(() => this.render());
 			},
 		).open();
 	}

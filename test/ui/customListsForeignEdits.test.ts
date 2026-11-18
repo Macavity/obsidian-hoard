@@ -100,9 +100,9 @@ describe('custom list foreign edits', () => {
 	});
 
 	it('stops listening once destroyed', async () => {
-		const { f, plugin, dataManager } = await setupCustomLists([makeList()]);
+		const { f, deps } = await setupCustomLists([makeList()]);
 		const container = document.body.appendChild(document.createElement('div'));
-		const tab = new CustomListsTab(container, plugin as never, dataManager as never);
+		const tab = new CustomListsTab(container, deps as never);
 		await tab.render();
 		tab.destroy();
 		const file = f.app.vault.getAbstractFileByPath(PATH) as TFile;
@@ -114,9 +114,9 @@ describe('custom list foreign edits', () => {
 
 describe('CustomListManager notes writes', () => {
 	it('refuses to overwrite notes changed elsewhere and keeps them', async () => {
-		const { f, plugin } = await setupCustomLists([makeList({ notes: 'old' })]);
+		const { f, deps } = await setupCustomLists([makeList({ notes: 'old' })]);
 		const conflicts: string[] = [];
-		const manager = new CustomListManager(f.app, plugin as never, (l) => conflicts.push(l.name));
+		const manager = new CustomListManager(deps, (l) => conflicts.push(l.name));
 		const list = (await manager.loadList('Backlog'))!;
 		f.files.set(PATH, f.files.get(PATH)!.replace('## Notes\nold', '## Notes\nfrom phone'));
 
@@ -126,8 +126,8 @@ describe('CustomListManager notes writes', () => {
 	});
 
 	it('writes notes when the note is unchanged and keeps saving afterwards', async () => {
-		const { f, plugin } = await setupCustomLists([makeList({ notes: 'old' })]);
-		const manager = new CustomListManager(f.app, plugin as never);
+		const { f, deps } = await setupCustomLists([makeList({ notes: 'old' })]);
+		const manager = new CustomListManager(deps);
 		const list = (await manager.loadList('Backlog'))!;
 
 		expect(await manager.saveNotes(list, 'mine')).toBe(true);
@@ -200,9 +200,9 @@ describe('review follow-ups', () => {
 	});
 
 	it('reports notes saved into a list deleted elsewhere', async () => {
-		const { f, plugin } = await setupCustomLists([makeList()]);
+		const { f, deps } = await setupCustomLists([makeList()]);
 		const conflicts: string[] = [];
-		const manager = new CustomListManager(f.app, plugin as never, (l) => conflicts.push(l.name));
+		const manager = new CustomListManager(deps, (l) => conflicts.push(l.name));
 		const list = (await manager.loadList('Backlog'))!;
 		f.files.delete(PATH);
 		(f.app.vault as unknown as { getAbstractFileByPath: (p: string) => unknown }).getAbstractFileByPath = () => null;
@@ -211,8 +211,8 @@ describe('review follow-ups', () => {
 	});
 
 	it('adds a ## Notes section when the note has none', async () => {
-		const { f, plugin } = await setupCustomLists([makeList()]);
-		const manager = new CustomListManager(f.app, plugin as never);
+		const { f, deps } = await setupCustomLists([makeList()]);
+		const manager = new CustomListManager(deps);
 		f.files.set(PATH, f.files.get(PATH)!.replace('## Notes\n\n\n', ''));
 		const list = (await manager.loadList('Backlog'))!;
 		expect(await manager.saveNotes(list, 'mine')).toBe(true);

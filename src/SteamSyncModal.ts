@@ -7,6 +7,13 @@ import { steamAppIdFromUrl, type ApiService, type SteamAppDetails, type SteamOwn
 import { newGame } from './entryFactories';
 import { steamLibraryCover } from './steamStoreApi';
 
+export interface SteamSyncModalDeps {
+	app: App;
+	settings: SettingsReader;
+	games: Pick<GameDataManager, 'addGame' | 'applySteamSync' | 'generateGameId' | 'getGames' | 'getSettings'>;
+	api: Pick<ApiService, 'getSteamOwnedGames' | 'getSteamAchievements' | 'getSteamAppDetails'>;
+}
+
 /**
  * Steam library sync.
  *
@@ -17,15 +24,7 @@ import { steamLibraryCover } from './steamStoreApi';
  * Flow: fetch the library → match against existing games → show what will change plus a checklist of
  * games not in the library yet → run, with progress and a working Cancel.
  */
-export interface SteamSyncModalDeps {
-	app: App;
-	settings: SettingsReader;
-	games: Pick<GameDataManager, 'addGame' | 'applySteamSync' | 'generateGameId' | 'getGames' | 'getSettings'>;
-	api: Pick<ApiService, 'getSteamOwnedGames' | 'getSteamAchievements' | 'getSteamAppDetails'>;
-}
-
 export class SteamSyncModal extends Modal {
-
 	private owned: SteamOwnedGame[] = [];
 	private matches: Array<{ game: Game; steam: SteamOwnedGame }> = [];
 	private unmatched: SteamOwnedGame[] = [];

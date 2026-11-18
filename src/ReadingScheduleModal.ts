@@ -17,6 +17,10 @@ function defaultMode(kind: 'book' | 'manga'): 'single' | 'recurring' {
 	return kind === 'book' ? 'single' : 'recurring';
 }
 
+export interface ReadingScheduleModalDeps {
+	app: App;
+}
+
 /**
  * Schedule modal for Reading titles (Books & Manga). Mirrors AirtimeScheduleModal — Single release /
  * Recurring toggle, date picker, schedule built fresh from the visible fields at Save — but with no
@@ -46,7 +50,7 @@ export class ReadingScheduleModal extends Modal {
 	) => Promise<void>;
 
 	constructor(
-		app: App,
+		deps: ReadingScheduleModalDeps,
 		item: Book | Manga,
 		kind: 'book' | 'manga',
 		existingSchedule: AirtimeSchedule | null,
@@ -63,7 +67,7 @@ export class ReadingScheduleModal extends Modal {
 		) => Promise<void>,
 		initialMode?: 'single' | 'recurring',
 	) {
-		super(app);
+		super(deps.app);
 		this.kind = kind;
 		this.onSave = onSave;
 		this.form = initialScheduleState(

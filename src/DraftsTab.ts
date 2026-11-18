@@ -1,11 +1,13 @@
 import type { TabInstance } from './ui/TabInstance';
 import Fuse from 'fuse.js';
-import type { EventRef } from 'obsidian';
+import type { App, EventRef } from 'obsidian';
 import { createIconButton } from './ui/IconButton';
-import type HoardPlugin from './main';
+import type { SettingsReader } from './SettingsService';
 import type { DataManager } from './DataManager';
+import type { ReadingDataManager } from './ReadingDataManager';
+import type { GameDataManager } from './GameDataManager';
 import type { DraftPersistState } from './types';
-import { openAddForTitle } from './AddRouter';
+import type { AddRouteOptions } from './AddRouter';
 import { t } from './i18n';
 
 /** Libraries a draft can already live in — used for the "In …" duplicate label. */
@@ -34,9 +36,21 @@ interface LiveDraftEntry {
 	added: boolean;
 }
 
+/** What the vault scan and the duplicate check read; the badge count needs only this, not the tab. */
+export interface DraftsScanDeps {
+	app: App;
+	settings: SettingsReader;
+	titles: Pick<DataManager, 'getDrafts' | 'getTitles'>;
+	reading: Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>;
+	games: Pick<GameDataManager, 'getGames'>;
+}
+
+export interface DraftsTabDeps extends DraftsScanDeps {
+	titles: Pick<DataManager, 'getDrafts' | 'setDrafts' | 'getTitles'>;
+	openAdd: (opts: AddRouteOptions) => void;
+}
+
 export class DraftsTab implements TabInstance {
-	private plugin: HoardPlugin;
-	private dataManager: DataManager;
 	private containerEl: HTMLElement;
 	private onCountChange: (count: number) => void;
 
@@ -53,13 +67,10 @@ export class DraftsTab implements TabInstance {
 
 	constructor(
 		containerEl: HTMLElement,
-		plugin: HoardPlugin,
-		dataManager: DataManager,
+		private deps: DraftsTabDeps,
 		onCountChange: (count: number) => void,
 	) {
 		this.containerEl = containerEl;
-		this.plugin = plugin;
-		this.dataManager = dataManager;
 		this.onCountChange = onCountChange;
 	}
 
@@ -82,7 +93,7 @@ export class DraftsTab implements TabInstance {
 			this.scanDebounceTimer = null;
 		}
 		if (this.eventRef) {
-			this.plugin.app.metadataCache.offref(this.eventRef);
+			this.deps.app.metadataCache.offref(this.eventRef);
 			this.eventRef = null;
 		}
 	}
@@ -90,7 +101,7 @@ export class DraftsTab implements TabInstance {
 	// Persistence
 
 	private loadPersistState(): void {
-		const drafts = this.plugin.dataManager.getDrafts();
+		const drafts = this.deps.titles.getDrafts();
 		if (drafts) {
 			this.persistState = {
 				dismissed: drafts.dismissed ?? [],
@@ -102,13 +113,13 @@ export class DraftsTab implements TabInstance {
 	}
 
 	private savePersistState(): void {
-		this.plugin.dataManager.setDrafts(this.persistState);
+		this.deps.titles.setDrafts(this.persistState);
 	}
 
 	// Vault scanning
 
 	private getTag(): string {
-		return this.plugin.settings.draftsVaultTag ?? '#hoard';
+		return this.deps.settings.get().draftsVaultTag ?? '#hoard';
 	}
 
 	/**
@@ -117,19 +128,19 @@ export class DraftsTab implements TabInstance {
 	 * and the count-only badge scan. Inline tags only — frontmatter tags are ignored.
 	 */
 	private static async scanTaggedFiles(
-		plugin: HoardPlugin,
+		deps: Pick<DraftsScanDeps, 'app'>,
 		tag: string,
 	): Promise<Map<string, { sources: Set<string>; displayTitle: string }>> {
-		const files = plugin.app.vault.getMarkdownFiles();
+		const files = deps.app.vault.getMarkdownFiles();
 		const liveMap: Map<string, { sources: Set<string>; displayTitle: string }> = new Map();
 
 		for (const file of files) {
-			const cache = plugin.app.metadataCache.getFileCache(file);
+			const cache = deps.app.metadataCache.getFileCache(file);
 			const hasTag = cache?.tags?.some((t) => t.tag === tag) ?? false;
 			if (!hasTag) continue;
 
 			try {
-				const content = await plugin.app.vault.cachedRead(file);
+				const content = await deps.app.vault.cachedRead(file);
 				const lines = content.split('\n');
 				for (const line of lines) {
 					if (!line.includes(tag)) continue;
@@ -159,7 +170,7 @@ export class DraftsTab implements TabInstance {
 
 	private async scanVault(): Promise<LiveDraftEntry[]> {
 		const tag = this.getTag();
-		const liveMap = await DraftsTab.scanTaggedFiles(this.plugin, tag);
+		const liveMap = await DraftsTab.scanTaggedFiles(this.deps, tag);
 
 		// record firstSeen and displayTitle for newly discovered entries
 		let stateChanged = false;
@@ -209,9 +220,9 @@ export class DraftsTab implements TabInstance {
 
 	private registerChangeListener(): void {
 		if (this.eventRef) {
-			this.plugin.app.metadataCache.offref(this.eventRef);
+			this.deps.app.metadataCache.offref(this.eventRef);
 		}
-		this.eventRef = this.plugin.app.metadataCache.on('changed', (_file) => {
+		this.eventRef = this.deps.app.metadataCache.on('changed', (_file) => {
 			this.triggerDebouncedRender();
 		});
 	}
@@ -223,12 +234,12 @@ export class DraftsTab implements TabInstance {
 	 * a draft already added anywhere counts as a duplicate. Each entry carries its library so the card
 	 * can name it ("In Games", "In Books", …).
 	 */
-	private static buildFuse(plugin: HoardPlugin): Fuse<DraftLibraryEntry> {
+	private static buildFuse(deps: Pick<DraftsScanDeps, 'titles' | 'reading' | 'games'>): Fuse<DraftLibraryEntry> {
 		const entries: DraftLibraryEntry[] = [
-			...plugin.dataManager.getTitles().map((ti) => ({ title: ti.title, library: 'Watchlist' as const })),
-			...plugin.readingDataManager.getBooks().map((b) => ({ title: b.title, library: 'Books' as const })),
-			...plugin.readingDataManager.getMangaList().map((m) => ({ title: m.title, library: 'Manga' as const })),
-			...plugin.gameDataManager.getGames().map((g) => ({ title: g.title, library: 'Games' as const })),
+			...deps.titles.getTitles().map((ti) => ({ title: ti.title, library: 'Watchlist' as const })),
+			...deps.reading.getBooks().map((b) => ({ title: b.title, library: 'Books' as const })),
+			...deps.reading.getMangaList().map((m) => ({ title: m.title, library: 'Manga' as const })),
+			...deps.games.getGames().map((g) => ({ title: g.title, library: 'Games' as const })),
 		];
 		return new Fuse(entries, {
 			keys: ['title'],
@@ -250,16 +261,16 @@ export class DraftsTab implements TabInstance {
 	 * the DOM or persistState. "Pending" = tagged, not dismissed, not marked added, and not already in
 	 * Watchlist / Reading / Games (exact key or fuzzy title). Cheap: only tagged files are read.
 	 */
-	static async computePendingCount(plugin: HoardPlugin, _dataManager: DataManager): Promise<number> {
-		const tag = plugin.settings.draftsVaultTag ?? '#hoard';
-		const liveMap = await DraftsTab.scanTaggedFiles(plugin, tag);
+	static async computePendingCount(deps: DraftsScanDeps): Promise<number> {
+		const tag = deps.settings.get().draftsVaultTag ?? '#hoard';
+		const liveMap = await DraftsTab.scanTaggedFiles(deps, tag);
 
-		const drafts = plugin.dataManager.getDrafts();
+		const drafts = deps.titles.getDrafts();
 		const dismissed = new Set(drafts?.dismissed ?? []);
 		const added = new Set(drafts?.added ?? []);
 		const titleDisplay = drafts?.titleDisplay ?? {};
 
-		const fuse = DraftsTab.buildFuse(plugin);
+		const fuse = DraftsTab.buildFuse(deps);
 
 		let pending = 0;
 		for (const [key, { displayTitle }] of liveMap) {
@@ -277,7 +288,7 @@ export class DraftsTab implements TabInstance {
 		el.empty();
 
 		const tag = this.getTag();
-		const fuse = DraftsTab.buildFuse(this.plugin);
+		const fuse = DraftsTab.buildFuse(this.deps);
 
 		// resolve the matching library once per entry and cache it (null = new draft)
 		const fuzzyCache = new Map<string, DraftLibrary | null>();
@@ -296,7 +307,7 @@ export class DraftsTab implements TabInstance {
 		}).length;
 		this.onCountChange(pendingCount);
 
-		if (this.plugin.settings.showHintBanners) {
+		if (this.deps.settings.get().showHintBanners) {
 			el.createDiv({
 				cls: 'hoard-drafts__notice',
 				text: `⚠ ${t('drafts.hint', { tag })}`,
@@ -353,7 +364,7 @@ export class DraftsTab implements TabInstance {
 			});
 			link.addEventListener('click', (e) => {
 				e.stopPropagation();
-				void this.plugin.app.workspace.openLinkText(primaryNote, '');
+				void this.deps.app.workspace.openLinkText(primaryNote, '');
 			});
 			if (entry.sources.length > 1) {
 				sourceEl.createSpan({
@@ -420,16 +431,14 @@ export class DraftsTab implements TabInstance {
 	}
 
 	private openAddModal(entry: LiveDraftEntry): void {
-		openAddForTitle({
-			plugin: this.plugin,
-			dataManager: this.dataManager,
+		this.deps.openAdd({
 			title: entry.titleDisplay,
 			onAdded: () => this.afterAdded(entry.titleKey),
 		});
 	}
 
 	private afterAdded(titleKey: string): void {
-		const behavior = this.plugin.settings.draftsAfterAdding ?? 'keep';
+		const behavior = this.deps.settings.get().draftsAfterAdding ?? 'keep';
 		if (behavior === 'remove') {
 			this.dismissEntry(titleKey);
 		} else {

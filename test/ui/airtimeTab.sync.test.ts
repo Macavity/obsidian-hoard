@@ -19,9 +19,24 @@ type Priv = {
 	handleTrackerCardsVisible: (cells: HTMLElement[]) => void;
 };
 
-afterEach(() => document.body.replaceChildren());
+afterEach(() => {
+	document.body.replaceChildren();
+	cap.readingModals.length = 0;
+});
 
 const once = (d: string) => ({ recurrence: 'once' as const, releaseDate: d });
+
+describe('startAddWithReading', () => {
+	it('adds a reading entry and writes the schedule totals back to the item', async () => {
+		const b = book();
+		const { tab, calls } = makeTab(newWorld({ books: [b] }));
+		(tab as unknown as { startAddWithReading: (i: Book, k: 'book') => void }).startAddWithReading(b, 'book');
+		const onSave = cap.readingModals.at(-1)!.at(-1) as (...a: unknown[]) => Promise<void>;
+		await onSave(once(isoOffset(3)), null, null, null, 12);
+		expect(calls.filter((c) => c.startsWith('addAirtimeEntry'))).toHaveLength(1);
+		expect(b.totalChapters).toBe(12);
+	});
+});
 
 describe('syncReadingItemFromSchedule', () => {
 	it('writes totals and a future date back to a book, once', async () => {
@@ -122,9 +137,9 @@ describe('handleTrackerCardsVisible', () => {
 
 	it('fetches a poster for titles without one and wires the image', async () => {
 		const w = newWorld({ titles: [{ id: 't1', title: 'Show', posterUrl: '' } as never, { id: 't2', title: 'Has', posterUrl: 'x' } as never] });
-		const { tab, plugin, calls } = makeTab(w);
+		const { tab, deps, calls } = makeTab(w);
 		const enqueue = vi.fn((t: { id: string }) => Promise.resolve(t.id === 't1' ? 'http://img/1.png' : ''));
-		(plugin.posterService as { enqueue: unknown }).enqueue = enqueue;
+		(deps.posters as { enqueue: unknown }).enqueue = enqueue;
 		const fetched = cell('t1');
 		const skipped = cell('t2');
 		const unknownTitle = cell('zzz');

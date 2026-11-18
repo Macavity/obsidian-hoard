@@ -1,13 +1,16 @@
 import type { TabInstance } from './ui/TabInstance';
 import { App, Component, MarkdownRenderer, Modal, Notice, Platform, TFile, normalizePath, Setting, type EventRef, type TAbstractFile } from 'obsidian';
-import type HoardPlugin from './main';
+import type { SettingsReader, SettingsWriter } from './SettingsService';
 import type { DataManager } from './DataManager';
+import type { ReadingDataManager } from './ReadingDataManager';
+import type { GameDataManager } from './GameDataManager';
+import type { VaultLayout } from './storage/VaultLayout';
 import type { CustomListColumn, CustomListRow, CustomList } from './types';
 import { DEFAULT_FIELD_COLOR } from './types';
 import { ConfirmModal } from './ConfirmModal';
 import { openColorPicker, deriveFillColor, deriveBorderColor } from './ColorPicker';
 import { openStatusDropdown } from './StatusDropdown';
-import { openAddForTitle } from './AddRouter';
+import type { AddRouteOptions } from './AddRouter';
 import { cloneColumns, renderCancelSave, renderColumnsEditor } from './ui/ColumnsEditor';
 import { t } from './i18n';
 import { at } from './storage/read';
@@ -95,6 +98,11 @@ function replaceNotes(content: string, notes: string): string {
 		: content.slice(0, afterNotes) + notes + '\n';
 }
 
+export interface CustomListManagerDeps {
+	app: App;
+	layout: () => Pick<VaultLayout, 'customListsFolder'>;
+}
+
 export class CustomListManager {
 	/** Names of lists whose ## Data JSON is corrupt — never overwrite these. */
 	corruptLists: Set<string> = new Set();
@@ -113,8 +121,7 @@ export class CustomListManager {
 	private baselines = new WeakMap<CustomList, string>();
 
 	constructor(
-		private readonly app: App,
-		private readonly plugin: HoardPlugin,
+		private readonly deps: CustomListManagerDeps,
 		/** Called when a write was refused because the note changed elsewhere. */
 		private readonly onConflict: (list: CustomList) => void = () => {},
 	) {}
@@ -157,9 +164,9 @@ export class CustomListManager {
 
 	/** The note's list without reporting corruption: undefined without a file, null if it does not parse. */
 	async peek(name: string): Promise<CustomList | null | undefined> {
-		const file = this.app.vault.getAbstractFileByPath(this.pathOf(name));
+		const file = this.deps.app.vault.getAbstractFileByPath(this.pathOf(name));
 		if (!(file instanceof TFile)) return undefined;
-		return this.parse(name, await this.app.vault.read(file), false);
+		return this.parse(name, await this.deps.app.vault.read(file), false);
 	}
 
 	/**
@@ -168,7 +175,7 @@ export class CustomListManager {
 	 */
 	private async writeChecked(list: CustomList, file: TFile, transform: (data: string) => string): Promise<boolean> {
 		let written = false;
-		await this.app.vault.process(file, (data) => {
+		await this.deps.app.vault.process(file, (data) => {
 			const disk = this.parse(list.name, data, false);
 			if (!disk || this.stateKey(disk) !== this.baselines.get(list)) return data;
 			const next = transform(data);
@@ -182,19 +189,19 @@ export class CustomListManager {
 	}
 
 	get folderPath(): string {
-		return this.plugin.getLayout().customListsFolder;
+		return this.deps.layout().customListsFolder;
 	}
 
 	async ensureFolder(): Promise<void> {
 		const path = normalizePath(this.folderPath);
-		if (!this.app.vault.getAbstractFileByPath(path)) {
-			try { await this.app.vault.createFolder(path); } catch { /* ok */ }
+		if (!this.deps.app.vault.getAbstractFileByPath(path)) {
+			try { await this.deps.app.vault.createFolder(path); } catch { /* ok */ }
 		}
 	}
 
 	listNames(): string[] {
 		const dir = normalizePath(this.folderPath);
-		return this.app.vault.getFiles()
+		return this.deps.app.vault.getFiles()
 			.filter(f => {
 				const parentPath = f.parent?.path ?? '';
 				return parentPath === dir && f.extension === 'md';
@@ -205,10 +212,10 @@ export class CustomListManager {
 
 	async loadList(name: string): Promise<CustomList | null> {
 		const path = normalizePath(`${this.folderPath}/${name}.md`);
-		const file = this.app.vault.getAbstractFileByPath(path);
+		const file = this.deps.app.vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) return null;
 		try {
-			const list = this.parse(name, await this.app.vault.read(file));
+			const list = this.parse(name, await this.deps.app.vault.read(file));
 			if (list) {
 				this.corruptLists.delete(name);
 				this.baselines.set(list, this.stateKey(list));
@@ -292,7 +299,7 @@ export class CustomListManager {
 			}
 			await this.ensureFolder();
 			const path = this.pathOf(list.name);
-			const existing = this.app.vault.getAbstractFileByPath(path);
+			const existing = this.deps.app.vault.getAbstractFileByPath(path);
 			if (existing instanceof TFile) {
 				return this.writeChecked(list, existing, (data) => replaceDataBlock(data, this.dataJson(list)));
 			}
@@ -302,7 +309,7 @@ export class CustomListManager {
 				return false;
 			}
 			const content = this.serialize(list);
-			await this.app.vault.create(path, content);
+			await this.deps.app.vault.create(path, content);
 			const created = this.parse(list.name, content);
 			if (created) this.baselines.set(list, this.stateKey(created));
 			return true;
@@ -312,7 +319,7 @@ export class CustomListManager {
 	/** Saves only the ## Notes section, without touching ## Data JSON. */
 	async saveNotes(list: CustomList, notes: string): Promise<boolean> {
 		return this.saveSerialized(list.name, async () => {
-			const file = this.app.vault.getAbstractFileByPath(this.pathOf(list.name));
+			const file = this.deps.app.vault.getAbstractFileByPath(this.pathOf(list.name));
 			if (!(file instanceof TFile)) {
 				this.onConflict(list); // deleted or renamed elsewhere
 				return false;
@@ -330,18 +337,18 @@ export class CustomListManager {
 
 	async deleteList(name: string): Promise<void> {
 		const path = normalizePath(`${this.folderPath}/${name}.md`);
-		const file = this.app.vault.getAbstractFileByPath(path);
+		const file = this.deps.app.vault.getAbstractFileByPath(path);
 		if (file instanceof TFile) {
-			try { await this.app.fileManager.trashFile(file); } catch { /* ok */ }
+			try { await this.deps.app.fileManager.trashFile(file); } catch { /* ok */ }
 		}
 	}
 
 	async renameList(oldName: string, newName: string): Promise<void> {
 		const newPath = normalizePath(`${this.folderPath}/${newName}.md`);
 		const oldPath = normalizePath(`${this.folderPath}/${oldName}.md`);
-		const file = this.app.vault.getAbstractFileByPath(oldPath);
+		const file = this.deps.app.vault.getAbstractFileByPath(oldPath);
 		if (file instanceof TFile) {
-			try { await this.app.vault.rename(file, newPath); } catch { /* ok */ }
+			try { await this.deps.app.vault.rename(file, newPath); } catch { /* ok */ }
 		}
 	}
 
@@ -476,16 +483,18 @@ class EditColumnsModal extends Modal {
 
 // DefaultColumnsModal — for Settings
 
+export interface DefaultColumnsModalDeps extends CustomListManagerDeps {
+	settings: SettingsReader & SettingsWriter;
+}
+
 export class DefaultColumnsModal extends Modal {
-	private plugin: HoardPlugin;
 	private cols: CustomListColumn[];
 	private manager: CustomListManager;
 
-	constructor(app: App, plugin: HoardPlugin) {
-		super(app);
-		this.plugin = plugin;
-		this.manager = new CustomListManager(app, plugin);
-		this.cols = cloneColumns(plugin.settings.defaultCustomColumns ?? []);
+	constructor(private deps: DefaultColumnsModalDeps) {
+		super(deps.app);
+		this.manager = new CustomListManager(deps);
+		this.cols = cloneColumns(deps.settings.get().defaultCustomColumns ?? []);
 	}
 
 	onOpen(): void {
@@ -512,8 +521,7 @@ export class DefaultColumnsModal extends Modal {
 	}
 
 	private async handleSave(cols: CustomListColumn[]): Promise<void> {
-		this.plugin.settings.defaultCustomColumns = cols;
-		await this.plugin.saveSettings();
+		await this.deps.settings.update((s) => { s.defaultCustomColumns = cols; });
 		new Notice(t('lists.defaultColumnsSaved'));
 		this.close();
 	}
@@ -662,10 +670,15 @@ class ListNameModal extends Modal {
 
 // CustomListsTab
 
+export interface CustomListsTabDeps extends DefaultColumnsModalDeps {
+	titles: Pick<DataManager, 'getTitles' | 'calcTimeRemainingForModal'>;
+	reading: Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>;
+	games: Pick<GameDataManager, 'getGames'>;
+	openAdd: (opts: AddRouteOptions) => void;
+}
+
 export class CustomListsTab implements TabInstance {
 	private container: HTMLElement;
-	private plugin: HoardPlugin;
-	private dataManager: DataManager;
 	private manager: CustomListManager;
 
 	private listNames: string[] = [];
@@ -690,12 +703,10 @@ export class CustomListsTab implements TabInstance {
 	private _countEl: HTMLElement | null = null;
 	private _tableContainer: HTMLElement | null = null;
 
-	constructor(container: HTMLElement, plugin: HoardPlugin, dataManager: DataManager) {
+	constructor(container: HTMLElement, private deps: CustomListsTabDeps) {
 		this.container = container;
-		this.plugin = plugin;
-		this.dataManager = dataManager;
-		this.manager = new CustomListManager(plugin.app, plugin, (list) => this.onSaveConflict(list));
-		this.modifyRef = plugin.app.vault.on('modify', (file) => void this.onVaultModify(file));
+		this.manager = new CustomListManager(deps, (list) => this.onSaveConflict(list));
+		this.modifyRef = deps.app.vault.on('modify', (file) => void this.onVaultModify(file));
 	}
 
 	private modifyRef: EventRef | null;
@@ -723,7 +734,7 @@ export class CustomListsTab implements TabInstance {
 
 	/** listNames merged with the persisted tab order (new lists appended at the end). */
 	private applyTabOrder(names: string[]): string[] {
-		const saved = this.plugin.settings.customListTabOrder ?? [];
+		const saved = this.deps.settings.get().customListTabOrder ?? [];
 		const ordered = saved.filter(n => names.includes(n));
 		const unordered = names.filter(n => !ordered.includes(n));
 		return [...ordered, ...unordered];
@@ -731,7 +742,7 @@ export class CustomListsTab implements TabInstance {
 
 	/** View close: stop listening to the vault and tear down the inline editor. */
 	destroy(): void {
-		if (this.modifyRef) this.plugin.app.vault.offref(this.modifyRef);
+		if (this.modifyRef) this.deps.app.vault.offref(this.modifyRef);
 		this.modifyRef = null;
 		this.teardownEditor();
 	}
@@ -860,8 +871,8 @@ export class CustomListsTab implements TabInstance {
 				if (fromIdx < 0 || toIdx < 0) return;
 				this.listNames.splice(fromIdx, 1);
 				this.listNames.splice(toIdx, 0, dragFromName);
-				this.plugin.settings.customListTabOrder = [...this.listNames];
-				void this.plugin.saveSettings().then(() => void this.render());
+				const order = [...this.listNames];
+				void this.deps.settings.update((s) => { s.customListTabOrder = order; }).then(() => void this.render());
 			});
 		}
 
@@ -901,8 +912,8 @@ export class CustomListsTab implements TabInstance {
 	}
 
 	private promptCreateList(): void {
-		new ListNameModal(this.plugin.app, this.listNames, (trimmed) => {
-			const defaultCols = (this.plugin.settings.defaultCustomColumns ?? [])
+		new ListNameModal(this.deps.app, this.listNames, (trimmed) => {
+			const defaultCols = (this.deps.settings.get().defaultCustomColumns ?? [])
 				.map(c => ({
 					...c,
 					id: c.id,
@@ -913,7 +924,7 @@ export class CustomListsTab implements TabInstance {
 			const newList: CustomList = { name: trimmed, columns: defaultCols, rows: [], notes: '' };
 
 			new EditColumnsModal(
-				this.plugin.app,
+				this.deps.app,
 				newList,
 				this.manager,
 				async (cols) => {
@@ -931,7 +942,7 @@ export class CustomListsTab implements TabInstance {
 	}
 
 	private deleteList(name: string): void {
-		new ConfirmModal(this.plugin.app, t('lists.deleteConfirm', { name }), () => {
+		new ConfirmModal(this.deps.app, t('lists.deleteConfirm', { name }), () => {
 			void (async () => {
 				await this.manager.deleteList(name);
 				if (this.activeListName === name) { this.activeListName = null; this.currentList = null; }
@@ -950,7 +961,7 @@ export class CustomListsTab implements TabInstance {
 		const notesBtn = toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.notes') });
 		notesBtn.addEventListener('click', () => {
 			new NotesModal(
-				this.plugin.app,
+				this.deps.app,
 				list.name,
 				list.notes,
 				(notes) => this.manager.saveNotes(list, notes),
@@ -975,7 +986,7 @@ export class CustomListsTab implements TabInstance {
 		toolbar.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('lists.tableSettings') })
 			.addEventListener('click', () => {
 				new EditColumnsModal(
-					this.plugin.app,
+					this.deps.app,
 					list,
 					this.manager,
 					async (cols) => {
@@ -1017,7 +1028,7 @@ export class CustomListsTab implements TabInstance {
 			}, 250);
 		});
 
-		if (this.plugin.settings.showHintBanners) {
+		if (this.deps.settings.get().showHintBanners) {
 			view.createDiv({
 				cls: 'hoard-custom-lists__draft-banner',
 				text: `⚠ ${t('lists.draftBanner')}`,
@@ -1088,7 +1099,7 @@ export class CustomListsTab implements TabInstance {
 	}
 
 	private exportToClipboard(list: CustomList): void {
-		new ExportFormatModal(this.plugin.app, (format) => {
+		new ExportFormatModal(this.deps.app, (format) => {
 			const data = this.gatherExportData(list);
 			const text = format === 'tsv' ? this.buildTsv(data) : this.buildMarkdown(data);
 			navigator.clipboard.writeText(text)
@@ -1098,7 +1109,7 @@ export class CustomListsTab implements TabInstance {
 	}
 
 	private openImport(list: CustomList): void {
-		new ImportListModal(this.plugin.app, list, this.manager, async () => {
+		new ImportListModal(this.deps.app, list, this.manager, async () => {
 			await this.manager.saveList(list);
 			await this.render();
 		}).open();
@@ -1191,9 +1202,7 @@ export class CustomListsTab implements TabInstance {
 			const target = list.rows.find((r) => r.id === rowId);
 			const name = target ? rowName(target) : '';
 			if (!name) return;
-			openAddForTitle({
-				plugin: this.plugin,
-				dataManager: this.dataManager,
+			this.deps.openAdd({
 				title: name,
 				heading: t('lists.addTitle'),
 			});
@@ -1506,12 +1515,12 @@ export class CustomListsTab implements TabInstance {
 			const q = input.value.toLowerCase();
 			if (!q) return;
 			// suggestions come from every library: Watchlist, Reading (Books + Manga) and Games
-			const reading = this.plugin.readingDataManager;
+			const reading = this.deps.reading;
 			const suggestions: { title: string; meta: string }[] = [
-				...this.dataManager.getTitles().map(ti => ({ title: ti.title, meta: `${typeLabel(ti.type)} · ${statusLabel(ti.status)}` })),
+				...this.deps.titles.getTitles().map(ti => ({ title: ti.title, meta: `${typeLabel(ti.type)} · ${statusLabel(ti.status)}` })),
 				...reading.getBooks().map(b => ({ title: b.title, meta: `${t('lists.book')} · ${readingStatusLabel(b.status)}` })),
 				...reading.getMangaList().map(m => ({ title: m.title, meta: `${t('lists.manga')} · ${readingStatusLabel(m.status)}` })),
-				...this.plugin.gameDataManager.getGames().map(g => ({ title: g.title, meta: `${t('lists.game')} · ${g.status}` })),
+				...this.deps.games.getGames().map(g => ({ title: g.title, meta: `${t('lists.game')} · ${g.status}` })),
 			]
 				.filter(s => s.title.toLowerCase().includes(q))
 				.slice(0, 10);
@@ -1715,7 +1724,7 @@ export class CustomListsTab implements TabInstance {
 	// Auto-populate time column
 
 	private autoPopulateTimeColumn(list: CustomList, col: CustomListColumn): void {
-		const titles = this.dataManager.getTitles();
+		const titles = this.deps.titles.getTitles();
 		for (const row of list.rows) {
 			const rowName = String(row['name'] ?? '').trim();
 			if (!rowName) continue;
@@ -1724,7 +1733,7 @@ export class CustomListsTab implements TabInstance {
 				row[col.id] = 'Not found';
 				continue;
 			}
-			const remainingMinutes = this.dataManager.calcTimeRemainingForModal(match);
+			const remainingMinutes = this.deps.titles.calcTimeRemainingForModal(match);
 			row[col.id] = remainingMinutes;
 		}
 	}

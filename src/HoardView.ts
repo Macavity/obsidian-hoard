@@ -1,15 +1,14 @@
 import type { TabInstance } from './ui/TabInstance';
 import { ItemView, Platform, setIcon, WorkspaceLeaf } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
-import type HoardPlugin from './main';
-import { DashboardTab } from './DashboardTab';
+import { DashboardTab, type DashboardTabDeps } from './DashboardTab';
 import { ListTab, type ListTabDeps } from './ListTab';
-import { AirtimeTab } from './AirtimeTab';
+import { AirtimeTab, type AirtimeTabDeps } from './AirtimeTab';
 import { ReadingTab, type ReadingTabDeps } from './ReadingTab';
 import { GamesTab, type GamesTabDeps } from './GamesTab';
-import { CustomListsTab } from './CustomListsTab';
-import { DraftsTab } from './DraftsTab';
-import { LogTab } from './LogTab';
+import { CustomListsTab, type CustomListsTabDeps } from './CustomListsTab';
+import { DraftsTab, type DraftsTabDeps } from './DraftsTab';
+import { LogTab, type LogTabDeps } from './LogTab';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';
 
@@ -19,15 +18,17 @@ export type TabName = 'dashboard' | 'watchlist' | 'upcoming' | 'reading' | 'game
  * What the view and its tabs read, supplied by main.ts. Each tab takes only the part it declares in its
  * own `<Tab>Deps`; a converted tab's deps are a supertype of this one, so `ctx.deps` passes straight in.
  */
-export interface HoardViewDeps extends ListTabDeps, ReadingTabDeps, GamesTabDeps {
+export interface HoardViewDeps
+	extends ListTabDeps, ReadingTabDeps, GamesTabDeps, AirtimeTabDeps, DashboardTabDeps, CustomListsTabDeps, DraftsTabDeps, LogTabDeps {
 	settings: ListTabDeps['settings'];
-	history: ListTabDeps['history'] & ReadingTabDeps['history'];
-	api: ListTabDeps['api'] & ReadingTabDeps['api'] & GamesTabDeps['api'];
-	isCardTextUnder: ListTabDeps['isCardTextUnder'];
+	titles: ListTabDeps['titles'];
+	history: ListTabDeps['history'] & ReadingTabDeps['history'] & LogTabDeps['history'];
+	api: ListTabDeps['api'] & ReadingTabDeps['api'] & GamesTabDeps['api'] & AirtimeTabDeps['api'];
+	isCardTextUnder: ListTabDeps['isCardTextUnder'] & AirtimeTabDeps['isCardTextUnder'];
+	reading: ReadingTabDeps['reading'];
+	games: GamesTabDeps['games'];
 	/** True while the WatchLog import wizard replaces the tabs with a placeholder. */
 	importRunning: () => boolean;
-	/** TODO(Task 6-8): the tabs not converted yet still take the plugin; Task 9 removes this. */
-	plugin: HoardPlugin;
 }
 
 /** What a tab factory receives. `setBadge` updates the count badge on the tab's own button. */
@@ -62,7 +63,7 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.dashboard',
 		icon: 'layout-dashboard',
 		cls: 'hoard-dashboard',
-		create: (ctx) => new DashboardTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.titles, ctx.deps.plugin.readingDataManager),
+		create: (ctx) => new DashboardTab(ctx.containerEl, ctx.deps),
 	},
 	{
 		name: 'watchlist',
@@ -76,10 +77,10 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.upcoming',
 		icon: 'calendar',
 		cls: 'hoard-airtime',
-		create: (ctx) => new AirtimeTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.titles, ctx.setBadge),
+		create: (ctx) => new AirtimeTab(ctx.containerEl, ctx.deps, ctx.setBadge),
 		badge: {
-			count: ({ titles, plugin }) =>
-				AirtimeTab.getAiredDueCount(titles, plugin.readingDataManager, plugin.gameDataManager) +
+			count: ({ titles, reading, games }) =>
+				AirtimeTab.getAiredDueCount(titles, reading, games) +
 				AirtimeTab.getMaybeDueCount(titles),
 			refreshOn: 'data-change',
 		},
@@ -103,15 +104,15 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.customLists',
 		icon: 'list',
 		cls: 'hoard-custom-lists',
-		create: (ctx) => new CustomListsTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.titles),
+		create: (ctx) => new CustomListsTab(ctx.containerEl, ctx.deps),
 	},
 	{
 		name: 'drafts',
 		label: 'app.tabs.drafts',
 		icon: 'square-pen',
-		create: (ctx) => new DraftsTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.titles, ctx.setBadge),
+		create: (ctx) => new DraftsTab(ctx.containerEl, ctx.deps, ctx.setBadge),
 		badge: {
-			count: ({ plugin, titles }) => DraftsTab.computePendingCount(plugin, titles),
+			count: (deps) => DraftsTab.computePendingCount(deps),
 			refreshOn: 'metadata-resolved',
 		},
 	},
@@ -120,7 +121,7 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.log',
 		icon: 'history',
 		cls: 'hoard-log',
-		create: (ctx) => new LogTab(ctx.containerEl, ctx.deps.plugin),
+		create: (ctx) => new LogTab(ctx.containerEl, ctx.deps),
 	},
 ];
 

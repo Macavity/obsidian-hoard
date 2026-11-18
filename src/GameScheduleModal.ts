@@ -8,6 +8,10 @@ import {
 	renderScheduleModal,
 } from './ui/ScheduleForm';
 
+export interface GameScheduleModalDeps {
+	app: App;
+}
+
 /**
  * Schedule modal for Games — the single-release branch of AirtimeScheduleModal. A game releases
  * once, so there is no Single/Recurring toggle and no unit counters (games track a completion
@@ -18,12 +22,12 @@ export class GameScheduleModal extends Modal {
 	private onSave: (schedule: AirtimeSchedule) => Promise<void>;
 
 	constructor(
-		app: App,
+		deps: GameScheduleModalDeps,
 		game: Game,
 		existingSchedule: AirtimeSchedule | null,
 		onSave: (schedule: AirtimeSchedule) => Promise<void>,
 	) {
-		super(app);
+		super(deps.app);
 		this.onSave = onSave;
 		this.form = initialScheduleState(existingSchedule, game.releaseDate, 'single');
 	}

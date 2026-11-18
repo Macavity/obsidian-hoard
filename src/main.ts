@@ -25,6 +25,7 @@ import { InsertWidgetModal } from './InsertWidgetModal';
 import { WidgetRenderer } from './WidgetRenderer';
 import { HoardSettingsTab } from './SettingsTab';
 import { AirtimeTab } from './AirtimeTab';
+import { openAddForTitle, type AddRouterDeps } from './AddRouter';
 import { runAirtimeScheduler } from './airtimeScheduler';
 import type { BackupManagers } from './backup';
 import { WatchLogOnboardingModal } from './WatchLogOnboardingModal';
@@ -270,7 +271,19 @@ export default class HoardPlugin extends Plugin {
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
 			importRunning: () => this.importRunning,
-			plugin: this, // TODO(Task 6-8): the other tabs still take the plugin
+			layout: () => this.getLayout(),
+			markAirtimeHandled: (key) => this.markAirtimeHandled(key),
+			openAdd: (opts) => openAddForTitle(this.addRouterDeps(), opts),
+		};
+	}
+
+	/** What the Add chooser and the Add modals it opens read. */
+	private addRouterDeps(): AddRouterDeps {
+		return {
+			...this.listTabDeps(),
+			reading: this.readingDataManager,
+			games: this.gameDataManager,
+			api: this.apiService,
 		};
 	}
 

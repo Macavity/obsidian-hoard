@@ -8,7 +8,5 @@ export function hoardViewDeps(onResolved: (cb: () => void) => void = () => {}): 
 		settings: fakeSettings({ colorTheme: 'default' }),
 		titles: { onChange: () => {}, offChange: () => {} },
 		importRunning: () => false,
-		// the tabs not converted yet still read the plugin
-		plugin: { readingDataManager: {}, gameDataManager: {} },
 	} as never;
 }

@@ -36,13 +36,6 @@ type GameDisplayItem =
 	| { kind: 'group'; data: GameGroup; members: Game[] };
 
 
-/**
- * Games tab: the Watchlist toolbar (search + Saved filter / Filters / Sorting / Select / + Add,
- * on the shared FilterPanel + SortPopover + mobile-toggle modules) over the customizable Rows
- * layout (GAMES_ROWS_SHELVES + RowsCustomizeModal) — shelves, the exclusive By genre / By status
- * grids, and the flat "All games" fallback, all on the shared card infrastructure. + Add opens
- * AddGameModal; a card click opens GameDetailModal, or toggles selection in Select mode.
- */
 export interface GamesTabDeps extends AddGameModalDeps, GameDetailModalDeps, RowsCustomizeModalDeps {
 	settings: SettingsReader & SettingsWriter;
 	api: AddGameModalDeps['api'] & GameDetailModalDeps['api'];
@@ -50,6 +43,13 @@ export interface GamesTabDeps extends AddGameModalDeps, GameDetailModalDeps, Row
 	isCardTextUnder: (tab: 'games') => boolean;
 }
 
+/**
+ * Games tab: the Watchlist toolbar (search + Saved filter / Filters / Sorting / Select / + Add,
+ * on the shared FilterPanel + SortPopover + mobile-toggle modules) over the customizable Rows
+ * layout (GAMES_ROWS_SHELVES + RowsCustomizeModal) — shelves, the exclusive By genre / By status
+ * grids, and the flat "All games" fallback, all on the shared card infrastructure. + Add opens
+ * AddGameModal; a card click opens GameDetailModal, or toggles selection in Select mode.
+ */
 export class GamesTab implements TabInstance {
 	private container: HTMLElement;
 	private dataChangeListener: () => void;

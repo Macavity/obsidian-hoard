@@ -11,6 +11,10 @@ export interface UpcomingFinderItem {
 	typeLabel: string;
 }
 
+export interface UpcomingFinderModalDeps {
+	app: App;
+}
+
 /**
  * The shared "+ add" finder for the Upcoming tab. Extends the watchlist finder to also surface
  * Reading items and Games, so any tracked title is added through the same pathway.
@@ -19,8 +23,8 @@ export class UpcomingFinderModal extends FuzzySuggestModal<UpcomingFinderItem> {
 	private items: UpcomingFinderItem[];
 	private onSelect: (item: UpcomingFinderItem) => void;
 
-	constructor(app: App, items: UpcomingFinderItem[], onSelect: (item: UpcomingFinderItem) => void) {
-		super(app);
+	constructor(deps: UpcomingFinderModalDeps, items: UpcomingFinderItem[], onSelect: (item: UpcomingFinderItem) => void) {
+		super(deps.app);
 		this.items = items;
 		this.onSelect = onSelect;
 		this.setPlaceholder(t('misc.upcomingFinder.placeholder'));

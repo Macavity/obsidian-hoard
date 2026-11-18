@@ -4,18 +4,22 @@ import { renderChoiceGrid } from './ui/choiceGrid';
 
 export type DraftAddChoice = 'watchlist' | 'book' | 'manga' | 'game';
 
+export interface DraftChoiceModalDeps {
+	app: App;
+}
+
 /**
  * Choice modal shown when adding a draft: four inline options (Watchlist / Book / Manga / Game),
  * each routing to its own Add modal. The draft's text is the subtitle.
  */
 export class DraftChoiceModal extends Modal {
 	constructor(
-		app: App,
+		deps: DraftChoiceModalDeps,
 		private draftText: string,
 		private onChoice: (choice: DraftAddChoice) => void,
 		private heading = t('misc.draftChoice.heading'),
 	) {
-		super(app);
+		super(deps.app);
 	}
 
 	onOpen(): void {

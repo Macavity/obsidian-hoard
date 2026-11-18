@@ -6,6 +6,7 @@ import { CustomListsTab } from '../../src/CustomListsTab';
 import { DraftsTab } from '../../src/DraftsTab';
 import { InsertWidgetModal } from '../../src/InsertWidgetModal';
 import { El } from '../helpers/fakeEl';
+import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));
 
@@ -65,7 +66,7 @@ describe('custom lists and drafts i18n', () => {
 	it('renders the custom lists empty state in German', () => {
 		setLocale('de');
 		const root = new El('div');
-		const tab = new CustomListsTab(asEl(root), { app: { vault: { on: () => ({}) } }, settings: {} } as never, {} as never);
+		const tab = new CustomListsTab(asEl(root), { app: { vault: { on: () => ({}) } }, settings: {} } as never);
 		(tab as unknown as { buildEmptyState: () => void }).buildEmptyState();
 		expect(texts(root)).toContain(de.lists.emptyText);
 		expect(texts(root)).toContain(de.lists.createFirst);
@@ -74,13 +75,13 @@ describe('custom lists and drafts i18n', () => {
 	it('renders drafts chrome in German', () => {
 		setLocale('de');
 		const root = new El('div');
-		const plugin = {
-			settings: { showHintBanners: false, draftsVaultTag: '#hoard' },
-			dataManager: { getTitles: () => [] },
-			readingDataManager: { getBooks: () => [], getMangaList: () => [] },
-			gameDataManager: { getGames: () => [] },
+		const deps = {
+			settings: fakeSettings({ showHintBanners: false, draftsVaultTag: '#hoard' }),
+			titles: { getTitles: () => [] },
+			reading: { getBooks: () => [], getMangaList: () => [] },
+			games: { getGames: () => [] },
 		};
-		const tab = new DraftsTab(asEl(root), plugin as never, {} as never, () => {});
+		const tab = new DraftsTab(asEl(root), deps as never, () => {});
 		(tab as unknown as { renderUI: (e: unknown[]) => void }).renderUI([]);
 		expect(texts(root)).toContain(` ${de.drafts.pending.other}`);
 		expect(texts(root)).toContain(de.drafts.empty.replace('{tag}', '#hoard'));

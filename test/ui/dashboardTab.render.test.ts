@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DashboardTab } from '../../src/DashboardTab';
-import type HoardPlugin from '../../src/main';
-import type { DataManager } from '../../src/DataManager';
-import type { ReadingDataManager } from '../../src/ReadingDataManager';
+import type { DashboardTabDeps } from '../../src/DashboardTab';
+import { fakeSettings } from '../helpers/fakeSettings';
 import type { Book, Game, HoardTitle, Manga } from '../../src/types';
 import { DEFAULT_SETTINGS } from '../../src/types';
 import { qsa, textsOf as texts } from '../helpers/dom';
@@ -28,10 +27,6 @@ function render(o: Opts = {}): HTMLElement {
 		types: [{ name: 'Anime', color: '#f00' }, { name: 'Movie', color: '#0f0' }],
 		dashboardCardStyle: o.cardStyle ?? 'rings',
 	};
-	const plugin = {
-		settings,
-		gameDataManager: { getGames: () => o.games ?? [] },
-	} as unknown as HoardPlugin;
 	const titles = o.titles ?? [];
 	const dm = {
 		getTitles: () => titles,
@@ -42,13 +37,19 @@ function render(o: Opts = {}): HTMLElement {
 		getRecentlyAdded: () => titles.slice(0, 3),
 		getNextUnwatchedEpisode: () => 2,
 		getProgress: () => 40,
-	} as unknown as DataManager;
+	};
 	const rdm = {
 		getBooks: () => o.books ?? [],
 		getMangaList: () => o.manga ?? [],
-	} as unknown as ReadingDataManager;
+	};
 	const container = document.createElement('div');
-	new DashboardTab(container, plugin, dm, rdm).render();
+	const deps = {
+		settings: fakeSettings(settings),
+		titles: dm,
+		reading: rdm,
+		games: { getGames: () => o.games ?? [] },
+	} as unknown as DashboardTabDeps;
+	new DashboardTab(container, deps).render();
 	return container;
 }
 

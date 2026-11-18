@@ -1166,7 +1166,7 @@ export function migratePriorityExclude(
 /** Badge color for a Reading type (Book / Manga), from settings.readingTypeColors. */
 export function getReadingTypeColor(
 	kind: 'book' | 'manga',
-	settings: HoardPluginSettings,
+	settings: Pick<HoardPluginSettings, 'readingTypeColors'>,
 ): string {
 	const colors = settings.readingTypeColors ?? DEFAULT_SETTINGS.readingTypeColors;
 	return kind === 'manga' ? colors.manga : colors.book;

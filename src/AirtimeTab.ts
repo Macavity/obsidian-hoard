@@ -5,7 +5,9 @@ import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from './i
 import { monthName } from './ui/dateNames';
 import { scheduleText } from './ui/scheduleText';
 import { createIconButton } from './ui/IconButton';
-import type HoardPlugin from './main';
+import type { SettingsReader, SettingsWriter } from './SettingsService';
+import type { ApiService } from './ApiService';
+import type { PosterService } from './PosterService';
 import type { DataManager } from './DataManager';
 import type { ReadingDataManager } from './ReadingDataManager';
 import type { GameDataManager } from './GameDataManager';
@@ -27,10 +29,10 @@ import { VirtualScroller } from './VirtualScroller';
 import { LazyCardObserver } from './LazyCardObserver';
 import { openCardMenu } from './PosterCard';
 import { ConfirmModal } from './ConfirmModal';
-import { MaybeAddModal } from './MaybeAddModal';
-import { ReadingScheduleModal } from './ReadingScheduleModal';
-import { GameScheduleModal } from './GameScheduleModal';
-import { UpcomingFinderModal, type UpcomingFinderItem } from './UpcomingFinderModal';
+import { MaybeAddModal, type MaybeAddModalDeps } from './MaybeAddModal';
+import { ReadingScheduleModal, type ReadingScheduleModalDeps } from './ReadingScheduleModal';
+import { GameScheduleModal, type GameScheduleModalDeps } from './GameScheduleModal';
+import { UpcomingFinderModal, type UpcomingFinderItem, type UpcomingFinderModalDeps } from './UpcomingFinderModal';
 import { renderAddButton, renderSelectAllButton, renderViewDropdown } from './ui/TabToolbar';
 import { renderTypeBadge } from './ui/typeBadge';
 import { renderActionBar } from './ui/ActionBar';
@@ -253,14 +255,33 @@ function openExternalLink(link: string, noLinkKey: 'airtime.notices.noLink' | 'a
 	else new Notice(t(noLinkKey));
 }
 
+/** Shows a remote cover on the card image; anything that is not an http(s) URL leaves the placeholder. */
+function showTrackerCover(card: HTMLElement, img: HTMLImageElement, src: string): boolean {
+	if (!src.startsWith('http')) return false;
+	img.onerror = () => card.removeClass('has-poster');
+	card.addClass('has-poster');
+	img.src = src;
+	return true;
+}
+
 // AirtimeTab
+
+export interface AirtimeTabDeps
+	extends MaybeAddModalDeps, ReadingScheduleModalDeps, GameScheduleModalDeps, UpcomingFinderModalDeps, AirtimeScheduleModalDeps {
+	settings: SettingsReader & SettingsWriter;
+	titles: DataManager;
+	reading: Pick<ReadingDataManager, 'getBook' | 'getManga' | 'getBooks' | 'getMangaList' | 'updateBook' | 'updateManga'>;
+	games: Pick<GameDataManager, 'getGame' | 'getGames' | 'getSettings' | 'updateGame'>;
+	api: MaybeAddModalDeps['api'] & Pick<ApiService, 'getAnimeScheduleByMalId'>;
+	posters: Pick<PosterService, 'clearQueue' | 'enqueue'>;
+	getCardMinWidth: () => number;
+	isCardTextUnder: (tab: 'upcoming') => boolean;
+	/** Keeps the background scheduler from notifying again for an airing the user just handled. */
+	markAirtimeHandled: (key: string) => void;
+}
 
 export class AirtimeTab implements TabInstance {
 	private container: HTMLElement;
-	private plugin: HoardPlugin;
-	private dataManager: DataManager;
-	private readingDataManager: ReadingDataManager;
-	private gameDataManager: GameDataManager;
 	private onCountChange?: (count: number) => void;
 
 	currentSubTab: 'tracker' | 'history' | 'maybe' = 'tracker';
@@ -286,17 +307,12 @@ export class AirtimeTab implements TabInstance {
 
 	constructor(
 		container: HTMLElement,
-		plugin: HoardPlugin,
-		dataManager: DataManager,
+		private deps: AirtimeTabDeps,
 		onCountChange?: (count: number) => void,
 	) {
 		this.container = container;
-		this.plugin = plugin;
-		this.dataManager = dataManager;
-		this.readingDataManager = plugin.readingDataManager;
-		this.gameDataManager = plugin.gameDataManager;
 		this.onCountChange = onCountChange;
-		this.trackerView = plugin.settings.upcomingTrackerView === 'cards' ? 'cards' : 'list';
+		this.trackerView = deps.settings.get().upcomingTrackerView === 'cards' ? 'cards' : 'list';
 	}
 
 	/**
@@ -312,7 +328,7 @@ export class AirtimeTab implements TabInstance {
 	private resolveReadingEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
 		const kind = entry.readingKind ?? 'book';
 		const item: Book | Manga | undefined =
-			kind === 'book' ? this.readingDataManager.getBook(entry.titleId) : this.readingDataManager.getManga(entry.titleId);
+			kind === 'book' ? this.deps.reading.getBook(entry.titleId) : this.deps.reading.getManga(entry.titleId);
 		if (!item) return null;
 		const totalUnits = entry.totalEpisodes ?? item.totalChapters ?? 0;
 		return {
@@ -321,8 +337,8 @@ export class AirtimeTab implements TabInstance {
 			title: item.title,
 			typeName: kind === 'book' ? 'Book' : 'Manga',
 			typeLabel: t(`airtime.type.${kind}`),
-			typeColor: this.plugin.settings.coloredTypeBadges
-				? getReadingTypeColor(kind, this.plugin.settings)
+			typeColor: this.deps.settings.get().coloredTypeBadges
+				? getReadingTypeColor(kind, this.deps.settings.get())
 				: null,
 			externalLink: item.externalLink ?? '',
 			// the schedule's mode decides single vs recurring — a multi-chapter item scheduled as a one-off
@@ -337,7 +353,7 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	private resolveGameEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
-		const game = this.gameDataManager.getGame(entry.titleId);
+		const game = this.deps.games.getGame(entry.titleId);
 		if (!game) return null;
 		return {
 			source: 'game',
@@ -355,15 +371,15 @@ export class AirtimeTab implements TabInstance {
 			unit: 'release',
 			group: 'season',
 			next: 'nextGame',
-			planStatus: this.gameDataManager.getSettings().defaultStatus || 'Not started',
+			planStatus: this.deps.games.getSettings().defaultStatus || 'Not started',
 		};
 	}
 
 	private resolveWatchEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
-		const title = this.dataManager.getTitle(entry.titleId);
+		const title = this.deps.titles.getTitle(entry.titleId);
 		if (!title) return null;
-		const typeDef = this.plugin.settings.types.find((t) => t.name === title.type);
-		const colored = this.plugin.settings.coloredTypeBadges;
+		const typeDef = this.deps.settings.get().types.find((t) => t.name === title.type);
+		const colored = this.deps.settings.get().coloredTypeBadges;
 		return {
 			source: 'watchlist',
 			id: title.id,
@@ -371,7 +387,7 @@ export class AirtimeTab implements TabInstance {
 			typeName: title.type,
 			typeLabel: typeLabel(title.type),
 			typeColor: colored && typeDef
-				? getThemedColor(title.type, typeDef.color, this.plugin.settings.colorTheme)
+				? getThemedColor(title.type, typeDef.color, this.deps.settings.get().colorTheme)
 				: null,
 			externalLink: title.externalLink,
 			// same rule as reading: the schedule's mode decides, so a series set to "Single release" gets the
@@ -386,7 +402,7 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	/** Count of Due entries in the Maybe list — usable without rendering the tab. */
-	static getMaybeDueCount(dataManager: DataManager): number {
+	static getMaybeDueCount(dataManager: Pick<DataManager, 'getMaybeTitles'>): number {
 		const todayStr = todayIso();
 		return dataManager.getMaybeTitles().filter(
 			(mt) => !!mt.releaseDate && mt.releaseDate <= todayStr,
@@ -394,7 +410,11 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	/** Count of Aired/Due entries — usable without rendering the tab. */
-	static getAiredDueCount(dataManager: DataManager, readingDataManager?: ReadingDataManager, gameDataManager?: GameDataManager): number {
+	static getAiredDueCount(
+		dataManager: Pick<DataManager, 'getAirtimeEntries' | 'getTitles'>,
+		readingDataManager?: Pick<ReadingDataManager, 'getBook' | 'getManga'>,
+		gameDataManager?: Pick<GameDataManager, 'getGame'>,
+	): number {
 		const allEntries = dataManager.getAirtimeEntries();
 		const titles = dataManager.getTitles();
 		const titleMap = new Map(titles.map((t) => [t.id, t]));
@@ -441,7 +461,7 @@ export class AirtimeTab implements TabInstance {
 		this.container.empty();
 		this.container.addClass('hoard-airtime');
 		if (this.onCountChange) {
-			this.onCountChange(AirtimeTab.getAiredDueCount(this.dataManager, this.readingDataManager, this.gameDataManager) + AirtimeTab.getMaybeDueCount(this.dataManager));
+			this.onCountChange(AirtimeTab.getAiredDueCount(this.deps.titles, this.deps.reading, this.deps.games) + AirtimeTab.getMaybeDueCount(this.deps.titles));
 		}
 		this.renderInnerTabBar();
 		if (this.currentSubTab === 'tracker') {
@@ -455,8 +475,8 @@ export class AirtimeTab implements TabInstance {
 
 	private renderInnerTabBar(): void {
 		const bar = this.container.createDiv({ cls: 'hoard-inner-tabs' });
-		const trackerCount = AirtimeTab.getAiredDueCount(this.dataManager, this.readingDataManager, this.gameDataManager);
-		const maybeCount = AirtimeTab.getMaybeDueCount(this.dataManager);
+		const trackerCount = AirtimeTab.getAiredDueCount(this.deps.titles, this.deps.reading, this.deps.games);
+		const maybeCount = AirtimeTab.getMaybeDueCount(this.deps.titles);
 		const tabs: Array<{ key: 'tracker' | 'history' | 'maybe'; label: string; badge: number }> = [
 			{ key: 'tracker', label: t('airtime.tabs.tracker'), badge: trackerCount },
 			{ key: 'history', label: t('app.tabs.log'), badge: 0 },
@@ -480,7 +500,7 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	private renderTracker(): void {
-		if (this.plugin.settings.showHintBanners) {
+		if (this.deps.settings.get().showHintBanners) {
 			this.container.createDiv({
 				cls: 'hoard-custom-lists__draft-banner',
 				text: `⚠ ${t('airtime.hint', { status: statusLabel('To be released') })}`,
@@ -504,7 +524,7 @@ export class AirtimeTab implements TabInstance {
 		cutoff.setMonth(cutoff.getMonth() - 6);
 		const cutoffStr = toIsoDate(cutoff);
 
-		const pastTitles = this.dataManager.getTitles()
+		const pastTitles = this.deps.titles.getTitles()
 			.filter((t) => !!t.releaseDate && t.releaseDate <= todayStr && t.releaseDate >= cutoffStr)
 			.sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''));
 
@@ -526,7 +546,7 @@ export class AirtimeTab implements TabInstance {
 		left.createDiv({ cls: 'hoard-airtime__card-title', text: title.title });
 
 		const metaRow = left.createDiv({ cls: 'hoard-airtime__card-meta' });
-		renderTypeBadge(metaRow, title.type, this.plugin.settings);
+		renderTypeBadge(metaRow, title.type, this.deps.settings.get());
 		if (title.releaseDate) {
 			metaRow.createSpan({ cls: 'hoard-airtime__schedule', text: formatDateDisplay(title.releaseDate) });
 		}
@@ -549,14 +569,14 @@ export class AirtimeTab implements TabInstance {
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			new ConfirmModal(this.plugin.app, t('airtime.confirm.removeWatchlist', { title: title.title }), () => {
-				void this.dataManager.removeTitle(title.id).then(() => this.render());
+			new ConfirmModal(this.deps.app, t('airtime.confirm.removeWatchlist', { title: title.title }), () => {
+				void this.deps.titles.removeTitle(title.id).then(() => this.render());
 			}).open();
 		});
 	}
 
 	private renderMaybe(): void {
-		const maybeTitles = this.dataManager.getMaybeTitles();
+		const maybeTitles = this.deps.titles.getMaybeTitles();
 
 		const headerEl = this.container.createDiv({ cls: 'hoard-list__header' });
 		if (maybeTitles.length > 0) {
@@ -565,7 +585,7 @@ export class AirtimeTab implements TabInstance {
 		const controls = headerEl.createDiv({ cls: 'hoard-toolbar__controls' });
 		const rightGroup = controls.createDiv({ cls: 'hoard-toolbar__controls-right' });
 		renderAddButton(rightGroup, () => {
-			new MaybeAddModal(this.plugin.app, this.plugin, this.dataManager, () => this.render()).open();
+			new MaybeAddModal(this.deps, () => this.render()).open();
 		});
 
 		if (maybeTitles.length === 0) {
@@ -604,7 +624,7 @@ export class AirtimeTab implements TabInstance {
 
 		left.createSpan({ cls: 'hoard-maybe-card__title', text: mt.title });
 
-		renderTypeBadge(left, mt.type, this.plugin.settings);
+		renderTypeBadge(left, mt.type, this.deps.settings.get());
 
 		const pillClsMap: Record<DetailedCountdown['kind'], string> = {
 			'today-before': 'hoard-airtime__pill hoard-airtime__pill--today-series',
@@ -629,8 +649,8 @@ export class AirtimeTab implements TabInstance {
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			new ConfirmModal(this.plugin.app, t('airtime.confirm.removeMaybe', { title: mt.title }), () => {
-				void this.dataManager.removeMaybeTitle(mt.id).then(() => this.render());
+			new ConfirmModal(this.deps.app, t('airtime.confirm.removeMaybe', { title: mt.title }), () => {
+				void this.deps.titles.removeMaybeTitle(mt.id).then(() => this.render());
 			}).open();
 		});
 	}
@@ -673,7 +693,7 @@ export class AirtimeTab implements TabInstance {
 		const header = this.container.createDiv({ cls: 'hoard-list__header' });
 
 		// only entries that still resolve to a watchlist or reading item
-		const count = this.dataManager.getAirtimeEntries().filter(
+		const count = this.deps.titles.getAirtimeEntries().filter(
 			(e) => this.resolveEntry(e) !== null,
 		).length;
 		if (count > 0) {
@@ -692,7 +712,7 @@ export class AirtimeTab implements TabInstance {
 				if (this.selectedItems.size > 0) {
 					this.selectedItems.clear();
 				} else {
-					for (const entry of this.dataManager.getAirtimeEntries()) {
+					for (const entry of this.deps.titles.getAirtimeEntries()) {
 						this.selectedItems.add(entry.id);
 					}
 				}
@@ -734,20 +754,19 @@ export class AirtimeTab implements TabInstance {
 			onSelect: (key) => {
 				this.trackerView = key;
 				this._trackerPersistentScrollTop = 0;
-				this.plugin.settings.upcomingTrackerView = key;
-				void this.plugin.saveSettings();
+				void this.deps.settings.update((s) => { s.upcomingTrackerView = key; });
 				this.render();
 			},
 		});
 	}
 
 	private renderActionBar(parent: HTMLElement): void {
-		renderActionBar(parent, this.plugin.app, {
+		renderActionBar(parent, this.deps.app, {
 			title: t('airtime.actions.removeFromUpcoming'),
 			selected: this.selectedItems,
 			message: (count) => t('airtime.confirm.removeSelected', { count }),
 			onConfirm: async () => {
-				await this.dataManager.removeAirtimeEntriesBatch(Array.from(this.selectedItems));
+				await this.deps.titles.removeAirtimeEntriesBatch(Array.from(this.selectedItems));
 				this.selectedItems.clear();
 				this.render();
 			},
@@ -757,7 +776,7 @@ export class AirtimeTab implements TabInstance {
 	// Add flow
 
 	private openAddFlow(): void {
-		const entries = this.dataManager.getAirtimeEntries();
+		const entries = this.deps.titles.getAirtimeEntries();
 		// already-added keys, kept per source so a watchlist id and a reading id that happen to match
 		// don't shadow each other
 		const addedWatch = new Set(entries.filter((e) => e.source === undefined || e.source === 'watchlist').map((e) => e.titleId));
@@ -765,27 +784,27 @@ export class AirtimeTab implements TabInstance {
 		const addedGame = new Set(entries.filter((e) => e.source === 'game').map((e) => e.titleId));
 
 		const items: UpcomingFinderItem[] = [];
-		for (const t of this.dataManager.getTitles()) {
+		for (const t of this.deps.titles.getTitles()) {
 			if (addedWatch.has(t.id)) continue;
 			items.push({ source: 'watchlist', id: t.id, title: t.title, typeLabel: typeLabel(t.type) });
 		}
-		for (const b of this.readingDataManager.getBooks()) {
+		for (const b of this.deps.reading.getBooks()) {
 			if (addedReading.has(b.id)) continue;
 			items.push({ source: 'reading', kind: 'book', id: b.id, title: b.title, typeLabel: t('airtime.type.book') });
 		}
-		for (const m of this.readingDataManager.getMangaList()) {
+		for (const m of this.deps.reading.getMangaList()) {
 			if (addedReading.has(m.id)) continue;
 			items.push({ source: 'reading', kind: 'manga', id: m.id, title: m.title, typeLabel: t('airtime.type.manga') });
 		}
-		for (const g of this.gameDataManager.getGames()) {
+		for (const g of this.deps.games.getGames()) {
 			if (addedGame.has(g.id)) continue;
 			items.push({ source: 'game', id: g.id, title: g.title, typeLabel: t('airtime.type.game') });
 		}
 
-		if (this.dataManager.getTitles().length === 0 &&
-			this.readingDataManager.getBooks().length === 0 &&
-			this.readingDataManager.getMangaList().length === 0 &&
-			this.gameDataManager.getGames().length === 0) {
+		if (this.deps.titles.getTitles().length === 0 &&
+			this.deps.reading.getBooks().length === 0 &&
+			this.deps.reading.getMangaList().length === 0 &&
+			this.deps.games.getGames().length === 0) {
 			new Notice(t('airtime.notices.noTitles'));
 			return;
 		}
@@ -794,18 +813,18 @@ export class AirtimeTab implements TabInstance {
 			return;
 		}
 
-		new UpcomingFinderModal(this.plugin.app, items, (item) => {
+		new UpcomingFinderModal(this.deps, items, (item) => {
 			if (item.source === 'reading') {
 				const kind = item.kind ?? 'book';
 				const readItem = kind === 'book'
-					? this.readingDataManager.getBook(item.id)
-					: this.readingDataManager.getManga(item.id);
+					? this.deps.reading.getBook(item.id)
+					: this.deps.reading.getManga(item.id);
 				if (readItem) this.startAddWithReading(readItem, kind);
 			} else if (item.source === 'game') {
-				const game = this.gameDataManager.getGame(item.id);
+				const game = this.deps.games.getGame(item.id);
 				if (game) this.startAddWithGame(game);
 			} else {
-				const title = this.dataManager.getTitle(item.id);
+				const title = this.deps.titles.getTitle(item.id);
 				if (title) void this.startAddWithTitle(title);
 			}
 		}).open();
@@ -817,15 +836,15 @@ export class AirtimeTab implements TabInstance {
 				? { recurrence: 'once', releaseDate: game.releaseDate }
 				: null;
 
-		new GameScheduleModal(this.plugin.app, game, prefilled, async (schedule) => {
+		new GameScheduleModal(this.deps, game, prefilled, async (schedule) => {
 			const entry: AirtimeEntry = {
-				id: this.dataManager.generateGameAirtimeId(game.id),
+				id: this.deps.titles.generateGameAirtimeId(game.id),
 				titleId: game.id,
 				source: 'game',
 				schedule,
 				dateAdded: new Date().toISOString(),
 			};
-			await this.dataManager.addAirtimeEntry(entry);
+			await this.deps.titles.addAirtimeEntry(entry);
 			await this.syncGameFromSchedule(game.id, schedule);
 			this.render();
 		}).open();
@@ -836,13 +855,13 @@ export class AirtimeTab implements TabInstance {
 	 * doesn't auto-remove the just-added entry.
 	 */
 	private async syncGameFromSchedule(gameId: string, schedule: AirtimeSchedule): Promise<void> {
-		const g = this.gameDataManager.getGame(gameId);
+		const g = this.deps.games.getGame(gameId);
 		if (!g) return;
 		if (schedule.recurrence === 'once' && isReleaseDateFuture(schedule.releaseDate)) {
 			const newDate = schedule.releaseDate ?? null;
 			if (g.releaseDate !== newDate) {
 				g.releaseDate = newDate;
-				await this.gameDataManager.updateGame(g);
+				await this.deps.games.updateGame(g);
 			}
 		}
 	}
@@ -854,7 +873,7 @@ export class AirtimeTab implements TabInstance {
 				: null;
 
 		new ReadingScheduleModal(
-			this.plugin.app,
+			this.deps,
 			item,
 			kind,
 			prefilled,
@@ -864,7 +883,7 @@ export class AirtimeTab implements TabInstance {
 			null,
 			async (schedule, volume, chapter, totalVolumes, totalChapters) => {
 				const entry: AirtimeEntry = {
-					id: this.dataManager.generateReadingAirtimeId(item.id),
+					id: this.deps.titles.generateReadingAirtimeId(item.id),
 					titleId: item.id,
 					source: 'reading',
 					readingKind: kind,
@@ -875,7 +894,7 @@ export class AirtimeTab implements TabInstance {
 					totalEpisodes: totalChapters ?? undefined,
 					dateAdded: new Date().toISOString(),
 				};
-				await this.dataManager.addAirtimeEntry(entry);
+				await this.deps.titles.addAirtimeEntry(entry);
 				await this.syncReadingItemFromSchedule(item.id, kind, schedule, totalVolumes, totalChapters);
 				this.render();
 			},
@@ -891,7 +910,7 @@ export class AirtimeTab implements TabInstance {
 		totalChapters: number | null,
 	): Promise<void> {
 		if (kind === 'book') {
-			const b = this.readingDataManager.getBook(itemId);
+			const b = this.deps.reading.getBook(itemId);
 			if (!b) return;
 			let changed = false;
 			if (totalChapters !== null && totalChapters !== b.totalChapters) { b.totalChapters = totalChapters; changed = true; }
@@ -901,9 +920,9 @@ export class AirtimeTab implements TabInstance {
 				const newDate = schedule.releaseDate ?? null;
 				if (b.releaseDate !== newDate) { b.releaseDate = newDate; changed = true; }
 			}
-			if (changed) await this.readingDataManager.updateBook(b);
+			if (changed) await this.deps.reading.updateBook(b);
 		} else {
-			const m = this.readingDataManager.getManga(itemId);
+			const m = this.deps.reading.getManga(itemId);
 			if (!m) return;
 			let changed = false;
 			if (totalChapters !== null && totalChapters !== m.totalChapters) { m.totalChapters = totalChapters; changed = true; }
@@ -914,7 +933,7 @@ export class AirtimeTab implements TabInstance {
 				const newDate = schedule.releaseDate ?? null;
 				if (m.releaseDate !== newDate) { m.releaseDate = newDate; changed = true; }
 			}
-			if (changed) await this.readingDataManager.updateManga(m);
+			if (changed) await this.deps.reading.updateManga(m);
 		}
 	}
 
@@ -923,27 +942,27 @@ export class AirtimeTab implements TabInstance {
 		if (r.source === 'reading') {
 			const kind = entry.readingKind ?? 'book';
 			if (kind === 'book') {
-				const b = this.readingDataManager.getBook(entry.titleId);
-				if (b && b.status === 'To be released') { b.status = 'Plan to Read'; await this.readingDataManager.updateBook(b); }
+				const b = this.deps.reading.getBook(entry.titleId);
+				if (b && b.status === 'To be released') { b.status = 'Plan to Read'; await this.deps.reading.updateBook(b); }
 			} else {
-				const m = this.readingDataManager.getManga(entry.titleId);
-				if (m && m.status === 'To be released') { m.status = 'Plan to Read'; await this.readingDataManager.updateManga(m); }
+				const m = this.deps.reading.getManga(entry.titleId);
+				if (m && m.status === 'To be released') { m.status = 'Plan to Read'; await this.deps.reading.updateManga(m); }
 			}
 		} else if (r.source === 'game') {
-			const g = this.gameDataManager.getGame(entry.titleId);
+			const g = this.deps.games.getGame(entry.titleId);
 			if (g && g.status === GAME_AUTO_STATUS) {
-				g.status = this.gameDataManager.getSettings().defaultStatus || 'Not started';
-				await this.gameDataManager.updateGame(g);
+				g.status = this.deps.games.getSettings().defaultStatus || 'Not started';
+				await this.deps.games.updateGame(g);
 			}
 		} else {
-			const t = this.dataManager.getTitle(entry.titleId);
-			if (t && t.status === 'To be released') { t.status = 'Plan to watch'; await this.dataManager.updateTitle(t); }
+			const t = this.deps.titles.getTitle(entry.titleId);
+			if (t && t.status === 'To be released') { t.status = 'Plan to watch'; await this.deps.titles.updateTitle(t); }
 		}
 	}
 
 	/** Pushes the schedule-derived episode total and (single release) release date back onto the Watchlist title. */
 	private async syncTitleFromSchedule(titleId: string, schedule: AirtimeSchedule, totalEpisodes: number | null): Promise<void> {
-		const title = this.dataManager.getTitle(titleId);
+		const title = this.deps.titles.getTitle(titleId);
 		if (!title) return;
 		let changed = false;
 		if (totalEpisodes !== null && totalEpisodes !== title.totalEpisodes) {
@@ -957,7 +976,7 @@ export class AirtimeTab implements TabInstance {
 				changed = true;
 			}
 		}
-		if (changed) await this.dataManager.updateTitle(title);
+		if (changed) await this.deps.titles.updateTitle(title);
 	}
 
 	private async startAddWithTitle(title: HoardTitle): Promise<void> {
@@ -966,7 +985,7 @@ export class AirtimeTab implements TabInstance {
 		// try Jikan auto-fill for Anime with a known malId
 		if (title.type === 'Anime' && title.malId) {
 			try {
-				const sched = await this.plugin.apiService.getAnimeScheduleByMalId(title.malId);
+				const sched = await this.deps.api.getAnimeScheduleByMalId(title.malId);
 				if (sched) {
 					prefilled = { recurrence: 'weekly', dayOfWeek: sched.dayOfWeek, releaseTime: sched.time };
 					new Notice(t('airtime.notices.autoFilled'));
@@ -981,7 +1000,7 @@ export class AirtimeTab implements TabInstance {
 		}
 
 		new AirtimeScheduleModal(
-			this.plugin.app,
+			this.deps,
 			title,
 			prefilled,
 			null,
@@ -990,7 +1009,7 @@ export class AirtimeTab implements TabInstance {
 			null,
 			async (schedule, season, episode, totalSeasons, totalEpisodes) => {
 				const entry: AirtimeEntry = {
-					id: this.dataManager.generateAirtimeId(title.id),
+					id: this.deps.titles.generateAirtimeId(title.id),
 					titleId: title.id,
 					schedule,
 					currentSeason: season ?? undefined,
@@ -999,7 +1018,7 @@ export class AirtimeTab implements TabInstance {
 					totalEpisodes: totalEpisodes ?? undefined,
 					dateAdded: new Date().toISOString(),
 				};
-				await this.dataManager.addAirtimeEntry(entry);
+				await this.deps.titles.addAirtimeEntry(entry);
 
 				await this.syncTitleFromSchedule(title.id, schedule, totalEpisodes);
 
@@ -1016,7 +1035,7 @@ export class AirtimeTab implements TabInstance {
 	 */
 	private computeTrackerCardData(): TrackerCardData[] {
 		const q = this.searchQuery.trim().toLowerCase();
-		return this.dataManager.getAirtimeEntries()
+		return this.deps.titles.getAirtimeEntries()
 			.map((entry) => {
 				const r = this.resolveEntry(entry);
 				if (!r) return null;
@@ -1053,7 +1072,7 @@ export class AirtimeTab implements TabInstance {
 
 	/** Card data to render, or null after the matching empty state has been shown. */
 	private trackerCardDataOrEmpty(): TrackerCardData[] | null {
-		if (this.dataManager.getAirtimeEntries().length === 0) {
+		if (this.deps.titles.getAirtimeEntries().length === 0) {
 			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.tracker') });
 			return null;
 		}
@@ -1196,11 +1215,11 @@ export class AirtimeTab implements TabInstance {
 
 	/** Removes what the card shows: a derived card clears the release date, a manual schedule only itself. */
 	private confirmRemove(entry: AirtimeEntry, r: ResolvedUpcoming): void {
-		const msg = this.dataManager.removeClearsReleaseDate(entry)
+		const msg = this.deps.titles.removeClearsReleaseDate(entry)
 			? t('airtime.confirm.removeUpcomingClear', { title: r.title })
 			: t('airtime.confirm.removeUpcoming', { title: r.title });
-		new ConfirmModal(this.plugin.app, msg, () => {
-			void this.dataManager.removeAirtimeEntry(entry.id).then(() => this.render());
+		new ConfirmModal(this.deps.app, msg, () => {
+			void this.deps.titles.removeAirtimeEntry(entry.id).then(() => this.render());
 		}).open();
 	}
 
@@ -1214,7 +1233,7 @@ export class AirtimeTab implements TabInstance {
 			totalEps > 0 &&
 			entry.currentEpisode >= totalEps;
 
-		const confirmMsg = tickConfirmMessage(r, entry.currentEpisode, isFinalEpisode, this.dataManager.isAiringTracked(entry));
+		const confirmMsg = tickConfirmMessage(r, entry.currentEpisode, isFinalEpisode, this.deps.titles.isAiringTracked(entry));
 
 		// single releases get an escape hatch: a due title that turns out to be a serial jumps into the
 		// schedule modal in Recurring mode instead of being removed. Games have no recurring units.
@@ -1228,23 +1247,23 @@ export class AirtimeTab implements TabInstance {
 			}
 			: undefined;
 
-		new ConfirmModal(this.plugin.app, confirmMsg, () => {
+		new ConfirmModal(this.deps.app, confirmMsg, () => {
 			void (async () => {
 				const today = new Date();
 				const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 				// prevent a scheduler double-fire for the same airtime
-				this.plugin.markAirtimeHandled(`${entry.id}-${todayStr}`);
+				this.deps.markAirtimeHandled(`${entry.id}-${todayStr}`);
 
 				if (isMovie) {
 					// a derived premiere card goes with the status change; its release date stays
-					if (!this.dataManager.removeClearsReleaseDate(entry)) await this.dataManager.removeAirtimeEntry(entry.id);
+					if (!this.deps.titles.removeClearsReleaseDate(entry)) await this.deps.titles.removeAirtimeEntry(entry.id);
 					await this.revertToBeReleasedStatus(entry, r);
 				} else if (isFinalEpisode) {
 					// final unit: remove from Upcoming, do NOT change status
-					await this.dataManager.removeAirtimeEntry(entry.id);
+					await this.deps.titles.removeAirtimeEntry(entry.id);
 				} else {
 					// non-final: acknowledge so the countdown resets; without an API pointer also advance the unit
-					await this.dataManager.tickAirtimeEntry(entry, todayStr);
+					await this.deps.titles.tickAirtimeEntry(entry, todayStr);
 				}
 				this.render();
 			})();
@@ -1331,8 +1350,8 @@ export class AirtimeTab implements TabInstance {
 	 * the card text style is 'under'; in 'inside' mode the cell is the bare 2:3 card.
 	 */
 	private trackerMetrics(containerWidth: number): GridMetrics {
-		const base = computeGridMetrics(containerWidth, this.plugin.getCardMinWidth());
-		if (!this.plugin.isCardTextUnder('upcoming')) return base;
+		const base = computeGridMetrics(containerWidth, this.deps.getCardMinWidth());
+		if (!this.deps.isCardTextUnder('upcoming')) return base;
 		const cardHeight = base.cardHeight + AirtimeTab.TRACKER_CARD_TEXT_H;
 		return { cols: base.cols, cardWidth: base.cardWidth, cardHeight, rowHeight: cardHeight + 12 };
 	}
@@ -1343,7 +1362,7 @@ export class AirtimeTab implements TabInstance {
 		this.trackerObserver?.destroy();
 		this.trackerObserver = null;
 		// same hygiene as the Watchlist Cards teardown: stale pending fetches would just be re-enqueued
-		this.plugin.posterService?.clearQueue();
+		this.deps.posters.clearQueue();
 	}
 
 	// Cards view: single card
@@ -1368,23 +1387,8 @@ export class AirtimeTab implements TabInstance {
 		const card = cell.createDiv({ cls: 'hoard-card hoard-tracker__card' });
 		if (this.selectionMode && this.selectedItems.has(entry.id)) card.addClass('hoard-card--selected');
 
-		// placeholder colour: the type colour regardless of the colored-badges setting
-		let placeholderColor: string;
-		if (entry.source === 'reading') {
-			placeholderColor = getReadingTypeColor(entry.readingKind ?? 'book', this.plugin.settings);
-		} else if (entry.source === 'game') {
-			// the Games-tab placeholder colour: the game's genre colour
-			const game = this.gameDataManager.getGame(entry.titleId);
-			placeholderColor = this.gameDataManager.getSettings().types
-				.find((t) => t.name === game?.type)?.color ?? '#888780';
-		} else {
-			const typeDef = this.plugin.settings.types.find((t) => t.name === r.typeName);
-			placeholderColor = typeDef
-				? getThemedColor(r.typeName, typeDef.color, this.plugin.settings.colorTheme)
-				: '#888780';
-		}
 		const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
-		placeholder.setCssProps({ '--hoard-card-placeholder-color': placeholderColor });
+		placeholder.setCssProps({ '--hoard-card-placeholder-color': this.trackerPlaceholderColor(entry, r) });
 		placeholder.createSpan({ text: (r.title.trim().charAt(0) || '?').toUpperCase() });
 
 		const posterHeight = Math.round(cardWidth * 1.5);
@@ -1393,45 +1397,12 @@ export class AirtimeTab implements TabInstance {
 		img.width = Math.round(cardWidth);
 		img.height = posterHeight;
 
-		if (entry.source === 'reading') {
-			// reading items carry their cover directly — no lazy fetch machinery
-			const item = entry.readingKind === 'manga'
-				? this.readingDataManager.getManga(entry.titleId)
-				: this.readingDataManager.getBook(entry.titleId);
-			const cover = item?.coverUrl ?? '';
-			if (cover.startsWith('http')) {
-				img.onerror = () => card.removeClass('has-poster');
-				card.addClass('has-poster');
-				img.src = cover;
-			}
-		} else if (entry.source === 'game') {
-			// games also carry their cover directly (RAWG-resized like the Games tab)
-			const cover = this.gameDataManager.getGame(entry.titleId)?.coverUrl ?? '';
-			if (cover.startsWith('http')) {
-				img.onerror = () => card.removeClass('has-poster');
-				card.addClass('has-poster');
-				img.src = rawgResizedCover(cover);
-			}
-		} else {
-			const title = this.dataManager.getTitle(entry.titleId);
-			if (title) {
-				cell.dataset.titleId = title.id;
-				const display = getDisplayPoster(title);
-				const needsPoster = !title.posterUrl;
-				if (display && display.startsWith('http')) {
-					img.onerror = () => card.removeClass('has-poster');
-					card.addClass('has-poster');
-					img.src = display;
-				} else if (needsPoster) {
-					cell.dataset.needsPoster = 'true';
-				}
-			}
-		}
+		this.loadTrackerPoster(cell, card, img, entry);
 
 		// text block: below the poster ('under') or overlaid at its bottom ('inside', the classic
 		// Watchlist overlay). Built before the corner buttons so an overlay paints below them (later
 		// absolute siblings win).
-		const info = this.plugin.isCardTextUnder('upcoming')
+		const info = this.deps.isCardTextUnder('upcoming')
 			? cell.createDiv({ cls: 'hoard-tracker__card-info' })
 			: card.createDiv({ cls: 'hoard-card__overlay hoard-tracker__card-overlay' });
 		info.createDiv({ cls: 'hoard-tracker__card-title', text: r.title });
@@ -1454,21 +1425,7 @@ export class AirtimeTab implements TabInstance {
 		});
 		if (r.typeColor) typeBadge.setCssProps({ '--hoard-tracker-type-color': r.typeColor });
 
-		// countdown badge — top-right: big number + DAYS, or the state word
-		const cd = card.createDiv({ cls: `hoard-tracker__countdown ${COUNTDOWN_KIND_CLASSES[countdown.kind]}` });
-		if (countdown.kind === 'future') {
-			if (countdown.daysUntil >= 9999) {
-				cd.createSpan({ cls: 'hoard-tracker__countdown-word', text: '—' });
-			} else {
-				cd.createSpan({ cls: 'hoard-tracker__countdown-number', text: String(countdown.daysUntil) });
-				cd.createSpan({ cls: 'hoard-tracker__countdown-label', text: t('airtime.countdown.dayUnit', { count: countdown.daysUntil }) });
-			}
-		} else {
-			const word = countdown.kind === 'today-before'
-				? t('airtime.countdown.today')
-				: countdown.kind === 'aired' ? t('airtime.countdown.aired') : t('airtime.countdown.due');
-			cd.createSpan({ cls: 'hoard-tracker__countdown-word', text: word.toUpperCase() });
-		}
+		this.renderTrackerCountdown(card, countdown);
 
 		// green tick overlay (same due/aired gate as the List tick button)
 		if (showTick) this.renderTickButton(card, 'hoard-tracker__tick-btn', entry, r, isFinalEpisode);
@@ -1513,6 +1470,66 @@ export class AirtimeTab implements TabInstance {
 		return cell;
 	}
 
+	/** Placeholder colour: the type colour regardless of the colored-badges setting. */
+	private trackerPlaceholderColor(entry: AirtimeEntry, r: ResolvedUpcoming): string {
+		if (entry.source === 'reading') {
+			return getReadingTypeColor(entry.readingKind ?? 'book', this.deps.settings.get());
+		}
+		if (entry.source === 'game') {
+			// the Games-tab placeholder colour: the game's genre colour
+			const game = this.deps.games.getGame(entry.titleId);
+			return this.deps.games.getSettings().types
+				.find((t) => t.name === game?.type)?.color ?? '#888780';
+		}
+		const typeDef = this.deps.settings.get().types.find((t) => t.name === r.typeName);
+		return typeDef
+			? getThemedColor(r.typeName, typeDef.color, this.deps.settings.get().colorTheme)
+			: '#888780';
+	}
+
+	/** Points the card image at the item's cover; watchlist titles without one are marked for the lazy poster fetch. */
+	private loadTrackerPoster(cell: HTMLElement, card: HTMLElement, img: HTMLImageElement, entry: AirtimeEntry): void {
+		if (entry.source === 'reading') {
+			// reading items carry their cover directly — no lazy fetch machinery
+			const item = entry.readingKind === 'manga'
+				? this.deps.reading.getManga(entry.titleId)
+				: this.deps.reading.getBook(entry.titleId);
+			showTrackerCover(card, img, item?.coverUrl ?? '');
+		} else if (entry.source === 'game') {
+			// games also carry their cover directly (RAWG-resized like the Games tab)
+			const cover = this.deps.games.getGame(entry.titleId)?.coverUrl ?? '';
+			showTrackerCover(card, img, cover.startsWith('http') ? rawgResizedCover(cover) : '');
+		} else {
+			this.loadWatchPoster(cell, card, img, entry);
+		}
+	}
+
+	private loadWatchPoster(cell: HTMLElement, card: HTMLElement, img: HTMLImageElement, entry: AirtimeEntry): void {
+		const title = this.deps.titles.getTitle(entry.titleId);
+		if (!title) return;
+		cell.dataset.titleId = title.id;
+		const display = getDisplayPoster(title);
+		if (!showTrackerCover(card, img, display ?? '') && !title.posterUrl) cell.dataset.needsPoster = 'true';
+	}
+
+	/** Countdown badge — top-right: big number + DAYS, or the state word. */
+	private renderTrackerCountdown(card: HTMLElement, countdown: TrackerCardData['countdown']): void {
+		const cd = card.createDiv({ cls: `hoard-tracker__countdown ${COUNTDOWN_KIND_CLASSES[countdown.kind]}` });
+		if (countdown.kind === 'future') {
+			if (countdown.daysUntil >= 9999) {
+				cd.createSpan({ cls: 'hoard-tracker__countdown-word', text: '—' });
+			} else {
+				cd.createSpan({ cls: 'hoard-tracker__countdown-number', text: String(countdown.daysUntil) });
+				cd.createSpan({ cls: 'hoard-tracker__countdown-label', text: t('airtime.countdown.dayUnit', { count: countdown.daysUntil }) });
+			}
+		} else {
+			const word = countdown.kind === 'today-before'
+				? t('airtime.countdown.today')
+				: countdown.kind === 'aired' ? t('airtime.countdown.aired') : t('airtime.countdown.due');
+			cd.createSpan({ cls: 'hoard-tracker__countdown-word', text: word.toUpperCase() });
+		}
+	}
+
 	private openTrackerCardMenu(card: HTMLElement, anchorBtn: HTMLElement, data: TrackerCardData): void {
 		const { entry, r } = data;
 		// tick lives on the card overlay, edit on card click, open-page on the globe — the menu only
@@ -1536,15 +1553,15 @@ export class AirtimeTab implements TabInstance {
 			const titleId = cell.dataset.titleId;
 			if (!titleId) continue;
 
-			const title = this.dataManager.getTitle(titleId);
+			const title = this.deps.titles.getTitle(titleId);
 			if (!title) continue;
 			// same gate as the Watchlist cards
-			if (!this.dataManager.lookupDue(title.id, 'poster')) continue;
+			if (!this.deps.titles.lookupDue(title.id, 'poster')) continue;
 
 			const placeholder = cell.querySelector('.hoard-card__poster-placeholder');
 			placeholder?.addClass('is-loading');
 
-			void this.plugin.posterService.enqueue(title).then((url) => {
+			void this.deps.posters.enqueue(title).then((url) => {
 				placeholder?.removeClass('is-loading');
 				if (!url) return;
 				const card = cell.querySelector<HTMLElement>('.hoard-card');
@@ -1557,10 +1574,10 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	private openEditWatchSchedule(entry: AirtimeEntry, initialMode?: 'single' | 'recurring'): void {
-		const title = this.dataManager.getTitle(entry.titleId);
+		const title = this.deps.titles.getTitle(entry.titleId);
 		if (!title) return;
 		new AirtimeScheduleModal(
-			this.plugin.app,
+			this.deps,
 			title,
 			{ ...entry.schedule },
 			entry.currentSeason ?? null,
@@ -1573,7 +1590,7 @@ export class AirtimeTab implements TabInstance {
 				entry.currentEpisode = episode ?? undefined;
 				entry.totalSeasons = totalSeasons ?? undefined;
 				entry.totalEpisodes = totalEpisodes ?? undefined;
-				await this.dataManager.updateAirtimeEntry(entry);
+				await this.deps.titles.updateAirtimeEntry(entry);
 
 				await this.syncTitleFromSchedule(entry.titleId, schedule, totalEpisodes);
 
@@ -1584,11 +1601,11 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	private openEditGameSchedule(entry: AirtimeEntry): void {
-		const game = this.gameDataManager.getGame(entry.titleId);
+		const game = this.deps.games.getGame(entry.titleId);
 		if (!game) return;
-		new GameScheduleModal(this.plugin.app, game, { ...entry.schedule }, async (schedule) => {
+		new GameScheduleModal(this.deps, game, { ...entry.schedule }, async (schedule) => {
 			entry.schedule = schedule;
-			await this.dataManager.updateAirtimeEntry(entry);
+			await this.deps.titles.updateAirtimeEntry(entry);
 			await this.syncGameFromSchedule(entry.titleId, schedule);
 			this.render();
 		}).open();
@@ -1597,10 +1614,10 @@ export class AirtimeTab implements TabInstance {
 	private openEditReadingSchedule(entry: AirtimeEntry, initialMode?: 'single' | 'recurring'): void {
 		const kind = entry.readingKind ?? 'book';
 		const item: Book | Manga | undefined =
-			kind === 'book' ? this.readingDataManager.getBook(entry.titleId) : this.readingDataManager.getManga(entry.titleId);
+			kind === 'book' ? this.deps.reading.getBook(entry.titleId) : this.deps.reading.getManga(entry.titleId);
 		if (!item) return;
 		new ReadingScheduleModal(
-			this.plugin.app,
+			this.deps,
 			item,
 			kind,
 			{ ...entry.schedule },
@@ -1614,7 +1631,7 @@ export class AirtimeTab implements TabInstance {
 				entry.currentEpisode = chapter ?? undefined;
 				entry.totalSeasons = totalVolumes ?? undefined;
 				entry.totalEpisodes = totalChapters ?? undefined;
-				await this.dataManager.updateAirtimeEntry(entry);
+				await this.deps.titles.updateAirtimeEntry(entry);
 				await this.syncReadingItemFromSchedule(entry.titleId, kind, schedule, totalVolumes, totalChapters);
 				this.render();
 			},
@@ -1628,6 +1645,10 @@ export class AirtimeTab implements TabInstance {
 /** Without a schedule the title's shape only picks the DEFAULT mode; the toggle makes it overridable. */
 function defaultScheduleMode(title: HoardTitle): 'single' | 'recurring' {
 	return title.totalEpisodes <= 1 ? 'single' : 'recurring';
+}
+
+export interface AirtimeScheduleModalDeps {
+	app: App;
 }
 
 class AirtimeScheduleModal extends Modal {
@@ -1650,7 +1671,7 @@ class AirtimeScheduleModal extends Modal {
 	) => Promise<void>;
 
 	constructor(
-		app: App,
+		deps: AirtimeScheduleModalDeps,
 		title: HoardTitle,
 		existingSchedule: AirtimeSchedule | null,
 		currentSeason: number | null,
@@ -1666,7 +1687,7 @@ class AirtimeScheduleModal extends Modal {
 		) => Promise<void>,
 		initialMode?: 'single' | 'recurring',
 	) {
-		super(app);
+		super(deps.app);
 		this.title = title;
 		this.onSave = onSave;
 		this.form = initialScheduleState(

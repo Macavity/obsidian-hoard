@@ -1,6 +1,6 @@
 
 import { AirtimeTab } from '../../src/AirtimeTab';
-import type HoardPlugin from '../../src/main';
+import { fakeSettings } from '../helpers/fakeSettings';
 import type { AirtimeEntry, Book, Game, HoardTitle, Manga } from '../../src/types';
 import { DEFAULT_SETTINGS } from '../../src/types';
 
@@ -83,31 +83,32 @@ export function makeTab(w: World) {
 		getSettings: () => ({ defaultStatus: '', types: [{ name: 'RPG', color: '#123456' }] }),
 		updateGame: rec('updateGame'),
 	};
-	const plugin = {
+	const settingsService = fakeSettings({
+		...DEFAULT_SETTINGS,
+		types: [{ name: 'Anime', color: '#f00' }],
+		coloredTypeBadges: w.colored ?? false,
+		upcomingTrackerView: w.view ?? 'list',
+		showHintBanners: false,
+	});
+	const deps = {
 		app: {},
-		settings: {
-			...DEFAULT_SETTINGS,
-			types: [{ name: 'Anime', color: '#f00' }],
-			coloredTypeBadges: w.colored ?? false,
-			upcomingTrackerView: w.view ?? 'list',
-			showHintBanners: false,
-		},
-		readingDataManager: rdm,
-		gameDataManager: gdm,
-		apiService: {
+		settings: settingsService,
+		titles: dm,
+		reading: rdm,
+		games: gdm,
+		api: {
 			getAnimeScheduleByMalId: () => (w.animeThrows
 				? Promise.reject(new Error('offline'))
 				: Promise.resolve(w.anime ?? null)),
 		},
-		posterService: { clearQueue: () => {}, enqueue: () => Promise.resolve('') },
+		posters: { clearQueue: () => {}, enqueue: () => Promise.resolve('') },
 		markAirtimeHandled: rec('markAirtimeHandled'),
-		saveSettings: rec('saveSettings'),
 		getCardMinWidth: () => 150,
 		isCardTextUnder: () => true,
 	};
 	const container = document.createElement('div');
 	document.body.appendChild(container);
-	const tab = new AirtimeTab(container, plugin as unknown as HoardPlugin, dm as never, () => {});
+	const tab = new AirtimeTab(container, deps as never, () => {});
 	const priv = tab as unknown as Record<'resolveEntry' | 'openAddFlow' | 'startAddWithTitle' | 'openEditWatchSchedule', (...a: unknown[]) => unknown>;
-	return { tab, priv, container, calls, dm, plugin, rdm, gdm };
+	return { tab, priv, container, calls, dm, deps, settingsService, rdm, gdm };
 }

@@ -2653,7 +2653,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				const count = (this.plugin.settings.defaultCustomColumns ?? []).length;
 				b.setButtonText(t('settings.lists.columns.button', { count }));
 				b.onClick(() => {
-					new DefaultColumnsModal(this.app, this.plugin).open();
+					// TODO(Task 8): build the deps without the plugin
+					new DefaultColumnsModal({ app: this.app, settings: this.plugin.settingsService, layout: () => this.plugin.getLayout() }).open();
 				});
 			});
 
@@ -2671,7 +2672,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.lists.folder.desc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.folders.createNow.button')).onClick(async () => {
-					const manager = new CustomListManager(this.app, this.plugin);
+					const manager = new CustomListManager({ app: this.app, layout: () => this.plugin.getLayout() }); // TODO(Task 8)
 					await manager.ensureFolder();
 					new Notice(t('settings.lists.folder.done'));
 				}),

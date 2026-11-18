@@ -60,11 +60,6 @@ function gameResultMeta(result: GameSearchResult): string {
 	return `${year} · ${platforms}`;
 }
 
-/**
- * Add-game modal (the AddTitleModal pattern): search (Steam, or RAWG/IGDB once keyed) with
- * thumbnailed results, an editable form below, platform chips, the mode pill and a store-link
- * button. Steam needs no key, so search always works.
- */
 export interface AddGameModalDeps {
 	app: App;
 	settings: SettingsReader;
@@ -72,6 +67,11 @@ export interface AddGameModalDeps {
 	api: GameCoverApi & Pick<ApiService, 'getSteamStoreDetails'>;
 }
 
+/**
+ * Add-game modal (the AddTitleModal pattern): search (Steam, or RAWG/IGDB once keyed) with
+ * thumbnailed results, an editable form below, platform chips, the mode pill and a store-link
+ * button. Steam needs no key, so search always works.
+ */
 export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	private onAdded: () => void;
 	private initialQuery = '';

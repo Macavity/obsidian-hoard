@@ -1,6 +1,7 @@
 // CustomListsTab on a fake vault with the lists given as in-memory CustomList objects.
 import { vi } from 'vitest';
 import { createFakeApp } from '../fakes/fakeApp';
+import { fakeSettings } from './fakeSettings';
 import { CustomListsTab } from '../../src/CustomListsTab';
 import { VaultLayout } from '../../src/storage/VaultLayout';
 import { DEFAULT_SETTINGS, type CustomList, type HoardTitle } from '../../src/types';
@@ -36,24 +37,29 @@ export async function setupCustomLists(lists: CustomList[], titles: Partial<Hoar
 	const files: Record<string, string> = {};
 	for (const list of lists) files[`${layout.customListsFolder}/${list.name}.md`] = listFile(list);
 	const f = createFakeApp(files);
-	const plugin = {
-		app: f.app,
-		settings: { ...DEFAULT_SETTINGS },
-		getLayout: () => layout,
-		saveSettings: vi.fn(() => Promise.resolve()),
-	};
 	const dataManager = {
 		getTitles: () => titles,
 		calcTimeRemainingForModal: vi.fn(() => 42),
 	};
+	const settingsService = fakeSettings({ ...DEFAULT_SETTINGS });
+	const openAdd = vi.fn();
+	const deps = {
+		app: f.app,
+		settings: settingsService,
+		layout: () => layout,
+		titles: dataManager,
+		reading: { getBooks: () => [], getMangaList: () => [] },
+		games: { getGames: () => [] },
+		openAdd,
+	};
 	const container = document.createElement('div');
 	document.body.appendChild(container);
-	const tab = new CustomListsTab(container, plugin as never, dataManager as never);
+	const tab = new CustomListsTab(container, deps as never);
 	await tab.render();
 	const stored = (name: string): CustomList => {
 		const content = f.files.get(`${layout.customListsFolder}/${name}.md`)!;
 		const json = /```json\n([\s\S]*?)\n```/.exec(content)![1]!;
 		return { ...makeList(), ...(JSON.parse(json) as Partial<CustomList>), name };
 	};
-	return { f, plugin, dataManager, container, tab, stored };
+	return { f, deps, settingsService, openAdd, dataManager, container, tab, stored };
 }
