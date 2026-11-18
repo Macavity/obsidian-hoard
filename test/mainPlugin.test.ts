@@ -7,6 +7,8 @@ import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/types';
 const plugin = (props: Record<string, unknown>): HoardPlugin =>
 	Object.assign(Object.create(HoardPlugin.prototype) as HoardPlugin, props);
 const priv = (p: HoardPlugin) => p as unknown as {
+	resolveDefaultAddType(): string;
+	applyCardSizeCssVar(): void;
 	activateView(tab?: string): Promise<void>;
 	openWidgetPalette(editor: { replaceSelection(s: string): void }): void;
 };
@@ -18,16 +20,16 @@ afterEach(() => {
 
 describe('settings before they are loaded', () => {
 	it('are a copy of the defaults, not the defaults themselves', () => {
-		const fresh = new (HoardPlugin as unknown as new () => HoardPlugin)();
-		expect(fresh.settings).toEqual(DEFAULT_SETTINGS);
-		expect(fresh.settings).not.toBe(DEFAULT_SETTINGS);
-		expect(fresh.settings.types).not.toBe(DEFAULT_SETTINGS.types);
+		const fresh = priv(new (HoardPlugin as unknown as new () => HoardPlugin)()) as unknown as { state: typeof DEFAULT_SETTINGS };
+		expect(fresh.state).toEqual(DEFAULT_SETTINGS);
+		expect(fresh.state).not.toBe(DEFAULT_SETTINGS);
+		expect(fresh.state.types).not.toBe(DEFAULT_SETTINGS.types);
 	});
 });
 
 describe('resolveDefaultAddType', () => {
 	const types = [{ name: 'Movie' }, { name: 'Anime' }];
-	const resolve = (s: Record<string, unknown>) => plugin({ settings: { types, ...s } }).resolveDefaultAddType();
+	const resolve = (s: Record<string, unknown>) => priv(plugin({ state: { types, ...s } })).resolveDefaultAddType();
 
 	it('follows the last added type for the sentinel and falls back to the first', () => {
 		expect(resolve({ defaultAddType: LAST_USED_TYPE_SENTINEL, lastAddedType: 'Anime' })).toBe('Anime');
@@ -37,7 +39,7 @@ describe('resolveDefaultAddType', () => {
 	it('keeps an existing chosen type and falls back when it is gone', () => {
 		expect(resolve({ defaultAddType: 'Anime' })).toBe('Anime');
 		expect(resolve({ defaultAddType: 'Gone' })).toBe('Movie');
-		expect(plugin({ settings: { types: [] } }).resolveDefaultAddType()).toBe('');
+		expect(priv(plugin({ state: { types: [] } })).resolveDefaultAddType()).toBe('');
 	});
 });
 
@@ -47,7 +49,7 @@ describe('applyCardSizeCssVar', () => {
 		const settingsWindow = document.implementation.createHTMLDocument('settings');
 		vi.stubGlobal('activeDocument', settingsWindow);
 		try {
-			plugin({ settings: { cardSize: 3, cardSizeMobile: 3 } }).applyCardSizeCssVar();
+			priv(plugin({ state: { cardSize: 3, cardSizeMobile: 3 } })).applyCardSizeCssVar();
 		} finally {
 			vi.unstubAllGlobals();
 		}

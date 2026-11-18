@@ -26,7 +26,7 @@ describe('loadSettings', () => {
 			typeNamesKey: null,
 			dataManager: { resetNoKeyChecks: reset },
 		});
-		await (plugin as unknown as HoardPlugin).loadSettings();
+		await (plugin as unknown as { loadSettings(): Promise<void> }).loadSettings();
 		expect(api.setTmdbKey).toHaveBeenCalledWith('tmdb');
 		expect(api.setSteamCredentials).toHaveBeenCalledWith('steam', '42');
 		expect(api.setIgdbCredentials).toHaveBeenCalledWith('id', 'sec');

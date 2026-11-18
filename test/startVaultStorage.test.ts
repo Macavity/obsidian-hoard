@@ -28,7 +28,7 @@ function harness(o: Opts = {}): Harness {
 	const files = Object.entries(o.bases ?? {}).map(([path]) => ({ path, extension: 'base' }));
 	const plugin = Object.create(HoardPlugin.prototype) as Record<string, unknown>;
 	Object.assign(plugin, {
-		settings: { types: [{ name: 'Movie' }] },
+		state: { types: [{ name: 'Movie' }] },
 		local: { data: { ui: {} } },
 		app: { vault: { getFiles: () => files, cachedRead: (f: { path: string }) => Promise.resolve(o.bases?.[f.path] ?? '') } },
 		applySharedSettings: track('applySettings'),

@@ -22,11 +22,12 @@ describe('DataManager registrations', () => {
 
 describe('plugin unload', () => {
 	it('unload flushes pending edits of all three managers', () => {
-		const flush = { dm: vi.fn(), dmLocal: vi.fn(), dmQueued: vi.fn(), reading: vi.fn(() => Promise.resolve()), games: vi.fn(() => Promise.resolve()) };
+		const flush = { dm: vi.fn(), dmLocal: vi.fn(), dmQueued: vi.fn(), reading: vi.fn(() => Promise.resolve()), games: vi.fn(() => Promise.resolve()), settings: vi.fn(() => Promise.resolve()) };
 		const plugin = Object.assign(Object.create(HoardPlugin.prototype) as HoardPlugin, <Record<string, unknown>>{
 			dataManager: { flushPendingSaveSync: flush.dm, flushLocalData: flush.dmLocal, flushQueuedSaveSync: flush.dmQueued },
 			readingDataManager: { flushPending: flush.reading },
 			gameDataManager: { flushPending: flush.games },
+			settingsService: { flush: flush.settings },
 			index: { stop: vi.fn() },
 			shared: { stop: vi.fn() },
 			local: { flush: vi.fn() },

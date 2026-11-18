@@ -44,17 +44,17 @@ const DEFAULT_ROOT = 'Hoard';
 
 export default class HoardPlugin extends Plugin {
 	// a copy: lists edited in place before the first load must not change the defaults
-	settings: HoardPluginSettings = structuredClone(DEFAULT_SETTINGS);
-	/** Single settings access; `settings` stays until all consumers have migrated. */
-	readonly settingsService = new SettingsService({
-		current: () => this.settings,
+	private state: HoardPluginSettings = structuredClone(DEFAULT_SETTINGS);
+	/** The single settings access for everything else; `state` is only the plugin's own copy. */
+	private readonly settingsService = new SettingsService({
+		current: () => this.state,
 		persist: () => this.persistAll(),
 		changed: emitDataChanged,
 	});
 	private indexReady = false;
 	private wizardOpen = false;
 	private typeNamesKey: string | null = null;
-	private layout = new VaultLayout(DEFAULT_ROOT, () => this.settings.types.map((t) => t.name));
+	private layout = new VaultLayout(DEFAULT_ROOT, () => this.state.types.map((t) => t.name));
 	private secretStore = new SecretStore(this.app.secretStorage);
 	private local = new LocalStore({
 		loadData: () => this.loadData(),
@@ -70,7 +70,7 @@ export default class HoardPlugin extends Plugin {
 	);
 	private index = new EntryIndex(this.app, () => this.layout, this.local, (ref) => this.registerEvent(ref));
 	// the managers reach each other through lambdas, so the construction order does not matter
-	dataManager: DataManager = new DataManager({
+	private dataManager: DataManager = new DataManager({
 		index: this.index,
 		local: this.local,
 		shared: this.shared,
@@ -90,7 +90,7 @@ export default class HoardPlugin extends Plugin {
 			clearGameReleaseDate: (id) => this.gameDataManager.clearGameReleaseDate(id),
 		},
 	});
-	readingDataManager: ReadingDataManager = new ReadingDataManager({
+	private readingDataManager: ReadingDataManager = new ReadingDataManager({
 		index: this.index,
 		local: this.local,
 		shared: this.shared,
@@ -104,7 +104,7 @@ export default class HoardPlugin extends Plugin {
 			removeReadingAirtimeEntries: (id) => this.dataManager.removeReadingAirtimeEntries(id),
 		},
 	});
-	gameDataManager: GameDataManager = new GameDataManager({
+	private gameDataManager: GameDataManager = new GameDataManager({
 		index: this.index,
 		local: this.local,
 		shared: this.shared,
@@ -118,19 +118,19 @@ export default class HoardPlugin extends Plugin {
 			removeGameAirtimeEntries: (id) => this.dataManager.removeGameAirtimeEntries(id),
 		},
 	});
-	apiService: ApiService = new ApiService('', '');
+	private apiService: ApiService = new ApiService('', '');
 	/** TMDB/OMDb key snapshot of the last settings save; null before onload set it */
 	private apiKeys: string | null = null;
-	historyManager: HistoryManager = new HistoryManager(new HistoryStore(
+	private historyManager: HistoryManager = new HistoryManager(new HistoryStore(
 		this.app,
 		() => this.layout,
 		(ref) => this.registerEvent(ref),
 	));
-	posterService!: PosterService;
-	widgetRenderer?: WidgetRenderer;
+	private posterService!: PosterService;
+	private widgetRenderer?: WidgetRenderer;
 
 	// runtime import progress state (not persisted)
-	importProgress: ImportProgress | null = null;
+	private importProgress: ImportProgress | null = null;
 
 	// which entry+day combos have already fired a notification
 	private notifiedEntries: Set<string> = new Set();
@@ -155,17 +155,17 @@ export default class HoardPlugin extends Plugin {
 		this.register(() => window.document.body.setCssProps({ '--hoard-card-minimum-width': '' }));
 
 		this.apiService = new ApiService(
-			this.settings.omdbApiKey,
-			this.settings.tmdbApiKey,
-			this.settings.googleBooksApiKey,
-			this.settings.rawgApiKey,
-			this.settings.igdbClientId,
-			this.settings.igdbClientSecret,
-			this.settings.steamApiKey,
-			this.settings.steamId,
-			resolveJikanEndpoint(this.settings.jikanBaseUrl),
+			this.state.omdbApiKey,
+			this.state.tmdbApiKey,
+			this.state.googleBooksApiKey,
+			this.state.rawgApiKey,
+			this.state.igdbClientId,
+			this.state.igdbClientSecret,
+			this.state.steamApiKey,
+			this.state.steamId,
+			resolveJikanEndpoint(this.state.jikanBaseUrl),
 		);
-		this.apiKeys = [this.settings.tmdbApiKey, this.settings.omdbApiKey].join('\n');
+		this.apiKeys = [this.state.tmdbApiKey, this.state.omdbApiKey].join('\n');
 		this.dataManager.setHistoryManager(this.historyManager);
 		this.readingDataManager.setHistoryManager(this.historyManager);
 		this.gameDataManager.setHistoryManager(this.historyManager);
@@ -174,7 +174,7 @@ export default class HoardPlugin extends Plugin {
 
 		this.posterService = new PosterService(
 			this.dataManager,
-			() => this.settings,
+			() => this.state,
 			() => this.apiService,
 		);
 
@@ -210,7 +210,7 @@ export default class HoardPlugin extends Plugin {
 				const deps = this.listTabDeps();
 				new AddTitleModal(deps, (entry) => {
 					// setting off = just reveal whatever tab was open, no modal
-					if (!(this.settings.openWatchlistAfterAdd ?? true)) {
+					if (!(this.state.openWatchlistAfterAdd ?? true)) {
 						void this.activateView();
 						return;
 					}
@@ -313,7 +313,7 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/** Renders a manager notice in the active language. */
-	notifyManager(n: ManagerNotice): void {
+	private notifyManager(n: ManagerNotice): void {
 		const { code, ...params } = n;
 		new Notice(t(`notices.manager.${code}`, params));
 	}
@@ -323,7 +323,7 @@ export default class HoardPlugin extends Plugin {
 		this.dataManager.flushPendingSaveSync();
 		this.dataManager.flushLocalData();
 		this.dataManager.flushQueuedSaveSync();
-		const flushes = [this.readingDataManager?.flushPending(), this.gameDataManager?.flushPending()];
+		const flushes = [this.readingDataManager?.flushPending(), this.gameDataManager?.flushPending(), this.settingsService.flush()];
 		this.posterService?.destroy();
 		this.widgetRenderer?.cleanup();
 		this.index.stop();
@@ -339,13 +339,13 @@ export default class HoardPlugin extends Plugin {
 	private async startVaultStorage(): Promise<void> {
 		try {
 			let root = await detectRoot(this.app.vault);
-			this.layout = new VaultLayout(root ?? DEFAULT_ROOT, () => this.settings.types.map((t) => t.name));
+			this.layout = new VaultLayout(root ?? DEFAULT_ROOT, () => this.state.types.map((t) => t.name));
 			if (root === null) {
 				// fresh install (or base not synced yet): no base until the first write; a synced one is adopted
 				this.shared.deferBase({
 					create: async () => {
 						await this.dataManager.ensureFolder(this.layout.root);
-						await this.shared.createBase(toRecord(this.settings));
+						await this.shared.createBase(toRecord(this.state));
 					},
 					appeared: () => this.adoptSyncedBase(),
 				});
@@ -379,7 +379,7 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/** True while the WatchLog onboarding wizard is open (the view shows a placeholder). */
-	get importRunning(): boolean {
+	private get importRunning(): boolean {
 		return this.wizardOpen;
 	}
 
@@ -433,13 +433,13 @@ export default class HoardPlugin extends Plugin {
 	/** The import may have written the base and device settings: re-detect the root, reload, refresh views. */
 	private async adoptImportedData(): Promise<void> {
 		const root = await detectRoot(this.app.vault);
-		if (root !== null) this.layout = new VaultLayout(root, () => this.settings.types.map((t) => t.name));
+		if (root !== null) this.layout = new VaultLayout(root, () => this.state.types.map((t) => t.name));
 		await this.shared.load();
 		await this.applySharedSettings();
 	}
 
 	/** Settings entry: re-runs the wizard (ignoring earlier decisions) on the found sources or the cleanup step. */
-	async openWatchLogImport(startAt: 'found' | 'cleanup' = 'found'): Promise<void> {
+	private async openWatchLogImport(startAt: 'found' | 'cleanup' = 'found'): Promise<void> {
 		if (this.wizardOpen) return;
 		const sources = await detectWatchLogSources(this.app);
 		if (!sources.original && !sources.fork) {
@@ -461,7 +461,7 @@ export default class HoardPlugin extends Plugin {
 		try {
 			const root = await detectRoot(this.app.vault);
 			if (root !== null) {
-				this.layout = new VaultLayout(root, () => this.settings.types.map((t) => t.name));
+				this.layout = new VaultLayout(root, () => this.state.types.map((t) => t.name));
 			}
 			await this.shared.load();
 			await this.applySharedSettings();
@@ -475,7 +475,7 @@ export default class HoardPlugin extends Plugin {
 
 	/** Type names drive classification: a change (local or synced) needs a re-scan of all notes. */
 	private syncTypeNames(): void {
-		const key = this.settings.types.map((t) => t.name).join('\n');
+		const key = this.state.types.map((t) => t.name).join('\n');
 		const changed = this.typeNamesKey !== null && key !== this.typeNamesKey;
 		this.typeNamesKey = key;
 		if (!changed || !this.indexReady) return;
@@ -483,7 +483,7 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/** Everything backup export and restore need. */
-	backupManagers(): BackupManagers {
+	private backupManagers(): BackupManagers {
 		return {
 			dataManager: this.dataManager,
 			readingDataManager: this.readingDataManager,
@@ -505,7 +505,7 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/** Current vault layout (root and central folders). */
-	getLayout(): VaultLayout {
+	private getLayout(): VaultLayout {
 		return this.layout;
 	}
 
@@ -524,7 +524,7 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/** Lets AirtimeTab prevent the scheduler from double-firing after a manual tick. */
-	markAirtimeHandled(key: string): void {
+	private markAirtimeHandled(key: string): void {
 		this.notifiedEntries.add(key);
 	}
 
@@ -552,10 +552,10 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/** Refreshes the status-bar Upcoming counter. Hidden when off or when 0 due. */
-	updateStatusBar(): void {
+	private updateStatusBar(): void {
 		const el = this.statusBarEl;
 		if (!el) return;
-		if (!this.settings.showUpcomingStatusBar) {
+		if (!this.state.showUpcomingStatusBar) {
 			el.hide();
 			return;
 		}
@@ -578,9 +578,9 @@ export default class HoardPlugin extends Plugin {
 	 * Minimum card width (px) for every poster/cover grid and shelf, from the card-size step for this
 	 * device class (desktop vs mobile).
 	 */
-	getCardMinWidth(): number {
+	private getCardMinWidth(): number {
 		return cardSizeToMinWidth(
-			Platform.isMobile ? this.settings.cardSizeMobile : this.settings.cardSize,
+			Platform.isMobile ? this.state.cardSizeMobile : this.state.cardSize,
 		);
 	}
 
@@ -588,8 +588,8 @@ export default class HoardPlugin extends Plugin {
 	 * Whether a tab's poster cards show their text under the poster (the per-tab cardTextStyles
 	 * setting; 'under' is the default for data saved before it existed).
 	 */
-	isCardTextUnder(tab: CardStyleTab): boolean {
-		return this.settings.cardTextStyles?.[tab] !== 'inside';
+	private isCardTextUnder(tab: CardStyleTab): boolean {
+		return this.state.cardTextStyles?.[tab] !== 'inside';
 	}
 
 	/**
@@ -598,7 +598,7 @@ export default class HoardPlugin extends Plugin {
 	 * Always the main window's body, not `activeDocument`: Obsidian copies the main body's custom
 	 * properties into its other windows (settings, popouts), never back.
 	 */
-	applyCardSizeCssVar(): void {
+	private applyCardSizeCssVar(): void {
 		window.document.body.setCssProps({ '--hoard-card-minimum-width': `${this.getCardMinWidth()}px` });
 	}
 
@@ -611,10 +611,10 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/** Composes settings from defaults, data.json and the shared base (shared keys win). */
-	loadSettings(): Promise<void> {
-		this.settings = composeSettings(this.local.data.settings, this.shared.get().settings, this.secretStore.read());
+	private loadSettings(): Promise<void> {
+		this.state = composeSettings(this.local.data.settings, this.shared.get().settings, this.secretStore.read());
 		// mirror into types.ts so the pure formatters render in the chosen order without a settings ref
-		setActiveDateFormat(this.settings.dateFormat);
+		setActiveDateFormat(this.state.dateFormat);
 		this.syncTypeNames();
 		// a restored backup or a WatchLog import can bring other keys and endpoints
 		this.applyApiKeys();
@@ -623,7 +623,7 @@ export default class HoardPlugin extends Plugin {
 
 	/** Pushes the composed keys into the API service; a changed key makes "no key" checks worth repeating. */
 	private applyApiKeys(): void {
-		const s = this.settings;
+		const s = this.state;
 		const api = this.apiService;
 		api.setJikanEndpoint(resolveJikanEndpoint(s.jikanBaseUrl));
 		api.setOmdbKey(s.omdbApiKey);
@@ -639,10 +639,10 @@ export default class HoardPlugin extends Plugin {
 
 	private async persistAll(): Promise<void> {
 		// keep the date formatters in step with the setting on every save
-		setActiveDateFormat(this.settings.dateFormat);
+		setActiveDateFormat(this.state.dateFormat);
 		this.syncTypeNames();
 		this.applyApiKeys();
-		await persistSettings(this.settings, this.local, this.shared, this.secretStore);
+		await persistSettings(this.state, this.local, this.shared, this.secretStore);
 	}
 
 	/**
@@ -650,13 +650,13 @@ export default class HoardPlugin extends Plugin {
 	 * the first available; a real, still-existing type → itself; otherwise the first available. Never
 	 * returns a non-existent type while at least one exists.
 	 */
-	resolveDefaultAddType(): string {
-		const types = this.settings.types ?? [];
+	private resolveDefaultAddType(): string {
+		const types = this.state.types ?? [];
 		const firstAvailable = types[0]?.name ?? '';
 		const exists = (name: string): boolean => !!name && types.some((t) => t.name === name);
-		const choice = this.settings.defaultAddType ?? LAST_USED_TYPE_SENTINEL;
+		const choice = this.state.defaultAddType ?? LAST_USED_TYPE_SENTINEL;
 		if (choice === LAST_USED_TYPE_SENTINEL) {
-			return exists(this.settings.lastAddedType) ? this.settings.lastAddedType : firstAvailable;
+			return exists(this.state.lastAddedType) ? this.state.lastAddedType : firstAvailable;
 		}
 		return exists(choice) ? choice : firstAvailable;
 	}
