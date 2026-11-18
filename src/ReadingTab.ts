@@ -4,15 +4,14 @@ import { t, type TranslationKey } from './i18n';
 import { readingStatusLabel } from './i18n/labels';
 import { apiErrorMessage } from './ApiService';
 import { fetchReadingCoverById, firstBookCover, searchBooks } from './coverRefresh';
-import type HoardPlugin from './main';
-import type { ReadingDataManager, ReadingKind } from './ReadingDataManager';
+import type { ReadingKind } from './ReadingDataManager';
 import { Book, Manga, ReadingStatus, ReadingCustomColumn, ReadingSavedFilterPreset, READING_STATUSES, SELECTABLE_READING_STATUSES, normalizeRowsLayout, READING_ROWS_SHELVES, bookUnitProgress, formatCount, sortByFavorited } from './types';
 import { searchItems, yearOf, type SearchFieldSpec } from './SearchQuery';
 import { renderSearchHelpButton } from './SearchHelpModal';
 import { renderShelf, renderShelfTitle, type ShelfSelect } from './RowsView';
-import { RowsCustomizeModal } from './RowsCustomizeModal';
-import { AddReadingModal } from './AddReadingModal';
-import { ReadingDetailModal } from './ReadingDetailModal';
+import { RowsCustomizeModal, type RowsCustomizeModalDeps } from './RowsCustomizeModal';
+import { AddReadingModal, type AddReadingModalDeps } from './AddReadingModal';
+import { ReadingDetailModal, type ReadingDetailModalDeps } from './ReadingDetailModal';
 import { coverFallbackColor, readingStatusColor } from './readingColors';
 import { ReadingManageColumnsModal } from './ReadingManageColumnsModal';
 import { ConfirmModal } from './ConfirmModal';
@@ -117,6 +116,12 @@ function selectValueOf(item: Book | Manga, colId: string): string {
 	return v === undefined || v === null ? '' : String(v);
 }
 
+export interface ReadingTabDeps extends AddReadingModalDeps, ReadingDetailModalDeps, RowsCustomizeModalDeps {
+	api: AddReadingModalDeps['api'] & ReadingDetailModalDeps['api'];
+	getCardMinWidth: () => number;
+	isCardTextUnder: (tab: 'reading') => boolean;
+}
+
 export class ReadingTab implements TabInstance {
 	// session-persistent state: survives tab switches and view rebuilds within the same plugin load,
 	// resets only on unload
@@ -131,8 +136,6 @@ export class ReadingTab implements TabInstance {
 	};
 
 	private container: HTMLElement;
-	private plugin: HoardPlugin;
-	private readingData: ReadingDataManager;
 	private searchQuery = '';
 	private dataChangeListener: () => void;
 	private contentEl: HTMLElement | null = null;
@@ -165,7 +168,7 @@ export class ReadingTab implements TabInstance {
 
 	private get activeSubTab(): SubTab {
 		if (ReadingTab.sessionSubTab !== null) return ReadingTab.sessionSubTab;
-		return this.readingData.getSettings().defaultSubTab ?? 'books';
+		return this.deps.reading.getSettings().defaultSubTab ?? 'books';
 	}
 	private set activeSubTab(value: SubTab) {
 		ReadingTab.sessionSubTab = value;
@@ -181,20 +184,18 @@ export class ReadingTab implements TabInstance {
 	// custom columns for the active sub-tab (Books → bookColumns, Manga → mangaColumns)
 	private activeColumns(): ReadingCustomColumn[] {
 		return this.activeSubTab === 'books'
-			? this.readingData.getBookColumns()
-			: this.readingData.getMangaColumns();
+			? this.deps.reading.getBookColumns()
+			: this.deps.reading.getMangaColumns();
 	}
 
-	constructor(container: HTMLElement, plugin: HoardPlugin, readingData: ReadingDataManager) {
+	constructor(container: HTMLElement, private deps: ReadingTabDeps) {
 		this.container = container;
-		this.plugin = plugin;
-		this.readingData = readingData;
 		this.dataChangeListener = () => this.renderContent();
-		this.readingData.onChange(this.dataChangeListener);
+		this.deps.reading.onChange(this.dataChangeListener);
 	}
 
 	destroy(): void {
-		this.readingData.offChange(this.dataChangeListener);
+		this.deps.reading.offChange(this.dataChangeListener);
 		this.closePopover();
 		this.destroyVirtualScroll();
 		for (const fn of this.activeCleanups) fn();
@@ -260,7 +261,7 @@ export class ReadingTab implements TabInstance {
 			onChange: (q) => { this.searchQuery = q; },
 			onCommit: () => this.renderContent(),
 			debounceMs: 200,
-			help: (host) => renderSearchHelpButton(host, this.plugin.app, t(this.activeSubTab === 'books' ? 'reading.tabs.books' : 'reading.tabs.manga'), () => this.searchFields()),
+			help: (host) => renderSearchHelpButton(host, this.deps.app, t(this.activeSubTab === 'books' ? 'reading.tabs.books' : 'reading.tabs.manga'), () => this.searchFields()),
 		});
 	}
 
@@ -334,8 +335,8 @@ export class ReadingTab implements TabInstance {
 					this.selectedIds.clear();
 				} else {
 					const items: Array<Book | Manga> = this.activeSubTab === 'books'
-						? this.readingData.getBooks()
-						: this.readingData.getMangaList();
+						? this.deps.reading.getBooks()
+						: this.deps.reading.getMangaList();
 					for (const item of this.applySearch(this.applyFilters(items))) {
 						this.selectedIds.add(item.id);
 					}
@@ -379,15 +380,15 @@ export class ReadingTab implements TabInstance {
 			e.stopPropagation();
 			const count = this.selectedIds.size;
 			new ConfirmModal(
-				this.plugin.app,
+				this.deps.app,
 				t('reading.deleteSelectedConfirm', { count }),
 				() => {
 					void (async () => {
 						const ids = Array.from(this.selectedIds);
 						if (this.activeSubTab === 'books') {
-							await this.readingData.removeBooksBatch(ids);
+							await this.deps.reading.removeBooksBatch(ids);
 						} else {
-							await this.readingData.removeMangaBatch(ids);
+							await this.deps.reading.removeMangaBatch(ids);
 						}
 						this.selectedIds.clear();
 						this.selectionMode = false;
@@ -409,18 +410,18 @@ export class ReadingTab implements TabInstance {
 				const isBooks = this.activeSubTab === 'books';
 				for (const id of this.selectedIds) {
 					if (isBooks) {
-						const book = this.readingData.getBook(id);
+						const book = this.deps.reading.getBook(id);
 						if (book) {
-							this.readingData.updateBookSilent({ ...book, status: newStatus });
+							this.deps.reading.updateBookSilent({ ...book, status: newStatus });
 						}
 					} else {
-						const manga = this.readingData.getManga(id);
+						const manga = this.deps.reading.getManga(id);
 						if (manga) {
-							this.readingData.updateMangaSilent({ ...manga, status: newStatus });
+							this.deps.reading.updateMangaSilent({ ...manga, status: newStatus });
 						}
 					}
 				}
-				await this.readingData.saveAndNotify();
+				await this.deps.reading.saveAndNotify();
 				statusSelect.value = '';
 				this.selectedIds.clear();
 				this.selectionMode = false;
@@ -505,7 +506,7 @@ export class ReadingTab implements TabInstance {
 
 	// Saved filter (single, Watchlist-style)
 	private getSavedFilter(): ReadingSavedFilterPreset | null {
-		return this.readingData.getSettings().savedFilters?.[this.activeSubTab] ?? null;
+		return this.deps.reading.getSettings().savedFilters?.[this.activeSubTab] ?? null;
 	}
 
 	private filtersMatchSaved(saved: ReadingSavedFilterPreset): boolean {
@@ -678,7 +679,7 @@ export class ReadingTab implements TabInstance {
 			ev.stopPropagation();
 			void (async () => {
 				// Preserve the other sub-tab's saved filter when updating this one.
-				const current = { ...(this.readingData.getSettings().savedFilters ?? {}) };
+				const current = { ...(this.deps.reading.getSettings().savedFilters ?? {}) };
 				if (!hasSavedFilter) {
 					current[this.activeSubTab] = {
 						name: 'Saved filter',
@@ -686,10 +687,10 @@ export class ReadingTab implements TabInstance {
 						statusInclude: READING_STATUSES.filter((s) => !draft.statusExclude.has(s)),
 						ratingMode: draft.ratingMode,
 					};
-					await this.readingData.updateSettings({ savedFilters: current });
+					await this.deps.reading.updateSettings({ savedFilters: current });
 				} else {
 					delete current[this.activeSubTab];
-					await this.readingData.updateSettings({ savedFilters: current });
+					await this.deps.reading.updateSettings({ savedFilters: current });
 					this.savedFilterActive = false;
 				}
 				this.closePopover();
@@ -956,8 +957,8 @@ export class ReadingTab implements TabInstance {
 
 		const isBooks = this.activeSubTab === 'books';
 		const items: Array<Book | Manga> = isBooks
-			? this.readingData.getBooks()
-			: this.readingData.getMangaList();
+			? this.deps.reading.getBooks()
+			: this.deps.reading.getMangaList();
 
 		if (items.length === 0) {
 			this.renderEmptyState();
@@ -1075,7 +1076,7 @@ export class ReadingTab implements TabInstance {
 		// pattern). "By status" is Reading's only grouped-grid section — with
 		// it off, the flat grid (the old Reading grid) renders at its layout
 		// position; with every section off, the flat grid is all there is.
-		const layout = normalizeRowsLayout(this.readingData.getSettings().rowsLayout, READING_ROWS_SHELVES, []);
+		const layout = normalizeRowsLayout(this.deps.reading.getSettings().rowsLayout, READING_ROWS_SHELVES, []);
 		const byStatusEnabled = layout.some((e) => e.id === 'byStatus' && e.enabled);
 		const anyShelfEnabled = layout.some((e) => e.id !== 'byStatus' && e.enabled);
 		for (const entry of layout) {
@@ -1109,14 +1110,14 @@ export class ReadingTab implements TabInstance {
 			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
-			new RowsCustomizeModal({ app: this.plugin.app, settings: this.plugin.settingsService }, {
+			new RowsCustomizeModal(this.deps, {
 				shelves: READING_ROWS_SHELVES.map((sh) => ({ id: sh.id, label: t(`reading.shelves.${sh.id}` as TranslationKey) })),
-				getLayout: () => this.readingData.getSettings().rowsLayout,
-				setLayout: (layout) => { this.readingData.getSettings().rowsLayout = layout; },
+				getLayout: () => this.deps.reading.getSettings().rowsLayout,
+				setLayout: (layout) => { this.deps.reading.getSettings().rowsLayout = layout; },
 				// The layout lives inside data.json's reading key, not
-				// plugin.settings — persist through the reading data manager
+				// the global settings — persist through the reading data manager
 				// (quiet: onChanged re-renders this tab itself).
-				persist: () => this.readingData.persistQuiet(),
+				persist: () => this.deps.reading.persistQuiet(),
 				onChanged: () => this.renderContent(),
 				hint: t('reading.customizeHint'),
 				// Reading has a single grouped-grid section — nothing to be
@@ -1140,8 +1141,8 @@ export class ReadingTab implements TabInstance {
 	 *  'under'; in 'inside' mode the text overlays the cover, so the cell is
 	 *  the bare 2:3 card. */
 	private readingMetrics(containerWidth: number): GridMetrics {
-		const base = computeGridMetrics(containerWidth, this.plugin.getCardMinWidth());
-		if (!this.plugin.isCardTextUnder('reading')) return base;
+		const base = computeGridMetrics(containerWidth, this.deps.getCardMinWidth());
+		if (!this.deps.isCardTextUnder('reading')) return base;
 		const cardHeight = base.cardHeight + 72;
 		return { cols: base.cols, cardWidth: base.cardWidth, cardHeight, rowHeight: cardHeight + 12 };
 	}
@@ -1254,7 +1255,7 @@ export class ReadingTab implements TabInstance {
 		for (const card of cards) {
 			const id = card.dataset.itemId;
 			if (!id) continue;
-			const item = kind === 'book' ? this.readingData.getBook(id) : this.readingData.getManga(id);
+			const item = kind === 'book' ? this.deps.reading.getBook(id) : this.deps.reading.getManga(id);
 			// Skip if it vanished, already has a cover, or failed earlier this session.
 			if (!item || item.coverUrl || this.coverFetchFailed.has(id)) continue;
 
@@ -1266,8 +1267,8 @@ export class ReadingTab implements TabInstance {
 					// Persist silently (no re-render) and update this card's <img> directly.
 					// When a title-based lookup resolved a new ID, store it too so future
 					// loads use the cheap ID path instead of re-searching.
-					if (sourceId) void this.readingData.updateCoverAndSource(kind, id, url, sourceId);
-					else void this.readingData.updateCoverUrl(kind, id, url);
+					if (sourceId) void this.deps.reading.updateCoverAndSource(kind, id, url, sourceId);
+					else void this.deps.reading.updateCoverUrl(kind, id, url);
 					this.applyCoverToCard(card, url, item.title);
 				} else {
 					this.coverFetchFailed.add(id);
@@ -1293,16 +1294,16 @@ export class ReadingTab implements TabInstance {
 	}
 
 	private async resolveBookCover(book: Book): Promise<{ url: string; sourceId: string }> {
-		const api = this.plugin.apiService;
+		const api = this.deps.api;
 		if (book.googleBooksId || book.openLibraryId) {
 			return { url: await fetchReadingCoverById(api, 'book', book), sourceId: '' };
 		}
-		const results = await searchBooks(api, this.plugin.settings, book.author ? `${book.title} ${book.author}` : book.title);
+		const results = await searchBooks(api, this.deps.settings.get(), book.author ? `${book.title} ${book.author}` : book.title);
 		return firstBookCover(results[0]);
 	}
 
 	private async resolveMangaCover(manga: Manga): Promise<{ url: string; sourceId: string }> {
-		const api = this.plugin.apiService;
+		const api = this.deps.api;
 		if (manga.malId) return { url: await fetchReadingCoverById(api, 'manga', manga), sourceId: '' };
 		const first = (await api.searchManga(manga.title))[0];
 		if (!first?.coverUrl || !first.malId) return { url: '', sourceId: '' };
@@ -1413,7 +1414,7 @@ export class ReadingTab implements TabInstance {
 		fallbackIcon: string,
 	): { card: HTMLElement; textHost: HTMLElement } {
 		const card = grid.createDiv({ cls: 'hoard-reading-card' });
-		if (!this.plugin.isCardTextUnder('reading')) card.addClass('is-text-inside');
+		if (!this.deps.isCardTextUnder('reading')) card.addClass('is-text-inside');
 
 		const cover = card.createDiv({ cls: 'hoard-reading-card__cover' });
 		if (item.coverUrl) {
@@ -1439,7 +1440,7 @@ export class ReadingTab implements TabInstance {
 
 		const statusBadge = cover.createSpan({ cls: 'hoard-reading-card__status-badge', text: readingStatusLabel(item.status) });
 		statusBadge.setCssProps({
-			'--hoard-reading-card-status-color': readingStatusColor(item.status, this.readingData.getSettings().statusColors),
+			'--hoard-reading-card-status-color': readingStatusColor(item.status, this.deps.reading.getSettings().statusColors),
 		});
 
 		const menuBtn = createIconButton(card, {
@@ -1452,7 +1453,7 @@ export class ReadingTab implements TabInstance {
 			this.openCardContextMenu(card, menuBtn, item);
 		});
 
-		const textHost = this.plugin.isCardTextUnder('reading')
+		const textHost = this.deps.isCardTextUnder('reading')
 			? card
 			: cover.createDiv({ cls: 'hoard-reading-card__overlay' });
 
@@ -1491,20 +1492,20 @@ export class ReadingTab implements TabInstance {
 				new Notice(t('reading.notices.noBookId'));
 				return;
 			}
-			if (!book.openLibraryId && !this.plugin.apiService.hasGoogleBooksKey()) {
+			if (!book.openLibraryId && !this.deps.api.hasGoogleBooksKey()) {
 				new Notice(t('reading.notices.googleBooksKeyRequired'));
 				return;
 			}
 			void (async () => {
 				try {
-					const coverUrl = await fetchReadingCoverById(this.plugin.apiService, 'book', book);
+					const coverUrl = await fetchReadingCoverById(this.deps.api, 'book', book);
 					if (!coverUrl) {
 						new Notice(t('reading.notices.coverFetchFailed'));
 						return;
 					}
-					const fresh = this.readingData.getBook(book.id);
+					const fresh = this.deps.reading.getBook(book.id);
 					if (!fresh) return;
-					await this.readingData.updateBook({ ...fresh, coverUrl });
+					await this.deps.reading.updateBook({ ...fresh, coverUrl });
 					new Notice(t('reading.notices.coverRefreshed'));
 				} catch (err) {
 					new Notice(apiErrorMessage(err));
@@ -1518,14 +1519,14 @@ export class ReadingTab implements TabInstance {
 			}
 			void (async () => {
 				try {
-					const coverUrl = await fetchReadingCoverById(this.plugin.apiService, 'manga', manga);
+					const coverUrl = await fetchReadingCoverById(this.deps.api, 'manga', manga);
 					if (!coverUrl) {
 						new Notice(t('reading.notices.coverFetchFailed'));
 						return;
 					}
-					const fresh = this.readingData.getManga(manga.id);
+					const fresh = this.deps.reading.getManga(manga.id);
 					if (!fresh) return;
-					await this.readingData.updateManga({ ...fresh, coverUrl });
+					await this.deps.reading.updateManga({ ...fresh, coverUrl });
 					new Notice(t('reading.notices.coverRefreshed'));
 				} catch {
 					new Notice(t('reading.notices.refreshFailed'));
@@ -1539,7 +1540,7 @@ export class ReadingTab implements TabInstance {
 		const fill = bar.createDiv({ cls: 'hoard-reading-card__progress-fill' });
 		fill.setCssProps({
 			'--hoard-reading-card-progress-width': `${percent}%`,
-			'--hoard-reading-card-progress-color': readingStatusColor(status, this.readingData.getSettings().statusColors),
+			'--hoard-reading-card-progress-color': readingStatusColor(status, this.deps.reading.getSettings().statusColors),
 		});
 	}
 
@@ -1562,9 +1563,7 @@ export class ReadingTab implements TabInstance {
 
 	private openAddModal(): void {
 		new AddReadingModal(
-			this.plugin.app,
-			this.plugin,
-			this.readingData,
+			this.deps,
 			this.activeSubTab === 'books' ? 'book' : 'manga',
 			() => this.renderContent(),
 		).open();
@@ -1572,9 +1571,7 @@ export class ReadingTab implements TabInstance {
 
 	private openManageColumns(): void {
 		new ReadingManageColumnsModal(
-			this.plugin.app,
-			this.plugin,
-			this.readingData,
+			this.deps,
 			this.activeSubTab === 'books' ? 'book' : 'manga',
 			() => this.renderContent(),
 		).open();
@@ -1582,9 +1579,7 @@ export class ReadingTab implements TabInstance {
 
 	private openDetailModal(mode: 'book' | 'manga', id: string): void {
 		new ReadingDetailModal(
-			this.plugin.app,
-			this.plugin,
-			this.readingData,
+			this.deps,
 			mode,
 			id,
 			() => this.renderContent(),

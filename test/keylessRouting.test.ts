@@ -5,6 +5,7 @@ import { resultIdKeys } from '../src/titleSearch';
 import type { Game, MediaSearchResult } from '../src/types';
 import type { GameDetailsResult, GameSearchResult } from '../src/ApiService';
 import { AddGameModal } from '../src/AddGameModal';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const row: MediaSearchResult = {
 	imdbId: 'tt0903747', title: 'Breaking Bad', mediaType: 'tv', episodes: 0, episodeDuration: 0, releaseDate: '', url: '', seasons: [],
@@ -48,8 +49,8 @@ describe('Steam pick in AddGameModal', () => {
 			generateGameId: () => 'g1',
 			addGame: vi.fn((g: Game) => { added.push(g); return Promise.resolve(); }),
 		};
-		const plugin = { settings: { gamesApiSource: 'rawg', priorities: [] }, apiService: api };
-		const modal = new AddGameModal({} as never, plugin as never, gameData as never, () => {});
+		const deps = { app: {}, settings: fakeSettings({ gamesApiSource: 'rawg', priorities: [] }), games: gameData, api };
+		const modal = new AddGameModal(deps as never, () => {});
 		modal.open();
 		return { modal, api, added };
 	}

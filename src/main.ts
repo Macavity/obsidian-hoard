@@ -265,6 +265,10 @@ export default class HoardPlugin extends Plugin {
 	private hoardViewDeps(): HoardViewDeps {
 		return {
 			...this.listTabDeps(),
+			api: this.apiService,
+			history: this.historyManager,
+			reading: this.readingDataManager,
+			games: this.gameDataManager,
 			importRunning: () => this.importRunning,
 			plugin: this, // TODO(Task 6-8): the other tabs still take the plugin
 		};
@@ -596,8 +600,8 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/**
-	 * Legacy entry: persists without the change signal. Callers that need a re-render emit it
-	 * themselves, so delegating to `settingsService.update` would double the re-render.
+	 * Legacy entry: persists without the change signal. Kept for SettingsTab, which emits the signal
+	 * itself after its own writes; routing it through `settingsService.update` would emit twice.
 	 */
 	saveSettings(): Promise<void> {
 		return this.persistAll();

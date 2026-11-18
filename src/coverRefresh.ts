@@ -8,6 +8,18 @@ import type { Book, Game, HoardPluginSettings, HoardTitle, Manga } from './types
 import { effectiveBookSource, effectiveGameSource } from './apiSources';
 import { steamLibraryCover } from './steamStoreApi';
 
+/** What the game cover lookups call on the API service. */
+export type GameCoverApi = Pick<
+	ApiService,
+	| 'steamCoverExists' | 'getIgdbGameDetails' | 'getRawgGameDetails'
+	| 'searchIgdbGames' | 'searchRawgGames' | 'searchSteamStore'
+	| 'hasRawgKey' | 'hasIgdbCredentials'
+>;
+/** What book searches call on the API service. */
+export type BookSearchApi = Pick<ApiService, 'searchGoogleBooks' | 'searchOpenLibrary' | 'hasGoogleBooksKey'>;
+/** What the book and manga cover-by-id lookups call on the API service. */
+export type ReadingCoverApi = Pick<ApiService, 'getOpenLibraryWork' | 'getGoogleBookById' | 'getMangaByMalId'>;
+
 export interface GameCover { url: string; source: '' | 'rawg' | 'igdb' | 'steam'; apiId: string }
 
 /**
@@ -16,7 +28,7 @@ export interface GameCover { url: string; source: '' | 'rawg' | 'igdb' | 'steam'
  * caller can persist them. `source` is '' when there is nothing new to store. Never throws.
  */
 export async function resolveGameCover(
-	api: ApiService,
+	api: GameCoverApi,
 	searchSource: 'steam' | 'rawg' | 'igdb',
 	game: Game,
 	idOnly = false,
@@ -38,7 +50,7 @@ export async function resolveGameCover(
 	}
 }
 
-async function gameCoverById(api: ApiService, source: string, apiId: string): Promise<string> {
+async function gameCoverById(api: GameCoverApi, source: string, apiId: string): Promise<string> {
 	if (source === 'steam') return (await api.steamCoverExists(apiId)) ? steamLibraryCover(apiId) : '';
 	const details = source === 'igdb'
 		? await api.getIgdbGameDetails(Number(apiId))
@@ -46,7 +58,7 @@ async function gameCoverById(api: ApiService, source: string, apiId: string): Pr
 	return details?.coverUrl ?? '';
 }
 
-function searchGamesByTitle(api: ApiService, source: 'steam' | 'rawg' | 'igdb', title: string): Promise<GameSearchResult[]> {
+function searchGamesByTitle(api: GameCoverApi, source: 'steam' | 'rawg' | 'igdb', title: string): Promise<GameSearchResult[]> {
 	if (source === 'igdb') return api.searchIgdbGames(title);
 	if (source === 'rawg') return api.searchRawgGames(title);
 	return api.searchSteamStore(title);
@@ -54,7 +66,7 @@ function searchGamesByTitle(api: ApiService, source: 'steam' | 'rawg' | 'igdb', 
 
 /** Book search via the effective source: Google Books with a key and chosen, else keyless Open Library. */
 export function searchBooks(
-	api: ApiService,
+	api: BookSearchApi,
 	settings: Pick<HoardPluginSettings, 'booksApiSource'>,
 	query: string,
 ): Promise<BookSearchResult[]> {
@@ -67,20 +79,20 @@ export function firstBookCover(hit: BookSearchResult | undefined): { url: string
 	return hit?.coverUrl && sourceId ? { url: hit.coverUrl, sourceId } : { url: '', sourceId: '' };
 }
 
-async function bookCoverById(api: ApiService, book: Book): Promise<string> {
+async function bookCoverById(api: ReadingCoverApi, book: Book): Promise<string> {
 	if (book.openLibraryId) return (await api.getOpenLibraryWork(book.openLibraryId))?.coverUrl ?? '';
 	return book.googleBooksId ? (await api.getGoogleBookById(book.googleBooksId))?.coverUrl ?? '' : '';
 }
 
 /** The cover of a book (Open Library or Google Books id) or manga (MAL id); '' without id or cover. Throws on API errors. */
-export async function fetchReadingCoverById(api: ApiService, kind: ReadingKind, item: Book | Manga): Promise<string> {
+export async function fetchReadingCoverById(api: ReadingCoverApi, kind: ReadingKind, item: Book | Manga): Promise<string> {
 	if (kind === 'book') return bookCoverById(api, item as Book);
 	const malId = (item as Manga).malId;
 	return malId ? (await api.getMangaByMalId(Number(malId)))?.coverUrl ?? '' : '';
 }
 
 export interface CoverRefreshDeps {
-	api: ApiService;
+	api: GameCoverApi & ReadingCoverApi & BookSearchApi;
 	gamesApiSource: 'steam' | 'rawg' | 'igdb';
 	dataManager: Pick<DataManager, 'getTitles'>;
 	posterService: Pick<PosterService, 'enqueue'>;

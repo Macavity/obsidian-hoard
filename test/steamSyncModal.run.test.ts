@@ -4,6 +4,7 @@ import type { SteamOwnedGame } from '../src/ApiService';
 import { steamLibraryCover } from '../src/steamStoreApi';
 import { GAME_AUTO_STATUS, type Game, type SteamSyncUpdate } from '../src/types';
 import { clickByText, shownNotices } from './helpers/csvWizard';
+import { fakeSettings } from './helpers/fakeSettings';
 
 type Details = Awaited<ReturnType<import('../src/ApiService').ApiService['getSteamAppDetails']>>;
 type Achievements = { earned: number; total: number } | null;
@@ -34,8 +35,8 @@ function setup(opts: Opts = {}) {
 		types: opts.types ?? [{ name: 'Action' }, { name: 'RPG' }],
 	};
 	const plugin = {
-		settings: { colorTheme: 'default' },
-		apiService: {
+		settings: fakeSettings({ colorTheme: 'default' }),
+		api: {
 			getSteamOwnedGames: () => Promise.resolve({ ok: true, games: opts.library ?? [] }),
 			getSteamAchievements: () => { opts.onAchievements?.(); return Promise.resolve(opts.achievements ?? { earned: 3, total: 10 }); },
 			getSteamAppDetails: (id: string) => Promise.resolve(opts.details?.[id] ?? null),
@@ -48,7 +49,7 @@ function setup(opts: Opts = {}) {
 		applySteamSync: (u: SteamSyncUpdate[]) => { updates.push(...u); return Promise.resolve(u.length); },
 		addGame: (g: Game) => { added.push(g); return Promise.resolve(); },
 	};
-	const modal = new SteamSyncModal({} as never, plugin as never, gameData as never);
+	const modal = new SteamSyncModal({ app: {}, ...plugin, games: gameData } as never);
 	return { modal, updates, added };
 }
 

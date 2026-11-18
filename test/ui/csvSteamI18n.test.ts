@@ -3,6 +3,7 @@ import { setLocale, t } from '../../src/i18n';
 import de from '../../src/i18n/de';
 import { ReadingCsvChoiceModal } from '../../src/ReadingCsvChoiceModal';
 import { SteamSyncModal } from '../../src/SteamSyncModal';
+import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));
 
@@ -31,10 +32,12 @@ describe('csv and steam i18n', () => {
 
 	it('shows a German Steam failure message', async () => {
 		setLocale('de');
-		const modal = new SteamSyncModal({} as never, {
-			settings: {},
-			apiService: { getSteamOwnedGames: () => Promise.resolve({ ok: false, reason: 'empty' }) },
-		} as never, {} as never);
+		const modal = new SteamSyncModal({
+			app: {},
+			settings: fakeSettings({}),
+			api: { getSteamOwnedGames: () => Promise.resolve({ ok: false, reason: 'empty' }) },
+			games: {},
+		} as never);
 		modal.onOpen();
 		await new Promise((r) => setTimeout(r, 0));
 		const texts = allText(modal.contentEl);

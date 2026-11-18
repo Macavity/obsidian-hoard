@@ -1,11 +1,11 @@
 import { App, FuzzySuggestModal, Modal, Notice, TFile } from 'obsidian';
-import type HoardPlugin from './main';
+import type { SettingsReader } from './SettingsService';
 import type { ReadingDataManager } from './ReadingDataManager';
 import { newBook, newManga } from './entryFactories';
-import type { BookSearchResult, MangaSearchResult } from './ApiService';
+import type { ApiService, BookSearchResult, MangaSearchResult } from './ApiService';
 import { apiErrorMessage } from './ApiService';
 import { renderSearchResultRow } from './SearchThumbnail';
-import { searchBooks } from './coverRefresh';
+import { searchBooks, type BookSearchApi } from './coverRefresh';
 import { LibraryIndex, bookResultIdKeys, mangaResultIdKeys } from './LibraryIndex';
 import { renderStarRating } from './StarRating';
 import { createDatePicker } from './DatePicker';
@@ -98,9 +98,14 @@ export class VaultFilePicker extends FuzzySuggestModal<TFile> {
 	}
 }
 
+export interface AddReadingModalDeps {
+	app: App;
+	settings: SettingsReader;
+	reading: ReadingDataManager;
+	api: BookSearchApi & Pick<ApiService, 'searchManga' | 'getMangaByMalId' | 'getGoogleBookById' | 'getOpenLibraryWork'>;
+}
+
 export class AddReadingModal extends Modal {
-	private plugin: HoardPlugin;
-	private readingData: ReadingDataManager;
 	private mode: ReadingMode;
 	private state: ReadingFormState;
 	private existingId: string | null;
@@ -119,21 +124,17 @@ export class AddReadingModal extends Modal {
 	private libIndex: LibraryIndex | null = null;
 
 	constructor(
-		app: App,
-		plugin: HoardPlugin,
-		readingData: ReadingDataManager,
+		private deps: AddReadingModalDeps,
 		mode: ReadingMode,
 		onSaved: () => void,
 		initial?: { state: ReadingFormState; id: string },
 		prefillSearch?: string,
 	) {
-		super(app);
-		this.plugin = plugin;
-		this.readingData = readingData;
+		super(deps.app);
 		this.mode = mode;
 		this.state = initial ? { ...initial.state } : emptyFormState();
 		if (!initial) {
-			const defStatus = readingData.getSettings().defaultStatus;
+			const defStatus = deps.reading.getSettings().defaultStatus;
 			if (defStatus) this.state.status = defStatus;
 		}
 		this.existingId = initial?.id ?? null;
@@ -142,7 +143,7 @@ export class AddReadingModal extends Modal {
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
+		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
 		this.modalEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.addClass('hoard-view');
@@ -215,9 +216,9 @@ export class AddReadingModal extends Modal {
 	private openLinkedVaultPage(): void {
 		const path = this.state.vaultPage;
 		if (!path) return;
-		const file = this.plugin.app.vault.getAbstractFileByPath(path);
+		const file = this.app.vault.getAbstractFileByPath(path);
 		if (file instanceof TFile) {
-			void this.plugin.app.workspace.getLeaf('tab').openFile(file);
+			void this.app.workspace.getLeaf('tab').openFile(file);
 			this.close();
 		} else {
 			new Notice(t('add.reading.linkMissing'));
@@ -307,14 +308,14 @@ export class AddReadingModal extends Modal {
 	}
 
 	private async lookupBooks(query: string): Promise<LookupOutcome> {
-		return { kind: 'books', results: await searchBooks(this.plugin.apiService, this.plugin.settings, query) };
+		return { kind: 'books', results: await searchBooks(this.deps.api, this.deps.settings.get(), query) };
 	}
 
 	private async lookupManga(query: string): Promise<LookupOutcome> {
 		if (!/^\d+$/.test(query)) {
-			return { kind: 'manga', results: await this.plugin.apiService.searchManga(query) };
+			return { kind: 'manga', results: await this.deps.api.searchManga(query) };
 		}
-		const single = await this.plugin.apiService.getMangaByMalId(parseInt(query, 10));
+		const single = await this.deps.api.getMangaByMalId(parseInt(query, 10));
 		return { kind: 'manga', results: single ? [single] : [] };
 	}
 
@@ -337,8 +338,8 @@ export class AddReadingModal extends Modal {
 		// books check Books, manga check Manga — the two libraries stay separate
 		if (!this.libIndex) {
 			this.libIndex = LibraryIndex.build({
-				books: () => this.plugin.readingDataManager.getBooks(),
-				manga: () => this.plugin.readingDataManager.getMangaList(),
+				books: () => this.deps.reading.getBooks(),
+				manga: () => this.deps.reading.getMangaList(),
 			}, [this.mode === 'book' ? 'books' : 'manga']);
 		}
 		const libIndex = this.libIndex;
@@ -375,7 +376,7 @@ export class AddReadingModal extends Modal {
 
 	private async enrichBook(r: BookSearchResult, gen: number): Promise<void> {
 		try {
-			const api = this.plugin.apiService;
+			const api = this.deps.api;
 			const detail = r.googleBooksId ? await api.getGoogleBookById(r.googleBooksId) : await api.getOpenLibraryWork(r.openLibraryId);
 			if (gen !== this.selectGen || !detail) return; // a newer selection superseded this one
 			if (r.googleBooksId) this.applyGoogleDetail(detail);
@@ -412,7 +413,7 @@ export class AddReadingModal extends Modal {
 		// search returns null chapters/volumes for ongoing titles — fetch detail only for the selected manga.
 		if (r.malId > 0) {
 			void (async () => {
-				const detail = await this.plugin.apiService.getMangaByMalId(r.malId);
+				const detail = await this.deps.api.getMangaByMalId(r.malId);
 				if (gen !== this.selectGen || !detail) return; // superseded or no data
 				this.state.totalChapters = detail.totalChapters > 0 ? detail.totalChapters : this.state.totalChapters;
 				this.state.totalVolumes = detail.totalVolumes > 0 ? detail.totalVolumes : this.state.totalVolumes;
@@ -548,8 +549,8 @@ export class AddReadingModal extends Modal {
 	private renderStars(): void {
 		if (!this.starsWrap) return;
 		renderStarRating(this.starsWrap, this.state.rating, {
-			allowHalf: this.plugin.settings.halfStarRatings ?? false,
-			tiers: this.plugin.settings.ratingSystem,
+			allowHalf: this.deps.settings.get().halfStarRatings ?? false,
+			tiers: this.deps.settings.get().ratingSystem,
 			showLabel: true,
 			onChange: (value) => {
 				this.state.rating = value;
@@ -659,7 +660,7 @@ export class AddReadingModal extends Modal {
 
 	private async saveBook(title: string): Promise<void> {
 		if (this.existingId) {
-			const existing = this.readingData.getBook(this.existingId);
+			const existing = this.deps.reading.getBook(this.existingId);
 			if (!existing) {
 				new Notice(t('add.reading.bookGone'));
 				return;
@@ -669,10 +670,10 @@ export class AddReadingModal extends Modal {
 				title,
 				...this.bookFormFields(),
 			};
-			await this.readingData.updateBook(updated);
+			await this.deps.reading.updateBook(updated);
 		} else {
-			await this.readingData.addBook(newBook({
-				id: this.readingData.generateBookId(title),
+			await this.deps.reading.addBook(newBook({
+				id: this.deps.reading.generateBookId(title),
 				title,
 				...this.bookFormFields(),
 			}));
@@ -700,7 +701,7 @@ export class AddReadingModal extends Modal {
 
 	private async saveManga(title: string): Promise<void> {
 		if (this.existingId) {
-			const existing = this.readingData.getManga(this.existingId);
+			const existing = this.deps.reading.getManga(this.existingId);
 			if (!existing) {
 				new Notice(t('add.reading.mangaGone'));
 				return;
@@ -710,10 +711,10 @@ export class AddReadingModal extends Modal {
 				title,
 				...this.mangaFormFields(),
 			};
-			await this.readingData.updateManga(updated);
+			await this.deps.reading.updateManga(updated);
 		} else {
-			await this.readingData.addManga(newManga({
-				id: this.readingData.generateMangaId(title),
+			await this.deps.reading.addManga(newManga({
+				id: this.deps.reading.generateMangaId(title),
 				title,
 				...this.mangaFormFields(),
 			}));

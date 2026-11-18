@@ -6,6 +6,7 @@ import { GroupDetailModal, renderCreditsRows } from '../../src/TitleDetailModal'
 import { GameGroupDetailModal } from '../../src/GameDetailModal';
 import { El } from '../helpers/fakeEl';
 import { makeTitle } from '../helpers/setupDataManager';
+import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));
 
@@ -46,10 +47,10 @@ describe('detail modals i18n', () => {
 
 	it('renders the game group modal count in German', () => {
 		setLocale('de');
-		const modal = new GameGroupDetailModal({} as never, {
-			settings: {},
-		} as never, {
-			getSettings: () => ({ types: [], statuses: [] }),
+		const modal = new GameGroupDetailModal({
+			app: {},
+			settings: fakeSettings({}),
+			games: { getSettings: () => ({ types: [], statuses: [] }) },
 		} as never, { name: 'Zelda' } as never, []);
 		(modal as unknown as { renderAll: () => void }).renderAll();
 		expect(domText(modal.contentEl)).toContain('0 Spiele');

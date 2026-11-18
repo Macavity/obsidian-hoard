@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GamesTab } from '../src/GamesTab';
 import { defaultGamesSettings, DEFAULT_SETTINGS, type Game, type GameGroup } from '../src/types';
 import { t } from '../src/i18n';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const groupModalOpened = vi.hoisted(() => vi.fn());
 
@@ -50,16 +51,18 @@ function build(o: Setup = {}) {
 		getRecommendedDaily: () => ({ date: '', ids: [] as string[] }),
 		setRecommendedDaily: vi.fn(),
 	};
-	const plugin = {
+	const deps = {
 		app: {},
-		settings: { ...DEFAULT_SETTINGS, gamesFilters: o.favoritesOnly ? { favoritesOnly: true } : undefined },
+		settings: fakeSettings({ ...DEFAULT_SETTINGS, gamesFilters: o.favoritesOnly ? { favoritesOnly: true } : undefined }),
+		games: gameData,
+		api: {},
 		isCardTextUnder: () => false,
 		getCardMinWidth: () => 150,
 	};
 	const container = document.createElement('div');
 	const content = document.createElement('div');
 	container.appendChild(content);
-	const tab = new GamesTab(container, plugin as never, gameData as never);
+	const tab = new GamesTab(container, deps as never);
 	const internals = tab as unknown as { contentEl: HTMLElement; renderContent: () => void; searchQuery: string };
 	internals.contentEl = content;
 	if (o.query) internals.searchQuery = o.query;

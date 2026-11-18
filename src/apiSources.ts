@@ -20,11 +20,11 @@ export function effectiveMediaSource(
 	return 'cinemeta';
 }
 
-export function effectiveBookSource(settings: Pick<HoardPluginSettings, 'booksApiSource'>, api: KeyProbe): BookSource {
+export function effectiveBookSource(settings: Pick<HoardPluginSettings, 'booksApiSource'>, api: Pick<KeyProbe, 'hasGoogleBooksKey'>): BookSource {
 	return settings.booksApiSource === 'google' && api.hasGoogleBooksKey() ? 'google' : 'openlibrary';
 }
 
-export function effectiveGameSource(settings: Pick<HoardPluginSettings, 'gamesApiSource'>, api: KeyProbe): GameSource {
+export function effectiveGameSource(settings: Pick<HoardPluginSettings, 'gamesApiSource'>, api: Pick<KeyProbe, 'hasRawgKey' | 'hasIgdbCredentials'>): GameSource {
 	if (settings.gamesApiSource === 'rawg' && api.hasRawgKey()) return 'rawg';
 	if (settings.gamesApiSource === 'igdb' && api.hasIgdbCredentials()) return 'igdb';
 	return 'steam';

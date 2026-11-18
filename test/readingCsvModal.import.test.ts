@@ -18,7 +18,7 @@ function setup(kind: ReadingCsvKind, defaultStatus?: string) {
 		addMangaBatch: (c: Manga[]) => { manga.push(c); return Promise.resolve(); },
 		notifyChange,
 	};
-	const modal = new ReadingCsvModal({} as never, { readingDataManager } as never, kind, 'import');
+	const modal = new ReadingCsvModal({ app: {} as never, reading: readingDataManager as never }, kind, 'import');
 	return { modal, books, manga, notifyChange };
 }
 

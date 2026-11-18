@@ -3,6 +3,7 @@ import { FuzzySuggestModal, Notice } from 'obsidian';
 import { ReadingDetailModal } from '../src/ReadingDetailModal';
 import { t } from '../src/i18n';
 import type { Book, Manga, ReadingCustomColumn } from '../src/types';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
@@ -51,16 +52,17 @@ function build(o: Opts = {}) {
 	};
 	const getAbstractFileByPath = vi.fn(() => o.onFile ?? null);
 	const openFile = vi.fn();
-	const plugin = {
-		settings: {},
-		apiService,
+	const deps = {
+		settings: fakeSettings({}),
+		api: apiService,
+		reading: readingData,
 		app: {
 			vault: { getAbstractFileByPath, getMarkdownFiles: () => o.files ?? [] },
 			workspace: { getLeaf: () => ({ openFile }) },
 		},
 	};
 	const onChanged = vi.fn();
-	const modal = new ReadingDetailModal({} as never, plugin as never, readingData as never, mode, 'x', onChanged);
+	const modal = new ReadingDetailModal(deps as never, mode, 'x', onChanged);
 	const x = modal as unknown as {
 		refetchCoverFromId: (id: string) => Promise<void>;
 		renderCustomValueEditor: (cell: HTMLElement, item: Book | Manga, col: ReadingCustomColumn, cur: string | number | undefined) => void;

@@ -1,8 +1,8 @@
 import type HoardPlugin from './main';
 import type { DataManager } from './DataManager';
 import { AddTitleModal, type AddTitleModalDeps } from './AddTitleModal';
-import { AddReadingModal } from './AddReadingModal';
-import { AddGameModal } from './AddGameModal';
+import { AddReadingModal, type AddReadingModalDeps } from './AddReadingModal';
+import { AddGameModal, type AddGameModalDeps } from './AddGameModal';
 import { DraftChoiceModal } from './DraftChoiceModal';
 
 export interface AddRouteOptions {
@@ -46,15 +46,27 @@ export function openAddForTitle(opts: AddRouteOptions): void {
 				seasons: [],
 			}).open();
 		} else if (choice === 'game') {
-			new AddGameModal(plugin.app, plugin, plugin.gameDataManager, done, {
+			// TODO(Task 7): AddRouter takes AddGameModalDeps instead of the plugin
+			const deps: AddGameModalDeps = {
+				app: plugin.app,
+				settings: plugin.settingsService,
+				games: plugin.gameDataManager,
+				api: plugin.apiService,
+			};
+			new AddGameModal(deps, done, {
 				searchQuery: title,
 				title,
 			}).open();
 		} else {
+			// TODO(Task 7): AddRouter takes AddReadingModalDeps instead of the plugin
+			const deps: AddReadingModalDeps = {
+				app: plugin.app,
+				settings: plugin.settingsService,
+				reading: plugin.readingDataManager,
+				api: plugin.apiService,
+			};
 			new AddReadingModal(
-				plugin.app,
-				plugin,
-				plugin.readingDataManager,
+				deps,
 				choice,
 				done,
 				undefined,

@@ -2,7 +2,6 @@ import type { App } from 'obsidian';
 import { CsvModalBase, rowsToCsv, type CsvFieldDef, type CsvExportRow, type CsvSelectOption } from './csv/CsvModalBase';
 import { t } from './i18n';
 import { readingStatusLabel } from './i18n/labels';
-import type HoardPlugin from './main';
 import type { ReadingDataManager } from './ReadingDataManager';
 import { newBook, newManga } from './entryFactories';
 import type { Book, Manga, ReadingStatus } from './types';
@@ -89,6 +88,14 @@ function bookProgressUnit(entry: Partial<Book>): 'words' | 'pages' {
 
 // Modal
 
+export interface ReadingCsvModalDeps {
+	app: App;
+	reading: Pick<
+		ReadingDataManager,
+		'getBooks' | 'getMangaList' | 'generateBookId' | 'generateMangaId' | 'getSettings' | 'addBookBatch' | 'addMangaBatch' | 'notifyChange'
+	>;
+}
+
 export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 	private schema: ReadingSchema;
 
@@ -96,16 +103,15 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 		return t(`csv.library.${this.kind}`);
 	}
 
-	// TODO(Task 6): replace the plugin with ReadingCsvModalDeps
-	constructor(app: App, protected plugin: HoardPlugin, private kind: ReadingCsvKind, mode: 'export' | 'import') {
-		super(app, mode);
+	constructor(private deps: ReadingCsvModalDeps, private kind: ReadingCsvKind, mode: 'export' | 'import') {
+		super(deps.app, mode);
 		this.schema = schemaFor(kind);
 	}
 
 	private getItems(): (Book | Manga)[] {
 		return this.kind === 'book'
-			? this.plugin.readingDataManager.getBooks()
-			: this.plugin.readingDataManager.getMangaList();
+			? this.deps.reading.getBooks()
+			: this.deps.reading.getMangaList();
 	}
 
 	// Export
@@ -211,7 +217,7 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 		const common = this.commonFields(entry, defaultStatus);
 		return newBook({
 			...common,
-			id: this.plugin.readingDataManager.generateBookId(common.title),
+			id: this.deps.reading.generateBookId(common.title),
 			progressUnit: bookProgressUnit(entry),
 			pagesRead: entry.pagesRead,
 			totalPages: entry.totalPages,
@@ -226,7 +232,7 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 		const common = this.commonFields(entry, defaultStatus);
 		return newManga({
 			...common,
-			id: this.plugin.readingDataManager.generateMangaId(common.title),
+			id: this.deps.reading.generateMangaId(common.title),
 			volumesRead: entry.volumesRead,
 			totalVolumes: entry.totalVolumes,
 			malId: entry.malId,
@@ -239,7 +245,7 @@ export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 
 		this.startImportUi(toImport.length);
 
-		const reading: ReadingDataManager = this.plugin.readingDataManager;
+		const reading = this.deps.reading;
 		const defaultStatus: ReadingStatus = reading.getSettings().defaultStatus ?? 'Plan to Read';
 
 		let added = 0;

@@ -3,6 +3,7 @@ import { Notice, Platform } from 'obsidian';
 import { GameDetailModal } from '../src/GameDetailModal';
 import { DEFAULT_SETTINGS, type Game, type GameGroup } from '../src/types';
 import { t } from '../src/i18n';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
@@ -69,13 +70,14 @@ function build(o: Opts = {}) {
 		getSteamOwnedGames: vi.fn(() => Promise.resolve(steam.library ?? { ok: true, games: [] })),
 		getSteamAchievements: vi.fn(() => Promise.resolve(steam.achievements ?? null)),
 	};
-	const plugin = {
-		settings: { ...DEFAULT_SETTINGS },
-		apiService,
+	const deps = {
 		app: {},
+		settings: fakeSettings({ ...DEFAULT_SETTINGS }),
+		games: gameData,
+		api: apiService,
 	};
 	(Platform as { isMobile: boolean }).isMobile = o.mobile ?? false;
-	const modal = new GameDetailModal({} as never, plugin as never, gameData as never, game);
+	const modal = new GameDetailModal(deps as never, game);
 	modal.open();
 	const root = (modal as unknown as { contentEl: HTMLElement }).contentEl;
 	const draft = () => (modal as unknown as { draft: Game }).draft;

@@ -7,6 +7,7 @@ import { defaultGamesSettings, DEFAULT_SETTINGS } from '../../src/types';
 import { ReadingManageColumnsModal } from '../../src/ReadingManageColumnsModal';
 import { ReadingTab } from '../../src/ReadingTab';
 import { El } from '../helpers/fakeEl';
+import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));
 
@@ -18,10 +19,14 @@ describe('reading and games i18n', () => {
 	it('renders the reading empty state in German', () => {
 		setLocale('de');
 		const container = new El('root');
-		const tab = new ReadingTab(container as never, {} as never, {
-			onChange: () => {}, offChange: () => {},
-			getSettings: () => ({ defaultSubTab: 'books' }),
-			getBooks: () => [],
+		const tab = new ReadingTab(container as never, {
+			app: {},
+			settings: fakeSettings({}),
+			reading: {
+				onChange: () => {}, offChange: () => {},
+				getSettings: () => ({ defaultSubTab: 'books' }),
+				getBooks: () => [],
+			},
 		} as never);
 		(tab as unknown as { contentEl: El }).contentEl = container;
 		(tab as unknown as { renderContent: () => void }).renderContent();
@@ -32,10 +37,14 @@ describe('reading and games i18n', () => {
 
 	it('renders the manage fields modal in German', () => {
 		setLocale('de');
-		const modal = new ReadingManageColumnsModal({} as never, { settings: {} } as never, {
-			getSettings: () => ({}),
-			getBookColumns: () => [],
-			getMangaColumns: () => [],
+		const modal = new ReadingManageColumnsModal({
+			app: {},
+			settings: fakeSettings({}),
+			reading: {
+				getSettings: () => ({}),
+				getBookColumns: () => [],
+				getMangaColumns: () => [],
+			},
 		} as never, 'book', () => {});
 		const internals = modal as unknown as {
 			renderStyleToggle: (parent: El) => void;
@@ -54,11 +63,15 @@ describe('reading and games i18n', () => {
 	it('renders the games empty state in German', () => {
 		setLocale('de');
 		const container = new El('root');
-		const tab = new GamesTab(container as never, { settings: {} } as never, {
-			onChange: () => {}, offChange: () => {},
-			getSavedFilterPreset: () => null,
-			getGames: () => [],
-			getGroups: () => [],
+		const tab = new GamesTab(container as never, {
+			app: {},
+			settings: fakeSettings({}),
+			games: {
+				onChange: () => {}, offChange: () => {},
+				getSavedFilterPreset: () => null,
+				getGames: () => [],
+				getGroups: () => [],
+			},
 		} as never);
 		(tab as unknown as { contentEl: El }).contentEl = container;
 		(tab as unknown as { renderContent: () => void }).renderContent();
@@ -70,9 +83,11 @@ describe('reading and games i18n', () => {
 		setLocale('de');
 		const game = { id: 'g1', title: 'Hades', status: 'Playing', priority: 'High', type: '', platforms: [] };
 		const modal = new GameDetailModal(
-			{} as never,
-			{ settings: { priorities: DEFAULT_SETTINGS.priorities.map((p) => ({ name: p.name })) } } as never,
-			{ getGroups: () => [], getSettings: () => ({ ...defaultGamesSettings(), statuses: defaultGamesSettings().statuses.map((s) => ({ name: s.name })) }) } as never,
+			{
+				app: {},
+				settings: fakeSettings({ priorities: DEFAULT_SETTINGS.priorities.map((p) => ({ name: p.name })) }),
+				games: { getGroups: () => [], getSettings: () => ({ ...defaultGamesSettings(), statuses: defaultGamesSettings().statuses.map((s) => ({ name: s.name })) }) },
+			} as never,
 			game as never,
 		);
 		const badgeRow = new El('div') as El & { empty: () => void };

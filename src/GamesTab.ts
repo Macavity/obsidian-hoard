@@ -2,8 +2,7 @@ import type { TabInstance } from './ui/TabInstance';
 import { Notice, TFile } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { gameStatusLabel } from './i18n/labels';
-import type HoardPlugin from './main';
-import type { GameDataManager } from './GameDataManager';
+import type { SettingsReader, SettingsWriter } from './SettingsService';
 import {
 	Game, GameGroup, GamesSavedFilterPreset, GAME_AUTO_STATUS, GAME_FINISHED_STATUS,
 	normalizeRowsLayout, GAMES_ROWS_SHELVES, ROWS_EXCLUSIVE_SHELVES, sortByFavorited,
@@ -11,7 +10,7 @@ import {
 } from './types';
 import { searchItems, yearOf, type SearchFieldSpec } from './SearchQuery';
 import { renderSearchHelpButton } from './SearchHelpModal';
-import { RowsCustomizeModal } from './RowsCustomizeModal';
+import { RowsCustomizeModal, type RowsCustomizeModalDeps } from './RowsCustomizeModal';
 import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from './VirtualGrid';
 import { VirtualScroller } from './VirtualScroller';
 import { LazyCardObserver } from './LazyCardObserver';
@@ -28,8 +27,8 @@ import { resolveGameCover, type GameCover } from './coverRefresh';
 import { effectiveGameSource } from './apiSources';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from './ui/TabFilters';
 import { ConfirmModal } from './ConfirmModal';
-import { GameDetailModal, GameGroupDetailModal, gameGroupProgress } from './GameDetailModal';
-import { AddGameModal } from './AddGameModal';
+import { GameDetailModal, GameGroupDetailModal, gameGroupProgress, type GameDetailModalDeps } from './GameDetailModal';
+import { AddGameModal, type AddGameModalDeps } from './AddGameModal';
 
 /** One entry in the merged grid: an ungrouped game, or a group card with its resolved members. */
 type GameDisplayItem =
@@ -44,10 +43,15 @@ type GameDisplayItem =
  * grids, and the flat "All games" fallback, all on the shared card infrastructure. + Add opens
  * AddGameModal; a card click opens GameDetailModal, or toggles selection in Select mode.
  */
+export interface GamesTabDeps extends AddGameModalDeps, GameDetailModalDeps, RowsCustomizeModalDeps {
+	settings: SettingsReader & SettingsWriter;
+	api: AddGameModalDeps['api'] & GameDetailModalDeps['api'];
+	getCardMinWidth: () => number;
+	isCardTextUnder: (tab: 'games') => boolean;
+}
+
 export class GamesTab implements TabInstance {
 	private container: HTMLElement;
-	private plugin: HoardPlugin;
-	private gameData: GameDataManager;
 	private dataChangeListener: () => void;
 	private scroller: VirtualScroller | null = null;
 	// lazy cover re-fetch — one observer per rendered view (see handleCoversVisible).
@@ -90,15 +94,13 @@ export class GamesTab implements TabInstance {
 	private toolbarActionsEl: HTMLElement | null = null;
 	private contentEl: HTMLElement | null = null;
 
-	constructor(container: HTMLElement, plugin: HoardPlugin, gameData: GameDataManager) {
+	constructor(container: HTMLElement, private deps: GamesTabDeps) {
 		this.container = container;
-		this.plugin = plugin;
-		this.gameData = gameData;
 		this.dataChangeListener = () => this.render();
-		this.gameData.onChange(this.dataChangeListener);
+		this.deps.games.onChange(this.dataChangeListener);
 
 		// restore persisted filter state
-		const saved = plugin.settings.gamesFilters;
+		const saved = deps.settings.get().gamesFilters;
 		if (saved) {
 			this.filterGenreExclude    = new Set(saved.genreExclude    ?? []);
 			this.filterStatusExclude   = new Set(saved.statusExclude   ?? []);
@@ -106,7 +108,7 @@ export class GamesTab implements TabInstance {
 			this.filterPriorityExclude = migratePriorityExclude(
 				saved.priorityExclude,
 				saved.priorityEmptyOnly,
-				plugin.settings.priorities,
+				deps.settings.get().priorities,
 			);
 			this.filterPlatformExclude = new Set(saved.platformExclude ?? []);
 			this.filterGroupExclude    = new Set(saved.groupExclude    ?? []);
@@ -122,7 +124,7 @@ export class GamesTab implements TabInstance {
 		}
 
 		// keep the preset button green while filters still match it
-		const savedPreset = gameData.getSavedFilterPreset();
+		const savedPreset = deps.games.getSavedFilterPreset();
 		if (savedPreset) {
 			const setsMatch = (a: Set<string>, b: string[]): boolean =>
 				a.size === b.length && b.every((x) => a.has(x));
@@ -135,7 +137,7 @@ export class GamesTab implements TabInstance {
 					Array.from(migratePriorityExclude(
 						savedPreset.priorityExclude,
 						savedPreset.priorityEmptyOnly,
-						plugin.settings.priorities,
+						deps.settings.get().priorities,
 					)),
 				) &&
 				setsMatch(this.filterPlatformExclude, savedPreset.platformExclude) &&
@@ -149,7 +151,7 @@ export class GamesTab implements TabInstance {
 	}
 
 	destroy(): void {
-		this.gameData.offChange(this.dataChangeListener);
+		this.deps.games.offChange(this.dataChangeListener);
 		this.scroller?.destroy();
 		this.scroller = null;
 		this.coversObserver?.destroy();
@@ -167,7 +169,7 @@ export class GamesTab implements TabInstance {
 	}
 
 	private saveFiltersToSettings(): void {
-		this.plugin.settings.gamesFilters = {
+		const filters = {
 			genreExclude:    Array.from(this.filterGenreExclude),
 			statusExclude:   Array.from(this.filterStatusExclude),
 			ratingExclude:   Array.from(this.filterRatingExclude),
@@ -184,7 +186,7 @@ export class GamesTab implements TabInstance {
 			wishlistOnly:        this.filterWishlistOnly,
 			groupsOnly:          this.filterGroupsOnly,
 		};
-		void this.plugin.saveSettings();
+		void this.deps.settings.update((s) => { s.gamesFilters = filters; });
 	}
 
 	private hasActiveFilter(): boolean {
@@ -229,7 +231,7 @@ export class GamesTab implements TabInstance {
 		this.filterPriorityExclude = migratePriorityExclude(
 			preset.priorityExclude,
 			preset.priorityEmptyOnly,
-			this.plugin.settings.priorities,
+			this.deps.settings.get().priorities,
 		);
 		this.filterPlatformExclude = new Set(preset.platformExclude);
 		this.filterGroupExclude    = new Set(preset.groupExclude ?? []);
@@ -303,7 +305,7 @@ export class GamesTab implements TabInstance {
 	}
 
 	private getStatusIndex(status: string): number {
-		const idx = this.gameData.getSettings().statuses.findIndex((s) => s.name === status);
+		const idx = this.deps.games.getSettings().statuses.findIndex((s) => s.name === status);
 		return idx === -1 ? 99 : idx;
 	}
 
@@ -366,7 +368,7 @@ export class GamesTab implements TabInstance {
 
 	/** Matching game ids, or null for an empty query. */
 	private getSearchMatchedIds(): Set<string> | null {
-		return searchItems(this.gameData.getGames(), { id: (g) => g.id, fields: this.searchFields() }, this.searchQuery);
+		return searchItems(this.deps.games.getGames(), { id: (g) => g.id, fields: this.searchFields() }, this.searchQuery);
 	}
 
 	/** An empty query (null set) matches everything. */
@@ -392,7 +394,7 @@ export class GamesTab implements TabInstance {
 	/** Search + filters + primary/secondary sort applied to the games list. */
 	private getDisplayGames(): Game[] {
 		const matched = this.getSearchMatchedIds();
-		return this.sortGames(this.gameData.getGames().filter((g) =>
+		return this.sortGames(this.deps.games.getGames().filter((g) =>
 			this.gameMatchesSearch(g, matched) && this.gamePassesFilters(g),
 		));
 	}
@@ -405,7 +407,7 @@ export class GamesTab implements TabInstance {
 	 * member passes. "Groups only" drops every standalone game.
 	 */
 	private getDisplayItems(): GameDisplayItem[] {
-		const groupedIds = this.gameData.getGroupedGameIds();
+		const groupedIds = this.deps.games.getGroupedGameIds();
 
 		const topLevel = this.filterGroupsOnly
 			? []
@@ -432,8 +434,8 @@ export class GamesTab implements TabInstance {
 	 * active filter must pass for at least one member.
 	 */
 	private getVisibleGroups(): Array<{ data: GameGroup; members: Game[] }> {
-		const groups = this.gameData.getGroups();
-		const gameMap = new Map(this.gameData.getGames().map((g) => [g.id, g]));
+		const groups = this.deps.games.getGroups();
+		const gameMap = new Map(this.deps.games.getGames().map((g) => [g.id, g]));
 		const q = this.searchQuery.trim().toLowerCase();
 		const matched = this.getSearchMatchedIds();
 		const anyFilterActive = this.hasActiveFilter();
@@ -485,7 +487,7 @@ export class GamesTab implements TabInstance {
 			.map((g) => PRIORITY_ORDER.indexOf(g.priority as typeof PRIORITY_ORDER[number]))
 			.filter((i) => i !== -1);
 		const statusIdx = m.map((g) => this.getStatusIndex(g.status));
-		const statuses = this.gameData.getSettings().statuses;
+		const statuses = this.deps.games.getSettings().statuses;
 		const first = m[0];
 		return {
 			...(first ?? ({} as Game)),
@@ -542,8 +544,8 @@ export class GamesTab implements TabInstance {
 		this.activeCleanups = [];
 		content.empty();
 
-		const allGames = this.gameData.getGames();
-		if (allGames.length === 0 && this.gameData.getGroups().length === 0) {
+		const allGames = this.deps.games.getGames();
+		if (allGames.length === 0 && this.deps.games.getGroups().length === 0) {
 			const empty = content.createDiv({ cls: 'hoard-card-grid__empty' });
 			empty.createSpan({ cls: 'hoard-card-grid__empty-icon', text: '🎮' });
 			empty.createEl('p', { cls: 'hoard-card-grid__empty-message', text: t('games.empty') });
@@ -573,16 +575,16 @@ export class GamesTab implements TabInstance {
 			cls: 'hoard-rows-customize__btn',
 		});
 		gearBtn.addEventListener('click', () => {
-			new RowsCustomizeModal({ app: this.plugin.app, settings: this.plugin.settingsService }, {
+			new RowsCustomizeModal(this.deps, {
 				shelves: GAMES_ROWS_SHELVES.map((sh) => ({
 					id: sh.id,
 					label: t(`games.shelves.${sh.id === 'byType' ? 'byGenre' : sh.id}` as TranslationKey),
 				})),
-				getLayout: () => this.gameData.getSettings().rowsLayout,
-				setLayout: (layout) => { this.gameData.getSettings().rowsLayout = layout; },
-				// the layout lives inside data.json's games key, not plugin.settings — persist through the games
+				getLayout: () => this.deps.games.getSettings().rowsLayout,
+				setLayout: (layout) => { this.deps.games.getSettings().rowsLayout = layout; },
+				// the layout lives inside data.json's games key, not the global settings — persist through the games
 				// data manager (quiet: onChanged re-renders this tab itself)
-				persist: () => this.gameData.persistQuiet(),
+				persist: () => this.deps.games.persistQuiet(),
 				onChanged: () => this.renderContent(),
 				hint: t('games.customizeHint'),
 				exclusiveGroups: ROWS_EXCLUSIVE_SHELVES,
@@ -593,10 +595,10 @@ export class GamesTab implements TabInstance {
 		// shelf cards mirror the grids' *computed* card width (setRowsCardWidth); one metrics source
 		// keeps shelves matching grids across resizes. Heights come from the CSS 2:3 ratio.
 		const metrics = (w: number): GridMetrics => {
-			const m = computeGridMetrics(w, this.plugin.getCardMinWidth());
+			const m = computeGridMetrics(w, this.deps.getCardMinWidth());
 			setRowsCardWidth(scroll, m.cardWidth);
 			// text-under cells are poster + text block
-			if (this.plugin.isCardTextUnder('games')) {
+			if (this.deps.isCardTextUnder('games')) {
 				const cardHeight = m.cardHeight + POSTER_CARD_TEXT_H;
 				return { cols: m.cols, cardWidth: m.cardWidth, cardHeight, rowHeight: cardHeight + 12 };
 			}
@@ -696,7 +698,7 @@ export class GamesTab implements TabInstance {
 
 		// user order + visibility: with BOTH grouped grids off, the flat "All games" grid renders at the
 		// first grid entry's position
-		const layout = normalizeRowsLayout(this.gameData.getSettings().rowsLayout, GAMES_ROWS_SHELVES);
+		const layout = normalizeRowsLayout(this.deps.games.getSettings().rowsLayout, GAMES_ROWS_SHELVES);
 		const gridIds = new Set(['byType', 'byStatus']);
 		const anyGridEnabled = layout.some((e) => gridIds.has(e.id) && e.enabled);
 		const anyShelfEnabled = layout.some((e) => !gridIds.has(e.id) && e.enabled);
@@ -751,14 +753,14 @@ export class GamesTab implements TabInstance {
 		mode: 'byType' | 'byStatus',
 	): void {
 		const byType = mode === 'byType';
-		const settings = this.gameData.getSettings();
+		const settings = this.deps.games.getSettings();
 		const defs = byType ? settings.types : settings.statuses;
 		const keyOf = (g: Game): string => (byType ? g.type : g.status);
 
 		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
 		section.createDiv({ cls: 'hoard-rows-view__grouped-title', text: byType ? t('games.shelves.byGenre') : t('games.shelves.byStatus') });
 
-		const allGames = this.gameData.getGames();
+		const allGames = this.deps.games.getGames();
 		let rendered = 0;
 		for (const def of defs) {
 			const bucketGames = this.sortGames(
@@ -850,7 +852,7 @@ export class GamesTab implements TabInstance {
 		);
 		const today = GamesTab.todayStamp();
 
-		const stored = this.gameData.getRecommendedDaily();
+		const stored = this.deps.games.getRecommendedDaily();
 		if (stored.date === today) {
 			const byId = new Map(pool.map((g) => [g.id, g]));
 			const picks = stored.ids
@@ -862,13 +864,13 @@ export class GamesTab implements TabInstance {
 					pool.filter((g) => !used.has(g.id)),
 					GamesTab.RECOMMENDED_COUNT - picks.length,
 				));
-				this.gameData.setRecommendedDaily({ date: today, ids: picks.map((g) => g.id) });
+				this.deps.games.setRecommendedDaily({ date: today, ids: picks.map((g) => g.id) });
 			}
 			return picks;
 		}
 
 		const picks = pickRandom(pool, GamesTab.RECOMMENDED_COUNT);
-		this.gameData.setRecommendedDaily({ date: today, ids: picks.map((g) => g.id) });
+		this.deps.games.setRecommendedDaily({ date: today, ids: picks.map((g) => g.id) });
 		return picks;
 	}
 
@@ -896,7 +898,7 @@ export class GamesTab implements TabInstance {
 		renderSearchBox(parent, {
 			value: this.searchQuery,
 			placeholder: t('games.searchPlaceholder'),
-			help: (host) => renderSearchHelpButton(host, this.plugin.app, t('app.tabs.games'), () => this.searchFields()),
+			help: (host) => renderSearchHelpButton(host, this.deps.app, t('app.tabs.games'), () => this.searchFields()),
 			onChange: (q) => { this.searchQuery = q; },
 			onCommit: () => this.renderContent(),
 		});
@@ -915,7 +917,7 @@ export class GamesTab implements TabInstance {
 
 	private renderToolbarActions(controls: HTMLElement): void {
 		// saved filter preset (only when one is stored)
-		const preset = this.gameData.getSavedFilterPreset();
+		const preset = this.deps.games.getSavedFilterPreset();
 		this.savedFilterBtnEl = renderToolbarCore(controls, {
 			preset: preset && {
 				active: this.savedFilterActive,
@@ -959,14 +961,14 @@ export class GamesTab implements TabInstance {
 			rerenderAll: () => this.render(),
 			registerCleanup: (fn) => this.activeCleanups.push(fn),
 			preset: {
-				exists: () => this.gameData.getSavedFilterPreset() !== null,
+				exists: () => this.deps.games.getSavedFilterPreset() !== null,
 				remove: async () => {
-					await this.gameData.setSavedFilterPreset(null);
+					await this.deps.games.setSavedFilterPreset(null);
 					this.savedFilterActive = false;
 				},
 			},
 			openDraft: () => {
-				const settings = this.gameData.getSettings();
+				const settings = this.deps.games.getSettings();
 				const platformOpts = settings.platforms.map((p) => p.name);
 
 				// draft — live filter state only changes on Apply
@@ -990,12 +992,12 @@ export class GamesTab implements TabInstance {
 						statusOpts: settings.statuses.map((s) => s.name),
 						formatStatus: gameStatusLabel,
 						// half options appear only when a game holds that exact rating (the Watchlist rule)
-						ratingOpts: buildRatingOpts(this.gameData.getGames().map((g) => g.rating)),
-						priorities: this.plugin.settings.priorities,
+						ratingOpts: buildRatingOpts(this.deps.games.getGames().map((g) => g.rating)),
+						priorities: this.deps.settings.get().priorities,
 						middle: platformOpts.length > 0
 							? [{ label: t('games.filters.platform'), opts: platformOpts, excludeSet: draft.platformExclude }]
 							: [],
-						groupOpts: this.gameData.getGroups().map((g) => g.name),
+						groupOpts: this.deps.games.getGroups().map((g) => g.name),
 						draft,
 					}),
 					favorites: {
@@ -1008,7 +1010,7 @@ export class GamesTab implements TabInstance {
 						get: () => draft.filterWishlistOnly,
 						set: (v) => { draft.filterWishlistOnly = v; },
 					}],
-					savePreset: () => this.gameData.setSavedFilterPreset({
+					savePreset: () => this.deps.games.setSavedFilterPreset({
 						genreExclude:    Array.from(draft.genreExclude),
 						statusExclude:   Array.from(draft.statusExclude),
 						ratingExclude:   Array.from(draft.ratingExclude),
@@ -1100,24 +1102,24 @@ export class GamesTab implements TabInstance {
 	}
 
 	private renderActionBar(parent: HTMLElement): void {
-		const bar = renderActionBar(parent, this.plugin.app, {
+		const bar = renderActionBar(parent, this.deps.app, {
 			title: t('games.deleteSelected'),
 			selected: this.selectedIds,
 			message: (count) => t('games.deleteSelectedConfirm', { count }),
 			onConfirm: async () => {
 				// selected groups are dissolved (games return to the grid); selected games are batch-deleted
 				// with their note files
-				const groupIds = new Set(this.gameData.getGroups().map((g) => g.id));
+				const groupIds = new Set(this.deps.games.getGroups().map((g) => g.id));
 				const gameIds: string[] = [];
 				for (const id of Array.from(this.selectedIds)) {
 					if (groupIds.has(id)) {
-						await this.gameData.removeGroup(id);
+						await this.deps.games.removeGroup(id);
 					} else {
 						gameIds.push(id);
 					}
 				}
 				if (gameIds.length > 0) {
-					await this.gameData.removeGamesBatch(gameIds);
+					await this.deps.games.removeGamesBatch(gameIds);
 				}
 				this.selectedIds.clear();
 				this.render();
@@ -1128,20 +1130,20 @@ export class GamesTab implements TabInstance {
 		// status belongs to the member games)
 		renderBatchStatusSelect(
 			bar,
-			this.gameData.getSettings().statuses.map((s) => s.name).filter((name) => name !== GAME_AUTO_STATUS),
+			this.deps.games.getSettings().statuses.map((s) => s.name).filter((name) => name !== GAME_AUTO_STATUS),
 			async (newStatus) => {
 				for (const id of this.selectedIds) {
-					const game = this.gameData.getGame(id);
+					const game = this.deps.games.getGame(id);
 					if (game) {
-						this.gameData.updateGameSilent({ ...game, status: newStatus });
+						this.deps.games.updateGameSilent({ ...game, status: newStatus });
 					}
 				}
-				await this.gameData.saveAndNotify();
+				await this.deps.games.saveAndNotify();
 			},
 			gameStatusLabel,
 		);
 
-		const allGroups = this.gameData.getGroups();
+		const allGroups = this.deps.games.getGroups();
 		const groupIds = new Set(allGroups.map((g) => g.id));
 		const selectedGameIds = () => Array.from(this.selectedIds).filter((id) => !groupIds.has(id));
 		renderMoveToGroupSelect(bar, {
@@ -1152,19 +1154,19 @@ export class GamesTab implements TabInstance {
 				this.selectedIds.clear();
 				this.selectionMode = false;
 				for (const id of gameIds) {
-					await this.gameData.addGameToGroup(groupId, id);
+					await this.deps.games.addGameToGroup(groupId, id);
 				}
 			},
 			onCreate: async (name) => {
 				const newGroup: GameGroup = {
-					id: this.gameData.generateGroupId(name),
+					id: this.deps.games.generateGroupId(name),
 					name,
 					gameIds: selectedGameIds(),
 					dateAdded: new Date().toISOString(),
 				};
 				this.selectedIds.clear();
 				this.selectionMode = false;
-				await this.gameData.addGroup(newGroup);
+				await this.deps.games.addGroup(newGroup);
 			},
 			onCancel: () => this.refreshToolbarActions(),
 		});
@@ -1177,7 +1179,7 @@ export class GamesTab implements TabInstance {
 	 * height from the CSS 2:3 ratio.
 	 */
 	private renderGameCard(parent: HTMLElement, game: Game, cardWidth: number, cardHeight?: number): void {
-		const settings = this.gameData.getSettings();
+		const settings = this.deps.games.getSettings();
 		const typeColor = settings.types.find((ty) => ty.name === game.type)?.color ?? '#888780';
 		const statusColor = settings.statuses.find((s) => s.name === game.status)?.color;
 
@@ -1196,16 +1198,16 @@ export class GamesTab implements TabInstance {
 			typeColor,
 			year: game.releaseDate?.match(/^(\d{4})/)?.[1],
 			progressRatio: game.progress > 0 ? game.progress / 100 : undefined,
-			textUnder: this.plugin.isCardTextUnder('games'),
+			textUnder: this.deps.isCardTextUnder('games'),
 			flag: game.wishlist ? { icon: 'gift', label: t('games.card.onWishlist') } : undefined,
 			menuItems: [
 				{
 					label: game.favorite ? t('games.card.unfavorite') : t('games.card.favorite'),
-					onClick: () => { void this.gameData.updateGame({ ...game, favorite: !game.favorite }); },
+					onClick: () => { void this.deps.games.updateGame({ ...game, favorite: !game.favorite }); },
 				},
 				{
 					label: game.wishlist ? t('games.card.removeFromWishlist') : t('games.card.addToWishlist'),
-					onClick: () => { void this.gameData.updateGame({ ...game, wishlist: !game.wishlist }); },
+					onClick: () => { void this.deps.games.updateGame({ ...game, wishlist: !game.wishlist }); },
 				},
 				{ label: t('games.card.refreshCover'), onClick: () => { void this.refreshCover(game); } },
 				{ label: t('games.card.openNote'), onClick: () => { void this.openGameNote(game); } },
@@ -1213,9 +1215,9 @@ export class GamesTab implements TabInstance {
 					label: t('common.delete'),
 					onClick: () => {
 						new ConfirmModal(
-							this.plugin.app,
+							this.deps.app,
 							t('games.card.deleteConfirm', { title: game.title }),
-							() => { void this.gameData.removeGame(game.id); },
+							() => { void this.deps.games.removeGame(game.id); },
 						).open();
 					},
 				},
@@ -1241,7 +1243,7 @@ export class GamesTab implements TabInstance {
 			const id = card.dataset.gameId;
 			if (!id) continue;
 			if (gameById === null) {
-				gameById = new Map(this.gameData.getGames().map((g) => [g.id, g]));
+				gameById = new Map(this.deps.games.getGames().map((g) => [g.id, g]));
 			}
 			const game = gameById.get(id);
 			// skip if it vanished, already has a cover, or failed earlier this session
@@ -1257,16 +1259,16 @@ export class GamesTab implements TabInstance {
 				}
 				// persist silently (no re-render, so scroll survives) and swap this card's <img>. A title search
 				// that resolved an id stores it too, so the next fetch takes the cheap id path.
-				if (res.source) void this.gameData.updateCoverAndSource(id, res.url, res.source, res.apiId);
-				else void this.gameData.updateCoverUrl(id, res.url);
+				if (res.source) void this.deps.games.updateCoverAndSource(id, res.url, res.source, res.apiId);
+				else void this.deps.games.updateCoverUrl(id, res.url);
 				this.applyCoverToCard(card, res.url);
 			});
 		}
 	}
 
 	private resolveCover(game: Game): Promise<GameCover> {
-		const api = this.plugin.apiService;
-		return resolveGameCover(api, effectiveGameSource(this.plugin.settings, api), game);
+		const api = this.deps.api;
+		return resolveGameCover(api, effectiveGameSource(this.deps.settings.get(), api), game);
 	}
 
 	private applyCoverToCard(card: HTMLElement, url: string): void {
@@ -1280,7 +1282,7 @@ export class GamesTab implements TabInstance {
 			new Notice(t('games.notices.coverFetchFailed'));
 			return;
 		}
-		const fresh = this.gameData.getGame(game.id);
+		const fresh = this.deps.games.getGame(game.id);
 		if (!fresh) return;
 		// an explicit refresh replaces the cover in the note
 		const updated: Game = { ...fresh, coverUrl: res.url };
@@ -1288,7 +1290,7 @@ export class GamesTab implements TabInstance {
 			updated.apiSource = res.source;
 			updated.apiId = res.apiId;
 		}
-		await this.gameData.updateGame(updated);
+		await this.deps.games.updateGame(updated);
 		new Notice(t('games.notices.coverRefreshed'));
 	}
 
@@ -1297,15 +1299,15 @@ export class GamesTab implements TabInstance {
 	 * GameGroupDetailModal.
 	 */
 	private renderGroupCard(parent: HTMLElement, group: GameGroup, members: Game[], cardHeight?: number): void {
-		const settings = this.gameData.getSettings();
+		const settings = this.deps.games.getSettings();
 		const primaryType = members[0]?.type ?? '';
 		renderGroupCard(parent, {
-			app: this.plugin.app,
+			app: this.deps.app,
 			group,
 			members,
 			getCover: (g) => rawgResizedCover(g.coverUrl),
 			typeColor: settings.types.find((ty) => ty.name === primaryType)?.color ?? '#888780',
-			textUnder: this.plugin.isCardTextUnder('games'),
+			textUnder: this.deps.isCardTextUnder('games'),
 			selected: this.selectedIds.has(group.id),
 			cardHeight,
 			unit: 'game',
@@ -1313,40 +1315,40 @@ export class GamesTab implements TabInstance {
 			cleanups: this.activeCleanups,
 			onRename: () => this.openRenameGroupPrompt(group),
 			deleteMessage: t('games.card.deleteGroupConfirm', { name: group.name }),
-			onDelete: () => { void this.gameData.removeGroup(group.id); },
+			onDelete: () => { void this.deps.games.removeGroup(group.id); },
 			onActivate: (card) => {
 				if (this.selectionMode) {
 					this.toggleCardSelection(card, group.id);
 					return;
 				}
-				new GameGroupDetailModal(this.plugin.app, this.plugin, this.gameData, group, members).open();
+				new GameGroupDetailModal(this.deps, group, members).open();
 			},
 		});
 	}
 
 	private openRenameGroupPrompt(group: GameGroup): void {
-		openRenameGroupPrompt(this.plugin.app, group.name, (name) => {
-			void this.gameData.updateGroup({ ...group, name });
+		openRenameGroupPrompt(this.deps.app, group.name, (name) => {
+			void this.deps.games.updateGroup({ ...group, name });
 		});
 	}
 
 	private openDetailModal(game: Game): void {
 		// re-resolve so a stale card built before an edit can't reopen old data
-		const fresh = this.gameData.getGame(game.id);
+		const fresh = this.deps.games.getGame(game.id);
 		if (!fresh) return;
-		new GameDetailModal(this.plugin.app, this.plugin, this.gameData, fresh).open();
+		new GameDetailModal(this.deps, fresh).open();
 	}
 
 	private async openGameNote(game: Game): Promise<void> {
-		const path = await this.gameData.ensureGameNote(game);
-		const file = this.plugin.app.vault.getAbstractFileByPath(path);
+		const path = await this.deps.games.ensureGameNote(game);
+		const file = this.deps.app.vault.getAbstractFileByPath(path);
 		if (file instanceof TFile) {
-			void this.plugin.app.workspace.getLeaf('tab').openFile(file);
+			void this.deps.app.workspace.getLeaf('tab').openFile(file);
 		}
 	}
 
 	/** Opens the API-assisted Add modal (the tab re-renders via its data listener). */
 	private openAddPrompt(): void {
-		new AddGameModal(this.plugin.app, this.plugin, this.gameData, () => {}).open();
+		new AddGameModal(this.deps, () => {}).open();
 	}
 }

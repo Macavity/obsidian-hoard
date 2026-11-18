@@ -1,9 +1,9 @@
 import { App, Modal, Notice, Platform, setIcon } from 'obsidian';
-import type HoardPlugin from './main';
+import type { SettingsReader } from './SettingsService';
 import type { GameDataManager } from './GameDataManager';
 import { Game, GameGroup, GAME_AUTO_STATUS, formatTime, parsePlaytimeInput } from './types';
 import { buildPosterCard } from './PosterCard';
-import { rawgResizedCover, steamAppIdFromUrl } from './ApiService';
+import { rawgResizedCover, steamAppIdFromUrl, type ApiService } from './ApiService';
 import { renderStarRating } from './StarRating';
 import { renderTagPill, renderTagChips } from './StatusDropdown';
 import { ConfirmModal } from './ConfirmModal';
@@ -16,6 +16,14 @@ import { gameStatusLabel, priorityLabel } from './i18n/labels';
 import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader } from './ui/detailShared';
 import { createFavoriteButton, markDetailRoot } from './ui/detailFrame';
 
+/** Shared by GameDetailModal and GameGroupDetailModal, which opens it for a member. */
+export interface GameDetailModalDeps {
+	app: App;
+	settings: SettingsReader;
+	games: GameDataManager;
+	api: Pick<ApiService, 'hasSteamCredentials' | 'getSteamOwnedGames' | 'getSteamAchievements'>;
+}
+
 /**
  * Game detail/edit modal: cover + title/developer header, Type / Priority / Status pill dropdowns
  * (shared StatusDropdown), favorite heart, star rating (shared StarRating) with a text label, the
@@ -24,8 +32,6 @@ import { createFavoriteButton, markDetailRoot } from './ui/detailFrame';
  * draft copy — nothing persists until Save.
  */
 export class GameDetailModal extends Modal {
-	private plugin: HoardPlugin;
-	private gameData: GameDataManager;
 	private draft: Game;
 	private notesValue = '';
 	private notesLoaded = false;
@@ -44,19 +50,17 @@ export class GameDetailModal extends Modal {
 	// phone layout: note/store/wishlist on their own line, Modes aligned with Progress
 	private readonly mobile = Platform.isMobile;
 
-	constructor(app: App, plugin: HoardPlugin, gameData: GameDataManager, game: Game) {
-		super(app);
-		this.plugin = plugin;
-		this.gameData = gameData;
+	constructor(private deps: GameDetailModalDeps, game: Game) {
+		super(deps.app);
 		this.draft = { ...game, platforms: [...game.platforms] };
 		// the batch "Group…" action only ever adds, so a game can already sit in more than one group; the
 		// dropdown seeds from the first and Save re-homes it into exactly one (or none)
-		this.originalGroupId = this.gameData.getGroups().find((g) => g.gameIds.includes(game.id))?.id ?? '';
+		this.originalGroupId = this.deps.games.getGroups().find((g) => g.gameIds.includes(game.id))?.id ?? '';
 		this.selectedGroupId = this.originalGroupId;
 	}
 
 	onOpen(): void {
-		const colorTheme = this.plugin.settings.colorTheme ?? 'default';
+		const colorTheme = this.deps.settings.get().colorTheme ?? 'default';
 		this.modalEl.setAttribute('data-theme', colorTheme);
 		this.contentEl.setAttribute('data-theme', colorTheme);
 		this.modalEl.addClass('hoard-game-detail');
@@ -65,7 +69,7 @@ export class GameDetailModal extends Modal {
 
 		// notes live in the note file's ## Notes section — loaded async so edits made directly in the .md
 		// flow into the textarea
-		void this.gameData.readGameNotes(this.draft).then((notes) => {
+		void this.deps.games.readGameNotes(this.draft).then((notes) => {
 			this.notesValue = notes ?? '';
 			this.notesLoaded = true;
 			const ta = this.contentEl.querySelector<HTMLTextAreaElement>('.hoard-game-detail__notes');
@@ -120,7 +124,7 @@ export class GameDetailModal extends Modal {
 		platforms.createSpan({ cls: 'hoard-game-detail__label', text: t('detail.game.platforms') });
 		renderTagChips({
 			wrap: platforms.createDiv({ cls: 'hoard-game-detail__platforms' }),
-			tags: this.gameData.getSettings().platforms,
+			tags: this.deps.games.getSettings().platforms,
 			selected: this.draft.platforms,
 			onToggle: (sel) => { this.draft.platforms = sel; },
 		});
@@ -162,7 +166,7 @@ export class GameDetailModal extends Modal {
 				this.app,
 				t('games.card.deleteConfirm', { title: this.draft.title }),
 				() => {
-					void this.gameData.removeGame(this.draft.id);
+					void this.deps.games.removeGame(this.draft.id);
 					this.close();
 				},
 			).open();
@@ -189,12 +193,12 @@ export class GameDetailModal extends Modal {
 	private async save(): Promise<void> {
 		if (!this.draft.title.trim()) return;
 		this.draft.title = this.draft.title.trim();
-		await this.gameData.updateGame(this.draft);
+		await this.deps.games.updateGame(this.draft);
 		await this.applyGroupChange();
 		// write the Notes section only when it was loaded or edited — never clobber an unloaded section
 		// with an empty string
 		if (this.notesLoaded || this.notesValue !== '') {
-			await this.gameData.writeGameNotes(this.draft, this.notesValue);
+			await this.deps.games.writeGameNotes(this.draft, this.notesValue);
 		}
 		this.close();
 	}
@@ -280,8 +284,8 @@ export class GameDetailModal extends Modal {
 		const row = this.badgeRowEl;
 		if (!row) return;
 		row.empty();
-		const settings = this.gameData.getSettings();
-		const priorities = this.plugin.settings.priorities;
+		const settings = this.deps.games.getSettings();
+		const priorities = this.deps.settings.get().priorities;
 
 		// the shared detail-modal pill (renderTagPill), so these match the Watchlist / Reading badges. The
 		// auto-managed "To be released" is excluded from the dropdown (it follows the release date) but
@@ -340,9 +344,9 @@ export class GameDetailModal extends Modal {
 	/** Open this game's .md note — the shared file-text icon the other detail modals use. */
 	private renderNoteButton(parent: HTMLElement): void {
 		appendNoteLinkButton(
-			this.plugin.app,
+			this.app,
 			parent,
-			this.gameData.noteFilePath(this.draft.title),
+			this.deps.games.noteFilePath(this.draft.title),
 			() => this.close(),
 		);
 	}
@@ -367,7 +371,7 @@ export class GameDetailModal extends Modal {
 		const section = parent.createDiv({ cls: 'hoard-game-detail__section hoard-game-detail__section--progress' });
 
 		// the bar picks up the genre colour, the way the type pill does
-		const typeColor = this.gameData.getSettings().types.find((t) => t.name === this.draft.type)?.color;
+		const typeColor = this.deps.games.getSettings().types.find((t) => t.name === this.draft.type)?.color;
 		if (typeColor) section.setCssProps({ '--hoard-game-detail-progress-color': typeColor });
 
 		const head = section.createDiv({ cls: 'hoard-game-detail__progress-head' });
@@ -501,7 +505,7 @@ export class GameDetailModal extends Modal {
 		// draft like every other control here, so it still takes a Save and can be undone by closing the
 		// modal.
 		const steamAppId = this.draft.steamAppId || steamAppIdFromUrl(this.draft.storeUrl);
-		if (this.plugin.apiService.hasSteamCredentials() && steamAppId !== '') {
+		if (this.deps.api.hasSteamCredentials() && steamAppId !== '') {
 			const steamBtn = strip.createEl('button', {
 				cls: 'hoard-game-detail__steam-pull',
 				attr: { type: 'button', title: t('detail.game.steamPull') },
@@ -515,8 +519,8 @@ export class GameDetailModal extends Modal {
 				void (async () => {
 					try {
 						const [library, achievements] = await Promise.all([
-							this.plugin.apiService.getSteamOwnedGames(),
-							this.plugin.apiService.getSteamAchievements(steamAppId),
+							this.deps.api.getSteamOwnedGames(),
+							this.deps.api.getSteamAchievements(steamAppId),
 						]);
 						const owned = library.ok
 							? library.games.find((g) => g.appId === steamAppId)
@@ -617,7 +621,7 @@ export class GameDetailModal extends Modal {
 		const stars = row.createDiv();
 		renderStarRating(stars, this.draft.rating, {
 			allowHalf: true,
-			tiers: this.plugin.settings.ratingSystem,
+			tiers: this.deps.settings.get().ratingSystem,
 			showLabel: true,
 			onChange: (value) => {
 				this.draft.rating = value;
@@ -686,7 +690,7 @@ export class GameDetailModal extends Modal {
 		// not hoard-input__select--sm — that sets width:auto, which fights the grid column
 		const select = controls.createEl('select', { cls: 'hoard-input__select' });
 		select.createEl('option', { text: t('ui.form.none'), value: '' });
-		for (const g of this.gameData.getGroups()) {
+		for (const g of this.deps.games.getGroups()) {
 			const opt = select.createEl('option', { text: g.name, value: g.id });
 			if (g.id === this.selectedGroupId) opt.selected = true;
 		}
@@ -732,23 +736,23 @@ export class GameDetailModal extends Modal {
 		const newName = this.newGroupName.trim();
 		if (newName === '' && this.selectedGroupId === this.originalGroupId) return;
 
-		for (const g of this.gameData.getGroups()) {
+		for (const g of this.deps.games.getGroups()) {
 			if (!g.gameIds.includes(this.draft.id)) continue;
-			await this.gameData.updateGroup({
+			await this.deps.games.updateGroup({
 				...g,
 				gameIds: g.gameIds.filter((id) => id !== this.draft.id),
 			});
 		}
 
 		if (newName) {
-			await this.gameData.addGroup({
-				id: this.gameData.generateGroupId(newName),
+			await this.deps.games.addGroup({
+				id: this.deps.games.generateGroupId(newName),
 				name: newName,
 				gameIds: [this.draft.id],
 				dateAdded: new Date().toISOString(),
 			});
 		} else if (this.selectedGroupId) {
-			await this.gameData.addGameToGroup(this.selectedGroupId, this.draft.id);
+			await this.deps.games.addGameToGroup(this.selectedGroupId, this.draft.id);
 		}
 		// else: moved to "— none —" — detached only
 	}
@@ -867,28 +871,22 @@ export function gameGroupProgress(members: Game[]): number {
  * and opens its GameDetailModal.
  */
 export class GameGroupDetailModal extends Modal {
-	private plugin: HoardPlugin;
-	private gameData: GameDataManager;
 	private group: GameGroup;
 	private members: Game[];
 	private cleanups: (() => void)[] = [];
 
 	constructor(
-		app: App,
-		plugin: HoardPlugin,
-		gameData: GameDataManager,
+		private deps: GameDetailModalDeps,
 		group: GameGroup,
 		members: Game[],
 	) {
-		super(app);
-		this.plugin = plugin;
-		this.gameData = gameData;
+		super(deps.app);
 		this.group = group;
 		this.members = members;
 	}
 
 	onOpen(): void {
-		markDetailRoot(this.modalEl, this.contentEl, this.plugin.settings.colorTheme);
+		markDetailRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
 		this.renderAll();
 	}
 
@@ -907,7 +905,7 @@ export class GameGroupDetailModal extends Modal {
 		});
 
 		const grid = this.contentEl.createDiv({ cls: 'hoard-card-grid hoard-detail__group-grid' });
-		const settings = this.gameData.getSettings();
+		const settings = this.deps.games.getSettings();
 		for (const m of this.members) {
 			const typeColor = settings.types.find((t) => t.name === m.type)?.color ?? '#888780';
 			const statusColor = settings.statuses.find((s) => s.name === m.status)?.color;
@@ -925,9 +923,9 @@ export class GameGroupDetailModal extends Modal {
 				flag: m.wishlist ? { icon: 'gift', label: t('games.card.onWishlist') } : undefined,
 				onClick: () => {
 					this.close();
-					const fresh = this.gameData.getGame(m.id);
+					const fresh = this.deps.games.getGame(m.id);
 					if (!fresh) return;
-					new GameDetailModal(this.plugin.app, this.plugin, this.gameData, fresh).open();
+					new GameDetailModal(this.deps, fresh).open();
 				},
 			}, { container: this.contentEl, cleanups: this.cleanups });
 		}

@@ -5,8 +5,8 @@ import type HoardPlugin from './main';
 import { DashboardTab } from './DashboardTab';
 import { ListTab, type ListTabDeps } from './ListTab';
 import { AirtimeTab } from './AirtimeTab';
-import { ReadingTab } from './ReadingTab';
-import { GamesTab } from './GamesTab';
+import { ReadingTab, type ReadingTabDeps } from './ReadingTab';
+import { GamesTab, type GamesTabDeps } from './GamesTab';
 import { CustomListsTab } from './CustomListsTab';
 import { DraftsTab } from './DraftsTab';
 import { LogTab } from './LogTab';
@@ -19,7 +19,11 @@ export type TabName = 'dashboard' | 'watchlist' | 'upcoming' | 'reading' | 'game
  * What the view and its tabs read, supplied by main.ts. Each tab takes only the part it declares in its
  * own `<Tab>Deps`; a converted tab's deps are a supertype of this one, so `ctx.deps` passes straight in.
  */
-export interface HoardViewDeps extends ListTabDeps {
+export interface HoardViewDeps extends ListTabDeps, ReadingTabDeps, GamesTabDeps {
+	settings: ListTabDeps['settings'];
+	history: ListTabDeps['history'] & ReadingTabDeps['history'];
+	api: ListTabDeps['api'] & ReadingTabDeps['api'] & GamesTabDeps['api'];
+	isCardTextUnder: ListTabDeps['isCardTextUnder'];
 	/** True while the WatchLog import wizard replaces the tabs with a placeholder. */
 	importRunning: () => boolean;
 	/** TODO(Task 6-8): the tabs not converted yet still take the plugin; Task 9 removes this. */
@@ -85,14 +89,14 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.reading',
 		icon: 'book-open',
 		cls: 'hoard-reading',
-		create: (ctx) => new ReadingTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.plugin.readingDataManager),
+		create: (ctx) => new ReadingTab(ctx.containerEl, ctx.deps),
 	},
 	{
 		name: 'games',
 		label: 'app.tabs.games',
 		icon: 'gamepad-2',
 		cls: 'hoard-games',
-		create: (ctx) => new GamesTab(ctx.containerEl, ctx.deps.plugin, ctx.deps.plugin.gameDataManager),
+		create: (ctx) => new GamesTab(ctx.containerEl, ctx.deps),
 	},
 	{
 		name: 'custom-lists',

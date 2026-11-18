@@ -1,7 +1,8 @@
 import { App, Notice, setIcon } from 'obsidian';
-import type HoardPlugin from './main';
+import type { SettingsReader } from './SettingsService';
 import type { GameDataManager } from './GameDataManager';
-import { rawgResizedCover, steamAppIdFromUrl, type GameDetailsResult, type GameSearchResult } from './ApiService';
+import { rawgResizedCover, steamAppIdFromUrl, type ApiService, type GameDetailsResult, type GameSearchResult } from './ApiService';
+import type { GameCoverApi } from './coverRefresh';
 import { effectiveGameSource } from './apiSources';
 import { newGame } from './entryFactories';
 import { GameGroup, GAME_AUTO_STATUS } from './types';
@@ -64,9 +65,14 @@ function gameResultMeta(result: GameSearchResult): string {
  * thumbnailed results, an editable form below, platform chips, the mode pill and a store-link
  * button. Steam needs no key, so search always works.
  */
+export interface AddGameModalDeps {
+	app: App;
+	settings: SettingsReader;
+	games: GameDataManager;
+	api: GameCoverApi & Pick<ApiService, 'getSteamStoreDetails'>;
+}
+
 export class AddGameModal extends SearchFormModal<GameSearchResult> {
-	private plugin: HoardPlugin;
-	private gameData: GameDataManager;
 	private onAdded: () => void;
 	private initialQuery = '';
 
@@ -98,17 +104,13 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	private libIndex: LibraryIndex | null = null;
 
 	constructor(
-		app: App,
-		plugin: HoardPlugin,
-		gameData: GameDataManager,
+		private deps: AddGameModalDeps,
 		onAdded: () => void,
 		prefill?: { searchQuery?: string; title?: string },
 	) {
-		super(app, t('add.game.heading'), ['hoard-add-modal', 'hoard-add-game']);
-		this.plugin = plugin;
-		this.gameData = gameData;
+		super(deps.app, t('add.game.heading'), ['hoard-add-modal', 'hoard-add-game']);
 		this.onAdded = onAdded;
-		const s = gameData.getSettings();
+		const s = deps.games.getSettings();
 		this.fieldGenre = s.types[0]?.name ?? '';
 		this.fieldStatus = s.defaultStatus;
 		// prefill (e.g. from Drafts): seed the search box and title field so the modal opens ready to search
@@ -126,15 +128,15 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	}
 
 	protected search(query: string): Promise<GameSearchResult[]> {
-		const api = this.plugin.apiService;
-		const source = effectiveGameSource(this.plugin.settings, api);
+		const api = this.deps.api;
+		const source = effectiveGameSource(this.deps.settings.get(), api);
 		if (source === 'igdb') return api.searchIgdbGames(query);
 		if (source === 'rawg') return api.searchRawgGames(query);
 		return api.searchSteamStore(query);
 	}
 
 	private fetchDetails(result: GameSearchResult): Promise<GameDetailsResult | null> {
-		const api = this.plugin.apiService;
+		const api = this.deps.api;
 		if (result.source === 'igdb') return api.getIgdbGameDetails(result.id);
 		if (result.source === 'steam') return api.getSteamStoreDetails(result);
 		return api.getRawgGameDetails(result.id);
@@ -163,7 +165,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 	}
 
 	protected renderResult(host: HTMLElement, result: GameSearchResult, select: (itemEl: HTMLElement) => void): HTMLElement {
-		if (!this.libIndex) this.libIndex = LibraryIndex.build({ games: () => this.plugin.gameDataManager.getGames() }, ['games']);
+		if (!this.libIndex) this.libIndex = LibraryIndex.build({ games: () => this.deps.games.getGames() }, ['games']);
 		return renderSearchResultRow(host, {
 			// card covers are full-width now, so request a sharper 600px rendition
 			thumbUrl: rawgResizedCover(result.coverUrl, 600),
@@ -206,7 +208,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 
 	/** Maps API platform names onto the user's configured platform chips. */
 	private matchOwnPlatforms(apiPlatforms: string[]): string[] {
-		return this.gameData
+		return this.deps.games
 			.getSettings()
 			.platforms.filter((own) => apiPlatforms.some((p) => platformMatches(own.name, p)))
 			.map((own) => own.name);
@@ -231,11 +233,11 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 			onInput: (v) => { this.fieldPublisher = v; },
 		});
 
-		const settings = this.gameData.getSettings();
+		const settings = this.deps.games.getSettings();
 		const genrePriRow = form.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });
 		nameSelect(makeCell(genrePriRow, t('add.game.genre')), settings.types.map((t) => t.name), this.fieldGenre,
 			(v) => { this.fieldGenre = v; });
-		nameSelect(makeCell(genrePriRow, t('add.priority'), true), this.plugin.settings.priorities.map((p) => p.name),
+		nameSelect(makeCell(genrePriRow, t('add.priority'), true), this.deps.settings.get().priorities.map((p) => p.name),
 			this.fieldPriority, (v) => { this.fieldPriority = v; }, true, priorityLabel);
 
 		// status + date started paired 50/50 (the auto "To be released" is excluded — it follows the
@@ -313,7 +315,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		});
 
 		// group fields (mutually exclusive, the AddTitleModal pattern)
-		renderGroupPicker(form, this.gameData.getGroups(), this.group);
+		renderGroupPicker(form, this.deps.games.getGroups(), this.group);
 
 		const btnRow = form.createDiv({ cls: 'hoard-modal__btn-row' });
 		const addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('add.game.submit') });
@@ -327,7 +329,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 			return;
 		}
 
-		const isDuplicate = this.gameData.getGames().some(
+		const isDuplicate = this.deps.games.getGames().some(
 			(g) => g.title.toLowerCase() === titleName.toLowerCase(),
 		);
 		const blocked = blockDuplicate(this.contentEl, this.duplicates, {
@@ -339,7 +341,7 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 		if (blocked) return;
 
 		const game = newGame({
-			id: this.gameData.generateGameId(titleName),
+			id: this.deps.games.generateGameId(titleName),
 			title: titleName,
 			developer: this.fieldDeveloper.trim(),
 			publisher: this.fieldPublisher.trim(),
@@ -362,19 +364,19 @@ export class AddGameModal extends SearchFormModal<GameSearchResult> {
 			dateStarted: this.fieldDateStarted || null,
 		});
 
-		await this.gameData.addGame(game);
+		await this.deps.games.addGame(game);
 
 		if (this.group.selectedGroupId) {
-			await this.gameData.addGameToGroup(this.group.selectedGroupId, game.id);
+			await this.deps.games.addGameToGroup(this.group.selectedGroupId, game.id);
 		} else if (this.group.newGroupName.trim()) {
 			const name = this.group.newGroupName.trim();
 			const group: GameGroup = {
-				id: this.gameData.generateGroupId(name),
+				id: this.deps.games.generateGroupId(name),
 				name,
 				gameIds: [game.id],
 				dateAdded: new Date().toISOString(),
 			};
-			await this.gameData.addGroup(group);
+			await this.deps.games.addGroup(group);
 		}
 
 		new Notice(t('add.added', { name: titleName }));

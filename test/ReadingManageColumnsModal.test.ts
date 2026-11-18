@@ -4,6 +4,7 @@ import { t } from '../src/i18n';
 import { ReadingManageColumnsModal } from '../src/ReadingManageColumnsModal';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
 import { tick } from './helpers/common';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
@@ -12,7 +13,7 @@ async function openModal() {
 	await r.rdm.addColumn('book', { id: 'c1', name: 'Format', type: 'text', options: [] });
 	await r.rdm.addColumn('book', { id: 'c2', name: 'Year', type: 'number', options: [] });
 	const onChanged = vi.fn();
-	const modal = new ReadingManageColumnsModal(r.f.app, { settings: {} } as never, r.rdm, 'book', onChanged);
+	const modal = new ReadingManageColumnsModal({ app: r.f.app, settings: fakeSettings({}) as never, reading: r.rdm }, 'book', onChanged);
 	(modal as unknown as { build: () => void }).build();
 	return { ...r, modal, onChanged, el: modal.contentEl };
 }

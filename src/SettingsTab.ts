@@ -10,7 +10,7 @@ import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL,
 import { readingStatusColor } from './readingColors';
 import { gamesKeyChip } from './ui/gamesKeyChip';
 import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from './apiSources';
-import { SteamSyncModal } from './SteamSyncModal';
+import { SteamSyncModal, type SteamSyncModalDeps } from './SteamSyncModal';
 import type { SteamFailureReason } from './ApiService';
 import { FAILED } from './lookup';
 
@@ -140,7 +140,7 @@ interface ApiProviderHandle {
 }
 import { CsvModal, type CsvModalDeps } from './CsvModal';
 import { ReadingCsvChoiceModal } from './ReadingCsvChoiceModal';
-import { ReadingCsvModal } from './ReadingCsvModal';
+import { ReadingCsvModal, type ReadingCsvModalDeps } from './ReadingCsvModal';
 import { HoardView } from './HoardView';
 import { CustomListManager, DefaultColumnsModal } from './CustomListsTab';
 import { ConfirmModal } from './ConfirmModal';
@@ -194,6 +194,18 @@ export class HoardSettingsTab extends PluginSettingTab {
 			settings: this.plugin.settingsService,
 			titles: this.plugin.dataManager,
 			setImportProgress: (progress) => { this.plugin.importProgress = progress; },
+		};
+	}
+	// TODO(Task 8): the tab takes the deps of these modals from its own deps instead of the plugin
+	private readingCsvModalDeps(): ReadingCsvModalDeps {
+		return { app: this.app, reading: this.plugin.readingDataManager };
+	}
+	private steamSyncModalDeps(): SteamSyncModalDeps {
+		return {
+			app: this.app,
+			settings: this.plugin.settingsService,
+			games: this.plugin.gameDataManager,
+			api: this.plugin.apiService,
 		};
 	}
 	private activeSection: SettingsSection = 'general';
@@ -1659,7 +1671,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 						new Notice(t('settings.steam.sync.needCreds'));
 						return;
 					}
-					new SteamSyncModal(this.app, this.plugin, this.plugin.gameDataManager).open();
+					new SteamSyncModal(this.steamSyncModalDeps()).open();
 				});
 			},
 		});
@@ -2734,7 +2746,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.exportButton')).onClick(() => {
 					new ReadingCsvChoiceModal(this.app, 'export', (kind) => {
-						new ReadingCsvModal(this.app, this.plugin, kind, 'export').open();
+						new ReadingCsvModal(this.readingCsvModalDeps(), kind, 'export').open();
 					}).open();
 				}),
 			);
@@ -2745,7 +2757,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.importButton')).onClick(() => {
 					new ReadingCsvChoiceModal(this.app, 'import', (kind) => {
-						new ReadingCsvModal(this.app, this.plugin, kind, 'import').open();
+						new ReadingCsvModal(this.readingCsvModalDeps(), kind, 'import').open();
 					}).open();
 				}),
 			);

@@ -54,7 +54,7 @@ describe('add and edit modals i18n', () => {
 
 	it('localizes the reading modal header title', () => {
 		setLocale('de');
-		const modal = new AddReadingModal({} as never, {} as never, {} as never, 'book', () => {}, {
+		const modal = new AddReadingModal({ app: {}, settings: fakeSettings({}), reading: {} } as never, 'book', () => {}, {
 			state: {} as never, id: 'b1',
 		});
 		expect((modal as unknown as { headerTitle: () => string }).headerTitle()).toBe(de.add.reading.editBook);

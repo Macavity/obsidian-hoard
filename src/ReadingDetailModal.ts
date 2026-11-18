@@ -1,6 +1,5 @@
-import { App, Modal, Notice, Platform, TFile } from 'obsidian';
-import type HoardPlugin from './main';
-import type { ReadingDataManager } from './ReadingDataManager';
+import { Modal, Notice, Platform, TFile } from 'obsidian';
+import type { HistoryManager } from './HistoryManager';
 import {
 	Book, Manga, ReadingCustomColumn, ReadingStatus, SELECTABLE_READING_STATUSES,
 	DEFAULT_FIELD_COLOR, BookProgressUnit,
@@ -9,14 +8,14 @@ import {
 } from './types';
 import { createDatePicker } from './DatePicker';
 import { deriveFillColor, deriveBorderColor } from './ColorPicker';
-import { apiErrorMessage } from './ApiService';
+import { apiErrorMessage, type ApiService } from './ApiService';
 import { appendNoteLinkButton } from './NoteLinkButton';
 import { ConfirmModal } from './ConfirmModal';
 import { renderStarRating } from './StarRating';
 import { VaultFilePicker } from './AddReadingModal';
 import { readingStatusColor, coverFallbackColor } from './readingColors';
 import { openStatusDropdown, renderSegmentedToggle } from './StatusDropdown';
-import { ReadingManageColumnsModal } from './ReadingManageColumnsModal';
+import { ReadingManageColumnsModal, type ReadingManageColumnsModalDeps } from './ReadingManageColumnsModal';
 import { pinModalFooter } from './StickyModal';
 import { t } from './i18n';
 import { paintFavoriteButton, renderEditableTitle } from './ui/detailShared';
@@ -102,9 +101,12 @@ function splitAtSlot(text: string, slot: string): [string, string] {
 	return at < 0 ? [text, ''] : [text.slice(0, at), text.slice(at + slot.length)];
 }
 
+export interface ReadingDetailModalDeps extends ReadingManageColumnsModalDeps {
+	api: Pick<ApiService, 'hasGoogleBooksKey' | 'getGoogleBookById' | 'getMangaByMalId'>;
+	history: Pick<HistoryManager, 'log'>;
+}
+
 export class ReadingDetailModal extends Modal {
-	private plugin: HoardPlugin;
-	private readingData: ReadingDataManager;
 	private mode: 'book' | 'manga';
 	private id: string;
 	private onChanged: () => void;
@@ -113,16 +115,12 @@ export class ReadingDetailModal extends Modal {
 	private starsWrapEl: HTMLElement | null = null;
 
 	constructor(
-		app: App,
-		plugin: HoardPlugin,
-		readingData: ReadingDataManager,
+		private deps: ReadingDetailModalDeps,
 		mode: 'book' | 'manga',
 		id: string,
 		onChanged: () => void,
 	) {
-		super(app);
-		this.plugin = plugin;
-		this.readingData = readingData;
+		super(deps.app);
 		this.mode = mode;
 		this.id = id;
 		this.onChanged = onChanged;
@@ -138,12 +136,12 @@ export class ReadingDetailModal extends Modal {
 
 	private getItem(): Book | Manga | undefined {
 		return this.mode === 'book'
-			? this.readingData.getBook(this.id)
-			: this.readingData.getManga(this.id);
+			? this.deps.reading.getBook(this.id)
+			: this.deps.reading.getManga(this.id);
 	}
 
 	onOpen(): void {
-		markDetailRoot(this.modalEl, this.contentEl, this.plugin.settings.colorTheme);
+		markDetailRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-reading-detail');
 		this.renderAll();
 	}
@@ -173,7 +171,7 @@ export class ReadingDetailModal extends Modal {
 				chaptersRead: this.draft.chaptersRead,
 			};
 			this.applyAutoComplete(updated);
-			await this.readingData.updateBook(updated);
+			await this.deps.reading.updateBook(updated);
 		} else {
 			const manga = item as Manga;
 			const updated: Manga = {
@@ -182,7 +180,7 @@ export class ReadingDetailModal extends Modal {
 				volumesRead: this.draft.volumesRead,
 			};
 			this.applyAutoComplete(updated);
-			await this.readingData.updateManga(updated);
+			await this.deps.reading.updateManga(updated);
 		}
 
 		this.logProgressChange(item);
@@ -198,19 +196,19 @@ export class ReadingDetailModal extends Modal {
 			// only the unit the book is tracked in is worth a log line
 			if (bookProgressUnit(book) === 'words') {
 				if (this.draft.wordsRead !== snap.wordsRead && book.totalWords > 0) {
-					void this.plugin.historyManager?.log(
+					void this.deps.history.log(
 						`${item.title} (${typeLabel}) At word ${formatCount(this.draft.wordsRead)} / ${formatCount(book.totalWords)}`,
 						{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
 					);
 				}
 			} else if (this.draft.pagesRead !== snap.pagesRead && book.totalPages > 0) {
-				void this.plugin.historyManager?.log(
+				void this.deps.history.log(
 					`${item.title} (${typeLabel}) At page ${formatCount(this.draft.pagesRead)} / ${formatCount(book.totalPages)}`,
 					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
 				);
 			}
 			if (this.draft.chaptersRead !== snap.chaptersRead && book.totalChapters > 0) {
-				void this.plugin.historyManager?.log(
+				void this.deps.history.log(
 					`${item.title} (${typeLabel}) At chapter ${this.draft.chaptersRead} / ${book.totalChapters}`,
 					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
 				);
@@ -218,13 +216,13 @@ export class ReadingDetailModal extends Modal {
 		} else {
 			const manga = item as Manga;
 			if (this.draft.chaptersRead !== snap.chaptersRead && manga.totalChapters > 0) {
-				void this.plugin.historyManager?.log(
+				void this.deps.history.log(
 					`${item.title} (${typeLabel}) At chapter ${this.draft.chaptersRead} / ${manga.totalChapters}`,
 					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
 				);
 			}
 			if (this.draft.volumesRead !== snap.volumesRead && manga.totalVolumes > 0) {
-				void this.plugin.historyManager?.log(
+				void this.deps.history.log(
 					`${item.title} (${typeLabel}) At volume ${this.draft.volumesRead} / ${manga.totalVolumes}`,
 					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
 				);
@@ -283,9 +281,9 @@ export class ReadingDetailModal extends Modal {
 		// open this entry's .md note; Reading resolves its own path (Books/Manga have their own folder) and
 		// the shared helper handles the rest
 		appendNoteLinkButton(
-			this.plugin.app,
+			this.app,
 			meta,
-			this.readingData.noteFilePath(this.mode, item.title),
+			this.deps.reading.noteFilePath(this.mode, item.title),
 			() => this.close(),
 		);
 
@@ -326,9 +324,9 @@ export class ReadingDetailModal extends Modal {
 				const curr = this.getItem();
 				if (curr && val !== curr.title) {
 					if (this.mode === 'book') {
-						await this.readingData.updateBook({ ...(curr as Book), title: val });
+						await this.deps.reading.updateBook({ ...(curr as Book), title: val });
 					} else {
-						await this.readingData.updateManga({ ...(curr as Manga), title: val });
+						await this.deps.reading.updateManga({ ...(curr as Manga), title: val });
 					}
 					this.onChanged();
 				}
@@ -369,9 +367,9 @@ export class ReadingDetailModal extends Modal {
 				const curr = this.getItem();
 				if (curr && val !== curr.author) {
 					if (this.mode === 'book') {
-						await this.readingData.updateBook({ ...(curr as Book), author: val });
+						await this.deps.reading.updateBook({ ...(curr as Book), author: val });
 					} else {
-						await this.readingData.updateManga({ ...(curr as Manga), author: val });
+						await this.deps.reading.updateManga({ ...(curr as Manga), author: val });
 					}
 					this.onChanged();
 				}
@@ -392,7 +390,7 @@ export class ReadingDetailModal extends Modal {
 		const fresh = this.getItem();
 		const status = fresh?.status ?? 'Plan to Read';
 		const badge = wrap.createSpan({ cls: 'hoard-reading-detail__status', text: readingStatusLabel(status) });
-		badge.setCssProps({ '--hoard-reading-detail-status-color': readingStatusColor(status, this.readingData.getSettings().statusColors) });
+		badge.setCssProps({ '--hoard-reading-detail-status-color': readingStatusColor(status, this.deps.reading.getSettings().statusColors) });
 		badge.title = t('detail.clickToChangeStatus');
 		badge.addEventListener('click', (e) => {
 			e.stopPropagation();
@@ -405,7 +403,7 @@ export class ReadingDetailModal extends Modal {
 			anchor,
 			container: this.contentEl,
 			options: SELECTABLE_READING_STATUSES.map((status) => ({ value: status, label: readingStatusLabel(status) })),
-			getOptionColor: (status) => readingStatusColor(status as ReadingStatus, this.readingData.getSettings().statusColors),
+			getOptionColor: (status) => readingStatusColor(status as ReadingStatus, this.deps.reading.getSettings().statusColors),
 			onSelect: (status) =>
 				void this.saveStatus(status as ReadingStatus).then(() => this.renderStatusBadge(wrap)),
 		});
@@ -419,9 +417,9 @@ export class ReadingDetailModal extends Modal {
 			patch.dateFinished = todayIso();
 		}
 		if (this.mode === 'book') {
-			await this.readingData.updateBook({ ...(curr as Book), ...patch });
+			await this.deps.reading.updateBook({ ...(curr as Book), ...patch });
 		} else {
-			await this.readingData.updateManga({ ...(curr as Manga), ...patch });
+			await this.deps.reading.updateManga({ ...(curr as Manga), ...patch });
 		}
 		this.onChanged();
 	}
@@ -453,9 +451,9 @@ export class ReadingDetailModal extends Modal {
 					const curr = this.getItem();
 					if (!curr) return;
 					if (this.mode === 'book') {
-						await this.readingData.updateBook({ ...(curr as Book), externalLink: url });
+						await this.deps.reading.updateBook({ ...(curr as Book), externalLink: url });
 					} else {
-						await this.readingData.updateManga({ ...(curr as Manga), externalLink: url });
+						await this.deps.reading.updateManga({ ...(curr as Manga), externalLink: url });
 					}
 					this.onChanged();
 					this.renderExternalLinkActions(container);
@@ -499,8 +497,8 @@ export class ReadingDetailModal extends Modal {
 			? t('detail.reading.linked', { path: item.vaultPage })
 			: t('detail.reading.linkVaultNote');
 		linkBtn.addEventListener('click', () => {
-			const files = this.plugin.app.vault.getMarkdownFiles();
-			new VaultFilePicker(this.plugin.app, files, (file) => {
+			const files = this.app.vault.getMarkdownFiles();
+			new VaultFilePicker(this.app, files, (file) => {
 				void this.updateVaultPage(file.path).then(() => this.renderVaultRow(row));
 			}).open();
 		});
@@ -534,19 +532,19 @@ export class ReadingDetailModal extends Modal {
 		if (!item) return;
 		if (this.mode === 'book') {
 			const updated: Book = { ...(item as Book), vaultPage: newPath };
-			await this.readingData.updateBook(updated);
+			await this.deps.reading.updateBook(updated);
 		} else {
 			const updated: Manga = { ...(item as Manga), vaultPage: newPath };
-			await this.readingData.updateManga(updated);
+			await this.deps.reading.updateManga(updated);
 		}
 	}
 
 	private openLinkedVaultPage(): void {
 		const item = this.getItem();
 		if (!item || !item.vaultPage) return;
-		const file = this.plugin.app.vault.getAbstractFileByPath(item.vaultPage);
+		const file = this.app.vault.getAbstractFileByPath(item.vaultPage);
 		if (file instanceof TFile) {
-			void this.plugin.app.workspace.getLeaf('tab').openFile(file);
+			void this.app.workspace.getLeaf('tab').openFile(file);
 			this.close();
 		} else {
 			new Notice(t('detail.reading.vaultMissing'));
@@ -561,8 +559,8 @@ export class ReadingDetailModal extends Modal {
 			return;
 		}
 		renderStarRating(this.starsWrapEl, item.rating, {
-			allowHalf: this.plugin.settings.halfStarRatings ?? false,
-			tiers: this.plugin.settings.ratingSystem,
+			allowHalf: this.deps.settings.get().halfStarRatings ?? false,
+			tiers: this.deps.settings.get().ratingSystem,
 			showLabel: true,
 			onChange: (value) => {
 				const fresh = this.getItem();
@@ -570,10 +568,10 @@ export class ReadingDetailModal extends Modal {
 				void (async () => {
 					if (this.mode === 'book') {
 						const updated = { ...(fresh as Book), rating: value };
-						await this.readingData.updateBook(updated);
+						await this.deps.reading.updateBook(updated);
 					} else {
 						const updated = { ...(fresh as Manga), rating: value };
-						await this.readingData.updateManga(updated);
+						await this.deps.reading.updateManga(updated);
 					}
 					this.renderStars();
 				})();
@@ -640,7 +638,7 @@ export class ReadingDetailModal extends Modal {
 
 		// the "of N …" totals are click-to-edit, which isn't discoverable on its own — gated on the same
 		// "Show hint banners" setting as the other hints
-		if (this.plugin.settings.showHintBanners) {
+		if (this.deps.settings.get().showHintBanners) {
 			const primary = this.mode === 'book'
 				? (bookProgressUnit(item as Book) === 'words' ? 'words' : 'pages')
 				: 'chapters';
@@ -680,7 +678,7 @@ export class ReadingDetailModal extends Modal {
 			wordsRead: this.draft.wordsRead,
 			chaptersRead: this.draft.chaptersRead,
 		};
-		await this.readingData.updateBook(updated);
+		await this.deps.reading.updateBook(updated);
 		this.openSnapshot = { ...this.draft };
 		this.onChanged();
 		this.renderAll();
@@ -694,9 +692,9 @@ export class ReadingDetailModal extends Modal {
 		const curr = this.getItem();
 		if (!curr) return;
 		if (this.mode === 'book') {
-			await this.readingData.updateBook({ ...(curr as Book), [field]: value });
+			await this.deps.reading.updateBook({ ...(curr as Book), [field]: value });
 		} else {
-			await this.readingData.updateManga({ ...(curr as Manga), [field]: value });
+			await this.deps.reading.updateManga({ ...(curr as Manga), [field]: value });
 		}
 		this.onChanged();
 	}
@@ -862,9 +860,9 @@ export class ReadingDetailModal extends Modal {
 				const curr = this.getItem();
 				if (!curr) return;
 				if (this.mode === 'book') {
-					await this.readingData.updateBook({ ...(curr as Book), dateStarted: val });
+					await this.deps.reading.updateBook({ ...(curr as Book), dateStarted: val });
 				} else {
-					await this.readingData.updateManga({ ...(curr as Manga), dateStarted: val });
+					await this.deps.reading.updateManga({ ...(curr as Manga), dateStarted: val });
 				}
 				this.onChanged();
 			},
@@ -879,9 +877,9 @@ export class ReadingDetailModal extends Modal {
 				const curr = this.getItem();
 				if (!curr) return;
 				if (this.mode === 'book') {
-					await this.readingData.updateBook({ ...(curr as Book), dateFinished: val });
+					await this.deps.reading.updateBook({ ...(curr as Book), dateFinished: val });
 				} else {
-					await this.readingData.updateManga({ ...(curr as Manga), dateFinished: val });
+					await this.deps.reading.updateManga({ ...(curr as Manga), dateFinished: val });
 				}
 				this.onChanged();
 			},
@@ -970,9 +968,9 @@ export class ReadingDetailModal extends Modal {
 				if (!curr) return;
 				if (newId === this.idText(curr)) { restore(); return; }
 				if (this.mode === 'book') {
-					await this.readingData.updateBook({ ...(curr as Book), googleBooksId: newId });
+					await this.deps.reading.updateBook({ ...(curr as Book), googleBooksId: newId });
 				} else {
-					await this.readingData.updateManga({ ...(curr as Manga), malId: newId });
+					await this.deps.reading.updateManga({ ...(curr as Manga), malId: newId });
 				}
 				this.onChanged();
 				restore();
@@ -996,27 +994,27 @@ export class ReadingDetailModal extends Modal {
 	private async refetchCoverFromId(newId: string): Promise<void> {
 		try {
 			if (this.mode === 'book') {
-				if (!this.plugin.apiService.hasGoogleBooksKey()) {
+				if (!this.deps.api.hasGoogleBooksKey()) {
 					new Notice(t('reading.notices.googleBooksKeyRequired'));
 					return;
 				}
-				const result = await this.plugin.apiService.getGoogleBookById(newId);
+				const result = await this.deps.api.getGoogleBookById(newId);
 				if (!result || !result.coverUrl) {
 					new Notice(t('detail.reading.noBookCover'));
 					return;
 				}
 				const fresh = this.getItem();
 				if (!fresh) return;
-				await this.readingData.updateBook({ ...(fresh as Book), coverUrl: result.coverUrl });
+				await this.deps.reading.updateBook({ ...(fresh as Book), coverUrl: result.coverUrl });
 			} else {
-				const result = await this.plugin.apiService.getMangaByMalId(Number(newId));
+				const result = await this.deps.api.getMangaByMalId(Number(newId));
 				if (!result || !result.coverUrl) {
 					new Notice(t('detail.reading.noMangaCover'));
 					return;
 				}
 				const fresh = this.getItem();
 				if (!fresh) return;
-				await this.readingData.updateManga({ ...(fresh as Manga), coverUrl: result.coverUrl });
+				await this.deps.reading.updateManga({ ...(fresh as Manga), coverUrl: result.coverUrl });
 			}
 			this.onChanged();
 		} catch (err) {
@@ -1050,9 +1048,9 @@ export class ReadingDetailModal extends Modal {
 					const curr = this.getItem();
 					if (!curr) return;
 					if (this.mode === 'book') {
-						await this.readingData.updateBook({ ...(curr as Book), releaseDate: iso });
+						await this.deps.reading.updateBook({ ...(curr as Book), releaseDate: iso });
 					} else {
-						await this.readingData.updateManga({ ...(curr as Manga), releaseDate: iso });
+						await this.deps.reading.updateManga({ ...(curr as Manga), releaseDate: iso });
 					}
 					this.onChanged();
 					// status may have flipped to/from "To be released"
@@ -1115,14 +1113,14 @@ export class ReadingDetailModal extends Modal {
 		});
 		deleteBtn.addEventListener('click', () => {
 			new ConfirmModal(
-				this.plugin.app,
+				this.app,
 				t('detail.reading.deleteConfirm', { title: item.title }),
 				() => {
 					void (async () => {
 						if (this.mode === 'book') {
-							await this.readingData.removeBook(item.id);
+							await this.deps.reading.removeBook(item.id);
 						} else {
-							await this.readingData.removeManga(item.id);
+							await this.deps.reading.removeManga(item.id);
 						}
 						this.onChanged();
 						this.close();
@@ -1145,7 +1143,7 @@ export class ReadingDetailModal extends Modal {
 			if (writing) return;
 			writing = true;
 			const fav = this.getItem()?.favorite === true;
-			void this.readingData.setFavorite(this.mode, item.id, !fav).catch(() => {
+			void this.deps.reading.setFavorite(this.mode, item.id, !fav).catch(() => {
 				new Notice(t('detail.favorite.failed'));
 			}).finally(() => {
 				writing = false;
@@ -1164,15 +1162,13 @@ export class ReadingDetailModal extends Modal {
 
 	private getColumns(): ReadingCustomColumn[] {
 		return this.mode === 'book'
-			? this.readingData.getBookColumns()
-			: this.readingData.getMangaColumns();
+			? this.deps.reading.getBookColumns()
+			: this.deps.reading.getMangaColumns();
 	}
 
 	private openManageColumns(): void {
 		new ReadingManageColumnsModal(
-			this.plugin.app,
-			this.plugin,
-			this.readingData,
+			this.deps,
 			this.mode,
 			() => this.renderAll(),
 		).open();
@@ -1212,7 +1208,7 @@ export class ReadingDetailModal extends Modal {
 			return;
 		}
 
-		const settings = this.readingData.getSettings();
+		const settings = this.deps.reading.getSettings();
 		const fieldStyle = this.mode === 'book'
 			? (settings.bookCustomFieldStyle ?? 'fill')
 			: (settings.mangaCustomFieldStyle ?? 'fill');
@@ -1230,7 +1226,7 @@ export class ReadingDetailModal extends Modal {
 		const labelCell = row.createDiv({ cls: 'hoard-reading-custom-fields__label', text: col.name });
 		const valueCell = row.createDiv({ cls: 'hoard-reading-custom-fields__value' });
 
-		const settings = this.readingData.getSettings();
+		const settings = this.deps.reading.getSettings();
 		const style = this.mode === 'book'
 			? (settings.bookCustomFieldStyle ?? 'fill')
 			: (settings.mangaCustomFieldStyle ?? 'fill');
@@ -1338,7 +1334,7 @@ export class ReadingDetailModal extends Modal {
 		col: ReadingCustomColumn,
 		value: string | number | null,
 	): Promise<void> {
-		await this.readingData.setCustomField(this.mode, item.id, col.id, value);
+		await this.deps.reading.setCustomField(this.mode, item.id, col.id, value);
 	}
 
 	private renderQuotesSection(item: Book | Manga): void {
@@ -1357,7 +1353,7 @@ export class ReadingDetailModal extends Modal {
 		const refresh = async (): Promise<void> => {
 			listEl.empty();
 			try {
-				const content = await this.readingData.readReadingNote(this.mode, item);
+				const content = await this.deps.reading.readReadingNote(this.mode, item);
 				const quotes = content ? parseQuotesSection(content) : [];
 				if (quotes.length === 0) {
 					listEl.createDiv({
@@ -1426,7 +1422,7 @@ export class ReadingDetailModal extends Modal {
 			}
 			void (async () => {
 				try {
-					await this.readingData.appendQuote(this.mode, item, text, refInput.value);
+					await this.deps.reading.appendQuote(this.mode, item, text, refInput.value);
 					parent.empty();
 					await onSaved();
 				} catch (e) {
@@ -1452,7 +1448,7 @@ export class ReadingDetailModal extends Modal {
 				chaptersRead: this.draft.chaptersRead,
 			};
 			this.applyAutoComplete(updated);
-			await this.readingData.updateBook(updated);
+			await this.deps.reading.updateBook(updated);
 		} else {
 			const manga = item as Manga;
 			const updated: Manga = {
@@ -1461,7 +1457,7 @@ export class ReadingDetailModal extends Modal {
 				volumesRead: this.draft.volumesRead,
 			};
 			this.applyAutoComplete(updated);
-			await this.readingData.updateManga(updated);
+			await this.deps.reading.updateManga(updated);
 		}
 
 		this.logProgressChange(item);

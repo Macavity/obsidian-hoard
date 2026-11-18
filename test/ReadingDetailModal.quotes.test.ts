@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ReadingDetailModal } from '../src/ReadingDetailModal';
 import { t } from '../src/i18n';
 import type { Book } from '../src/types';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const flush = () => new Promise<void>((r) => setTimeout(r, 0));
 const book = { id: 'b1', title: 'Dune', customFields: {} } as unknown as Book;
@@ -12,7 +13,7 @@ function build(read: () => Promise<string | null>) {
 		readReadingNote: vi.fn(read),
 		appendQuote: vi.fn(() => Promise.resolve()),
 	};
-	const modal = new ReadingDetailModal({} as never, { settings: {}, apiService: {}, app: {} } as never, readingData as never, 'book', 'b1', vi.fn());
+	const modal = new ReadingDetailModal({ settings: fakeSettings({}), api: {}, reading: readingData, app: {} } as never, 'book', 'b1', vi.fn());
 	const m = modal as unknown as { renderQuotesSection: (i: Book) => void; contentEl: HTMLElement };
 	m.renderQuotesSection(book);
 	const list = () => m.contentEl.querySelector<HTMLElement>('.hoard-reading-quotes__list')!;

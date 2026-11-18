@@ -10,6 +10,7 @@ vi.mock('../src/PosterCard', () => ({
 	POSTER_CARD_TEXT_H: 40,
 }));
 import { openCardMenu } from '../src/PosterCard';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
@@ -51,9 +52,9 @@ function build(sub: 'books' | 'manga', o: Opts = {}) {
 		getGoogleBookById: vi.fn(() => (o.coverFails ? Promise.reject(new Error('x')) : Promise.resolve({ coverUrl: o.cover ?? '' }))),
 		getMangaByMalId: vi.fn(() => (o.coverFails ? Promise.reject(new Error('x')) : Promise.resolve({ coverUrl: o.cover ?? '' }))),
 	};
-	const plugin = { app: {}, apiService, isCardTextUnder: () => o.textUnder ?? true, settings: {} };
+	const deps = { app: {}, api: apiService, reading: readingData, isCardTextUnder: () => o.textUnder ?? true, settings: fakeSettings({}) };
 	const container = document.createElement('div');
-	const tab = new ReadingTab(container, plugin as never, readingData as never);
+	const tab = new ReadingTab(container, deps as never);
 	(tab as unknown as { activeSubTab: string }).activeSubTab = sub;
 	const x = tab as unknown as {
 		renderBookCard: (g: HTMLElement, b: Book) => void;
@@ -204,7 +205,7 @@ describe('ReadingTab.refreshCover', () => {
 
 	it('refreshes an Open Library book without a Google key', async () => {
 		const { tab, readingData } = build('books', { hasKey: false, cover: 'http://c/ol.jpg' });
-		const api = (tab as unknown as { plugin: { apiService: Record<string, unknown> } }).plugin.apiService;
+		const api = (tab as unknown as { deps: { api: Record<string, unknown> } }).deps.api;
 		api.getOpenLibraryWork = vi.fn(() => Promise.resolve({ coverUrl: 'http://c/ol.jpg' }));
 		tab.refreshCover(book({ openLibraryId: 'OL1W' }));
 		await flush();
