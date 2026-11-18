@@ -439,4 +439,23 @@ describe('HoardSettingsTab type API routing', () => {
 		expect(settings.typeApiMapping).toEqual({ Docu: 'movie' });
 		expect(settingsService.update).toHaveBeenCalledTimes(1);
 	});
+
+	it('saves nothing when no route is stale', () => {
+		const { tab, settings, settingsService } = makeTab();
+		settings.types = [{ name: 'Docu', color: '#222222' }];
+		(settings as { typeApiMapping: Record<string, string> }).typeApiMapping = { Docu: 'movie' };
+		(tab as unknown as { renderTypeApiMapping(p: HTMLElement): void }).renderTypeApiMapping(document.createElement('div'));
+		expect(settingsService.update).not.toHaveBeenCalled();
+	});
+
+	it('logs a failing prune save instead of leaving the rejection unhandled', async () => {
+		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { tab, settings, settingsService } = makeTab();
+		(settings as { typeApiMapping: Record<string, string> }).typeApiMapping = { Gone: 'anime' };
+		settingsService.update.mockRejectedValueOnce(new Error('disk'));
+		(tab as unknown as { renderTypeApiMapping(p: HTMLElement): void }).renderTypeApiMapping(document.createElement('div'));
+		await Promise.resolve();
+		expect(err).toHaveBeenCalled();
+		err.mockRestore();
+	});
 });

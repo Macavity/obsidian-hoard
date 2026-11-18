@@ -49,6 +49,12 @@ export class SettingsService implements SettingsReader, SettingsWriter {
 		}, STAGE_DELAY_MS);
 	}
 
+	/** Saves a pending `stage` now (plugin unload); does nothing when none is pending. */
+	async flush(): Promise<void> {
+		if (this.stageTimer === null) return;
+		await this.update(() => {});
+	}
+
 	private cancelStaged(): void {
 		if (this.stageTimer === null) return;
 		window.clearTimeout(this.stageTimer);

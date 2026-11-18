@@ -57,6 +57,31 @@ describe('SettingsService', () => {
 		});
 	});
 
+	describe('flush', () => {
+		it('flush persists a pending stage once', async () => {
+			vi.useFakeTimers();
+			try {
+				const { svc, persistSpy, changed } = make();
+				svc.stage((s) => { s.omdbApiKey = 'a'; });
+				await svc.flush();
+				expect(persistSpy).toHaveBeenCalledTimes(1);
+				expect(changed).toHaveBeenCalledTimes(1);
+				// the cancelled timer must not save a second time
+				await vi.advanceTimersByTimeAsync(1000);
+				expect(persistSpy).toHaveBeenCalledTimes(1);
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it('flush without a pending stage does nothing', async () => {
+			const { svc, persistSpy, changed } = make();
+			await svc.flush();
+			expect(persistSpy).not.toHaveBeenCalled();
+			expect(changed).not.toHaveBeenCalled();
+		});
+	});
+
 	it('get is read-only at compile time', () => {
 		const { svc } = make();
 		// @ts-expect-error a readonly array is not assignable to a mutable one

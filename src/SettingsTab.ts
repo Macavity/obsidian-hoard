@@ -1659,9 +1659,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			(key) => !validNames.has(key) || key === 'Anime' || key === 'Movie' || key === 'TV Show' || key === 'TvShow',
 		);
 		if (stale.length === 0) return;
-		void this.deps.settings.update((d) => {
+		this.deps.settings.update((d) => {
 			for (const key of stale) delete d.typeApiMapping[key];
-		});
+		}).catch((e: unknown) => console.error('[Hoard] could not prune stale API routes', e));
 	}
 
 	private renderTypeApiMapping(parent: HTMLElement): void {
