@@ -35,6 +35,7 @@ import { composeSettings, persistSettings } from './settingsSplit';
 import { toRecord } from './storage/sharedHelpers';
 import { resolveJikanEndpoint } from './jikanBase';
 import { emitDataChanged, onDataChanged } from './changeSignal';
+import { SettingsService } from './SettingsService';
 
 /** Root folder created on a fresh install (no `.base` with a `hoard:` key found). */
 const DEFAULT_ROOT = 'Hoard';
@@ -42,6 +43,12 @@ const DEFAULT_ROOT = 'Hoard';
 export default class HoardPlugin extends Plugin {
 	// a copy: lists edited in place before the first load must not change the defaults
 	settings: HoardPluginSettings = structuredClone(DEFAULT_SETTINGS);
+	/** Single settings access; `settings` stays until all consumers have migrated. */
+	readonly settingsService = new SettingsService({
+		current: () => this.settings,
+		persist: () => this.persistAll(),
+		changed: emitDataChanged,
+	});
 	private indexReady = false;
 	private wizardOpen = false;
 	private typeNamesKey: string | null = null;
@@ -534,7 +541,15 @@ export default class HoardPlugin extends Plugin {
 		this.apiKeys = keys;
 	}
 
-	async saveSettings(): Promise<void> {
+	/**
+	 * Legacy entry: persists without the change signal. Callers that need a re-render emit it
+	 * themselves, so delegating to `settingsService.update` would double the re-render.
+	 */
+	saveSettings(): Promise<void> {
+		return this.persistAll();
+	}
+
+	private async persistAll(): Promise<void> {
 		// keep the date formatters in step with the setting on every save
 		setActiveDateFormat(this.settings.dateFormat);
 		this.syncTypeNames();
