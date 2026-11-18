@@ -16,7 +16,7 @@ import type { DataManager } from '../services/DataManager';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
 import type { HoardTitle, HoardGroup, Season } from '../../../shared/domain/types';
 import { completedEpisodes } from '../../../shared/domain/entryFactories';
-import { formatSeasonLine, parseSeasonLine, seasonsOf } from '../../../shared/storage/seasonText';
+import { formatSeasonLine, parseSeasonLine, seasonsOf } from '../../../shared/domain/seasonText';
 
 /** Seasons from the seasons box, one "Name: N" or "Name: N (skip list)" per line. No bounds are applied here. */
 function parseSeasonsText(text: string): Season[] {

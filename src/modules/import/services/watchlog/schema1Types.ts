@@ -9,7 +9,7 @@ import type { SharedConfigStore } from '../../../../shared/storage/SharedConfigS
 import type { HistoryStore } from '../../../../shared/storage/HistoryStore';
 import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
 import type { EntryKind, YamlIO } from '../../../../shared/storage/storageTypes';
-import type { Progress } from './report';
+import type { Progress } from '../../../../shared/domain/importReport';
 
 /** A title as WatchLog stored it; `manualPosterUrl` wins over `posterUrl`. */
 export type WatchLogTitle = HoardTitle & { manualPosterUrl?: string };

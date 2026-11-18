@@ -2,7 +2,7 @@ import { App, Modal, Notice, type TFile } from 'obsidian';
 import { t } from '../../../shared/i18n';
 import type { SourceCounts, WatchLogSourceKind, WatchLogSources } from '../services/watchlog/detect';
 import type { ImportDecision } from '../services/watchlog/onboardingState';
-import { generalErrors, type ImportPhase, type ImportReport, type Progress, type ReviewItem } from '../services/watchlog/report';
+import { generalErrors, type ImportPhase, type ImportReport, type Progress, type ReviewItem } from '../../../shared/domain/importReport';
 import type { CleanupItem } from '../services/watchlog/cleanup';
 import { PLUGIN_NAME, REASONS, reasonLabel, reportMarkdown, reportStats, reviewDetail } from './WatchLogReport';
 

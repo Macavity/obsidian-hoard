@@ -1,7 +1,7 @@
 import { TFile, TFolder, type App } from 'obsidian';
 import type { OriginalSource } from './detect';
 import { isListNote, originalFolders, originalNotePath } from './originalPaths';
-import { emptyImportReport, type ImportReport, type Progress } from './report';
+import { emptyImportReport, type ImportReport, type Progress } from '../../../../shared/domain/importReport';
 import { importWatchLogData, mergeSideFiles } from './schema1';
 import { bodyOf, ensureFolder } from './schema1Notes';
 import type { ImportContext } from './schema1Types';

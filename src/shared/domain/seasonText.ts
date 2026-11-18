@@ -1,4 +1,4 @@
-import type { Season } from '../domain/types';
+import type { Season } from './types';
 
 /**
  * The text form of a season: "Name: N", optionally followed by the episodes to skip, " (5,8,33-37)".

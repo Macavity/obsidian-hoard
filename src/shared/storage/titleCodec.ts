@@ -3,7 +3,7 @@ import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId, Fm } 
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
 import { externalIdFromLink, formatExternalId, parseExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, TITLE_PROPS as T } from './properties';
-import { parseSeasonLine, seasonsOf } from './seasonText';
+import { parseSeasonLine, seasonsOf } from '../domain/seasonText';
 import { defined, nonEmpty, optional } from '../domain/sharedHelpers';
 
 const RECURRENCES: readonly AirtimeRecurrence[] = ['once', 'daily', 'weekly', 'monthly'];

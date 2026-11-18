@@ -15,7 +15,7 @@ import {
 	REMOVED_SETTINGS, WISHLIST, isRecord,
 	type IdMaps, type ImportContext, type ImportHooks, type PreparedData, type WatchLogData, type WatchLogTitle,
 } from './schema1Types';
-import { emptyImportReport, type ImportReport } from './report';
+import { emptyImportReport, type ImportReport } from '../../../../shared/domain/importReport';
 
 /** Adds groups and the recurring schedule to an entry. */
 type Extras = <T extends { groups?: string[]; airtime?: EntryAirtime }>(item: T, key: string) => T;

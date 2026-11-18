@@ -1,7 +1,6 @@
 import type { App } from 'obsidian';
 import type { LocalStore } from '../../../../shared/storage/LocalStore';
 import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
-import type { WatchLogImporter } from '../../ui/WatchLogOnboardingModal';
 import { planCleanup, runCleanup } from './cleanup';
 import type { WatchLogSources } from './detect';
 import { importFork } from './importFork';
@@ -19,7 +18,7 @@ export interface ImporterDeps {
 }
 
 /** Wires the onboarding wizard to the import logic. */
-export function createImporter(deps: ImporterDeps, sources: WatchLogSources): WatchLogImporter {
+export function createImporter(deps: ImporterDeps, sources: WatchLogSources) {
 	const { app, local } = deps;
 	return {
 		sources,
