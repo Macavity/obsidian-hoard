@@ -83,6 +83,8 @@ function groupMatchesSearch(group: HoardGroup, members: HoardTitle[], q: string,
 }
 
 /** It drives most of the manager, so `titles` is the whole `DataManager` rather than a `Pick`. */
+type ListFilterState = NonNullable<ReturnType<SettingsReader['get']>['listFilters']>;
+
 export class ListTab implements TabInstance {
 
 	// preserved state
@@ -172,44 +174,49 @@ export class ListTab implements TabInstance {
 		this.container.addEventListener('scroll', this.scrollPositionListener, { passive: true });
 		this.pinnedGroupId = titles.getPinnedGroupId();
 
-		// restore persisted filter state
 		const saved = settings.get().listFilters;
-		if (saved) {
-			this.filterTypeExclude     = new Set(saved.typeExclude     ?? []);
-			this.filterStatusExclude   = new Set(saved.statusExclude   ?? []);
-			this.filterGroupExclude    = new Set(saved.groupExclude    ?? []);
-			this.filterRatingExclude   = new Set(saved.ratingExclude   ?? []);
-			this.filterPriorityExclude = migratePriorityExclude(
-				saved.priorityExclude,
-				saved.priorityEmptyOnly,
-				settings.get().priorities,
-			);
-			const ms = ListTab.migrateSortKey(saved.sort ?? 'dateAdded-newest');
-			this.sort.filterSort     = ms.key;
-			this.sort.filterSortDir  = saved.sortDir ?? ms.dir;
-			const ms2 = ListTab.migrateSortKey(saved.secondSort ?? 'none');
-			this.sort.filterSecondSort    = ms2.key;
-			this.sort.filterSecondSortDir = saved.secondSortDir ?? ms2.dir;
-			this.filterRatingEmptyOnly      = saved.ratingEmptyOnly      ?? false;
-			this.filterRecentlyArrivedOnly  = saved.recentlyArrivedOnly  ?? false;
-			this.filterGroupsOnly           = saved.groupsOnly           ?? false;
-			this.filterFavoritesOnly        = saved.favoritesOnly        ?? false;
-		}
-
+		if (saved) this.restoreFilters(saved);
 		// keep the preset button green while filters still match it
 		const savedPreset = titles.getSavedFilterPreset();
-		if (savedPreset) {
-			this.savedFilterActive =
-				setsMatch(this.filterTypeExclude, savedPreset.typeExclude) &&
-				setsMatch(this.filterStatusExclude, savedPreset.statusExclude) &&
-				setsMatch(this.filterGroupExclude, savedPreset.groupExclude) &&
-				setsMatch(this.filterRatingExclude, savedPreset.ratingExclude) &&
-				priorityExcludeMatches(this.filterPriorityExclude, savedPreset, settings.get().priorities) &&
-				(this.filterRatingEmptyOnly === (savedPreset.ratingEmptyOnly ?? false)) &&
-				(this.filterRecentlyArrivedOnly === (savedPreset.recentlyArrivedOnly ?? false)) &&
-				(this.filterGroupsOnly === (savedPreset.groupsOnly ?? false)) &&
-				(this.filterFavoritesOnly === (savedPreset.favoritesOnly ?? false));
-		}
+		if (savedPreset) this.savedFilterActive = this.matchesPreset(savedPreset);
+	}
+
+	private restoreFilters(saved: ListFilterState): void {
+		this.filterTypeExclude     = new Set(saved.typeExclude     ?? []);
+		this.filterStatusExclude   = new Set(saved.statusExclude   ?? []);
+		this.filterGroupExclude    = new Set(saved.groupExclude    ?? []);
+		this.filterRatingExclude   = new Set(saved.ratingExclude   ?? []);
+		this.filterPriorityExclude = migratePriorityExclude(
+			saved.priorityExclude,
+			saved.priorityEmptyOnly,
+			this.settings.get().priorities,
+		);
+		this.restoreSort(saved);
+		this.filterRatingEmptyOnly      = saved.ratingEmptyOnly      ?? false;
+		this.filterRecentlyArrivedOnly  = saved.recentlyArrivedOnly  ?? false;
+		this.filterGroupsOnly           = saved.groupsOnly           ?? false;
+		this.filterFavoritesOnly        = saved.favoritesOnly        ?? false;
+	}
+
+	private restoreSort(saved: ListFilterState): void {
+		const ms = ListTab.migrateSortKey(saved.sort ?? 'dateAdded-newest');
+		this.sort.filterSort     = ms.key;
+		this.sort.filterSortDir  = saved.sortDir ?? ms.dir;
+		const ms2 = ListTab.migrateSortKey(saved.secondSort ?? 'none');
+		this.sort.filterSecondSort    = ms2.key;
+		this.sort.filterSecondSortDir = saved.secondSortDir ?? ms2.dir;
+	}
+
+	private matchesPreset(preset: SavedFilterPreset): boolean {
+		return setsMatch(this.filterTypeExclude, preset.typeExclude) &&
+			setsMatch(this.filterStatusExclude, preset.statusExclude) &&
+			setsMatch(this.filterGroupExclude, preset.groupExclude) &&
+			setsMatch(this.filterRatingExclude, preset.ratingExclude) &&
+			priorityExcludeMatches(this.filterPriorityExclude, preset, this.settings.get().priorities) &&
+			(this.filterRatingEmptyOnly === (preset.ratingEmptyOnly ?? false)) &&
+			(this.filterRecentlyArrivedOnly === (preset.recentlyArrivedOnly ?? false)) &&
+			(this.filterGroupsOnly === (preset.groupsOnly ?? false)) &&
+			(this.filterFavoritesOnly === (preset.favoritesOnly ?? false));
 	}
 
 	/** Saves the live filters and drops the saved-preset highlight. */

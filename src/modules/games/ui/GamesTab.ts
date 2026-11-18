@@ -67,6 +67,8 @@ export interface GamesTabModals {
  * grids, and the flat "All games" fallback, all on the shared card infrastructure. + Add opens
  * AddGameModal; a card click opens GameDetailModal, or toggles selection in Select mode.
  */
+type GamesFilterState = NonNullable<ReturnType<SettingsReader['get']>['gamesFilters']>;
+
 export class GamesTab implements TabInstance {
 	private container: HTMLElement;
 	private dataChangeListener: () => void;
@@ -125,46 +127,58 @@ export class GamesTab implements TabInstance {
 		this.dataChangeListener = () => this.render();
 		this.games.onChange(this.dataChangeListener);
 
-		// restore persisted filter state
 		const saved = settings.get().gamesFilters;
-		if (saved) {
-			this.filterGenreExclude    = new Set(saved.genreExclude    ?? []);
-			this.filterStatusExclude   = new Set(saved.statusExclude   ?? []);
-			this.filterRatingExclude   = new Set(saved.ratingExclude   ?? []);
-			this.filterPriorityExclude = migratePriorityExclude(
-				saved.priorityExclude,
-				saved.priorityEmptyOnly,
-				settings.get().priorities,
-			);
-			this.filterPlatformExclude = new Set(saved.platformExclude ?? []);
-			this.filterGroupExclude    = new Set(saved.groupExclude    ?? []);
-			this.sort.filterSort          = saved.sort ?? 'dateAdded';
-			this.sort.filterSortDir       = saved.sortDir ?? 'desc';
-			this.sort.filterSecondSort    = saved.secondSort ?? 'none';
-			this.sort.filterSecondSortDir = saved.secondSortDir ?? 'asc';
-			this.filterRatingEmptyOnly     = saved.ratingEmptyOnly     ?? false;
-			this.filterRecentlyArrivedOnly = saved.recentlyArrivedOnly ?? false;
-			this.filterFavoritesOnly       = saved.favoritesOnly       ?? false;
-			this.filterWishlistOnly        = saved.wishlistOnly        ?? false;
-			this.filterGroupsOnly          = saved.groupsOnly          ?? false;
-		}
-
+		if (saved) this.restoreFilters(saved);
 		// keep the preset button green while filters still match it
 		const savedPreset = games.getSavedFilterPreset();
-		if (savedPreset) {
-			this.savedFilterActive =
-				setsMatch(this.filterGenreExclude, savedPreset.genreExclude) &&
-				setsMatch(this.filterStatusExclude, savedPreset.statusExclude) &&
-				setsMatch(this.filterRatingExclude, savedPreset.ratingExclude) &&
-				priorityExcludeMatches(this.filterPriorityExclude, savedPreset, settings.get().priorities) &&
-				setsMatch(this.filterPlatformExclude, savedPreset.platformExclude) &&
-				setsMatch(this.filterGroupExclude, savedPreset.groupExclude ?? []) &&
-				(this.filterRatingEmptyOnly === (savedPreset.ratingEmptyOnly ?? false)) &&
-				(this.filterRecentlyArrivedOnly === (savedPreset.recentlyArrivedOnly ?? false)) &&
-				(this.filterFavoritesOnly === (savedPreset.favoritesOnly ?? false)) &&
-				(this.filterWishlistOnly === (savedPreset.wishlistOnly ?? false)) &&
-				(this.filterGroupsOnly === (savedPreset.groupsOnly ?? false));
-		}
+		if (savedPreset) this.savedFilterActive = this.matchesPreset(savedPreset);
+	}
+
+	private restoreFilters(saved: GamesFilterState): void {
+		this.filterGenreExclude    = new Set(saved.genreExclude    ?? []);
+		this.filterRatingExclude   = new Set(saved.ratingExclude   ?? []);
+		this.filterStatusExclude   = new Set(saved.statusExclude   ?? []);
+		this.filterPlatformExclude = new Set(saved.platformExclude ?? []);
+		this.filterGroupExclude    = new Set(saved.groupExclude    ?? []);
+		this.filterPriorityExclude = migratePriorityExclude(
+			saved.priorityExclude,
+			saved.priorityEmptyOnly,
+			this.settings.get().priorities,
+		);
+		this.sort.filterSort          = saved.sort ?? 'dateAdded';
+		this.sort.filterSortDir       = saved.sortDir ?? 'desc';
+		this.sort.filterSecondSort    = saved.secondSort ?? 'none';
+		this.sort.filterSecondSortDir = saved.secondSortDir ?? 'asc';
+		this.restoreFlags(saved);
+	}
+
+	private restoreFlags(saved: GamesFilterState): void {
+		this.filterRatingEmptyOnly     = saved.ratingEmptyOnly     ?? false;
+		this.filterRecentlyArrivedOnly = saved.recentlyArrivedOnly ?? false;
+		this.filterFavoritesOnly       = saved.favoritesOnly       ?? false;
+		this.filterWishlistOnly        = saved.wishlistOnly        ?? false;
+		this.filterGroupsOnly          = saved.groupsOnly          ?? false;
+	}
+
+	private matchesPreset(preset: GamesSavedFilterPreset): boolean {
+		return this.excludesMatchPreset(preset) && this.flagsMatchPreset(preset);
+	}
+
+	private excludesMatchPreset(preset: GamesSavedFilterPreset): boolean {
+		return setsMatch(this.filterGenreExclude, preset.genreExclude) &&
+			setsMatch(this.filterStatusExclude, preset.statusExclude) &&
+			setsMatch(this.filterRatingExclude, preset.ratingExclude) &&
+			priorityExcludeMatches(this.filterPriorityExclude, preset, this.settings.get().priorities) &&
+			setsMatch(this.filterPlatformExclude, preset.platformExclude) &&
+			setsMatch(this.filterGroupExclude, preset.groupExclude ?? []);
+	}
+
+	private flagsMatchPreset(preset: GamesSavedFilterPreset): boolean {
+		return (this.filterRatingEmptyOnly === (preset.ratingEmptyOnly ?? false)) &&
+			(this.filterRecentlyArrivedOnly === (preset.recentlyArrivedOnly ?? false)) &&
+			(this.filterFavoritesOnly === (preset.favoritesOnly ?? false)) &&
+			(this.filterWishlistOnly === (preset.wishlistOnly ?? false)) &&
+			(this.filterGroupsOnly === (preset.groupsOnly ?? false));
 	}
 
 	destroy(): void {
