@@ -47,11 +47,13 @@ describe('detail modals i18n', () => {
 
 	it('renders the game group modal count in German', () => {
 		setLocale('de');
-		const modal = new GameGroupDetailModal({
-			app: {},
-			settings: fakeSettings({}),
-			games: { getSettings: () => ({ types: [], statuses: [] }) },
-		} as never, { name: 'Zelda' } as never, []);
+		const modal = new GameGroupDetailModal(
+			{} as never,
+			fakeSettings({}) as never,
+			{ getSettings: () => ({ types: [], statuses: [] }) } as never,
+			vi.fn(),
+			{ group: { name: 'Zelda' } as never, members: [] },
+		);
 		(modal as unknown as { renderAll: () => void }).renderAll();
 		expect(domText(modal.contentEl)).toContain('0 Spiele');
 	});

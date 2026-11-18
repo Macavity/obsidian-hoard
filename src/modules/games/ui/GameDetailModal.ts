@@ -6,9 +6,9 @@ import { buildPosterCard } from '../../../shared/ui/PosterCard';
 import { rawgResizedCover, steamAppIdFromUrl, type ApiService } from '../../../shared/api/ApiService';
 import { renderStarRating } from '../../../shared/ui/StarRating';
 import { renderTagPill, renderTagChips } from '../../../shared/ui/StatusDropdown';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
 import { renderModePill } from '../../../shared/ui/ModePill';
-import { appendNoteLinkButton } from '../../../shared/ui/NoteLinkButton';
+import { appendNoteLinkButton, type NoteFiles } from '../../../shared/ui/NoteLinkButton';
 import { createDatePicker } from '../../../shared/ui/DatePicker';
 import { pinModalFooter } from '../../../shared/ui/StickyModal';
 import { t } from '../../../shared/i18n';
@@ -16,13 +16,13 @@ import { gameStatusLabel, priorityLabel } from '../../../shared/i18n/labels';
 import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader } from '../../../shared/ui/detailShared';
 import { createFavoriteButton, markDetailRoot, markViewRoot } from '../../../shared/ui/detailFrame';
 
-/** Shared by GameDetailModal and GameGroupDetailModal, which opens it for a member. */
-export interface GameDetailModalDeps {
-	app: App;
-	settings: SettingsReader;
-	games: GameDataManager;
-	api: Pick<ApiService, 'hasSteamCredentials' | 'getSteamOwnedGames' | 'getSteamAchievements'>;
+export type GameDetailApi = Pick<ApiService, 'hasSteamCredentials' | 'getSteamOwnedGames' | 'getSteamAchievements'>;
+
+export interface GameDetailOptions {
+	game: Game;
 }
+
+export type OpenGameDetail = (opts: GameDetailOptions) => void;
 
 /**
  * Game detail/edit modal: cover + title/developer header, Type / Priority / Status pill dropdowns
@@ -50,23 +50,32 @@ export class GameDetailModal extends Modal {
 	// phone layout: note/store/wishlist on their own line, Modes aligned with Progress
 	private readonly mobile = Platform.isMobile;
 
-	constructor(private deps: GameDetailModalDeps, game: Game) {
-		super(deps.app);
+	constructor(
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly games: GameDataManager,
+		private readonly api: GameDetailApi,
+		private readonly files: NoteFiles,
+		private readonly confirm: OpenConfirm,
+		opts: GameDetailOptions,
+	) {
+		super(app);
+		const { game } = opts;
 		this.draft = { ...game, platforms: [...game.platforms] };
 		// the batch "Group…" action only ever adds, so a game can already sit in more than one group; the
 		// dropdown seeds from the first and Save re-homes it into exactly one (or none)
-		this.originalGroupId = this.deps.games.getGroups().find((g) => g.gameIds.includes(game.id))?.id ?? '';
+		this.originalGroupId = this.games.getGroups().find((g) => g.gameIds.includes(game.id))?.id ?? '';
 		this.selectedGroupId = this.originalGroupId;
 	}
 
 	onOpen(): void {
-		markViewRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
+		markViewRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
 		this.modalEl.addClass('hoard-game-detail');
 		this.render();
 
 		// notes live in the note file's ## Notes section — loaded async so edits made directly in the .md
 		// flow into the textarea
-		void this.deps.games.readGameNotes(this.draft).then((notes) => {
+		void this.games.readGameNotes(this.draft).then((notes) => {
 			this.notesValue = notes ?? '';
 			this.notesLoaded = true;
 			const ta = this.contentEl.querySelector<HTMLTextAreaElement>('.hoard-game-detail__notes');
@@ -121,7 +130,7 @@ export class GameDetailModal extends Modal {
 		platforms.createSpan({ cls: 'hoard-game-detail__label', text: t('detail.game.platforms') });
 		renderTagChips({
 			wrap: platforms.createDiv({ cls: 'hoard-game-detail__platforms' }),
-			tags: this.deps.games.getSettings().platforms,
+			tags: this.games.getSettings().platforms,
 			selected: this.draft.platforms,
 			onToggle: (sel) => { this.draft.platforms = sel; },
 		});
@@ -159,14 +168,13 @@ export class GameDetailModal extends Modal {
 		const footer = c.createDiv({ cls: 'hoard-game-detail__footer' });
 		const deleteBtn = footer.createEl('button', { cls: 'hoard-btn hoard-btn--delete', text: t('common.delete') });
 		deleteBtn.addEventListener('click', () => {
-			new ConfirmModal(
-				this.app,
+			this.confirm(
 				t('games.card.deleteConfirm', { title: this.draft.title }),
 				() => {
-					void this.deps.games.removeGame(this.draft.id);
+					void this.games.removeGame(this.draft.id);
 					this.close();
 				},
-			).open();
+			);
 		});
 
 		// favorite heart, centered between Delete and Save by the footer's space-between layout. Edits the
@@ -190,12 +198,12 @@ export class GameDetailModal extends Modal {
 	private async save(): Promise<void> {
 		if (!this.draft.title.trim()) return;
 		this.draft.title = this.draft.title.trim();
-		await this.deps.games.updateGame(this.draft);
+		await this.games.updateGame(this.draft);
 		await this.applyGroupChange();
 		// write the Notes section only when it was loaded or edited — never clobber an unloaded section
 		// with an empty string
 		if (this.notesLoaded || this.notesValue !== '') {
-			await this.deps.games.writeGameNotes(this.draft, this.notesValue);
+			await this.games.writeGameNotes(this.draft, this.notesValue);
 		}
 		this.close();
 	}
@@ -281,8 +289,8 @@ export class GameDetailModal extends Modal {
 		const row = this.badgeRowEl;
 		if (!row) return;
 		row.empty();
-		const settings = this.deps.games.getSettings();
-		const priorities = this.deps.settings.get().priorities;
+		const settings = this.games.getSettings();
+		const priorities = this.settings.get().priorities;
 
 		// the shared detail-modal pill (renderTagPill), so these match the Watchlist / Reading badges. The
 		// auto-managed "To be released" is excluded from the dropdown (it follows the release date) but
@@ -341,9 +349,9 @@ export class GameDetailModal extends Modal {
 	/** Open this game's .md note — the shared file-text icon the other detail modals use. */
 	private renderNoteButton(parent: HTMLElement): void {
 		appendNoteLinkButton(
-			this.app,
+			this.files,
 			parent,
-			this.deps.games.noteFilePath(this.draft.title),
+			this.games.noteFilePath(this.draft.title),
 			() => this.close(),
 		);
 	}
@@ -368,7 +376,7 @@ export class GameDetailModal extends Modal {
 		const section = parent.createDiv({ cls: 'hoard-game-detail__section hoard-game-detail__section--progress' });
 
 		// the bar picks up the genre colour, the way the type pill does
-		const typeColor = this.deps.games.getSettings().types.find((t) => t.name === this.draft.type)?.color;
+		const typeColor = this.games.getSettings().types.find((t) => t.name === this.draft.type)?.color;
 		if (typeColor) section.setCssProps({ '--hoard-game-detail-progress-color': typeColor });
 
 		const head = section.createDiv({ cls: 'hoard-game-detail__progress-head' });
@@ -502,7 +510,7 @@ export class GameDetailModal extends Modal {
 		// draft like every other control here, so it still takes a Save and can be undone by closing the
 		// modal.
 		const steamAppId = this.draft.steamAppId || steamAppIdFromUrl(this.draft.storeUrl);
-		if (this.deps.api.hasSteamCredentials() && steamAppId !== '') {
+		if (this.api.hasSteamCredentials() && steamAppId !== '') {
 			const steamBtn = strip.createEl('button', {
 				cls: 'hoard-game-detail__steam-pull',
 				attr: { type: 'button', title: t('detail.game.steamPull') },
@@ -516,8 +524,8 @@ export class GameDetailModal extends Modal {
 				void (async () => {
 					try {
 						const [library, achievements] = await Promise.all([
-							this.deps.api.getSteamOwnedGames(),
-							this.deps.api.getSteamAchievements(steamAppId),
+							this.api.getSteamOwnedGames(),
+							this.api.getSteamAchievements(steamAppId),
 						]);
 						const owned = library.ok
 							? library.games.find((g) => g.appId === steamAppId)
@@ -618,7 +626,7 @@ export class GameDetailModal extends Modal {
 		const stars = row.createDiv();
 		renderStarRating(stars, this.draft.rating, {
 			allowHalf: true,
-			tiers: this.deps.settings.get().ratingSystem,
+			tiers: this.settings.get().ratingSystem,
 			showLabel: true,
 			onChange: (value) => {
 				this.draft.rating = value;
@@ -687,7 +695,7 @@ export class GameDetailModal extends Modal {
 		// not hoard-input__select--sm — that sets width:auto, which fights the grid column
 		const select = controls.createEl('select', { cls: 'hoard-input__select' });
 		select.createEl('option', { text: t('ui.form.none'), value: '' });
-		for (const g of this.deps.games.getGroups()) {
+		for (const g of this.games.getGroups()) {
 			const opt = select.createEl('option', { text: g.name, value: g.id });
 			if (g.id === this.selectedGroupId) opt.selected = true;
 		}
@@ -733,23 +741,23 @@ export class GameDetailModal extends Modal {
 		const newName = this.newGroupName.trim();
 		if (newName === '' && this.selectedGroupId === this.originalGroupId) return;
 
-		for (const g of this.deps.games.getGroups()) {
+		for (const g of this.games.getGroups()) {
 			if (!g.gameIds.includes(this.draft.id)) continue;
-			await this.deps.games.updateGroup({
+			await this.games.updateGroup({
 				...g,
 				gameIds: g.gameIds.filter((id) => id !== this.draft.id),
 			});
 		}
 
 		if (newName) {
-			await this.deps.games.addGroup({
-				id: this.deps.games.generateGroupId(newName),
+			await this.games.addGroup({
+				id: this.games.generateGroupId(newName),
 				name: newName,
 				gameIds: [this.draft.id],
 				dateAdded: new Date().toISOString(),
 			});
 		} else if (this.selectedGroupId) {
-			await this.deps.games.addGameToGroup(this.selectedGroupId, this.draft.id);
+			await this.games.addGameToGroup(this.selectedGroupId, this.draft.id);
 		}
 		// else: moved to "— none —" — detached only
 	}
@@ -867,23 +875,32 @@ export function gameGroupProgress(members: Game[]): number {
  * completion with a progress bar, and a card grid of the members — clicking one closes this modal
  * and opens its GameDetailModal.
  */
+export interface GameGroupDetailOptions {
+	group: GameGroup;
+	members: Game[];
+}
+
+export type OpenGameGroupDetail = (opts: GameGroupDetailOptions) => void;
+
 export class GameGroupDetailModal extends Modal {
 	private group: GameGroup;
 	private members: Game[];
 	private cleanups: (() => void)[] = [];
 
 	constructor(
-		private deps: GameDetailModalDeps,
-		group: GameGroup,
-		members: Game[],
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly games: Pick<GameDataManager, 'getSettings' | 'getGame'>,
+		private readonly openGameDetail: OpenGameDetail,
+		opts: GameGroupDetailOptions,
 	) {
-		super(deps.app);
-		this.group = group;
-		this.members = members;
+		super(app);
+		this.group = opts.group;
+		this.members = opts.members;
 	}
 
 	onOpen(): void {
-		markDetailRoot(this.modalEl, this.contentEl, this.deps.settings.get().colorTheme);
+		markDetailRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
 		this.renderAll();
 	}
 
@@ -902,7 +919,7 @@ export class GameGroupDetailModal extends Modal {
 		});
 
 		const grid = this.contentEl.createDiv({ cls: 'hoard-card-grid hoard-detail__group-grid' });
-		const settings = this.deps.games.getSettings();
+		const settings = this.games.getSettings();
 		for (const m of this.members) {
 			const typeColor = settings.types.find((t) => t.name === m.type)?.color ?? '#888780';
 			const statusColor = settings.statuses.find((s) => s.name === m.status)?.color;
@@ -920,9 +937,9 @@ export class GameGroupDetailModal extends Modal {
 				flag: m.wishlist ? { icon: 'gift', label: t('games.card.onWishlist') } : undefined,
 				onClick: () => {
 					this.close();
-					const fresh = this.deps.games.getGame(m.id);
+					const fresh = this.games.getGame(m.id);
 					if (!fresh) return;
-					new GameDetailModal(this.deps, fresh).open();
+					this.openGameDetail({ game: fresh });
 				},
 			}, { container: this.contentEl, cleanups: this.cleanups });
 		}

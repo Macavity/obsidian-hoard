@@ -4,10 +4,11 @@ import { t, type TranslationKey } from '../shared/i18n';
 import { DashboardTab, type DashboardTabDeps } from '../modules/dashboard/ui/DashboardTab';
 import { AirtimeTab, type AirtimeTabDeps } from '../modules/airtime/ui/AirtimeTab';
 import type { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
-import { GamesTab, type GamesTabDeps } from '../modules/games/ui/GamesTab';
+import type { GameDataManager } from '../modules/games/services/GameDataManager';
 import { CustomListsTab, type CustomListsTabDeps } from '../modules/custom-lists/ui/CustomListsTab';
 import { DraftsTab, type DraftsTabDeps } from '../modules/drafts/ui/DraftsTab';
 import { LogTab, type LogTabDeps } from '../modules/log/ui/LogTab';
+import type { SettingsReader, SettingsWriter } from '../shared/services/SettingsService';
 import type { DataManager } from '../modules/watchlist/services/DataManager';
 import type { CardStyleTab } from '../shared/domain/types';
 
@@ -20,18 +21,20 @@ export type TabName = 'dashboard' | 'watchlist' | 'upcoming' | 'reading' | 'game
  * own `<Tab>Deps`; a converted tab's deps are a supertype of this one, so `ctx.deps` passes straight in.
  */
 export interface HoardViewDeps
-	extends GamesTabDeps, AirtimeTabDeps, DashboardTabDeps, CustomListsTabDeps, DraftsTabDeps, LogTabDeps {
-	settings: GamesTabDeps['settings'];
+	extends AirtimeTabDeps, DashboardTabDeps, CustomListsTabDeps, DraftsTabDeps, LogTabDeps {
+	settings: SettingsReader & SettingsWriter;
 	titles: DataManager;
 	history: LogTabDeps['history'];
-	api: GamesTabDeps['api'] & AirtimeTabDeps['api'];
+	api: AirtimeTabDeps['api'];
 	isCardTextUnder: (tab: CardStyleTab) => boolean;
 	/** Builds the Watchlist tab; wired in `src/app/wiring/watchlist.ts`. */
 	createListTab: (container: HTMLElement) => TabInstance;
 	/** Builds the Reading tab; wired in `src/app/wiring/reading.ts`. */
 	createReadingTab: (container: HTMLElement) => TabInstance;
 	reading: ReadingDataManager;
-	games: GamesTabDeps['games'];
+	/** Builds the Games tab; wired in `src/app/wiring/games.ts`. */
+	createGamesTab: (container: HTMLElement) => TabInstance;
+	games: GameDataManager;
 	/** True while the WatchLog import wizard replaces the tabs with a placeholder. */
 	importRunning: () => boolean;
 }
@@ -102,7 +105,7 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.games',
 		icon: 'gamepad-2',
 		cls: 'hoard-games',
-		create: (ctx) => new GamesTab(ctx.containerEl, ctx.deps),
+		create: (ctx) => ctx.deps.createGamesTab(ctx.containerEl),
 	},
 	{
 		name: 'custom-lists',

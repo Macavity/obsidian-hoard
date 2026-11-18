@@ -70,14 +70,16 @@ function build(o: Opts = {}) {
 		getSteamOwnedGames: vi.fn(() => Promise.resolve(steam.library ?? { ok: true, games: [] })),
 		getSteamAchievements: vi.fn(() => Promise.resolve(steam.achievements ?? null)),
 	};
-	const deps = {
-		app: {},
-		settings: fakeSettings({ ...DEFAULT_SETTINGS }),
-		games: gameData,
-		api: apiService,
-	};
 	(Platform as { isMobile: boolean }).isMobile = o.mobile ?? false;
-	const modal = new GameDetailModal(deps as never, game);
+	const modal = new GameDetailModal(
+		{} as never,
+		fakeSettings({ ...DEFAULT_SETTINGS }),
+		gameData as never,
+		apiService as never,
+		{} as never,
+		vi.fn(),
+		{ game },
+	);
 	modal.open();
 	const root = (modal as unknown as { contentEl: HTMLElement }).contentEl;
 	const draft = () => (modal as unknown as { draft: Game }).draft;

@@ -22,6 +22,7 @@ import { HistoryStore } from '../shared/storage/HistoryStore';
 import { HoardView, HOARD_VIEW_TYPE, TabName, type HoardViewDeps } from './HoardView';
 import { watchlistUi, type WatchlistUi } from './wiring/watchlist';
 import { readingUi, type ReadingUi } from './wiring/reading';
+import { gamesUi, type GamesUi } from './wiring/games';
 import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
 import { WidgetRenderer } from '../modules/widgets/ui/WidgetRenderer';
 import { HoardSettingsTab, type HoardSettingsTabDeps } from '../modules/settings/ui/SettingsTab';
@@ -134,6 +135,7 @@ export default class HoardPlugin extends Plugin {
 	private posterService!: PosterService;
 	private watchlist!: WatchlistUi;
 	private reading!: ReadingUi;
+	private games!: GamesUi;
 	private coverRefresher!: CoverRefresher;
 	private widgetRenderer?: WidgetRenderer;
 
@@ -217,6 +219,14 @@ export default class HoardPlugin extends Plugin {
 			history: this.historyManager,
 			searchBooks,
 			covers: { searchBooks, fetchReadingCoverById, firstBookCover },
+			host,
+		});
+		this.games = gamesUi({
+			app: this.app,
+			settings: this.settingsService,
+			games: this.gameDataManager,
+			api: this.apiService,
+			resolveGameCover,
 			host,
 		});
 
@@ -349,11 +359,11 @@ export default class HoardPlugin extends Plugin {
 			isCardTextUnder: (tab) => this.isCardTextUnder(tab),
 			createListTab: (container) => this.watchlist.createListTab(container),
 			createReadingTab: (container) => this.reading.createReadingTab(container),
+			createGamesTab: (container) => this.games.createGamesTab(container),
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
 			importRunning: () => this.importRunning,
 			listManager: this.listManager,
-			resolveGameCover,
 			markAirtimeHandled: (key) => this.markAirtimeHandled(key),
 			openAdd: (opts) => openAddForTitle(this.addRouterDeps(), opts),
 		};

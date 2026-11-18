@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setLocale } from '../../src/shared/i18n';
 import de from '../../src/shared/i18n/de';
-import { GamesTab } from '../../src/modules/games/ui/GamesTab';
+import { newGamesTab } from '../helpers/newGamesTab';
 import { GameDetailModal } from '../../src/modules/games/ui/GameDetailModal';
 import { defaultGamesSettings, DEFAULT_SETTINGS } from '../../src/shared/domain/types';
 import { ReadingManageColumnsModal } from '../../src/modules/reading/ui/ReadingManageColumnsModal';
@@ -63,8 +63,7 @@ describe('reading and games i18n', () => {
 	it('renders the games empty state in German', () => {
 		setLocale('de');
 		const container = new El('root');
-		const tab = new GamesTab(container as never, {
-			app: {},
+		const tab = newGamesTab(container, {
 			settings: fakeSettings({}),
 			games: {
 				onChange: () => {}, offChange: () => {},
@@ -72,7 +71,7 @@ describe('reading and games i18n', () => {
 				getGames: () => [],
 				getGroups: () => [],
 			},
-		} as never);
+		});
 		(tab as unknown as { contentEl: El }).contentEl = container;
 		(tab as unknown as { renderContent: () => void }).renderContent();
 		expect(allText(container)).toContain(de.games.empty);
@@ -83,12 +82,13 @@ describe('reading and games i18n', () => {
 		setLocale('de');
 		const game = { id: 'g1', title: 'Hades', status: 'Playing', priority: 'High', type: '', platforms: [] };
 		const modal = new GameDetailModal(
-			{
-				app: {},
-				settings: fakeSettings({ priorities: DEFAULT_SETTINGS.priorities.map((p) => ({ name: p.name })) }),
-				games: { getGroups: () => [], getSettings: () => ({ ...defaultGamesSettings(), statuses: defaultGamesSettings().statuses.map((s) => ({ name: s.name })) }) },
-			} as never,
-			game as never,
+			{} as never,
+			fakeSettings({ priorities: DEFAULT_SETTINGS.priorities.map((p) => ({ name: p.name })) }) as never,
+			{ getGroups: () => [], getSettings: () => ({ ...defaultGamesSettings(), statuses: defaultGamesSettings().statuses.map((s) => ({ name: s.name })) }) } as never,
+			{} as never,
+			{} as never,
+			() => {},
+			{ game: game as never },
 		);
 		const badgeRow = new El('div') as El & { empty: () => void };
 		badgeRow.empty = () => { badgeRow.children = []; };

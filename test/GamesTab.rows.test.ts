@@ -1,23 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GamesTab } from '../src/modules/games/ui/GamesTab';
+import { newGamesTab } from './helpers/newGamesTab';
 import { defaultGamesSettings, DEFAULT_SETTINGS, type Game, type GameGroup } from '../src/shared/domain/types';
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const groupModalOpened = vi.hoisted(() => vi.fn());
-
-vi.mock('../src/shared/ui/RowsCustomizeModal', () => ({
-	RowsCustomizeModal: class {
-		constructor(_app: unknown, _settings: unknown, opts: unknown) { customizeOpts = opts as CustomizeOpts; }
-		open = vi.fn();
-	},
-}));
-
-vi.mock('../src/modules/games/ui/GameDetailModal', () => ({
-	GameDetailModal: class { open = vi.fn(); },
-	GameGroupDetailModal: class { open = (): void => { groupModalOpened(); }; },
-	gameGroupProgress: () => 0,
-}));
 
 const game = (id: string, over: Partial<Game> = {}): Game => ({
 	id, title: id, developer: '', publisher: '', type: 'RPG', status: 'Playing', priority: '', favorite: false,
@@ -52,18 +39,18 @@ function build(o: Setup = {}) {
 		setRecommendedDaily: vi.fn(),
 	};
 	const settingsService = fakeSettings({ ...DEFAULT_SETTINGS, gamesFilters: o.favoritesOnly ? { favoritesOnly: true } : undefined });
-	const deps = {
-		app: {},
-		settings: settingsService,
-		games: gameData,
-		api: {},
-		isCardTextUnder: () => false,
-		getCardMinWidth: () => 150,
-	};
 	const container = document.createElement('div');
 	const content = document.createElement('div');
 	container.appendChild(content);
-	const tab = new GamesTab(container, deps as never);
+	const tab = newGamesTab(container, {
+		settings: settingsService,
+		games: gameData,
+		isCardTextUnder: () => false,
+		modals: {
+			openRowsCustomize: (opts) => { customizeOpts = opts as unknown as CustomizeOpts; },
+			openGroupDetail: () => { groupModalOpened(); },
+		},
+	});
 	const internals = tab as unknown as { contentEl: HTMLElement; renderContent: () => void; searchQuery: string };
 	internals.contentEl = content;
 	if (o.query) internals.searchQuery = o.query;

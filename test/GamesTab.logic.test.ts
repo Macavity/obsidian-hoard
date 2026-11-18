@@ -1,5 +1,5 @@
+import { newGamesTab } from './helpers/newGamesTab';
 import { describe, expect, it, vi } from 'vitest';
-import { GamesTab } from '../src/modules/games/ui/GamesTab';
 import { defaultGamesSettings, DEFAULT_SETTINGS, type Game } from '../src/shared/domain/types';
 import { fakeSettings } from './helpers/fakeSettings';
 
@@ -36,8 +36,7 @@ function build(games: Game[] = []) {
 		updateCoverAndSource: vi.fn(() => Promise.resolve()),
 		updateCoverUrl: vi.fn(() => Promise.resolve()),
 	};
-	const deps = { app: {}, settings: fakeSettings({ ...DEFAULT_SETTINGS }), games: gameData, api: {}, isCardTextUnder: () => false, getCardMinWidth: () => 150 };
-	const tab = new GamesTab(document.createElement('div'), deps as never);
+	const tab = newGamesTab(document.createElement('div'), { settings: fakeSettings({ ...DEFAULT_SETTINGS }), games: gameData, isCardTextUnder: () => false });
 	return { p: tab as unknown as Priv, gameData, settings };
 }
 
