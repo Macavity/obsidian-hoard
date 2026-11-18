@@ -19,8 +19,8 @@ import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLib
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { normalizeCreditsForStore, imdbIdFromLink } from '../domain/types';
 import type { EntryCache } from '../storage/storageTypes';
-import { at, readBoolean, readList, readNumber, readOptionalNumber, readOptionalString, readRecord, readString, readStringList } from '../storage/read';
-import { isRecord } from '../storage/sharedHelpers';
+import { at, readBoolean, readList, readNumber, readOptionalNumber, readOptionalString, readRecord, readString, readStringList } from '../domain/read';
+import { isRecord } from '../domain/sharedHelpers';
 import { attempt, errorMessage, firstFound, found, FAILED, NOT_FOUND, NO_KEY, type LookupResult, type LookupSource } from './lookup';
 
 export { apiErrorMessage, apiErrorShort, lookupOfError } from './apiError';

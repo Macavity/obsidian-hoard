@@ -3,8 +3,8 @@ import type { HistoryAction, HistoryEntry, HistorySource } from '../../../../sha
 import { readMaybe } from '../../../backup/services/backupEntries';
 import {
 	at, readList, readOptionalNumber, readOptionalString, readRecord, readString, readStringList,
-} from '../../../../shared/storage/read';
-import { defined, isRecord } from '../../../../shared/storage/sharedHelpers';
+} from '../../../../shared/domain/read';
+import { defined, isRecord } from '../../../../shared/domain/sharedHelpers';
 import { isoOf, normalizeGames, normalizeReading, normalizeTitle, readEntries } from './schema1Normalize';
 import type { PreparedData, WatchLogTitle } from './schema1Types';
 

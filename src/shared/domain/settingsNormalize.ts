@@ -1,7 +1,7 @@
 import { COLUMN_TYPES, DEFAULT_SETTINGS, normalizeRowsLayout } from './types';
 import type { CustomListColumn, HoardPluginSettings, RatingTier, TagDefinition } from './types';
-import { isRecord } from '../storage/sharedHelpers';
-import { at, readList, readOneOf, readRecord } from '../storage/read';
+import { isRecord } from './sharedHelpers';
+import { at, readList, readOneOf, readRecord } from './read';
 
 /** Settings that no longer exist; dropped from stored data. */
 export const REMOVED_SETTINGS = ['rootFolder', 'customListsFolder'];

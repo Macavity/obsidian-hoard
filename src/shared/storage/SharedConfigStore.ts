@@ -4,7 +4,7 @@ import type { VaultLayout } from './VaultLayout';
 import {
 	createBaseFile, findInFolderPath, hasHoardKey, readHoardBlock, replaceInFolderPath, writeHoardBlock,
 } from './baseFile';
-import { isRecord } from './sharedHelpers';
+import { isRecord } from '../domain/sharedHelpers';
 
 /**
  * Whitelist of settings synced via the base: the vocabulary and schema every device needs to read

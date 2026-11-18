@@ -1,5 +1,5 @@
 import type { ApiCheckResult } from '../storage/storageTypes';
-import { at, readString } from '../storage/read';
+import { at, readString } from '../domain/read';
 
 export type LookupResult<T> =
 	| { status: 'found'; value: T }

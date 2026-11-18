@@ -5,7 +5,7 @@ import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from '../doma
 import { getApiGroupForType } from '../domain/types';
 import { httpsOrEmpty } from './httpsUrl';
 import { found, attempt, firstFound, FAILED, NO_KEY, type LookupResult, type LookupSource } from './lookup';
-import { at, readList, readOptionalString, readString } from '../storage/read';
+import { at, readList, readOptionalString, readString } from '../domain/read';
 import { jsonPost, lookupOfError, requestVia, type ApiService } from './ApiService';
 import { resolveJikanEndpoint, type JikanEndpoint } from './jikanBase';
 

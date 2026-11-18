@@ -6,7 +6,7 @@ import { titleToProperties, titleToCache } from '../../../../shared/storage/titl
 import { encodeBook, encodeManga } from '../../../../shared/storage/readingCodec';
 import { encodeGame } from '../../../../shared/storage/gameCodec';
 import { externalIdFromLink } from '../../../../shared/storage/externalId';
-import { at, readList, readStringList } from '../../../../shared/storage/read';
+import { at, readList, readStringList } from '../../../../shared/domain/read';
 import { NoteWriter, ensureFolder, sameValue } from './schema1Notes';
 import { collectAirtime, collectGroups, importHistory } from './schema1Records';
 import { normalizeReading, normalizeTitle, orphanValues, progressOf, watchLogApiValues } from './schema1Normalize';

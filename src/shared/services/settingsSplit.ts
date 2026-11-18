@@ -1,5 +1,5 @@
 import { normalizeSettings } from '../domain/settingsNormalize';
-import { toRecord } from '../storage/sharedHelpers';
+import { toRecord } from '../domain/sharedHelpers';
 import type { HoardPluginSettings } from '../domain/types';
 import { SHARED_SETTING_KEYS } from '../storage/SharedConfigStore';
 import type { SharedConfigStore } from '../storage/SharedConfigStore';

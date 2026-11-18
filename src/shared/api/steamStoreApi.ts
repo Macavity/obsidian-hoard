@@ -1,5 +1,5 @@
 import type { GameDetailsResult, GameSearchResult, SteamAppDetails } from './ApiService';
-import { isRecord } from '../storage/sharedHelpers';
+import { isRecord } from '../domain/sharedHelpers';
 
 /**
  * The portrait library capsule. Steam's `header_image` is a 460×215 landscape banner that

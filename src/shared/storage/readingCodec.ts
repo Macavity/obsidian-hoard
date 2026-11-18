@@ -3,7 +3,7 @@ import type { Book, Manga, EntryAirtime, AirtimeRecurrence, ReadingCustomColumn,
 import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, READING_PROPS as R, customFieldKey } from './properties';
-import { defined, nonEmpty } from './sharedHelpers';
+import { defined, nonEmpty } from '../domain/sharedHelpers';
 
 type Columns = readonly ReadingCustomColumn[];
 

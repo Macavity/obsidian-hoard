@@ -1,5 +1,3 @@
-import type { Fm } from './storageTypes';
-
 /** Small helpers shared by the data managers and codecs. */
 
 /** A plain record: an object that is neither null nor a list. */
@@ -17,7 +15,7 @@ export function changedKeys(before: Record<string, unknown>, after: Record<strin
 }
 
 /** `{ key: value }` when the value is set, else `{}`: optional properties stay out of the note. */
-export function optional(key: string, value: unknown): Fm {
+export function optional(key: string, value: unknown): Record<string, unknown> {
 	return value ? { [key]: value } : {};
 }
 

@@ -1,6 +1,6 @@
 import en from './en';
 import de from './de';
-import { at } from '../storage/read';
+import { at } from '../domain/read';
 
 type Leaf = string | { one: string; other: string; zero?: string };
 // Leaf strings are widened: `as const` locale files hold literal types the translations must not have to match.

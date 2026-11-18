@@ -1,5 +1,5 @@
 import type { ApiCheckKind } from './storageTypes';
-import { isRecord } from './sharedHelpers';
+import { isRecord } from '../domain/sharedHelpers';
 
 const NONE = 'none';
 const isNoneList = (v: unknown): boolean => Array.isArray(v) && v.length === 1 && v[0] === NONE;

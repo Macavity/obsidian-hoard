@@ -6,7 +6,7 @@ import type { DataManager } from '../services/DataManager';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
 import { newTitle } from '../../../shared/domain/entryFactories';
-import { nonEmpty } from '../../../shared/storage/sharedHelpers';
+import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 import type {
 	HoardTitle,
 	HoardGroup,

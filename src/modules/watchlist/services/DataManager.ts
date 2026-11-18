@@ -25,7 +25,7 @@ import { decodeBook, decodeManga, encodeAirtime } from '../../../shared/storage/
 import { decodeGame } from '../../../shared/storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from '../../../shared/storage/properties';
 import { extractNotes, replaceNotesSection } from '../../../shared/storage/noteBody';
-import { omit, sameJson } from '../../../shared/storage/sharedHelpers';
+import { omit, sameJson } from '../../../shared/domain/sharedHelpers';
 import { emitDataChanged } from '../../../shared/services/changeSignal';
 import { ChangeNotifier } from '../../../shared/services/changeListeners';
 

@@ -1,6 +1,6 @@
 import { t, type TranslationKey } from '../i18n';
 import type { LookupResult } from './lookup';
-import { at, readString } from '../storage/read';
+import { at, readString } from '../domain/read';
 
 /** Which service a failed request went to. */
 export type ApiSource = 'tmdb' | 'omdb' | 'jikan' | 'anilist' | 'googleBooks' | 'rawg' | 'igdb' | 'twitch' | 'cinemeta' | 'openLibrary' | 'steamStore' | 'unknown';

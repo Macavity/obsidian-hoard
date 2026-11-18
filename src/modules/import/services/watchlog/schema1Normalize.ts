@@ -6,8 +6,8 @@ import type {
 } from '../../../../shared/domain/types';
 import { readBook, readGame, readGameGroup, readManga } from '../../../backup/services/backupEntries';
 import { readGamesSettings, readReadingSettings } from '../../../../shared/domain/featureSettings';
-import { at, readList, readOneOf, readOptionalString, readRecord, readString, readStringList } from '../../../../shared/storage/read';
-import { defined } from '../../../../shared/storage/sharedHelpers';
+import { at, readList, readOneOf, readOptionalString, readRecord, readString, readStringList } from '../../../../shared/domain/read';
+import { defined } from '../../../../shared/domain/sharedHelpers';
 import { TITLE_PROPS } from '../../../../shared/storage/properties';
 import { WISHLIST, type WatchLogTitle } from './schema1Types';
 import type { Fm } from '../../../../shared/storage/storageTypes';

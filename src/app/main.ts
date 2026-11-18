@@ -34,7 +34,7 @@ import type { WatchLogSourceKind, WatchLogSources } from '../modules/import/serv
 import { createImporter } from '../modules/import/services/watchlog/importer';
 import { getDecision, pendingSources } from '../modules/import/services/watchlog/onboardingState';
 import { composeSettings, persistSettings } from '../shared/services/settingsSplit';
-import { toRecord } from '../shared/storage/sharedHelpers';
+import { toRecord } from '../shared/domain/sharedHelpers';
 import { resolveJikanEndpoint } from '../shared/api/jikanBase';
 import { emitDataChanged, onDataChanged } from '../shared/services/changeSignal';
 import { SettingsService } from '../shared/services/SettingsService';

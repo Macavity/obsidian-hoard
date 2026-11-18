@@ -66,4 +66,4 @@ export interface IdMaps {
 
 export const WISHLIST = 'Wishlist';
 export { REMOVED_SETTINGS } from '../../../../shared/domain/settingsNormalize';
-export { isRecord } from '../../../../shared/storage/sharedHelpers';
+export { isRecord } from '../../../../shared/domain/sharedHelpers';

@@ -1,5 +1,5 @@
 import type { HistoryAction, HistorySource } from '../services/HistoryManager';
-import { defined } from './sharedHelpers';
+import { defined } from '../domain/sharedHelpers';
 
 export type HistoryLineAction = HistoryAction | 'group-created';
 

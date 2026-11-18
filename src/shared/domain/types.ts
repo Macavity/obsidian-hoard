@@ -1,4 +1,4 @@
-import { readStringList } from '../storage/read';
+import { readStringList } from './read';
 
 export interface Season {
 	name: string;

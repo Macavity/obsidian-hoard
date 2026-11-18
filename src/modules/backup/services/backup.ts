@@ -9,8 +9,8 @@ import { SHARED_SETTING_KEYS, type SharedConfigStore } from '../../../shared/sto
 import type { ImportContext } from '../../import/services/watchlog/schema1Types';
 import { withoutCredentials } from '../../../shared/api/jikanBase';
 import { SECRET_KEYS } from '../../../shared/storage/SecretStore';
-import { isRecord, toRecord } from '../../../shared/storage/sharedHelpers';
-import { at, readList, readRecord, readString } from '../../../shared/storage/read';
+import { isRecord, toRecord } from '../../../shared/domain/sharedHelpers';
+import { at, readList, readRecord, readString } from '../../../shared/domain/read';
 import { normalizeSettings } from '../../../shared/domain/settingsNormalize';
 import { readColumns, readGamesSettings, readReadingSettings } from '../../../shared/domain/featureSettings';
 import { readBook, readGame, readGameGroup, readManga, readMaybe, readTitle } from './backupEntries';

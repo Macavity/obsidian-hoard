@@ -28,8 +28,8 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from '../../../shared/domain/types';
-import { omit, sameJson, slugify, toRecord } from '../../../shared/storage/sharedHelpers';
-import { readRecord } from '../../../shared/storage/read';
+import { omit, sameJson, slugify, toRecord } from '../../../shared/domain/sharedHelpers';
+import { readRecord } from '../../../shared/domain/read';
 import { readGamesSettings } from '../../../shared/domain/featureSettings';
 
 const GAMES_FOLDER_PREFIX = 'Games/';

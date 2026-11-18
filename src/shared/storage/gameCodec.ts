@@ -4,7 +4,7 @@ import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { FmReader, airtimeProps, decodeAirtime } from './readingCodec';
 import { COMMON_PROPS as C, GAME_PROPS as G } from './properties';
-import { defined, nonEmpty, optional } from './sharedHelpers';
+import { defined, nonEmpty, optional } from '../domain/sharedHelpers';
 
 const PLAYTIME_RE = /^(?:(\d{1,3}(?:,\d{3})+|\d+)h)?(?: ?(\d+)m)?$/;
 

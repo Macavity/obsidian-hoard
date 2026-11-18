@@ -13,7 +13,7 @@ import { openStatusDropdown } from '../../../shared/ui/StatusDropdown';
 import type { AddRouteOptions } from '../../../app/AddRouter';
 import { cloneColumns, renderCancelSave, renderColumnsEditor } from '../../../shared/ui/ColumnsEditor';
 import { t } from '../../../shared/i18n';
-import { at } from '../../../shared/storage/read';
+import { at } from '../../../shared/domain/read';
 import { createIconButton } from '../../../shared/ui/IconButton';
 import { statusLabel, typeLabel, readingStatusLabel } from '../../../shared/i18n/labels';
 

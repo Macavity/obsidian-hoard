@@ -1,5 +1,5 @@
 import type { Book, Game, HoardTitle, Manga } from './types';
-import { defined } from '../storage/sharedHelpers';
+import { defined } from './sharedHelpers';
 
 /**
  * New library entries. Each factory owns the defaults of its kind: a caller passes what it knows,

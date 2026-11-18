@@ -26,8 +26,8 @@ import {
 	isReleaseDateFuture,
 	todayIso,
 } from '../../../shared/domain/types';
-import { omit, slugify } from '../../../shared/storage/sharedHelpers';
-import { readRecord } from '../../../shared/storage/read';
+import { omit, slugify } from '../../../shared/domain/sharedHelpers';
+import { readRecord } from '../../../shared/domain/read';
 import { readColumns, readReadingSettings } from '../../../shared/domain/featureSettings';
 
 export type ReadingKind = 'book' | 'manga';

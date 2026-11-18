@@ -6,7 +6,7 @@ import type { VaultLayout } from './VaultLayout';
 import { titleFromProperties } from './titleCodec';
 import { decodeBook, decodeManga } from './readingCodec';
 import { decodeGame } from './gameCodec';
-import { isRecord } from './sharedHelpers';
+import { isRecord } from '../domain/sharedHelpers';
 
 export type AnyEntry =
 	| { kind: 'title'; entry: HoardTitle }

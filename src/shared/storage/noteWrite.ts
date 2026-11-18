@@ -3,7 +3,7 @@ import type { App, EventRef, TAbstractFile } from 'obsidian';
 import type { Fm, Notify } from './storageTypes';
 import type { VaultLayout } from './VaultLayout';
 import { setBaseline } from './baseline';
-import { changedKeys } from './sharedHelpers';
+import { changedKeys } from '../domain/sharedHelpers';
 
 /** processFrontMatter that reports unreadable YAML as a notice and returns false instead of throwing. */
 export async function updateFrontMatter(

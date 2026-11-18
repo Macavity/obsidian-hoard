@@ -8,7 +8,7 @@ import type { SettingsReader, SettingsWriter } from '../../../shared/services/Se
 import type { HoardTitle, ImportProgress } from '../../../shared/domain/types';
 import { getTitleCredits, normalizeManualCredits } from '../../../shared/domain/types';
 import { completedEpisodes, newTitle } from '../../../shared/domain/entryFactories';
-import { nonEmpty } from '../../../shared/storage/sharedHelpers';
+import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 
 /** studio list ⇄ one CSV cell; semicolons, since studio names contain commas */
 const STUDIO_SEP = '; ';

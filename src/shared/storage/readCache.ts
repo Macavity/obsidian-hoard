@@ -1,7 +1,7 @@
 import type { RecommendedDaily, Season } from '../domain/types';
 import type { ApiCheckKind, ApiCheckResult, EntryCache, LocalData } from './storageTypes';
-import { defined, isRecord } from './sharedHelpers';
-import { at, readList, readRecord, readOneOf, readOptionalNumber, readOptionalString, readStringList } from './read';
+import { defined, isRecord } from '../domain/sharedHelpers';
+import { at, readList, readRecord, readOneOf, readOptionalNumber, readOptionalString, readStringList } from '../domain/read';
 
 /** Reads data.json's `cache` field by field: a field of the wrong type is dropped, the entry stays. */
 

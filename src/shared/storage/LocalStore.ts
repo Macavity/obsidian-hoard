@@ -1,9 +1,9 @@
 import type { SecretStore } from './SecretStore';
 import type { EntryCache, LocalData } from './storageTypes';
-import { isRecord } from './sharedHelpers';
+import { isRecord } from '../domain/sharedHelpers';
 import { migrateNoneMarkers } from './cacheMigration';
 import { readCache, readUi } from './readCache';
-import { readRecord } from './read';
+import { readRecord } from '../domain/read';
 
 /** `newer`: data.json from a later plugin version; it is never written by this one. */
 /** `watchlog` / `newer`: data.json is kept as is and nothing is saved this session (the caller warns). */

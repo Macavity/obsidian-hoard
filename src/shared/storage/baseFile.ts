@@ -1,6 +1,6 @@
 import type { YamlIO } from './storageTypes';
-import { at } from './read';
-import { isRecord } from './sharedHelpers';
+import { at } from '../domain/read';
+import { isRecord } from '../domain/sharedHelpers';
 
 const KEY = 'hoard';
 const INFOLDER_RE = /^(\s*-\s+file\.inFolder\(")((?:[^"\\]|\\.)*)("\)\s*)$/;

@@ -10,7 +10,7 @@ import {
 	readRecord,
 	readString,
 	readStringList,
-} from '../../src/shared/storage/read';
+} from '../../src/shared/domain/read';
 
 describe('readString', () => {
 	it('keeps strings and falls back otherwise', () => {

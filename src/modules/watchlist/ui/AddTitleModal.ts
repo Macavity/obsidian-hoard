@@ -5,7 +5,7 @@ import type { SettingsReader, SettingsWriter } from '../../../shared/services/Se
 import type { HoardTitle, HoardGroup, Season } from '../../../shared/domain/types';
 import { getApiGroupForType, todayIso } from '../../../shared/domain/types';
 import { completedEpisodes, newTitle } from '../../../shared/domain/entryFactories';
-import { nonEmpty } from '../../../shared/storage/sharedHelpers';
+import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 import { t } from '../../../shared/i18n';
 import { found, type LookupResult } from '../../../shared/api/lookup';
 import { priorityLabel, statusLabel } from '../../../shared/i18n/labels';
