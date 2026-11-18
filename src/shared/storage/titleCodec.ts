@@ -14,6 +14,16 @@ export function isMovie(seasons: Season[], totalEpisodes: number): boolean {
 	return seasons.length === 0 && totalEpisodes === 1;
 }
 
+/** True when an API or a pasted link identifies the title, so its data can be refetched. */
+export function hasApiIdentity(t: HoardTitle): boolean {
+	return !!t.tmdbId || !!t.malId || !!t.anilistId || externalIdFromLink(t.externalLink) !== null;
+}
+
+/** Without an API identity nothing can refetch the seasons: they belong in the note. */
+export function pinSeasonsWithoutIdentity(t: HoardTitle): void {
+	if (!hasApiIdentity(t) && t.seasons.length > 0) t.seasonsOverride = true;
+}
+
 /**
  * A series with an API identity but no seasons in note or cache, whose season fetch has not yet ended
  * in "not found" or "no key": its episodes cannot be mapped until the seasons arrive.
@@ -22,7 +32,7 @@ export function seasonsPending(t: HoardTitle, seasonsCheck: ApiCheckResult | und
 	if (t.seasonsOverride || t.seasons.length > 0 || t.tmdbMediaType === 'movie') return false;
 	if (isMovie(t.seasons, t.totalEpisodes)) return false;
 	if (seasonsCheck === 'notfound' || seasonsCheck === 'nokey') return false;
-	return !!t.tmdbId || !!t.malId || !!t.anilistId || externalIdFromLink(t.externalLink) !== null;
+	return hasApiIdentity(t);
 }
 
 /** Seasons episodes map onto: the known ones, else one implicit "S01" of `totalEpisodes`. */

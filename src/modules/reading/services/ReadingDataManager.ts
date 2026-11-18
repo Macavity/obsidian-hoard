@@ -1,5 +1,6 @@
 import { TFile, getFrontMatterInfo, parseYaml, stringifyYaml } from 'obsidian';
 import { dropOldId, rewriteOwnedKeys } from '../../../shared/storage/noteWrite';
+import { followIndex } from '../../../shared/services/followIndex';
 import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteWrite';
 import { ChangeNotifier } from '../../../shared/services/changeListeners';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
@@ -84,7 +85,6 @@ export class ReadingDataManager extends ChangeNotifier {
 	// ids changed via the *Silent updaters, written on the next saveAndNotify()
 	private dirty: Set<string> = new Set();
 	// what a rename re-keys and a delete forgets
-	private held: HeldEntries<{ src: ReadingItem; view: ReadingItem }>;
 
 	private historyManager: HistoryManager | null = null;
 
@@ -98,7 +98,10 @@ export class ReadingDataManager extends ChangeNotifier {
 		private readonly upcoming: ReadingUpcomingSync,
 	) {
 		super();
-		this.held = { index: this.index, views: this.views, dirty: this.dirty };
+	}
+
+	private get held(): HeldEntries<{ src: ReadingItem; view: ReadingItem }> {
+		return { index: this.index, views: this.views, dirty: this.dirty };
 	}
 
 	setHistoryManager(hm: HistoryManager): void {
@@ -109,17 +112,8 @@ export class ReadingDataManager extends ChangeNotifier {
 	async init(): Promise<void> {
 		this.readShared();
 		this.notes.followRenames(this.held);
-		this.index.onChange((ids) => {
-			let touched = false;
-			for (const id of ids) {
-				if (id.startsWith(`${FOLDERS.book}/`) || id.startsWith(`${FOLDERS.manga}/`)) {
-					// a pending silent edit keeps its copy until written
-					if (!this.dirty.has(id)) this.views.delete(id);
-					touched = true;
-				}
-			}
-			if (touched) this.notifyListeners();
-		});
+		const owns = (id: string): boolean => id.startsWith(`${FOLDERS.book}/`) || id.startsWith(`${FOLDERS.manga}/`);
+		followIndex(this.index, this.views, this.dirty, owns, () => this.notifyListeners());
 		this.shared.onChange(() => {
 			this.readShared();
 			this.notifyListeners();

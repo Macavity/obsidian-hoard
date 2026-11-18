@@ -2,10 +2,9 @@ import { normalizePath, type DataAdapter } from 'obsidian';
 import type { Book, EntryAirtime, Manga, ReadingCustomColumn } from '../../../../shared/domain/types';
 import { SHARED_SETTING_KEYS } from '../../../../shared/storage/SharedConfigStore';
 import type { EntryCache, EntryKind, Fm } from '../../../../shared/storage/storageTypes';
-import { titleToProperties, titleToCache } from '../../../../shared/storage/titleCodec';
+import { titleToProperties, titleToCache, pinSeasonsWithoutIdentity } from '../../../../shared/storage/titleCodec';
 import { encodeBook, encodeManga } from '../../../../shared/storage/readingCodec';
 import { encodeGame } from '../../../../shared/storage/gameCodec';
-import { externalIdFromLink } from '../../../../shared/storage/externalId';
 import { at, readList, readStringList } from '../../../../shared/domain/read';
 import { NoteWriter, ensureFolder, sameValue } from './schema1Notes';
 import { collectAirtime, collectGroups, importHistory } from './schema1Records';
@@ -273,9 +272,7 @@ class Schema1Migration {
 	}
 
 	private async writeTitle(path: string, title: WatchLogTitle): Promise<void> {
-		// without an API identity nothing can refetch the seasons: they belong in the note
-		const fetchable = !!title.tmdbId || !!title.malId || !!title.anilistId || externalIdFromLink(title.externalLink) !== null;
-		if (!fetchable && title.seasons.length > 0) title.seasonsOverride = true;
+		pinSeasonsWithoutIdentity(title);
 		// the poster is a note field (E12): WatchLog's manual one wins over the fetched one
 		const { manualPosterUrl, ...entry } = title;
 		if (manualPosterUrl?.trim()) entry.posterUrl = manualPosterUrl;

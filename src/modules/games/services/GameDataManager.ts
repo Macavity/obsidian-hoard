@@ -6,6 +6,7 @@ import { ChangeNotifier } from '../../../shared/services/changeListeners';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import type { SettingsReader } from '../../../shared/services/SettingsService';
+import { followIndex } from '../../../shared/services/followIndex';
 import type { EntryIndex } from '../../../shared/storage/EntryIndex';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
 import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
@@ -58,7 +59,6 @@ export class GameDataManager extends ChangeNotifier {
 	// games changed via updateGameSilent, written on the next saveAndNotify
 	private dirty = new Set<string>();
 	// what a rename re-keys and a delete forgets
-	private held: HeldEntries<{ src: Game; base: Game; view: Game }>;
 	private settingsCache: GamesSettings | null = null;
 
 	private historyManager: HistoryManager | null = null;
@@ -73,7 +73,10 @@ export class GameDataManager extends ChangeNotifier {
 		private readonly upcoming: GameUpcomingSync,
 	) {
 		super();
-		this.held = { index: this.index, views: this.views, dirty: this.dirty };
+	}
+
+	private get held(): HeldEntries<{ src: Game; base: Game; view: Game }> {
+		return { index: this.index, views: this.views, dirty: this.dirty };
 	}
 
 	setHistoryManager(hm: HistoryManager): void {
@@ -83,15 +86,7 @@ export class GameDataManager extends ChangeNotifier {
 	/** After index.build() and shared.load(): follows index and base changes, reconciles Upcoming. */
 	async init(): Promise<void> {
 		this.notes.followRenames(this.held);
-		this.index.onChange((ids) => {
-			let touched = false;
-			for (const id of ids) {
-				if (!id.startsWith(GAMES_FOLDER_PREFIX)) continue;
-				touched = true;
-				if (!this.dirty.has(id)) this.views.delete(id);
-			}
-			if (touched) this.notifyListeners();
-		});
+		followIndex(this.index, this.views, this.dirty, (id) => id.startsWith(GAMES_FOLDER_PREFIX), () => this.notifyListeners());
 		this.shared.onChange(() => {
 			this.settingsCache = null;
 			this.notifyListeners();

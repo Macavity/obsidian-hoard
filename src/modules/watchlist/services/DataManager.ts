@@ -20,8 +20,7 @@ import type { ApiCheckKind, ApiCheckResult, EntryCache, LookupKind, Notify } fro
 import { checkResultOf, FAILED } from '../../../shared/api/lookup';
 import type { LookupResult } from '../../../shared/api/lookup';
 import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
-import { TITLE_CACHE_KEYS, titleFromProperties, titleToProperties, isMovie, seasonsPending, titleToCache } from '../../../shared/storage/titleCodec';
-import { externalIdFromLink } from '../../../shared/storage/externalId';
+import { TITLE_CACHE_KEYS, titleFromProperties, titleToProperties, isMovie, seasonsPending, titleToCache, hasApiIdentity, pinSeasonsWithoutIdentity } from '../../../shared/storage/titleCodec';
 import { decodeBook, decodeManga, encodeAirtime } from '../../../shared/storage/readingCodec';
 import { decodeGame } from '../../../shared/storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from '../../../shared/storage/properties';
@@ -144,8 +143,7 @@ export class DataManager extends ChangeNotifier {
 		for (const t of titles) {
 			if (t.maybe || this.posterRequested.has(t.id)) continue;
 			if (t.posterUrl || !this.lookupDue(t.id, 'poster')) continue;
-			const identified = !!t.tmdbId || !!t.malId || !!t.anilistId || externalIdFromLink(t.externalLink) !== null;
-			if (!identified) continue;
+			if (!hasApiIdentity(t)) continue;
 			this.posterRequested.add(t.id);
 			void service.enqueue(t);
 		}
@@ -1404,10 +1402,7 @@ export class DataManager extends ChangeNotifier {
 
 	/** Creates the note for a new title; the title's id becomes the note path. */
 	private async createNote(title: HoardTitle): Promise<void> {
-		// without an API identity nothing can refetch the seasons: they belong in the note
-		const fetchable = !!title.tmdbId || !!title.malId || !!title.anilistId
-			|| externalIdFromLink(title.externalLink) !== null;
-		if (!fetchable && title.seasons.length > 0) title.seasonsOverride = true;
+		pinSeasonsWithoutIdentity(title);
 		const { path, id } = await this.entryNotes.reserve('title', title.title, title.type);
 		const fm = titleToProperties(title, this.getProgress(title), this.seasonsPending(title));
 		const notes = title.notes ?? '';
