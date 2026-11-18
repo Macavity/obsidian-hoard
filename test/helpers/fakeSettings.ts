@@ -8,5 +8,7 @@ export function fakeSettings<S extends object>(settings: S) {
 			fn(settings);
 			return Promise.resolve();
 		}),
+		/** Applies at once like the real one; the delayed save is not simulated. */
+		stage: vi.fn((fn: (draft: S) => void) => { fn(settings); }),
 	};
 }

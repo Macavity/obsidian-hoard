@@ -18,13 +18,13 @@ describe('widget i18n', () => {
 		const map = new Map<string, (source: string, el: HTMLElement) => void>();
 		const g = globalThis as Record<string, unknown>;
 		g.activeDocument = { addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true };
-		const plugin = {
-			registerMarkdownCodeBlockProcessor: (lang: string, fn: (s: string, e: HTMLElement) => void) => map.set(lang, fn),
-			register: () => {},
-			settings: { types: [], statuses: [], coloredTypeBadges: false },
-		};
 		const dm = { getAirtimeEntries: () => [], getTitles: () => [], getPinnedGroupId: () => null, getGroups: () => [] };
-		new WidgetRenderer(plugin as never, dm as never);
+		new WidgetRenderer({
+			registerMarkdownCodeBlockProcessor: ((lang: string, fn: (s: string, e: HTMLElement) => void) => map.set(lang, fn)) as never,
+			register: () => {},
+			settings: fakeSettings({ types: [], statuses: [], coloredTypeBadges: false }) as never,
+			titles: dm as never,
+		});
 		return map;
 	}
 
@@ -54,7 +54,7 @@ describe('widget i18n', () => {
 		const orig = proto.setPlaceholder;
 		proto.setPlaceholder = (p: string) => { placeholder = p; };
 		try {
-			new InsertWidgetModal({} as never, [], () => {});
+			new InsertWidgetModal({ app: {} as never }, [], () => {});
 		} finally {
 			proto.setPlaceholder = orig;
 		}

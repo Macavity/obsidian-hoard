@@ -4,6 +4,7 @@ import de from '../../src/i18n/de';
 import { HoardSettingsTab } from '../../src/SettingsTab';
 import { DEFAULT_SETTINGS } from '../../src/types';
 import { tick } from '../helpers/common';
+import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));
 
@@ -14,15 +15,15 @@ function allText(el: Element): string[] {
 	return [own, ...attrs, ...Array.from(el.children).flatMap(allText)].filter(Boolean);
 }
 
-function makeTab(plugin: Record<string, unknown> = {}, section = 'general') {
-	const full = {
-		settings: { ...DEFAULT_SETTINGS },
-		getLayout: () => ({ root: 'W' }),
+function makeTab(over: Record<string, unknown> = {}, section = 'general') {
+	const deps = {
+		app: {},
+		settings: fakeSettings({ ...DEFAULT_SETTINGS }),
+		layout: () => ({ root: 'W' }),
 		backupManagers: () => ({ storage: { local: { data: { ui: {} } } } }),
-		saveSettings: () => Promise.resolve(),
-		...plugin,
+		...over,
 	};
-	const tab = new HoardSettingsTab({} as never, full as never);
+	const tab = new HoardSettingsTab({} as never, deps as never);
 	(tab as unknown as { activeSection: string }).activeSection = section;
 	const root = tab.containerEl;
 	// the tab renders through its own display(); the structural type sidesteps the base-class deprecation
@@ -43,12 +44,12 @@ describe('settings tab i18n', () => {
 
 	it('shows the Steam bad-key failure in German', async () => {
 		setLocale('de');
-		const apiService = {
+		const api = {
 			resolveSteamId: () => Promise.resolve(''),
 			setSteamCredentials: vi.fn(),
 			checkSteamConnection: () => Promise.resolve({ ok: false, reason: 'badKey' }),
 		};
-		const { render, root } = makeTab({ apiService }, 'api');
+		const { render, root } = makeTab({ api }, 'api');
 		render();
 		const steamTest = Array.from(root.querySelectorAll<HTMLElement>('.hoard-api-provider__test')).at(-1)!;
 		steamTest.click();

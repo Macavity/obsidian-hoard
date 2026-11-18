@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Modal, Notice } from './__mocks__/obsidian';
 import HoardPlugin from '../src/main';
 import { HoardView } from '../src/HoardView';
-import { HoardSettingsTab } from '../src/SettingsTab';
 import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/types';
 
 const plugin = (props: Record<string, unknown>): HoardPlugin =>
@@ -117,22 +116,5 @@ describe('openWidgetPalette', () => {
 		choose('hoard-todo:mini');
 		opened[2]!.onChooseItem({ title: 'Dark' });
 		expect(written).toEqual(['```hoard-todo\nDark\n```', '```hoard-todo\nDark\nmini\n```']);
-	});
-});
-
-describe('HoardSettingsTab.gamesFilterRefs', () => {
-	it('lists the live and saved-preset exclusions of the axis', () => {
-		const live = { genreExclude: ['RPG'], platformExclude: ['PC'] };
-		const preset = { genreExclude: ['Indie'] };
-		const tab = Object.assign(Object.create(HoardSettingsTab.prototype) as HoardSettingsTab, {
-			plugin: { settings: { gamesFilters: live }, gameDataManager: { getSettings: () => ({ savedFilterPreset: preset }) } },
-		});
-		const refs = (kind: 'type' | 'platform') => (tab as unknown as { gamesFilterRefs(k: string): string[][] }).gamesFilterRefs(kind);
-		expect(refs('type')).toEqual([['RPG'], ['Indie']]);
-		expect(refs('platform')).toEqual([['PC']]);
-		// the very arrays, so renames and deletions reach the stored exclusions
-		expect(refs('type')[0]).toBe(live.genreExclude);
-		expect(refs('type')[1]).toBe(preset.genreExclude);
-		expect(refs('platform')[0]).toBe(live.platformExclude);
 	});
 });

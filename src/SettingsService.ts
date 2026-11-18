@@ -6,9 +6,16 @@ export interface SettingsReader {
 }
 
 export interface SettingsWriter {
-	/** Mutates the settings, persists once, then signals the change once. */
+	/** Mutates the settings (synchronously), persists once, then signals the change once. */
 	update(fn: (draft: HoardPluginSettings) => void): Promise<void>;
+	/**
+	 * For text typed key by key: mutates the settings now, but persists and signals once, after
+	 * `STAGE_DELAY_MS` without another `stage` or `update` call.
+	 */
+	stage(fn: (draft: HoardPluginSettings) => void): void;
 }
+
+const STAGE_DELAY_MS = 500;
 
 export interface SettingsServiceDeps {
 	current: () => HoardPluginSettings;
@@ -17,6 +24,8 @@ export interface SettingsServiceDeps {
 }
 
 export class SettingsService implements SettingsReader, SettingsWriter {
+	private stageTimer: number | null = null;
+
 	constructor(private readonly deps: SettingsServiceDeps) {}
 
 	get(): DeepReadonly<HoardPluginSettings> {
@@ -25,7 +34,24 @@ export class SettingsService implements SettingsReader, SettingsWriter {
 
 	async update(fn: (draft: HoardPluginSettings) => void): Promise<void> {
 		fn(this.deps.current());
+		// this save covers anything staged before
+		this.cancelStaged();
 		await this.deps.persist();
 		this.deps.changed();
+	}
+
+	stage(fn: (draft: HoardPluginSettings) => void): void {
+		fn(this.deps.current());
+		this.cancelStaged();
+		this.stageTimer = window.setTimeout(() => {
+			this.stageTimer = null;
+			this.update(() => {}).catch((e: unknown) => console.error('[Hoard] could not save settings', e));
+		}, STAGE_DELAY_MS);
+	}
+
+	private cancelStaged(): void {
+		if (this.stageTimer === null) return;
+		window.clearTimeout(this.stageTimer);
+		this.stageTimer = null;
 	}
 }

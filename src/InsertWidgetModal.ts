@@ -3,12 +3,17 @@ import type { HoardTitle } from './types';
 import { t } from './i18n';
 import { typeLabel } from './i18n/labels';
 
+export interface InsertWidgetModalDeps {
+	app: App;
+}
+
+/** Picks a title to insert into a note as a widget. */
 export class InsertWidgetModal extends FuzzySuggestModal<HoardTitle> {
 	private onSelect: (title: HoardTitle) => void;
 	private titles: HoardTitle[];
 
-	constructor(app: App, titles: HoardTitle[], onSelect: (title: HoardTitle) => void) {
-		super(app);
+	constructor(deps: InsertWidgetModalDeps, titles: HoardTitle[], onSelect: (title: HoardTitle) => void) {
+		super(deps.app);
 		this.titles = titles;
 		this.onSelect = onSelect;
 		this.setPlaceholder(t('widget.insertPlaceholder'));

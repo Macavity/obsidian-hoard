@@ -7,6 +7,7 @@ const gamesKeyChip = (source: 'rawg' | 'igdb', s: Record<string, string>) => rea
 import { HoardSettingsTab } from '../src/SettingsTab';
 import { gamesKeyChip as realChip } from '../src/ui/gamesKeyChip';
 import type { HoardTitle, TagDefinition } from '../src/types';
+import { fakeSettings } from './helpers/fakeSettings';
 
 /** The private members under test, reached through a cast. */
 interface Internals {
@@ -14,7 +15,8 @@ interface Internals {
 	rewriteAllFrontmatter(): Promise<void>;
 	fetchAllStudios(): Promise<void>;
 	runRegenerate(wrap: HTMLElement, fill: HTMLElement, text: HTMLElement): Promise<void>;
-	gamesFilterRefs(kind: 'type' | 'platform'): string[][];
+	renameGamesFilterRefs(kind: 'type' | 'platform', from: string, to: string): void;
+	clearGamesFilterRefs(kind: 'type' | 'platform', name: string): void;
 	renderThemePicker(el: HTMLElement, onPicked?: (label: string) => void): void;
 	renderApi(el: HTMLElement): void;
 	renderTagSection(parent: HTMLElement, label: string, key: 'types' | 'statuses' | 'priorities', onChanged?: () => void): void;
@@ -68,35 +70,38 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 		statuses: [{ name: 'Watching', color: '#333333' }] as TagDefinition[],
 		priorities: [] as TagDefinition[],
 	};
-	const plugin = {
-		settings,
-		saveSettings: vi.fn(() => Promise.resolve()),
-		getLayout: () => ({ root: over.root ?? 'Hoard' }),
-		dataManager: dm,
-		readingDataManager: reading,
-		gameDataManager: { getSettings: () => ({ savedFilterPreset: { genreExclude: ['RPG', 'FPS'] } }) },
-		apiService: {
-			hasOmdbKey: () => !!settings.omdbApiKey,
-			hasTmdbKey: () => !!settings.tmdbApiKey,
-			hasGoogleBooksKey: () => !!settings.googleBooksApiKey,
-			hasRawgKey: () => !!settings.rawgApiKey,
-			hasIgdbCredentials: () => !!settings.igdbClientId && !!settings.igdbClientSecret,
-			setOmdbKey: vi.fn(),
-			setGoogleBooksKey: vi.fn(),
-			setRawgKey: vi.fn(),
-			fetchStudio: vi.fn((t: HoardTitle) => {
-				if (t.title === 'err') return Promise.reject(new Error('net'));
-				return Promise.resolve(t.title === 'hit'
-					? { status: 'found', value: { studio: ['Ghibli'], tmdbId: 1, tmdbMediaType: 'movie' } }
-					: { status: 'notfound' });
-			}),
-		},
-		importProgress: null as unknown,
-		app: { workspace: { getLeavesOfType: () => [{ view: {} }] } },
+	const preset = { genreExclude: ['RPG', 'FPS'] };
+	const state = { importProgress: null as null | { cancel(): void } };
+	const settingsService = fakeSettings(settings);
+	const api = {
+		hasOmdbKey: () => !!settings.omdbApiKey,
+		hasTmdbKey: () => !!settings.tmdbApiKey,
+		hasGoogleBooksKey: () => !!settings.googleBooksApiKey,
+		hasRawgKey: () => !!settings.rawgApiKey,
+		hasIgdbCredentials: () => !!settings.igdbClientId && !!settings.igdbClientSecret,
+		setOmdbKey: vi.fn(),
+		setGoogleBooksKey: vi.fn(),
+		setRawgKey: vi.fn(),
+		fetchStudio: vi.fn((t: HoardTitle) => {
+			if (t.title === 'err') return Promise.reject(new Error('net'));
+			return Promise.resolve(t.title === 'hit'
+				? { status: 'found', value: { studio: ['Ghibli'], tmdbId: 1, tmdbMediaType: 'movie' } }
+				: { status: 'notfound' });
+		}),
 	};
-	const app = { vault };
-	const tab = new HoardSettingsTab(app as never, plugin as never);
-	return { tab: tab as unknown as Internals, plugin, dm, reading, app, adapter, written, settings };
+	const app = { vault, workspace: { getLeavesOfType: () => [{ view: {} }] } };
+	const deps = {
+		app,
+		settings: settingsService,
+		layout: () => ({ root: over.root ?? 'Hoard' }),
+		titles: dm,
+		reading,
+		games: { getSettings: () => ({ savedFilterPreset: preset }) },
+		api,
+		setImportProgress: (p: typeof state.importProgress) => { state.importProgress = p; },
+	};
+	const tab = new HoardSettingsTab({} as never, deps as never);
+	return { tab: tab as unknown as Internals, deps, state, settingsService, api, preset, dm, reading, app, adapter, written, settings };
 }
 
 beforeEach(() => { Notice.shown.length = 0; vi.stubGlobal('activeDocument', document); });
@@ -123,7 +128,7 @@ describe('HoardSettingsTab tag colour pickers', () => {
 
 describe('HoardSettingsTab tag sections', () => {
 	it('locks built-in types and statuses; colour changes persist', async () => {
-		const { tab, settings, plugin } = makeTab();
+		const { tab, settings, settingsService } = makeTab();
 		const el = document.createElement('div');
 		tab.renderTagSection(el, 'Statuses', 'statuses');
 		expect(el.querySelector('.hoard-tag-editor__delete')).toBeNull();
@@ -131,7 +136,7 @@ describe('HoardSettingsTab tag sections', () => {
 		const picker = el.querySelector<HTMLInputElement>('.hoard-tag-editor__color-picker')!;
 		picker.value = '#abcdef';
 		picker.dispatchEvent(new Event('change'));
-		await until(() => plugin.saveSettings.mock.calls.length > 0);
+		await until(() => settingsService.update.mock.calls.length > 0);
 		expect(settings.statuses[0]!.color).toBe('#abcdef');
 		const types = document.createElement('div');
 		tab.renderTagSection(types, 'Types', 'types');
@@ -198,16 +203,26 @@ describe('HoardSettingsTab rename commit', () => {
 });
 
 describe('HoardSettingsTab games filter refs', () => {
-	it('collects live and preset exclusion lists per axis', () => {
-		const { tab } = makeTab();
-		expect(tab.gamesFilterRefs('type')).toEqual([['RPG'], ['RPG', 'FPS']]);
-		expect(tab.gamesFilterRefs('platform')).toEqual([[]]);
+	it('renames in the live filter (saved through update) and in the preset', () => {
+		const { tab, settings, preset, settingsService } = makeTab();
+		tab.renameGamesFilterRefs('type', 'RPG', 'Role-playing');
+		expect(settings.gamesFilters.genreExclude).toEqual(['Role-playing']);
+		expect(preset.genreExclude).toEqual(['Role-playing', 'FPS']);
+		expect(settingsService.update).toHaveBeenCalledTimes(1);
+	});
+	it('drops a deleted name from both lists, per axis', () => {
+		const { tab, settings, preset } = makeTab();
+		tab.clearGamesFilterRefs('type', 'FPS');
+		expect(preset.genreExclude).toEqual(['RPG']);
+		tab.clearGamesFilterRefs('platform', 'PC');
+		expect(settings.gamesFilters.platformExclude).toEqual([]);
+		expect(settings.gamesFilters.genreExclude).toEqual(['RPG']);
 	});
 });
 
 describe('HoardSettingsTab theme picker', () => {
 	it('marks the current theme and switches on click', async () => {
-		const { tab, settings, plugin } = makeTab();
+		const { tab, settings, settingsService } = makeTab();
 		const picked = vi.fn();
 		const el = document.createElement('div');
 		tab.renderThemePicker(el, picked);
@@ -219,7 +234,7 @@ describe('HoardSettingsTab theme picker', () => {
 		expect(settings.colorTheme).toBe('nightfall');
 		expect(cards[1]!.classList.contains('is-selected')).toBe(true);
 		expect(cards[0]!.classList.contains('is-selected')).toBe(false);
-		expect(plugin.saveSettings).toHaveBeenCalled();
+		expect(settingsService.update).toHaveBeenCalled();
 	});
 });
 
@@ -255,16 +270,16 @@ describe('HoardSettingsTab rewriteAllFrontmatter', () => {
 	});
 	it('rewrites every note, counts skipped ones and clears progress', async () => {
 		const titles = Array.from({ length: 11 }, (_, i) => ({ id: `t${i}`, title: i === 0 ? 'gone' : `T${i}` }));
-		const { tab, plugin, reading } = makeTab({ titles, books: [{}], manga: [{}] });
+		const { tab, state, reading } = makeTab({ titles, books: [{}], manga: [{}] });
 		await tab.rewriteAllFrontmatter();
 		expect(reading.rewriteFrontmatterIfExists).toHaveBeenCalledTimes(2);
-		expect(plugin.importProgress).toBeNull();
+		expect(state.importProgress).toBeNull();
 		expect(Notice.shown).toContain('Done: 12 notes rewritten, 1 skipped (no file).');
 	});
 	it('stops when cancelled', async () => {
-		const { tab, dm } = makeTab({ titles: [{ title: 'a' }, { title: 'b' }] });
+		const { tab, dm, state } = makeTab({ titles: [{ title: 'a' }, { title: 'b' }] });
 		dm.rewriteFrontmatterIfExists.mockImplementationOnce(() => {
-			(tab as unknown as { plugin: { importProgress: { cancel(): void } } }).plugin.importProgress.cancel();
+			state.importProgress!.cancel();
 			return Promise.resolve(true);
 		});
 		await tab.rewriteAllFrontmatter();
@@ -279,19 +294,19 @@ describe('HoardSettingsTab fetchAllStudios', () => {
 		expect(Notice.shown).toContain('Every title already has a studio.');
 	});
 	it('fills hits, records misses and errors without storing and survives errors', async () => {
-		const { tab, dm, plugin } = makeTab({ titles: [anime('hit'), anime('miss'), anime('err')] });
+		const { tab, dm, state } = makeTab({ titles: [anime('hit'), anime('miss'), anime('err')] });
 		await tab.fetchAllStudios();
 		expect(dm.updateStudio).toHaveBeenCalledTimes(1);
 		expect(dm.recordLookup).toHaveBeenCalledWith('miss', 'studio', { status: 'notfound' });
 		expect(dm.recordLookup).toHaveBeenCalledWith('err', 'studio', { status: 'failed' });
-		expect(plugin.importProgress).toBeNull();
+		expect(state.importProgress).toBeNull();
 		expect(Notice.shown).toContain('Done: 1 title filled, 2 with no studio available.');
 	});
 	it('leaves movies unfetched without a TMDB key and fetches them with one', async () => {
 		const movie = { id: 'm', title: 'hit', type: 'Movie' };
 		const without = makeTab({ titles: [movie, anime('hit')] });
 		await without.tab.fetchAllStudios();
-		expect(without.plugin.apiService.fetchStudio).toHaveBeenCalledTimes(1);
+		expect(without.api.fetchStudio).toHaveBeenCalledTimes(1);
 		expect(without.dm.updateStudio).toHaveBeenCalledTimes(1);
 		const keyed = makeTab({ titles: [movie] });
 		keyed.settings.tmdbApiKey = 'k';
@@ -299,9 +314,9 @@ describe('HoardSettingsTab fetchAllStudios', () => {
 		expect(keyed.dm.updateStudio).toHaveBeenCalledTimes(1);
 	});
 	it('stops when cancelled', async () => {
-		const { tab, plugin } = makeTab({ titles: [anime('hit'), anime('hit2')] });
-		plugin.apiService.fetchStudio.mockImplementationOnce(() => {
-			(plugin.importProgress as { cancel(): void }).cancel();
+		const { tab, api, state } = makeTab({ titles: [anime('hit'), anime('hit2')] });
+		api.fetchStudio.mockImplementationOnce(() => {
+			state.importProgress!.cancel();
 			return Promise.resolve({ status: 'found', value: { studio: ['A'], tmdbId: 1, tmdbMediaType: 'tv' } });
 		});
 		await tab.fetchAllStudios();
@@ -380,5 +395,48 @@ describe('HoardSettingsTab keyless source selectors', () => {
 		expect(hints()).toEqual(['Uses Steam Store until a key is set.']);
 		seg('Steam Store').click();
 		expect(hints()).toEqual([]);
+	});
+
+	it('saves a key typed into the OMDb field once the typing settles, not per keystroke', () => {
+		const { el, settings, settingsService, api } = render();
+		const input = el.querySelector<HTMLInputElement>('input[placeholder="Paste your OMDb key here"]')!;
+		input.value = 'abc';
+		input.dispatchEvent(new Event('input'));
+		expect(settings.omdbApiKey).toBe('abc');
+		expect(api.setOmdbKey).toHaveBeenCalledWith('abc');
+		expect(settingsService.stage).toHaveBeenCalledTimes(1);
+		expect(settingsService.update).not.toHaveBeenCalled();
+	});
+
+	it('saves the active source through update', () => {
+		const { seg, settingsService } = render();
+		seg('RAWG').click();
+		expect(settingsService.update).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('HoardSettingsTab type API routing', () => {
+	const select = (el: HTMLElement) => el.querySelector<HTMLSelectElement>('select.hoard-api-provider__type-api-select')!;
+
+	it('writes the chosen route and removes it again through update', () => {
+		const { tab, settings, settingsService } = makeTab();
+		settings.types = [{ name: 'Docu', color: '#222222' }];
+		const el = document.createElement('div');
+		(tab as unknown as { renderTypeApiMapping(p: HTMLElement): void }).renderTypeApiMapping(el);
+		select(el).value = 'anime';
+		select(el).dispatchEvent(new Event('change'));
+		expect(settings.typeApiMapping).toEqual({ Docu: 'anime' });
+		select(el).value = '';
+		select(el).dispatchEvent(new Event('change'));
+		expect(settings.typeApiMapping).toEqual({});
+		expect(settingsService.update).toHaveBeenCalledTimes(2);
+	});
+
+	it('prunes routes of types that no longer exist, saving once', () => {
+		const { tab, settings, settingsService } = makeTab();
+		(settings as { typeApiMapping: Record<string, string> }).typeApiMapping = { Gone: 'anime', Docu: 'movie' };
+		(tab as unknown as { renderTypeApiMapping(p: HTMLElement): void }).renderTypeApiMapping(document.createElement('div'));
+		expect(settings.typeApiMapping).toEqual({ Docu: 'movie' });
+		expect(settingsService.update).toHaveBeenCalledTimes(1);
 	});
 });

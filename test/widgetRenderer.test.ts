@@ -1,6 +1,7 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { WidgetRenderer, findNextRelease, groupProgress } from '../src/WidgetRenderer';
 import type { HoardTitle } from '../src/types';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const t = (id: string, watched: number[], over: Partial<HoardTitle> = {}): HoardTitle =>
 	({ id, title: `T${id}`, type: 'Series', watchedEpisodes: watched, ...over }) as HoardTitle;
@@ -65,16 +66,6 @@ function mountRenderer(fx: Fixture = {}) {
 	vi.stubGlobal('activeDocument', fx.loadedIn ?? document);
 	const handlers = new Map<string, Handler>();
 	const titles = fx.titles ?? [];
-	const plugin = {
-		settings: {
-			colorTheme: fx.colorTheme ?? 'default',
-			coloredTypeBadges: true,
-			types: [{ name: 'Series', color: '#123456' }, { name: 'Movie', color: '#654321' }],
-			statuses: [{ name: 'Watching', color: '#00aa00' }],
-		},
-		registerMarkdownCodeBlockProcessor: (lang: string, fn: Handler) => handlers.set(lang, fn),
-		register: () => {},
-	};
 	const dm = {
 		getTitle: (id: string) => titles.find((x) => x.id === id),
 		getTitles: () => titles,
@@ -89,7 +80,17 @@ function mountRenderer(fx: Fixture = {}) {
 		getAirtimeEntries: () => (fx.releases ?? []).map((r) => ({ titleId: r.titleId, schedule: { recurrence: 'once', releaseDate: r.releaseDate } })),
 		markEpisodeWatched: vi.fn(async () => {}),
 	};
-	new WidgetRenderer(plugin as never, dm as never);
+	new WidgetRenderer({
+		settings: fakeSettings({
+			colorTheme: fx.colorTheme ?? 'default',
+			coloredTypeBadges: true,
+			types: [{ name: 'Series', color: '#123456' }, { name: 'Movie', color: '#654321' }],
+			statuses: [{ name: 'Watching', color: '#00aa00' }],
+		}) as never,
+		registerMarkdownCodeBlockProcessor: ((lang: string, fn: Handler) => handlers.set(lang, fn)) as never,
+		register: () => {},
+		titles: dm as never,
+	});
 	const run = (lang: string, source: string): HTMLElement => {
 		const el = document.createElement('div');
 		document.body.appendChild(el);

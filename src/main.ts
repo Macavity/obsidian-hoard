@@ -23,7 +23,7 @@ import { AddTitleModal } from './AddTitleModal';
 import { TitleDetailModal } from './TitleDetailModal';
 import { InsertWidgetModal } from './InsertWidgetModal';
 import { WidgetRenderer } from './WidgetRenderer';
-import { HoardSettingsTab } from './SettingsTab';
+import { HoardSettingsTab, type HoardSettingsTabDeps } from './SettingsTab';
 import { AirtimeTab } from './AirtimeTab';
 import { openAddForTitle, type AddRouterDeps } from './AddRouter';
 import { runAirtimeScheduler } from './airtimeScheduler';
@@ -186,7 +186,12 @@ export default class HoardPlugin extends Plugin {
 			return new HoardView(leaf, this.hoardViewDeps());
 		});
 
-		this.widgetRenderer = new WidgetRenderer(this, this.dataManager);
+		this.widgetRenderer = new WidgetRenderer({
+			settings: this.settingsService,
+			titles: this.dataManager,
+			registerMarkdownCodeBlockProcessor: (language, handler) => this.registerMarkdownCodeBlockProcessor(language, handler),
+			register: (cleanup) => this.register(cleanup),
+		});
 
 		this.addRibbonIcon('tv', t('app.ribbon'), () => {
 			void this.activateView();
@@ -231,7 +236,7 @@ export default class HoardPlugin extends Plugin {
 			name: t('app.commands.searchTitle'),
 			callback: () => {
 				const titles = this.dataManager.getTitles();
-				new InsertWidgetModal(this.app, titles, (title) => {
+				new InsertWidgetModal({ app: this.app }, titles, (title) => {
 					void this.activateView().then(() => {
 						new Notice(t('app.titleNotice', { title: title.title, type: typeLabel(title.type), status: statusLabel(title.status) }));
 					});
@@ -239,7 +244,7 @@ export default class HoardPlugin extends Plugin {
 			},
 		});
 
-		this.addSettingTab(new HoardSettingsTab(this.app, this));
+		this.addSettingTab(new HoardSettingsTab(this, this.settingsTabDeps()));
 
 		this.setupStatusBar();
 		// keep the status bar in sync with data edits (no new timer: the 60s airtime interval drives the
@@ -260,6 +265,26 @@ export default class HoardPlugin extends Plugin {
 			isCardTextUnder: (tab) => this.isCardTextUnder(tab),
 			importProgress: () => this.importProgress,
 			resolveDefaultAddType: () => this.resolveDefaultAddType(),
+		};
+	}
+
+	/** What the settings pane and the modals it opens read and change. */
+	private settingsTabDeps(): HoardSettingsTabDeps {
+		return {
+			app: this.app,
+			settings: this.settingsService,
+			titles: this.dataManager,
+			reading: this.readingDataManager,
+			games: this.gameDataManager,
+			api: this.apiService,
+			posters: this.posterService,
+			layout: () => this.getLayout(),
+			backupManagers: () => this.backupManagers(),
+			openWatchLogImport: (startAt) => this.openWatchLogImport(startAt),
+			reloadSettings: () => this.loadSettings(),
+			applyCardSizeCssVar: () => this.applyCardSizeCssVar(),
+			updateStatusBar: () => this.updateStatusBar(),
+			setImportProgress: (progress) => { this.importProgress = progress; },
 		};
 	}
 
@@ -612,14 +637,6 @@ export default class HoardPlugin extends Plugin {
 		this.apiKeys = keys;
 	}
 
-	/**
-	 * Legacy entry: persists without the change signal. Kept for SettingsTab, which emits the signal
-	 * itself after its own writes; routing it through `settingsService.update` would emit twice.
-	 */
-	saveSettings(): Promise<void> {
-		return this.persistAll();
-	}
-
 	private async persistAll(): Promise<void> {
 		// keep the date formatters in step with the setting on every save
 		setActiveDateFormat(this.settings.dateFormat);
@@ -665,7 +682,7 @@ export default class HoardPlugin extends Plugin {
 					return;
 				}
 				const isMini = selected.id === 'hoard-todo:mini';
-				new InsertWidgetModal(this.app, titles, (title) => {
+				new InsertWidgetModal({ app: this.app }, titles, (title) => {
 					if (isMini) {
 						editor.replaceSelection(`\`\`\`hoard-todo\n${title.title}\nmini\n\`\`\``);
 					} else {

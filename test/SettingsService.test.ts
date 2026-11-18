@@ -25,6 +25,38 @@ describe('SettingsService', () => {
 		expect(changed).not.toHaveBeenCalled();
 	});
 
+	describe('stage', () => {
+		it('applies at once, persists and signals once after the quiet period', async () => {
+			vi.useFakeTimers();
+			try {
+				const { svc, persistSpy, changed } = make();
+				svc.stage((s) => { s.omdbApiKey = 'a'; });
+				svc.stage((s) => { s.omdbApiKey = 'ab'; });
+				expect(svc.get().omdbApiKey).toBe('ab');
+				vi.advanceTimersByTime(499);
+				expect(persistSpy).not.toHaveBeenCalled();
+				await vi.advanceTimersByTimeAsync(1);
+				expect(persistSpy).toHaveBeenCalledTimes(1);
+				expect(changed).toHaveBeenCalledTimes(1);
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it('an update in between covers the staged change, so the timer does not save again', async () => {
+			vi.useFakeTimers();
+			try {
+				const { svc, persistSpy } = make();
+				svc.stage((s) => { s.omdbApiKey = 'a'; });
+				await svc.update((s) => { s.dateFormat = 'iso'; });
+				vi.advanceTimersByTime(1000);
+				expect(persistSpy).toHaveBeenCalledTimes(1);
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+	});
+
 	it('get is read-only at compile time', () => {
 		const { svc } = make();
 		// @ts-expect-error a readonly array is not assignable to a mutable one

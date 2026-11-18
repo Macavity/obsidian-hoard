@@ -1,17 +1,16 @@
-import { App, Notice, Platform, PluginSettingTab, Setting, SliderComponent, normalizePath, setIcon } from 'obsidian';
+import { Notice, Platform, PluginSettingTab, Setting, SliderComponent, normalizePath, setIcon, type Plugin } from 'obsidian';
 import { t, type TranslationKey } from './i18n';
 import { createIconButton } from './ui/IconButton';
 import { statusLabel, typeLabel, readingStatusLabel } from './i18n/labels';
 import { typeNameProblemText } from './ui/problemText';
 import { cardSizeToMinWidth } from './VirtualGrid';
-import type HoardPlugin from './main';
 import type { HoardPluginSettings, TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from './types';
 import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType } from './types';
 import { readingStatusColor } from './readingColors';
 import { gamesKeyChip } from './ui/gamesKeyChip';
 import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from './apiSources';
 import { SteamSyncModal, type SteamSyncModalDeps } from './SteamSyncModal';
-import type { SteamFailureReason } from './ApiService';
+import type { ApiService, SteamFailureReason } from './ApiService';
 import { FAILED } from './lookup';
 
 /** short status-line label per Steam failure (the modal shows the long form) */
@@ -35,7 +34,7 @@ const DATE_PREVIEW = '2026-03-09';
 interface TagListSectionConfig {
 	label: string;
 	info?: string;
-	getList: () => TagDefinition[];
+	getList: () => readonly TagDefinition[];
 	setColor: (name: string, color: string) => Promise<void>;
 	/** entries that keep the colour picker but can't be renamed or removed */
 	isLocked?: (name: string) => boolean;
@@ -139,16 +138,23 @@ interface ApiProviderHandle {
 	refreshStatus: () => void;
 }
 import { CsvModal, type CsvModalDeps } from './CsvModal';
+import type { DataManager } from './DataManager';
+import type { ReadingDataManager } from './ReadingDataManager';
+import type { GameDataManager } from './GameDataManager';
+import type { VaultLayout } from './storage/VaultLayout';
+import type { BackupManagers } from './backup';
+import type { SettingsReader, SettingsWriter } from './SettingsService';
 import { ReadingCsvChoiceModal } from './ReadingCsvChoiceModal';
 import { ReadingCsvModal, type ReadingCsvModalDeps } from './ReadingCsvModal';
 import { HoardView } from './HoardView';
-import { CustomListManager, DefaultColumnsModal } from './CustomListsTab';
+import { CustomListManager, DefaultColumnsModal, type DefaultColumnsModalDeps } from './CustomListsTab';
 import { ConfirmModal } from './ConfirmModal';
 import { refreshAllCovers } from './coverRefresh';
 import { apiErrorMessage, apiErrorShort } from './ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from './jikanBase';
 import { getDecision } from './import/watchlog/onboardingState';
 import { buildBackup, parseBackup, restoreBackup, withoutSecrets } from './backup';
+import type { PosterService } from './PosterService';
 import { emitDataChanged } from './changeSignal';
 
 /** Chip for the MyAnimeList endpoint field: default, custom, or rejected and falling back. */
@@ -176,45 +182,33 @@ const GAME_NAMES = { steam: 'Steam Store', rawg: 'RAWG', igdb: 'IGDB' } as const
 
 type SettingsSection = 'general' | 'api' | 'customize' | 'watchlist' | 'drafts' | 'custom-lists' | 'reading' | 'widgets' | 'quick-info';
 
-export class HoardSettingsTab extends PluginSettingTab {
-	private plugin: HoardPlugin;
-	private textSaveTimer: number | null = null;
+/** What the settings pane reads and changes, including the deps of every modal it opens. */
+export interface HoardSettingsTabDeps extends CsvModalDeps, ReadingCsvModalDeps, SteamSyncModalDeps, DefaultColumnsModalDeps {
+	settings: SettingsReader & SettingsWriter;
+	titles: DataManager;
+	reading: ReadingDataManager;
+	games: GameDataManager;
+	api: ApiService;
+	posters: Pick<PosterService, 'enqueue'>;
+	layout: () => Pick<VaultLayout, 'root' | 'customListsFolder'>;
+	/** Everything backup export and restore (and the WatchLog decisions) read. */
+	backupManagers: () => BackupManagers;
+	openWatchLogImport: (startAt: 'found' | 'cleanup') => Promise<void>;
+	/** Re-composes the settings after a backup restore replaced the stored ones. */
+	reloadSettings: () => Promise<void>;
+	/** Publishes the card size as a CSS variable on the main window. */
+	applyCardSizeCssVar: () => void;
+	updateStatusBar: () => void;
+}
 
-	private debouncedSaveSettings(): void {
-		if (this.textSaveTimer !== null) window.clearTimeout(this.textSaveTimer);
-		this.textSaveTimer = window.setTimeout(() => {
-			this.textSaveTimer = null;
-			void this.plugin.saveSettings();
-		}, 500);
-	}
-	// TODO(Task 8): the tab takes CsvModalDeps from its own deps instead of the plugin
-	private csvModalDeps(): CsvModalDeps {
-		return {
-			app: this.app,
-			settings: this.plugin.settingsService,
-			titles: this.plugin.dataManager,
-			setImportProgress: (progress) => { this.plugin.importProgress = progress; },
-		};
-	}
-	// TODO(Task 8): the tab takes the deps of these modals from its own deps instead of the plugin
-	private readingCsvModalDeps(): ReadingCsvModalDeps {
-		return { app: this.app, reading: this.plugin.readingDataManager };
-	}
-	private steamSyncModalDeps(): SteamSyncModalDeps {
-		return {
-			app: this.app,
-			settings: this.plugin.settingsService,
-			games: this.plugin.gameDataManager,
-			api: this.plugin.apiService,
-		};
-	}
+/** The plugin's settings pane. Obsidian wants the plugin itself for registration (K4); nothing else. */
+export class HoardSettingsTab extends PluginSettingTab {
 	private activeSection: SettingsSection = 'general';
 	/** Teardown for an in-flight restore file picker; see openRestoreDialog. */
 	private restoreDialogCleanup: (() => void) | null = null;
 
-	constructor(app: App, plugin: HoardPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
+	constructor(plugin: Plugin, private deps: HoardSettingsTabDeps) {
+		super(deps.app, plugin);
 	}
 
 	hide(): void {
@@ -311,7 +305,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	 * `setChip` keeps the header chip in sync ("Text under · 160 px", "Mixed · 160 px").
 	 */
 	private renderCardSettings(el: HTMLElement, setChip: (label: string) => void): void {
-		const s = this.plugin.settings;
+		const s = this.deps.settings.get();
 		const tabs = HoardSettingsTab.CARD_STYLE_TABS;
 		/** 'under' / 'inside' when every tab agrees, null when mixed. */
 		const unanimous = (): CardTextStyle | null => {
@@ -340,17 +334,15 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const tabButtons: Array<{ key: CardStyleTab; value: CardTextStyle; btn: HTMLElement }> = [];
 		// one save path for tiles and rows: persist, repaint open tabs, resync UI
 		const applyStyles = (assign: Partial<Record<CardStyleTab, CardTextStyle>>): void => {
-			Object.assign(s.cardTextStyles, assign);
+			// update applies the change synchronously; the repaint below reads it back, saving follows
+			const saved = this.deps.settings.update((d) => { Object.assign(d.cardTextStyles, assign); });
 			const all = unanimous();
 			for (const [value, tile] of tiles) tile.toggleClass('is-active', value === all);
 			for (const { key, value, btn } of tabButtons) {
 				btn.toggleClass('is-active', s.cardTextStyles[key] === value);
 			}
 			syncChip();
-			void (async () => {
-				await this.plugin.saveSettings();
-				this.plugin.dataManager.notifyChange();
-			})();
+			void saved.then(() => this.deps.titles.notifyChange());
 		};
 
 		for (const opt of options) {
@@ -405,9 +397,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 		});
 		const rows = sizeBody.createDiv({ cls: 'hoard-card-size__rows' });
 		this.renderCardSizeRow(rows, 'monitor', t('settings.cards.desktop'),
-			() => s.cardSize ?? 0, (v) => { s.cardSize = v; }, syncChip);
+			() => s.cardSize ?? 0, (d, v) => { d.cardSize = v; }, syncChip);
 		this.renderCardSizeRow(rows, 'smartphone', t('settings.cards.mobile'),
-			() => s.cardSizeMobile ?? 0, (v) => { s.cardSizeMobile = v; }, syncChip);
+			() => s.cardSizeMobile ?? 0, (d, v) => { d.cardSizeMobile = v; }, syncChip);
 
 		syncChip();
 	}
@@ -421,7 +413,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		icon: string,
 		label: string,
 		get: () => number,
-		set: (v: number) => void,
+		set: (draft: HoardPluginSettings, v: number) => void,
 		onChanged: () => void,
 	): void {
 		const row = parent.createDiv({ cls: 'hoard-card-size__row' });
@@ -438,13 +430,13 @@ export class HoardSettingsTab extends PluginSettingTab {
 		slider
 			.setLimits(-3, 3, 1)
 			.setValue(get())
-			.onChange(async (v) => {
-				set(v);
+			.onChange((v) => {
+				// the slider fires on every step of a drag: save once when it settles
+				this.deps.settings.stage((d) => set(d, v));
 				valueEl.setText(fmt(v));
-				await this.plugin.saveSettings();
 				// re-publish the CSS var and re-render, so the size shows now and not on tab switch
-				this.plugin.applyCardSizeCssVar();
-				this.plugin.dataManager.notifyChange();
+				this.deps.applyCardSizeCssVar();
+				this.deps.titles.notifyChange();
 				onChanged();
 			});
 	}
@@ -471,11 +463,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 						circles: t('settings.general.dashboardStyle.circles'),
 						rectangles: t('settings.general.dashboardStyle.rectangles'),
 					})
-					.setValue(this.plugin.settings.dashboardCardStyle ?? 'circles')
+					.setValue(this.deps.settings.get().dashboardCardStyle ?? 'circles')
 					.onChange(async (v) => {
-						this.plugin.settings.dashboardCardStyle = v as 'circles' | 'rectangles';
-						await this.plugin.saveSettings();
-						emitDataChanged();
+						await this.deps.settings.update((s) => { s.dashboardCardStyle = v as 'circles' | 'rectangles'; });
 					}),
 			);
 
@@ -489,11 +479,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 						american: t('settings.general.dateFormat.american', { date: formatDateDisplay(DATE_PREVIEW, 'american') }),
 						iso: t('settings.general.dateFormat.iso', { date: formatDateDisplay(DATE_PREVIEW, 'iso') }),
 					})
-					.setValue(this.plugin.settings.dateFormat ?? 'european')
+					.setValue(this.deps.settings.get().dateFormat ?? 'european')
 					.onChange(async (v) => {
-						this.plugin.settings.dateFormat = v as DateFormatPref;
-						// saveSettings mirrors the value into the shared formatters
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.dateFormat = v as DateFormatPref; });
 						// repaint open tabs and widgets so the new order shows immediately
 						this.refreshOpenViews();
 					}),
@@ -504,10 +492,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.general.halfStar.desc'))
 			.addToggle((t) =>
 				t
-					.setValue(this.plugin.settings.halfStarRatings ?? false)
+					.setValue(this.deps.settings.get().halfStarRatings ?? false)
 					.onChange(async (v) => {
-						this.plugin.settings.halfStarRatings = v;
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.halfStarRatings = v; });
 					}),
 			);
 
@@ -516,10 +503,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.general.finishDate.desc'))
 			.addToggle((t) =>
 				t
-					.setValue(this.plugin.settings.setFinishDateAutomatically)
+					.setValue(this.deps.settings.get().setFinishDateAutomatically)
 					.onChange(async (v) => {
-						this.plugin.settings.setFinishDateAutomatically = v;
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.setFinishDateAutomatically = v; });
 					}),
 			);
 
@@ -528,9 +514,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.general.replaceImages.desc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.general.replaceImages.button')).onClick(() => {
-					const titles = this.plugin.dataManager.getTitles();
-					const readingCount = this.plugin.readingDataManager.getBooks().length + this.plugin.readingDataManager.getMangaList().length;
-					const gameCount = this.plugin.gameDataManager.getGames().length;
+					const titles = this.deps.titles.getTitles();
+					const readingCount = this.deps.reading.getBooks().length + this.deps.reading.getMangaList().length;
+					const gameCount = this.deps.games.getGames().length;
 					new ConfirmModal(
 						this.app,
 						t('settings.general.replaceImages.confirm', { titles: titles.length, reading: readingCount, games: gameCount }),
@@ -544,8 +530,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.general.rewrite.desc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.general.rewrite.button')).onClick(() => {
-					const titles = this.plugin.dataManager.getTitles();
-					const readingCount = this.plugin.readingDataManager.getBooks().length + this.plugin.readingDataManager.getMangaList().length;
+					const titles = this.deps.titles.getTitles();
+					const readingCount = this.deps.reading.getBooks().length + this.deps.reading.getMangaList().length;
 					new ConfirmModal(
 						this.app,
 						t('settings.general.rewrite.confirm', { titles: titles.length, reading: readingCount }),
@@ -559,7 +545,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.general.studios.desc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.general.studios.button')).onClick(() => {
-					const pending = this.plugin.dataManager
+					const pending = this.deps.titles
 						.getTitles()
 						.filter((title) => needsStudioFetch(title)).length;
 					if (pending === 0) {
@@ -579,11 +565,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.general.hints.desc'))
 			.addToggle((t) =>
 				t
-					.setValue(this.plugin.settings.showHintBanners)
+					.setValue(this.deps.settings.get().showHintBanners)
 					.onChange(async (v) => {
-						this.plugin.settings.showHintBanners = v;
-						await this.plugin.saveSettings();
-						emitDataChanged();
+						await this.deps.settings.update((s) => { s.showHintBanners = v; });
 					}),
 			);
 
@@ -592,11 +576,10 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.general.statusBar.desc'))
 			.addToggle((t) =>
 				t
-					.setValue(this.plugin.settings.showUpcomingStatusBar)
+					.setValue(this.deps.settings.get().showUpcomingStatusBar)
 					.onChange(async (v) => {
-						this.plugin.settings.showUpcomingStatusBar = v;
-						await this.plugin.saveSettings();
-						this.plugin.updateStatusBar();
+						await this.deps.settings.update((s) => { s.showUpcomingStatusBar = v; });
+						this.deps.updateStatusBar();
 					}),
 			);
 
@@ -657,12 +640,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 		new Setting(el)
 			.setName(t('onboarding.settings.importButton'))
 			.setDesc(t('onboarding.settings.importDesc'))
-			.addButton((b) => b.setButtonText(t('onboarding.settings.importButton')).onClick(() => void this.plugin.openWatchLogImport('found')));
-		if (!(['original', 'fork'] as const).some((k) => getDecision(this.plugin.backupManagers().storage.local, k) === 'imported')) return;
+			.addButton((b) => b.setButtonText(t('onboarding.settings.importButton')).onClick(() => void this.deps.openWatchLogImport('found')));
+		if (!(['original', 'fork'] as const).some((k) => getDecision(this.deps.backupManagers().storage.local, k) === 'imported')) return;
 		new Setting(el)
 			.setName(t('onboarding.settings.cleanupButton'))
 			.setDesc(t('onboarding.settings.cleanupDesc'))
-			.addButton((b) => b.setButtonText(t('onboarding.settings.cleanupButton')).onClick(() => void this.plugin.openWatchLogImport('cleanup')));
+			.addButton((b) => b.setButtonText(t('onboarding.settings.cleanupButton')).onClick(() => void this.deps.openWatchLogImport('cleanup')));
 	}
 
 	private async exportBackup(): Promise<void> {
@@ -671,7 +654,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const filename = `hoard-backup-${dateStr}.json`;
 
 		// notes, shared settings, log and the device-local settings; API keys stay in secret storage and are not exported
-		const backup = buildBackup(this.plugin.backupManagers());
+		const backup = buildBackup(this.deps.backupManagers());
 
 		// on mobile a browser download lands in an inaccessible sandbox — write into the vault
 		// instead (the folder syncs; withoutSecrets guards stray keys); desktop keeps the download path
@@ -696,7 +679,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	/** Mobile path: write the backup into <root>/backups/, disambiguating on collision. */
 	private async exportBackupToVault(filename: string, json: string): Promise<void> {
 		const vault = this.app.vault;
-		const folder = normalizePath(`${this.plugin.getLayout().root}/backups`);
+		const folder = normalizePath(`${this.deps.layout().root}/backups`);
 		if (!vault.getFolderByPath(folder)) {
 			try {
 				await vault.createFolder(folder);
@@ -757,8 +740,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				// validated as a whole before anything is written
 				new ConfirmModal(this.app, t('settings.backup.restore.confirm'), () => {
 					void (async () => {
-						await restoreBackup(this.plugin.backupManagers(), result.backup);
-						await this.plugin.loadSettings();
+						await restoreBackup(this.deps.backupManagers(), result.backup);
+						await this.deps.reloadSettings();
 						emitDataChanged();
 						new Notice(t('settings.backup.restore.done'));
 					})();
@@ -770,15 +753,15 @@ export class HoardSettingsTab extends PluginSettingTab {
 	}
 
 	private async refetchAllPosters(): Promise<void> {
-		const p = this.plugin;
+		const d = this.deps;
 		const res = await refreshAllCovers({
-			api: p.apiService,
-			gamesApiSource: effectiveGameSource(p.settings, p.apiService),
-			dataManager: p.dataManager,
-			posterService: p.posterService,
-			readingData: p.readingDataManager,
-			gameData: p.gameDataManager,
-			queue: p.dataManager.apiQueue,
+			api: d.api,
+			gamesApiSource: effectiveGameSource(d.settings.get(), d.api),
+			dataManager: d.titles,
+			posterService: d.posters,
+			readingData: d.reading,
+			gameData: d.games,
+			queue: d.titles.apiQueue,
 			onStart: (n) => new Notice(t('settings.general.replaceImages.start', { count: n })),
 		});
 		new Notice(t('settings.general.replaceImages.done', { updated: res.updated, unchanged: res.unchanged }));
@@ -797,8 +780,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 	} {
 		let cancelled = false;
 		const cancelFn = (): void => { cancelled = true; };
-		this.plugin.importProgress = { current: 0, total, cancel: cancelFn };
-		this.plugin.dataManager.notifyChange();
+		this.deps.setImportProgress({ current: 0, total, cancel: cancelFn });
+		this.deps.titles.notifyChange();
 
 		const notice = new Notice('', 0);
 		const label = notice.messageEl.createSpan({ text });
@@ -813,8 +796,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 	 * cancelable progress notice via the shared importProgress infrastructure.
 	 */
 	private async rewriteAllFrontmatter(): Promise<void> {
-		const dm = this.plugin.dataManager;
-		const reading = this.plugin.readingDataManager;
+		const dm = this.deps.titles;
+		const reading = this.deps.reading;
 		const titles = dm.getTitles();
 		const books = reading.getBooks();
 		const manga = reading.getMangaList();
@@ -847,13 +830,13 @@ export class HoardSettingsTab extends PluginSettingTab {
 				done++;
 				// yield every chunk so the UI repaints and stays responsive across 700+ notes
 				if (done % CHUNK_SIZE === 0 || done === total) {
-					this.plugin.importProgress = { current: done, total, cancel: cancelFn };
+					this.deps.setImportProgress({ current: done, total, cancel: cancelFn });
 					label.textContent = t('settings.general.rewrite.progress', { done, total });
 					await new Promise((r) => window.setTimeout(r, 0));
 				}
 			}
 		} finally {
-			this.plugin.importProgress = null;
+			this.deps.setImportProgress(null);
 			dm.notifyChange();
 			notice.hide();
 		}
@@ -866,9 +849,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 	/** Bulk studio backfill; the rewriteAllFrontmatter progress/cancel pattern. */
 	private async fetchAllStudios(): Promise<void> {
-		const dm = this.plugin.dataManager;
-		const api = this.plugin.apiService;
-		const mapping = this.plugin.settings.typeApiMapping;
+		const dm = this.deps.titles;
+		const api = this.deps.api;
+		const mapping = this.deps.settings.get().typeApiMapping;
 		// movie studios need TMDB: without a key a miss is not an answer, so leave the field unfetched;
 		// a title whose last lookup is still fresh is not asked again
 		const pending = dm.getTitles().filter((title) =>
@@ -886,7 +869,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			t('settings.general.studios.progress', { done: 0, total }),
 		);
 
-		const animeSource = this.plugin.settings.animeApiSource ?? 'jikan';
+		const animeSource = this.deps.settings.get().animeApiSource ?? 'jikan';
 		let filled = 0;
 		let missed = 0;
 		try {
@@ -908,12 +891,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 					dm.recordLookup(title.id, 'studio', FAILED);
 					missed++;
 				}
-				this.plugin.importProgress = { current: i + 1, total, cancel: cancelFn };
+				this.deps.setImportProgress({ current: i + 1, total, cancel: cancelFn });
 				label.textContent = t('settings.general.studios.progress', { done: i + 1, total });
 				await new Promise((r) => window.setTimeout(r, 0));
 			}
 		} finally {
-			this.plugin.importProgress = null;
+			this.deps.setImportProgress(null);
 			dm.notifyChange();
 			notice.hide();
 		}
@@ -929,8 +912,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 		progressBarFill: HTMLElement,
 		progressText: HTMLElement,
 	): Promise<void> {
-		const titles = this.plugin.dataManager.getTitles();
-		const reading = this.plugin.readingDataManager;
+		const titles = this.deps.titles.getTitles();
+		const reading = this.deps.reading;
 		const books = reading.getBooks();
 		const manga = reading.getMangaList();
 		const total = titles.length + books.length + manga.length;
@@ -952,7 +935,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			progressText.textContent = `${done} / ${total}`;
 		};
 		for (const title of titles) {
-			tick(await this.plugin.dataManager.createMarkdownFileIfMissing(title));
+			tick(await this.deps.titles.createMarkdownFileIfMissing(title));
 		}
 		for (const book of books) {
 			tick(await reading.createReadingNoteIfMissing('book', book));
@@ -1222,7 +1205,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 	private renderApi(el: HTMLElement): void {
 		const page = el.createDiv({ cls: 'hoard-settings-group__page' });
-		const s = this.plugin.settings;
+		const s = this.deps.settings.get();
 
 		// 1. Movies & TV shows
 		const movies = this.settingsGroup(page, {
@@ -1238,7 +1221,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			const active = s.activeApi;
 			omdb.setActive(active === 'OMDb');
 			tmdb.setActive(active === 'TMDB');
-			const effective = effectiveMediaSource(s, this.plugin.apiService);
+			const effective = effectiveMediaSource(s, this.deps.api);
 			const fellBack = effective !== active.toLowerCase();
 			movies.setChip(active === 'Cinemeta' ? keylessChip(active) : keyedChip(active, !fellBack));
 			setMoviesHint(fellBack ? MEDIA_NAMES.cinemeta : null);
@@ -1253,8 +1236,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			],
 			value: s.activeApi,
 			onChange: (v) => {
-				s.activeApi = v as HoardPluginSettings['activeApi'];
-				void this.plugin.saveSettings();
+				void this.deps.settings.update((d) => { d.activeApi = v as HoardPluginSettings['activeApi']; });
 				syncMovies();
 			},
 		});
@@ -1272,9 +1254,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				secret: true,
 				get: () => s.omdbApiKey,
 				set: (v) => {
-					s.omdbApiKey = v;
-					this.plugin.apiService.setOmdbKey(v);
-					this.debouncedSaveSettings();
+					this.deps.settings.stage((d) => { d.omdbApiKey = v; });
+					this.deps.api.setOmdbKey(v);
 					syncMovies();
 				},
 			}],
@@ -1283,7 +1264,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				: { text: t('settings.api.noKey'), tone: 'idle' }),
 			test: async () => {
 				try {
-					const ok = await this.plugin.apiService.checkOmdbConnection();
+					const ok = await this.deps.api.checkOmdbConnection();
 					return ok
 						? { text: t('settings.api.connected'), tone: 'ok' as const }
 						: { text: t('settings.api.failedCheckKey'), tone: 'error' as const };
@@ -1305,9 +1286,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				secret: true,
 				get: () => s.tmdbApiKey ?? '',
 				set: (v) => {
-					s.tmdbApiKey = v;
-					this.plugin.apiService.setTmdbKey(v);
-					this.debouncedSaveSettings();
+					this.deps.settings.stage((d) => { d.tmdbApiKey = v; });
+					this.deps.api.setTmdbKey(v);
 					syncMovies();
 				},
 			}],
@@ -1316,7 +1296,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				: { text: t('settings.api.noToken'), tone: 'idle' }),
 			test: async () => {
 				try {
-					const ok = await this.plugin.apiService.checkTmdbConnection();
+					const ok = await this.deps.api.checkTmdbConnection();
 					return ok
 						? { text: t('settings.api.connected'), tone: 'ok' as const }
 						: { text: t('settings.api.failedCheckToken'), tone: 'error' as const };
@@ -1354,17 +1334,16 @@ export class HoardSettingsTab extends PluginSettingTab {
 			options: [{ value: 'jikan', label: 'MyAnimeList' }, { value: 'anilist', label: 'AniList' }],
 			value: s.animeApiSource ?? 'jikan',
 			onChange: (v) => {
-				s.animeApiSource = v as 'jikan' | 'anilist';
-				void this.plugin.saveSettings();
+				void this.deps.settings.update((d) => { d.animeApiSource = v as 'jikan' | 'anilist'; });
 				syncAnime();
 			},
 		});
 
 		let endpointInput: HTMLInputElement | null = null;
 		const setEndpoint = (v: string): void => {
-			s.jikanBaseUrl = v;
-			void this.plugin.saveSettings();
-			this.plugin.apiService.setJikanEndpoint(resolveJikanEndpoint(v));
+			// fires per keystroke: saved once the typing settles
+			this.deps.settings.stage((d) => { d.jikanBaseUrl = v; });
+			this.deps.api.setJikanEndpoint(resolveJikanEndpoint(v));
 		};
 		jikan = this.apiProvider(anime.body, {
 			name: 'MyAnimeList',
@@ -1380,7 +1359,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			status: () => jikanEndpointStatus(s.jikanBaseUrl ?? ''),
 			test: async () => {
 				try {
-					return (await this.plugin.apiService.pingJikan())
+					return (await this.deps.api.pingJikan())
 						? { text: t('settings.api.connected'), tone: 'ok' as const }
 						: { text: t('settings.api.jikan.notCompatible'), tone: 'error' as const };
 				} catch (err) {
@@ -1422,7 +1401,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			variant: 'books',
 		});
 		const syncBooks = (): void => {
-			const effective = effectiveBookSource(s, this.plugin.apiService);
+			const effective = effectiveBookSource(s, this.deps.api);
 			const fellBack = effective !== s.booksApiSource;
 			books.setChip(s.booksApiSource === 'openlibrary' ? keylessChip('Open Library') : keyedChip('Google Books', !fellBack));
 			setBooksHint(fellBack ? 'Open Library' : null);
@@ -1433,8 +1412,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			options: [{ value: 'openlibrary', label: 'Open Library' }, { value: 'google', label: 'Google Books' }],
 			value: s.booksApiSource,
 			onChange: (v) => {
-				s.booksApiSource = v as HoardPluginSettings['booksApiSource'];
-				void this.plugin.saveSettings();
+				void this.deps.settings.update((d) => { d.booksApiSource = v as HoardPluginSettings['booksApiSource']; });
 				syncBooks();
 			},
 		});
@@ -1453,9 +1431,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				secret: true,
 				get: () => s.googleBooksApiKey ?? '',
 				set: (v) => {
-					s.googleBooksApiKey = v;
-					this.plugin.apiService.setGoogleBooksKey(v);
-					this.debouncedSaveSettings();
+					this.deps.settings.stage((d) => { d.googleBooksApiKey = v; });
+					this.deps.api.setGoogleBooksKey(v);
 					syncBooks();
 				},
 			}],
@@ -1464,7 +1441,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				: { text: t('settings.api.books.google.noKey'), tone: 'warn' }),
 			test: async () => {
 				try {
-					const ok = await this.plugin.apiService.checkGoogleBooksConnection();
+					const ok = await this.deps.api.checkGoogleBooksConnection();
 					return ok
 						? { text: t('settings.api.connected'), tone: 'ok' as const }
 						: { text: t('settings.api.failed'), tone: 'error' as const };
@@ -1504,7 +1481,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				igdbClientId: s.igdbClientId,
 				igdbClientSecret: s.igdbClientSecret,
 			}));
-			setGamesHint(effectiveGameSource(s, this.plugin.apiService) !== active ? GAME_NAMES.steam : null);
+			setGamesHint(effectiveGameSource(s, this.deps.api) !== active ? GAME_NAMES.steam : null);
 		};
 
 		this.apiSegmented(games.body, {
@@ -1516,8 +1493,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			],
 			value: s.gamesApiSource,
 			onChange: (v) => {
-				s.gamesApiSource = v as HoardPluginSettings['gamesApiSource'];
-				void this.plugin.saveSettings();
+				void this.deps.settings.update((d) => { d.gamesApiSource = v as HoardPluginSettings['gamesApiSource']; });
 				syncGames();
 			},
 		});
@@ -1535,9 +1511,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				secret: true,
 				get: () => s.rawgApiKey ?? '',
 				set: (v) => {
-					s.rawgApiKey = v;
-					this.plugin.apiService.setRawgKey(v);
-					this.debouncedSaveSettings();
+					this.deps.settings.stage((d) => { d.rawgApiKey = v; });
+					this.deps.api.setRawgKey(v);
 					syncGames();
 				},
 			}],
@@ -1546,7 +1521,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				: { text: t('settings.api.noKey'), tone: 'idle' }),
 			test: async () => {
 				try {
-					const ok = await this.plugin.apiService.checkRawgConnection();
+					const ok = await this.deps.api.checkRawgConnection();
 					return ok
 						? { text: t('settings.api.connected'), tone: 'ok' as const }
 						: { text: t('settings.api.failedCheckKey'), tone: 'error' as const };
@@ -1569,9 +1544,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 					secret: true,
 					get: () => s.igdbClientId ?? '',
 					set: (v) => {
-						s.igdbClientId = v;
-						this.plugin.apiService.setIgdbCredentials(v, s.igdbClientSecret ?? '');
-						this.debouncedSaveSettings();
+						this.deps.settings.stage((d) => { d.igdbClientId = v; });
+						this.deps.api.setIgdbCredentials(v, s.igdbClientSecret ?? '');
 						syncGames();
 					},
 				},
@@ -1581,9 +1555,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 					secret: true,
 					get: () => s.igdbClientSecret ?? '',
 					set: (v) => {
-						s.igdbClientSecret = v;
-						this.plugin.apiService.setIgdbCredentials(s.igdbClientId ?? '', v);
-						this.debouncedSaveSettings();
+						this.deps.settings.stage((d) => { d.igdbClientSecret = v; });
+						this.deps.api.setIgdbCredentials(s.igdbClientId ?? '', v);
 						syncGames();
 					},
 				},
@@ -1593,7 +1566,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				: { text: t('settings.api.credsIncomplete'), tone: 'idle' }),
 			test: async () => {
 				try {
-					const ok = await this.plugin.apiService.checkIgdbConnection();
+					const ok = await this.deps.api.checkIgdbConnection();
 					return ok
 						? { text: t('settings.api.connected'), tone: 'ok' as const }
 						: { text: t('settings.api.failedCheckIdSecret'), tone: 'error' as const };
@@ -1621,9 +1594,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 					secret: true,
 					get: () => s.steamApiKey ?? '',
 					set: (v) => {
-						s.steamApiKey = v;
-						this.plugin.apiService.setSteamCredentials(v, s.steamId ?? '');
-						this.debouncedSaveSettings();
+						this.deps.settings.stage((d) => { d.steamApiKey = v; });
+						this.deps.api.setSteamCredentials(v, s.steamId ?? '');
 					},
 				},
 				{
@@ -1631,9 +1603,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 					placeholder: '76561198… or steamcommunity.com/id/yourname',
 					get: () => s.steamId ?? '',
 					set: (v) => {
-						s.steamId = v;
-						this.plugin.apiService.setSteamCredentials(s.steamApiKey ?? '', v);
-						this.debouncedSaveSettings();
+						this.deps.settings.stage((d) => { d.steamId = v; });
+						this.deps.api.setSteamCredentials(s.steamApiKey ?? '', v);
 					},
 					onInput: (input) => { steamIdInput = input; },
 				},
@@ -1644,15 +1615,15 @@ export class HoardSettingsTab extends PluginSettingTab {
 			test: async () => {
 				// resolve a vanity name / URL to a SteamID64 once and store it. The field is written in
 				// place rather than via this.display(), which would detach the elements this handler holds.
-				const resolved = await this.plugin.apiService.resolveSteamId(s.steamId ?? '');
+				const resolved = await this.deps.api.resolveSteamId(s.steamId ?? '');
 				if (resolved && resolved !== s.steamId) {
-					s.steamId = resolved;
+					const saved = this.deps.settings.update((d) => { d.steamId = resolved; });
 					if (steamIdInput) steamIdInput.value = resolved;
-					await this.plugin.saveSettings();
+					await saved;
 				}
-				this.plugin.apiService.setSteamCredentials(s.steamApiKey ?? '', resolved || (s.steamId ?? ''));
+				this.deps.api.setSteamCredentials(s.steamApiKey ?? '', resolved || (s.steamId ?? ''));
 
-				const result = await this.plugin.apiService.checkSteamConnection();
+				const result = await this.deps.api.checkSteamConnection();
 				return result.ok
 					? { text: t('settings.steam.connected', { count: result.games.length }), tone: 'ok' as const }
 					: { text: steamFailureLabel(result.reason), tone: 'error' as const };
@@ -1667,11 +1638,11 @@ export class HoardSettingsTab extends PluginSettingTab {
 				});
 				const btn = row.createEl('button', { cls: 'hoard-api-provider__action-btn mod-cta', text: t('settings.steam.sync.button') });
 				btn.addEventListener('click', () => {
-					if (!this.plugin.apiService.hasSteamCredentials()) {
+					if (!this.deps.api.hasSteamCredentials()) {
 						new Notice(t('settings.steam.sync.needCreds'));
 						return;
 					}
-					new SteamSyncModal(this.steamSyncModalDeps()).open();
+					new SteamSyncModal(this.deps).open();
 				});
 			},
 		});
@@ -1679,6 +1650,18 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 		// API routing (always last)
 		this.renderTypeApiMapping(page);
+	}
+
+	/** Drops routes of types that no longer exist (and of the locked built-ins, which never route here). */
+	private pruneStaleRouting(allTypes: readonly TagDefinition[], mapping: Readonly<Record<string, unknown>>): void {
+		const validNames = new Set(allTypes.map((type) => type.name));
+		const stale = Object.keys(mapping).filter(
+			(key) => !validNames.has(key) || key === 'Anime' || key === 'Movie' || key === 'TV Show' || key === 'TvShow',
+		);
+		if (stale.length === 0) return;
+		void this.deps.settings.update((d) => {
+			for (const key of stale) delete d.typeApiMapping[key];
+		});
 	}
 
 	private renderTypeApiMapping(parent: HTMLElement): void {
@@ -1690,19 +1673,10 @@ export class HoardSettingsTab extends PluginSettingTab {
 		});
 
 		const list = card.createDiv({ cls: 'hoard-api-provider__type-api-list' });
-		const allTypes = this.plugin.settings.types ?? [];
-		const mapping = this.plugin.settings.typeApiMapping ?? {};
+		const allTypes = this.deps.settings.get().types ?? [];
+		const mapping = this.deps.settings.get().typeApiMapping ?? {};
 
-		// prune stale entries (types that no longer exist)
-		const validNames = new Set(allTypes.map((type) => type.name));
-		let pruned = false;
-		for (const key of Object.keys(mapping)) {
-			if (!validNames.has(key) || key === 'Anime' || key === 'Movie' || key === 'TV Show' || key === 'TvShow') {
-				delete mapping[key];
-				pruned = true;
-			}
-		}
-		if (pruned) void this.plugin.saveSettings();
+		this.pruneStaleRouting(allTypes, mapping);
 
 		for (const type of allTypes) {
 			const row = list.createDiv({ cls: 'hoard-api-provider__type-api-row' });
@@ -1726,13 +1700,14 @@ export class HoardSettingsTab extends PluginSettingTab {
 				}
 				select.addEventListener('change', () => {
 					const v = select.value as '' | 'anime' | 'movie';
-					if (!this.plugin.settings.typeApiMapping) this.plugin.settings.typeApiMapping = {};
-					if (v === '') {
-						delete this.plugin.settings.typeApiMapping[type.name];
-					} else {
-						this.plugin.settings.typeApiMapping[type.name] = v;
-					}
-					void this.plugin.saveSettings();
+					void this.deps.settings.update((d) => {
+						d.typeApiMapping ??= {};
+						if (v === '') {
+							delete d.typeApiMapping[type.name];
+						} else {
+							d.typeApiMapping[type.name] = v;
+						}
+					});
 				});
 			}
 		}
@@ -1747,7 +1722,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	 */
 	private renderCustomize(el: HTMLElement): void {
 		const page = el.createDiv({ cls: 'hoard-settings-group__page' });
-		const s = this.plugin.settings;
+		const s = this.deps.settings.get();
 
 		// theme
 		const theme = this.settingsGroup(page, {
@@ -1810,7 +1785,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			icon: 'gamepad-2',
 			variant: 'games',
 		});
-		const gamesSettings = (): GamesSettings => this.plugin.gameDataManager.getSettings();
+		const gamesSettings = (): GamesSettings => this.deps.games.getSettings();
 		const syncGames = (): void => games.setChip({
 			text: this.chipJoin(
 				t('settings.chip.genres', { count: gamesSettings().types.length }),
@@ -1857,7 +1832,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		});
 
 		const list = wrap.createDiv({ cls: 'hoard-rating-tier__list' });
-		this.plugin.settings.ratingSystem.forEach((tier, idx) => {
+		this.deps.settings.get().ratingSystem.forEach((tier, idx) => {
 			const tierNumber = idx + 1;
 			const rowEl = list.createDiv({ cls: 'hoard-rating-tier__row' });
 
@@ -1890,10 +1865,11 @@ export class HoardSettingsTab extends PluginSettingTab {
 			dot.addEventListener('click', () => colorPicker.click());
 			colorPicker.addEventListener('change', () => {
 				void (async () => {
-					tier.color = colorPicker.value;
-					dot.setCssProps({ '--hoard-tag-editor-dot-color': colorPicker.value });
-					preview.setCssProps({ '--hoard-star-rating-color': colorPicker.value });
-					await this.plugin.saveSettings();
+					const color = colorPicker.value;
+					const saved = this.deps.settings.update((d) => { d.ratingSystem[idx]!.color = color; });
+					dot.setCssProps({ '--hoard-tag-editor-dot-color': color });
+					preview.setCssProps({ '--hoard-star-rating-color': color });
+					await saved;
 					this.refreshOpenViews();
 				})();
 			});
@@ -1903,9 +1879,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 				const val = labelInput.value.trim();
 				if (!val) { labelInput.value = tier.label; return; }
 				if (val === tier.label) return;
-				tier.label = val;
 				void (async () => {
-					await this.plugin.saveSettings();
+					await this.deps.settings.update((d) => { d.ratingSystem[idx]!.label = val; });
 					this.refreshOpenViews();
 				})();
 			};
@@ -1914,10 +1889,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 		});
 	}
 
-	/** Re-render open Hoard views + widgets so a display-setting edit shows immediately. */
+	/** Re-renders the open Hoard views after a display-setting edit (`update` already signalled the widgets). */
 	private refreshOpenViews(): void {
-		emitDataChanged();
-		const leaves = this.plugin.app.workspace.getLeavesOfType('hoard-view');
+		const leaves = this.app.workspace.getLeavesOfType('hoard-view');
 		for (const leaf of leaves) {
 			if (leaf.view instanceof HoardView) leaf.view.refreshUI();
 		}
@@ -1941,17 +1915,17 @@ export class HoardSettingsTab extends PluginSettingTab {
 
 			const dotWrap = pill.createDiv({ cls: 'hoard-tag-editor__dot-wrap' });
 			const dot = dotWrap.createSpan({ cls: 'hoard-tag-editor__dot' });
-			dot.setCssProps({ '--hoard-tag-editor-dot-color': this.plugin.settings.readingTypeColors[kind] });
+			dot.setCssProps({ '--hoard-tag-editor-dot-color': this.deps.settings.get().readingTypeColors[kind] });
 			const colorPicker = dotWrap.createEl('input', {
 				cls: 'hoard-tag-editor__color-picker',
-				attr: { type: 'color', value: this.plugin.settings.readingTypeColors[kind], 'aria-label': t('settings.colorFor', { name: label }) },
+				attr: { type: 'color', value: this.deps.settings.get().readingTypeColors[kind], 'aria-label': t('settings.colorFor', { name: label }) },
 			});
 			dot.addEventListener('click', () => colorPicker.click());
 			colorPicker.addEventListener('change', () => {
 				void (async () => {
-					this.plugin.settings.readingTypeColors[kind] = colorPicker.value;
+					const saved = this.deps.settings.update((d) => { d.readingTypeColors[kind] = colorPicker.value; });
 					dot.setCssProps({ '--hoard-tag-editor-dot-color': colorPicker.value });
-					await this.plugin.saveSettings();
+					await saved;
 				})();
 			});
 
@@ -1964,7 +1938,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	 * union). Values live in `ReadingSettings.statusColors`, keyed by status name.
 	 */
 	private renderReadingStatusColors(el: HTMLElement): void {
-		const readingData = this.plugin.readingDataManager;
+		const readingData = this.deps.reading;
 		this.renderTagListSection(el, {
 			label: t('settings.tags.status'),
 			info: t('settings.tags.infoStatusLocked'),
@@ -1991,7 +1965,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	 * game records and into any stored filter selections, or it orphans them.
 	 */
 	private renderGamesTags(el: HTMLElement, onChanged?: () => void): void {
-		const gameData = this.plugin.gameDataManager;
+		const gameData = this.deps.games;
 		const settings = (): GamesSettings => gameData.getSettings();
 
 		this.renderTagListSection(el, {
@@ -2086,26 +2060,29 @@ export class HoardSettingsTab extends PluginSettingTab {
 		});
 	}
 
-	/** Live-filter + saved-preset exclusion lists referencing a genre/platform by name. */
-	private gamesFilterRefs(kind: 'type' | 'platform'): string[][] {
+	/**
+	 * Edits the live-filter and saved-preset exclusion lists that reference a genre/platform by
+	 * name. The preset lives in the games settings (saved with their next update), the live filter
+	 * in the plugin settings (saved here).
+	 */
+	private editGamesFilterRefs(kind: 'type' | 'platform', edit: (list: string[]) => void): void {
 		// the Games filter calls the genre axis `genreExclude` (the field on the game itself is
 		// `type`), so the two names differ by design
 		const key = kind === 'type' ? 'genreExclude' : 'platformExclude';
-		const lists: string[][] = [];
-		const live = this.plugin.settings.gamesFilters;
-		if (live?.[key]) lists.push(live[key]);
-		const preset = this.plugin.gameDataManager.getSettings().savedFilterPreset;
-		if (preset?.[key]) lists.push(preset[key]);
-		return lists;
+		const preset = this.deps.games.getSettings().savedFilterPreset;
+		if (preset?.[key]) edit(preset[key]);
+		void this.deps.settings.update((d) => {
+			const live = d.gamesFilters?.[key];
+			if (live) edit(live);
+		});
 	}
 
 	/** Keeps stored "exclude this genre/platform" selections pointing at the new name. */
 	private renameGamesFilterRefs(kind: 'type' | 'platform', from: string, to: string): void {
-		for (const list of this.gamesFilterRefs(kind)) {
+		this.editGamesFilterRefs(kind, (list) => {
 			const idx = list.indexOf(from);
 			if (idx !== -1) list[idx] = to;
-		}
-		void this.plugin.saveSettings();
+		});
 	}
 
 	/**
@@ -2113,11 +2090,10 @@ export class HoardSettingsTab extends PluginSettingTab {
 	 * exclusion with no checkbox left to clear it.
 	 */
 	private clearGamesFilterRefs(kind: 'type' | 'platform', name: string): void {
-		for (const list of this.gamesFilterRefs(kind)) {
+		this.editGamesFilterRefs(kind, (list) => {
 			const idx = list.indexOf(name);
 			if (idx !== -1) list.splice(idx, 1);
-		}
-		void this.plugin.saveSettings();
+		});
 	}
 
 	/** `onPicked` reports the selected theme's label so the group header chip can follow it. */
@@ -2140,7 +2116,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			},
 		];
 
-		const currentTheme = this.plugin.settings.colorTheme ?? 'default';
+		const currentTheme = this.deps.settings.get().colorTheme ?? 'default';
 		const cardsRow = el.createDiv({ cls: 'hoard-theme-picker__cards' });
 		onPicked?.(themes.find((th) => th.key === currentTheme)?.label ?? t('settings.customize.theme.default'));
 
@@ -2158,18 +2134,11 @@ export class HoardSettingsTab extends PluginSettingTab {
 			}
 			card.addEventListener('click', () => {
 				void (async () => {
-					this.plugin.settings.colorTheme = theme.key;
-					await this.plugin.saveSettings();
+					await this.deps.settings.update((s) => { s.colorTheme = theme.key; });
 					for (const c of allCards) c.removeClass('is-selected');
 					card.addClass('is-selected');
 					onPicked?.(theme.label);
-					emitDataChanged();
-					const leaves = this.plugin.app.workspace.getLeavesOfType('hoard-view');
-					for (const leaf of leaves) {
-						if (leaf.view instanceof HoardView) {
-							leaf.view.refreshUI();
-						}
-					}
+					this.refreshOpenViews();
 				})();
 			});
 		}
@@ -2184,7 +2153,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const colorsEl = wrap.createDiv({ cls: 'hoard-tag-editor__season-colors-list' });
 		const renderColors = (): void => {
 			colorsEl.empty();
-			this.plugin.settings.seasonPalette.forEach((color, idx) => {
+			this.deps.settings.get().seasonPalette.forEach((color, idx) => {
 				const pill = colorsEl.createDiv({ cls: 'hoard-tag-editor__season-color-pill' });
 				const swatch = pill.createEl('input', {
 					cls: 'hoard-color-picker__input',
@@ -2192,8 +2161,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				});
 				swatch.addEventListener('change', () => {
 					void (async () => {
-						this.plugin.settings.seasonPalette[idx] = swatch.value;
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((d) => { d.seasonPalette[idx] = swatch.value; });
 					})();
 				});
 				pill.createSpan({ cls: 'hoard-tag-editor__season-color-label', text: t('settings.customize.season.name', { number: idx + 1 }) });
@@ -2205,8 +2173,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				});
 				del.addEventListener('click', () => {
 					void (async () => {
-						this.plugin.settings.seasonPalette.splice(idx, 1);
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((d) => { d.seasonPalette.splice(idx, 1); });
 						renderColors();
 					})();
 				});
@@ -2222,8 +2189,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 		const addBtn = addRow.createEl('button', { cls: 'hoard-btn hoard-btn--success', text: t('settings.customize.season.add') });
 		addBtn.addEventListener('click', () => {
 			void (async () => {
-				this.plugin.settings.seasonPalette.push(colorInput.value);
-				await this.plugin.saveSettings();
+				await this.deps.settings.update((d) => { d.seasonPalette.push(colorInput.value); });
 				colorInput.value = '#888780';
 				renderColors();
 			})();
@@ -2374,7 +2340,6 @@ export class HoardSettingsTab extends PluginSettingTab {
 	): void {
 		const isStatuses = key === 'statuses';
 		const isTypes = key === 'types';
-		const persist = async (): Promise<void> => { await this.plugin.saveSettings(); };
 
 		this.renderTagListSection(parent, {
 			label,
@@ -2386,11 +2351,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 					: undefined,
 			...(isStatuses ? { display: statusLabel } : {}),
 			...(isTypes ? { display: typeLabel } : {}),
-			getList: () => this.plugin.settings[key],
+			getList: () => this.deps.settings.get()[key],
 			setColor: async (name, color) => {
-				const tag = this.plugin.settings[key].find((entry) => entry.name === name);
-				if (tag) tag.color = color;
-				await persist();
+				await this.deps.settings.update((d) => {
+					const tag = d[key].find((entry) => entry.name === name);
+					if (tag) tag.color = color;
+				});
 			},
 			// statuses are colour-only; locked built-in types keep their picker but lose delete
 			isLocked: (name) =>
@@ -2398,12 +2364,10 @@ export class HoardSettingsTab extends PluginSettingTab {
 			...(isTypes ? { validateName: typeNameProblemText } : {}),
 			...(isStatuses ? {} : {
 				add: async (name, color) => {
-					this.plugin.settings[key].push({ name, color });
-					await persist();
+					await this.deps.settings.update((d) => { d[key].push({ name, color }); });
 				},
 				remove: async (name) => {
-					this.plugin.settings[key] = this.plugin.settings[key].filter((entry) => entry.name !== name);
-					await persist();
+					await this.deps.settings.update((d) => { d[key] = d[key].filter((entry) => entry.name !== name); });
 				},
 			}),
 		});
@@ -2432,11 +2396,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 						absolute: t('settings.watchlist.numbering.absolute'),
 						'per-season': t('settings.watchlist.numbering.perSeason'),
 					})
-					.setValue(this.plugin.settings.episodeNumbering ?? 'absolute')
+					.setValue(this.deps.settings.get().episodeNumbering ?? 'absolute')
 					.onChange(async (v) => {
-						this.plugin.settings.episodeNumbering = v as 'absolute' | 'per-season';
-						await this.plugin.saveSettings();
-						emitDataChanged();
+						await this.deps.settings.update((s) => { s.episodeNumbering = v as 'absolute' | 'per-season'; });
 					}),
 			);
 
@@ -2445,13 +2407,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.watchlist.defaultType.desc'))
 			.addDropdown((d) => {
 				d.addOption(LAST_USED_TYPE_SENTINEL, t('settings.watchlist.defaultType.last'));
-				for (const type of this.plugin.settings.types) {
+				for (const type of this.deps.settings.get().types) {
 					d.addOption(type.name, typeLabel(type.name));
 				}
-				d.setValue(this.plugin.settings.defaultAddType ?? LAST_USED_TYPE_SENTINEL).onChange(
+				d.setValue(this.deps.settings.get().defaultAddType ?? LAST_USED_TYPE_SENTINEL).onChange(
 					async (v) => {
-						this.plugin.settings.defaultAddType = v;
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.defaultAddType = v; });
 					},
 				);
 			});
@@ -2463,13 +2424,11 @@ export class HoardSettingsTab extends PluginSettingTab {
 				t.inputEl.type = 'number';
 				t.inputEl.min = '1';
 				t.inputEl.addClass('hoard-settings__count-input');
-				t.setValue(String(this.plugin.settings.dashboardTopCredits ?? 5)).onChange(
+				t.setValue(String(this.deps.settings.get().dashboardTopCredits ?? 5)).onChange(
 					async (v) => {
 						const n = parseInt(v, 10);
 						if (isNaN(n) || n < 1) return;
-						this.plugin.settings.dashboardTopCredits = n;
-						await this.plugin.saveSettings();
-						emitDataChanged();
+						await this.deps.settings.update((s) => { s.dashboardTopCredits = n; });
 					},
 				);
 			});
@@ -2479,10 +2438,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.watchlist.autoComplete.desc'))
 			.addToggle((t) =>
 				t
-					.setValue(this.plugin.settings.autoCompleteOnLastEpisode)
+					.setValue(this.deps.settings.get().autoCompleteOnLastEpisode)
 					.onChange(async (v) => {
-						this.plugin.settings.autoCompleteOnLastEpisode = v;
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.autoCompleteOnLastEpisode = v; });
 					}),
 			);
 
@@ -2491,10 +2449,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.watchlist.coloredBadges.desc'))
 			.addToggle((t) =>
 				t
-					.setValue(this.plugin.settings.coloredTypeBadges)
+					.setValue(this.deps.settings.get().coloredTypeBadges)
 					.onChange(async (v) => {
-						this.plugin.settings.coloredTypeBadges = v;
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.coloredTypeBadges = v; });
 					}),
 			);
 
@@ -2503,10 +2460,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.watchlist.openAfterAdd.desc'))
 			.addToggle((t) =>
 				t
-					.setValue(this.plugin.settings.openWatchlistAfterAdd ?? true)
+					.setValue(this.deps.settings.get().openWatchlistAfterAdd ?? true)
 					.onChange(async (v) => {
-						this.plugin.settings.openWatchlistAfterAdd = v;
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.openWatchlistAfterAdd = v; });
 					}),
 			);
 
@@ -2524,7 +2480,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.csv.watchlistExportDesc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.exportButton')).onClick(() => {
-					new CsvModal(this.csvModalDeps(), 'export').open();
+					new CsvModal(this.deps, 'export').open();
 				}),
 			);
 
@@ -2533,7 +2489,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.csv.watchlistImportDesc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.importButton')).onClick(() => {
-					new CsvModal(this.csvModalDeps(), 'import').open();
+					new CsvModal(this.deps, 'import').open();
 				}),
 			);
 
@@ -2551,10 +2507,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.folders.auto.desc'))
 			.addToggle((t) =>
 				t
-					.setValue(this.plugin.settings.autoCreateFolders)
+					.setValue(this.deps.settings.get().autoCreateFolders)
 					.onChange(async (v) => {
-						this.plugin.settings.autoCreateFolders = v;
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.autoCreateFolders = v; });
 					}),
 			);
 
@@ -2563,7 +2518,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.folders.createNow.desc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.folders.createNow.button')).onClick(async () => {
-					await this.plugin.dataManager.ensureFolders();
+					await this.deps.titles.ensureFolders();
 					new Notice(t('settings.folders.createNow.done'));
 				}),
 			);
@@ -2576,17 +2531,17 @@ export class HoardSettingsTab extends PluginSettingTab {
 			variant: 'subfolders',
 		});
 		subfolders.setChip({
-			text: t('settings.chip.types', { count: this.plugin.settings.types.length }),
+			text: t('settings.chip.types', { count: this.deps.settings.get().types.length }),
 			tone: 'count',
 		});
 
 		const listEl = subfolders.body.createDiv({ cls: 'hoard-folder-list' });
-		for (const type of this.plugin.settings.types) {
+		for (const type of this.deps.settings.get().types) {
 			const row = listEl.createDiv({ cls: 'hoard-folder-list__row' });
 			row.createSpan({ cls: 'hoard-folder-list__type', text: typeLabel(type.name) });
 			row.createSpan({
 				cls: 'hoard-folder-list__path',
-				text: `${this.plugin.getLayout().root}/${type.name}`,
+				text: `${this.deps.layout().root}/${type.name}`,
 			});
 		}
 	}
@@ -2611,10 +2566,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.addText((t) =>
 				t
 					.setPlaceholder('#hoard')
-					.setValue(this.plugin.settings.draftsVaultTag ?? '#hoard')
+					.setValue(this.deps.settings.get().draftsVaultTag ?? '#hoard')
 					.onChange(async (v) => {
-						this.plugin.settings.draftsVaultTag = v.trim() || '#hoard';
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.draftsVaultTag = v.trim() || '#hoard'; });
 					}),
 			);
 
@@ -2624,10 +2578,9 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.addDropdown((d) =>
 				d
 					.addOptions({ keep: t('settings.drafts.after.keep'), remove: t('common.remove') })
-					.setValue(this.plugin.settings.draftsAfterAdding ?? 'keep')
+					.setValue(this.deps.settings.get().draftsAfterAdding ?? 'keep')
 					.onChange(async (v) => {
-						this.plugin.settings.draftsAfterAdding = v as 'keep' | 'remove';
-						await this.plugin.saveSettings();
+						await this.deps.settings.update((s) => { s.draftsAfterAdding = v as 'keep' | 'remove'; });
 					}),
 			);
 	}
@@ -2650,11 +2603,10 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setName(t('settings.lists.columns.name'))
 			.setDesc(t('settings.lists.columns.desc'))
 			.addButton((b) => {
-				const count = (this.plugin.settings.defaultCustomColumns ?? []).length;
+				const count = (this.deps.settings.get().defaultCustomColumns ?? []).length;
 				b.setButtonText(t('settings.lists.columns.button', { count }));
 				b.onClick(() => {
-					// TODO(Task 8): build the deps without the plugin
-					new DefaultColumnsModal({ app: this.app, settings: this.plugin.settingsService, layout: () => this.plugin.getLayout() }).open();
+					new DefaultColumnsModal(this.deps).open();
 				});
 			});
 
@@ -2672,7 +2624,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.setDesc(t('settings.lists.folder.desc'))
 			.addButton((b) =>
 				b.setButtonText(t('settings.folders.createNow.button')).onClick(async () => {
-					const manager = new CustomListManager({ app: this.app, layout: () => this.plugin.getLayout() }); // TODO(Task 8)
+					const manager = new CustomListManager(this.deps);
 					await manager.ensureFolder();
 					new Notice(t('settings.lists.folder.done'));
 				}),
@@ -2682,7 +2634,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 	// Reading
 
 	private renderReading(container: HTMLElement): void {
-		const readingData = this.plugin.readingDataManager;
+		const readingData = this.deps.reading;
 		const settings = readingData.getSettings();
 		const page = container.createDiv({ cls: 'hoard-settings-group__page' });
 
@@ -2747,7 +2699,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.exportButton')).onClick(() => {
 					new ReadingCsvChoiceModal(this.app, 'export', (kind) => {
-						new ReadingCsvModal(this.readingCsvModalDeps(), kind, 'export').open();
+						new ReadingCsvModal(this.deps, kind, 'export').open();
 					}).open();
 				}),
 			);
@@ -2758,7 +2710,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 			.addButton((b) =>
 				b.setButtonText(t('settings.csv.importButton')).onClick(() => {
 					new ReadingCsvChoiceModal(this.app, 'import', (kind) => {
-						new ReadingCsvModal(this.readingCsvModalDeps(), kind, 'import').open();
+						new ReadingCsvModal(this.deps, kind, 'import').open();
 					}).open();
 				}),
 			);
