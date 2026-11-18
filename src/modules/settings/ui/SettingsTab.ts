@@ -141,7 +141,6 @@ import { CsvModal, type CsvModalDeps } from '../../watchlist/ui/CsvModal';
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
-import type { VaultLayout } from '../../../shared/storage/VaultLayout';
 import type { BackupManagers, buildBackup, parseBackup, restoreBackup, withoutSecrets } from '../../backup/services/backup';
 import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
 import { ReadingCsvChoiceModal } from '../../reading/ui/ReadingCsvChoiceModal';
@@ -187,7 +186,7 @@ export interface HoardSettingsTabDeps extends CsvModalDeps, ReadingCsvModalDeps,
 	games: GameDataManager;
 	api: ApiService;
 	posters: Pick<PosterService, 'enqueue'>;
-	layout: () => Pick<VaultLayout, 'root' | 'customListsFolder'>;
+	layout: () => { readonly root: string; readonly customListsFolder: string };
 	/** Everything backup export and restore (and the WatchLog decisions) read. */
 	backupManagers: () => BackupManagers;
 	buildBackup: typeof buildBackup;

@@ -1,5 +1,5 @@
 import type { TabInstance } from '../../../shared/ui/TabInstance';
-import { App, Component, MarkdownRenderer, Modal, Notice, Platform, TFile, normalizePath, Setting, type EventRef, type TAbstractFile } from 'obsidian';
+import { App, Component, MarkdownRenderer, Modal, Notice, Platform, normalizePath, Setting, type EventRef, type TAbstractFile } from 'obsidian';
 import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
 import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
@@ -13,7 +13,6 @@ import { openStatusDropdown } from '../../../shared/ui/StatusDropdown';
 import type { AddRouteOptions } from '../../../shared/ui/addRoute';
 import { cloneColumns, renderCancelSave, renderColumnsEditor } from '../../../shared/ui/ColumnsEditor';
 import { t } from '../../../shared/i18n';
-import { at } from '../../../shared/domain/read';
 import { createIconButton } from '../../../shared/ui/IconButton';
 import { statusLabel, typeLabel, readingStatusLabel } from '../../../shared/i18n/labels';
 
