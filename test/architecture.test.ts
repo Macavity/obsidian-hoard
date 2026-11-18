@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ESLint } from "eslint";
+import process from "node:process";
 
 // Layer rules inside modules (docs/architecture/overview.md). Real file paths, so type-aware linting resolves them.
 // With CI=true typescript-eslint infers single-run mode, which assumes file contents never differ from disk; the
