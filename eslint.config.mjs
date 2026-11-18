@@ -18,6 +18,29 @@ const STYLE_SELECTORS = [{
   message: "setCssProps takes custom properties only (keys starting with --).",
 }];
 
+// Constructor injection (docs/architecture/overview.md): no `*Deps` bags, no `deps` names, dependencies are separate parameters.
+const DI_SELECTORS = [{
+  selector: "TSInterfaceDeclaration[id.name=/Deps$/]",
+  message: `Do not declare a *Deps type: take each dependency as a private readonly constructor parameter. ${ARCH_DOC}`,
+}, {
+  selector: "TSTypeAliasDeclaration[id.name=/Deps$/]",
+  message: `Do not declare a *Deps type: take each dependency as a private readonly constructor parameter. ${ARCH_DOC}`,
+}, {
+  selector: "Identifier[name='deps']",
+  message: `Do not pass dependencies as a \`deps\` bag: use explicit constructor parameters. ${ARCH_DOC}`,
+}, {
+  selector: "MethodDefinition[kind='constructor'] RestElement",
+  message: `Constructors take named parameters, not a rest tuple of dependencies. ${ARCH_DOC}`,
+}];
+
+// Only src/app may hold App; modules and shared take Vault, Workspace, MetadataCache or a Pick instead.
+const NO_THIS_APP = {
+  selector: "MemberExpression[object.type='ThisExpression'][property.name='app']",
+  message: `Do not reach for this.app: inject Vault, Workspace, MetadataCache or a Pick of them (App only for super(app)). ${ARCH_DOC}`,
+};
+
+const BASE_SELECTORS = [...STYLE_SELECTORS, ...DI_SELECTORS];
+
 export default defineConfig([
   {
     ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "vitest.config.ts", "scripts/**", "test/e2e/**", ".ref/**", "spike/**", ".claude/**", ".superpowers/**"]
@@ -114,14 +137,14 @@ export default defineConfig([
   {
     // Obsidian guideline: no inline styles from code.
     files: ["src/**/*.ts"],
-    rules: { "no-restricted-syntax": ["error", ...STYLE_SELECTORS] },
+    rules: { "no-restricted-syntax": ["error", ...BASE_SELECTORS] },
   },
   {
     // Objects are wired once, in src/app. Same rule key as above, so it repeats the style selectors.
     files: ["src/**/*.ts"],
     ignores: ["src/app/**"],
     rules: {
-      "no-restricted-syntax": ["error", ...STYLE_SELECTORS, {
+      "no-restricted-syntax": ["error", ...BASE_SELECTORS, NO_THIS_APP, {
         selector: "NewExpression[callee.name=/(Manager|Service)$/]",
         message: `Do not construct a Manager or Service here: take it as a constructor dependency and let src/app wire it. ${ARCH_DOC}`,
       }],
@@ -152,10 +175,10 @@ export default defineConfig([
   },
   {
     // Services report codes (ManagerNotice); they never show UI.
-    files: ["src/modules/*/services/**/*.ts"],
+    files: ["src/modules/*/services/**/*.ts", "src/shared/services/**/*.ts", "src/shared/storage/**/*.ts", "src/shared/api/**/*.ts"],
     rules: {
       // Named imports are caught below; a namespace or default import would reach the same UI classes.
-      "no-restricted-syntax": ["error", ...STYLE_SELECTORS, {
+      "no-restricted-syntax": ["error", ...BASE_SELECTORS, NO_THIS_APP, {
         selector: "ImportDeclaration[source.value='obsidian'] > :matches(ImportNamespaceSpecifier, ImportDefaultSpecifier)",
         message: `Services must not use Obsidian UI classes: import only what you need by name, and report a code (ManagerNotice) instead of showing UI. ${ARCH_DOC}`,
       }, {
@@ -165,8 +188,8 @@ export default defineConfig([
       "@typescript-eslint/no-restricted-imports": ["error", {
         paths: [{
           name: "obsidian",
-          importNames: ["Modal", "Notice", "Setting", "PluginSettingTab", "ItemView", "Menu"],
-          message: `Services must not use Obsidian UI classes: report a code (ManagerNotice) and let the UI show it. ${ARCH_DOC}`,
+          importNames: ["App", "Modal", "Notice", "Setting", "PluginSettingTab", "ItemView", "Menu"],
+          message: `Services must not use Obsidian UI classes or App: inject Vault, Workspace or a Pick, and report a code (ManagerNotice) for the UI to show. ${ARCH_DOC}`,
         }],
         patterns: [{
           group: ["**/ui/**", "**/shared/ui/**"],

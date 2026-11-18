@@ -91,4 +91,51 @@ describe("architecture lint rules", () => {
 		expect(m.some((x) => x.message.includes("noInlineConfig"))).toBe(true);
 		expect(m.some((x) => x.ruleId === "no-console")).toBe(true);
 	});
+
+	describe("constructor injection guards", () => {
+		const DOC = "docs/architecture/overview.md";
+
+		it("rejects *Deps interfaces and type aliases", async () => {
+			const i = await errorsOf(`export interface FooDeps { a: number }`, UI_FILE, "no-restricted-syntax");
+			expect(i).toHaveLength(1);
+			expect(i[0]?.message).toContain(DOC);
+			const t = await errorsOf(`export type FooDeps = { a: number };`, SERVICE_FILE, "no-restricted-syntax");
+			expect(t).toHaveLength(1);
+			expect(await errorsOf(`export interface FooPort { a: number }`, UI_FILE, "no-restricted-syntax")).toEqual([]);
+		});
+
+		it("rejects the identifier deps, also in src/app", async () => {
+			const m = await errorsOf(`export const f = (deps: number) => deps;`, "src/app/main.ts", "no-restricted-syntax");
+			expect(m.length).toBeGreaterThan(0);
+			expect(m[0]?.message).toContain(DOC);
+			expect(await errorsOf(`export const f = (dep: number) => dep;`, UI_FILE, "no-restricted-syntax")).toEqual([]);
+		});
+
+		it("rejects this.app in modules and shared, allows it in src/app", async () => {
+			const code = `export class X { app = 1; f() { return this.app; } }`;
+			const ui = await errorsOf(code, UI_FILE, "no-restricted-syntax");
+			expect(ui).toHaveLength(1);
+			expect(ui[0]?.message).toContain(DOC);
+			expect(await errorsOf(code, SERVICE_FILE, "no-restricted-syntax")).toHaveLength(1);
+			expect(await errorsOf(code, "src/shared/ui/RowsCustomizeModal.ts", "no-restricted-syntax")).toHaveLength(1);
+			expect(await errorsOf(code, "src/app/main.ts", "no-restricted-syntax")).toEqual([]);
+		});
+
+		it("rejects importing App in services, storage and api, allows it in src/app", async () => {
+			const code = `import { App } from "obsidian";\nexport type X = App;`;
+			for (const file of [SERVICE_FILE, "src/shared/services/SettingsService.ts", "src/shared/storage/VaultLayout.ts", "src/shared/api/ApiService.ts"]) {
+				const m = await errorsOf(code, file, "no-restricted-imports");
+				expect(m, file).toHaveLength(1);
+				expect(m[0]?.message).toContain(DOC);
+			}
+			expect(await errorsOf(code, "src/app/main.ts", "no-restricted-imports")).toEqual([]);
+		});
+
+		it("rejects a rest parameter in a constructor, allows it elsewhere", async () => {
+			const ctor = await errorsOf(`export class X { constructor(...parts: number[]) { void parts; } }`, UI_FILE, "no-restricted-syntax");
+			expect(ctor).toHaveLength(1);
+			expect(ctor[0]?.message).toContain(DOC);
+			expect(await errorsOf(`export const f = (...parts: number[]) => parts;`, UI_FILE, "no-restricted-syntax")).toEqual([]);
+		});
+	});
 });
