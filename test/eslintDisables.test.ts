@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { findDisableIssues } from "../scripts/lib/eslint-disables.mjs";
+import { findBoundaryIgnores, findDisableIssues } from "../scripts/lib/eslint-disables.mjs";
 
 describe("eslint-disable checks", () => {
   it("accepts a directive with a -- description", () => {
@@ -37,5 +37,16 @@ describe("eslint-disable checks", () => {
 
   it("ignores lines without a directive", () => {
     expect(findDisableIssues(["// eslint is great", "let x;"])).toEqual([]);
+  });
+
+  it("reports a fallow-ignore of a boundary violation", () => {
+    const line = "// fallow-ignore-next-line boundary-violation";
+    expect(findBoundaryIgnores([line])).toEqual([
+      { line: 1, content: line, problem: "fallow-ignore of a boundary violation (see docs/architecture/overview.md)" },
+    ]);
+  });
+
+  it("lets other fallow-ignore comments pass", () => {
+    expect(findBoundaryIgnores(["// fallow-ignore-next-line unused-export"])).toEqual([]);
   });
 });

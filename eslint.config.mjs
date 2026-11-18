@@ -4,6 +4,20 @@ import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 
+const ARCH_DOC = "See docs/architecture/overview.md.";
+
+const STYLE_SELECTORS = [{
+  selector: "MemberExpression[property.name='style']",
+  message: "Use CSS classes or setCssProps with custom properties.",
+}, {
+  // a plain key (`top: …`) is an inline style by another name; computed keys hold `--hoard-…` constants
+  selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[computed=false][key.type='Identifier']",
+  message: "setCssProps takes custom properties only (keys starting with --).",
+}, {
+  selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[key.type='Literal']:not([key.value=/^--/])",
+  message: "setCssProps takes custom properties only (keys starting with --).",
+}];
+
 export default defineConfig([
   {
     ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "vitest.config.ts", "scripts/**", "test/e2e/**", ".ref/**", "spike/**", ".claude/**", ".superpowers/**"]
@@ -93,19 +107,63 @@ export default defineConfig([
     }
   },
   {
+    // Inline `eslint-disable` would let a change switch the architecture rules off: source files take no inline config.
+    files: ["src/**/*.ts"],
+    linterOptions: { noInlineConfig: true },
+  },
+  {
     // Obsidian guideline: no inline styles from code.
     files: ["src/**/*.ts"],
+    rules: { "no-restricted-syntax": ["error", ...STYLE_SELECTORS] },
+  },
+  {
+    // Objects are wired once, in src/app. Same rule key as above, so it repeats the style selectors.
+    files: ["src/**/*.ts"],
+    ignores: ["src/app/**"],
     rules: {
-      "no-restricted-syntax": ["error", {
-        selector: "MemberExpression[property.name='style']",
-        message: "Use CSS classes or setCssProps with custom properties.",
-      }, {
-        // a plain key (`top: …`) is an inline style by another name; computed keys hold `--hoard-…` constants
-        selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[computed=false][key.type='Identifier']",
-        message: "setCssProps takes custom properties only (keys starting with --).",
-      }, {
-        selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[key.type='Literal']:not([key.value=/^--/])",
-        message: "setCssProps takes custom properties only (keys starting with --).",
+      "no-restricted-syntax": ["error", ...STYLE_SELECTORS, {
+        selector: "NewExpression[callee.name=/(Manager|Service)$/]",
+        message: `Do not construct a Manager or Service here: take it as a constructor dependency and let src/app wire it. ${ARCH_DOC}`,
+      }],
+    },
+  },
+  {
+    // UI reaches data and services only through injected dependencies.
+    files: ["src/modules/*/ui/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": ["error", {
+        patterns: [
+          {
+            group: ["**/shared/storage/**"],
+            message: `UI must not touch storage: depend on an injected service interface instead. ${ARCH_DOC}`,
+          },
+          {
+            group: ["**/app/**"],
+            message: `UI must not import from app: receive what you need as a constructor dependency. ${ARCH_DOC}`,
+          },
+          {
+            group: ["**/services/**", "!**/shared/services/**"],
+            allowTypeImports: true,
+            message: `UI may only use \`import type\` from a services file: take the service as an injected dependency, and move pure helpers to shared/domain. ${ARCH_DOC}`,
+          },
+        ],
+      }],
+    },
+  },
+  {
+    // Services report codes (ManagerNotice); they never show UI.
+    files: ["src/modules/*/services/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": ["error", {
+        paths: [{
+          name: "obsidian",
+          importNames: ["Modal", "Notice", "Setting", "PluginSettingTab", "ItemView", "Menu"],
+          message: `Services must not use Obsidian UI classes: report a code (ManagerNotice) and let the UI show it. ${ARCH_DOC}`,
+        }],
+        patterns: [{
+          group: ["**/ui/**", "**/shared/ui/**"],
+          message: `Services must not import UI: expose data or a code and let the UI call you. ${ARCH_DOC}`,
+        }],
       }],
     },
   },
@@ -123,7 +181,7 @@ export default defineConfig([
       "src/shared/domain/settingsNormalize.ts",
       "src/shared/services/settingsSplit.ts",
       "src/modules/backup/services/backup.ts",
-      "src/modules/backup/services/backupEntries.ts",
+      "src/shared/storage/entryReaders.ts",
       "src/shared/domain/featureSettings.ts",
     ],
     rules: {

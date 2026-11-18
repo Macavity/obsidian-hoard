@@ -33,3 +33,14 @@ export function findDisableIssues(lines) {
 	});
 	return issues;
 }
+
+/** `fallow-ignore` comments naming a boundary rule would switch the layer check off for a line; never allowed in src. */
+export function findBoundaryIgnores(lines) {
+	const issues = [];
+	lines.forEach((raw, i) => {
+		if (/fallow-ignore[^\n]*boundary/.test(raw)) {
+			issues.push({ line: i + 1, content: raw.trim(), problem: "fallow-ignore of a boundary violation (see docs/architecture/overview.md)" });
+		}
+	});
+	return issues;
+}
