@@ -146,7 +146,6 @@ import type { BackupManagers } from '../../backup/services/backup';
 import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
 import { ReadingCsvChoiceModal } from '../../reading/ui/ReadingCsvChoiceModal';
 import { ReadingCsvModal, type ReadingCsvModalDeps } from '../../reading/ui/ReadingCsvModal';
-import { HoardView } from '../../../app/HoardView';
 import { CustomListManager, DefaultColumnsModal, type DefaultColumnsModalDeps } from '../../custom-lists/ui/CustomListsTab';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 import { refreshAllCovers } from '../../covers/services/coverRefresh';
@@ -199,6 +198,8 @@ export interface HoardSettingsTabDeps extends CsvModalDeps, ReadingCsvModalDeps,
 	/** Publishes the card size as a CSS variable on the main window. */
 	applyCardSizeCssVar: () => void;
 	updateStatusBar: () => void;
+	/** Re-renders the open Hoard views after a display-setting edit (`update` already signalled the widgets). */
+	refreshOpenViews: () => void;
 }
 
 /** The plugin's settings pane. Obsidian wants the plugin itself for registration (K4); nothing else. */
@@ -483,7 +484,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						await this.deps.settings.update((s) => { s.dateFormat = v as DateFormatPref; });
 						// repaint open tabs and widgets so the new order shows immediately
-						this.refreshOpenViews();
+						this.deps.refreshOpenViews();
 					}),
 			);
 
@@ -1870,7 +1871,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 					dot.setCssProps({ '--hoard-tag-editor-dot-color': color });
 					preview.setCssProps({ '--hoard-star-rating-color': color });
 					await saved;
-					this.refreshOpenViews();
+					this.deps.refreshOpenViews();
 				})();
 			});
 
@@ -1881,20 +1882,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 				if (val === tier.label) return;
 				void (async () => {
 					await this.deps.settings.update((d) => { d.ratingSystem[idx]!.label = val; });
-					this.refreshOpenViews();
+					this.deps.refreshOpenViews();
 				})();
 			};
 			labelInput.addEventListener('change', commitLabel);
 			labelInput.addEventListener('blur', commitLabel);
 		});
-	}
-
-	/** Re-renders the open Hoard views after a display-setting edit (`update` already signalled the widgets). */
-	private refreshOpenViews(): void {
-		const leaves = this.app.workspace.getLeavesOfType('hoard-view');
-		for (const leaf of leaves) {
-			if (leaf.view instanceof HoardView) leaf.view.refreshUI();
-		}
 	}
 
 	/** Reading type badge colours — two fixed entries (Manga, Book), colour picker only. */
@@ -2138,7 +2131,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 					for (const c of allCards) c.removeClass('is-selected');
 					card.addClass('is-selected');
 					onPicked?.(theme.label);
-					this.refreshOpenViews();
+					this.deps.refreshOpenViews();
 				})();
 			});
 		}

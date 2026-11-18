@@ -1,20 +1,12 @@
 import { AddTitleModal, type AddTitleModalDeps } from '../modules/watchlist/ui/AddTitleModal';
 import { AddReadingModal, type AddReadingModalDeps } from '../modules/reading/ui/AddReadingModal';
 import { AddGameModal, type AddGameModalDeps } from '../modules/games/ui/AddGameModal';
+import type { AddRouteOptions } from '../shared/ui/addRoute';
 import { DraftChoiceModal, type DraftChoiceModalDeps } from '../modules/drafts/ui/DraftChoiceModal';
 
 export interface AddRouterDeps extends DraftChoiceModalDeps, AddTitleModalDeps, AddGameModalDeps, AddReadingModalDeps {
 	settings: AddTitleModalDeps['settings'];
 	api: AddTitleModalDeps['api'] & AddGameModalDeps['api'] & AddReadingModalDeps['api'];
-}
-
-export interface AddRouteOptions {
-	/** Prefills the search box and the title field of whichever Add modal is picked. */
-	title: string;
-	/** Fires once the title is actually saved into a library. */
-	onAdded?: () => void;
-	/** Chooser heading — "Add draft" from Drafts, "Add title" elsewhere. */
-	heading?: string;
 }
 
 /**

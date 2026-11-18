@@ -10,7 +10,7 @@ import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/types';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 import { openColorPicker, deriveFillColor, deriveBorderColor } from '../../../shared/ui/ColorPicker';
 import { openStatusDropdown } from '../../../shared/ui/StatusDropdown';
-import type { AddRouteOptions } from '../../../app/AddRouter';
+import type { AddRouteOptions } from '../../../shared/ui/addRoute';
 import { cloneColumns, renderCancelSave, renderColumnsEditor } from '../../../shared/ui/ColumnsEditor';
 import { t } from '../../../shared/i18n';
 import { at } from '../../../shared/domain/read';

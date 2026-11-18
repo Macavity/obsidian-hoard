@@ -7,7 +7,7 @@ import type { DataManager } from '../../watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../games/services/GameDataManager';
 import type { DraftPersistState } from '../../../shared/domain/types';
-import type { AddRouteOptions } from '../../../app/AddRouter';
+import type { AddRouteOptions } from '../../../shared/ui/addRoute';
 import { t } from '../../../shared/i18n';
 
 /** Libraries a draft can already live in — used for the "In …" duplicate label. */

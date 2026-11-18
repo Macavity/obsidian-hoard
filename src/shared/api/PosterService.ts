@@ -1,6 +1,6 @@
 import type { RequestUrlParam } from 'obsidian';
 import { explicitMediaKind, titleMediaKind } from './cinemetaApi';
-import type { DataManager } from '../../modules/watchlist/services/DataManager';
+import type { LookupKind } from '../storage/storageTypes';
 import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from '../domain/types';
 import { getApiGroupForType } from '../domain/types';
 import { httpsOrEmpty } from './httpsUrl';
@@ -29,7 +29,11 @@ interface QueueItem {
 }
 
 /** What the poster fetch records and persists on the watchlist. */
-export type PosterTitles = Pick<DataManager, 'recordLookup' | 'updatePosterUrl' | 'lookupDue'>;
+export interface PosterTitles {
+	recordLookup(id: string, kind: LookupKind, result: LookupResult<unknown>): void;
+	updatePosterUrl(titleId: string, url: string, overwrite?: boolean): Promise<void>;
+	lookupDue(id: string, kind: LookupKind): boolean;
+}
 
 export class PosterService {
 	private dataManager: PosterTitles;

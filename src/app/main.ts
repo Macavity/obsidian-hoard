@@ -284,6 +284,7 @@ export default class HoardPlugin extends Plugin {
 			reloadSettings: () => this.loadSettings(),
 			applyCardSizeCssVar: () => this.applyCardSizeCssVar(),
 			updateStatusBar: () => this.updateStatusBar(),
+			refreshOpenViews: () => this.refreshOpenViews(),
 			setImportProgress: (progress) => { this.importProgress = progress; },
 		};
 	}
@@ -310,6 +311,12 @@ export default class HoardPlugin extends Plugin {
 			games: this.gameDataManager,
 			api: this.apiService,
 		};
+	}
+
+	private refreshOpenViews(): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(HOARD_VIEW_TYPE)) {
+			if (leaf.view instanceof HoardView) leaf.view.refreshUI();
+		}
 	}
 
 	/** Renders a manager notice in the active language. */
