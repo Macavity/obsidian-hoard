@@ -1,4 +1,4 @@
-import { normalizePath, parseYaml, type App, type TFile } from 'obsidian';
+import { normalizePath, parseYaml, type TFile, type Vault } from 'obsidian';
 import { hasTopLevelKey } from '../../../../shared/storage/baseFile';
 import { VaultLayout, detectRoot } from '../../../../shared/storage/VaultLayout';
 import type { LocalData } from '../../../../shared/storage/storageTypes';
@@ -38,12 +38,12 @@ const isEmptyData = (raw: unknown): boolean =>
  * First `.base` (path-sorted, the rule of `VaultLayout.findRoot`) named `WatchLog.base` or holding a
  * top-level `watchlog:` block; null when the vault has none.
  */
-export async function findWatchLogBase(app: App): Promise<TFile | null> {
-	const bases = app.vault.getFiles().filter((f) => f.extension === 'base');
+export async function findWatchLogBase(vault: Vault): Promise<TFile | null> {
+	const bases = vault.getFiles().filter((f) => f.extension === 'base');
 	bases.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 	for (const f of bases) {
 		if (f.name === WATCHLOG_BASE_FILE) return f;
-		if (hasTopLevelKey(await app.vault.cachedRead(f), WATCHLOG_KEY)) return f;
+		if (hasTopLevelKey(await vault.cachedRead(f), WATCHLOG_KEY)) return f;
 	}
 	return null;
 }
@@ -101,20 +101,18 @@ export interface WatchLogSources {
 const ORIGINAL_ID = 'watchlog';
 const FORK_ID = 'watchlog-sync';
 
-/** Obsidian's private plugin registry; typed locally. */
-type AppWithPlugins = App & { plugins?: { enabledPlugins?: Set<string> } };
-const isEnabled = (app: App, id: string): boolean =>
-	(app as AppWithPlugins).plugins?.enabledPlugins?.has(id) ?? false;
+const pluginSource = (vault: Vault): PluginDataSource => ({ configDir: vault.configDir, adapter: vault.adapter });
 
-const pluginSource = (app: App): PluginDataSource => ({ configDir: app.vault.configDir, adapter: app.vault.adapter });
+/** Whether a community plugin is enabled (Obsidian's plugin registry is private, so the caller reads it). */
+export type PluginEnabled = (id: string) => boolean;
 
-async function originalCounts(app: App, data: WatchLogData): Promise<SourceCounts> {
+async function originalCounts(vault: Vault, data: WatchLogData): Promise<SourceCounts> {
 	// Maybe titles become titles, custom lists are copied: both belong in the preview
 	const titles = data.titles.length + (data.maybe?.length ?? 0);
 	const listsFolder = originalFolders(data).lists;
 	let lists = 0;
-	for (const f of app.vault.getMarkdownFiles()) {
-		if (f.parent?.path === listsFolder && isListNote(await app.vault.cachedRead(f))) lists++;
+	for (const f of vault.getMarkdownFiles()) {
+		if (f.parent?.path === listsFolder && isListNote(await vault.cachedRead(f))) lists++;
 	}
 	const books = data.reading?.books?.length ?? 0;
 	const manga = data.reading?.manga?.length ?? 0;
@@ -122,13 +120,13 @@ async function originalCounts(app: App, data: WatchLogData): Promise<SourceCount
 	return { titles, books, manga, games, lists, notes: titles + books + manga + games + lists };
 }
 
-async function detectOriginal(app: App): Promise<OriginalSource | null> {
-	const found = await readPluginData(pluginSource(app), ORIGINAL_ID);
+async function detectOriginal(vault: Vault, isEnabled: PluginEnabled): Promise<OriginalSource | null> {
+	const found = await readPluginData(pluginSource(vault), ORIGINAL_ID);
 	if (!found || !isRecord(found.raw) || !Array.isArray(found.raw.titles)) return null;
 	const data = prepareData(found.raw);
 	return {
-		kind: 'original', dir: found.dir, data, counts: await originalCounts(app, data),
-		pluginEnabled: isEnabled(app, ORIGINAL_ID),
+		kind: 'original', dir: found.dir, data, counts: await originalCounts(vault, data),
+		pluginEnabled: isEnabled(ORIGINAL_ID),
 	};
 }
 
@@ -142,9 +140,9 @@ export function forkBaseTypes(content: string): unknown {
 }
 
 /** Type names from the base's `watchlog:` block; Hoard's defaults when it lists none. */
-async function readTypeNames(app: App, base: TFile): Promise<string[]> {
+async function readTypeNames(vault: Vault, base: TFile): Promise<string[]> {
 	try {
-		const types = forkBaseTypes(await app.vault.cachedRead(base));
+		const types = forkBaseTypes(await vault.cachedRead(base));
 		if (Array.isArray(types)) {
 			const names = types.flatMap((t: unknown) => (isRecord(t) && typeof t.name === 'string' ? [t.name] : []));
 			if (names.length) return names;
@@ -155,8 +153,8 @@ async function readTypeNames(app: App, base: TFile): Promise<string[]> {
 	return DEFAULT_SETTINGS.types.map((t) => t.name);
 }
 
-async function readForkData(app: App): Promise<LocalData | null> {
-	const found = await readPluginData(pluginSource(app), FORK_ID);
+async function readForkData(vault: Vault): Promise<LocalData | null> {
+	const found = await readPluginData(pluginSource(vault), FORK_ID);
 	if (!found || !isRecord(found.raw) || found.raw.schemaVersion !== 2) return null;
 	const raw = found.raw;
 	return {
@@ -170,11 +168,11 @@ async function readForkData(app: App): Promise<LocalData | null> {
 	};
 }
 
-function forkCounts(app: App, root: string, typeNames: string[], hoardRoot: string | null): SourceCounts {
+function forkCounts(vault: Vault, root: string, typeNames: string[], hoardRoot: string | null): SourceCounts {
 	const layout = new VaultLayout(root, () => typeNames);
 	const counts: SourceCounts = { titles: 0, books: 0, manga: 0, games: 0, lists: 0, notes: 0 };
 	const nested = hoardRoot === null ? '' : nestedHoardRoot(root, hoardRoot);
-	for (const f of app.vault.getMarkdownFiles()) {
+	for (const f of vault.getMarkdownFiles()) {
 		if (nested && (f.path === nested || f.path.startsWith(`${nested}/`))) continue;
 		if (f.parent?.path === layout.customListsFolder) { counts.lists++; counts.notes++; continue; }
 		const hit = layout.classify(f.path);
@@ -185,23 +183,23 @@ function forkCounts(app: App, root: string, typeNames: string[], hoardRoot: stri
 	return counts;
 }
 
-async function detectFork(app: App, hoardRoot: string | null): Promise<ForkSource | null> {
-	const base = await findWatchLogBase(app);
+async function detectFork(vault: Vault, isEnabled: PluginEnabled, hoardRoot: string | null): Promise<ForkSource | null> {
+	const base = await findWatchLogBase(vault);
 	if (!base) return null;
 	const root = base.parent?.path === '/' ? '' : (base.parent?.path ?? '');
-	const typeNames = await readTypeNames(app, base);
+	const typeNames = await readTypeNames(vault, base);
 	return {
-		kind: 'fork', base, root, typeNames, data: await readForkData(app),
-		counts: forkCounts(app, root, typeNames, hoardRoot), pluginEnabled: isEnabled(app, FORK_ID),
+		kind: 'fork', base, root, typeNames, data: await readForkData(vault),
+		counts: forkCounts(vault, root, typeNames, hoardRoot), pluginEnabled: isEnabled(FORK_ID),
 	};
 }
 
 /** Finds WatchLog data sources and whether Hoard already holds data. Read-only; never throws on broken data. */
-export async function detectWatchLogSources(app: App): Promise<WatchLogSources> {
-	const hoardRoot = await detectRoot(app.vault);
+export async function detectWatchLogSources(vault: Vault, isEnabled: PluginEnabled): Promise<WatchLogSources> {
+	const hoardRoot = await detectRoot(vault);
 	return {
-		original: await detectOriginal(app),
-		fork: await detectFork(app, hoardRoot),
+		original: await detectOriginal(vault, isEnabled),
+		fork: await detectFork(vault, isEnabled, hoardRoot),
 		hoardHasData: hoardRoot !== null,
 	};
 }

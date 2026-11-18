@@ -1,4 +1,4 @@
-import { normalizePath, type App, type TFile } from 'obsidian';
+import { normalizePath, type TFile, type Vault } from 'obsidian';
 import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
 import { FOLDERS } from '../../../../shared/domain/typeName';
 
@@ -22,9 +22,9 @@ export function managedFolders(layout: VaultLayout, typeNames: string[]): string
  * Every file (any extension, also in subfolders) inside the managed folders of `layout`, plus its
  * history file; nothing below `exclude` (Hoard's own root when it lies inside the WatchLog root).
  */
-export function managedFiles(app: App, layout: VaultLayout, typeNames: string[], exclude: string): TFile[] {
+export function managedFiles(vault: Pick<Vault, 'getFiles'>, layout: VaultLayout, typeNames: string[], exclude: string): TFile[] {
 	const folders = managedFolders(layout, typeNames);
-	return app.vault.getFiles()
+	return vault.getFiles()
 		.filter((f) => !inside(f.path, exclude))
 		.filter((f) => f.path === layout.historyPath || folders.some((d) => f.path.startsWith(`${d}/`)))
 		.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));

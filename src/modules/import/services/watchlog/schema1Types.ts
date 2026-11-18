@@ -1,4 +1,4 @@
-import type { App } from 'obsidian';
+import type { FileManager, Vault } from 'obsidian';
 import type {
 	AirtimeEntry, DraftPersistState, GamesData, HoardGroup, HoardPluginSettings, HoardTitle, MaybeTitle,
 	ReadingData, RecommendedDaily, SavedFilterPreset,
@@ -46,7 +46,8 @@ export interface ImportHooks {
 }
 
 export interface ImportContext {
-	app: App;
+	vault: Vault;
+	fileManager: FileManager;
 	local: LocalStore;
 	shared: SharedConfigStore;
 	history: HistoryStore;

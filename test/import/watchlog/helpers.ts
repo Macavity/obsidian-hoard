@@ -20,7 +20,7 @@ export function importContext(
 	const layout = new VaultLayout(root, () => types);
 	const shared = new SharedConfigStore(f.app, () => layout, yaml);
 	const history = new HistoryStore(f.app, () => layout);
-	return { app: f.app, local, shared, history, yaml, layout };
+	return { vault: f.app.vault, fileManager: f.app.fileManager, local, shared, history, yaml, layout };
 }
 
 /** The type names of WatchLog data. */

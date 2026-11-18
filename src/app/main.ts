@@ -434,7 +434,7 @@ export default class HoardPlugin extends Plugin {
 	 */
 	private async runOnboarding(opts: { force: boolean; startAt?: 'found' | 'cleanup' }): Promise<boolean> {
 		try {
-			const sources = await detectWatchLogSources(this.app);
+			const sources = await detectWatchLogSources(this.app.vault, (id) => this.isPluginEnabled(id));
 			if (!opts.force && pendingSources(this.local, sources).length === 0) return false;
 			await this.openWizard(sources, opts.startAt);
 			return true;
@@ -448,7 +448,8 @@ export default class HoardPlugin extends Plugin {
 		const kinds: WatchLogSourceKind[] = ['original', 'fork'];
 		const imported = startAt === 'cleanup' ? kinds.filter((k) => getDecision(this.local, k) === 'imported') : undefined;
 		const importer = createImporter(
-			this.app,
+			this.app.vault,
+			this.app.fileManager,
 			this.local,
 			() => this.importContext(),
 			() => this.layout,
@@ -487,7 +488,7 @@ export default class HoardPlugin extends Plugin {
 	/** Settings entry: re-runs the wizard (ignoring earlier decisions) on the found sources or the cleanup step. */
 	private async openWatchLogImport(startAt: 'found' | 'cleanup' = 'found'): Promise<void> {
 		if (this.wizardOpen) return;
-		const sources = await detectWatchLogSources(this.app);
+		const sources = await detectWatchLogSources(this.app.vault, (id) => this.isPluginEnabled(id));
 		if (!sources.original && !sources.fork) {
 			new Notice(t('onboarding.none'));
 			return;
@@ -542,10 +543,16 @@ export default class HoardPlugin extends Plugin {
 		};
 	}
 
+	/** Obsidian's plugin registry is private; typed locally. */
+	private isPluginEnabled(id: string): boolean {
+		return (this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } }).plugins?.enabledPlugins?.has(id) ?? false;
+	}
+
 	/** What the WatchLog import writes into. */
 	private importContext(): ImportContext {
 		return {
-			app: this.app,
+			vault: this.app.vault,
+			fileManager: this.app.fileManager,
 			local: this.local,
 			shared: this.shared,
 			history: new HistoryStore(this.app, () => this.layout),

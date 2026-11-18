@@ -24,17 +24,17 @@ async function ensureFolder(ctx: ImportContext, path: string): Promise<void> {
 	const i = path.lastIndexOf('/');
 	if (i < 0) return;
 	const dir = path.slice(0, i);
-	if (ctx.app.vault.getAbstractFileByPath(dir)) return;
+	if (ctx.vault.getAbstractFileByPath(dir)) return;
 	await ensureFolder(ctx, dir);
-	await ctx.app.vault.createFolder(dir);
+	await ctx.vault.createFolder(dir);
 }
 
 async function copyFile(file: TFile, target: string, ctx: ImportContext): Promise<void> {
 	await ensureFolder(ctx, target);
 	if (TEXT_EXTENSIONS.has(file.extension.toLowerCase())) {
-		await ctx.app.vault.create(target, await ctx.app.vault.read(file));
+		await ctx.vault.create(target, await ctx.vault.read(file));
 	} else {
-		await ctx.app.vault.createBinary(target, await ctx.app.vault.readBinary(file));
+		await ctx.vault.createBinary(target, await ctx.vault.readBinary(file));
 	}
 }
 
@@ -52,9 +52,9 @@ function sameProperties(fm: Record<string, unknown>, next: Record<string, unknow
 
 /** Renames the 0.1 property names of a copied entry note; unreadable YAML or a key it could not rename is reported, the copy stays. */
 async function translateNote(path: string, ctx: ImportContext, report: ImportReport): Promise<void> {
-	const note = ctx.app.vault.getAbstractFileByPath(path);
+	const note = ctx.vault.getAbstractFileByPath(path);
 	if (!(note instanceof TFile)) return;
-	const match = FRONTMATTER.exec(await ctx.app.vault.read(note));
+	const match = FRONTMATTER.exec(await ctx.vault.read(note));
 	if (!match) return;
 	let current: unknown;
 	try {
@@ -77,7 +77,7 @@ async function translateNote(path: string, ctx: ImportContext, report: ImportRep
 		report.review.push(...items);
 		return;
 	}
-	const ok = await updateFrontMatter(ctx.app.fileManager, note, () => {}, (fm) => {
+	const ok = await updateFrontMatter(ctx.fileManager, note, () => {}, (fm) => {
 		for (const key of Object.keys(fm)) delete fm[key];
 		for (const [k, v] of Object.entries(next)) Object.defineProperty(fm, k, { value: v, writable: true, enumerable: true, configurable: true });
 	});
@@ -86,14 +86,14 @@ async function translateNote(path: string, ctx: ImportContext, report: ImportRep
 }
 
 async function importBase(src: ForkSource, ctx: ImportContext, report: ImportReport): Promise<void> {
-	const existing = await detectRoot(ctx.app.vault);
+	const existing = await detectRoot(ctx.vault);
 	if (existing !== null) {
 		report.review.push({ path: existing ? `${existing}/Hoard.base` : 'Hoard.base', reason: 'exists' });
 		return;
 	}
-	const content = renameTopLevelBlock(await ctx.app.vault.read(src.base), 'watchlog', 'hoard');
+	const content = renameTopLevelBlock(await ctx.vault.read(src.base), 'watchlog', 'hoard');
 	await ensureFolder(ctx, ctx.layout.basePath);
-	await ctx.app.vault.create(ctx.layout.basePath, content);
+	await ctx.vault.create(ctx.layout.basePath, content);
 	report.created++;
 	await ctx.shared.load();
 	await ctx.shared.ensureFilter();
@@ -122,13 +122,13 @@ function importSettings(src: ForkSource, ctx: ImportContext, report: ImportRepor
 export async function importFork(src: ForkSource, ctx: ImportContext, progress: Progress): Promise<ImportReport> {
 	const report = emptyImportReport();
 	const forkLayout = new VaultLayout(src.root, () => src.typeNames);
-	const files = managedFiles(ctx.app, forkLayout, src.typeNames, nestedHoardRoot(src.root, ctx.layout.root));
+	const files = managedFiles(ctx.vault, forkLayout, src.typeNames, nestedHoardRoot(src.root, ctx.layout.root));
 	const entryDirs = entryFolders(forkLayout, src.typeNames);
 	let done = 0;
 	for (const file of files) {
 		const target = forkTarget(file.path, src.root, ctx.layout.root);
 		try {
-			if (ctx.app.vault.getAbstractFileByPath(target)) {
+			if (ctx.vault.getAbstractFileByPath(target)) {
 				report.review.push({ path: target, reason: 'exists' });
 			} else {
 				await copyFile(file, target, ctx);
@@ -145,7 +145,7 @@ export async function importFork(src: ForkSource, ctx: ImportContext, progress: 
 	}
 	try {
 		await importBase(src, ctx, report);
-		await registerTypes(ctx, forkBaseTypes(await ctx.app.vault.read(src.base)));
+		await registerTypes(ctx, forkBaseTypes(await ctx.vault.read(src.base)));
 	} catch (e) {
 		report.review.push({ path: ctx.layout.basePath, reason: 'error', code: 'failed', params: { message: errMsg(e) } });
 		report.errors.push(`${ctx.layout.basePath}: ${errMsg(e)}`);

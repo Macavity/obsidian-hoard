@@ -11,7 +11,7 @@ export async function setupFork(files: Record<string, string>, forkData?: unknow
 	if (forkData !== undefined) f.adapterFiles.set(FORK_DATA_PATH, JSON.stringify(forkData));
 	const local = new LocalStore(f.plugin);
 	const ctx = importContext(f, local, root, ['Movie']);
-	const detected = (await detectWatchLogSources(f.app)).fork as ForkSource;
+	const detected = (await detectWatchLogSources(f.app.vault, () => false)).fork as ForkSource;
 	const src: ForkSource = { ...detected, typeNames: ['Movie'] };
 	return { f, ctx, src, local };
 }

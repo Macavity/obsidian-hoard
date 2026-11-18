@@ -34,13 +34,13 @@ describe.each([
 ] as const)("scenario %s", (name, EXPECT) => {
 	it("is detected and imports the expected titles", async () => {
 		const f = loadScenario(name);
-		const sources = await detectWatchLogSources(f.app);
+		const sources = await detectWatchLogSources(f.app.vault, () => false);
 		const kind = EXPECT.kind as WatchLogSourceKind;
 		const src = sources[kind];
 		expect(src).not.toBeNull();
 		const types = kind === "fork" ? sources.fork!.typeNames : (sources.original!.data.settings.types ?? []).map((t) => t.name);
 		const ctx = importContext(f, new LocalStore(f.plugin), "Hoard", types);
-		const importer = createImporter(f.app, new LocalStore(f.plugin), () => ctx, () => ctx.layout, () => {}, sources);
+		const importer = createImporter(f.app.vault, f.app.fileManager, new LocalStore(f.plugin), () => ctx, () => ctx.layout, () => {}, sources);
 		const report = await importer.run(kind, () => {});
 		expect(report.errors).toEqual([]);
 		const titles = [...f.files.keys()].filter((p) => ctx.layout.classify(p)?.kind === "title");

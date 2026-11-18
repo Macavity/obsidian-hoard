@@ -1,4 +1,4 @@
-import type { App, TFile } from 'obsidian';
+import type { FileManager, TFile, Vault } from 'obsidian';
 import type { LocalStore } from '../../../../shared/storage/LocalStore';
 import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
 import { planCleanup, runCleanup, type CleanupItem } from './cleanup';
@@ -24,7 +24,8 @@ export interface WatchLogImporter {
 
 /** Wires the onboarding wizard to the import logic. */
 export function createImporter(
-	app: App,
+	vault: Vault,
+	fileManager: Pick<FileManager, 'trashFile'>,
 	local: LocalStore,
 	ctx: () => ImportContext,
 	layout: () => VaultLayout,
@@ -36,9 +37,9 @@ export function createImporter(
 		run: (kind: WatchLogSourceKind, progress: Progress) => kind === 'fork'
 			? importFork(sources.fork!, ctx(), progress)
 			: importOriginal(sources.original!, ctx(), progress),
-		plan: (imported: WatchLogSourceKind[]) => planCleanup(app, sources, layout(), imported),
-		cleanup: (items: CleanupItem[]) => runCleanup(app, items, layout()),
-		writeReport: (markdown: string) => writeReportNote(app, layout(), markdown),
+		plan: (imported: WatchLogSourceKind[]) => planCleanup(vault, sources, layout(), imported),
+		cleanup: (items: CleanupItem[]) => runCleanup(vault, fileManager, items, layout()),
+		writeReport: (markdown: string) => writeReportNote(vault, layout(), markdown),
 		decide: (kind: WatchLogSourceKind, d: ImportDecision) => setDecision(local, kind, d),
 		openFile,
 	};

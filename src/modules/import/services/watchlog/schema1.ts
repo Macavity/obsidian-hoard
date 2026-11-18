@@ -69,7 +69,7 @@ class Schema1Migration {
 		private report: ImportReport,
 		private hooks: ImportHooks,
 	) {
-		this.notes = new NoteWriter(ctx.app, ctx.yaml, report);
+		this.notes = new NoteWriter(ctx.vault, ctx.fileManager, ctx.yaml, report);
 	}
 
 	/** The notes, base, history and cache part of an import, plus missing device-local settings. */
@@ -118,7 +118,7 @@ class Schema1Migration {
 		};
 		await shared.load();
 		if (!shared.baseFile()) {
-			await ensureFolder(this.ctx.app, layout.root);
+			await ensureFolder(this.ctx.vault, layout.root);
 			await shared.createBase(initial);
 		} else if (Object.keys(shared.get().settings).length === 0) {
 			await shared.update(initial);
@@ -256,7 +256,7 @@ class Schema1Migration {
 		kind: EntryKind, path: string, title: string, fm: Fm, body: string, apiValues?: Fm, type?: string,
 	): Promise<void> {
 		try {
-			const old = this.ctx.app.vault.getAbstractFileByPath(path) ? null : await this.hooks.oldBody?.(kind, title, type);
+			const old = this.ctx.vault.getAbstractFileByPath(path) ? null : await this.hooks.oldBody?.(kind, title, type);
 			await this.notes.write(path, fm, old ?? body, apiValues);
 		} catch (e) {
 			this.fail(path, e);

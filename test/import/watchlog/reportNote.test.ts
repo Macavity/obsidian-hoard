@@ -9,10 +9,10 @@ describe('writeReportNote', () => {
 		const layout = new VaultLayout('Hoard', () => []);
 		// 00:30 local time: UTC may still be the previous day
 		const d = new Date(2026, 10, 8, 0, 30);
-		const first = await writeReportNote(f.app, layout, '# a', d);
+		const first = await writeReportNote(f.app.vault, layout, '# a', d);
 		expect(first.path).toBe('Hoard/WatchLog-Import 2026-11-08.md');
 		expect(f.files.get(first.path)).toBe('# a');
-		const second = await writeReportNote(f.app, layout, '# b', d);
+		const second = await writeReportNote(f.app.vault, layout, '# b', d);
 		expect(second.path).toBe('Hoard/WatchLog-Import 2026-11-08 2.md');
 	});
 });

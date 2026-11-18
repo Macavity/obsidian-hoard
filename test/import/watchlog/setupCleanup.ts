@@ -5,7 +5,7 @@ import { detectWatchLogSources } from '../../../src/modules/import/services/watc
 
 export async function setupCleanup(files: Record<string, string>, types: string[] = ['Movie']) {
 	const f = createFakeApp(files);
-	const sources = await detectWatchLogSources(f.app);
+	const sources = await detectWatchLogSources(f.app.vault, () => false);
 	const layout = new VaultLayout('Hoard', () => types);
 	return { f, sources, layout };
 }

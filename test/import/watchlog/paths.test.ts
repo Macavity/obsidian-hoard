@@ -16,7 +16,7 @@ describe('managed paths', () => {
 			'Movie/Heat.md': 'a', 'Books/Dune.md': 'b', 'History.md': 'h', 'Diary.md': 'x', 'Hoard/Movie/Old.md': 'o',
 		});
 		const layout = new VaultLayout('', () => ['Movie']);
-		expect(managedFiles(f.app, layout, ['Movie'], 'Hoard').map((x) => x.path))
+		expect(managedFiles(f.app.vault, layout, ['Movie'], 'Hoard').map((x) => x.path))
 			.toEqual(['Books/Dune.md', 'History.md', 'Movie/Heat.md']);
 	});
 });

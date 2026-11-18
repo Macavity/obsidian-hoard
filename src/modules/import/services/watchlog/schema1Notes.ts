@@ -1,4 +1,4 @@
-import { TFile, type App } from 'obsidian';
+import { TFile, type FileManager, type Vault } from 'obsidian';
 import type { Fm, YamlIO } from '../../../../shared/storage/storageTypes';
 import type { ImportReport } from '../../../../shared/domain/importReport';
 import { isRecord } from './schema1Types';
@@ -18,10 +18,10 @@ export const bodyOf = (content: string): string => content.slice(FM_RE.exec(cont
 const show = (v: unknown): string => (typeof v === 'string' ? v : JSON.stringify(v) ?? 'null');
 
 /** Creates a folder unless it exists (or another writer created it meanwhile). */
-export async function ensureFolder(app: App, path: string): Promise<void> {
-	if (!path || app.vault.getAbstractFileByPath(path)) return;
+export async function ensureFolder(vault: Pick<Vault, 'getAbstractFileByPath' | 'createFolder'>, path: string): Promise<void> {
+	if (!path || vault.getAbstractFileByPath(path)) return;
 	try {
-		await app.vault.createFolder(path);
+		await vault.createFolder(path);
 	} catch {
 		// created concurrently
 	}
@@ -29,7 +29,7 @@ export async function ensureFolder(app: App, path: string): Promise<void> {
 
 /** Creates notes or fills the keys they lack; existing values are never overwritten. */
 export class NoteWriter {
-	constructor(private app: App, private yaml: YamlIO, private report: ImportReport) {}
+	constructor(private vault: Vault, private fileManager: FileManager, private yaml: YamlIO, private report: ImportReport) {}
 
 	/**
 	 * Creates the note, or adds only the keys it lacks. A key of `apiValues` (API values WatchLog
@@ -37,10 +37,10 @@ export class NoteWriter {
 	 * a differing value stays as the user's override (E9).
 	 */
 	async write(path: string, fm: Fm, body: string, apiValues: Fm = {}): Promise<void> {
-		const { vault, fileManager } = this.app;
+		const { vault, fileManager } = this;
 		const file = vault.getAbstractFileByPath(path);
 		if (!file) {
-			await ensureFolder(this.app, path.slice(0, Math.max(0, path.lastIndexOf('/'))));
+			await ensureFolder(vault, path.slice(0, Math.max(0, path.lastIndexOf('/'))));
 			await vault.create(path, `---\n${this.yaml.stringify(fm)}---\n\n${body}`);
 			this.report.created++;
 			return;
