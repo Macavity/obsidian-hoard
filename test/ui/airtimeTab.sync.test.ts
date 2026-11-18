@@ -1,11 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Book, Game, Manga } from '../../src/shared/domain/types';
-import { entry, isoOffset, makeTab, newWorld } from './airtimeTab.harness';
+import { captures as cap, entry, isoOffset, makeTab, newWorld } from './airtimeTab.harness';
 
-const cap = vi.hoisted(() => ({ readingModals: [] as unknown[][] }));
-vi.mock('../../src/modules/airtime/ui/ReadingScheduleModal', () => ({ ReadingScheduleModal: class { constructor(...a: unknown[]) { cap.readingModals.push(a); } open(): void {} } }));
-vi.mock('../../src/shared/ui/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
-vi.mock('../../src/modules/airtime/ui/MaybeAddModal', () => ({ MaybeAddModal: class { open(): void {} } }));
 vi.mock('../../src/shared/ui/VirtualScroller', () => ({ VirtualScroller: class { addSection(): void {} attach(): void {} detach(): void {} destroy(): void {} } }));
 
 const book = (over: Partial<Book> = {}): Book => ({ id: 'b1', title: 'Dune', totalChapters: 10, releaseDate: null, ...over }) as unknown as Book;
@@ -137,9 +133,9 @@ describe('handleTrackerCardsVisible', () => {
 
 	it('fetches a poster for titles without one and wires the image', async () => {
 		const w = newWorld({ titles: [{ id: 't1', title: 'Show', posterUrl: '' } as never, { id: 't2', title: 'Has', posterUrl: 'x' } as never] });
-		const { tab, deps, calls } = makeTab(w);
+		const { tab, posters, calls } = makeTab(w);
 		const enqueue = vi.fn((t: { id: string }) => Promise.resolve(t.id === 't1' ? 'http://img/1.png' : ''));
-		(deps.posters as { enqueue: unknown }).enqueue = enqueue;
+		(posters as { enqueue: unknown }).enqueue = enqueue;
 		const fetched = cell('t1');
 		const skipped = cell('t2');
 		const unknownTitle = cell('zzz');

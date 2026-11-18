@@ -19,7 +19,7 @@ vi.mock('../../src/modules/dashboard/ui/DashboardTab', () => ({ DashboardTab: ta
 vi.mock('../../src/modules/custom-lists/ui/CustomListsTab', () => ({ CustomListsTab: tab('custom-lists', true) }));
 vi.mock('../../src/modules/log/ui/LogTab', () => ({ LogTab: tab('log', true) }));
 vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
-	AirtimeTab: tab('upcoming', true, { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 }),
+	AirtimeTab: { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 },
 }));
 vi.mock('../../src/modules/drafts/ui/DraftsTab', () => ({
 	DraftsTab: tab('drafts', true, { computePendingCount: () => Promise.resolve(0) }),
@@ -31,11 +31,13 @@ async function open(): Promise<HoardView> {
 	const WatchlistStub = tab('watchlist', true);
 	const ReadingStub = tab('reading', true);
 	const GamesStub = tab('games', true);
+	const AirtimeStub = tab('upcoming', true);
 	const deps = {
 		...hoardViewDeps(),
 		createListTab: () => new WatchlistStub(),
 		createReadingTab: () => new ReadingStub(),
 		createGamesTab: () => new GamesStub(),
+		createAirtimeTab: () => new AirtimeStub(),
 	} as never;
 	const view = new HoardView(new WorkspaceLeaf(), deps);
 	await view.onOpen();

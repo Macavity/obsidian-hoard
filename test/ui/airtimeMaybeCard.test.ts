@@ -2,15 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from '../__mocks__/obsidian';
 import { t } from '../../src/shared/i18n';
 import type { MaybeTitle } from '../../src/shared/domain/types';
-import { isoOffset, makeTab, newWorld } from './airtimeTab.harness';
+import { captures, isoOffset, makeTab, newWorld } from './airtimeTab.harness';
 
-const confirms = vi.hoisted<{ message: string; onConfirm: () => void }[]>(() => []);
-vi.mock('../../src/shared/ui/ConfirmModal', () => ({
-	ConfirmModal: class {
-		constructor(_app: unknown, message: string, onConfirm: () => void) { confirms.push({ message, onConfirm }); }
-		open(): void {}
-	},
-}));
+const confirms = captures.confirms;
 
 const open = vi.fn();
 beforeEach(() => {

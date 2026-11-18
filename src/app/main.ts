@@ -23,6 +23,7 @@ import { HoardView, HOARD_VIEW_TYPE, TabName, type HoardViewDeps } from './Hoard
 import { watchlistUi, type WatchlistUi } from './wiring/watchlist';
 import { readingUi, type ReadingUi } from './wiring/reading';
 import { gamesUi, type GamesUi } from './wiring/games';
+import { airtimeUi, type AirtimeUi } from './wiring/airtime';
 import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
 import { WidgetRenderer } from '../modules/widgets/ui/WidgetRenderer';
 import { HoardSettingsTab, type HoardSettingsTabDeps } from '../modules/settings/ui/SettingsTab';
@@ -136,6 +137,7 @@ export default class HoardPlugin extends Plugin {
 	private watchlist!: WatchlistUi;
 	private reading!: ReadingUi;
 	private games!: GamesUi;
+	private airtime!: AirtimeUi;
 	private coverRefresher!: CoverRefresher;
 	private widgetRenderer?: WidgetRenderer;
 
@@ -228,6 +230,16 @@ export default class HoardPlugin extends Plugin {
 			api: this.apiService,
 			resolveGameCover,
 			host,
+		});
+		this.airtime = airtimeUi({
+			app: this.app,
+			settings: this.settingsService,
+			titles: this.dataManager,
+			reading: this.readingDataManager,
+			games: this.gameDataManager,
+			api: this.apiService,
+			posters: this.posterService,
+			host: { ...host, markAirtimeHandled: (key) => this.markAirtimeHandled(key) },
 		});
 
 		this.startAirtimeScheduler();
@@ -352,19 +364,15 @@ export default class HoardPlugin extends Plugin {
 			app: this.app,
 			settings: this.settingsService,
 			titles: this.dataManager,
-			api: this.apiService,
-			posters: this.posterService,
 			history: this.historyManager,
-			getCardMinWidth: () => this.getCardMinWidth(),
-			isCardTextUnder: (tab) => this.isCardTextUnder(tab),
 			createListTab: (container) => this.watchlist.createListTab(container),
 			createReadingTab: (container) => this.reading.createReadingTab(container),
 			createGamesTab: (container) => this.games.createGamesTab(container),
+			createAirtimeTab: (container, setBadge) => this.airtime.createAirtimeTab(container, setBadge),
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
 			importRunning: () => this.importRunning,
 			listManager: this.listManager,
-			markAirtimeHandled: (key) => this.markAirtimeHandled(key),
 			openAdd: (opts) => openAddForTitle(this.addRouterDeps(), opts),
 		};
 	}

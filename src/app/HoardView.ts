@@ -2,7 +2,7 @@ import type { TabInstance } from '../shared/ui/TabInstance';
 import { ItemView, Platform, setIcon, WorkspaceLeaf } from 'obsidian';
 import { t, type TranslationKey } from '../shared/i18n';
 import { DashboardTab, type DashboardTabDeps } from '../modules/dashboard/ui/DashboardTab';
-import { AirtimeTab, type AirtimeTabDeps } from '../modules/airtime/ui/AirtimeTab';
+import { AirtimeTab } from '../modules/airtime/ui/AirtimeTab';
 import type { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../modules/games/services/GameDataManager';
 import { CustomListsTab, type CustomListsTabDeps } from '../modules/custom-lists/ui/CustomListsTab';
@@ -10,7 +10,6 @@ import { DraftsTab, type DraftsTabDeps } from '../modules/drafts/ui/DraftsTab';
 import { LogTab, type LogTabDeps } from '../modules/log/ui/LogTab';
 import type { SettingsReader, SettingsWriter } from '../shared/services/SettingsService';
 import type { DataManager } from '../modules/watchlist/services/DataManager';
-import type { CardStyleTab } from '../shared/domain/types';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';
 
@@ -21,12 +20,12 @@ export type TabName = 'dashboard' | 'watchlist' | 'upcoming' | 'reading' | 'game
  * own `<Tab>Deps`; a converted tab's deps are a supertype of this one, so `ctx.deps` passes straight in.
  */
 export interface HoardViewDeps
-	extends AirtimeTabDeps, DashboardTabDeps, CustomListsTabDeps, DraftsTabDeps, LogTabDeps {
+	extends DashboardTabDeps, CustomListsTabDeps, DraftsTabDeps, LogTabDeps {
 	settings: SettingsReader & SettingsWriter;
 	titles: DataManager;
 	history: LogTabDeps['history'];
-	api: AirtimeTabDeps['api'];
-	isCardTextUnder: (tab: CardStyleTab) => boolean;
+	/** Builds the Upcoming tab; wired in `src/app/wiring/airtime.ts`. */
+	createAirtimeTab: (container: HTMLElement, setBadge: (count: number) => void) => TabInstance;
 	/** Builds the Watchlist tab; wired in `src/app/wiring/watchlist.ts`. */
 	createListTab: (container: HTMLElement) => TabInstance;
 	/** Builds the Reading tab; wired in `src/app/wiring/reading.ts`. */
@@ -85,7 +84,7 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.upcoming',
 		icon: 'calendar',
 		cls: 'hoard-airtime',
-		create: (ctx) => new AirtimeTab(ctx.containerEl, ctx.deps, ctx.setBadge),
+		create: (ctx) => ctx.deps.createAirtimeTab(ctx.containerEl, ctx.setBadge),
 		badge: {
 			count: ({ titles, reading, games }) =>
 				AirtimeTab.getAiredDueCount(titles, reading, games) +

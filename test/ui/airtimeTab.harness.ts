@@ -1,5 +1,7 @@
 
+import { vi } from 'vitest';
 import { AirtimeTab } from '../../src/modules/airtime/ui/AirtimeTab';
+import { AirtimeScheduleModal } from '../../src/modules/airtime/ui/AirtimeScheduleModal';
 import { fakeSettings } from '../helpers/fakeSettings';
 import type { AirtimeEntry, Book, Game, HoardTitle, Manga } from '../../src/shared/domain/types';
 import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
@@ -11,6 +13,12 @@ export interface Captures {
 	readingModals: unknown[][];
 	gameModals: unknown[][];
 	forms: { form: unknown; opts: { onSave: () => Promise<void>; hint: (m: string) => string; timeNote: (time: string) => string } }[];
+}
+
+/** Where the spy dialogs record what the tab opened; `useCaptures` swaps in a test file's own arrays. */
+export const captures: Captures = { confirms: [], finders: [], readingModals: [], gameModals: [], forms: [] };
+export function useCaptures(own: Partial<Captures>): void {
+	Object.assign(captures, own);
 }
 
 export interface World {
@@ -90,25 +98,32 @@ export function makeTab(w: World) {
 		upcomingTrackerView: w.view ?? 'list',
 		showHintBanners: false,
 	});
-	const deps = {
-		app: {},
-		settings: settingsService,
-		titles: dm,
-		reading: rdm,
-		games: gdm,
-		api: {
-			getAnimeScheduleByMalId: () => (w.animeThrows
-				? Promise.reject(new Error('offline'))
-				: Promise.resolve(w.anime ?? null)),
+	const api = {
+		getAnimeScheduleByMalId: () => (w.animeThrows
+			? Promise.reject(new Error('offline'))
+			: Promise.resolve(w.anime ?? null)),
+	};
+	const posters = { clearQueue: () => {}, enqueue: () => Promise.resolve('') };
+	const host = { markAirtimeHandled: rec('markAirtimeHandled'), getCardMinWidth: () => 150, isCardTextUnder: () => true };
+	const modals = {
+		openMaybeAdd: vi.fn(),
+		openUpcomingFinder: (opts: { items: Captures['finders'][number]['items']; onSelect: (i: unknown) => void }) => {
+			captures.finders.push({ items: opts.items, onPick: opts.onSelect });
 		},
-		posters: { clearQueue: () => {}, enqueue: () => Promise.resolve('') },
-		markAirtimeHandled: rec('markAirtimeHandled'),
-		getCardMinWidth: () => 150,
-		isCardTextUnder: () => true,
+		// the recorded shape keeps the options at index 1, where the former constructor args had them
+		openReadingSchedule: (opts: unknown) => { captures.readingModals.push([null, opts]); },
+		openGameSchedule: (opts: unknown) => { captures.gameModals.push([null, opts]); },
+		// the real dialog, so its form capture in the ScheduleForm mock keeps working
+		openAirtimeSchedule: (opts: ConstructorParameters<typeof AirtimeScheduleModal>[1]) => {
+			new AirtimeScheduleModal({} as never, opts).open();
+		},
+		confirm: (message: string, onConfirm: () => void, extra?: { label: string; onClick: () => void }) => {
+			captures.confirms.push({ message, onConfirm, extra });
+		},
 	};
 	const container = document.createElement('div');
 	document.body.appendChild(container);
-	const tab = new AirtimeTab(container, deps as never, () => {});
+	const tab = new AirtimeTab(container, settingsService, dm as never, rdm, gdm as never, api, posters, host, modals, () => {});
 	const priv = tab as unknown as Record<'resolveEntry' | 'openAddFlow' | 'startAddWithTitle' | 'openEditWatchSchedule', (...a: unknown[]) => unknown>;
-	return { tab, priv, container, calls, dm, deps, settingsService, rdm, gdm };
+	return { tab, priv, container, calls, dm, posters, settingsService, rdm, gdm };
 }

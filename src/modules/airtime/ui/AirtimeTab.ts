@@ -1,5 +1,5 @@
 import type { TabInstance } from '../../../shared/ui/TabInstance';
-import { App, Notice } from 'obsidian';
+import { Notice } from 'obsidian';
 import { t } from '../../../shared/i18n';
 import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
 import { monthName } from '../../../shared/ui/dateNames';
@@ -18,13 +18,12 @@ import { VirtualGrid, computeGridMetrics, type GridMetrics } from '../../../shar
 import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
 import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
 import { openCardMenu } from '../../../shared/ui/PosterCard';
-import { ConfirmModal, confirmWith } from '../../../shared/ui/ConfirmModal';
-import { MaybeAddModal, type MaybeAddStore } from './MaybeAddModal';
-import { ReadingScheduleModal } from './ReadingScheduleModal';
-import { GameScheduleModal } from './GameScheduleModal';
-import { AirtimeScheduleModal } from './AirtimeScheduleModal';
-import { UpcomingFinderModal, type UpcomingFinderItem } from './UpcomingFinderModal';
-import type { TitleSearchApi } from '../../watchlist/ui/titleSearch';
+import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
+import type { OpenMaybeAdd } from './MaybeAddModal';
+import type { OpenReadingSchedule } from './ReadingScheduleModal';
+import type { OpenGameSchedule } from './GameScheduleModal';
+import type { OpenAirtimeSchedule } from './AirtimeScheduleModal';
+import type { OpenUpcomingFinder, UpcomingFinderItem } from './UpcomingFinderModal';
 import { renderAddButton, renderSelectAllButton, renderViewDropdown } from '../../../shared/ui/TabToolbar';
 import { renderTypeBadge } from '../../../shared/ui/typeBadge';
 import { renderActionBar } from '../../../shared/ui/ActionBar';
@@ -258,18 +257,21 @@ function showTrackerCover(card: HTMLElement, img: HTMLImageElement, src: string)
 
 // AirtimeTab
 
-export interface AirtimeTabDeps {
-	app: App;
-	settings: SettingsReader & SettingsWriter;
-	titles: DataManager & MaybeAddStore;
-	reading: Pick<ReadingDataManager, 'getBook' | 'getManga' | 'getBooks' | 'getMangaList' | 'updateBook' | 'updateManga'>;
-	games: Pick<GameDataManager, 'getGame' | 'getGames' | 'getSettings' | 'updateGame'>;
-	api: TitleSearchApi & Pick<ApiService, 'getAnimeScheduleByMalId'>;
-	posters: Pick<PosterService, 'clearQueue' | 'enqueue'>;
-	getCardMinWidth: () => number;
-	isCardTextUnder: (tab: 'upcoming') => boolean;
+export interface AirtimeTabHost {
+	getCardMinWidth(): number;
+	isCardTextUnder(tab: 'upcoming'): boolean;
 	/** Keeps the background scheduler from notifying again for an airing the user just handled. */
-	markAirtimeHandled: (key: string) => void;
+	markAirtimeHandled(key: string): void;
+}
+
+/** The dialogs the Upcoming tab opens; the wiring layer builds them, so the tab needs none of their collaborators. */
+export interface AirtimeTabModals {
+	openMaybeAdd: OpenMaybeAdd;
+	openUpcomingFinder: OpenUpcomingFinder;
+	openGameSchedule: OpenGameSchedule;
+	openReadingSchedule: OpenReadingSchedule;
+	openAirtimeSchedule: OpenAirtimeSchedule;
+	confirm: OpenConfirm;
 }
 
 export class AirtimeTab implements TabInstance {
@@ -299,12 +301,19 @@ export class AirtimeTab implements TabInstance {
 
 	constructor(
 		container: HTMLElement,
-		private deps: AirtimeTabDeps,
+		private readonly settings: SettingsReader & SettingsWriter,
+		private readonly titles: DataManager,
+		private readonly reading: Pick<ReadingDataManager, 'getBook' | 'getManga' | 'getBooks' | 'getMangaList' | 'updateBook' | 'updateManga'>,
+		private readonly games: Pick<GameDataManager, 'getGame' | 'getGames' | 'getSettings' | 'updateGame'>,
+		private readonly api: Pick<ApiService, 'getAnimeScheduleByMalId'>,
+		private readonly posters: Pick<PosterService, 'clearQueue' | 'enqueue'>,
+		private readonly host: AirtimeTabHost,
+		private readonly modals: AirtimeTabModals,
 		onCountChange?: (count: number) => void,
 	) {
 		this.container = container;
 		this.onCountChange = onCountChange;
-		this.trackerView = deps.settings.get().upcomingTrackerView === 'cards' ? 'cards' : 'list';
+		this.trackerView = settings.get().upcomingTrackerView === 'cards' ? 'cards' : 'list';
 	}
 
 	/**
@@ -320,7 +329,7 @@ export class AirtimeTab implements TabInstance {
 	private resolveReadingEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
 		const kind = entry.readingKind ?? 'book';
 		const item: Book | Manga | undefined =
-			kind === 'book' ? this.deps.reading.getBook(entry.titleId) : this.deps.reading.getManga(entry.titleId);
+			kind === 'book' ? this.reading.getBook(entry.titleId) : this.reading.getManga(entry.titleId);
 		if (!item) return null;
 		const totalUnits = entry.totalEpisodes ?? item.totalChapters ?? 0;
 		return {
@@ -329,8 +338,8 @@ export class AirtimeTab implements TabInstance {
 			title: item.title,
 			typeName: kind === 'book' ? 'Book' : 'Manga',
 			typeLabel: t(`airtime.type.${kind}`),
-			typeColor: this.deps.settings.get().coloredTypeBadges
-				? getReadingTypeColor(kind, this.deps.settings.get())
+			typeColor: this.settings.get().coloredTypeBadges
+				? getReadingTypeColor(kind, this.settings.get())
 				: null,
 			externalLink: item.externalLink ?? '',
 			// the schedule's mode decides single vs recurring — a multi-chapter item scheduled as a one-off
@@ -345,7 +354,7 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	private resolveGameEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
-		const game = this.deps.games.getGame(entry.titleId);
+		const game = this.games.getGame(entry.titleId);
 		if (!game) return null;
 		return {
 			source: 'game',
@@ -363,15 +372,15 @@ export class AirtimeTab implements TabInstance {
 			unit: 'release',
 			group: 'season',
 			next: 'nextGame',
-			planStatus: this.deps.games.getSettings().defaultStatus || 'Not started',
+			planStatus: this.games.getSettings().defaultStatus || 'Not started',
 		};
 	}
 
 	private resolveWatchEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
-		const title = this.deps.titles.getTitle(entry.titleId);
+		const title = this.titles.getTitle(entry.titleId);
 		if (!title) return null;
-		const typeDef = this.deps.settings.get().types.find((t) => t.name === title.type);
-		const colored = this.deps.settings.get().coloredTypeBadges;
+		const typeDef = this.settings.get().types.find((t) => t.name === title.type);
+		const colored = this.settings.get().coloredTypeBadges;
 		return {
 			source: 'watchlist',
 			id: title.id,
@@ -379,7 +388,7 @@ export class AirtimeTab implements TabInstance {
 			typeName: title.type,
 			typeLabel: typeLabel(title.type),
 			typeColor: colored && typeDef
-				? getThemedColor(title.type, typeDef.color, this.deps.settings.get().colorTheme)
+				? getThemedColor(title.type, typeDef.color, this.settings.get().colorTheme)
 				: null,
 			externalLink: title.externalLink,
 			// same rule as reading: the schedule's mode decides, so a series set to "Single release" gets the
@@ -453,7 +462,7 @@ export class AirtimeTab implements TabInstance {
 		this.container.empty();
 		this.container.addClass('hoard-airtime');
 		if (this.onCountChange) {
-			this.onCountChange(AirtimeTab.getAiredDueCount(this.deps.titles, this.deps.reading, this.deps.games) + AirtimeTab.getMaybeDueCount(this.deps.titles));
+			this.onCountChange(AirtimeTab.getAiredDueCount(this.titles, this.reading, this.games) + AirtimeTab.getMaybeDueCount(this.titles));
 		}
 		this.renderInnerTabBar();
 		if (this.currentSubTab === 'tracker') {
@@ -467,8 +476,8 @@ export class AirtimeTab implements TabInstance {
 
 	private renderInnerTabBar(): void {
 		const bar = this.container.createDiv({ cls: 'hoard-inner-tabs' });
-		const trackerCount = AirtimeTab.getAiredDueCount(this.deps.titles, this.deps.reading, this.deps.games);
-		const maybeCount = AirtimeTab.getMaybeDueCount(this.deps.titles);
+		const trackerCount = AirtimeTab.getAiredDueCount(this.titles, this.reading, this.games);
+		const maybeCount = AirtimeTab.getMaybeDueCount(this.titles);
 		const tabs: Array<{ key: 'tracker' | 'history' | 'maybe'; label: string; badge: number }> = [
 			{ key: 'tracker', label: t('airtime.tabs.tracker'), badge: trackerCount },
 			{ key: 'history', label: t('app.tabs.log'), badge: 0 },
@@ -492,7 +501,7 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	private renderTracker(): void {
-		if (this.deps.settings.get().showHintBanners) {
+		if (this.settings.get().showHintBanners) {
 			this.container.createDiv({
 				cls: 'hoard-custom-lists__draft-banner',
 				text: `⚠ ${t('airtime.hint', { status: statusLabel('To be released') })}`,
@@ -516,7 +525,7 @@ export class AirtimeTab implements TabInstance {
 		cutoff.setMonth(cutoff.getMonth() - 6);
 		const cutoffStr = toIsoDate(cutoff);
 
-		const pastTitles = this.deps.titles.getTitles()
+		const pastTitles = this.titles.getTitles()
 			.filter((t) => !!t.releaseDate && t.releaseDate <= todayStr && t.releaseDate >= cutoffStr)
 			.sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''));
 
@@ -538,7 +547,7 @@ export class AirtimeTab implements TabInstance {
 		left.createDiv({ cls: 'hoard-airtime__card-title', text: title.title });
 
 		const metaRow = left.createDiv({ cls: 'hoard-airtime__card-meta' });
-		renderTypeBadge(metaRow, title.type, this.deps.settings.get());
+		renderTypeBadge(metaRow, title.type, this.settings.get());
 		if (title.releaseDate) {
 			metaRow.createSpan({ cls: 'hoard-airtime__schedule', text: formatDateDisplay(title.releaseDate) });
 		}
@@ -561,14 +570,14 @@ export class AirtimeTab implements TabInstance {
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			new ConfirmModal(this.deps.app, t('airtime.confirm.removeWatchlist', { title: title.title }), () => {
-				void this.deps.titles.removeTitle(title.id).then(() => this.render());
-			}).open();
+			this.modals.confirm(t('airtime.confirm.removeWatchlist', { title: title.title }), () => {
+				void this.titles.removeTitle(title.id).then(() => this.render());
+			});
 		});
 	}
 
 	private renderMaybe(): void {
-		const maybeTitles = this.deps.titles.getMaybeTitles();
+		const maybeTitles = this.titles.getMaybeTitles();
 
 		const headerEl = this.container.createDiv({ cls: 'hoard-list__header' });
 		if (maybeTitles.length > 0) {
@@ -577,7 +586,7 @@ export class AirtimeTab implements TabInstance {
 		const controls = headerEl.createDiv({ cls: 'hoard-toolbar__controls' });
 		const rightGroup = controls.createDiv({ cls: 'hoard-toolbar__controls-right' });
 		renderAddButton(rightGroup, () => {
-			new MaybeAddModal(this.deps.app, this.deps.settings, this.deps.api, this.deps.titles, { onAdded: () => this.render() }).open();
+			this.modals.openMaybeAdd({ onAdded: () => this.render() });
 		});
 
 		if (maybeTitles.length === 0) {
@@ -616,7 +625,7 @@ export class AirtimeTab implements TabInstance {
 
 		left.createSpan({ cls: 'hoard-maybe-card__title', text: mt.title });
 
-		renderTypeBadge(left, mt.type, this.deps.settings.get());
+		renderTypeBadge(left, mt.type, this.settings.get());
 
 		const pillClsMap: Record<DetailedCountdown['kind'], string> = {
 			'today-before': 'hoard-airtime__pill hoard-airtime__pill--today-series',
@@ -641,9 +650,9 @@ export class AirtimeTab implements TabInstance {
 		});
 		deleteBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			new ConfirmModal(this.deps.app, t('airtime.confirm.removeMaybe', { title: mt.title }), () => {
-				void this.deps.titles.removeMaybeTitle(mt.id).then(() => this.render());
-			}).open();
+			this.modals.confirm(t('airtime.confirm.removeMaybe', { title: mt.title }), () => {
+				void this.titles.removeMaybeTitle(mt.id).then(() => this.render());
+			});
 		});
 	}
 
@@ -685,7 +694,7 @@ export class AirtimeTab implements TabInstance {
 		const header = this.container.createDiv({ cls: 'hoard-list__header' });
 
 		// only entries that still resolve to a watchlist or reading item
-		const count = this.deps.titles.getAirtimeEntries().filter(
+		const count = this.titles.getAirtimeEntries().filter(
 			(e) => this.resolveEntry(e) !== null,
 		).length;
 		if (count > 0) {
@@ -704,7 +713,7 @@ export class AirtimeTab implements TabInstance {
 				if (this.selectedItems.size > 0) {
 					this.selectedItems.clear();
 				} else {
-					for (const entry of this.deps.titles.getAirtimeEntries()) {
+					for (const entry of this.titles.getAirtimeEntries()) {
 						this.selectedItems.add(entry.id);
 					}
 				}
@@ -746,19 +755,19 @@ export class AirtimeTab implements TabInstance {
 			onSelect: (key) => {
 				this.trackerView = key;
 				this._trackerPersistentScrollTop = 0;
-				void this.deps.settings.update((s) => { s.upcomingTrackerView = key; });
+				void this.settings.update((s) => { s.upcomingTrackerView = key; });
 				this.render();
 			},
 		});
 	}
 
 	private renderActionBar(parent: HTMLElement): void {
-		renderActionBar(parent, confirmWith(this.deps.app), {
+		renderActionBar(parent, this.modals.confirm, {
 			title: t('airtime.actions.removeFromUpcoming'),
 			selected: this.selectedItems,
 			message: (count) => t('airtime.confirm.removeSelected', { count }),
 			onConfirm: async () => {
-				await this.deps.titles.removeAirtimeEntriesBatch(Array.from(this.selectedItems));
+				await this.titles.removeAirtimeEntriesBatch(Array.from(this.selectedItems));
 				this.selectedItems.clear();
 				this.render();
 			},
@@ -768,7 +777,7 @@ export class AirtimeTab implements TabInstance {
 	// Add flow
 
 	private openAddFlow(): void {
-		const entries = this.deps.titles.getAirtimeEntries();
+		const entries = this.titles.getAirtimeEntries();
 		// already-added keys, kept per source so a watchlist id and a reading id that happen to match
 		// don't shadow each other
 		const addedWatch = new Set(entries.filter((e) => e.source === undefined || e.source === 'watchlist').map((e) => e.titleId));
@@ -776,27 +785,27 @@ export class AirtimeTab implements TabInstance {
 		const addedGame = new Set(entries.filter((e) => e.source === 'game').map((e) => e.titleId));
 
 		const items: UpcomingFinderItem[] = [];
-		for (const t of this.deps.titles.getTitles()) {
+		for (const t of this.titles.getTitles()) {
 			if (addedWatch.has(t.id)) continue;
 			items.push({ source: 'watchlist', id: t.id, title: t.title, typeLabel: typeLabel(t.type) });
 		}
-		for (const b of this.deps.reading.getBooks()) {
+		for (const b of this.reading.getBooks()) {
 			if (addedReading.has(b.id)) continue;
 			items.push({ source: 'reading', kind: 'book', id: b.id, title: b.title, typeLabel: t('airtime.type.book') });
 		}
-		for (const m of this.deps.reading.getMangaList()) {
+		for (const m of this.reading.getMangaList()) {
 			if (addedReading.has(m.id)) continue;
 			items.push({ source: 'reading', kind: 'manga', id: m.id, title: m.title, typeLabel: t('airtime.type.manga') });
 		}
-		for (const g of this.deps.games.getGames()) {
+		for (const g of this.games.getGames()) {
 			if (addedGame.has(g.id)) continue;
 			items.push({ source: 'game', id: g.id, title: g.title, typeLabel: t('airtime.type.game') });
 		}
 
-		if (this.deps.titles.getTitles().length === 0 &&
-			this.deps.reading.getBooks().length === 0 &&
-			this.deps.reading.getMangaList().length === 0 &&
-			this.deps.games.getGames().length === 0) {
+		if (this.titles.getTitles().length === 0 &&
+			this.reading.getBooks().length === 0 &&
+			this.reading.getMangaList().length === 0 &&
+			this.games.getGames().length === 0) {
 			new Notice(t('airtime.notices.noTitles'));
 			return;
 		}
@@ -805,21 +814,21 @@ export class AirtimeTab implements TabInstance {
 			return;
 		}
 
-		new UpcomingFinderModal(this.deps.app, { items, onSelect: (item) => {
+		this.modals.openUpcomingFinder({ items, onSelect: (item) => {
 			if (item.source === 'reading') {
 				const kind = item.kind ?? 'book';
 				const readItem = kind === 'book'
-					? this.deps.reading.getBook(item.id)
-					: this.deps.reading.getManga(item.id);
+					? this.reading.getBook(item.id)
+					: this.reading.getManga(item.id);
 				if (readItem) this.startAddWithReading(readItem, kind);
 			} else if (item.source === 'game') {
-				const game = this.deps.games.getGame(item.id);
+				const game = this.games.getGame(item.id);
 				if (game) this.startAddWithGame(game);
 			} else {
-				const title = this.deps.titles.getTitle(item.id);
+				const title = this.titles.getTitle(item.id);
 				if (title) void this.startAddWithTitle(title);
 			}
-		} }).open();
+		} });
 	}
 
 	private startAddWithGame(game: Game): void {
@@ -828,18 +837,18 @@ export class AirtimeTab implements TabInstance {
 				? { recurrence: 'once', releaseDate: game.releaseDate }
 				: null;
 
-		new GameScheduleModal(this.deps.app, { game, existingSchedule: prefilled, onSave: async (schedule) => {
+		this.modals.openGameSchedule({ game, existingSchedule: prefilled, onSave: async (schedule) => {
 			const entry: AirtimeEntry = {
-				id: this.deps.titles.generateGameAirtimeId(game.id),
+				id: this.titles.generateGameAirtimeId(game.id),
 				titleId: game.id,
 				source: 'game',
 				schedule,
 				dateAdded: new Date().toISOString(),
 			};
-			await this.deps.titles.addAirtimeEntry(entry);
+			await this.titles.addAirtimeEntry(entry);
 			await this.syncGameFromSchedule(game.id, schedule);
 			this.render();
-		} }).open();
+		} });
 	}
 
 	/**
@@ -847,13 +856,13 @@ export class AirtimeTab implements TabInstance {
 	 * doesn't auto-remove the just-added entry.
 	 */
 	private async syncGameFromSchedule(gameId: string, schedule: AirtimeSchedule): Promise<void> {
-		const g = this.deps.games.getGame(gameId);
+		const g = this.games.getGame(gameId);
 		if (!g) return;
 		if (schedule.recurrence === 'once' && isReleaseDateFuture(schedule.releaseDate)) {
 			const newDate = schedule.releaseDate ?? null;
 			if (g.releaseDate !== newDate) {
 				g.releaseDate = newDate;
-				await this.deps.games.updateGame(g);
+				await this.games.updateGame(g);
 			}
 		}
 	}
@@ -864,7 +873,7 @@ export class AirtimeTab implements TabInstance {
 				? { recurrence: 'once', releaseDate: item.releaseDate }
 				: null;
 
-		new ReadingScheduleModal(this.deps.app, {
+		this.modals.openReadingSchedule({
 			item,
 			kind,
 			existingSchedule: prefilled,
@@ -874,7 +883,7 @@ export class AirtimeTab implements TabInstance {
 			totalChapters: null,
 			onSave: async (schedule, volume, chapter, totalVolumes, totalChapters) => {
 				const entry: AirtimeEntry = {
-					id: this.deps.titles.generateReadingAirtimeId(item.id),
+					id: this.titles.generateReadingAirtimeId(item.id),
 					titleId: item.id,
 					source: 'reading',
 					readingKind: kind,
@@ -885,11 +894,11 @@ export class AirtimeTab implements TabInstance {
 					totalEpisodes: totalChapters ?? undefined,
 					dateAdded: new Date().toISOString(),
 				};
-				await this.deps.titles.addAirtimeEntry(entry);
+				await this.titles.addAirtimeEntry(entry);
 				await this.syncReadingItemFromSchedule(item.id, kind, schedule, totalVolumes, totalChapters);
 				this.render();
 			},
-		}).open();
+		});
 	}
 
 	/** Pushes schedule-derived totals / release date back onto the reading item. */
@@ -901,7 +910,7 @@ export class AirtimeTab implements TabInstance {
 		totalChapters: number | null,
 	): Promise<void> {
 		if (kind === 'book') {
-			const b = this.deps.reading.getBook(itemId);
+			const b = this.reading.getBook(itemId);
 			if (!b) return;
 			let changed = false;
 			if (totalChapters !== null && totalChapters !== b.totalChapters) { b.totalChapters = totalChapters; changed = true; }
@@ -911,9 +920,9 @@ export class AirtimeTab implements TabInstance {
 				const newDate = schedule.releaseDate ?? null;
 				if (b.releaseDate !== newDate) { b.releaseDate = newDate; changed = true; }
 			}
-			if (changed) await this.deps.reading.updateBook(b);
+			if (changed) await this.reading.updateBook(b);
 		} else {
-			const m = this.deps.reading.getManga(itemId);
+			const m = this.reading.getManga(itemId);
 			if (!m) return;
 			let changed = false;
 			if (totalChapters !== null && totalChapters !== m.totalChapters) { m.totalChapters = totalChapters; changed = true; }
@@ -924,7 +933,7 @@ export class AirtimeTab implements TabInstance {
 				const newDate = schedule.releaseDate ?? null;
 				if (m.releaseDate !== newDate) { m.releaseDate = newDate; changed = true; }
 			}
-			if (changed) await this.deps.reading.updateManga(m);
+			if (changed) await this.reading.updateManga(m);
 		}
 	}
 
@@ -933,27 +942,27 @@ export class AirtimeTab implements TabInstance {
 		if (r.source === 'reading') {
 			const kind = entry.readingKind ?? 'book';
 			if (kind === 'book') {
-				const b = this.deps.reading.getBook(entry.titleId);
-				if (b && b.status === 'To be released') { b.status = 'Plan to Read'; await this.deps.reading.updateBook(b); }
+				const b = this.reading.getBook(entry.titleId);
+				if (b && b.status === 'To be released') { b.status = 'Plan to Read'; await this.reading.updateBook(b); }
 			} else {
-				const m = this.deps.reading.getManga(entry.titleId);
-				if (m && m.status === 'To be released') { m.status = 'Plan to Read'; await this.deps.reading.updateManga(m); }
+				const m = this.reading.getManga(entry.titleId);
+				if (m && m.status === 'To be released') { m.status = 'Plan to Read'; await this.reading.updateManga(m); }
 			}
 		} else if (r.source === 'game') {
-			const g = this.deps.games.getGame(entry.titleId);
+			const g = this.games.getGame(entry.titleId);
 			if (g && g.status === GAME_AUTO_STATUS) {
-				g.status = this.deps.games.getSettings().defaultStatus || 'Not started';
-				await this.deps.games.updateGame(g);
+				g.status = this.games.getSettings().defaultStatus || 'Not started';
+				await this.games.updateGame(g);
 			}
 		} else {
-			const t = this.deps.titles.getTitle(entry.titleId);
-			if (t && t.status === 'To be released') { t.status = 'Plan to watch'; await this.deps.titles.updateTitle(t); }
+			const t = this.titles.getTitle(entry.titleId);
+			if (t && t.status === 'To be released') { t.status = 'Plan to watch'; await this.titles.updateTitle(t); }
 		}
 	}
 
 	/** Pushes the schedule-derived episode total and (single release) release date back onto the Watchlist title. */
 	private async syncTitleFromSchedule(titleId: string, schedule: AirtimeSchedule, totalEpisodes: number | null): Promise<void> {
-		const title = this.deps.titles.getTitle(titleId);
+		const title = this.titles.getTitle(titleId);
 		if (!title) return;
 		let changed = false;
 		if (totalEpisodes !== null && totalEpisodes !== title.totalEpisodes) {
@@ -967,7 +976,7 @@ export class AirtimeTab implements TabInstance {
 				changed = true;
 			}
 		}
-		if (changed) await this.deps.titles.updateTitle(title);
+		if (changed) await this.titles.updateTitle(title);
 	}
 
 	private async startAddWithTitle(title: HoardTitle): Promise<void> {
@@ -976,7 +985,7 @@ export class AirtimeTab implements TabInstance {
 		// try Jikan auto-fill for Anime with a known malId
 		if (title.type === 'Anime' && title.malId) {
 			try {
-				const sched = await this.deps.api.getAnimeScheduleByMalId(title.malId);
+				const sched = await this.api.getAnimeScheduleByMalId(title.malId);
 				if (sched) {
 					prefilled = { recurrence: 'weekly', dayOfWeek: sched.dayOfWeek, releaseTime: sched.time };
 					new Notice(t('airtime.notices.autoFilled'));
@@ -990,7 +999,7 @@ export class AirtimeTab implements TabInstance {
 			prefilled = { recurrence: 'once', releaseDate: title.releaseDate };
 		}
 
-		new AirtimeScheduleModal(this.deps.app, {
+		this.modals.openAirtimeSchedule({
 			title,
 			existingSchedule: prefilled,
 			currentSeason: null,
@@ -999,7 +1008,7 @@ export class AirtimeTab implements TabInstance {
 			totalEpisodes: null,
 			onSave: async (schedule, season, episode, totalSeasons, totalEpisodes) => {
 				const entry: AirtimeEntry = {
-					id: this.deps.titles.generateAirtimeId(title.id),
+					id: this.titles.generateAirtimeId(title.id),
 					titleId: title.id,
 					schedule,
 					currentSeason: season ?? undefined,
@@ -1008,13 +1017,13 @@ export class AirtimeTab implements TabInstance {
 					totalEpisodes: totalEpisodes ?? undefined,
 					dateAdded: new Date().toISOString(),
 				};
-				await this.deps.titles.addAirtimeEntry(entry);
+				await this.titles.addAirtimeEntry(entry);
 
 				await this.syncTitleFromSchedule(title.id, schedule, totalEpisodes);
 
 				this.render();
 			},
-		}).open();
+		});
 	}
 
 	// Card list
@@ -1025,7 +1034,7 @@ export class AirtimeTab implements TabInstance {
 	 */
 	private computeTrackerCardData(): TrackerCardData[] {
 		const q = this.searchQuery.trim().toLowerCase();
-		return this.deps.titles.getAirtimeEntries()
+		return this.titles.getAirtimeEntries()
 			.map((entry) => {
 				const r = this.resolveEntry(entry);
 				if (!r) return null;
@@ -1062,7 +1071,7 @@ export class AirtimeTab implements TabInstance {
 
 	/** Card data to render, or null after the matching empty state has been shown. */
 	private trackerCardDataOrEmpty(): TrackerCardData[] | null {
-		if (this.deps.titles.getAirtimeEntries().length === 0) {
+		if (this.titles.getAirtimeEntries().length === 0) {
 			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.tracker') });
 			return null;
 		}
@@ -1205,12 +1214,12 @@ export class AirtimeTab implements TabInstance {
 
 	/** Removes what the card shows: a derived card clears the release date, a manual schedule only itself. */
 	private confirmRemove(entry: AirtimeEntry, r: ResolvedUpcoming): void {
-		const msg = this.deps.titles.removeClearsReleaseDate(entry)
+		const msg = this.titles.removeClearsReleaseDate(entry)
 			? t('airtime.confirm.removeUpcomingClear', { title: r.title })
 			: t('airtime.confirm.removeUpcoming', { title: r.title });
-		new ConfirmModal(this.deps.app, msg, () => {
-			void this.deps.titles.removeAirtimeEntry(entry.id).then(() => this.render());
-		}).open();
+		this.modals.confirm(msg, () => {
+			void this.titles.removeAirtimeEntry(entry.id).then(() => this.render());
+		});
 	}
 
 	/** Tick confirm + apply, shared by the List row button and the Cards overlay button/menu. */
@@ -1223,7 +1232,7 @@ export class AirtimeTab implements TabInstance {
 			totalEps > 0 &&
 			entry.currentEpisode >= totalEps;
 
-		const confirmMsg = tickConfirmMessage(r, entry.currentEpisode, isFinalEpisode, this.deps.titles.isAiringTracked(entry));
+		const confirmMsg = tickConfirmMessage(r, entry.currentEpisode, isFinalEpisode, this.titles.isAiringTracked(entry));
 
 		// single releases get an escape hatch: a due title that turns out to be a serial jumps into the
 		// schedule modal in Recurring mode instead of being removed. Games have no recurring units.
@@ -1237,27 +1246,27 @@ export class AirtimeTab implements TabInstance {
 			}
 			: undefined;
 
-		new ConfirmModal(this.deps.app, confirmMsg, () => {
+		this.modals.confirm(confirmMsg, () => {
 			void (async () => {
 				const today = new Date();
 				const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 				// prevent a scheduler double-fire for the same airtime
-				this.deps.markAirtimeHandled(`${entry.id}-${todayStr}`);
+				this.host.markAirtimeHandled(`${entry.id}-${todayStr}`);
 
 				if (isMovie) {
 					// a derived premiere card goes with the status change; its release date stays
-					if (!this.deps.titles.removeClearsReleaseDate(entry)) await this.deps.titles.removeAirtimeEntry(entry.id);
+					if (!this.titles.removeClearsReleaseDate(entry)) await this.titles.removeAirtimeEntry(entry.id);
 					await this.revertToBeReleasedStatus(entry, r);
 				} else if (isFinalEpisode) {
 					// final unit: remove from Upcoming, do NOT change status
-					await this.deps.titles.removeAirtimeEntry(entry.id);
+					await this.titles.removeAirtimeEntry(entry.id);
 				} else {
 					// non-final: acknowledge so the countdown resets; without an API pointer also advance the unit
-					await this.deps.titles.tickAirtimeEntry(entry, todayStr);
+					await this.titles.tickAirtimeEntry(entry, todayStr);
 				}
 				this.render();
 			})();
-		}, extraButton).open();
+		}, extraButton);
 	}
 
 	// Cards view (poster grid, month-grouped)
@@ -1340,8 +1349,8 @@ export class AirtimeTab implements TabInstance {
 	 * the card text style is 'under'; in 'inside' mode the cell is the bare 2:3 card.
 	 */
 	private trackerMetrics(containerWidth: number): GridMetrics {
-		const base = computeGridMetrics(containerWidth, this.deps.getCardMinWidth());
-		if (!this.deps.isCardTextUnder('upcoming')) return base;
+		const base = computeGridMetrics(containerWidth, this.host.getCardMinWidth());
+		if (!this.host.isCardTextUnder('upcoming')) return base;
 		const cardHeight = base.cardHeight + AirtimeTab.TRACKER_CARD_TEXT_H;
 		return { cols: base.cols, cardWidth: base.cardWidth, cardHeight, rowHeight: cardHeight + 12 };
 	}
@@ -1352,7 +1361,7 @@ export class AirtimeTab implements TabInstance {
 		this.trackerObserver?.destroy();
 		this.trackerObserver = null;
 		// same hygiene as the Watchlist Cards teardown: stale pending fetches would just be re-enqueued
-		this.deps.posters.clearQueue();
+		this.posters.clearQueue();
 	}
 
 	// Cards view: single card
@@ -1392,7 +1401,7 @@ export class AirtimeTab implements TabInstance {
 		// text block: below the poster ('under') or overlaid at its bottom ('inside', the classic
 		// Watchlist overlay). Built before the corner buttons so an overlay paints below them (later
 		// absolute siblings win).
-		const info = this.deps.isCardTextUnder('upcoming')
+		const info = this.host.isCardTextUnder('upcoming')
 			? cell.createDiv({ cls: 'hoard-tracker__card-info' })
 			: card.createDiv({ cls: 'hoard-card__overlay hoard-tracker__card-overlay' });
 		info.createDiv({ cls: 'hoard-tracker__card-title', text: r.title });
@@ -1463,17 +1472,17 @@ export class AirtimeTab implements TabInstance {
 	/** Placeholder colour: the type colour regardless of the colored-badges setting. */
 	private trackerPlaceholderColor(entry: AirtimeEntry, r: ResolvedUpcoming): string {
 		if (entry.source === 'reading') {
-			return getReadingTypeColor(entry.readingKind ?? 'book', this.deps.settings.get());
+			return getReadingTypeColor(entry.readingKind ?? 'book', this.settings.get());
 		}
 		if (entry.source === 'game') {
 			// the Games-tab placeholder colour: the game's genre colour
-			const game = this.deps.games.getGame(entry.titleId);
-			return this.deps.games.getSettings().types
+			const game = this.games.getGame(entry.titleId);
+			return this.games.getSettings().types
 				.find((t) => t.name === game?.type)?.color ?? '#888780';
 		}
-		const typeDef = this.deps.settings.get().types.find((t) => t.name === r.typeName);
+		const typeDef = this.settings.get().types.find((t) => t.name === r.typeName);
 		return typeDef
-			? getThemedColor(r.typeName, typeDef.color, this.deps.settings.get().colorTheme)
+			? getThemedColor(r.typeName, typeDef.color, this.settings.get().colorTheme)
 			: '#888780';
 	}
 
@@ -1482,12 +1491,12 @@ export class AirtimeTab implements TabInstance {
 		if (entry.source === 'reading') {
 			// reading items carry their cover directly — no lazy fetch machinery
 			const item = entry.readingKind === 'manga'
-				? this.deps.reading.getManga(entry.titleId)
-				: this.deps.reading.getBook(entry.titleId);
+				? this.reading.getManga(entry.titleId)
+				: this.reading.getBook(entry.titleId);
 			showTrackerCover(card, img, item?.coverUrl ?? '');
 		} else if (entry.source === 'game') {
 			// games also carry their cover directly (RAWG-resized like the Games tab)
-			const cover = this.deps.games.getGame(entry.titleId)?.coverUrl ?? '';
+			const cover = this.games.getGame(entry.titleId)?.coverUrl ?? '';
 			showTrackerCover(card, img, cover.startsWith('http') ? rawgResizedCover(cover) : '');
 		} else {
 			this.loadWatchPoster(cell, card, img, entry);
@@ -1495,7 +1504,7 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	private loadWatchPoster(cell: HTMLElement, card: HTMLElement, img: HTMLImageElement, entry: AirtimeEntry): void {
-		const title = this.deps.titles.getTitle(entry.titleId);
+		const title = this.titles.getTitle(entry.titleId);
 		if (!title) return;
 		cell.dataset.titleId = title.id;
 		const display = getDisplayPoster(title);
@@ -1543,15 +1552,15 @@ export class AirtimeTab implements TabInstance {
 			const titleId = cell.dataset.titleId;
 			if (!titleId) continue;
 
-			const title = this.deps.titles.getTitle(titleId);
+			const title = this.titles.getTitle(titleId);
 			if (!title) continue;
 			// same gate as the Watchlist cards
-			if (!this.deps.titles.lookupDue(title.id, 'poster')) continue;
+			if (!this.titles.lookupDue(title.id, 'poster')) continue;
 
 			const placeholder = cell.querySelector('.hoard-card__poster-placeholder');
 			placeholder?.addClass('is-loading');
 
-			void this.deps.posters.enqueue(title).then((url) => {
+			void this.posters.enqueue(title).then((url) => {
 				placeholder?.removeClass('is-loading');
 				if (!url) return;
 				const card = cell.querySelector<HTMLElement>('.hoard-card');
@@ -1564,9 +1573,9 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	private openEditWatchSchedule(entry: AirtimeEntry, initialMode?: 'single' | 'recurring'): void {
-		const title = this.deps.titles.getTitle(entry.titleId);
+		const title = this.titles.getTitle(entry.titleId);
 		if (!title) return;
-		new AirtimeScheduleModal(this.deps.app, {
+		this.modals.openAirtimeSchedule({
 			title,
 			existingSchedule: { ...entry.schedule },
 			currentSeason: entry.currentSeason ?? null,
@@ -1579,33 +1588,33 @@ export class AirtimeTab implements TabInstance {
 				entry.currentEpisode = episode ?? undefined;
 				entry.totalSeasons = totalSeasons ?? undefined;
 				entry.totalEpisodes = totalEpisodes ?? undefined;
-				await this.deps.titles.updateAirtimeEntry(entry);
+				await this.titles.updateAirtimeEntry(entry);
 
 				await this.syncTitleFromSchedule(entry.titleId, schedule, totalEpisodes);
 
 				this.render();
 			},
 			initialMode,
-		}).open();
+		});
 	}
 
 	private openEditGameSchedule(entry: AirtimeEntry): void {
-		const game = this.deps.games.getGame(entry.titleId);
+		const game = this.games.getGame(entry.titleId);
 		if (!game) return;
-		new GameScheduleModal(this.deps.app, { game, existingSchedule: { ...entry.schedule }, onSave: async (schedule) => {
+		this.modals.openGameSchedule({ game, existingSchedule: { ...entry.schedule }, onSave: async (schedule) => {
 			entry.schedule = schedule;
-			await this.deps.titles.updateAirtimeEntry(entry);
+			await this.titles.updateAirtimeEntry(entry);
 			await this.syncGameFromSchedule(entry.titleId, schedule);
 			this.render();
-		} }).open();
+		} });
 	}
 
 	private openEditReadingSchedule(entry: AirtimeEntry, initialMode?: 'single' | 'recurring'): void {
 		const kind = entry.readingKind ?? 'book';
 		const item: Book | Manga | undefined =
-			kind === 'book' ? this.deps.reading.getBook(entry.titleId) : this.deps.reading.getManga(entry.titleId);
+			kind === 'book' ? this.reading.getBook(entry.titleId) : this.reading.getManga(entry.titleId);
 		if (!item) return;
-		new ReadingScheduleModal(this.deps.app, {
+		this.modals.openReadingSchedule({
 			item,
 			kind,
 			existingSchedule: { ...entry.schedule },
@@ -1619,11 +1628,11 @@ export class AirtimeTab implements TabInstance {
 				entry.currentEpisode = chapter ?? undefined;
 				entry.totalSeasons = totalVolumes ?? undefined;
 				entry.totalEpisodes = totalChapters ?? undefined;
-				await this.deps.titles.updateAirtimeEntry(entry);
+				await this.titles.updateAirtimeEntry(entry);
 				await this.syncReadingItemFromSchedule(entry.titleId, kind, schedule, totalVolumes, totalChapters);
 				this.render();
 			},
 			initialMode,
-		}).open();
+		});
 	}
 }

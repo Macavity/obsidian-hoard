@@ -6,43 +6,13 @@ import { DEFAULT_SETTINGS, GAME_AUTO_STATUS } from '../../src/shared/domain/type
 import type { Book, Game, Manga } from '../../src/shared/domain/types';
 import { qsa } from '../helpers/dom';
 import type { Captures } from './airtimeTab.harness';
-import { entry, isoOffset, makeTab, newWorld, title } from './airtimeTab.harness';
+import { entry, isoOffset, makeTab, newWorld, title, useCaptures } from './airtimeTab.harness';
 
 const cap = vi.hoisted<Captures>(() => ({
 	confirms: [], finders: [], readingModals: [], gameModals: [], forms: [],
 }));
+useCaptures(cap);
 
-vi.mock('../../src/shared/ui/ConfirmModal', () => ({
-	ConfirmModal: class {
-		constructor(_app: unknown, message: string, onConfirm: () => void, extra?: { label: string; onClick: () => void }) {
-			cap.confirms.push({ message, onConfirm, extra });
-		}
-		open(): void {}
-	},
-	confirmWith: () => (message: string, onConfirm: () => void, extra?: { label: string; onClick: () => void }) => {
-		cap.confirms.push({ message, onConfirm, extra });
-	},
-}));
-vi.mock('../../src/modules/airtime/ui/UpcomingFinderModal', () => ({
-	UpcomingFinderModal: class {
-		constructor(_app: unknown, opts: { items: Captures['finders'][number]['items']; onSelect: (i: unknown) => void }) {
-			cap.finders.push({ items: opts.items, onPick: opts.onSelect });
-		}
-		open(): void {}
-	},
-}));
-vi.mock('../../src/modules/airtime/ui/ReadingScheduleModal', () => ({
-	ReadingScheduleModal: class {
-		constructor(...args: unknown[]) { cap.readingModals.push(args); }
-		open(): void {}
-	},
-}));
-vi.mock('../../src/modules/airtime/ui/GameScheduleModal', () => ({
-	GameScheduleModal: class {
-		constructor(...args: unknown[]) { cap.gameModals.push(args); }
-		open(): void {}
-	},
-}));
 vi.mock('../../src/shared/ui/ScheduleForm', async (orig) => ({
 	...(await orig<typeof import('../../src/shared/ui/ScheduleForm')>()),
 	renderScheduleModal: (_el: unknown, form: unknown, opts: Captures['forms'][number]['opts']) => {
