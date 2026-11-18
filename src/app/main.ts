@@ -25,11 +25,13 @@ import { readingUi, type ReadingUi } from './wiring/reading';
 import { gamesUi, type GamesUi } from './wiring/games';
 import { airtimeUi, type AirtimeUi } from './wiring/airtime';
 import { customListsUi, type CustomListsUi } from './wiring/customLists';
+import { draftsUi, type DraftsUi } from './wiring/drafts';
 import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
 import { WidgetRenderer } from '../modules/widgets/ui/WidgetRenderer';
 import { HoardSettingsTab, type HoardSettingsTabDeps } from '../modules/settings/ui/SettingsTab';
 import { AirtimeTab } from '../modules/airtime/ui/AirtimeTab';
 import { openAddForTitle, type AddRouterDeps } from './AddRouter';
+import type { OpenAddRoute } from '../shared/ui/addRoute';
 import { runAirtimeScheduler } from '../modules/airtime/services/airtimeScheduler';
 import { buildBackup, parseBackup, restoreBackup, withoutSecrets, type BackupManagers } from '../modules/backup/services/backup';
 import { WatchLogOnboardingModal } from '../modules/import/ui/WatchLogOnboardingModal';
@@ -140,6 +142,7 @@ export default class HoardPlugin extends Plugin {
 	private games!: GamesUi;
 	private airtime!: AirtimeUi;
 	private customLists!: CustomListsUi;
+	private drafts!: DraftsUi;
 	private coverRefresher!: CoverRefresher;
 	private widgetRenderer?: WidgetRenderer;
 
@@ -243,6 +246,7 @@ export default class HoardPlugin extends Plugin {
 			posters: this.posterService,
 			host: { ...host, markAirtimeHandled: (key) => this.markAirtimeHandled(key) },
 		});
+		const openAdd: OpenAddRoute = (opts) => openAddForTitle(this.addRouterDeps(), opts);
 		this.customLists = customListsUi({
 			app: this.app,
 			settings: this.settingsService,
@@ -250,7 +254,15 @@ export default class HoardPlugin extends Plugin {
 			titles: this.dataManager,
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
-			openAdd: (opts) => openAddForTitle(this.addRouterDeps(), opts),
+			openAdd,
+		});
+		this.drafts = draftsUi({
+			app: this.app,
+			settings: this.settingsService,
+			titles: this.dataManager,
+			reading: this.readingDataManager,
+			games: this.gameDataManager,
+			openAdd,
 		});
 
 		this.startAirtimeScheduler();
@@ -381,10 +393,11 @@ export default class HoardPlugin extends Plugin {
 			createGamesTab: (container) => this.games.createGamesTab(container),
 			createAirtimeTab: (container, setBadge) => this.airtime.createAirtimeTab(container, setBadge),
 			createCustomListsTab: (container) => this.customLists.createCustomListsTab(container),
+			createDraftsTab: (container, setBadge) => this.drafts.createDraftsTab(container, setBadge),
+			countPendingDrafts: () => this.drafts.countPending(),
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
 			importRunning: () => this.importRunning,
-			openAdd: (opts) => openAddForTitle(this.addRouterDeps(), opts),
 		};
 	}
 

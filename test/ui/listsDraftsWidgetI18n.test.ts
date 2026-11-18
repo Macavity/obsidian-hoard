@@ -3,7 +3,7 @@ import { setLocale } from '../../src/shared/i18n';
 import de from '../../src/shared/i18n/de';
 import { WidgetRenderer } from '../../src/modules/widgets/ui/WidgetRenderer';
 import { CustomListsTab } from '../../src/modules/custom-lists/ui/CustomListsTab';
-import { DraftsTab } from '../../src/modules/drafts/ui/DraftsTab';
+import { newDraftsTab } from '../helpers/newDraftsTab';
 import { InsertWidgetModal } from '../../src/modules/widgets/ui/InsertWidgetModal';
 import { El } from '../helpers/fakeEl';
 import { fakeSettings } from '../helpers/fakeSettings';
@@ -75,13 +75,13 @@ describe('custom lists and drafts i18n', () => {
 	it('renders drafts chrome in German', () => {
 		setLocale('de');
 		const root = new El('div');
-		const deps = {
+		const parts = {
 			settings: fakeSettings({ showHintBanners: false, draftsVaultTag: '#hoard' }),
 			titles: { getTitles: () => [] },
 			reading: { getBooks: () => [], getMangaList: () => [] },
 			games: { getGames: () => [] },
 		};
-		const tab = new DraftsTab(asEl(root), deps as never, () => {});
+		const tab = newDraftsTab(asEl(root), parts);
 		(tab as unknown as { renderUI: (e: unknown[]) => void }).renderUI([]);
 		expect(texts(root)).toContain(` ${de.drafts.pending.other}`);
 		expect(texts(root)).toContain(de.drafts.empty.replace('{tag}', '#hoard'));

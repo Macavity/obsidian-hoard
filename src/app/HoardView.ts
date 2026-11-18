@@ -5,7 +5,6 @@ import { DashboardTab, type DashboardTabDeps } from '../modules/dashboard/ui/Das
 import { AirtimeTab } from '../modules/airtime/ui/AirtimeTab';
 import type { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../modules/games/services/GameDataManager';
-import { DraftsTab, type DraftsTabDeps } from '../modules/drafts/ui/DraftsTab';
 import { LogTab, type LogTabDeps } from '../modules/log/ui/LogTab';
 import type { SettingsReader, SettingsWriter } from '../shared/services/SettingsService';
 import type { DataManager } from '../modules/watchlist/services/DataManager';
@@ -19,7 +18,7 @@ export type TabName = 'dashboard' | 'watchlist' | 'upcoming' | 'reading' | 'game
  * own `<Tab>Deps`; a converted tab's deps are a supertype of this one, so `ctx.deps` passes straight in.
  */
 export interface HoardViewDeps
-	extends DashboardTabDeps, DraftsTabDeps, LogTabDeps {
+	extends DashboardTabDeps, LogTabDeps {
 	settings: SettingsReader & SettingsWriter;
 	titles: DataManager;
 	history: LogTabDeps['history'];
@@ -32,6 +31,10 @@ export interface HoardViewDeps
 	reading: ReadingDataManager;
 	/** Builds the Custom Lists tab; wired in `src/app/wiring/customLists.ts`. */
 	createCustomListsTab: (container: HTMLElement) => TabInstance;
+	/** Builds the Drafts tab; wired in `src/app/wiring/drafts.ts`. */
+	createDraftsTab: (container: HTMLElement, setBadge: (count: number) => void) => TabInstance;
+	/** Counts the pending drafts without the tab being open. */
+	countPendingDrafts: () => Promise<number>;
 	/** Builds the Games tab; wired in `src/app/wiring/games.ts`. */
 	createGamesTab: (container: HTMLElement) => TabInstance;
 	games: GameDataManager;
@@ -118,9 +121,9 @@ const TABS: TabDefinition[] = [
 		name: 'drafts',
 		label: 'app.tabs.drafts',
 		icon: 'square-pen',
-		create: (ctx) => new DraftsTab(ctx.containerEl, ctx.deps, ctx.setBadge),
+		create: (ctx) => ctx.deps.createDraftsTab(ctx.containerEl, ctx.setBadge),
 		badge: {
-			count: (deps) => DraftsTab.computePendingCount(deps),
+			count: (deps) => deps.countPendingDrafts(),
 			refreshOn: 'metadata-resolved',
 		},
 	},

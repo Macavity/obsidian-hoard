@@ -18,9 +18,6 @@ vi.mock('../../src/modules/log/ui/LogTab', () => ({ LogTab: Stub }));
 vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
 	AirtimeTab: Object.assign(class extends Stub {}, { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 }),
 }));
-vi.mock('../../src/modules/drafts/ui/DraftsTab', () => ({
-	DraftsTab: Object.assign(class extends Stub {}, { computePendingCount: () => Promise.resolve(0) }),
-}));
 
 const PINNED = 'hoard-view__tab-content--pinned';
 const HEIGHT_VAR = '--hoard-view-pinned-tab-height';

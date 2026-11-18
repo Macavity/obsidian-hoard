@@ -25,9 +25,6 @@ vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
 		getMaybeDueCount: maybe,
 	}),
 }));
-vi.mock('../../src/modules/drafts/ui/DraftsTab', () => ({
-	DraftsTab: Object.assign(class extends Stub {}, { computePendingCount: pending }),
-}));
 
 afterEach(() => {
 	(Platform as { isMobile: boolean }).isMobile = false;
@@ -38,7 +35,7 @@ afterEach(() => {
 
 async function open() {
 	let resolved: () => void = () => {};
-	const view = new HoardView(new WorkspaceLeaf(), hoardViewDeps((cb) => { resolved = cb; }));
+	const view = new HoardView(new WorkspaceLeaf(), hoardViewDeps((cb) => { resolved = cb; }, { countPendingDrafts: pending }));
 	await view.onOpen();
 	const tabs = (): HTMLButtonElement[] => qsa<HTMLButtonElement>(view.contentEl, '.hoard-tab-bar__btn');
 	const label = (name: string): string | undefined => tabs().find((b) => b.textContent?.startsWith(name))?.textContent ?? undefined;

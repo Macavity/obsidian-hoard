@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DraftsTab } from '../../src/modules/drafts/ui/DraftsTab';
+import { newDraftsTab } from '../helpers/newDraftsTab';
 import { qsa } from '../helpers/dom';
 import { fakeSettings } from '../helpers/fakeSettings';
 
@@ -17,7 +17,7 @@ const draft = (name: string, added = false): Entry => ({
 
 function render(entries: Entry[]): { root: HTMLElement; counts: number[] } {
 	const counts: number[] = [];
-	const deps = {
+	const parts = {
 		settings: fakeSettings({ showHintBanners: false, draftsVaultTag: '#hoard' }),
 		titles: { getTitles: () => [{ title: 'Breaking Bad' }] },
 		reading: {
@@ -27,7 +27,7 @@ function render(entries: Entry[]): { root: HTMLElement; counts: number[] } {
 		games: { getGames: () => [{ title: 'Hades' }] },
 	};
 	const root = document.createElement('div');
-	const tab = new DraftsTab(root, deps as never, (n) => counts.push(n));
+	const tab = newDraftsTab(root, parts, (n) => counts.push(n));
 	(tab as unknown as { renderUI: (e: Entry[]) => void }).renderUI(entries);
 	return { root, counts };
 }

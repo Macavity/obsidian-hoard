@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DraftsTab } from '../../src/modules/drafts/ui/DraftsTab';
+import { newDraftsTab } from '../helpers/newDraftsTab';
 import { qsa } from '../helpers/dom';
 import { fakeSettings } from '../helpers/fakeSettings';
 
@@ -11,11 +12,12 @@ const FILES: Record<string, { tags: string[]; text: string | Error }> = {
 	'NoCache': { tags: [], text: '' },
 };
 
-function makeDeps(drafts: unknown = undefined) {
+function makeParts(drafts: unknown = undefined) {
 	const persisted: unknown[] = [];
-	const deps = {
+	const parts = {
 		settings: fakeSettings({ showHintBanners: false }),
-		app: {
+		notes: {
+			workspace: {},
 			vault: {
 				getMarkdownFiles: () => Object.keys(FILES).map((basename) => ({ basename })),
 				cachedRead: (f: { basename: string }) => {
@@ -36,15 +38,15 @@ function makeDeps(drafts: unknown = undefined) {
 		reading: { getBooks: () => [], getMangaList: () => [] },
 		games: { getGames: () => [] },
 	};
-	return { deps, persisted };
+	return { parts, persisted };
 }
 
 type Priv = { scanVault: () => Promise<Array<{ titleKey: string; titleDisplay: string; sources: string[]; added: boolean }>>; persistState: { dismissed: string[]; added: string[]; firstSeen: Record<string, string>; titleDisplay: Record<string, string> } };
 
 describe('DraftsTab vault scan', () => {
 	it('collects titles after the tag, splits on commas and skips unreadable or overlong entries', async () => {
-		const { deps, persisted } = makeDeps();
-		const tab = new DraftsTab(document.createElement('div'), deps as never, () => {});
+		const { parts, persisted } = makeParts();
+		const tab = newDraftsTab(document.createElement('div'), parts);
 		const p = tab as unknown as Priv;
 		p.persistState.dismissed = ['hades'];
 		p.persistState.added = ['dune'];
@@ -61,19 +63,21 @@ describe('DraftsTab vault scan', () => {
 	});
 
 	it('counts pending drafts without touching state', async () => {
-		const { deps } = makeDeps({ dismissed: [], added: ['dune'], titleDisplay: {}, firstSeen: {} });
+		const count = (p: ReturnType<typeof makeParts>['parts']) =>
+			DraftsTab.computePendingCount(p.settings as never, p.titles as never, p.reading, p.games, p.notes as never);
+		const { parts } = makeParts({ dismissed: [], added: ['dune'], titleDisplay: {}, firstSeen: {} });
 		// Hades exists in the Watchlist, Dune is marked added, so nothing is pending
-		expect(await DraftsTab.computePendingCount(deps as never)).toBe(0);
-		const fresh = makeDeps(undefined);
-		expect(await DraftsTab.computePendingCount(fresh.deps as never)).toBe(1);
-		const dismissed = makeDeps({ dismissed: ['dune'], added: [], titleDisplay: { hades: 'Hades' }, firstSeen: {} });
-		expect(await DraftsTab.computePendingCount(dismissed.deps as never)).toBe(0);
+		expect(await count(parts)).toBe(0);
+		const fresh = makeParts(undefined);
+		expect(await count(fresh.parts)).toBe(1);
+		const dismissed = makeParts({ dismissed: ['dune'], added: [], titleDisplay: { hades: 'Hades' }, firstSeen: {} });
+		expect(await count(dismissed.parts)).toBe(0);
 	});
 });
 
 describe('DraftsTab persisted state', () => {
 	const load = (drafts: unknown) => {
-		const tab = new DraftsTab(document.createElement('div'), makeDeps(drafts).deps as never, () => {});
+		const tab = newDraftsTab(document.createElement('div'), makeParts(drafts).parts);
 		const p = tab as unknown as Priv & { loadPersistState: () => void };
 		p.loadPersistState();
 		return p.persistState;
@@ -95,9 +99,9 @@ describe('DraftsTab persisted state', () => {
 
 describe('DraftsTab dismiss button', () => {
 	it('is an x icon button that dismisses the draft', () => {
-		const { deps } = makeDeps();
+		const { parts } = makeParts();
 		const root = document.createElement('div');
-		const tab = new DraftsTab(root, deps as never, () => {});
+		const tab = newDraftsTab(root, parts);
 		const dismiss = vi.spyOn(tab as unknown as { dismissEntry: (k: string) => void }, 'dismissEntry').mockImplementation(() => {});
 		(tab as unknown as { renderUI: (e: unknown[]) => void }).renderUI([
 			{ titleKey: 'new one', titleDisplay: 'New One', sources: ['Note'], firstSeen: '2026-01-01', added: false },
