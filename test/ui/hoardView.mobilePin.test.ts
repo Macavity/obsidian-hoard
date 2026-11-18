@@ -3,20 +3,8 @@ import { Platform, WorkspaceLeaf } from 'obsidian';
 import { HoardView } from '../../src/app/HoardView';
 import { hoardViewDeps } from '../helpers/hoardViewDeps';
 
-const { Stub } = vi.hoisted(() => ({
-	Stub: class {
-		render(): void {}
-	},
-}));
-
-vi.mock('../../src/modules/dashboard/ui/DashboardTab', () => ({ DashboardTab: Stub }));
-vi.mock('../../src/modules/watchlist/ui/ListTab', () => ({ ListTab: Stub }));
-vi.mock('../../src/modules/reading/ui/ReadingTab', () => ({ ReadingTab: Stub }));
-vi.mock('../../src/modules/games/ui/GamesTab', () => ({ GamesTab: Stub }));
-vi.mock('../../src/modules/custom-lists/ui/CustomListsTab', () => ({ CustomListsTab: Stub }));
-vi.mock('../../src/modules/log/ui/LogTab', () => ({ LogTab: Stub }));
 vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
-	AirtimeTab: Object.assign(class extends Stub {}, { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 }),
+	AirtimeTab: { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 },
 }));
 
 const PINNED = 'hoard-view__tab-content--pinned';

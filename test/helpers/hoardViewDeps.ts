@@ -1,7 +1,10 @@
 import { fakeSettings } from './fakeSettings';
 import type { HoardViewDeps } from '../../src/app/HoardView';
 
-/** The part of `HoardViewDeps` the view shell itself reads; `onResolved` receives the metadata-cache listener. */
+/** A tab that renders nothing. */
+const stubTab = () => ({ render: () => {} });
+
+/** The part of `HoardViewDeps` the view shell itself reads, with tabs that render nothing; `onResolved` receives the metadata-cache listener. */
 export function hoardViewDeps(
 	onResolved: (cb: () => void) => void = () => {},
 	extra: Partial<HoardViewDeps> = {},
@@ -12,6 +15,14 @@ export function hoardViewDeps(
 		titles: { onChange: () => {}, offChange: () => {} },
 		importRunning: () => false,
 		countPendingDrafts: () => Promise.resolve(0),
+		createDashboardTab: stubTab,
+		createListTab: stubTab,
+		createAirtimeTab: stubTab,
+		createReadingTab: stubTab,
+		createGamesTab: stubTab,
+		createCustomListsTab: stubTab,
+		createDraftsTab: stubTab,
+		createLogTab: stubTab,
 		...extra,
 	} as never;
 }

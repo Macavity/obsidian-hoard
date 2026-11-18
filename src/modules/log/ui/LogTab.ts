@@ -1,4 +1,3 @@
-import type { App } from 'obsidian';
 import type { TabInstance } from '../../../shared/ui/TabInstance';
 import { t, type TranslationKey } from '../../../shared/i18n';
 import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from '../../../shared/i18n/labels';
@@ -7,7 +6,7 @@ import { createIconButton } from '../../../shared/ui/IconButton';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import type { HistoryEntry } from '../../../shared/domain/types';
 import { inferHistoryAction, inferHistorySource } from '../../../shared/services/HistoryManager';
-import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
 import { getActiveDateFormat } from '../../../shared/domain/types';
 
 type SourceFilter = 'all' | 'Watchlist' | 'Reading' | 'Games';
@@ -129,10 +128,7 @@ interface VirtualRow {
 const ROW_HEIGHT = 32;
 const HEADER_HEIGHT = 40;
 
-export interface LogTabDeps {
-	app: App;
-	history: Pick<HistoryManager, 'onChange' | 'offChange' | 'getEntries' | 'deleteEntry'>;
-}
+export type LogTabHistory = Pick<HistoryManager, 'onChange' | 'offChange' | 'getEntries' | 'deleteEntry'>;
 
 export class LogTab implements TabInstance {
 	private container: HTMLElement;
@@ -153,15 +149,19 @@ export class LogTab implements TabInstance {
 	// scroll offset to restore after a delete re-render
 	private pendingScroll: number | null = null;
 
-	constructor(container: HTMLElement, private deps: LogTabDeps) {
+	constructor(
+		container: HTMLElement,
+		private readonly history: LogTabHistory,
+		private readonly confirm: OpenConfirm,
+	) {
 		this.container = container;
-		deps.history.onChange(this.onHistoryChange);
+		history.onChange(this.onHistoryChange);
 	}
 
 	// History.md changed outside the plugin; a tab that left the DOM unsubscribes itself
 	private onHistoryChange = (): void => {
 		if (!this.container.isConnected) {
-			this.deps.history.offChange(this.onHistoryChange);
+			this.history.offChange(this.onHistoryChange);
 			return;
 		}
 		this.pendingScroll = this.scrollContainer?.scrollTop ?? null;
@@ -169,7 +169,7 @@ export class LogTab implements TabInstance {
 	};
 
 	destroy(): void {
-		this.deps.history.offChange(this.onHistoryChange);
+		this.history.offChange(this.onHistoryChange);
 		this.destroyVirtualScroll();
 	}
 
@@ -180,7 +180,7 @@ export class LogTab implements TabInstance {
 
 		this.renderFilterBar();
 
-		const allEntries = this.deps.history.getEntries();
+		const allEntries = this.history.getEntries();
 		const filtered = this.sourceFilter === 'all'
 			? allEntries
 			: allEntries.filter((e) => inferHistorySource(e) === this.sourceFilter);
@@ -390,14 +390,13 @@ export class LogTab implements TabInstance {
 	}
 
 	private confirmDelete(entry: HistoryEntry): void {
-		new ConfirmModal(
-			this.deps.app,
+		this.confirm(
 			t('dashboard.log.confirmDelete', { title: titleFromEntry(entry), action: actionLabel(entry) }),
 			() => {
 				this.pendingScroll = this.scrollContainer?.scrollTop ?? null;
-				void this.deps.history.deleteEntry(entry.id).then(() => this.render());
+				void this.history.deleteEntry(entry.id).then(() => this.render());
 			},
-		).open();
+		);
 	}
 
 	private findFirstVisible(scrollTop: number): number {

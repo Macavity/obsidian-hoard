@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DashboardTab } from '../../src/modules/dashboard/ui/DashboardTab';
-import type { DashboardTabDeps } from '../../src/modules/dashboard/ui/DashboardTab';
 import { fakeSettings } from '../helpers/fakeSettings';
 import type { Book, Game, HoardTitle, Manga } from '../../src/shared/domain/types';
 import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
@@ -43,13 +42,13 @@ function render(o: Opts = {}): HTMLElement {
 		getMangaList: () => o.manga ?? [],
 	};
 	const container = document.createElement('div');
-	const deps = {
-		settings: fakeSettings(settings),
-		titles: dm,
-		reading: rdm,
-		games: { getGames: () => o.games ?? [] },
-	} as unknown as DashboardTabDeps;
-	new DashboardTab(container, deps).render();
+	new DashboardTab(
+		container,
+		fakeSettings(settings) as never,
+		dm,
+		rdm,
+		{ getGames: () => o.games ?? [] },
+	).render();
 	return container;
 }
 

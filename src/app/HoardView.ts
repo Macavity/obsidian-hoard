@@ -1,27 +1,26 @@
 import type { TabInstance } from '../shared/ui/TabInstance';
-import { ItemView, Platform, setIcon, WorkspaceLeaf } from 'obsidian';
+import { ItemView, Platform, setIcon, type App, type WorkspaceLeaf } from 'obsidian';
 import { t, type TranslationKey } from '../shared/i18n';
-import { DashboardTab, type DashboardTabDeps } from '../modules/dashboard/ui/DashboardTab';
 import { AirtimeTab } from '../modules/airtime/ui/AirtimeTab';
 import type { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../modules/games/services/GameDataManager';
-import { LogTab, type LogTabDeps } from '../modules/log/ui/LogTab';
-import type { SettingsReader, SettingsWriter } from '../shared/services/SettingsService';
+import type { SettingsReader } from '../shared/services/SettingsService';
 import type { DataManager } from '../modules/watchlist/services/DataManager';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';
 
 export type TabName = 'dashboard' | 'watchlist' | 'upcoming' | 'reading' | 'games' | 'custom-lists' | 'drafts' | 'log';
 
-/**
- * What the view and its tabs read, supplied by main.ts. Each tab takes only the part it declares in its
- * own `<Tab>Deps`; a converted tab's deps are a supertype of this one, so `ctx.deps` passes straight in.
- */
-export interface HoardViewDeps
-	extends DashboardTabDeps, LogTabDeps {
-	settings: SettingsReader & SettingsWriter;
+/** What the view itself reads and the tab factories wired in `src/app/wiring/`, supplied by main.ts. */
+export interface HoardViewDeps {
+	app: App;
+	settings: SettingsReader;
+	/** The view re-renders on its changes; the Upcoming badge counts from it. */
 	titles: DataManager;
-	history: LogTabDeps['history'];
+	/** Builds the Dashboard tab; wired in `src/app/wiring/dashboard.ts`. */
+	createDashboardTab: (container: HTMLElement) => TabInstance;
+	/** Builds the Log tab; wired in `src/app/wiring/log.ts`. */
+	createLogTab: (container: HTMLElement) => TabInstance;
 	/** Builds the Upcoming tab; wired in `src/app/wiring/airtime.ts`. */
 	createAirtimeTab: (container: HTMLElement, setBadge: (count: number) => void) => TabInstance;
 	/** Builds the Watchlist tab; wired in `src/app/wiring/watchlist.ts`. */
@@ -74,7 +73,7 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.dashboard',
 		icon: 'layout-dashboard',
 		cls: 'hoard-dashboard',
-		create: (ctx) => new DashboardTab(ctx.containerEl, ctx.deps),
+		create: (ctx) => ctx.deps.createDashboardTab(ctx.containerEl),
 	},
 	{
 		name: 'watchlist',
@@ -132,7 +131,7 @@ const TABS: TabDefinition[] = [
 		label: 'app.tabs.log',
 		icon: 'history',
 		cls: 'hoard-log',
-		create: (ctx) => new LogTab(ctx.containerEl, ctx.deps),
+		create: (ctx) => ctx.deps.createLogTab(ctx.containerEl),
 	},
 ];
 

@@ -59,16 +59,11 @@ function statTypeLabel(type: string): string {
 	return typeLabel(type);
 }
 
-export interface DashboardTabDeps {
-	settings: SettingsReader;
-	titles: Pick<
-		DataManager,
-		| 'calcTimeWatched' | 'getNextUnwatchedEpisode' | 'getProgress' | 'getRecentlyAdded'
-		| 'getRecentlyWatched' | 'getTitles' | 'getTotalTimeRemaining' | 'getTotalTimeWatched'
-	>;
-	reading: Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>;
-	games: Pick<GameDataManager, 'getGames'>;
-}
+export type DashboardTitles = Pick<
+	DataManager,
+	| 'calcTimeWatched' | 'getNextUnwatchedEpisode' | 'getProgress' | 'getRecentlyAdded'
+	| 'getRecentlyWatched' | 'getTitles' | 'getTotalTimeRemaining' | 'getTotalTimeWatched'
+>;
 
 export class DashboardTab implements TabInstance {
 	private container: HTMLElement;
@@ -80,7 +75,13 @@ export class DashboardTab implements TabInstance {
 	 */
 	private static activeSources = new Set<StatSource>(['watchlist', 'reading', 'games']);
 
-	constructor(container: HTMLElement, private deps: DashboardTabDeps) {
+	constructor(
+		container: HTMLElement,
+		private readonly settings: SettingsReader,
+		private readonly titles: DashboardTitles,
+		private readonly reading: Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>,
+		private readonly games: Pick<GameDataManager, 'getGames'>,
+	) {
 		this.container = container;
 	}
 
@@ -89,7 +90,7 @@ export class DashboardTab implements TabInstance {
 		this.container.addClass('hoard-dashboard');
 
 		// precompute shared collections once per render so subrenderers don't rescan the titles array
-		const allTitles = this.deps.titles.getTitles();
+		const allTitles = this.titles.getTitles();
 		const byType = new Map<string, HoardTitle[]>();
 		for (const t of allTitles) {
 			const arr = byType.get(t.type);
@@ -99,9 +100,9 @@ export class DashboardTab implements TabInstance {
 		const planTitles = allTitles.filter((t) => t.status === 'Plan to watch');
 
 		// reading data from ReadingDataManager so footer counts span both datasets
-		const books = this.deps.reading.getBooks();
-		const manga = this.deps.reading.getMangaList();
-		const games = this.deps.games.getGames();
+		const books = this.reading.getBooks();
+		const manga = this.reading.getMangaList();
+		const games = this.games.getGames();
 
 		// reading aggregates computed once per render, not per data change
 		const booksAgg = this.aggregateBooks(books);
@@ -132,7 +133,7 @@ export class DashboardTab implements TabInstance {
 		booksAgg: ReadingAggregate,
 		mangaAgg: ReadingAggregate,
 	): void {
-		const isRect = this.deps.settings.get().dashboardCardStyle === 'rectangles';
+		const isRect = this.settings.get().dashboardCardStyle === 'rectangles';
 		const grid = this.container.createDiv({ cls: 'hoard-dashboard__rings-grid' });
 
 		// unified Total / Time card, anchored at the top (full width)
@@ -141,11 +142,11 @@ export class DashboardTab implements TabInstance {
 			totalStats.total === 0
 				? 0
 				: Math.round((totalStats.watched / totalStats.total) * 100);
-		const timeWatched = this.deps.titles.getTotalTimeWatched();
-		const timeRemaining = this.deps.titles.getTotalTimeRemaining();
+		const timeWatched = this.titles.getTotalTimeWatched();
+		const timeRemaining = this.titles.getTotalTimeRemaining();
 		// the games segment is omitted entirely when nothing has a playtime, so libraries without games
 		// keep the 3-up card
-		const timePlayed = this.deps.games
+		const timePlayed = this.games
 			.getGames()
 			.reduce((sum, g) => sum + g.playtimeMinutes, 0);
 		this.renderUnifiedCard(
@@ -154,7 +155,7 @@ export class DashboardTab implements TabInstance {
 			timePlayed > 0 ? formatTime(timePlayed) : null,
 		);
 
-		for (const type of this.deps.settings.get().types) {
+		for (const type of this.settings.get().types) {
 			const stats = this.statsFor(byType.get(type.name) ?? []);
 			const percent =
 				stats.total === 0 ? 0 : Math.round((stats.watched / stats.total) * 100);
@@ -251,7 +252,7 @@ export class DashboardTab implements TabInstance {
 	): void {
 		const percent = agg.total > 0 ? Math.round((agg.read / agg.total) * 100) : 0;
 		// configured Reading type colour, mirroring how watchlist type cards use theirs
-		const color = getReadingTypeColor(label === 'Books' ? 'book' : 'manga', this.deps.settings.get());
+		const color = getReadingTypeColor(label === 'Books' ? 'book' : 'manga', this.settings.get());
 
 		// single inline subline under the bar: Books → pages; Manga → chapters · vol.
 		const readStr = formatCount(agg.read);
@@ -487,7 +488,7 @@ export class DashboardTab implements TabInstance {
 		this.renderCountSection(grid, t('dashboard.stats.byType'), this.countBy(statItems, (item) => item.type), undefined, statTypeLabel);
 		this.renderByYearSection(grid, statItems);
 		this.renderTimeByYearSection(grid, watch);
-		const topN = Math.max(1, this.deps.settings.get().dashboardTopCredits ?? 5);
+		const topN = Math.max(1, this.settings.get().dashboardTopCredits ?? 5);
 		this.renderCountSection(grid, t('dashboard.stats.topActors'), this.countCredits(watch, 'cast'), topN);
 		this.renderCountSection(grid, t('dashboard.stats.topDirectors'), this.countCredits(watch, 'director'), topN);
 		this.renderCountSection(grid, t('dashboard.stats.topStudios'), this.countCredits(watch, 'studio'), topN);
@@ -629,7 +630,7 @@ export class DashboardTab implements TabInstance {
 		for (const t of allTitles) {
 			const year = this.yearOf(t.dateFinished);
 			if (!year) continue;
-			const time = this.deps.titles.calcTimeWatched(t);
+			const time = this.titles.calcTimeWatched(t);
 			if (time <= 0) continue;
 			minutes.set(year, (minutes.get(year) ?? 0) + time);
 		}
@@ -705,13 +706,13 @@ export class DashboardTab implements TabInstance {
 
 	private renderRecentlyWatched(): void {
 		this.renderRecentSection(
-			'dashboard.recent.watchedTitle', 'dashboard.recent.watchedEmpty', this.deps.titles.getRecentlyWatched(3),
+			'dashboard.recent.watchedTitle', 'dashboard.recent.watchedEmpty', this.titles.getRecentlyWatched(3),
 		);
 	}
 
 	private renderRecentlyAdded(): void {
 		this.renderRecentSection(
-			'dashboard.recent.addedTitle', 'dashboard.recent.addedEmpty', this.deps.titles.getRecentlyAdded(3),
+			'dashboard.recent.addedTitle', 'dashboard.recent.addedEmpty', this.titles.getRecentlyAdded(3),
 		);
 	}
 
@@ -730,7 +731,7 @@ export class DashboardTab implements TabInstance {
 	private renderRecentItem(section: HTMLElement, title: HoardTitle): void {
 		const item = section.createDiv({ cls: 'hoard-recent__item' });
 		item.createDiv({ cls: 'hoard-recent__title', text: title.title });
-		renderTypeBadge(item.createDiv({ cls: 'hoard-recent__column-badge' }), title.type, this.deps.settings.get());
+		renderTypeBadge(item.createDiv({ cls: 'hoard-recent__column-badge' }), title.type, this.settings.get());
 		item.createDiv({ cls: 'hoard-recent__column-episode', text: this.recentEpisodeText(title) });
 		item.createDiv({ cls: 'hoard-recent__column-percent', text: this.recentProgressText(title) });
 	}
@@ -738,12 +739,12 @@ export class DashboardTab implements TabInstance {
 	/** Next unwatched episode, "✓" when all are watched, empty for movies. */
 	private recentEpisodeText(title: HoardTitle): string {
 		if (title.type === 'Movie') return '';
-		const nextEp = this.deps.titles.getNextUnwatchedEpisode(title);
+		const nextEp = this.titles.getNextUnwatchedEpisode(title);
 		return nextEp !== null ? t('dashboard.recent.episode', { n: nextEp }) : '✓';
 	}
 
 	private recentProgressText(title: HoardTitle): string {
 		if (title.type === 'Movie') return title.watchedEpisodes.includes(1) ? '100%' : '0%';
-		return `${this.deps.titles.getProgress(title)}%`;
+		return `${this.titles.getProgress(title)}%`;
 	}
 }

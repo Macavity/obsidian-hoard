@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { LogTab } from '../../src/modules/log/ui/LogTab';
-import type { LogTabDeps } from '../../src/modules/log/ui/LogTab';
 import type { HistoryEntry } from '../../src/shared/domain/types';
 import { qsa } from '../helpers/dom';
 
@@ -14,10 +13,8 @@ const entry = (id: string, source: HistoryEntry['source'], ts: string): HistoryE
 function mount(entries: HistoryEntry[]): HTMLElement {
 	const container = document.createElement('div');
 	document.body.appendChild(container);
-	const deps = {
-		history: { getEntries: () => entries, onChange: () => {}, offChange: () => {} },
-	} as unknown as LogTabDeps;
-	new LogTab(container, deps).render();
+	const history = { getEntries: () => entries, onChange: () => {}, offChange: () => {} };
+	new LogTab(container, history as never, () => {}).render();
 	return container;
 }
 

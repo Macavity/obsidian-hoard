@@ -26,6 +26,8 @@ import { gamesUi, type GamesUi } from './wiring/games';
 import { airtimeUi, type AirtimeUi } from './wiring/airtime';
 import { customListsUi, type CustomListsUi } from './wiring/customLists';
 import { draftsUi, type DraftsUi } from './wiring/drafts';
+import { logUi, type LogUi } from './wiring/log';
+import { dashboardUi, type DashboardUi } from './wiring/dashboard';
 import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
 import { WidgetRenderer } from '../modules/widgets/ui/WidgetRenderer';
 import { HoardSettingsTab, type HoardSettingsTabDeps } from '../modules/settings/ui/SettingsTab';
@@ -143,6 +145,8 @@ export default class HoardPlugin extends Plugin {
 	private airtime!: AirtimeUi;
 	private customLists!: CustomListsUi;
 	private drafts!: DraftsUi;
+	private log!: LogUi;
+	private dashboard!: DashboardUi;
 	private coverRefresher!: CoverRefresher;
 	private widgetRenderer?: WidgetRenderer;
 
@@ -255,6 +259,13 @@ export default class HoardPlugin extends Plugin {
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
 			openAdd,
+		});
+		this.log = logUi({ app: this.app, history: this.historyManager });
+		this.dashboard = dashboardUi({
+			settings: this.settingsService,
+			titles: this.dataManager,
+			reading: this.readingDataManager,
+			games: this.gameDataManager,
 		});
 		this.drafts = draftsUi({
 			app: this.app,
@@ -387,7 +398,8 @@ export default class HoardPlugin extends Plugin {
 			app: this.app,
 			settings: this.settingsService,
 			titles: this.dataManager,
-			history: this.historyManager,
+			createDashboardTab: (container) => this.dashboard.createDashboardTab(container),
+			createLogTab: (container) => this.log.createLogTab(container),
 			createListTab: (container) => this.watchlist.createListTab(container),
 			createReadingTab: (container) => this.reading.createReadingTab(container),
 			createGamesTab: (container) => this.games.createGamesTab(container),

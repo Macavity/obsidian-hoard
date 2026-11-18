@@ -4,26 +4,17 @@ import { HoardView } from '../../src/app/HoardView';
 import { qsa } from '../helpers/dom';
 import { hoardViewDeps } from '../helpers/hoardViewDeps';
 
-const { Stub, pending, aired, maybe } = vi.hoisted(() => ({
-	Stub: class {
-		render(): void {}
-	},
+const { pending, aired, maybe } = vi.hoisted(() => ({
 	pending: vi.fn(() => Promise.resolve(4)),
 	aired: vi.fn(() => 2),
 	maybe: vi.fn(() => 1),
 }));
 
-vi.mock('../../src/modules/dashboard/ui/DashboardTab', () => ({ DashboardTab: Stub }));
-vi.mock('../../src/modules/watchlist/ui/ListTab', () => ({ ListTab: Stub }));
-vi.mock('../../src/modules/reading/ui/ReadingTab', () => ({ ReadingTab: Stub }));
-vi.mock('../../src/modules/games/ui/GamesTab', () => ({ GamesTab: Stub }));
-vi.mock('../../src/modules/custom-lists/ui/CustomListsTab', () => ({ CustomListsTab: Stub }));
-vi.mock('../../src/modules/log/ui/LogTab', () => ({ LogTab: Stub }));
 vi.mock('../../src/modules/airtime/ui/AirtimeTab', () => ({
-	AirtimeTab: Object.assign(class extends Stub {}, {
+	AirtimeTab: {
 		getAiredDueCount: aired,
 		getMaybeDueCount: maybe,
-	}),
+	},
 }));
 
 afterEach(() => {
