@@ -278,12 +278,14 @@ describe('rewriteOwnedKeys', () => {
 });
 
 describe('dropOldId', () => {
+	interface Slot { src: { id: string }; view: { id: string } }
+	const slot = (id: string): Slot => ({ src: { id }, view: { id } });
 	const state = (pending: string[]) => {
 		const removed: string[] = [];
 		return {
 			removed,
 			index: { removeLocal: (id: string) => { removed.push(id); } },
-			views: new Map<string, unknown>([['Books/A', 'view of A'], ['Books/C', 'view of C']]),
+			views: new Map<string, Slot>([['Books/A', slot('Books/A')], ['Books/C', slot('Books/C')]]),
 			dirty: new Set(pending),
 		};
 	};
@@ -300,5 +302,15 @@ describe('dropOldId', () => {
 		const s = state(['Books/A', 'Books/C']);
 		dropOldId(s, 'Books/A', 'Books/B');
 		expect([...s.dirty].sort()).toEqual(['Books/B', 'Books/C']);
+	});
+
+	it('moves the view of a pending id to the new id, same object, carrying the new id', () => {
+		const s = state(['Books/A']);
+		const view = s.views.get('Books/A')!.view;
+		dropOldId(s, 'Books/A', 'Books/B');
+		expect(s.views.has('Books/A')).toBe(false);
+		expect(s.views.get('Books/B')!.view).toBe(view);
+		expect(view.id).toBe('Books/B');
+		expect(s.views.get('Books/B')!.src.id).toBe('Books/B');
 	});
 });

@@ -16,6 +16,16 @@ describe('ReadingDataManager on vault storage', () => {
 		expect(rdm.getBookColumns()).toHaveLength(1);
 	});
 
+	it('keeps a pending silent edit when its note is renamed', async () => {
+		const { rdm, f } = await setupReadingDataManager({ 'W/Books/A.md': '---\nName: A\nType: book\nPages Read: 1\n---\n' });
+		rdm.updateBookSilent({ ...rdm.getBook('Books/A')!, pagesRead: 42 });
+		f.externalRename('W/Books/A.md', 'W/Books/B.md');
+		await tick();
+		await rdm.flushPending();
+		expect(f.files.get('W/Books/B.md')).toMatch(/Pages Read: 42/);
+		expect(f.files.has('W/Books/A.md')).toBe(false);
+	});
+
 	it('writes progress changes to frontmatter and keeps unknown keys and body', async () => {
 		const { rdm, f } = await setupReadingDataManager({
 			'W/Books/Dune.md': '---\nName: Dune\nType: book\nPages Read: 1\nmyKey: 1\nRating: great\n---\n\n## Notes\n\nkeep\n',

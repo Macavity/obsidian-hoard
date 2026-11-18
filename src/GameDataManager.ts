@@ -1,11 +1,11 @@
 import { TFile, stringifyYaml } from 'obsidian';
-import type { App } from 'obsidian';
+import type { App, EventRef } from 'obsidian';
 import type { SettingsReader } from './SettingsService';
 import type { HistoryManager } from './HistoryManager';
 import type { DataStores } from './DataManager';
 import type { Notify } from './storage/storageTypes';
 import type { EntryIndex } from './storage/EntryIndex';
-import { dropOldId, ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import { dropOldId, followRename, ensureFolder, freeNotePath, noteFile, parentOf, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
 import type { EntryWriteHooks } from './storage/noteWrite';
 import { ChangeListeners } from './changeListeners';
 import { getBaseline, sameStoredState, setBaseline } from './storage/baseline';
@@ -52,11 +52,14 @@ export interface GameUpcomingSync {
 export type GameDataManagerDeps = DataStores & {
 	app: App;
 	settings: SettingsReader;
+	/** Bound to the plugin, so the handler is removed on unload. */
+	registerEvent: (ref: EventRef) => void;
 	upcoming: GameUpcomingSync;
 };
 
 export class GameDataManager {
 	private app: App;
+	private registerEvent: (ref: EventRef) => void;
 	private appSettings: SettingsReader;
 	private upcoming: GameUpcomingSync;
 	private index: EntryIndex;
@@ -83,6 +86,7 @@ export class GameDataManager {
 		this.local = deps.local;
 		this.shared = deps.shared;
 		this.layout = deps.layout;
+		this.registerEvent = deps.registerEvent;
 	}
 
 	setHistoryManager(hm: HistoryManager): void {
@@ -91,6 +95,7 @@ export class GameDataManager {
 
 	/** After index.build() and shared.load(): follows index and base changes, reconciles Upcoming. */
 	async init(): Promise<void> {
+		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => followRename({ index: this.index, views: this.views, dirty: this.dirty }, this.layout(), file, oldPath)));
 		this.index.onChange((ids) => {
 			let touched = false;
 			for (const id of ids) {

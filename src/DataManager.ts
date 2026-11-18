@@ -12,7 +12,7 @@ import type { AnyEntry, EntryIndex } from './storage/EntryIndex';
 import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBaseline } from './storage/baseline';
 import { ApiCheckQueue } from './apiCheckQueue';
 import type { LocalStore } from './storage/LocalStore';
-import { ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
+import { ensureFolder, freeNotePath, noteFile, parentOf, retargetSlot, rewriteOwnedKeys, trashNote, updateFrontMatter, writeEntry } from './storage/noteWrite';
 import type { EntryWriteHooks } from './storage/noteWrite';
 import type { ApiCheckKind, ApiCheckResult, EntryCache, LookupKind, Notify } from './storage/storageTypes';
 import { checkResultOf, FAILED } from './lookup';
@@ -545,10 +545,11 @@ export class DataManager {
 	/** Writes the titles with pending silent or episode edits. */
 	private async writePending(): Promise<void> {
 		const ids = new Set([...this.dirty, ...this.pendingMdTitleIds]);
+		// resolved while the ids are still pending: a copy that no longer matches the index entry (rename) is kept only then
+		const titles = [...ids].map((id) => ({ id, t: this.getTitle(id) }));
 		this.dirty.clear();
 		this.pendingMdTitleIds.clear();
-		for (const id of ids) {
-			const t = this.getTitle(id);
+		for (const { id, t } of titles) {
 			if (t) await this.writeTitle(t);
 			else this.notify({ code: 'editLost', id });
 		}
@@ -1618,10 +1619,17 @@ export class DataManager {
 			this.notes.delete(from);
 			this.notes.set(to, notes);
 		}
+		const slot = this.views.get(from);
 		this.views.delete(from);
+		let pending = false;
 		for (const set of [this.dirty, this.pendingMdTitleIds]) {
-			if (set.delete(from)) set.add(to);
+			if (set.delete(from)) {
+				set.add(to);
+				pending = true;
+			}
 		}
+		// the copy with the pending edit follows, so the flush writes the renamed note
+		if (pending && slot) this.views.set(to, retargetSlot(slot, to));
 		const collapsed = this.local.data.ui.collapsedSeasons;
 		if (collapsed?.[from]) {
 			collapsed[to] = collapsed[from];

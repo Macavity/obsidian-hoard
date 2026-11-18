@@ -64,6 +64,6 @@ export async function createStores(files: Record<string, string>, opts: StoreOpt
 	index.start();
 	const stores = { index, local, shared, layout: () => layout, notify };
 	/** Stores plus what every manager takes besides them. */
-	const base = { ...stores, app: f.app, settings: { get: () => settings } };
+	const base = { ...stores, app: f.app, settings: { get: () => settings }, registerEvent: f.plugin.registerEvent };
 	return { f, plugin, settings, local, layout, shared, index, notices, stores, base };
 }

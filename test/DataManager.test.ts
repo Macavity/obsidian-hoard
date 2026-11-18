@@ -44,6 +44,17 @@ describe('DataManager on vault storage', () => {
 		expect(dm.getTitle('Movie/A')).toBeUndefined();
 	});
 
+	it('keeps a pending silent edit when its note is renamed', async () => {
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
+		const t = dm.getTitle('Movie/A')!;
+		dm.updateTitleSilent({ ...t, status: 'Completed' });
+		f.externalRename('W/Movie/A.md', 'W/Movie/B.md');
+		await tick();
+		await dm.save();
+		expect(f.files.get('W/Movie/B.md')).toContain('Status: Completed');
+		expect(f.files.has('W/Movie/A.md')).toBe(false);
+	});
+
 	it('does not overwrite an invalid field it did not change', async () => {
 		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\nRating: great\n---\n' });
 		await dm.setFavorite('Movie/A', true);

@@ -66,15 +66,14 @@ describe('reading writes: rename', () => {
 		expect(f.files.get('W/Books/A2.md')).toContain('Author: Y');
 	});
 
-	it('drops a pending silent edit when the entry is renamed, and reports it under the new id', async () => {
+	it('keeps a pending silent edit when the entry is renamed', async () => {
 		const { rdm, f, notices } = await setupReadingDataManager({ 'W/Books/A.md': BOOK });
 		const b = rdm.getBook('Books/A')!;
 		rdm.updateBookSilent({ ...b, author: 'Y' });
 		await rdm.updateBook({ ...b, title: 'A2' });
 		await rdm.saveAndNotify();
-		// as today: the rename drops the pending copy, so its author never reaches the note, and the flush says so
-		expect(notices).toEqual([{ code: 'editLost', id: 'Books/A2' }]);
-		expect(f.files.get('W/Books/A2.md')).not.toContain('Author');
+		expect(notices).toEqual([]);
+		expect(f.files.get('W/Books/A2.md')).toContain('Author: Y');
 	});
 });
 

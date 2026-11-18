@@ -96,6 +96,7 @@ export default class HoardPlugin extends Plugin {
 		notify: (n) => this.notifyManager(n),
 		app: this.app,
 		settings: this.settingsService,
+		registerEvent: (ref) => this.registerEvent(ref),
 		upcoming: {
 			autoAddReadingToUpcoming: (item, kind) => this.dataManager.autoAddReadingToUpcoming(item, kind),
 			removeReadingAirtimeEntries: (id) => this.dataManager.removeReadingAirtimeEntries(id),
@@ -109,6 +110,7 @@ export default class HoardPlugin extends Plugin {
 		notify: (n) => this.notifyManager(n),
 		app: this.app,
 		settings: this.settingsService,
+		registerEvent: (ref) => this.registerEvent(ref),
 		upcoming: {
 			autoAddGameToUpcoming: (g) => this.dataManager.autoAddGameToUpcoming(g),
 			removeGameAirtimeEntries: (id) => this.dataManager.removeGameAirtimeEntries(id),

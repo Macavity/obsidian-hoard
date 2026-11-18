@@ -1,5 +1,5 @@
 import { TFile, normalizePath } from 'obsidian';
-import type { App } from 'obsidian';
+import type { App, TAbstractFile } from 'obsidian';
 import type { Fm, Notify } from './storageTypes';
 import type { VaultLayout } from './VaultLayout';
 import { setBaseline } from './baseline';
@@ -91,17 +91,41 @@ export function rewriteOwnedKeys(raw: Fm, keys: Iterable<string>, out: Fm, keep:
 
 /**
  * What a rename re-keys in a manager that holds an index entry, a view and a pending flag per id:
- * entry and view of the old id are dropped (the next read builds them under the new id), a pending
- * silent edit follows to the new id.
+ * the index entry is dropped (the next read builds it under the new id). A view with a pending silent
+ * edit moves to the new id together with the flag, so the flush writes the renamed note; any other view
+ * is dropped.
  */
-export function dropOldId(
-	held: { index: { removeLocal(id: string): void }; views: Map<string, unknown>; dirty: Set<string> },
+export function dropOldId<S extends { src: { id: string }; view: { id: string } }>(
+	held: { index: { removeLocal(id: string): void }; views: Map<string, S>; dirty: Set<string> },
 	from: string,
 	to: string,
 ): void {
 	held.index.removeLocal(from);
+	const slot = held.views.get(from);
 	held.views.delete(from);
-	if (held.dirty.delete(from)) held.dirty.add(to);
+	if (!held.dirty.delete(from)) return;
+	held.dirty.add(to);
+	if (slot) held.views.set(to, retargetSlot(slot, to));
+}
+
+/** The slot under a new id: the handed-out copy is the same object, so the UI keeps holding it. */
+export function retargetSlot<S extends { src: { id: string }; view: { id: string } }>(slot: S, to: string): S {
+	slot.view.id = to;
+	return { ...slot, src: { ...slot.src, id: to } };
+}
+
+/** A vault rename of a note whose id has a pending silent edit: re-keys it so the flush writes the renamed note. */
+export function followRename<S extends { src: { id: string }; view: { id: string } }>(
+	held: { index: { removeLocal(id: string): void }; views: Map<string, S>; dirty: Set<string> },
+	layout: VaultLayout,
+	file: TAbstractFile,
+	oldPath: string,
+): void {
+	if (!(file instanceof TFile)) return;
+	const from = layout.classify(oldPath)?.id;
+	const to = layout.classify(file.path)?.id;
+	if (from === undefined || to === undefined || from === to || !held.dirty.has(from)) return;
+	dropOldId(held, from, to);
 }
 
 /** What a manager tells the write pipeline about its kind of entry. */
