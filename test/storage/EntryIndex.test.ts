@@ -9,7 +9,7 @@ const note = (fm: string) => `---\n${fm}\n---\n\n## Notes\n`;
 async function setup(files: Record<string, string>) {
 	const f = createFakeApp(files);
 	const local = new LocalStore(f.plugin); await local.load();
-	const idx = new EntryIndex(f.app, () => new VaultLayout('W', () => ['Movie', 'TV Show']), local, () => {});
+	const idx = new EntryIndex(f.app.vault, f.app.metadataCache, f.app.workspace, () => new VaultLayout('W', () => ['Movie', 'TV Show']), local, () => {});
 	await idx.build(); idx.start();
 	const cb = vi.fn(); idx.onChange(cb);
 	return { f, local, idx, cb };
@@ -92,7 +92,7 @@ describe('EntryIndex edge cases', () => {
 		await f.plugin.saveData({ schemaVersion: 3 });
 		const local = new LocalStore(f.plugin); await local.load();
 		local.data.cache['Movie/Gone'] = { trailerUrl: 'g' };
-		const idx = new EntryIndex(f.app, () => new VaultLayout('W', () => ['Movie']), local, () => {});
+		const idx = new EntryIndex(f.app.vault, f.app.metadataCache, f.app.workspace, () => new VaultLayout('W', () => ['Movie']), local, () => {});
 		await idx.build();
 		idx.sweepCache();
 		expect(local.getCache('Movie/Gone')).toBeDefined();
@@ -107,7 +107,7 @@ describe('EntryIndex edge cases', () => {
 		const f = createFakeApp({ 'W/Anime/A.md': note('Name: A\nType: Anime') });
 		const local = new LocalStore(f.plugin); await local.load();
 		let types = ['Movie'];
-		const idx = new EntryIndex(f.app, () => new VaultLayout('W', () => types), local, () => {});
+		const idx = new EntryIndex(f.app.vault, f.app.metadataCache, f.app.workspace, () => new VaultLayout('W', () => types), local, () => {});
 		await idx.build();
 		expect(idx.titles()).toEqual([]);
 		types = ['Movie', 'Anime'];

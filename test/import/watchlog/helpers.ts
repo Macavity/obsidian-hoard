@@ -18,8 +18,8 @@ export function importContext(
 	f: ReturnType<typeof createFakeApp>, local: LocalStore, root: string, types: string[],
 ): ImportContext {
 	const layout = new VaultLayout(root, () => types);
-	const shared = new SharedConfigStore(f.app, () => layout, yaml);
-	const history = new HistoryStore(f.app, () => layout);
+	const shared = new SharedConfigStore(f.app.vault, () => layout, yaml);
+	const history = new HistoryStore(f.app.vault, () => layout);
 	return { vault: f.app.vault, fileManager: f.app.fileManager, local, shared, history, yaml, layout };
 }
 

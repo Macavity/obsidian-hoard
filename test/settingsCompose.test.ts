@@ -341,7 +341,7 @@ describe('composeSettings and persistSettings', () => {
 		const local = new LocalStore(f.plugin);
 		await local.load();
 		const layout = new VaultLayout('W', () => []);
-		const shared = new SharedConfigStore(f.app, () => layout, { parse, stringify });
+		const shared = new SharedConfigStore(f.app.vault, () => layout, { parse, stringify });
 		await shared.load();
 		local.data.settings = { futureKey: 1, cardSize: 2 };
 		const settings = composeSettings(local.data.settings, shared.get().settings);

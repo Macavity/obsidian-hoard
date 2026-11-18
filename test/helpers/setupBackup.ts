@@ -47,7 +47,7 @@ export async function setupBackup(files: Record<string, string>, secrets: Record
 		shared,
 		importContext: () => ({
 			app: f.app, local, shared, layout, yaml: { parse, stringify },
-			history: new HistoryStore(f.app, () => layout),
+			history: new HistoryStore(f.app.vault, () => layout),
 		}),
 	};
 	/** What was last written to data.json. */

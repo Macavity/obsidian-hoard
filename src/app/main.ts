@@ -65,13 +65,13 @@ export default class HoardPlugin extends Plugin {
 	}, this.secretStore);
 	private yaml = { parse: parseYaml, stringify: stringifyYaml };
 	private shared = new SharedConfigStore(
-		this.app,
+		this.app.vault,
 		() => this.layout,
 		this.yaml,
 		(ref) => this.registerEvent(ref),
 		(n) => this.notifyManager(n),
 	);
-	private index = new EntryIndex(this.app, () => this.layout, this.local, (ref) => this.registerEvent(ref));
+	private index = new EntryIndex(this.app.vault, this.app.metadataCache, this.app.workspace, () => this.layout, this.local, (ref) => this.registerEvent(ref));
 	// the managers reach each other through lambdas, so the construction order does not matter
 	private dataManager: DataManager = new DataManager(
 		this.app.vault,
@@ -128,7 +128,7 @@ export default class HoardPlugin extends Plugin {
 	/** TMDB/OMDb key snapshot of the last settings save; null before onload set it */
 	private apiKeys: string | null = null;
 	private historyManager: HistoryManager = new HistoryManager(new HistoryStore(
-		this.app,
+		this.app.vault,
 		() => this.layout,
 		(ref) => this.registerEvent(ref),
 	));
@@ -555,7 +555,7 @@ export default class HoardPlugin extends Plugin {
 			fileManager: this.app.fileManager,
 			local: this.local,
 			shared: this.shared,
-			history: new HistoryStore(this.app, () => this.layout),
+			history: new HistoryStore(this.app.vault, () => this.layout),
 			yaml: this.yaml,
 			layout: this.layout,
 		};

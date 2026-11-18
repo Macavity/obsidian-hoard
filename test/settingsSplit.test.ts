@@ -17,7 +17,7 @@ async function setup(files: Record<string, string>) {
 	const local = new LocalStore(f.plugin);
 	await local.load();
 	const layout = new VaultLayout('W', () => []);
-	const shared = new SharedConfigStore(f.app, () => layout, { parse, stringify });
+	const shared = new SharedConfigStore(f.app.vault, () => layout, { parse, stringify });
 	await shared.load();
 	return { f, local, shared };
 }

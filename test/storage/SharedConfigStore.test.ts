@@ -6,7 +6,7 @@ import { SharedConfigStore } from '../../src/shared/storage/SharedConfigStore';
 const yaml = { parse, stringify };
 const mk = (files: Record<string, string>) => {
 	const f = createFakeApp(files);
-	const s = new SharedConfigStore(f.app, () => new VaultLayout('W', () => []), yaml);
+	const s = new SharedConfigStore(f.app.vault, () => new VaultLayout('W', () => []), yaml);
 	return { f, s };
 };
 describe('SharedConfigStore', () => {

@@ -52,7 +52,7 @@ describe('resolveRecentlyWatched', () => {
 		const f = createFakeApp({
 			'W/History.md': '# History\n\n- 2026-01-01T00:00:00.000Z · watched · [[TV Show/Alien- Covenant]] · Alien: Covenant (TV Show) S1E1 watched #watchlist\n',
 		});
-		const entries = (await new HistoryStore(f.app, () => new VaultLayout('W', () => [])).load()).reverse();
+		const entries = (await new HistoryStore(f.app.vault, () => new VaultLayout('W', () => [])).load()).reverse();
 		expect(resolveRecentlyWatched(entries, [dark, alien])).toEqual([alien]);
 	});
 });

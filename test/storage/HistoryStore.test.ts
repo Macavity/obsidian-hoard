@@ -13,7 +13,7 @@ const tick = () => new Promise((r) => setTimeout(r, 20));
 describe('HistoryStore', () => {
 	it('appends, caps and keeps foreign lines', async () => {
 		const f = createFakeApp({ 'W/History.md': '# My log\n' });
-		const h = new HistoryStore(f.app, layout);
+		const h = new HistoryStore(f.app.vault, layout);
 		for (let i = 0; i < 1001; i++) await h.append(entry(i));
 		const all = await h.load();
 		expect(all.length).toBe(1000);
@@ -28,7 +28,7 @@ describe('HistoryStore', () => {
 		const local = Array.from({ length: 1000 }, (_, i) => line(1000 + i));
 		const imported = Array.from({ length: 5 }, (_, i) => line(i));
 		const f = createFakeApp({ 'W/History.md': ['# x', ...local, ...imported, ''].join('\n') });
-		const h = new HistoryStore(f.app, layout);
+		const h = new HistoryStore(f.app.vault, layout);
 		await h.append(entry(2000));
 		const all = await h.load();
 		expect(all).toHaveLength(1000);
@@ -43,7 +43,7 @@ describe('HistoryStore', () => {
 		const f = createFakeApp({ 'W/History.md': [
 			'# x', `- ${iso(30)} · added · T30 · m30`, `- ${iso(10)} · added · T10 · m10`, `- ${iso(20)} · added · T20 · m20`, '',
 		].join('\n') });
-		const h = new HistoryStore(f.app, layout);
+		const h = new HistoryStore(f.app.vault, layout);
 		expect((await h.load()).map((e) => e.message)).toEqual(['m10', 'm20', 'm30']);
 	});
 
@@ -51,7 +51,7 @@ describe('HistoryStore', () => {
 		const iso = (sec: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, sec)).toISOString();
 		const local = Array.from({ length: 1000 }, (_, i) => `- ${iso(1000 + i)} · added · T${i} · m${1000 + i}`);
 		const f = createFakeApp({ 'W/History.md': ['# x', 'my note', ...local, ''].join('\n') });
-		const h = new HistoryStore(f.app, layout);
+		const h = new HistoryStore(f.app.vault, layout);
 		await h.append(entry(3000));
 		const txt = f.files.get('W/History.md')!;
 		expect(txt.startsWith('# x\nmy note\n')).toBe(true);
@@ -61,7 +61,7 @@ describe('HistoryStore', () => {
 
 	it('roundtrips entries incl. source, wikilink and ids', async () => {
 		const f = createFakeApp();
-		const h = new HistoryStore(f.app, layout);
+		const h = new HistoryStore(f.app.vault, layout);
 		await h.append(entry(1, { source: 'Reading', titleId: 'Movie/T1' }));
 		await h.append(entry(2));
 		expect(f.files.get('W/History.md')).toContain('[[Movie/T1]]');
@@ -74,7 +74,7 @@ describe('HistoryStore', () => {
 
 	it('skips unreadable lines on load and maps group-created', async () => {
 		const f = createFakeApp({ 'W/History.md': '# x\nnotes\n- 2026-01-01T00:00:00.000Z · group-created · Favs\n- bad line\n' });
-		const h = new HistoryStore(f.app, layout);
+		const h = new HistoryStore(f.app.vault, layout);
 		const all = await h.load();
 		expect(all).toHaveLength(1);
 		expect(all[0]!.message).toBe('Group "Favs" was created');
@@ -87,7 +87,7 @@ describe('HistoryStore', () => {
 
 	it('replaceAll replaces entries and keeps foreign lines', async () => {
 		const f = createFakeApp({ 'W/History.md': '# x\n' });
-		const h = new HistoryStore(f.app, layout);
+		const h = new HistoryStore(f.app.vault, layout);
 		await h.append(entry(1)); await h.append(entry(2));
 		await h.replaceAll([entry(2)]);
 		expect((await h.load()).map((e) => e.message)).toEqual(['m2']);
@@ -96,7 +96,7 @@ describe('HistoryStore', () => {
 
 	it('notifies on external change, not on own writes', async () => {
 		const f = createFakeApp({ 'W/History.md': '# x\n' });
-		const h = new HistoryStore(f.app, layout);
+		const h = new HistoryStore(f.app.vault, layout);
 		const cb = vi.fn();
 		h.start(cb);
 		await h.append(entry(1));
@@ -109,7 +109,7 @@ describe('HistoryStore', () => {
 	it('links by titleId without a vault scan, also for sanitized names', async () => {
 		const f = createFakeApp();
 		const scan = vi.spyOn(f.app.vault, 'getMarkdownFiles');
-		const h = new HistoryStore(f.app, () => new VaultLayout('W', () => ['Movie']));
+		const h = new HistoryStore(f.app.vault, () => new VaultLayout('W', () => ['Movie']));
 		await h.append(entry(1, { titleName: 'Léon: The Professional', titleId: 'Movie/Léon- The Professional' }));
 		expect(f.files.get('W/History.md')).toContain('[[Movie/Léon- The Professional]]');
 		expect(scan).not.toHaveBeenCalled();
@@ -120,7 +120,7 @@ describe('HistoryStore', () => {
 
 	it('links two same-named titles of different types to their own notes', async () => {
 		const f = createFakeApp();
-		const h = new HistoryStore(f.app, () => new VaultLayout('W', () => ['Movie', 'TV Show']));
+		const h = new HistoryStore(f.app.vault, () => new VaultLayout('W', () => ['Movie', 'TV Show']));
 		await h.appendMany([
 			entry(1, { titleName: 'Dark', titleId: 'Movie/Dark' }),
 			entry(2, { titleName: 'Dark', titleId: 'TV Show/Dark' }),
@@ -132,14 +132,14 @@ describe('HistoryStore', () => {
 
 	it('keeps entries without id as plain text', async () => {
 		const f = createFakeApp({ 'W/Movie/Dark.md': '---\n---\n' });
-		const h = new HistoryStore(f.app, () => new VaultLayout('W', () => ['Movie']));
+		const h = new HistoryStore(f.app.vault, () => new VaultLayout('W', () => ['Movie']));
 		await h.append(entry(1, { titleName: 'Dark' }));
 		expect(f.files.get('W/History.md')).not.toContain('[[');
 	});
 
 	it('replaceAll keeps existing link targets', async () => {
 		const f = createFakeApp();
-		const h = new HistoryStore(f.app, () => new VaultLayout('W', () => ['Movie']));
+		const h = new HistoryStore(f.app.vault, () => new VaultLayout('W', () => ['Movie']));
 		await h.append(entry(1, { titleName: 'Léon: The Professional', titleId: 'Movie/Léon- The Professional' }));
 		await h.append(entry(2));
 		await h.replaceAll(await h.load());

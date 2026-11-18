@@ -1,4 +1,4 @@
-import { TFile, type App, type EventRef } from 'obsidian';
+import { TFile, type EventRef, type Vault } from 'obsidian';
 import type { Notify, SharedConfig, YamlIO } from './storageTypes';
 import type { VaultLayout } from './VaultLayout';
 import {
@@ -75,7 +75,7 @@ export class SharedConfigStore {
 	private createRef: EventRef | null = null;
 
 	constructor(
-		private app: App,
+		private vault: Vault,
 		private layout: () => VaultLayout,
 		private yaml: YamlIO,
 		private register: (ref: EventRef) => void = () => {},
@@ -84,7 +84,7 @@ export class SharedConfigStore {
 
 	/** The existing base file at the root, if any. */
 	baseFile(): TFile | null {
-		const f = this.app.vault.getAbstractFileByPath(this.layout().basePath);
+		const f = this.vault.getAbstractFileByPath(this.layout().basePath);
 		return f instanceof TFile ? f : null;
 	}
 
@@ -102,7 +102,7 @@ export class SharedConfigStore {
 
 	async load(): Promise<SharedConfig> {
 		const f = this.baseFile();
-		const parsed = f ? this.parseBlock(await this.app.vault.read(f)) : null;
+		const parsed = f ? this.parseBlock(await this.vault.read(f)) : null;
 		this.config = parsed ?? { version: VERSION, settings: {} };
 		return this.config;
 	}
@@ -134,7 +134,7 @@ export class SharedConfigStore {
 		}
 		const version = next.version;
 		let written = true;
-		await this.app.vault.process(f, (src) => {
+		await this.vault.process(f, (src) => {
 			let current: Record<string, unknown> | null = null;
 			if (hasHoardKey(src)) {
 				try {
@@ -170,7 +170,7 @@ export class SharedConfigStore {
 		} catch (e) {
 			// another device created the base meanwhile (sync): adopt it
 			const f = this.baseFile();
-			if (f && hasHoardKey(await this.app.vault.read(f))) {
+			if (f && hasHoardKey(await this.vault.read(f))) {
 				await d.appeared();
 				return;
 			}
@@ -187,13 +187,13 @@ export class SharedConfigStore {
 	async ensureFilter(): Promise<'ok' | 'fixed' | 'missing'> {
 		const f = this.baseFile();
 		if (!f) return 'missing';
-		const src = await this.app.vault.read(f);
+		const src = await this.vault.read(f);
 		const current = findInFolderPath(src);
 		if (current === null) return 'missing';
 		const root = this.layout().root;
 		if (current === root) return 'ok';
 		let result: 'fixed' | 'missing' = 'fixed';
-		await this.app.vault.process(f, (s) => {
+		await this.vault.process(f, (s) => {
 			const next = replaceInFolderPath(s, root);
 			if (next === null) { result = 'missing'; return s; }
 			return next;
@@ -206,25 +206,25 @@ export class SharedConfigStore {
 		const settings = pick(initial);
 		const content = createBaseFile(layout.root, { version: VERSION, ...settings }, this.yaml);
 		this.config = { version: VERSION, settings };
-		await this.app.vault.create(layout.basePath, content);
+		await this.vault.create(layout.basePath, content);
 	}
 
 	start(): void {
-		this.modifyRef = this.app.vault.on('modify', (file: unknown) => {
+		this.modifyRef = this.vault.on('modify', (file: unknown) => {
 			if (!(file instanceof TFile)) return;
 			if (this.deferred) void this.checkAppeared(file);
 			if (file.path !== this.baseFile()?.path) return;
 			void this.reload(file);
 		});
 		this.register(this.modifyRef);
-		this.createRef = this.app.vault.on('create', (file: unknown) => void this.checkAppeared(file));
+		this.createRef = this.vault.on('create', (file: unknown) => void this.checkAppeared(file));
 		this.register(this.createRef);
 	}
 
 	/** A `.base` with a `hoard:` block shows up while the base is deferred (sync). */
 	private async checkAppeared(file: unknown): Promise<void> {
 		if (!this.deferred || !(file instanceof TFile) || file.extension !== 'base') return;
-		if (!hasHoardKey(await this.app.vault.read(file))) return;
+		if (!hasHoardKey(await this.vault.read(file))) return;
 		const d = this.deferred;
 		if (!d) return;
 		this.deferred = null;
@@ -232,9 +232,9 @@ export class SharedConfigStore {
 	}
 
 	stop(): void {
-		if (this.modifyRef) this.app.vault.offref(this.modifyRef);
+		if (this.modifyRef) this.vault.offref(this.modifyRef);
 		this.modifyRef = null;
-		if (this.createRef) this.app.vault.offref(this.createRef);
+		if (this.createRef) this.vault.offref(this.createRef);
 		this.createRef = null;
 	}
 
@@ -243,7 +243,7 @@ export class SharedConfigStore {
 	}
 
 	private async reload(file: TFile): Promise<void> {
-		const parsed = this.parseBlock(await this.app.vault.read(file));
+		const parsed = this.parseBlock(await this.vault.read(file));
 		if (!parsed) return;
 		// own writes echo back identical content: no reload
 		if (canon(parsed.settings) === canon(this.config.settings)) return;

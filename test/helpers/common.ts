@@ -61,10 +61,10 @@ export async function createStores(files: Record<string, string>, opts: StoreOpt
 	const local = new LocalStore(f.plugin, opts.secrets ? new SecretStore(f.app.secretStorage) : undefined);
 	await local.load();
 	const layout = new VaultLayout('W', () => settings.types.map((t) => t.name));
-	const shared = new SharedConfigStore(f.app, () => layout, { parse, stringify }, undefined, notify);
+	const shared = new SharedConfigStore(f.app.vault, () => layout, { parse, stringify }, undefined, notify);
 	if (createBase && !f.files.has('W/Hoard.base')) await shared.createBase({});
 	if (createBase || opts.loadShared) await shared.load();
-	const index = new EntryIndex(f.app, () => layout, local, f.plugin.registerEvent);
+	const index = new EntryIndex(f.app.vault, f.app.metadataCache, f.app.workspace, () => layout, local, f.plugin.registerEvent);
 	await index.build();
 	index.start();
 	const stores = { index, local, shared, layout: () => layout, notify };

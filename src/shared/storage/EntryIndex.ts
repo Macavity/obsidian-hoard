@@ -1,5 +1,5 @@
 import { TFile } from 'obsidian';
-import type { App, EventRef, TAbstractFile } from 'obsidian';
+import type { EventRef, MetadataCache, TAbstractFile, Vault, Workspace } from 'obsidian';
 import type { Book, Game, Manga, HoardTitle, ReadingCustomColumn } from '../domain/types';
 import type { LocalStore } from './LocalStore';
 import type { VaultLayout } from './VaultLayout';
@@ -42,7 +42,9 @@ export class EntryIndex {
 	private mangaColumns: readonly ReadingCustomColumn[] = [];
 
 	constructor(
-		private readonly app: App,
+		private readonly vault: Vault,
+		private readonly metadataCache: MetadataCache,
+		private readonly workspace: Pick<Workspace, 'onLayoutReady'>,
 		private readonly layout: () => VaultLayout,
 		private readonly local: LocalStore,
 		private readonly register: (ref: EventRef) => void,
@@ -59,12 +61,12 @@ export class EntryIndex {
 		const layout = this.layout();
 		for (const id of this.local.cacheIds()) {
 			const path = layout.pathFromId(id);
-			if (layout.classify(path) && !this.app.vault.getAbstractFileByPath(path)) this.local.deleteCache(id);
+			if (layout.classify(path) && !this.vault.getAbstractFileByPath(path)) this.local.deleteCache(id);
 		}
 	}
 
 	start(): void {
-		const { vault, metadataCache } = this.app;
+		const { vault, metadataCache } = this;
 		this.register(metadataCache.on('changed', (file) => this.upsert(file)));
 		this.register(vault.on('delete', (file) => this.onDelete(file)));
 		this.register(vault.on('rename', (file, oldPath) => this.onRename(file, oldPath)));
@@ -91,7 +93,7 @@ export class EntryIndex {
 		if (!changed) return;
 		for (const [id, slot] of this.entries) {
 			if (slot.value.kind !== 'book' && slot.value.kind !== 'manga') continue;
-			const file = this.app.vault.getAbstractFileByPath(this.layout().pathFromId(id));
+			const file = this.vault.getAbstractFileByPath(this.layout().pathFromId(id));
 			const next = file instanceof TFile ? this.decode(file) : null;
 			if (!next) continue;
 			if (sameValue(slot.value, next.value)) { slot.invalid = next.invalid; continue; }
@@ -147,7 +149,7 @@ export class EntryIndex {
 	}
 
 	private layoutReady(): Promise<void> {
-		return new Promise((resolve) => this.app.workspace.onLayoutReady(resolve));
+		return new Promise((resolve) => this.workspace.onLayoutReady(resolve));
 	}
 
 	private entriesOf<T>(pick: (e: AnyEntry) => T | undefined): T[] {
@@ -161,7 +163,7 @@ export class EntryIndex {
 
 	private scan(): Map<string, Slot> {
 		const map = new Map<string, Slot>();
-		for (const file of this.app.vault.getMarkdownFiles()) {
+		for (const file of this.vault.getMarkdownFiles()) {
 			const slot = this.decode(file);
 			if (slot) map.set(slot.value.entry.id, slot);
 		}
@@ -172,7 +174,7 @@ export class EntryIndex {
 	private decode(file: TFile): Slot | null {
 		const c = this.layout().classify(file.path);
 		if (!c) return null;
-		const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+		const fm = this.metadataCache.getFileCache(file)?.frontmatter;
 		if (!fm || Object.keys(fm).length === 0) return null;
 		try {
 			switch (c.kind) {

@@ -1,4 +1,4 @@
-import { TFile, type App, type EventRef } from 'obsidian';
+import { TFile, type EventRef, type Vault } from 'obsidian';
 import type { HistoryEntry } from '../domain/types';
 import { formatHistoryLine, parseHistoryLine, type HistoryLine } from './historyLine';
 import type { VaultLayout } from './VaultLayout';
@@ -59,13 +59,13 @@ export class HistoryStore {
 	private own = new Set<string>();
 
 	constructor(
-		private app: App,
+		private vault: Vault,
 		private layout: () => VaultLayout,
 		private register: (ref: EventRef) => void = () => {},
 	) {}
 
 	private file(): TFile | null {
-		const f = this.app.vault.getAbstractFileByPath(this.layout().historyPath);
+		const f = this.vault.getAbstractFileByPath(this.layout().historyPath);
 		return f instanceof TFile ? f : null;
 	}
 
@@ -77,7 +77,7 @@ export class HistoryStore {
 		const f = this.file();
 		if (!f) return [];
 		const out: HistoryEntry[] = [];
-		(await this.app.vault.read(f)).split('\n').forEach((raw, i) => {
+		(await this.vault.read(f)).split('\n').forEach((raw, i) => {
 			const l = parseHistoryLine(raw.replace(/\r$/, ''));
 			if (l) out.push(toEntry(l, i));
 		});
@@ -136,18 +136,18 @@ export class HistoryStore {
 		const remember = (s: string) => { this.own.add(s); return s; };
 		if (!f) {
 			const content = remember(fn('# History\n\n'));
-			await this.app.vault.create(this.layout().historyPath, content);
+			await this.vault.create(this.layout().historyPath, content);
 			return;
 		}
-		await this.app.vault.process(f, (src) => remember(fn(src)));
+		await this.vault.process(f, (src) => remember(fn(src)));
 	}
 
 	/** Calls `onExternal` when History.md changes from outside; own writes are ignored. */
 	start(onExternal: () => void): void {
 		this.stop();
-		this.modifyRef = this.app.vault.on('modify', (file: unknown) => {
+		this.modifyRef = this.vault.on('modify', (file: unknown) => {
 			if (!(file instanceof TFile) || file.path !== this.layout().historyPath) return;
-			void this.app.vault.read(file).then((content) => {
+			void this.vault.read(file).then((content) => {
 				if (this.own.delete(content)) return;
 				onExternal();
 			});
@@ -156,7 +156,7 @@ export class HistoryStore {
 	}
 
 	stop(): void {
-		if (this.modifyRef) this.app.vault.offref(this.modifyRef);
+		if (this.modifyRef) this.vault.offref(this.modifyRef);
 		this.modifyRef = null;
 	}
 }
