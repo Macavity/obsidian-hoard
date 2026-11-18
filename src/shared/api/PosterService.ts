@@ -3,6 +3,7 @@ import { explicitMediaKind, titleMediaKind } from './cinemetaApi';
 import type { LookupKind } from '../storage/storageTypes';
 import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from '../domain/types';
 import { getApiGroupForType } from '../domain/types';
+import type { DeepReadonly } from '../domain/deepReadonly';
 import { httpsOrEmpty } from './httpsUrl';
 import { found, attempt, firstFound, FAILED, NO_KEY, type LookupResult, type LookupSource } from './lookup';
 import { at, readList, readOptionalString, readString } from '../domain/read';
@@ -37,7 +38,7 @@ export interface PosterTitles {
 
 export class PosterService {
 	private dataManager: PosterTitles;
-	private getSettings: () => HoardPluginSettings;
+	private getSettings: () => DeepReadonly<HoardPluginSettings>;
 	private queue: QueueItem[] = [];
 	private isProcessing = false;
 	private disposed = false;
@@ -45,7 +46,7 @@ export class PosterService {
 
 	constructor(
 		dataManager: PosterTitles,
-		getSettings: () => HoardPluginSettings,
+		getSettings: () => DeepReadonly<HoardPluginSettings>,
 		getApi?: () => ApiService,
 	) {
 		this.dataManager = dataManager;
@@ -217,7 +218,7 @@ export class PosterService {
 	}
 
 	/** TMDB, then OMDb, then Cinemeta; a source without a key (or Cinemeta without an api) reports nokey. */
-	private mediaSources(title: HoardTitle, settings: HoardPluginSettings): LookupSource<string>[] {
+	private mediaSources(title: HoardTitle, settings: DeepReadonly<HoardPluginSettings>): LookupSource<string>[] {
 		return [
 			() => (settings.tmdbApiKey ? attempt(() => this.fetchTmdbPoster(title, settings), lookupOfError) : Promise.resolve(NO_KEY)),
 			() => (settings.omdbApiKey ? attempt(() => this.fetchOmdbPoster(title, settings), lookupOfError) : Promise.resolve(NO_KEY)),
@@ -273,7 +274,7 @@ export class PosterService {
 		};
 	}
 
-	private async fetchTmdbPoster(title: HoardTitle, settings: HoardPluginSettings): Promise<string | null> {
+	private async fetchTmdbPoster(title: HoardTitle, settings: DeepReadonly<HoardPluginSettings>): Promise<string | null> {
 		const { name, imdbId, year, kind } = this.posterQuery(title);
 		const headers = { Authorization: `Bearer ${settings.tmdbApiKey}` };
 		const q = encodeURIComponent(name);
@@ -295,7 +296,7 @@ export class PosterService {
 		return path ? `${TMDB_IMG_BASE}${path}` : null;
 	}
 
-	private async fetchOmdbPoster(title: HoardTitle, settings: HoardPluginSettings): Promise<string | null> {
+	private async fetchOmdbPoster(title: HoardTitle, settings: DeepReadonly<HoardPluginSettings>): Promise<string | null> {
 		const { name, imdbId, year, kind } = this.posterQuery(title);
 		const key = encodeURIComponent(settings.omdbApiKey);
 		const posterAt = async (url: string): Promise<string | null> => {

@@ -177,7 +177,7 @@ export default class HoardPlugin extends Plugin {
 
 		this.posterService = new PosterService(
 			this.dataManager,
-			() => this.state,
+			() => this.settingsService.get(),
 			() => this.apiService,
 		);
 
@@ -307,10 +307,11 @@ export default class HoardPlugin extends Plugin {
 		};
 	}
 
+	/** For the tab host only; each tab narrows it to what it uses. */
 	private hoardViewDeps(): HoardViewDeps {
 		return {
 			...this.listTabDeps(),
-			api: this.apiService,
+			api: this.apiService, // listTabDeps() narrows it to the Watchlist's needs
 			history: this.historyManager,
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
@@ -331,7 +332,7 @@ export default class HoardPlugin extends Plugin {
 			...this.listTabDeps(),
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
-			api: this.apiService,
+			api: this.apiService, // listTabDeps() narrows it to the Watchlist's needs
 			searchBooks,
 		};
 	}
@@ -353,7 +354,7 @@ export default class HoardPlugin extends Plugin {
 		this.dataManager.flushPendingSaveSync();
 		this.dataManager.flushLocalData();
 		this.dataManager.flushQueuedSaveSync();
-		const flushes = [this.readingDataManager?.flushPending(), this.gameDataManager?.flushPending(), this.settingsService.flush()];
+		const flushes = [this.readingDataManager.flushPending(), this.gameDataManager.flushPending(), this.settingsService.flush()];
 		this.posterService?.destroy();
 		this.widgetRenderer?.cleanup();
 		this.index.stop();
