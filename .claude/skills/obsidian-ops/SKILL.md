@@ -20,7 +20,6 @@ This skill covers:
 
 ## Core Rules
 
-- **NEVER perform automatic git operations**: AI agents must never execute `git commit`, `git push`, or any command that automatically stages or commits changes without explicit user approval for each step.
 - **Verify Build**: Always run a build/lint after significant changes to ensure compatibility.
 
 ## Bundled Resources
