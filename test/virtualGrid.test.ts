@@ -66,3 +66,74 @@ describe("setRowsCardWidth", () => {
 		expect(prop(scroll, "--hoard-rows-view-card-width")).toBe("130px");
 	});
 });
+
+describe("VirtualGrid window transitions", () => {
+	const metrics = { cols: 4, cardWidth: 100, cardHeight: 88, rowHeight: 100 };
+	const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+
+	function mountIndexed(count: number) {
+		const spacer = createDiv();
+		const grid = spacer.createDiv();
+		const built: number[] = [];
+		const removed: number[] = [];
+		const cb = {
+			buildItem: (i: number) => {
+				built.push(i);
+				return createDiv({ cls: "card", attr: { "data-i": String(i) } });
+			},
+			removeItem: (el: HTMLElement) => {
+				removed.push(Number(el.dataset.i));
+				el.remove();
+			},
+		};
+		const indices = () => Array.from(grid.children).map((c) => Number((c as HTMLElement).dataset.i));
+		return { built, removed, indices, vgrid: new VirtualGrid(spacer, grid, count, cb) };
+	}
+
+	it("renders the initial window", () => {
+		const { vgrid, indices } = mountIndexed(40);
+		expect(vgrid.update(0, 300, metrics)).toBe(true);
+		expect(indices()).toEqual(range(0, 23));
+	});
+
+	it("scrolling down trims the top and appends the new rows", () => {
+		const { vgrid, built, removed, indices } = mountIndexed(40);
+		vgrid.update(0, 300, metrics);
+		built.length = 0;
+		expect(vgrid.update(200, 300, metrics)).toBe(true);
+		expect(indices()).toEqual(range(0, 31));
+		expect(removed).toEqual([]);
+		expect(built).toEqual(range(24, 31));
+		vgrid.update(400, 300, metrics);
+		expect(indices()).toEqual(range(8, 39));
+		expect(removed).toEqual(range(0, 7));
+	});
+
+	it("scrolling up trims the bottom and prepends the new rows", () => {
+		const { vgrid, built, removed, indices } = mountIndexed(40);
+		vgrid.update(1000, 300, metrics);
+		expect(indices()).toEqual(range(32, 39));
+		built.length = 0;
+		expect(vgrid.update(700, 300, metrics)).toBe(true);
+		expect(indices()).toEqual(range(20, 39));
+		expect(built).toEqual(range(20, 31));
+		vgrid.update(0, 300, metrics);
+		expect(indices()).toEqual(range(0, 23));
+		expect(removed.slice().sort((a, b) => a - b)).toEqual(range(24, 39));
+	});
+
+	it("replaces the window when old and new do not overlap", () => {
+		const { vgrid, removed, indices } = mountIndexed(100);
+		vgrid.update(0, 300, metrics);
+		vgrid.update(2000, 300, metrics);
+		expect(indices()[0]).toBeGreaterThan(23);
+		expect(removed).toEqual(range(0, 23));
+	});
+
+	it("empties the grid when it scrolls out of the viewport", () => {
+		const { vgrid, indices } = mountIndexed(40);
+		vgrid.update(0, 300, metrics);
+		expect(vgrid.update(-5000, 300, metrics)).toBe(true);
+		expect(indices()).toEqual([]);
+	});
+});

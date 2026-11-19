@@ -121,11 +121,118 @@ export interface PosterCardSpec {
 	onClick: (card: HTMLElement) => void;
 }
 
+export interface PosterCardModel {
+	imgSize: { width: number; height: number } | null;
+	poster: { kind: 'image'; url: string } | { kind: 'lazy' } | { kind: 'none' };
+	titleCls: string;
+	yearCls: string;
+	meta: { typeLabel: string; typeColor?: string; year?: string } | null;
+	progressWidth: string | null;
+	menu: { label: string; items: CardMenuItem[] } | null;
+}
+
+function posterImgSize(spec: PosterCardSpec): PosterCardModel['imgSize'] {
+	if (spec.cardWidth === undefined) return null;
+	const height = spec.textUnder ? spec.cardWidth * 1.5 : spec.cardHeight ?? spec.cardWidth * 1.5;
+	return { width: Math.round(spec.cardWidth), height: Math.round(height) };
+}
+
+function posterSource(spec: PosterCardSpec): PosterCardModel['poster'] {
+	if (spec.posterUrl && spec.posterUrl.startsWith('http')) return { kind: 'image', url: spec.posterUrl };
+	return spec.needsPoster ? { kind: 'lazy' } : { kind: 'none' };
+}
+
+function cardMeta(spec: PosterCardSpec): PosterCardModel['meta'] {
+	if (!spec.typeLabel) return null;
+	return { typeLabel: spec.typeLabel, typeColor: spec.typeColor, year: spec.year };
+}
+
+function cardMenu(spec: PosterCardSpec): PosterCardModel['menu'] {
+	const items = spec.menuItems;
+	if (!items || items.length === 0) return null;
+	return { label: spec.menuAriaLabel ?? t('list.card.moreActions'), items };
+}
+
+/** Pure decisions of a poster card, so the render code only applies them. */
+export function posterCardModel(spec: PosterCardSpec): PosterCardModel {
+	return {
+		imgSize: posterImgSize(spec),
+		poster: posterSource(spec),
+		titleCls: spec.textUnder ? 'hoard-card__under-title' : 'hoard-card__title',
+		yearCls: spec.textUnder ? 'hoard-card__under-year' : 'hoard-card__year',
+		meta: cardMeta(spec),
+		progressWidth:
+			spec.progressRatio === undefined ? null : `${Math.max(0, Math.min(1, spec.progressRatio)) * 100}%`,
+		menu: cardMenu(spec),
+	};
+}
+
+function renderPoster(card: HTMLElement, spec: PosterCardSpec, model: PosterCardModel): void {
+	createPosterPlaceholder(card, spec.title, spec.placeholderColor);
+
+	const img = card.createEl('img', { cls: 'hoard-card__poster' });
+	img.alt = spec.title;
+	// decode off the main thread — the letter placeholder covers the extra frame, and a synchronous
+	// decode of a large cover janks the scroll
+	img.decoding = 'async';
+	// give the <img> definite intrinsic dimensions so it never momentarily lays out at its natural
+	// (post-load) size; the CSS (absolute inset:0 + object-fit:cover) then fills the card's box. Shelf
+	// cards pass only cardWidth, so the height derives from the same 2:3 ratio.
+	if (model.imgSize) {
+		img.width = model.imgSize.width;
+		img.height = model.imgSize.height;
+	}
+
+	if (model.poster.kind === 'image') {
+		// reveal synchronously: gating on onload made every re-render flash the letter placeholder for a
+		// frame, because onload is async even for a fully cached image. An <img> paints nothing until its
+		// data arrives, so the placeholder still covers a genuinely slow load; onerror re-hides the img and
+		// restores the placeholder. Attach onerror before src so a cached failure still fires.
+		img.onerror = () => {
+			card.removeClass('has-poster');
+		};
+		card.addClass('has-poster');
+		img.src = model.poster.url;
+	} else if (model.poster.kind === 'lazy') {
+		card.dataset.needsPoster = 'true';
+	}
+}
+
+function renderCardText(textHost: HTMLElement, spec: PosterCardSpec, model: PosterCardModel): void {
+	textHost.createSpan({ cls: model.titleCls, text: spec.title });
+	if (model.meta) {
+		const metaRow = textHost.createDiv({ cls: 'hoard-card__meta-row' });
+		const typeBadge = metaRow.createSpan({
+			cls: 'hoard-card__type-badge',
+			text: model.meta.typeLabel,
+		});
+		if (model.meta.typeColor) typeBadge.setCssProps({ '--hoard-card-type-color': model.meta.typeColor });
+		if (model.meta.year) metaRow.createSpan({ cls: model.yearCls, text: model.meta.year });
+	}
+}
+
+function renderCardMenu(
+	card: HTMLElement,
+	menu: NonNullable<PosterCardModel['menu']>,
+	menuCtx: CardMenuContext,
+): void {
+	const menuBtn = createIconButton(card, {
+		icon: 'more-vertical',
+		label: menu.label,
+		cls: 'hoard-card__menu-btn',
+	});
+	menuBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		openCardMenu(card, menuBtn, menu.items, menuCtx);
+	});
+}
+
 export function buildPosterCard(
 	parent: HTMLElement,
 	spec: PosterCardSpec,
 	menuCtx: CardMenuContext,
 ): HTMLElement {
+	const model = posterCardModel(spec);
 	// text-under mode wraps the poster in a cell (the Upcoming tracker-cell pattern): the cell carries
 	// the total height, the poster keeps its 2:3 ratio via CSS, and the text block fills the rest
 	const cell = spec.textUnder ? parent.createDiv({ cls: 'hoard-card__cell' }) : null;
@@ -139,36 +246,7 @@ export function buildPosterCard(
 	// Fractional pixel widths per card made flex-wrap overflow and shift the grid a slot per scroll.
 	if (spec.cardHeight !== undefined) pinCardHeight(cell, card, spec.cardHeight);
 
-	createPosterPlaceholder(card, spec.title, spec.placeholderColor);
-
-	const img = card.createEl('img', { cls: 'hoard-card__poster' });
-	img.alt = spec.title;
-	// decode off the main thread — the letter placeholder covers the extra frame, and a synchronous
-	// decode of a large cover janks the scroll
-	img.decoding = 'async';
-	// give the <img> definite intrinsic dimensions so it never momentarily lays out at its natural
-	// (post-load) size; the CSS (absolute inset:0 + object-fit:cover) then fills the card's box. Shelf
-	// cards pass only cardWidth, so derive the height from the same 2:3 ratio.
-	if (spec.cardWidth !== undefined) {
-		img.width = Math.round(spec.cardWidth);
-		img.height = Math.round(
-			spec.textUnder ? spec.cardWidth * 1.5 : spec.cardHeight ?? spec.cardWidth * 1.5,
-		);
-	}
-
-	if (spec.posterUrl && spec.posterUrl.startsWith('http')) {
-		// reveal synchronously: gating on onload made every re-render flash the letter placeholder for a
-		// frame, because onload is async even for a fully cached image. An <img> paints nothing until its
-		// data arrives, so the placeholder still covers a genuinely slow load; onerror re-hides the img and
-		// restores the placeholder. Attach onerror before src so a cached failure still fires.
-		img.onerror = () => {
-			card.removeClass('has-poster');
-		};
-		card.addClass('has-poster');
-		img.src = spec.posterUrl;
-	} else if (spec.needsPoster) {
-		card.dataset.needsPoster = 'true';
-	}
+	renderPoster(card, spec, model);
 
 	if (spec.statusLabel) {
 		const statusBadge = card.createSpan({
@@ -183,24 +261,7 @@ export function buildPosterCard(
 	const textHost = cell
 		? cell.createDiv({ cls: 'hoard-card__under-info' })
 		: card.createDiv({ cls: 'hoard-card__overlay' });
-	textHost.createSpan({
-		cls: cell ? 'hoard-card__under-title' : 'hoard-card__title',
-		text: spec.title,
-	});
-	if (spec.typeLabel) {
-		const metaRow = textHost.createDiv({ cls: 'hoard-card__meta-row' });
-		const typeBadge = metaRow.createSpan({
-			cls: 'hoard-card__type-badge',
-			text: spec.typeLabel,
-		});
-		if (spec.typeColor) typeBadge.setCssProps({ '--hoard-card-type-color': spec.typeColor });
-		if (spec.year) {
-			metaRow.createSpan({
-				cls: cell ? 'hoard-card__under-year' : 'hoard-card__year',
-				text: spec.year,
-			});
-		}
-	}
+	renderCardText(textHost, spec, model);
 
 	if (spec.flag) {
 		const flag = card.createSpan({ cls: 'hoard-card__flag-badge' });
@@ -209,24 +270,13 @@ export function buildPosterCard(
 		setIcon(flag, spec.flag.icon);
 	}
 
-	if (spec.progressRatio !== undefined) {
+	if (model.progressWidth !== null) {
 		const bar = textHost.createDiv({ cls: 'hoard-card__progress-bar' });
 		const fill = bar.createDiv({ cls: 'hoard-card__progress-fill' });
-		fill.setCssProps({ '--hoard-card-progress-width': `${Math.max(0, Math.min(1, spec.progressRatio)) * 100}%` });
+		fill.setCssProps({ '--hoard-card-progress-width': model.progressWidth });
 	}
 
-	const menuItems = spec.menuItems;
-	if (menuItems && menuItems.length > 0) {
-		const menuBtn = createIconButton(card, {
-			icon: 'more-vertical',
-			label: spec.menuAriaLabel ?? t('list.card.moreActions'),
-			cls: 'hoard-card__menu-btn',
-		});
-		menuBtn.addEventListener('click', (e) => {
-			e.stopPropagation();
-			openCardMenu(card, menuBtn, menuItems, menuCtx);
-		});
-	}
+	if (model.menu) renderCardMenu(card, model.menu, menuCtx);
 
 	// in under mode the whole cell is clickable (poster AND text), but the callback still receives the
 	// card — selection styling lives there

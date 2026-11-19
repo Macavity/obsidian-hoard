@@ -7,6 +7,8 @@
 // Deliberately Obsidian-free (plain DOM) so it can run standalone in the headless-Chromium CLS
 // harness.
 
+import { computeGridWindow, planWindowChange, type GridWindow, type WindowChange } from './gridWindow';
+
 export interface GridMetrics {
 	cols: number;
 	cardWidth: number;
@@ -125,129 +127,91 @@ export class VirtualGrid {
 	 * materialised card set changed, so the caller can re-register the poster observer.
 	 */
 	update(localScrollTop: number, viewportHeight: number, metrics: GridMetrics): boolean {
-		const { cols, cardWidth, cardHeight, rowHeight } = metrics;
-		const totalRows = Math.ceil(this.itemCount / cols);
-
-		let firstVisibleRow = Math.max(0, Math.floor(localScrollTop / rowHeight) - OVERSCAN_ROWS);
-		const lastVisibleRow = Math.min(
-			totalRows - 1,
-			Math.ceil((localScrollTop + viewportHeight) / rowHeight) + OVERSCAN_ROWS,
+		const win = computeGridWindow(localScrollTop, viewportHeight, metrics, this.itemCount, OVERSCAN_ROWS);
+		const change = planWindowChange(
+			{ first: this.lastFirst, last: this.lastLast },
+			{ first: win.firstIndex, last: win.lastIndex },
 		);
 
-		let firstIndex: number;
-		let lastIndex: number;
-		if (lastVisibleRow < firstVisibleRow || this.itemCount === 0) {
-			// grid entirely outside the viewport (± overscan) — empty window
-			firstVisibleRow = 0;
-			firstIndex = 0;
-			lastIndex = -1;
-		} else {
-			firstIndex = firstVisibleRow * cols;
-			lastIndex = Math.min(this.itemCount - 1, (lastVisibleRow + 1) * cols - 1);
-		}
+		this.applyLayout(win, metrics); // skips its own writes when layout inputs are unchanged
+		if (change.kind === 'none') return false;
 
-		const oldFirst = this.lastFirst;
-		const oldLast = this.lastLast;
-		const windowUnchanged = firstIndex === oldFirst && lastIndex === oldLast;
+		this.lastFirst = win.firstIndex;
+		this.lastLast = win.lastIndex;
+		return this.applyChange(change, win, metrics);
+	}
 
-		// the four layout writes below depend only on these inputs (rowHeight is cardHeight plus a fixed
-		// gap). When none changed, the writes would be no-ops that still dirty layout — so skip them.
+	/**
+	 * Write spacer height / grid offset / CSS vars, skipping the writes when none of their inputs
+	 * changed (rowHeight is cardHeight plus a fixed gap) — they'd be no-ops that still dirty layout.
+	 */
+	private applyLayout(win: GridWindow, metrics: GridMetrics): void {
+		const { cols, cardHeight, rowHeight } = metrics;
 		const layoutUnchanged =
-			firstVisibleRow === this.lastFirstRow &&
+			win.firstRow === this.lastFirstRow &&
 			cols === this.lastCols &&
 			cardHeight === this.lastCardHeight &&
-			totalRows === this.lastTotalRows;
+			win.totalRows === this.lastTotalRows;
+		if (layoutUnchanged) return;
 
-		// same window and same geometry — bail before any DOM write, so a scroll within the current row
-		// window stays free
-		if (windowUnchanged && layoutUnchanged) return false;
+		this.spacer.setCssProps({ '--hoard-card-grid-spacer-height': `${win.totalRows * rowHeight}px` });
+		// Offset the grid with padding-top (through a custom property), NOT transform: translateY. With a transform, every row advance
+		// (remove top row + append bottom row + transform bump in one frame) makes Chromium's layout-shift
+		// tracker report a full row of stationary cards as shifted (previousRect 0×0 → poster rect) — the
+		// CLS that climbed on every scroll. Padding replaces the removed row in layout, so each surviving
+		// card's rect is literally unchanged. (Verified in a headless-Chromium harness: transform ≈ 0.14
+		// CLS per row advance; padding-top = 0. ReadingTab avoids it differently, by rebuilding the whole
+		// window — inserted-only content is never counted as a shift.)
+		this.grid.setCssProps({
+			[this.offsetVar]: `${win.firstRow * rowHeight}px`,
+			[this.colsVar]: String(cols),
+			[this.cardHeightVar]: `${cardHeight}px`,
+		});
+		this.lastFirstRow = win.firstRow;
+		this.lastCols = cols;
+		this.lastCardHeight = cardHeight;
+		this.lastTotalRows = win.totalRows;
+	}
 
-		if (!layoutUnchanged) {
-			this.spacer.setCssProps({ '--hoard-card-grid-spacer-height': `${totalRows * rowHeight}px` });
-			// Offset the grid with padding-top (through a custom property), NOT transform: translateY. With a transform, every row advance
-			// (remove top row + append bottom row + transform bump in one frame) makes Chromium's layout-shift
-			// tracker report a full row of stationary cards as shifted (previousRect 0×0 → poster rect) — the
-			// CLS that climbed on every scroll. Padding replaces the removed row in layout, so each surviving
-			// card's rect is literally unchanged. (Verified in a headless-Chromium harness: transform ≈ 0.14
-			// CLS per row advance; padding-top = 0. ReadingTab avoids it differently, by rebuilding the whole
-			// window — inserted-only content is never counted as a shift.)
-			this.grid.setCssProps({
-				[this.offsetVar]: `${firstVisibleRow * rowHeight}px`,
-				[this.colsVar]: String(cols),
-				[this.cardHeightVar]: `${cardHeight}px`,
-			});
-			this.lastFirstRow = firstVisibleRow;
-			this.lastCols = cols;
-			this.lastCardHeight = cardHeight;
-			this.lastTotalRows = totalRows;
-		}
-
-		if (windowUnchanged) return false;
-
-		const isInitial = oldFirst === -1 && oldLast === -1;
-		const oldEmpty = oldLast < oldFirst;
-		const newEmpty = lastIndex < firstIndex;
-		const hasOverlap =
-			!isInitial && !oldEmpty && !newEmpty && firstIndex <= oldLast && lastIndex >= oldFirst;
-
-		this.lastFirst = firstIndex;
-		this.lastLast = lastIndex;
-
-		if (!hasOverlap) {
+	/** Apply a planned window change to the DOM. Returns true when the card set changed. */
+	private applyChange(change: WindowChange, win: GridWindow, metrics: GridMetrics): boolean {
+		if (change.kind === 'none') return false;
+		if (change.kind === 'replace') {
 			this.removeAllCards();
-			const fragment = createFragment();
-			for (let i = firstIndex; i <= lastIndex; i++) {
-				const card = this.cb.buildItem(i, cardWidth, cardHeight);
-				if (card) fragment.appendChild(card);
-			}
-			this.grid.appendChild(fragment);
+			this.grid.appendChild(this.buildRange([win.firstIndex, win.lastIndex], metrics));
 			return true;
 		}
 
 		// incremental update — trim from the edges, then add what's new
-		if (firstIndex > oldFirst) {
-			const removeCount = firstIndex - oldFirst;
-			for (let i = 0; i < removeCount; i++) {
-				const el = this.grid.firstElementChild as HTMLElement | null;
-				if (!el) break;
-				this.cb.removeItem(el);
-			}
+		for (let i = 0; i < change.trimStart; i++) {
+			const el = this.grid.firstElementChild;
+			if (!el?.instanceOf(HTMLElement)) break;
+			this.cb.removeItem(el);
 		}
-		if (lastIndex < oldLast) {
-			const removeCount = oldLast - lastIndex;
-			for (let i = 0; i < removeCount; i++) {
-				const el = this.grid.lastElementChild as HTMLElement | null;
-				if (!el) break;
-				this.cb.removeItem(el);
-			}
+		for (let i = 0; i < change.trimEnd; i++) {
+			const el = this.grid.lastElementChild;
+			if (!el?.instanceOf(HTMLElement)) break;
+			this.cb.removeItem(el);
 		}
-		if (firstIndex < oldFirst) {
-			const addEnd = Math.min(oldFirst - 1, lastIndex);
-			const fragment = createFragment();
-			for (let i = firstIndex; i <= addEnd; i++) {
-				const card = this.cb.buildItem(i, cardWidth, cardHeight);
-				if (card) fragment.appendChild(card);
-			}
-			this.grid.insertBefore(fragment, this.grid.firstChild);
-		}
-		if (lastIndex > oldLast) {
-			const addStart = Math.max(oldLast + 1, firstIndex);
-			const fragment = createFragment();
-			for (let i = addStart; i <= lastIndex; i++) {
-				const card = this.cb.buildItem(i, cardWidth, cardHeight);
-				if (card) fragment.appendChild(card);
-			}
-			this.grid.appendChild(fragment);
-		}
-
+		if (change.prepend) this.grid.insertBefore(this.buildRange(change.prepend, metrics), this.grid.firstChild);
+		if (change.append) this.grid.appendChild(this.buildRange(change.append, metrics));
 		return true;
 	}
 
+	private buildRange([from, to]: [number, number], metrics: GridMetrics): DocumentFragment {
+		const fragment = createFragment();
+		for (let i = from; i <= to; i++) {
+			const card = this.cb.buildItem(i, metrics.cardWidth, metrics.cardHeight);
+			if (card) fragment.appendChild(card);
+		}
+		return fragment;
+	}
+
 	private removeAllCards(): void {
-		let el = this.grid.firstElementChild as HTMLElement | null;
+		let el = this.grid.firstElementChild;
 		while (el) {
-			const next = el.nextElementSibling as HTMLElement | null;
-			this.cb.removeItem(el);
+			const next = el.nextElementSibling;
+			if (el.instanceOf(HTMLElement)) this.cb.removeItem(el);
 			el = next;
 		}
 	}
