@@ -3,9 +3,9 @@ import type { ReadingDataManager } from '../src/modules/reading/services/Reading
 import type { GameDataManager } from '../src/modules/games/services/GameDataManager';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 import { tick, newReadingManager, newGameManager } from './helpers/common';
-import type { HoardTitle } from '../src/modules/watchlist/exports';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
 import { PosterService } from '../src/shared/api/PosterService';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import type { ApiService } from '../src/shared/api/ApiService';
 import { NOT_FOUND, FAILED, NO_KEY, found } from '../src/shared/api/lookup';
 

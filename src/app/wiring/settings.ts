@@ -1,11 +1,11 @@
 import type { App, Plugin } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../modules/settings/exports';
+import type { SettingsReader, SettingsWriter } from '../../modules/settings/services/roles';
 import type { ApiService } from '../../shared/api/ApiService';
 import type { DataManager } from '../../modules/watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';
 import type { CoverRefresher } from '../../shared/services/coverRefresh';
-import type { ImportProgress } from '../../modules/watchlist/exports';
+import type { ImportProgress } from '../../modules/watchlist/domain/model';
 import { confirmWith } from '../../design-system/ConfirmModal';
 import {
 	buildBackup,

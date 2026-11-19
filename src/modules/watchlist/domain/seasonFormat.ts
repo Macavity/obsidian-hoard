@@ -1,4 +1,4 @@
-import type { Season } from '../exports';
+import type { Season } from './model';
 
 /** [5, 8, 33, 34, 35] -> "5,8,33-35". */
 export function formatSkipSpec(episodes: number[]): string {

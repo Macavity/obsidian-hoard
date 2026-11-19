@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ListTab } from '../../src/modules/watchlist/ui/ListTab';
 import { fakeSettings } from '../helpers/fakeSettings';
 import * as ActionBar from '../../src/design-system/ActionBar';
-import type { HoardTitle, SavedFilterPreset } from '../../src/modules/watchlist/exports';
+import type { HoardTitle, SavedFilterPreset } from '../../src/modules/watchlist/domain/model';
 
 vi.mock('../../src/design-system/ActionBar', () => ({
 	renderActionBar: vi.fn(() => ({})),

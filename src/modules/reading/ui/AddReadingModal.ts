@@ -1,7 +1,7 @@
 import { App, FuzzySuggestModal, Modal, Notice, TFile, type Vault, type Workspace } from 'obsidian';
 import type { SettingsReader } from '../../settings/exports';
 import type { ReadingDataManager } from '../services/ReadingDataManager';
-import { newBook, newManga } from '../exports/newReading';
+import { newBook, newManga } from '../domain/newReading';
 import type { ApiService, BookSearchResult, MangaSearchResult } from '../../../shared/api/ApiService';
 import { apiErrorMessage } from '../../../shared/api/ApiService';
 import { renderSearchResultRow } from '../../../design-system/SearchThumbnail';
@@ -12,8 +12,8 @@ import { createDatePicker } from '../../../design-system/DatePicker';
 import { renderSegmentedToggle } from '../../../design-system/StatusDropdown';
 import { t } from '../../../shared/i18n';
 import { readingStatusLabel } from '../../../shared/i18n/labels';
-import type { Book, BookProgressUnit, Manga, ReadingStatus } from '../exports';
-import { SELECTABLE_READING_STATUSES } from '../exports/readingDefaults';
+import type { Book, BookProgressUnit, Manga, ReadingStatus } from '../domain/model';
+import { SELECTABLE_READING_STATUSES } from '../domain/readingDefaults';
 import { markViewRoot } from '../../../design-system/detailFrame';
 
 export type ReadingMode = 'book' | 'manga';

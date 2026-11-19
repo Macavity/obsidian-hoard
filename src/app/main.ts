@@ -4,13 +4,13 @@ import { CustomListManager } from '../modules/custom-lists/services/CustomListMa
 import { setLocale, t } from '../shared/i18n';
 import { statusLabel, typeLabel } from '../shared/i18n/labels';
 import type { ManagerNotice } from '../shared/storage/storageTypes';
-import type { HoardPluginSettings } from '../modules/settings/exports';
+import type { HoardPluginSettings } from '../modules/settings/domain/model';
 import { setActiveDateFormat } from '../shared/domain/date';
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../modules/settings/exports/settingsDefaults';
+import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../modules/settings/domain/settingsDefaults';
 import { cardSizeToMinWidth } from '../design-system/VirtualGrid';
 import type { CustomList } from '../modules/custom-lists/domain/customList';
-import type { CardStyleTab } from '../modules/settings/exports';
-import type { ImportProgress } from '../modules/watchlist/exports';
+import type { CardStyleTab } from '../modules/settings/domain/model';
+import type { ImportProgress } from '../modules/watchlist/domain/model';
 import { DataManager } from '../modules/watchlist/services/DataManager';
 import { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
 import { GameDataManager } from '../modules/games/services/GameDataManager';

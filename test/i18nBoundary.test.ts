@@ -16,20 +16,24 @@ const importFiles = readdirSync(join(root, 'src/modules/import/services/watchlog
 	.filter((f) => f.endsWith('.ts'))
 	.map((f) => `src/modules/import/services/watchlog/${f}`);
 
-// the domain model: shared helpers and the module exports
+// the domain model: shared helpers, each module's domain files, roles and public surface
 const domainFiles = readdirSync(join(root, 'src/shared/domain'))
 	.filter((f) => f.endsWith('.ts'))
 	.map((f) => `src/shared/domain/${f}`);
-const exportFiles = readdirSync(join(root, 'src/modules'))
-	.map((m) => `src/modules/${m}/exports`)
-	.filter((d) => existsSync(join(root, d)))
-	.flatMap((d) => readdirSync(join(root, d)).filter((f) => f.endsWith('.ts')).map((f) => `${d}/${f}`));
+const moduleFiles = readdirSync(join(root, 'src/modules')).flatMap((m) => {
+	const dir = `src/modules/${m}/domain`;
+	const domain = existsSync(join(root, dir))
+		? readdirSync(join(root, dir)).filter((f) => f.endsWith('.ts')).map((f) => `${dir}/${f}`)
+		: [];
+	const surface = [`src/modules/${m}/services/roles.ts`, `src/modules/${m}/exports.ts`].filter((f) => existsSync(join(root, f)));
+	return [...domain, ...surface];
+});
 
 const files = [
 	...storageFiles,
 	...importFiles,
 	...domainFiles,
-	...exportFiles,
+	...moduleFiles,
 	'src/modules/watchlist/services/DataManager.ts',
 	'src/modules/reading/services/ReadingDataManager.ts',
 	'src/modules/games/services/GameDataManager.ts',

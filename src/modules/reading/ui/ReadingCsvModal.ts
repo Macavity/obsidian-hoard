@@ -1,13 +1,13 @@
-import type { ReadingCsvOptions } from '../exports';
+import type { ReadingCsvOptions } from '../domain/model';
 import type { App } from 'obsidian';
 import { CsvModalBase, rowsToCsv, type CsvFieldDef, type CsvExportRow, type CsvSelectOption } from '../../../design-system/CsvModalBase';
 import { t } from '../../../shared/i18n';
 import { readingStatusLabel } from '../../../shared/i18n/labels';
 import type { ReadingDataManager } from '../services/ReadingDataManager';
-import { newBook, newManga } from '../exports/newReading';
-import type { Book, Manga, ReadingStatus } from '../exports';
-import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../exports/readingDefaults';
-import type { ReadingCsvKind } from '../exports';
+import { newBook, newManga } from '../domain/newReading';
+import type { Book, Manga, ReadingStatus } from '../domain/model';
+import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../domain/readingDefaults';
+import type { ReadingCsvKind } from '../domain/model';
 
 // Schemas (Books and Manga kept fully separate)
 

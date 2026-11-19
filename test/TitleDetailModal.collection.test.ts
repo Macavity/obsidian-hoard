@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
 import { fakeSettings } from './helpers/fakeSettings';
 import { newTitleDetail } from './helpers/newTitleDetail';
-import type { HoardTitle, TmdbCollectionDetail } from '../src/modules/watchlist/exports';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import type { HoardTitle, TmdbCollectionDetail } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import { t } from '../src/shared/i18n';
 import { resolveCollection, countMissing } from '../src/modules/watchlist/ui/CollectionModal';
 

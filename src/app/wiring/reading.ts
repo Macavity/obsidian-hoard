@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import type { SettingsReader } from '../../modules/settings/exports';
+import type { SettingsReader } from '../../modules/settings/services/roles';
 import type { HistoryManager } from '../../shared/services/HistoryManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
 import type { searchBooks } from '../../shared/services/coverRefresh';

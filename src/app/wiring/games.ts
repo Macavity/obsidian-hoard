@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../modules/settings/exports';
+import type { SettingsReader, SettingsWriter } from '../../modules/settings/services/roles';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';
 import type { resolveGameCover } from '../../shared/services/coverRefresh';
 import { confirmWith } from '../../design-system/ConfirmModal';

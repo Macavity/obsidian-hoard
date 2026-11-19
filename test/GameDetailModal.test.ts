@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice, Platform } from 'obsidian';
 import { GameDetailModal } from '../src/modules/games/ui/GameDetailModal';
-import type { Game, GameGroup } from '../src/modules/games/exports';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import type { Game, GameGroup } from '../src/modules/games/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 

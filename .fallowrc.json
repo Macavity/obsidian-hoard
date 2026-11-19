@@ -101,12 +101,6 @@
         ]
       },
       {
-        "name": "module-exports",
-        "patterns": [
-          "src/modules/*/exports/**"
-        ]
-      },
-      {
         "name": "modules/airtime",
         "patterns": [
           "src/modules/airtime/**"
@@ -199,7 +193,6 @@
           "tooling",
           "styles",
           "app",
-          "module-exports",
           "modules/airtime",
           "modules/backup",
           "modules/custom-lists",
@@ -241,7 +234,6 @@
           "modules/settings",
           "modules/watchlist",
           "modules/widgets",
-          "module-exports",
           "design-system",
           "shared",
           "obsidian-mock"
@@ -252,81 +244,107 @@
         "allow": []
       },
       {
-        "from": "module-exports",
-        "allow": [
-          "module-exports",
-          "shared",
-          "obsidian-mock"
-        ]
-      },
-      {
         "from": "modules/airtime",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
-          "obsidian-mock"
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/settings"
         ]
       },
       {
         "from": "modules/backup",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
-          "obsidian-mock"
+          "obsidian-mock",
+          "modules/games",
+          "modules/settings"
+        ],
+        "allowTypeOnly": [
+          "modules/reading",
+          "modules/watchlist"
         ]
       },
       {
         "from": "modules/custom-lists",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
           "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "modules/games",
+          "modules/reading",
+          "modules/settings",
+          "modules/watchlist"
         ]
       },
       {
         "from": "modules/dashboard",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
-          "obsidian-mock"
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/settings"
         ]
       },
       {
         "from": "modules/drafts",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
           "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "modules/games",
+          "modules/reading",
+          "modules/settings",
+          "modules/watchlist"
         ]
       },
       {
         "from": "modules/games",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
           "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "modules/airtime",
+          "modules/settings"
         ]
       },
       {
         "from": "modules/import",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
-          "obsidian-mock"
+          "obsidian-mock",
+          "modules/airtime",
+          "modules/games",
+          "modules/settings",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/drafts",
+          "modules/reading"
         ]
       },
       {
         "from": "modules/log",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
           "obsidian-mock"
         ]
@@ -335,36 +353,54 @@
         "from": "modules/reading",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
-          "obsidian-mock"
+          "obsidian-mock",
+          "modules/settings"
+        ],
+        "allowTypeOnly": [
+          "modules/airtime"
         ]
       },
       {
         "from": "modules/settings",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
-          "obsidian-mock"
+          "obsidian-mock",
+          "modules/reading",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/backup",
+          "modules/games"
         ]
       },
       {
         "from": "modules/watchlist",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
-          "obsidian-mock"
+          "obsidian-mock",
+          "modules/airtime",
+          "modules/games"
+        ],
+        "allowTypeOnly": [
+          "modules/drafts",
+          "modules/reading",
+          "modules/settings"
         ]
       },
       {
         "from": "modules/widgets",
         "allow": [
           "design-system",
-          "module-exports",
           "shared",
           "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "modules/airtime",
+          "modules/settings",
+          "modules/watchlist"
         ]
       },
       {
@@ -377,8 +413,15 @@
       {
         "from": "shared",
         "allow": [
-          "module-exports",
-          "obsidian-mock"
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/airtime",
+          "modules/drafts",
+          "modules/settings"
         ]
       }
     ],

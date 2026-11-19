@@ -1,5 +1,5 @@
 import { defined } from '../../../shared/domain/sharedHelpers';
-import type { HoardTitle } from '.';
+import type { HoardTitle } from './model';
 
 export type NewTitle = Pick<HoardTitle, 'id' | 'title' | 'type'> & Partial<HoardTitle>;
 

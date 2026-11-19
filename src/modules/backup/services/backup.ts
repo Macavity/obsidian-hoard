@@ -1,4 +1,4 @@
-import type { BackupFile, BackupParseResult } from '../exports';
+import type { BackupFile, BackupParseResult } from '../domain/model';
 import type { TitleBackup, TitleReader } from '../../watchlist/exports';
 import type { ReadingSnapshot } from '../../reading/exports';
 import type { GameSnapshot } from '../../games/exports';

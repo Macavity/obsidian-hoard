@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { newGame } from '../src/modules/games/exports/newGame';
-import { newBook, newManga } from '../src/modules/reading/exports/newReading';
+import { newGame } from '../src/modules/games/domain/newGame';
+import { newBook, newManga } from '../src/modules/reading/domain/newReading';
 import { completedEpisodes } from '../src/modules/watchlist/domain/completedEpisodes';
-import { newTitle } from '../src/modules/watchlist/exports/newTitle';
+import { newTitle } from '../src/modules/watchlist/domain/newTitle';
 
 const NOW = '2026-03-04T05:06:07.000Z';
 

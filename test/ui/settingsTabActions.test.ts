@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
 import { newSettingsTab } from '../helpers/newSettingsTab';
-import type { HoardTitle } from '../../src/modules/watchlist/exports';
-import { DEFAULT_SETTINGS } from '../../src/modules/settings/exports/settingsDefaults';
+import type { HoardTitle } from '../../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/domain/settingsDefaults';
 import { until } from '../helpers/common';
 import { makeTitle } from '../helpers/setupDataManager';
 import { fakeSettings } from '../helpers/fakeSettings';

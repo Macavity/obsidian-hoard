@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { ApiService } from '../src/shared/api/ApiService';
-import type { Game } from '../src/modules/games/exports';
+import type { Game } from '../src/modules/games/domain/model';
 import { steamLibraryCover } from '../src/shared/api/steamStoreApi';
 import { parse } from 'yaml';
 import { CoverRefresher, resolveGameCover, searchBooks, type GameCoverApi, type ReadingCoverApi, type BookSearchApi } from '../src/shared/services/coverRefresh';

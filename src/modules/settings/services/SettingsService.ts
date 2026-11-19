@@ -1,5 +1,6 @@
 import type { DeepReadonly } from '../../../shared/domain/deepReadonly';
-import type { HoardPluginSettings, SettingsReader, SettingsWriter } from '../exports';
+import type { HoardPluginSettings } from '../domain/model';
+import type { SettingsReader, SettingsWriter } from './roles';
 
 const STAGE_DELAY_MS = 500;
 

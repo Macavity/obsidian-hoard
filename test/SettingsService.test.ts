@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { SettingsService } from '../src/modules/settings/services/SettingsService';
-import type { HoardPluginSettings } from '../src/modules/settings/exports';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import type { HoardPluginSettings } from '../src/modules/settings/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 
 function make(persist: () => Promise<void> = () => Promise.resolve()) {
 	const settings: HoardPluginSettings = structuredClone(DEFAULT_SETTINGS);

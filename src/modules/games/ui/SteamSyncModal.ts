@@ -1,13 +1,13 @@
 import { App, Modal, Notice } from 'obsidian';
 import type { SettingsReader } from '../../settings/exports';
 import type { GameDataManager } from '../services/GameDataManager';
-import type { Game } from '../exports';
+import type { Game } from '../domain/model';
 import type { SteamSyncUpdate } from '../domain/steamSync';
 import { formatTime } from '../../../shared/domain/format';
-import { GAME_AUTO_STATUS } from '../exports/gameDefaults';
+import { GAME_AUTO_STATUS } from '../domain/gameDefaults';
 import { t } from '../../../shared/i18n';
 import { steamAppIdFromUrl, type ApiService, type SteamAppDetails, type SteamOwnedGame, type SteamFailureReason } from '../../../shared/api/ApiService';
-import { newGame } from '../exports/newGame';
+import { newGame } from '../domain/newGame';
 import { steamLibraryCover } from '../../../shared/api/steamStoreApi';
 import { markViewRoot } from '../../../design-system/detailFrame';
 

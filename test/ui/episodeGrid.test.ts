@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderEpisodeGrid, type EpisodeGridOptions } from '../../src/modules/watchlist/ui/EpisodeGrid';
-import type { HoardTitle, Season } from '../../src/modules/watchlist/exports';
+import type { HoardTitle, Season } from '../../src/modules/watchlist/domain/model';
 
 function setup(over: { watched?: number[]; season?: Season | null; perSeason?: boolean; total?: number } = {}) {
 	const title = { watchedEpisodes: over.watched ?? [], totalEpisodes: over.total ?? 3 } as unknown as HoardTitle;

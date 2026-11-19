@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import type { SettingsReader } from '../../modules/settings/exports';
+import type { SettingsReader } from '../../modules/settings/services/roles';
 import type { OpenAddRoute } from '../../shared/services/addRoute';
 import type { DataManager } from '../../modules/watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';

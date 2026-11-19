@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLocale } from '../../src/shared/i18n';
 import { formatDaysWithMonths, getDetailedCountdown } from '../../src/modules/airtime/ui/AirtimeTab';
-import type { AirtimeSchedule } from '../../src/modules/airtime/exports';
+import type { AirtimeSchedule } from '../../src/modules/airtime/domain/model';
 
 // Wednesday 2026-11-18, 12:00 local
 const NOW = new Date(2026, 10, 18, 12, 0, 0);

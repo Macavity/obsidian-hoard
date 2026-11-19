@@ -2,9 +2,6 @@ import type { EntryAirtime } from '../../airtime/exports';
 import type { RecommendedDaily, RowsShelfLayoutEntry } from '../../../shared/domain/rows';
 import type { TagDefinition } from '../../../shared/domain/tags';
 
-export { GAME_AUTO_STATUS, GAME_FINISHED_STATUS, GAME_TBA_STATUS, defaultGamesSettings } from './gameDefaults';
-export { newGame } from './newGame';
-
 export interface Game {
 	id: string;
 	title: string;
@@ -128,23 +125,8 @@ export interface GamesData {
 
 // Roles other modules see instead of the concrete GameDataManager.
 
-export interface GameReader {
-	getGame(id: string): Game | undefined;
-	getGames(): Game[];
-}
 
-export interface GameWriter {
-	updateGame(input: Game): Promise<void>;
-}
 
-export interface GameSettingsAccess {
-	getSettings(): GamesSettings;
-	updateSettings(patch: Partial<GamesSettings>): Promise<void>;
-}
 
-export interface GameSnapshot {
-	exportSnapshot(): GamesData;
-	restore(data: GamesData): Promise<void>;
-}
 
 export type OpenSteamSync = () => void;

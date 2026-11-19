@@ -3,8 +3,31 @@ import tsparser from "@typescript-eslint/parser";
 import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
+import { readdirSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import importX, { createNodeResolver } from "eslint-plugin-import-x";
 
 const ARCH_DOC = "See docs/architecture/overview.md.";
+
+const NO_NEW_SERVICE = {
+  selector: "NewExpression[callee.name=/(Manager|Service)$/]",
+  message: `Do not construct a Manager or Service here: take it as a constructor dependency and let src/app wire it. ${ARCH_DOC}`,
+};
+
+// A module's public surface is src/modules/<m>/exports.ts. import-x 4.17.1 matches `except` against the
+// absolute import path, and `**` does not cross dot folders (.claude/worktrees), hence the absolute glob.
+const ROOT = fileURLToPath(new URL(".", import.meta.url));
+const MODULES = readdirSync(`${ROOT}src/modules`).filter((m) => statSync(`${ROOT}src/modules/${m}`).isDirectory());
+const MODULE_EXPORTS = [`${ROOT}src/modules/*/exports.ts`];
+const BARREL_MSG = `Import another module only through its exports.ts; adding a symbol there goes through the exports-reviewer agent. ${ARCH_DOC}`;
+const EXPORTS_SELECTORS = [{
+  selector: "Program > :not(ExportNamedDeclaration[source])",
+  message: `exports.ts only re-exports by name (\`export { a } from './x'\`); define the symbol in the module file where it belongs. ${ARCH_DOC}`,
+}, {
+  // exports.ts sits at the module root, so any `../` leaves the module (esquery cannot parse `/` inside a regex)
+  selector: "ExportNamedDeclaration[source.value=/^\\.\\./]",
+  message: `exports.ts only re-exports files of its own module. ${ARCH_DOC}`,
+}];
 
 const STYLE_SELECTORS = [{
   selector: "MemberExpression[property.name='style']",
@@ -144,11 +167,29 @@ export default defineConfig([
     files: ["src/**/*.ts"],
     ignores: ["src/app/**"],
     rules: {
-      "no-restricted-syntax": ["error", ...BASE_SELECTORS, NO_THIS_APP, {
-        selector: "NewExpression[callee.name=/(Manager|Service)$/]",
-        message: `Do not construct a Manager or Service here: take it as a constructor dependency and let src/app wire it. ${ARCH_DOC}`,
+      "no-restricted-syntax": ["error", ...BASE_SELECTORS, NO_THIS_APP, NO_NEW_SERVICE],
+    },
+  },
+  {
+    // Module boundaries: other modules, shared and design-system reach a module only through its exports.ts.
+    // fallow (.fallowrc.json) decides which module edges exist; this decides that they go through the barrel.
+    files: ["src/**/*.ts"],
+    ignores: ["src/app/**"],
+    plugins: { "import-x": importX },
+    settings: { "import-x/resolver-next": [createNodeResolver({ extensions: [".ts", ".js"] })] },
+    rules: {
+      "import-x/no-restricted-paths": ["error", {
+        zones: [
+          ...MODULES.map((m) => ({ target: `./src/modules/${m}/**/*`, from: `./src/modules/!(${m})/**/*`, except: MODULE_EXPORTS, message: BARREL_MSG })),
+          { target: ["./src/shared/**/*", "./src/design-system/**/*"], from: "./src/modules/**/*", except: MODULE_EXPORTS, message: BARREL_MSG },
+        ],
       }],
     },
+  },
+  {
+    // exports.ts only re-exports by name from its own module. Same rule key as above, so it repeats those selectors.
+    files: ["src/modules/*/exports.ts"],
+    rules: { "no-restricted-syntax": ["error", ...BASE_SELECTORS, NO_THIS_APP, NO_NEW_SERVICE, ...EXPORTS_SELECTORS] },
   },
   {
     // UI reaches data and services only through injected dependencies.
@@ -210,7 +251,7 @@ export default defineConfig([
       "src/shared/api/steamStoreApi.ts",
       "src/shared/api/lookup.ts",
       "src/modules/settings/services/settingsSplit.ts",
-      "src/modules/settings/exports/settingsCodec.ts",
+      "src/modules/settings/domain/settingsCodec.ts",
       "src/modules/backup/services/backup.ts",
     ],
     rules: {

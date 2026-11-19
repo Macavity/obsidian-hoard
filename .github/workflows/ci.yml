@@ -88,7 +88,7 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          changed="$(git diff --name-only "origin/${BASE_REF}...HEAD" -- 'src/modules/*/exports/*')"
+          changed="$(git diff --name-only "origin/${BASE_REF}...HEAD" -- 'src/modules/*/exports.ts' '.fallowrc.json')"
           if [ -z "$changed" ]; then
             echo "No module exports changed."
             exit 0

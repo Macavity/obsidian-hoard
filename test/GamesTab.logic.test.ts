@@ -1,8 +1,8 @@
 import { newGamesTab } from './helpers/newGamesTab';
 import { describe, expect, it, vi } from 'vitest';
-import type { Game } from '../src/modules/games/exports';
-import { defaultGamesSettings } from '../src/modules/games/exports/gameDefaults';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import type { Game } from '../src/modules/games/domain/model';
+import { defaultGamesSettings } from '../src/modules/games/domain/gameDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const game = (id: string, over: Partial<Game> = {}): Game => ({

@@ -149,3 +149,91 @@ describe("architecture lint rules", () => {
 		});
 	});
 });
+
+describe("module exports barrel", () => {
+	const A = "src/modules/airtime/ui/AirtimeTab.ts";
+	const S = "src/shared/domain/date.ts";
+	const D = "src/design-system/ActionBar.ts";
+	const E = "src/modules/watchlist/exports.ts";
+	const APP = "src/app/main.ts";
+	const T = "test/DataManager.test.ts";
+	// import-x/no-restricted-paths: the barrel; no-restricted-syntax: the shape of exports.ts
+	const hits = (code: string, file: string) => errorsOf(code, file, file === E ? "no-restricted-syntax" : "no-restricted-paths");
+
+	beforeAll(async () => {
+		await lint("export {};", A);
+	}, 60_000);
+
+	it("rejects importing another module's internals", async () => {
+		const m = await hits(`import { x } from "../../watchlist/domain/titles";\nexport const y = x;`, A);
+		expect(m).toHaveLength(1);
+		expect(m[0]?.message).toContain("exports-reviewer");
+		expect(m[0]?.message).toContain("docs/architecture/overview.md");
+	});
+
+	it("rejects a type import past the barrel", async () => {
+		expect(await hits(`import type { X } from "../../watchlist/domain/model";\nexport type Y = X;`, A)).toHaveLength(1);
+	});
+
+	it("rejects a side-effect import past the barrel", async () => {
+		expect(await hits(`import "../../watchlist/domain/titles";`, A)).toHaveLength(1);
+	});
+
+	it("rejects a dynamic import past the barrel", async () => {
+		expect(await hits(`export const m = () => import("../../watchlist/ui/ListTab");`, A)).toHaveLength(1);
+	});
+
+	it("rejects re-exporting another module's internals", async () => {
+		expect(await hits(`export { x } from "../../watchlist/domain/titles";`, A)).toHaveLength(1);
+	});
+
+	it("rejects export * of another module's internals", async () => {
+		expect(await hits(`export * from "../../watchlist/domain/titles";`, A)).toHaveLength(1);
+	});
+
+	it("accepts the barrel, also with .ts", async () => {
+		const code = `import { x } from "../../watchlist/exports";\nimport { y } from "../../watchlist/exports.ts";\nexport const z = [x, y];`;
+		expect(await hits(code, A)).toEqual([]);
+	});
+
+	it("accepts own-module internals", async () => {
+		expect(await hits(`import { x } from "../domain/airtime";\nexport const y = x;`, A)).toEqual([]);
+	});
+
+	it("rejects shared past the barrel", async () => {
+		expect(await hits(`import type { X } from "../../modules/watchlist/domain/model";\nexport type Y = X;`, S)).toHaveLength(1);
+	});
+
+	it("rejects the design system past the barrel", async () => {
+		expect(await hits(`import { x } from "../modules/reading/domain/readingColors";\nexport const y = x;`, D)).toHaveLength(1);
+	});
+
+	it("allows app and test to reach internals", async () => {
+		expect(await hits(`import { ReadingDataManager } from "../modules/reading/services/ReadingDataManager";\nexport const x = ReadingDataManager;`, APP)).toEqual([]);
+		expect(await hits(`import { ReadingDataManager } from "../src/modules/reading/services/ReadingDataManager";\nexport const x = ReadingDataManager;`, T)).toEqual([]);
+	});
+
+	it("accepts named re-exports in exports.ts", async () => {
+		expect(await hits(`export { a } from "./domain/titles";\nexport type { T } from "./domain/model";`, E)).toEqual([]);
+	});
+
+	it("rejects a definition in exports.ts", async () => {
+		const m = await hits(`export const A = 1;`, E);
+		expect(m).toHaveLength(1);
+		expect(m[0]?.message).toContain("only re-exports by name");
+	});
+
+	it("rejects export * in exports.ts", async () => {
+		expect(await hits(`export * from "./domain/titles";\nexport type * from "./domain/model";`, E)).toHaveLength(2);
+	});
+
+	it("rejects import-then-export in exports.ts", async () => {
+		expect(await hits(`import { a } from "./domain/titles";\nexport { a };`, E)).toHaveLength(2);
+	});
+
+	it("rejects a foreign re-export in exports.ts", async () => {
+		const m = await hits(`export { a } from "../reading/exports";`, E);
+		expect(m).toHaveLength(1);
+		expect(m[0]?.message).toContain("own module");
+	});
+});

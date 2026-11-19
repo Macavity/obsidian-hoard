@@ -6,8 +6,8 @@ import { customListsUi } from '../../src/app/wiring/customLists';
 import { CustomListManager } from '../../src/modules/custom-lists/services/CustomListManager';
 import { VaultLayout } from '../../src/shared/storage/VaultLayout';
 import type { CustomList } from '../../src/modules/custom-lists/domain/customList';
-import type { HoardTitle } from '../../src/modules/watchlist/exports';
-import { DEFAULT_SETTINGS } from '../../src/modules/settings/exports/settingsDefaults';
+import type { HoardTitle } from '../../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/domain/settingsDefaults';
 
 // Obsidian's activeDocument (popout-aware document)
 (globalThis as { activeDocument?: Document }).activeDocument = document;

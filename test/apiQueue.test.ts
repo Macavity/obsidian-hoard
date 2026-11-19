@@ -4,7 +4,7 @@ import { ApiCheckQueue } from '../src/shared/api/apiCheckQueue';
 import { ApiService } from '../src/shared/api/ApiService';
 import type { LookupResult } from '../src/shared/api/lookup';
 import type { EntryCache } from '../src/shared/storage/storageTypes';
-import type { Season } from '../src/modules/watchlist/exports';
+import type { Season } from '../src/modules/watchlist/domain/model';
 
 type Airing = NonNullable<EntryCache['airing']>;
 const HOUR = 3_600_000;

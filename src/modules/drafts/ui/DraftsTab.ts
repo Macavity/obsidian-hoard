@@ -6,7 +6,8 @@ import Fuse from 'fuse.js';
 import type { EventRef, MetadataCache, Vault, Workspace } from 'obsidian';
 import { createIconButton } from '../../../design-system/IconButton';
 import type { SettingsReader } from '../../settings/exports';
-import type { DraftPersistState, DraftStore } from '../exports';
+import type { DraftPersistState } from '../domain/model';
+import type { DraftStore } from '../services/roles';
 import type { OpenAddRoute } from '../../../shared/services/addRoute';
 import { t } from '../../../shared/i18n';
 

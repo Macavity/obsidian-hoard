@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DefaultColumnsModal } from '../../src/modules/custom-lists/ui/CustomListsTab';
-import { DEFAULT_SETTINGS } from '../../src/modules/settings/exports/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/domain/settingsDefaults';
 import { qsa } from '../helpers/dom';
 import { fakeSettings } from '../helpers/fakeSettings';
 import { makeList, setupCustomLists } from '../helpers/setupCustomLists';

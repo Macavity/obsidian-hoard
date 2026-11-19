@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { newReadingDetail } from './helpers/newReadingDetail';
 import { t } from '../src/shared/i18n';
-import type { Book } from '../src/modules/reading/exports';
+import type { Book } from '../src/modules/reading/domain/model';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const flush = () => new Promise<void>((r) => setTimeout(r, 0));

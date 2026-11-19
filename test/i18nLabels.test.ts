@@ -3,9 +3,9 @@ import { setLocale } from '../src/shared/i18n';
 import en from '../src/shared/i18n/en';
 import de from '../src/shared/i18n/de';
 import { statusLabel, typeLabel, readingStatusLabel, gameStatusLabel, priorityLabel } from '../src/shared/i18n/labels';
-import { defaultGamesSettings } from '../src/modules/games/exports/gameDefaults';
-import { READING_STATUSES } from '../src/modules/reading/exports/readingDefaults';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import { defaultGamesSettings } from '../src/modules/games/domain/gameDefaults';
+import { READING_STATUSES } from '../src/modules/reading/domain/readingDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 
 describe('display labels', () => {
 	afterEach(() => setLocale('en'));

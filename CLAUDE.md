@@ -12,7 +12,7 @@ Obsidian plugin (id `hoard`). Package manager: pnpm.
 - `pnpm check` – typecheck + lint + test + quality
 - `pnpm smoke` – integration check against `hoard-test-vault/` in a running Obsidian (see CONTRIBUTING.md)
 - Any fallow exception (`thresholdOverrides`, `fallow-ignore` comments, suppressions) needs the user's explicit approval first. Never add one on your own.
-- A change under `src/modules/*/exports/` (a module's public surface), or a new import of module exports in `src/shared/`, goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed. Fix or answer every challenge; unresolved ones go to the user.
+- A change to a `src/modules/*/exports.ts` (a module's public surface), a new module edge in `.fallowrc.json`, or a new import of module exports in `src/shared/`, goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed. Fix or answer every challenge; unresolved ones go to the user.
 
 ## Skills
 Obsidian knowledge lives in `.claude/skills/` (`obsidian-dev`, `obsidian-ops`, `obsidian-ref`, `project`, `release`). These are maintained by hand; there is no generator.

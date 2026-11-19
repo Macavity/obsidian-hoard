@@ -1,4 +1,4 @@
-import type { Book, BookProgressUnit, ReadingSettings, ReadingStatus } from '.';
+import type { Book, BookProgressUnit, ReadingSettings, ReadingStatus } from './model';
 import type { HoardPluginSettings } from '../../settings/exports';
 import { DEFAULT_SETTINGS } from '../../settings/exports';
 

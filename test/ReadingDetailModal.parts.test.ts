@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
 import { newReadingDetail } from './helpers/newReadingDetail';
 import { t } from '../src/shared/i18n';
-import type { Book, Manga, ReadingCustomColumn } from '../src/modules/reading/exports';
+import type { Book, Manga, ReadingCustomColumn } from '../src/modules/reading/domain/model';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;

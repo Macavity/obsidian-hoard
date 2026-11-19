@@ -14,10 +14,10 @@ import {
 } from '../../../design-system/FormCells';
 import type { DataManager } from '../services/DataManager';
 import type { SettingsReader } from '../../settings/exports';
-import type { HoardGroup, HoardTitle, Season } from '../exports';
+import type { HoardGroup, HoardTitle, Season } from '../domain/model';
 import { completedEpisodes } from '../domain/completedEpisodes';
 import { formatSeasonLine } from '../domain/seasonFormat';
-import { parseSeasonLine, seasonsOf } from '../exports/seasonText';
+import { parseSeasonLine, seasonsOf } from '../domain/seasonText';
 
 /** Seasons from the seasons box, one "Name: N" or "Name: N (skip list)" per line. No bounds are applied here. */
 function parseSeasonsText(text: string): Season[] {

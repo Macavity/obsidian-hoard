@@ -1,4 +1,4 @@
-import type { ReadingStatus } from '.';
+import type { ReadingStatus } from './model';
 import { DEFAULT_READING_STATUS_COLORS } from './readingDefaults';
 
 /**

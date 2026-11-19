@@ -9,18 +9,16 @@ import type { DraftPersistState, DraftStore } from '../../drafts/exports';
 import type { AirtimeStore } from '../../airtime/exports';
 import type { Game } from '../../games/exports';
 import type { Book, Manga } from '../../reading/exports';
-import type {
-	HoardGroup, HoardTitle, MaybeTitle, SavedFilterPreset, Season,
-	TitleBackup, TitleMaintenance, TitleReader, TitleStats, TitleWriter,
-} from '../exports';
+import type { HoardGroup, HoardTitle, MaybeTitle, SavedFilterPreset, Season } from '../domain/model';
+import type { TitleBackup, TitleMaintenance, TitleReader, TitleStats, TitleWriter } from './roles';
 import type { RecommendedDaily } from '../../../shared/domain/rows';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import { formatHistoryDate } from '../../../shared/services/HistoryManager';
 import { normalizeManualCredits, pruneManualCredits } from '../domain/titleHelpers';
 import { isReleaseDateFuture, todayIso } from '../../../shared/domain/date';
 import { GAME_AUTO_STATUS } from '../../games/exports';
-import type { CreditsField } from '../exports';
-import { newTitle } from '../exports/newTitle';
+import type { CreditsField } from '../domain/model';
+import { newTitle } from '../domain/newTitle';
 import type { AnyEntry, EntryIndex } from '../../../shared/storage/EntryIndex';
 import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBaseline } from '../../../shared/storage/baseline';
 import { ApiCheckQueue } from '../../../shared/api/apiCheckQueue';

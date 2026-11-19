@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DashboardTab } from '../../src/modules/dashboard/ui/DashboardTab';
 import { fakeSettings } from '../helpers/fakeSettings';
-import type { Game } from '../../src/modules/games/exports';
-import type { Book, Manga } from '../../src/modules/reading/exports';
-import type { HoardTitle } from '../../src/modules/watchlist/exports';
-import { DEFAULT_SETTINGS } from '../../src/modules/settings/exports/settingsDefaults';
+import type { Game } from '../../src/modules/games/domain/model';
+import type { Book, Manga } from '../../src/modules/reading/domain/model';
+import type { HoardTitle } from '../../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/domain/settingsDefaults';
 import { qsa, textsOf as texts } from '../helpers/dom';
 import { t } from '../../src/shared/i18n';
 

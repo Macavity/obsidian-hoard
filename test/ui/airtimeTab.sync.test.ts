@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Game } from '../../src/modules/games/exports';
-import type { Book, Manga } from '../../src/modules/reading/exports';
+import type { Game } from '../../src/modules/games/domain/model';
+import type { Book, Manga } from '../../src/modules/reading/domain/model';
 import { captures as cap, entry, isoOffset, makeTab, newWorld } from './airtimeTab.harness';
 
 vi.mock('../../src/design-system/VirtualScroller', () => ({ VirtualScroller: class { addSection(): void {} attach(): void {} detach(): void {} destroy(): void {} } }));

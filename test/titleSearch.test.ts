@@ -10,7 +10,7 @@ import {
 	searchTitles,
 	type TitlePick,
 } from '../src/shared/services/titleSearch';
-import type { AnimeSearchResult, MediaSearchResult } from '../src/modules/watchlist/exports';
+import type { AnimeSearchResult, MediaSearchResult } from '../src/modules/watchlist/domain/model';
 import { SEARCH_RESULT_LIMIT } from '../src/shared/api/ApiService';
 import { fakeSettings } from './helpers/fakeSettings';
 

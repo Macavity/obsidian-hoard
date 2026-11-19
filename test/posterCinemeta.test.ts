@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { requestUrl } from 'obsidian';
 import { PosterService } from '../src/shared/api/PosterService';
-import type { HoardTitle } from '../src/modules/watchlist/exports';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import { ApiService } from '../src/shared/api/ApiService';
 
 function setup(api: Partial<ApiService>, keys: { tmdbApiKey?: string; omdbApiKey?: string } = {}) {

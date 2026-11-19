@@ -1,4 +1,4 @@
-import type { GamesSettings } from '.';
+import type { GamesSettings } from './model';
 
 /** auto status forced by a future release date; excluded from manual dropdowns */
 export const GAME_AUTO_STATUS = 'To be released';

@@ -17,12 +17,10 @@ import { decodeGame, encodeGame } from '../../../shared/storage/gameCodec';
 import { COMMON_PROPS } from '../../../shared/storage/properties';
 import { extractNotes, replaceNotesSection } from '../../../shared/storage/noteBody';
 import type { SteamSyncUpdate } from '../domain/steamSync';
-import type {
-	Game, GameGroup, GameReader, GamesData, GamesSavedFilterPreset, GameSettingsAccess, GamesSettings, GameSnapshot,
-	GameWriter,
-} from '../exports';
+import type { Game, GameGroup, GamesData, GamesSavedFilterPreset, GamesSettings } from '../domain/model';
+import type { GameReader, GameSettingsAccess, GameSnapshot, GameWriter } from './roles';
 import { isReleaseDateFuture, todayIso } from '../../../shared/domain/date';
-import { GAME_AUTO_STATUS, GAME_FINISHED_STATUS, defaultGamesSettings } from '../exports/gameDefaults';
+import { GAME_AUTO_STATUS, GAME_FINISHED_STATUS, defaultGamesSettings } from '../domain/gameDefaults';
 import type { RecommendedDaily } from '../../../shared/domain/rows';
 import { omit, sameJson, slugify, toRecord } from '../../../shared/domain/sharedHelpers';
 import { readRecord } from '../../../shared/domain/read';

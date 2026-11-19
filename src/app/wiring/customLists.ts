@@ -1,5 +1,5 @@
 import { MarkdownRenderer, type App } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../modules/settings/exports';
+import type { SettingsReader, SettingsWriter } from '../../modules/settings/services/roles';
 import type { DataManager } from '../../modules/watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';

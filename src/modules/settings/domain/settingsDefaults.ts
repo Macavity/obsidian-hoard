@@ -1,4 +1,4 @@
-import type { HoardPluginSettings } from '.';
+import type { HoardPluginSettings } from './model';
 import { ROWS_SHELVES } from '../../../shared/domain/rows';
 
 /**

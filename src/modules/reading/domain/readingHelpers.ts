@@ -1,5 +1,5 @@
-import type { Book } from '../exports';
-import { bookProgressUnit } from '../exports/readingDefaults';
+import type { Book } from './model';
+import { bookProgressUnit } from './readingDefaults';
 
 /**
  * Reading Rows sections. No groups and no type registry, so "By status" is the only

@@ -3,8 +3,8 @@ import { Platform } from 'obsidian';
 import { fakeSettings } from './helpers/fakeSettings';
 import { renderCreditsRefreshButton } from '../src/modules/watchlist/ui/TitleDetailModal';
 import { newTitleDetail } from './helpers/newTitleDetail';
-import type { HoardTitle } from '../src/modules/watchlist/exports';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import { t } from '../src/shared/i18n';
 import { FAILED, found, type LookupResult } from '../src/shared/api/lookup';
 

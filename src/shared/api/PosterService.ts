@@ -3,7 +3,7 @@ import { explicitMediaKind, titleMediaKind } from './cinemetaApi';
 import type { LookupKind } from '../storage/storageTypes';
 import type { HoardPluginSettings } from '../../modules/settings/exports';
 import type { HoardTitle, MediaSearchResult } from '../../modules/watchlist/exports';
-import { getApiGroupForType } from '../../modules/watchlist/exports';
+import { getApiGroupForType } from './apiGroup';
 import type { DeepReadonly } from '../domain/deepReadonly';
 import { httpsOrEmpty } from './httpsUrl';
 import { found, attempt, firstFound, FAILED, NO_KEY, type LookupResult, type LookupSource } from './lookup';

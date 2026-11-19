@@ -1,4 +1,4 @@
-import type { Season } from '.';
+import type { Season } from './model';
 
 /** One entry of a skip list as written. A single episode has `from === to`; an unreadable number is NaN. */
 export interface SkipRange {

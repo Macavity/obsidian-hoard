@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from '../../src/shared/storage/readingCodec';
 import { ALL_PROPERTY_NAMES } from '../../src/shared/storage/properties';
-import type { Book, Manga, ReadingCustomColumn } from '../../src/modules/reading/exports';
+import type { Book, Manga, ReadingCustomColumn } from '../../src/modules/reading/domain/model';
 
 const COLS: ReadingCustomColumn[] = [
 	{ id: 'col-1', name: 'Format', type: 'text', options: [] },

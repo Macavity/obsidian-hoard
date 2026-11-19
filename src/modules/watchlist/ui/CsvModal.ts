@@ -1,4 +1,4 @@
-import type { CsvOptions } from '../exports';
+import type { CsvOptions } from '../domain/model';
 import type { App } from 'obsidian';
 import { CsvModalBase, rowsToCsv, type CsvExportRow, type CsvFieldDef, type CsvSelectOption } from '../../../design-system/CsvModalBase';
 import { safeTypeName } from '../../../shared/domain/typeName';
@@ -6,11 +6,11 @@ import { t } from '../../../shared/i18n';
 import { statusLabel, typeLabel } from '../../../shared/i18n/labels';
 import type { DataManager } from '../services/DataManager';
 import type { SettingsReader, SettingsWriter } from '../../settings/exports';
-import type { HoardTitle, ImportProgress } from '../exports';
+import type { HoardTitle, ImportProgress } from '../domain/model';
 import { normalizeManualCredits } from '../domain/titleHelpers';
-import { getTitleCredits } from '../exports/titles';
+import { getTitleCredits } from '../domain/titles';
 import { completedEpisodes } from '../domain/completedEpisodes';
-import { newTitle } from '../exports/newTitle';
+import { newTitle } from '../domain/newTitle';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 
 /** studio list ⇄ one CSV cell; semicolons, since studio names contain commas */

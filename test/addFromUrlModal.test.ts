@@ -3,7 +3,7 @@ import type { OpenAddTitle } from '../src/modules/watchlist/ui/AddTitleModal';
 import { AddFromUrlModal } from '../src/modules/watchlist/ui/AddFromUrlModal';
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
-import type { MediaSearchResult } from '../src/modules/watchlist/exports';
+import type { MediaSearchResult } from '../src/modules/watchlist/domain/model';
 
 const result = (over: Partial<MediaSearchResult> = {}): MediaSearchResult => ({
 	imdbId: 'tt1', title: 'Inception', mediaType: 'movie', episodes: 1, episodeDuration: 148, releaseDate: '2010-07-16',

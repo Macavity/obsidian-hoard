@@ -6,7 +6,7 @@ import { t } from '../src/shared/i18n';
 import { todayIso } from '../src/shared/domain/date';
 import { formatCount } from '../src/shared/domain/format';
 import { DEFAULT_FIELD_COLOR } from '../src/shared/domain/tags';
-import type { Book, Manga, ReadingCustomColumn } from '../src/modules/reading/exports';
+import type { Book, Manga, ReadingCustomColumn } from '../src/modules/reading/domain/model';
 import { fakeSettings } from './helpers/fakeSettings';
 
 // the shared DOM polyfills lack createSvg, which the arc gauges draw with

@@ -1,7 +1,7 @@
 import type { TabInstance } from '../design-system/TabInstance';
 import { ItemView, Platform, setIcon, type MetadataCache, type WorkspaceLeaf } from 'obsidian';
 import { t, type TranslationKey } from '../shared/i18n';
-import type { SettingsReader } from '../modules/settings/exports';
+import type { SettingsReader } from '../modules/settings/services/roles';
 import type { DataManager } from '../modules/watchlist/services/DataManager';
 
 export const HOARD_VIEW_TYPE = 'hoard-view';

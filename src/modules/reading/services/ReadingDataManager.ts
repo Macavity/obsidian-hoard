@@ -16,12 +16,10 @@ import { FOLDERS } from '../../../shared/domain/typeName';
 import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from '../../../shared/storage/properties';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from '../../../shared/storage/readingCodec';
 import type { Fm } from '../../../shared/storage/storageTypes';
-import type {
-	Book, Manga, ReadingCustomColumn, ReadingData, ReadingItem, ReadingKind, ReadingReader, ReadingSettings,
-	ReadingSettingsAccess, ReadingSnapshot, ReadingWriter,
-} from '../exports';
+import type { Book, Manga, ReadingCustomColumn, ReadingData, ReadingItem, ReadingKind, ReadingSettings } from '../domain/model';
+import type { ReadingReader, ReadingSettingsAccess, ReadingSnapshot, ReadingWriter } from './roles';
 import { isReleaseDateFuture, todayIso } from '../../../shared/domain/date';
-import { DEFAULT_READING_SETTINGS } from '../exports/readingDefaults';
+import { DEFAULT_READING_SETTINGS } from '../domain/readingDefaults';
 import { omit, slugify } from '../../../shared/domain/sharedHelpers';
 import { readRecord } from '../../../shared/domain/read';
 import { readColumns, readReadingSettings } from '../../../shared/storage/featureSettings';

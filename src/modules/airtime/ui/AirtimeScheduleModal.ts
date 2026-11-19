@@ -1,6 +1,6 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../../../shared/i18n';
-import type { AirtimeSchedule } from '../exports';
+import type { AirtimeSchedule } from '../domain/model';
 import type { HoardTitle } from '../../watchlist/exports';
 import {
 	type ScheduleFormState,

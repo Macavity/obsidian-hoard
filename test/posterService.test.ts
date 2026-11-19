@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestUrl } from 'obsidian';
 import { PosterService } from '../src/shared/api/PosterService';
-import type { HoardTitle } from '../src/modules/watchlist/exports';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import type { ApiService } from '../src/shared/api/ApiService';
 import { FAILED, NOT_FOUND } from '../src/shared/api/lookup';
 import { setupDataManager } from './helpers/setupDataManager';

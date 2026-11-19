@@ -1,4 +1,4 @@
-import type { AirtimeEntry, EntryAirtime } from '.';
+import type { AirtimeEntry, EntryAirtime } from './model';
 
 /** The note-side schedule of an Upcoming entry; the 'once' date lives in the note's releaseDate. */
 export function toEntryAirtime(e: AirtimeEntry): EntryAirtime {

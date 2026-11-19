@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService } from '../src/shared/api/ApiService';
 import { fakeSettings } from './helpers/fakeSettings';
 import { newTitleDetail } from './helpers/newTitleDetail';
-import type { HoardTitle } from '../src/modules/watchlist/exports';
-import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import { setupDataManager } from './helpers/setupDataManager';
 
 const sent = vi.mocked(requestUrl);

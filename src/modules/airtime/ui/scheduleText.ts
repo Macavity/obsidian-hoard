@@ -1,5 +1,5 @@
 import { t } from '../../../shared/i18n';
-import type { AirtimeSchedule } from '../exports';
+import type { AirtimeSchedule } from '../domain/model';
 import { getActiveDateFormat, isoParts } from '../../../shared/domain/date';
 import { dayName, monthShortName } from '../../../shared/i18n/dateNames';
 

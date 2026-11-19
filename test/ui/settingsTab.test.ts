@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setLocale } from '../../src/shared/i18n';
 import de from '../../src/shared/i18n/de';
 import { newSettingsTab } from '../helpers/newSettingsTab';
-import { DEFAULT_SETTINGS } from '../../src/modules/settings/exports/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/domain/settingsDefaults';
 import { tick } from '../helpers/common';
 import { fakeSettings } from '../helpers/fakeSettings';
 

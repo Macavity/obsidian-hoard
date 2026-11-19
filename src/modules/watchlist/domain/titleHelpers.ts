@@ -1,5 +1,5 @@
-import type { HoardTitle } from '../exports';
-import { getDisplayCredits } from '../exports/titles';
+import type { HoardTitle } from './model';
+import { getDisplayCredits } from './titles';
 
 export const COLLECTION_NONE = 0;
 

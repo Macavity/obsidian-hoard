@@ -1,10 +1,6 @@
 import type { EntryAirtime } from '../../airtime/exports';
 import type { RowsShelfLayoutEntry } from '../../../shared/domain/rows';
 
-export { newBook, newManga } from './newReading';
-export { readingStatusColor } from './readingColors';
-export { DEFAULT_READING_SETTINGS, DEFAULT_READING_STATUS_COLORS, READING_STATUSES, SELECTABLE_READING_STATUSES, bookProgressUnit, getReadingTypeColor } from './readingDefaults';
-
 export type ReadingStatus = 'Reading' | 'Completed' | 'Plan to Read' | 'To be released' | 'Dropped';
 
 /**
@@ -120,29 +116,9 @@ export type ReadingItem = Book | Manga;
 
 // Roles other modules see instead of the concrete ReadingDataManager.
 
-export interface ReadingReader {
-	getBook(id: string): Book | undefined;
-	getManga(id: string): Manga | undefined;
-	getBooks(): Book[];
-	getMangaList(): Manga[];
-}
 
-export interface ReadingWriter {
-	updateBook(updated: Book): Promise<void>;
-	updateManga(updated: Manga): Promise<void>;
-}
 
-export interface ReadingSettingsAccess {
-	getSettings(): ReadingSettings;
-	updateSettings(patch: Partial<ReadingSettings>): Promise<void>;
-	rewriteFrontmatterIfExists(kind: ReadingKind, item: ReadingItem): Promise<boolean>;
-	createReadingNoteIfMissing(kind: ReadingKind, item: ReadingItem): Promise<boolean>;
-}
 
-export interface ReadingSnapshot {
-	exportSnapshot(): ReadingData;
-	restore(data: ReadingData): Promise<void>;
-}
 
 export type ReadingCsvKind = 'book' | 'manga';
 

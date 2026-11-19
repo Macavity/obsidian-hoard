@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReadingCsvModal } from '../src/modules/reading/ui/ReadingCsvModal';
-import type { Book, Manga } from '../src/modules/reading/exports';
-import type { ReadingCsvKind } from '../src/modules/reading/exports';
+import type { Book, Manga } from '../src/modules/reading/domain/model';
+import type { ReadingCsvKind } from '../src/modules/reading/domain/model';
 import { clickByText, clickNext, shownNotices, uploadCsv, valueSelect } from './helpers/csvWizard';
 
 function setup(kind: ReadingCsvKind, defaultStatus?: string) {

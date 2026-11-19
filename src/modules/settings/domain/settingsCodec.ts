@@ -1,5 +1,5 @@
 import type { CustomListColumn } from '../../../shared/domain/columns';
-import type { HoardPluginSettings } from '.';
+import type { HoardPluginSettings } from './model';
 import { COLUMN_TYPES } from '../../../shared/domain/columns';
 import { DEFAULT_SETTINGS } from './settingsDefaults';
 import { isRecord } from '../../../shared/domain/sharedHelpers';

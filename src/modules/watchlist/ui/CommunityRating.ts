@@ -1,9 +1,9 @@
 import { Notice } from 'obsidian';
 import type { DataManager } from '../services/DataManager';
 import type { SettingsReader } from '../../settings/exports';
-import type { AnimeSearchResult, HoardTitle } from '../exports';
+import type { AnimeSearchResult, HoardTitle } from '../domain/model';
 import { formatVoteCount, getCommunityRating } from '../domain/titleHelpers';
-import { getApiGroupForType } from '../exports/titles';
+import { getApiGroupForType } from '../../../shared/api/apiGroup';
 import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
 import { t } from '../../../shared/i18n';
 import { createIconButton } from '../../../design-system/IconButton';

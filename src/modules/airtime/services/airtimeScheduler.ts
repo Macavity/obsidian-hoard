@@ -1,8 +1,8 @@
 import type { TitleReader } from '../../watchlist/exports';
-import type { AirtimeReader } from '../exports';
+import type { AirtimeReader } from './roles';
 import type { ReadingReader } from '../../reading/exports';
 import type { GameReader } from '../../games/exports';
-import type { AirtimeEntry, AirtimeSchedule } from '../exports';
+import type { AirtimeEntry, AirtimeSchedule } from '../domain/model';
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 

@@ -1,5 +1,5 @@
 import { defined } from '../../../shared/domain/sharedHelpers';
-import type { Game } from '.';
+import type { Game } from './model';
 
 const isoNow = (): string => new Date().toISOString();
 

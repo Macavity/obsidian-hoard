@@ -1,6 +1,6 @@
 import { defined } from '../../../shared/domain/sharedHelpers';
-import type { Book } from '.';
-import type { Manga } from '.';
+import type { Book } from './model';
+import type { Manga } from './model';
 
 const isoNow = (): string => new Date().toISOString();
 
