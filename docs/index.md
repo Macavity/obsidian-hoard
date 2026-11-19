@@ -15,7 +15,7 @@ profile:
     - "*.test.ts"
     - scripts/
     - test/
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Context
@@ -31,7 +31,7 @@ Read [values](values.md) first; every rule below serves one of them.
 - **Base**: `Hoard.base`, whose `hoard:` block carries the shared vocabulary; nothing else syncs settings.
 - **Cache**: `data.json`, device-local; fetched data, UI state. API keys live in Obsidian's secret storage, also per device.
 - **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (the import wizard writes notes once, custom lists write their own notes).
-- **Contract**: a module's `contract.ts`, types only: its models and the role interfaces (`TitleReader`, `ReadingSnapshot`, …) other modules depend on instead of a manager class.
+- **Exports**: a module's `exports/` folder, its deliberate public surface: models, role interfaces (`TitleReader`, `ReadingSnapshot`, …) other modules depend on instead of a manager class, and the constants and pure functions others need. Reviewed by the `exports-reviewer` agent.
 - **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
 - **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
 - **Maybe**: a note with `Maybe: true`, considered but not in the library.
@@ -63,7 +63,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 
 # Architecture
 
-- [Overview](architecture/overview.md): which zones exist (app, modules, contracts, design system, shared), who may import whom, how modules talk through contracts and roles, how dependencies are injected, and which change channel drives the view versus the widgets.
+- [Overview](architecture/overview.md): which zones exist (app, modules, module exports, design system, shared), who may import whom, how modules talk through exports and roles, who reviews changes to them, how dependencies are injected, and which change channel drives the view versus the widgets.
 - [Storage](architecture/storage.md): where each piece of state lives (notes, base, History.md, data.json) and how reads and writes propagate.
 - [API layer](architecture/api-layer.md): which services exist (keyless defaults and keyed upgrades), how the effective source is resolved, how errors and rate limits are handled, and how fetched data reaches cache and notes.
 - [Internationalisation](architecture/i18n.md): how to add a string, why stored values and storage messages are codes not text, and which tests enforce it.

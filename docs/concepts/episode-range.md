@@ -5,10 +5,10 @@ description: The S01E01-E12 notation in watched and skipped properties, and how 
 source:
   - src/shared/storage/episodeRange.ts
   - src/shared/storage/titleCodec.ts
-  - src/shared/domain/seasonText.ts
+  - src/modules/watchlist/exports/seasonText.ts
   - src/shared/storage/storageTypes.ts
-  - src/modules/watchlist/contract.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+  - src/modules/watchlist/exports/index.ts
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Episode range
@@ -19,7 +19,7 @@ all seasons**; the two forms are converted by [episodeRange.ts](../../src/shared
 
 - Token grammar: `S<n>E<m>`, same-season range `S01E01-E12`, cross-season range `S01E11-S02E02`
   (needs known seasons). Case-insensitive, comma-separated, `MAX_EPISODE = 10000` guards expansion.
-- `parseEpisodeRange(text, seasons)` → `EpisodeRef[]` ([storageTypes.ts](../../src/shared/storage/storageTypes.ts); `Season` lives in [watchlist/contract](../../src/modules/watchlist/contract.ts)) (sorted, deduped) or null on garbage.
+- `parseEpisodeRange(text, seasons)` → `EpisodeRef[]` ([storageTypes.ts](../../src/shared/storage/storageTypes.ts); `Season` lives in [watchlist/exports](../../src/modules/watchlist/exports/index.ts)) (sorted, deduped) or null on garbage.
 - `formatEpisodeRange(refs)` writes the canonical form: consecutive runs per season collapsed.
 - `toAbsolute` / `fromAbsolute` map between refs and absolute numbers using the season lengths;
   `outsideSeasons` returns refs the known seasons cannot place.
@@ -29,7 +29,7 @@ all seasons**; the two forms are converted by [episodeRange.ts](../../src/shared
 `mappingSeasons` in [titleCodec.ts](../../src/shared/storage/titleCodec.ts): the title's seasons, else one
 implicit "Season 1" of `totalEpisodes`. Seasons come from the note (`Seasons` lines `Name: N`,
 optional `(skip spec)`, sets `seasonsOverride`) or from the [entry cache](entry-cache.md) (API).
-That line format is read in one place, [seasonText.ts](../../src/shared/domain/seasonText.ts), for the note
+That line format is read in one place, [seasonText.ts](../../src/modules/watchlist/exports/seasonText.ts), for the note
 and for the edit form's seasons box. The bounds differ on purpose: the codec rejects all seasons of
 a note when a count exceeds `MAX_EPISODE` or a skipped episode lies beyond its season; the edit form
 applies none. In both, a skip entry that is neither a number nor `from-to` (`1-2-3`, `x`) is ignored.

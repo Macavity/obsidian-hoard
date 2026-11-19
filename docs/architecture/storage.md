@@ -20,10 +20,11 @@ source:
   - src/shared/domain/sharedHelpers.ts
   - src/shared/storage/gameCodec.ts
   - src/shared/storage/readingCodec.ts
-  - src/shared/storage/settingsCodec.ts
+  - src/modules/settings/exports/settingsCodec.ts
+  - src/modules/settings/exports/settingsDefaults.ts
   - src/shared/storage/featureSettings.ts
   - src/modules/settings/services/settingsSplit.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Storage
@@ -69,7 +70,7 @@ wrong type instead of failing; those properties are left untouched on write. The
 its result as one expression composed from parts and assigns nothing afterwards; the order of the
 parts in `titleToProperties` is the order of properties in a new note. Property names come
 only from [properties.ts](../../src/shared/storage/properties.ts) ([property names](../concepts/properties.md)).
-Storage imports module models as types only (`modules/<x>/contract.ts`), never module code. The book and manga codecs also take that kind's custom columns, because a custom value's key is
+Storage imports module models and reference data (defaults, status lists) from `modules/<x>/exports/` only, never module internals ([overview](overview.md)). The book and manga codecs also take that kind's custom columns, because a custom value's key is
 `Custom <column name>`; `EntryIndex.setColumns` re-decodes reading notes when a column name changes.
 
 ## Reading outside data
@@ -80,7 +81,7 @@ WatchLog import) is read from `unknown`, field by field, never asserted
 `readList(v, readItem)` (drops items the reader rejects), `readOneOf`, `readRecord`, `readOptional*` and
 `at(v, ...path)`. They are pure and never throw; a wrong or missing field becomes its empty value, so one
 bad field never breaks the entry. `no-unsafe-type-assertion` is on for `src/shared/storage/`, `src/modules/import/`, the
-API modules, `lookup.ts`, `settingsSplit` and `backup.ts` (`eslint.config.mjs`). The settings readers live in `src/shared/storage/`: `settingsCodec.ts` (`normalizeSettings`, key by key) and `featureSettings.ts` (`readGamesSettings`, `readReadingSettings`), so the whole storage folder is covered.
+API modules, `lookup.ts`, `settingsSplit` and `backup.ts` (`eslint.config.mjs`). The settings readers: `settingsCodec.ts` (`normalizeSettings`, key by key) lives in `src/modules/settings/exports/` (explicitly listed in the lint rule), `featureSettings.ts` (`readGamesSettings`, `readReadingSettings`) in `src/shared/storage/`.
 Entries are built as one expression with `defined()` / conditional spreads and `omit()`
 ([sharedHelpers.ts](../../src/shared/domain/sharedHelpers.ts)); no key is `delete`d from an entry afterwards, so
 an optional field is absent, not present-and-undefined (maps keyed by id keep `delete`).
@@ -129,10 +130,10 @@ where the write pipeline emits them. `main.ts` renders the code in the active la
 
 - A new note property for titles: the matching part of `titleFromProperties` and of
   `titleToProperties` in [titleCodec.ts](../../src/shared/storage/titleCodec.ts) (`coreFields`/`coreProps`,
-  `userFields`/`linkAndFlagProps`, …), `HoardTitle` in `src/modules/watchlist/contract.ts`, and `TITLE_CACHE_KEYS` with
+  `userFields`/`linkAndFlagProps`, …), `HoardTitle` in `src/modules/watchlist/exports/index.ts`, and `TITLE_CACHE_KEYS` with
   `cachedApiFields`/`titleToCache` if it is API data. Reading and games: their codecs; cache merge does not exist there.
 - A new entry kind: `EntryKind`, `FOLDERS` and `classify` in `VaultLayout`, a codec, an `EntryIndex`
   case, a manager.
 - A new secret setting: `SECRET_SETTINGS` / `SecretKey` in `SecretStore.ts`.
 - A new shared setting: the whitelist in `SharedConfigStore` ([settings](../modules/settings.md)), its default in
-  `shared/domain/settingsDefaults.ts`, its type in `modules/settings/contract.ts`, its reader in `settingsCodec.ts`.
+  `modules/settings/exports/settingsDefaults.ts`, its type in `modules/settings/exports/index.ts`, its reader in `settingsCodec.ts` (same folder).

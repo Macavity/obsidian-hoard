@@ -10,7 +10,7 @@ source:
   - src/app/wiring/airtime.ts
   - src/app/wiring/tabs.ts
   - src/shared/services/changeSignal.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Airtime notifications
@@ -34,7 +34,7 @@ flowchart TD
 
 1. `runAirtimeScheduler(dataManager, readingDataManager, gameDataManager, notify, notified, now)` in
    [airtimeScheduler.ts](../../src/modules/airtime/services/airtimeScheduler.ts) walks every `AirtimeEntry`
-   ([airtime](../concepts/airtime.md)); the entries come from `AirtimeStore.getAirtimeEntries` (DataManager).
+   ([airtime](../concepts/airtime.md)); the entries come from `AirtimeReader.getAirtimeEntries` (implemented by DataManager).
 2. **Due** = today's `HH:MM` has passed at most 12 hours ago (`AIRTIME_CATCH_UP_MINUTES`, catches a
    sleeping machine without a burst after a long sleep) and the recurrence matches today
    (`daily`, `weekly` by `dayOfWeek`, `monthly` by `dayOfMonth`, `once` by date).

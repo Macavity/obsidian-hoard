@@ -15,7 +15,7 @@ source:
   - src/app/main.ts
   - src/modules/import/services/watchlog/schema1.ts
   - src/modules/import/domain/importReport.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # WatchLog import

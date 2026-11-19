@@ -3,7 +3,7 @@ type: Module
 title: Custom lists
 description: How a custom list is stored as a note with a JSON block, what a column and a row are, and how the auto time column is filled.
 source:
-  - src/modules/custom-lists/contract.ts
+  - src/modules/custom-lists/domain/customList.ts
   - src/modules/custom-lists/services/CustomListManager.ts
   - src/modules/custom-lists/ui/CustomListsTab.ts
   - src/app/wiring/customLists.ts
@@ -11,7 +11,7 @@ source:
   - src/shared/domain/columns.ts
   - src/shared/services/addRoute.ts
   - src/shared/storage/VaultLayout.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Custom lists
@@ -24,7 +24,7 @@ instance through the `CreateListManager` factory, also used by the settings tab 
 [CustomListsTab.ts](../../src/modules/custom-lists/ui/CustomListsTab.ts) (the tab, `EditColumnsModal` /
 `DefaultColumnsModal`, both rendering [ColumnsEditor.ts](../../src/design-system/ColumnsEditor.ts), `NotesModal`,
 `ListNameModal`, `ImportListModal` (paste TSV), `ExportFormatModal` and clipboard export (Markdown or TSV)) and
-[contract.ts](../../src/modules/custom-lists/contract.ts) (`CustomList`, types only; column and row types are
+[customList.ts](../../src/modules/custom-lists/domain/customList.ts) (`CustomList`, types only, module-internal: no `exports/` folder; column and row types are
 in [columns.ts](../../src/shared/domain/columns.ts)). [wiring/customLists.ts](../../src/app/wiring/customLists.ts)
 is the only place that `new`s the dialogs and the tab; the tab types its data sources against
 `TitleReader` / `TitleStats` / `ReadingReader` / `GameReader` roles.

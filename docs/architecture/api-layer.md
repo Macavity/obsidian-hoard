@@ -15,12 +15,12 @@ source:
   - src/shared/api/apiCheckQueue.ts
   - src/shared/api/lookup.ts
   - src/shared/domain/read.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # API layer
 
-The API code, `titleSearch` and `coverRefresh` all live in `shared` (`api/`, `services/`): modules and the design system call them, and they see module models only as contract types ([overview](overview.md)).
+The API code, `titleSearch` and `coverRefresh` all live in `shared` (`api/`, `services/`): modules and the design system call them, and they see module models and reference data only through `modules/<x>/exports/` ([overview](overview.md)).
 
 Search, autofill, posters and covers work without a key: Cinemeta (movies/TV), Open Library
 (books) and the Steam Store (games) are keyless defaults. Community ratings, airing, season refill,
@@ -111,7 +111,7 @@ backup or a WatchLog import takes effect without a restart; the Settings tab als
 (Cinemeta, Open Library, Steam). Nothing is migrated: an old `activeApi: 'OMDb'` without a key just
 resolves to Cinemeta. Every reader goes through it, never through the raw setting.
 
-- [titleSearch.ts](../../src/shared/services/titleSearch.ts): `getApiGroupForType(type, typeApiMapping)` (from `shared/domain/titles.ts`) → anime
+- [titleSearch.ts](../../src/shared/services/titleSearch.ts): `getApiGroupForType(type, typeApiMapping)` (from `modules/watchlist/exports/titles.ts`) → anime
   (Jikan or AniList by `animeApiSource`) or movie/series by the effective media source (Cinemeta,
   OMDb, TMDB; `fetchMediaDetails` follows the same). `resultIdKeys` takes that source, because
   `imdbId` on a row is a TMDB id under TMDB.
@@ -174,4 +174,4 @@ built. `no-unsafe-type-assertion` is on for the API modules, so they stay that w
   `apiError.ts`) + `apiSourceFromUrl`, a value in the `apiSources.ts` union and resolver, an
   [external id](../concepts/external-id.md) source and a `LibraryIndex` key.
 - A new failure reason: `ApiErrorReason` and its row in `REASONS`; the compiler asks for the row.
-- New per-type routing: `typeApiMapping` (`modules/settings/contract.ts`) and `getApiGroupForType` in `shared/domain/titles.ts`.
+- New per-type routing: `typeApiMapping` (`modules/settings/exports/index.ts`) and `getApiGroupForType` in `modules/watchlist/exports/titles.ts`.

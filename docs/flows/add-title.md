@@ -12,8 +12,9 @@ source:
   - src/shared/api/apiSources.ts
   - src/shared/services/LibraryIndex.ts
   - src/modules/watchlist/services/DataManager.ts
-  - src/shared/domain/entryFactories.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+  - src/modules/watchlist/exports/newTitle.ts
+  - src/modules/watchlist/domain/completedEpisodes.ts
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Add title
@@ -68,7 +69,7 @@ sequenceDiagram
    ([DuplicateGuard.ts](../../src/design-system/DuplicateGuard.ts)) warns on a same-name title with
    Continue/Cancel (Continue lets the next attempt pass once). "To be released" is not selectable;
    it follows the release date. The entry comes from `newTitle`
-   ([entryFactories.ts](../../src/shared/domain/entryFactories.ts)), which owns the defaults of a new title; the
+   ([newTitle.ts](../../src/modules/watchlist/exports/newTitle.ts)), which owns the defaults of a new title; the
    modal passes only its form fields. A `Completed` add marks all episodes watched
    (`completedEpisodes`) and may set the finish date.
 6. **Write**: `DataManager.addTitle` creates the note (or takes over a

@@ -3,14 +3,14 @@ type: Module
 title: Drafts
 description: How tagged lines in vault notes become add candidates, why the pending count is computed twice, and what is persisted.
 source:
-  - src/modules/drafts/contract.ts
+  - src/modules/drafts/exports/index.ts
   - src/modules/drafts/ui/DraftsTab.ts
   - src/modules/drafts/ui/DraftChoiceModal.ts
   - src/app/AddRouter.ts
   - src/app/wiring/drafts.ts
   - src/app/HoardView.ts
   - src/shared/services/addRoute.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Drafts
@@ -18,7 +18,7 @@ source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 An inbox: the user writes `#hoard Some Title` anywhere in the vault; the Drafts tab
 ([DraftsTab.ts](../../src/modules/drafts/ui/DraftsTab.ts)) lists those titles and routes each into Watchlist, Books,
 Manga or Games. Drafts are not entries and have no note; only triage state is persisted. The tab depends on roles only:
-`DraftStore` + `TitleReader` (watchlist), `ReadingReader`, `GameReader`, `SettingsReader`, the injected
+`DraftStore` (drafts exports) + `TitleReader` (watchlist), `ReadingReader`, `GameReader`, `SettingsReader`, the injected
 `OpenAddRoute`. [wiring/drafts.ts](../../src/app/wiring/drafts.ts) builds the tab and the badge count.
 
 ## Scan
@@ -48,8 +48,8 @@ refreshes on `metadata-resolved`, not on `hoard-data-changed`, because it needs 
   card "Added".
 - Dismiss is permanent per key; there is no un-dismiss in the tab.
 - `DraftPersistState` (`dismissed`, `added`, `firstSeen`, `titleDisplay`, all keyed by lowercase
-  title; type in [contract.ts](../../src/modules/drafts/contract.ts)) lives in `data.json` via the
-  `DraftStore` role (`getDrafts` / `setDrafts`, implemented by `DataManager`), device-local. The tag
+  title; type in [exports/index.ts](../../src/modules/drafts/exports/index.ts)) lives in `data.json` via the
+  `DraftStore` role (`getDrafts` / `setDrafts`, declared in the drafts exports, implemented by the watchlist's `DataManager`), device-local. The tag
   (`draftsVaultTag`, default `#hoard`) and `draftsAfterAdding` are device-local settings too.
 
 ## Where to change what

@@ -15,7 +15,7 @@ source:
   - src/modules/import/services/watchlog/widgets.ts
   - src/modules/import/ui/WatchLogOnboardingModal.ts
   - src/modules/import/ui/WatchLogReport.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Import
@@ -33,10 +33,10 @@ Only this module, [WatchLogOnboardingModal.ts](../../src/modules/import/ui/Watch
 may know WatchLog: plugin ids, `WatchLog.base`, the `watchlog:` key, `wl-*` widget names, schema-1
 data (`.claude/skills/project/SKILL.md`). The folder stays free of translated text: the wizard owns all
 copy (`onboarding.*`, [i18n](../architecture/i18n.md)), and the import logic only returns reports.
-There is no `contract.ts`: the module exposes no roles, and nothing imports it except `app/main.ts`
+There is no `exports/` folder: the module exposes no roles, and nothing imports it except `app/main.ts`
 (detection, `createImporter`, `importContext()` which builds the `ImportContext` it writes into, decisions); the
 settings tab reaches the wizard only through the host callbacks `openWatchLogImport` and `watchLogImported`.
-The import itself imports the other modules' contracts type-only (`HoardTitle`, `ReadingData`, `GamesData`, …).
+The import itself imports the other modules only through their `exports/` (types such as `HoardTitle`, `ReadingData`, `GamesData`, and values such as `defaultGamesSettings`, `DEFAULT_SETTINGS`, `toEntryAirtime`, `REMOVED_SETTINGS`).
 
 ## Contracts
 

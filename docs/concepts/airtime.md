@@ -3,12 +3,12 @@ type: Domain
 title: Airtime
 description: The airtime* note properties, AirtimeEntry versus derived release cards, and the acknowledgement rule.
 source:
-  - src/modules/airtime/contract.ts
+  - src/modules/airtime/exports/index.ts
   - src/shared/storage/titleCodec.ts
   - src/shared/storage/readingCodec.ts
   - src/modules/watchlist/services/DataManager.ts
   - src/modules/airtime/services/airtimeScheduler.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Airtime
@@ -17,7 +17,7 @@ Two things feed the Upcoming tab:
 
 1. **A manual schedule** stored on the entry's note as `Airtime Recurrence` (`once | daily | weekly |
    monthly`), `Airtime Day`, `Airtime Time`, `Airtime Season`, `Airtime Episode`, `Airtime Acknowledged`.
-   Decoded into `EntryAirtime` ([airtime/contract](../../src/modules/airtime/contract.ts)) by the codecs (titles in [titleCodec](../../src/shared/storage/titleCodec.ts),
+   Decoded into `EntryAirtime` ([airtime/exports](../../src/modules/airtime/exports/index.ts)) by the codecs (titles in [titleCodec](../../src/shared/storage/titleCodec.ts),
    reading and games via `decodeAirtime` in [readingCodec](../../src/shared/storage/readingCodec.ts)).
    The two disagree on empty values: a title keeps an empty `Airtime Time` as a value and reports
    an empty `Airtime Recurrence` as invalid; reading and games read both as not set.

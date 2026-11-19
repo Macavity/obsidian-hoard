@@ -22,14 +22,14 @@ source:
   - src/design-system/IconButton.ts
   - src/styles/icon-button.css
   - src/styles/index.css
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Design system
 
 Tabs and modals are thin; shared behaviour lives in `src/design-system/` (the UI kit), feature UI in `src/modules/<x>/ui/`.
 **The design system knows no module and no settings object**: fallow lets it import only `shared` (not even a
-contract, [overview](overview.md)), so what it needs from settings comes as a structural interface (`TypeBadgeStyle` in
+module's `exports/`, [overview](overview.md)), so what it needs from settings comes as a structural interface (`TypeBadgeStyle` in
 `typeBadge.ts`, `ThemeSource` in `RowsCustomizeModal.ts`) or as plain arguments. UI that only one module uses stays in
 that module (`ScheduleForm`/`scheduleText` in airtime, `ModePill` in games, `EpisodeGrid` in watchlist,
 `gamesKeyChip`/`problemText` in settings). **Boundary** (ESLint, `src/modules/*/ui`): module UI never imports

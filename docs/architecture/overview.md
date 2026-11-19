@@ -1,7 +1,7 @@
 ---
 type: Architecture
 title: Overview
-description: The zones of the plugin, which zone may import which, how modules talk to each other through contracts, how dependencies are injected, and the change signal that ties data to UI.
+description: The zones of the plugin, which zone may import which, how modules talk to each other through their exports, how dependencies are injected, and the change signal that ties data to UI.
 source:
   - .fallowrc.json
   - eslint.config.mjs
@@ -10,23 +10,28 @@ source:
   - src/app/main.ts
   - src/app/HoardView.ts
   - src/app/wiring/watchlist.ts
-  - src/modules/watchlist/contract.ts
+  - .claude/agents/exports-reviewer.md
+  - CLAUDE.md
+  - src/modules/watchlist/exports/index.ts
+  - src/modules/watchlist/exports/titles.ts
+  - src/modules/settings/exports/settingsCodec.ts
+  - src/modules/custom-lists/domain/customList.ts
   - src/modules/settings/services/SettingsService.ts
   - src/shared/services/EntryNotes.ts
   - src/shared/services/changeSignal.ts
   - src/shared/services/changeListeners.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Overview
 
 Hoard is one Obsidian plugin package. `src/` has four code zones: `src/app/` (composition root), `src/modules/<x>/`
-(one folder per feature: `contract.ts`, `ui/`, `services/`, `domain/`), `src/design-system/` (the UI kit, see
+(one folder per feature: `exports/` where others need something, `ui/`, `services/`, `domain/`), `src/design-system/` (the UI kit, see
 [ui-kit](ui-kit.md)) and `src/shared/` (`api`, `storage`, `services`, `domain`, `i18n`). The rules below are
 enforced by tools, not by this page: `.fallowrc.json` (`boundaries`) and `eslint.config.mjs` are the authority,
 `test/architecture.test.ts` proves the ESLint rules and the CI job `rules-changed` flags every change to a rule file
-in a PR. How to build a module: `.claude/skills/project/SKILL.md`.
+and (step "Flag changes to module exports") to `src/modules/*/exports/*` in a PR. How to build a module: `.claude/skills/project/SKILL.md`.
 
 ```mermaid
 flowchart TD
@@ -36,39 +41,54 @@ flowchart TD
   mod["modules/x: ui, services, domain"] -->|values| ds[design-system]
   mod -->|values| sh["shared: api, storage, services, domain, i18n"]
   ds --> sh
-  mod -. "type-only" .-> con["module-contracts: modules/*/contract.ts"]
-  sh -. "type-only" .-> con
-  con -. "type-only" .-> sh
-  con -. "type-only" .-> con
+  mod --> ex["module-exports: modules/*/exports/"]
+  sh --> ex
+  ex --> sh
+  ex --> ex
   sh -.-> Vault[(notes, Hoard.base, History.md, data.json)]
 ```
 
 ## Zones and rules
 
-Fallow zones are matched **first match wins**, so `module-contracts` (`src/modules/*/contract.ts`,
-`src/modules/*/contract/**`) precedes the module zones and a contract is never part of its module's zone.
+Fallow zones are matched **first match wins**, so `module-exports` (`src/modules/*/exports/**`) precedes the module
+zones and an exports folder is never part of its module's zone.
 
-| Zone | Pattern | May import (value) | Type-only |
-|---|---|---|---|
-| `app` | `src/app/**` | every module, `module-contracts`, `design-system`, `shared` | – |
-| `modules/<x>` (one per module) | `src/modules/<x>/**` | itself, `design-system`, `shared` | `module-contracts` |
-| `module-contracts` | `src/modules/*/contract.ts` | nothing | `shared`, other contracts |
-| `design-system` | `src/design-system/**` | `shared` | – |
-| `shared` | `src/shared/**` | itself | `module-contracts` |
-| `test` | `test/**` | everything | – |
-| `tooling`, `styles`, `obsidian-mock` | `scripts/**`, `*.mjs`, `vitest.config.ts` / `src/styles/**` / `test/__mocks__/obsidian.ts` | tooling: the mock; the other two: nothing | – |
+| Zone | Pattern | May import |
+|---|---|---|
+| `app` | `src/app/**` | every module, `module-exports`, `design-system`, `shared` |
+| `modules/<x>` (one per module) | `src/modules/<x>/**` | `design-system`, `module-exports`, `shared` (not itself: a module's own files are the same zone) |
+| `module-exports` | `src/modules/*/exports/**` | `module-exports`, `shared` |
+| `design-system` | `src/design-system/**` | `shared` |
+| `shared` | `src/shared/**` | `module-exports` |
+| `test` | `test/**` | everything |
+| `tooling`, `styles`, `obsidian-mock` | `scripts/**`, `*.mjs`, `vitest.config.ts` / `src/styles/**` / `test/__mocks__/obsidian.ts` | tooling: the mock; the other two: nothing |
 
-- **Every module rule is identical**; there is **no module-to-module value edge**. Cross-module knowledge is types
-  only, taken from the other module's contract. `shared` holds no module code (only contract types), and the design
-  system imports no contract at all, so it knows no module and no settings.
-- **Contracts are types only**: the models (`HoardTitle`, `Book`, `Game`, `HoardPluginSettings`, `BackupFile`, …) and
-  the **role interfaces** the managers `implement` (`TitleReader`, `TitleWriter`, `ReadingReader`, `GameWriter`,
-  `SettingsReader`, …). Values used by two or more modules (dates, columns, tags, defaults, `titles.ts`, …) live in
-  `src/shared/domain/`; helpers of one module stay in `src/modules/<x>/domain/`.
+- **Every module rule is identical** (`design-system`, `module-exports`, `shared`, `obsidian-mock`; no `allowTypeOnly`
+  anywhere). A module reaches another module only through that module's `exports/` (imported as `…/<x>/exports`),
+  never its internals, so there is no module-to-module edge into `ui/`, `services/` or `domain/`. `exports/` cannot
+  import module internals either.
+- **`exports/` is a module's deliberate public surface**: its models (`HoardTitle`, `Book`, `Game`,
+  `HoardPluginSettings`, `BackupFile`, …), the **role interfaces** the managers `implement` (`TitleReader`,
+  `TitleWriter`, `ReadingReader`, `GameWriter`, `SettingsReader`, `AirtimeReader`, `DraftStore`, …), `Open<X>` factory
+  types, and the constants and pure functions others need (`DEFAULT_SETTINGS`, `settingsCodec`, `GAME_AUTO_STATUS`,
+  `READING_STATUSES`, `titles`, `airtime`, `newTitle`/`newGame`/`newReading`). Entry point is `exports/index.ts`; fallow
+  follows re-exports to the defining file, so public code must **physically live in `exports/`**, a re-export of an
+  internal file fails. A role lives with its consumer, not with the implementing manager (`AirtimeReader` and `AirtimeStore` in
+  `airtime/exports`, `DraftStore` in `drafts/exports`; `DataManager` implements them). `custom-lists` has no `exports/` (its `CustomList` type sits in
+  `custom-lists/domain/customList.ts`; nobody outside imports it).
+- **`shared` may import module exports, types and values** (constants, codec reference data): `shared/storage` codecs
+  read `settingsDefaults`, `readingDefaults`, `gameDefaults`, `titles` from there. `shared` holds no module logic itself;
+  values only one module needs stay in its `exports/` or `domain/`, values two or more modules need (dates, columns,
+  tags, `imdb`, `api/credits`) stay in `src/shared/`. The design system imports no module exports, so it knows no module
+  and no settings.
+- **Exports review**: every change under `src/modules/*/exports/` and every new `shared` → exports import goes through
+  the read-only agent [exports-reviewer](../../.claude/agents/exports-reviewer.md) before the commit (rule in
+  [CLAUDE.md](../../CLAUDE.md)). It pushes back per symbol (outside consumer? owner? kind? width? logic leak?).
+  Unresolved challenges go to the user.
 - `obsidian-mock` is allowed for modules, the design system and `shared` only as an artifact: fallow resolves
   `obsidian` through the vitest alias to `test/__mocks__/obsidian.ts`.
 - **Inside `shared`** fallow draws no lines (one zone). What is kept out of lower layers is guarded by lint and tests:
-  no i18n import in storage, domain, contracts or the data managers ([i18n](i18n.md)); the services lint rules below.
+  no i18n import in storage, domain, exports or the data managers ([i18n](i18n.md)); the services lint rules below.
 - **One zone per module**, declared explicitly (`modules/<x>`), not via `autoDiscover`: `fallow audit` analyses the base
   branch with the current config, and an `autoDiscover` folder the base lacks makes the whole config invalid.
   `coverage.requireAllFiles` fails a new file that belongs to no zone. A new module therefore needs its zone and a
@@ -84,13 +104,13 @@ Fallow zones are matched **first match wins**, so `module-contracts` (`src/modul
   `scripts/check-eslint-disables.mjs`); fallow exceptions need the maintainer's approval. Data layers read outside data
   from `unknown` (`no-unsafe-type-assertion`, see [storage](storage.md)).
 
-## Modules talk through contracts
+## Modules talk through exports
 
-A module's `contract.ts` is its public surface. A consumer in another module names the **role** it needs, never the
+A module's `exports/` is its public surface. A consumer in another module names the **role** it needs, never the
 manager class: `DataManager implements TitleReader, TitleStats, TitleWriter, AirtimeStore, DraftStore,
-TitleMaintenance, TitleBackup`; the reading and game managers implement their `*Reader/Writer/SettingsAccess/Snapshot`
+TitleMaintenance, TitleBackup` (`AirtimeStore`, which extends `AirtimeReader`, and `DraftStore` come from the airtime and drafts exports); the reading and game managers implement their `*Reader/Writer/SettingsAccess/Snapshot`
 roles; `SettingsService implements SettingsReader, SettingsWriter`. Dashboard, airtime, backup and the others import
-these as types (usually `Pick<…>`), and `app` hands in the real objects. Inside a module the UI may take its own
+these as types (usually `Pick<…>`; constants and pure functions are plain value imports), and `app` hands in the real objects. Inside a module the UI may take its own
 manager class by `import type`. Where two managers need each other at runtime, `main.ts` links them with lambdas, so
 neither imports the other.
 
@@ -106,14 +126,14 @@ export type OpenAddReading = (opts: AddReadingOptions) => void; // exported from
 export class AddReadingModal extends Modal {
   constructor(
     app: App,                                  // only for super()
-    private readonly settings: SettingsReader, // role from settings/contract
+    private readonly settings: SettingsReader, // role from settings/exports
     private readonly reading: ReadingDataManager, // own module: class by import type
     private readonly opts: AddReadingOptions,
   ) { super(app); }
 }
 ```
 
-- **Shape, not origin.** A collaborator is a role of a contract, a `Pick<Manager, …>` or a consumer-owned interface,
+- **Shape, not origin.** A collaborator is a role from an `exports/`, a `Pick<Manager, …>` or a consumer-owned interface,
   not `HoardPlugin`.
 - **Children come as factories.** A parent receives `OpenX` function types (exported from the child's file) or, with
   more than three, a methods-only port it owns (`ListTabModals { openDetail(…): void; … }`). It never receives its

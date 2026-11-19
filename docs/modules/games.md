@@ -3,7 +3,8 @@ type: Module
 title: Games
 description: The game model and its text-encoded fields, how Steam sync matches and updates, and how covers are resolved.
 source:
-  - src/modules/games/contract.ts
+  - src/modules/games/exports/index.ts
+  - src/modules/games/domain/steamSync.ts
   - src/modules/games/services/GameDataManager.ts
   - src/shared/storage/gameCodec.ts
   - src/modules/games/ui/GamesTab.ts
@@ -12,15 +13,18 @@ source:
   - src/modules/games/ui/SteamSyncModal.ts
   - src/modules/airtime/ui/GameScheduleModal.ts
   - src/shared/services/coverRefresh.ts
-  - src/shared/domain/gameDefaults.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+  - src/modules/games/exports/gameDefaults.ts
+  - src/modules/games/exports/newGame.ts
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Games
 
-One note per game under `Games/`. [contract.ts](../../src/modules/games/contract.ts) is the module's public face
-(types only): `Game`, `GamesSettings`, `GamesData`, `SteamSyncUpdate` and the roles `GameReader`, `GameWriter`,
-`GameSettingsAccess`, `GameSnapshot` (backup) and `OpenSteamSync`. [GameDataManager.ts](../../src/modules/games/services/GameDataManager.ts)
+One note per game under `Games/`. [exports/](../../src/modules/games/exports/index.ts) is the module's public surface (what other modules
+and `shared` may import): the types `Game`, `GamesSettings`, `GamesData`, the roles `GameReader`, `GameWriter`,
+`GameSettingsAccess`, `GameSnapshot` (backup) and `OpenSteamSync`, plus the values `GAME_AUTO_STATUS` / `GAME_FINISHED_STATUS` /
+`GAME_TBA_STATUS`, `defaultGamesSettings` (`gameDefaults.ts`) and `newGame` (`newGame.ts`). `SteamSyncUpdate` is module-internal
+(`domain/steamSync.ts`). [GameDataManager.ts](../../src/modules/games/services/GameDataManager.ts)
 `implements` the four roles and owns copies, writes, derived groups, Upcoming sync (through the injected
 `GameUpcomingSync`) and history; consumers outside the module (dashboard, drafts, custom lists, backup) type against
 the roles. [gameCodec.ts](../../src/shared/storage/gameCodec.ts) maps properties to `Game`. Writes follow [flows/entry-write](../flows/entry-write.md); one
@@ -92,9 +96,10 @@ to a smaller size for display.
 | Change | Place |
 |---|---|
 | Property format, playtime, achievements | `gameCodec.ts`; `formatTime`, `parsePlaytimeInput` in `shared/domain/format.ts` |
-| Default statuses, genres, platforms | `defaultGamesSettings()` in `shared/domain/gameDefaults.ts` |
+| Default statuses, genres, platforms | `defaultGamesSettings()` in `exports/gameDefaults.ts` |
 | Release status and Upcoming | `applyReleaseStatus`, `syncUpcoming` in the manager |
-| Defaults of a new game | `newGame` in [entryFactories.ts](../../src/shared/domain/entryFactories.ts); the WatchLog import keeps its own |
+| Defaults of a new game | `newGame` in [exports/newGame.ts](../../src/modules/games/exports/newGame.ts); the WatchLog import keeps its own |
+| Anything other modules or `shared` import from games | `exports/`; the changed surface goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed |
 | Steam matching, and what an imported game takes from library and storefront | `matchAgainstLibrary`, `buildGame`, `storefrontFields` in `SteamSyncModal.ts` |
 | Steam, RAWG, IGDB requests | `ApiService.ts`; Steam Store mapping and `steamLibraryCover` in `steamStoreApi.ts` |
 | Recommended and Recently played shelves | `getRecommendedGames`, `getRecentlyPlayedGames` in `GamesTab.ts` |

@@ -3,7 +3,10 @@ type: Module
 title: Reading
 description: How books and manga differ in model and progress, the release-status and custom-column rules, and where CSV and quotes live.
 source:
-  - src/modules/reading/contract.ts
+  - src/modules/reading/exports/index.ts
+  - src/modules/reading/exports/readingDefaults.ts
+  - src/modules/reading/exports/newReading.ts
+  - src/modules/reading/exports/readingColors.ts
   - src/modules/reading/services/ReadingDataManager.ts
   - src/modules/reading/domain/readingHelpers.ts
   - src/shared/storage/readingCodec.ts
@@ -15,14 +18,17 @@ source:
   - src/modules/airtime/ui/ReadingScheduleModal.ts
   - src/shared/services/coverRefresh.ts
   - src/design-system/CsvModalBase.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 ---
 
 # Reading
 
-One note per book (`Books/`) or manga (`Manga/`). [contract.ts](../../src/modules/reading/contract.ts) is the module's
-public face (types only): `Book`, `Manga`, `ReadingSettings`, `ReadingData`, `ReadingKind`, the roles
-`ReadingReader`, `ReadingWriter`, `ReadingSettingsAccess`, `ReadingSnapshot` (backup) and `OpenReadingCsv`.
+One note per book (`Books/`) or manga (`Manga/`). [exports/](../../src/modules/reading/exports/index.ts) is the module's
+public surface (what other modules and `shared` may import): the types `Book`, `Manga`, `ReadingSettings`, `ReadingData`, `ReadingKind`, the roles
+`ReadingReader`, `ReadingWriter`, `ReadingSettingsAccess`, `ReadingSnapshot` (backup) and `OpenReadingCsv`, plus the values
+`READING_STATUSES`, `SELECTABLE_READING_STATUSES`, `DEFAULT_READING_SETTINGS`, `DEFAULT_READING_STATUS_COLORS`, `bookProgressUnit`,
+`getReadingTypeColor` (`readingDefaults.ts`), `readingStatusColor` (`readingColors.ts`) and `newBook` / `newManga` (`newReading.ts`).
+`coverFallbackColor` is module-internal (`domain/coverColor.ts`).
 [ReadingDataManager.ts](../../src/modules/reading/services/ReadingDataManager.ts) `implements` the four roles and
 owns the copies, writes, history and Upcoming sync; the dialogs and the tab are built in
 [wiring/reading.ts](../../src/app/wiring/reading.ts); [readingCodec.ts](../../src/shared/storage/readingCodec.ts)
@@ -94,8 +100,9 @@ Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pendin
 | Change | Place |
 |---|---|
 | Property names, defaults when reading a note, validation | `readingCodec.ts` |
-| Defaults of a new book or manga | `newBook`, `newManga` in [entryFactories.ts](../../src/shared/domain/entryFactories.ts); the WatchLog import keeps its own |
-| Status list and colours | `READING_STATUSES`, `DEFAULT_READING_STATUS_COLORS` in `shared/domain/reading.ts`, `readingColors.ts` (`shared/domain`) |
+| Defaults of a new book or manga | `newBook`, `newManga` in [newReading.ts](../../src/modules/reading/exports/newReading.ts); the WatchLog import keeps its own |
+| Status list and colours | `READING_STATUSES`, `DEFAULT_READING_STATUS_COLORS` in `exports/readingDefaults.ts`, `readingStatusColor` in `exports/readingColors.ts` |
+| Anything other modules or `shared` import from reading | `exports/`; the changed surface goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed |
 | Rows shelf ids | `READING_ROWS_SHELVES` in `domain/readingHelpers.ts` |
 | Release and Upcoming rules | `applyReleaseStatus`, `syncUpcoming` in the manager |
 | Auto-complete | `applyAutoComplete` in `ReadingDetailModal.ts` |
