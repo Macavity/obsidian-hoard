@@ -19,7 +19,7 @@ Obsidian knowledge lives in `.claude/skills/` (`obsidian-dev`, `obsidian-ops`, `
 ## Codebase wiki
 
 - `docs/` is the source-grounded wiki of this codebase, maintained via the `codebase-wiki` skill. Before touching an unfamiliar area, read `docs/index.md` and follow its links instead of re-exploring `src/`. Load pages on demand; the code stays the source of truth. `docs/values.md` is hand-written and never regenerated.
-- **At the end of every plan execution** (before the final commit), refresh the wiki: invoke the `codebase-wiki` skill in refresh mode (it diffs each page's `source_commit` against the working tree), update only affected pages, and commit the wiki together with the change. The freshness anchor is derived from git, so every code change lands with its wiki refresh in the same PR.
+- **Once per PR, after the last code commit**, refresh the wiki: invoke the `codebase-wiki` skill in refresh mode (it diffs each page's `source_commit` against the working tree), update only affected pages, and commit them as exactly one `docs(wiki)` commit. No refresh after individual fixes or phases. The freshness anchor is derived from git, so every code change lands with its wiki refresh in the same PR.
 
 ## Core Policies
 - **NEVER speak as the human on GitHub.** `gh` and `git` are authenticated as the repository owner, so anything an agent writes through them carries their name and avatar. Never post comments, replies or reviews on PRs or issues; an "automated by …" footer does not make it acceptable.
@@ -28,7 +28,11 @@ Obsidian knowledge lives in `.claude/skills/` (`obsidian-dev`, `obsidian-ops`, `
 - **No hidden memory — this repo is the only source of truth.** Agent memory outside the repo is not documentation: it is unreviewed, invisible to the human, and drifts against the code. Never cite it as fact or act on it without re-deriving from the repo first. Findings worth keeping get written into the repo.
 - **Specs and plans are local, never committed.** Write them to `.claude/specs/` and `.claude/plans/` (both git-ignored), whatever path a skill suggests by default.
 - **Never commit on `main`.** Every change, docs included, goes on a branch and lands through a PR. Before the first commit, check the branch; on `main`, create one first.
-- Commit your work as you go — don't wait to be asked. Each plan phase usually gets its own commit; otherwise commit in logical groups (one concern per commit).
+- Commit your work as you go — don't wait to be asked.
+- **One commit per plan phase.** Tasks inside a phase never commit on their own; this overrides the per-task commit steps of `writing-plans`, `executing-plans` and `subagent-driven-development` (plans get no per-task "Commit" step; subagent implementers don't commit, the controller commits once the phase gate is green). A phase commit holds the code, tests and lint fixes of that phase.
+- Finish a phase before committing it: gate green, review findings fixed. A fix found later for the current phase goes in with `git commit --amend --no-edit`, but only while that commit is HEAD, unpushed and no wiki commit follows. Otherwise one `fix(scope)` commit bundling all findings of that round, never one per finding. No other history rewriting (rebase breaks wiki stamps).
+- Work outside a plan: one commit per coherent change (one behaviour or decision), not per file or module.
+- Add a short commit body when the why isn't obvious from the diff.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): summary`, e.g. `feat(settings): add sync toggle`, `fix`, `refactor`, `docs`, `test`, `chore`, `ci`.
 - Don't defer tasks when planning or implementing a plan.
 - Keep your output concise and focused.
