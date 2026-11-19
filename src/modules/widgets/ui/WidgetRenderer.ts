@@ -105,6 +105,11 @@ export class WidgetRenderer {
 
 	/** Runs on the change signal (`onDataChanged`). Re-renders all live widgets. */
 	private onDataChanged(): void {
+		this.rerenderTitleWidgets();
+		this.rerenderGenericWidgets();
+	}
+
+	private rerenderTitleWidgets(): void {
 		const stale: HTMLElement[] = [];
 
 		for (const [el, titleId] of this.widgetRegistry) {
@@ -129,7 +134,9 @@ export class WidgetRenderer {
 			this.widgetRegistry.delete(el);
 			this.widgetMiniRegistry.delete(el);
 		}
+	}
 
+	private rerenderGenericWidgets(): void {
 		const staleGeneric: HTMLElement[] = [];
 		for (const [el, rerender] of this.widgetRerender) {
 			if (!el.isConnected) {

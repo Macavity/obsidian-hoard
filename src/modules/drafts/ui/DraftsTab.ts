@@ -10,6 +10,7 @@ import type { DraftPersistState } from '../domain/model';
 import type { DraftStore } from '../services/roles';
 import type { OpenAddRoute } from '../../../shared/services/addRoute';
 import { t } from '../../../shared/i18n';
+import { draftTitlesInLine } from '../domain/draftScan';
 
 /** Libraries a draft can already live in — used for the "In …" duplicate label. */
 type DraftLibrary = 'Watchlist' | 'Books' | 'Manga' | 'Games';
@@ -22,6 +23,21 @@ function libraryLabel(library: DraftLibrary): string {
 		case 'Manga': return t('drafts.libraryManga');
 		case 'Games': return t('drafts.libraryGames');
 	}
+}
+
+/** Records one draft title under its lowercase key; the first display title seen wins. */
+function addDraft(
+	map: Map<string, { sources: Set<string>; displayTitle: string }>,
+	displayTitle: string,
+	source: string,
+): void {
+	const titleKey = displayTitle.toLowerCase();
+	let entry = map.get(titleKey);
+	if (!entry) {
+		entry = { sources: new Set(), displayTitle };
+		map.set(titleKey, entry);
+	}
+	entry.sources.add(source);
 }
 
 interface DraftLibraryEntry {
@@ -144,24 +160,8 @@ export class DraftsTab implements TabInstance {
 
 			try {
 				const content = await notes.vault.cachedRead(file);
-				const lines = content.split('\n');
-				for (const line of lines) {
-					if (!line.includes(tag)) continue;
-					const tagIdx = line.indexOf(tag);
-					const afterTag = line.slice(tagIdx + tag.length).trim();
-					if (!afterTag) continue;
-
-					// each comma-separated segment after the tag is a separate title
-					const segments = afterTag.split(',');
-					for (const seg of segments) {
-						const displayTitle = seg.trim();
-						if (!displayTitle || displayTitle.length > 100) continue;
-						const titleKey = displayTitle.toLowerCase();
-						if (!liveMap.has(titleKey)) {
-							liveMap.set(titleKey, { sources: new Set(), displayTitle });
-						}
-						liveMap.get(titleKey)!.sources.add(file.basename);
-					}
+				for (const line of content.split('\n')) {
+					for (const title of draftTitlesInLine(line, tag)) addDraft(liveMap, title, file.basename);
 				}
 			} catch {
 				// skip unreadable files

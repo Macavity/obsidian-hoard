@@ -6,6 +6,7 @@ import type { Book, BookProgressUnit, Manga, ReadingCustomColumn, ReadingStatus 
 import { bookUnitProgress } from '../domain/readingHelpers';
 import { formatDateDisplay, todayIso } from '../../../shared/domain/date';
 import { formatCount } from '../../../shared/domain/format';
+import { progressLogLines, type ReadingItemRef } from '../domain/progressLog';
 import { SELECTABLE_READING_STATUSES, bookProgressUnit } from '../domain/readingDefaults';
 import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/tags';
 import { createDatePicker } from '../../../design-system/DatePicker';
@@ -158,6 +159,15 @@ export class ReadingDetailModal extends Modal {
 			: this.reading.getManga(this.id);
 	}
 
+	private getRef(): ReadingItemRef | undefined {
+		if (this.mode === 'book') {
+			const entry = this.reading.getBook(this.id);
+			return entry && { kind: 'book', entry };
+		}
+		const entry = this.reading.getManga(this.id);
+		return entry && { kind: 'manga', entry };
+	}
+
 	onOpen(): void {
 		markDetailRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
 		this.contentEl.addClass('hoard-reading-detail');
@@ -177,79 +187,44 @@ export class ReadingDetailModal extends Modal {
 			this.draft.volumesRead !== this.openSnapshot.volumesRead;
 		if (!draftChanged) return;
 
-		const item = this.getItem();
-		if (!item) return;
+		const ref = this.getRef();
+		if (!ref) return;
 
-		await this.persistDraft(item);
+		await this.persistDraft(ref);
 		this.onChanged();
 	}
 
 	/** Writes the draft counters onto the item, applies auto-complete and logs the change. */
-	private async persistDraft(item: Book | Manga): Promise<void> {
-		if (this.mode === 'book') {
-			const book = item as Book;
-			const updated: Book = {
-				...book,
+	private async persistDraft(ref: ReadingItemRef): Promise<void> {
+		let updated: ReadingItemRef;
+		if (ref.kind === 'book') {
+			const book: Book = {
+				...ref.entry,
 				pagesRead: this.draft.pagesRead,
 				wordsRead: this.draft.wordsRead,
 				chaptersRead: this.draft.chaptersRead,
 			};
-			this.applyAutoComplete(updated);
-			await this.reading.updateBook(updated);
+			this.applyAutoComplete(book);
+			await this.reading.updateBook(book);
+			updated = { kind: 'book', entry: book };
 		} else {
-			const manga = item as Manga;
-			const updated: Manga = {
-				...manga,
+			const manga: Manga = {
+				...ref.entry,
 				chaptersRead: this.draft.chaptersRead,
 				volumesRead: this.draft.volumesRead,
 			};
-			this.applyAutoComplete(updated);
-			await this.reading.updateManga(updated);
+			this.applyAutoComplete(manga);
+			await this.reading.updateManga(manga);
+			updated = { kind: 'manga', entry: manga };
 		}
 
-		this.logProgressChange(item);
+		this.logProgressChange(updated);
 	}
 
-	private logProgressChange(item: Book | Manga): void {
-		const snap = this.openSnapshot;
-		const typeLabel = this.mode === 'book' ? 'Book' : 'Manga';
-
-		if (this.mode === 'book') {
-			const book = item as Book;
-			// only the unit the book is tracked in is worth a log line
-			if (bookProgressUnit(book) === 'words') {
-				if (this.draft.wordsRead !== snap.wordsRead && book.totalWords > 0) {
-					void this.history.log(
-						`${item.title} (${typeLabel}) At word ${formatCount(this.draft.wordsRead)} / ${formatCount(book.totalWords)}`,
-						{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
-					);
-				}
-			} else if (this.draft.pagesRead !== snap.pagesRead && book.totalPages > 0) {
-				void this.history.log(
-					`${item.title} (${typeLabel}) At page ${formatCount(this.draft.pagesRead)} / ${formatCount(book.totalPages)}`,
-					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
-				);
-			}
-			if (this.draft.chaptersRead !== snap.chaptersRead && book.totalChapters > 0) {
-				void this.history.log(
-					`${item.title} (${typeLabel}) At chapter ${this.draft.chaptersRead} / ${book.totalChapters}`,
-					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
-				);
-			}
-		} else {
-			const manga = item as Manga;
-			if (this.draft.chaptersRead !== snap.chaptersRead && manga.totalChapters > 0) {
-				void this.history.log(
-					`${item.title} (${typeLabel}) At chapter ${this.draft.chaptersRead} / ${manga.totalChapters}`,
-					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
-				);
-			}
-			if (this.draft.volumesRead !== snap.volumesRead && manga.totalVolumes > 0) {
-				void this.history.log(
-					`${item.title} (${typeLabel}) At volume ${this.draft.volumesRead} / ${manga.totalVolumes}`,
-					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
-				);
-			}
+	private logProgressChange(ref: ReadingItemRef): void {
+		const { title, id } = ref.entry;
+		for (const text of progressLogLines(ref, this.draft, this.openSnapshot)) {
+			void this.history.log(text, { source: 'Reading', action: 'watched', titleName: title, titleId: id });
 		}
 	}
 
@@ -1426,10 +1401,10 @@ export class ReadingDetailModal extends Modal {
 	}
 
 	private async commitDraft(): Promise<void> {
-		const item = this.getItem();
-		if (!item) return;
+		const ref = this.getRef();
+		if (!ref) return;
 
-		await this.persistDraft(item);
+		await this.persistDraft(ref);
 		this.openSnapshot = { ...this.draft };
 
 		new Notice(t('detail.reading.progressUpdated'));
