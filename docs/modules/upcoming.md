@@ -7,6 +7,7 @@ source:
   - src/modules/airtime/domain/model.ts
   - src/modules/airtime/services/roles.ts
   - src/modules/airtime/domain/airtime.ts
+  - src/modules/airtime/domain/schedulePatch.ts
   - src/modules/airtime/ui/AirtimeTab.ts
   - src/modules/airtime/ui/AirtimeScheduleModal.ts
   - src/modules/airtime/ui/ScheduleForm.ts
@@ -16,7 +17,7 @@ source:
   - src/modules/airtime/services/airtimeScheduler.ts
   - src/app/wiring/airtime.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: cc203bf
+source_commit: a08c524
 ---
 
 # Upcoming
@@ -78,4 +79,5 @@ recurrence options live in [ScheduleForm.ts](../../src/modules/airtime/ui/Schedu
 | What becomes an entry | `airtimeEntryOf`, `isAwaitingRelease` in the watchlist `DataManager.ts` |
 | Tick and remove | `confirmTick`; `tickAirtimeEntry`, `removeAirtimeEntriesBatch` |
 | Schedule form fields | `ScheduleForm.ts` and the three schedule modals |
+| What a reading schedule writes back to the item (totals, future `once` release date) | `readingSchedulePatch` in [schedulePatch.ts](../../src/modules/airtime/domain/schedulePatch.ts); `applyReadingPatch` in `AirtimeTab.ts` applies it |
 | Card and list rendering | `renderCard`, `buildTrackerCard`, `renderTrackerCardsGrid` |

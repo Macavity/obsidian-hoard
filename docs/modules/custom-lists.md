@@ -5,13 +5,15 @@ description: How a custom list is stored as a note with a JSON block, what a col
 source:
   - src/modules/custom-lists/domain/customList.ts
   - src/modules/custom-lists/services/CustomListManager.ts
+  - src/modules/custom-lists/domain/cellView.ts
+  - src/modules/custom-lists/domain/importAnalysis.ts
   - src/modules/custom-lists/ui/CustomListsTab.ts
   - src/app/wiring/customLists.ts
   - src/design-system/ColumnsEditor.ts
   - src/shared/domain/columns.ts
   - src/shared/services/addRoute.ts
   - src/shared/storage/VaultLayout.ts
-source_commit: cc203bf
+source_commit: a08c524
 ---
 
 # Custom lists
@@ -106,7 +108,7 @@ The same idea as the entries' [baseline](../concepts/baseline.md), per list obje
 |---|---|
 | File format, corrupt-file guard | `CustomListManager.parse` / `serialize` / `saveList`, `replaceDataBlock` / `replaceNotes` |
 | Foreign-edit guard | `CustomListManager.writeChecked` / `isStale`, `CustomListsTab.onVaultModify` / `onSaveConflict` |
-| Column types | `CustomListColumn` in `shared/domain/columns.ts`, `ColumnsEditor.ts`, `renderCustomCell` |
+| Column types | `CustomListColumn` in `shared/domain/columns.ts`, `ColumnsEditor.ts`, `renderCustomCell`; what a cell shows (empty, coloured select badge, text with bold / italic) is the pure `customCellView` in [cellView.ts](../../src/modules/custom-lists/domain/cellView.ts) |
 | Inline editing and key navigation | `startNameEdit`, `handleEditKey`; where Tab / Shift+Tab / Enter lead is the pure `cellNavTarget`, `navigateCell` only clicks the target |
 | Auto time | `autoPopulateTimeColumn` |
-| Import and export | `ImportListModal`, `gatherExportData`, `buildMarkdown`, `buildTsv` |
+| Import and export | `ImportListModal`, `gatherExportData`, `buildMarkdown`, `buildTsv`; the paste analysis (new columns, new select options, number conflicts) is the pure `analyseImport` in [importAnalysis.ts](../../src/modules/custom-lists/domain/importAnalysis.ts) |

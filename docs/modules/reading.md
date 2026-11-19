@@ -11,6 +11,7 @@ source:
   - src/modules/reading/domain/readingColors.ts
   - src/modules/reading/services/ReadingDataManager.ts
   - src/modules/reading/domain/readingHelpers.ts
+  - src/modules/reading/domain/progressLog.ts
   - src/shared/storage/readingCodec.ts
   - src/modules/reading/ui/ReadingTab.ts
   - src/modules/reading/ui/ReadingDetailModal.ts
@@ -20,7 +21,7 @@ source:
   - src/modules/airtime/ui/ReadingScheduleModal.ts
   - src/shared/services/coverRefresh.ts
   - src/design-system/CsvModalBase.ts
-source_commit: cc203bf
+source_commit: a08c524
 ---
 
 # Reading
@@ -108,5 +109,6 @@ Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pendin
 | Rows shelf ids | `READING_ROWS_SHELVES` in `domain/readingHelpers.ts` |
 | Release and Upcoming rules | `applyReleaseStatus`, `syncUpcoming` in the manager |
 | Auto-complete | `applyAutoComplete` in `ReadingDetailModal.ts` |
+| History lines for changed progress counters (book: only the tracked unit; chapters; manga chapters and volumes; none when the total is 0) | `progressLogLines` in [progressLog.ts](../../src/modules/reading/domain/progressLog.ts) on a `ReadingItemRef` (`domain/model.ts`); the modal's `logProgressChange` writes them |
 | CSV fields and aliases | `*_EXPORT_COLUMNS`, `*_IMPORT_FIELDS` in `ReadingCsvModal.ts`; wizard steps in `design-system/CsvModalBase.ts`; dates in `csvCore.ts` |
 | Quotes format | `parseQuotesSection` (modal), `appendQuote` (manager) |

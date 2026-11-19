@@ -8,9 +8,10 @@ source:
   - src/shared/storage/HistoryStore.ts
   - src/shared/storage/historyLine.ts
   - src/modules/log/ui/LogTab.ts
+  - src/design-system/rowWindow.ts
   - src/app/wiring/log.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: cc203bf
+source_commit: a08c524
 ---
 
 # Log
@@ -43,7 +44,7 @@ synced like any note.
   `watched`/`completed` entries, resolved by id, shortened link basename or name, deduped.
 - `LogTab` renders rows virtually (spacer + viewport, `ResizeObserver`), colours the leading dot by
   source and the label by action, and extracts details (episode, page, rating) from the message with
-  regexes in `actionLabel`.
+  regexes in `actionLabel`. Which rendered rows to drop and which to build for the visible range is the pure `windowDelta` in [rowWindow.ts](../../src/design-system/rowWindow.ts), shared with the Watchlist List view.
 
 ## Where to change what
 

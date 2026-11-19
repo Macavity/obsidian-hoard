@@ -11,6 +11,10 @@ source:
   - src/design-system/SearchPicker.ts
   - src/design-system/DuplicateGuard.ts
   - src/design-system/VirtualGrid.ts
+  - src/design-system/gridWindow.ts
+  - src/design-system/rowWindow.ts
+  - src/design-system/FilterPanel.ts
+  - src/design-system/filterDraft.ts
   - src/design-system/VirtualScroller.ts
   - src/design-system/LazyCardObserver.ts
   - src/design-system/PosterCard.ts
@@ -22,7 +26,7 @@ source:
   - src/design-system/IconButton.ts
   - src/styles/icon-button.css
   - src/styles/index.css
-source_commit: cc203bf
+source_commit: a08c524
 ---
 
 # Design system
@@ -74,6 +78,10 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (the injected `
   per click and committing on Apply, sorting popover, view switch, add button. Selection mode works
   on ids, not DOM, because grids are virtualised. Tabs hand over `registerCleanup` so popover
   document listeners die with the render.
+- **Filter popover** ([FilterPanel.ts](../../src/design-system/FilterPanel.ts), used by the Watchlist and Games tabs): sections of
+  checkbox options on a caller-owned draft, committed on Apply. The draft operations (select / deselect all, a section's All
+  toggle) are pure in [filterDraft.ts](../../src/design-system/filterDraft.ts); the shared filter rules the tabs apply after
+  Apply are `passesCommonFilters` in `src/shared/domain/filterCriteria.ts`.
 - **Add-modal skeleton**: `SearchFormModal<R>` mounts a `SearchPicker` (debounced search, a
   generation counter drops stale responses, API errors and "no API" render in the results panel)
   above a form; `DuplicateGuard` shows Continue/Cancel and lets one retry pass; `LibraryIndex`
@@ -82,10 +90,13 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (the injected `
 - **Virtualised grids**: `VirtualScroller` owns the scroll listener, resize observer, section
   offsets and scroll restore for one or more `VirtualGrid`s; each grid diffs the visible row
   window plus two overscan rows through `buildItem` / `removeItem` and offsets with `padding-top`
-  (not `transform`, to avoid layout shift). `computeGridMetrics` mirrors the CSS columns;
+  (not `transform`, to avoid layout shift). The window maths is DOM-free in [gridWindow.ts](../../src/design-system/gridWindow.ts)
+  (`computeGridWindow`, `planWindowChange`: none / replace / shift) and, for row lists with varying heights, in
+  [rowWindow.ts](../../src/design-system/rowWindow.ts) (`rowOffsets`, `visibleRowRange`, `windowDelta`; used by the Watchlist List view and the Log tab). `computeGridMetrics` mirrors the CSS columns;
   `cardSizeToMinWidth` maps the card-size step to a pixel width. `LazyCardObserver` fetches a
-  poster the first time a card flagged `data-needs-poster` enters the viewport. `buildPosterCard`
-  draws the card; `POSTER_CARD_TEXT_H` must match the CSS. A card built elsewhere reuses its parts:
+  poster the first time a card flagged `data-needs-poster` enters the viewport. `posterCardModel`
+  (pure: image size, poster source, text classes, meta, progress width, menu) decides what `buildPosterCard`
+  then draws; `POSTER_CARD_TEXT_H` must match the CSS. A card built elsewhere reuses its parts:
   `createPosterPlaceholder` (letter tile) and `loadCardPoster` (sets the image, marks the card
   `has-poster` on load, hands a broken image to the caller).
 - **Search language** (`searchItems` in [SearchQuery.ts](../../src/shared/domain/SearchQuery.ts), `shared/domain`): Fuse index
@@ -131,5 +142,5 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (the injected `
 
 A new tab: a `TabFactory` in `hoardTabs` (`src/app/wiring/tabs.ts`) plus `TabName`. Shared toolbar, filter or sort behaviour:
 `src/design-system/` (pure sort/order helpers: `shared/domain/listOrder.ts`; `TabHelpers.ts` keeps only the grid mount). A new add modal: extend `SearchFormModal`, build a `LibraryIndex` and a
-`DuplicateGuard`. Grid geometry: `VirtualGrid.ts` / `VirtualScroller.ts`; card look:
+`DuplicateGuard`. Grid geometry: `VirtualGrid.ts` / `VirtualScroller.ts` (window maths in `gridWindow.ts`); card look:
 `PosterCard.ts` and the stylesheets in `src/styles/` (one per UI area, imported in cascade order by `index.css`). Search syntax: `SearchQuery.ts` and `SearchHelpModal.ts`.
