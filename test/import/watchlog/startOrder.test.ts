@@ -6,6 +6,7 @@ const hoisted = vi.hoisted(() => ({
 	order: [] as string[],
 	resolve: null as (() => void) | null,
 	sources: null as WatchLogSources | Error | null,
+	nothingNew: false,
 }));
 
 vi.mock('../../../src/modules/import/ui/WatchLogOnboardingModal', () => ({
@@ -20,6 +21,9 @@ vi.mock('../../../src/modules/import/ui/WatchLogOnboardingModal', () => ({
 vi.mock('../../../src/modules/import/services/watchlog/detect', () => ({
 	detectWatchLogSources: () => hoisted.sources instanceof Error ? Promise.reject(hoisted.sources) : Promise.resolve(hoisted.sources),
 }));
+vi.mock('../../../src/modules/import/services/watchlog/newData', () => ({
+	kindsWithNewData: (_v: unknown, _s: unknown, _l: unknown, kinds: string[]) => Promise.resolve(hoisted.nothingNew ? [] : kinds),
+}));
 
 const found = { original: null, fork: { kind: 'fork' }, hoardHasData: false } as unknown as WatchLogSources;
 const none = { original: null, fork: null, hoardHasData: false } as WatchLogSources;
@@ -29,6 +33,7 @@ function setup(sources: WatchLogSources | Error) {
 	hoisted.order.length = 0;
 	hoisted.resolve = null;
 	hoisted.sources = sources;
+	hoisted.nothingNew = false;
 	const track = (n: string) => () => { hoisted.order.push(n); return Promise.resolve(); };
 	const plugin = Object.create(HoardPlugin.prototype) as Record<string, unknown>;
 	Object.assign(plugin, {
@@ -92,6 +97,13 @@ describe('start order', () => {
 
 	it('opens no wizard without pending sources', async () => {
 		const { calls, start } = setup(none);
+		await start();
+		expect(calls.filter((c) => c.startsWith('wizard') || c.startsWith('index'))).toEqual(['index:build']);
+	});
+
+	it('opens no wizard when the pending sources hold nothing Hoard lacks', async () => {
+		const { calls, start } = setup(found);
+		hoisted.nothingNew = true;
 		await start();
 		expect(calls.filter((c) => c.startsWith('wizard') || c.startsWith('index'))).toEqual(['index:build']);
 	});

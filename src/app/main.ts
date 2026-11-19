@@ -44,6 +44,7 @@ import { detectWatchLogSources } from '../modules/import/services/watchlog/detec
 import type { WatchLogSourceKind, WatchLogSources } from '../modules/import/services/watchlog/detect';
 import { createImporter } from '../modules/import/services/watchlog/importer';
 import { getDecision, pendingSources } from '../modules/import/services/watchlog/onboardingState';
+import { kindsWithNewData } from '../modules/import/services/watchlog/newData';
 import type { ImportContext } from '../modules/import/services/watchlog/schema1Types';
 import { composeSettings, persistSettings } from '../modules/settings/services/settingsSplit';
 import { toRecord } from '../shared/domain/sharedHelpers';
@@ -486,13 +487,14 @@ export default class HoardPlugin extends Plugin {
 	}
 
 	/**
-	 * Opens the onboarding wizard when WatchLog data awaits a decision (or always with `force`).
+	 * Opens the onboarding wizard when undecided WatchLog data still holds notes Hoard lacks (or always with `force`).
 	 * Returns whether it ran; a failure never blocks Hoard's start.
 	 */
 	private async runOnboarding(opts: { force: boolean; startAt?: 'found' | 'cleanup' }): Promise<boolean> {
 		try {
 			const sources = await detectWatchLogSources(this.app.vault, (id) => this.isPluginEnabled(id));
-			if (!opts.force && pendingSources(this.local, sources).length === 0) return false;
+			// undecided here, yet maybe imported on another device: ask only while a note is still missing
+			if (!opts.force && (await kindsWithNewData(this.app.vault, sources, this.layout, pendingSources(this.local, sources))).length === 0) return false;
 			await this.openWizard(sources, opts.startAt);
 			return true;
 		} catch (e) {
