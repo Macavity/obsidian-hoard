@@ -25,7 +25,6 @@ Update frequency: Review periodically for AI agent-specific guidance
 - Ship features that require cloud services without clear disclosure and explicit opt-in.
 - Store or transmit vault contents unless essential and consented.
 - **File structure**: Never have `main.ts` in both root AND `src/` - this causes build confusion. For simple plugins, `main.ts` in root is acceptable. For plugins with multiple files, place `main.ts` in `src/` (recommended). See [file-conventions.md](../../obsidian-ref/references/file-conventions.md) for standard structure and common pitfalls.
-- **Git operations**: follow the commit rules in the project `CLAUDE.md`.
 - **Git updates**: When checking for updates to repos in `.ref`, you can use read-only commands like `git fetch` and `git log` to check what's new, but **never automatically pull** - always ask the user first. See [ref-instructions.md](../../obsidian-ref/references/ref-instructions.md) for how to check for updates.
 
 ## Fixing Linting Errors

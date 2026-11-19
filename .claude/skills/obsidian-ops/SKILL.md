@@ -20,7 +20,6 @@ This skill covers:
 
 ## Core Rules
 
-- **Git operations**: follow the commit rules in the project `CLAUDE.md`.
 - **Verify Build**: Always run a build/lint after significant changes to ensure compatibility.
 
 ## Bundled Resources
