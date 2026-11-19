@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Book, Game, Manga } from '../../src/shared/domain/types';
+import type { Game } from '../../src/modules/games/contract';
+import type { Book, Manga } from '../../src/modules/reading/contract';
 import { captures as cap, entry, isoOffset, makeTab, newWorld } from './airtimeTab.harness';
 
-vi.mock('../../src/shared/ui/VirtualScroller', () => ({ VirtualScroller: class { addSection(): void {} attach(): void {} detach(): void {} destroy(): void {} } }));
+vi.mock('../../src/design-system/VirtualScroller', () => ({ VirtualScroller: class { addSection(): void {} attach(): void {} detach(): void {} destroy(): void {} } }));
 
 const book = (over: Partial<Book> = {}): Book => ({ id: 'b1', title: 'Dune', totalChapters: 10, releaseDate: null, ...over }) as unknown as Book;
 const manga = (over: Partial<Manga> = {}): Manga => ({ id: 'm1', title: 'Berserk', totalChapters: 1, totalVolumes: 1, releaseDate: null, ...over }) as unknown as Manga;

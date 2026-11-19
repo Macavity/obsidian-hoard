@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
 import { newSettingsTab } from '../helpers/newSettingsTab';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../../src/shared/domain/types';
+import type { HoardTitle } from '../../src/modules/watchlist/contract';
+import { DEFAULT_SETTINGS } from '../../src/shared/domain/settingsDefaults';
 import { until } from '../helpers/common';
 import { makeTitle } from '../helpers/setupDataManager';
 import { fakeSettings } from '../helpers/fakeSettings';
-import { SettingsService } from '../../src/shared/services/SettingsService';
+import { SettingsService } from '../../src/modules/settings/services/SettingsService';
 import { emitDataChanged } from '../../src/shared/services/changeSignal';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;

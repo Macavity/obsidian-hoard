@@ -8,8 +8,11 @@ import { titleFromProperties } from "../../src/shared/storage/titleCodec";
 import { decodeBook, decodeManga } from "../../src/shared/storage/readingCodec";
 import { decodeGame } from "../../src/shared/storage/gameCodec";
 import { parseHistoryLine } from "../../src/shared/storage/historyLine";
-import { GAME_AUTO_STATUS, isReleaseDateFuture } from "../../src/shared/domain/types";
-import type { Book, Game, HoardTitle, Manga } from "../../src/shared/domain/types";
+import { isReleaseDateFuture } from '../../src/shared/domain/date';
+import { GAME_AUTO_STATUS } from '../../src/shared/domain/gameDefaults';
+import type { Game } from '../../src/modules/games/contract';
+import type { Book, Manga } from '../../src/modules/reading/contract';
+import type { HoardTitle } from '../../src/modules/watchlist/contract';
 
 const VAULT = resolve(fileURLToPath(import.meta.url), "../../../hoard-test-vault");
 const ROOT = "Hoard";

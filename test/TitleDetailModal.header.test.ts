@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice, Platform } from 'obsidian';
 import { fakeSettings } from './helpers/fakeSettings';
 import { newTitleDetail } from './helpers/newTitleDetail';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../src/shared/domain/types';
+import type { HoardTitle } from '../src/modules/watchlist/contract';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
 import { t } from '../src/shared/i18n';
 import type { LookupResult } from '../src/shared/api/lookup';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
-vi.mock('../src/shared/ui/NoteLinkButton', () => ({
+vi.mock('../src/design-system/NoteLinkButton', () => ({
 	appendNoteLinkButton: (_app: unknown, parent: HTMLElement) => parent.createSpan({ cls: 'note-link-stub' }),
 }));
 vi.mock('../src/modules/watchlist/ui/CommunityRating', () => ({

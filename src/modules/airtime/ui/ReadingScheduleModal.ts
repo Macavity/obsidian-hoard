@@ -1,6 +1,7 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../../../shared/i18n';
-import type { Book, Manga, AirtimeSchedule } from '../../../shared/domain/types';
+import type { AirtimeSchedule } from '../contract';
+import type { Book, Manga } from '../../reading/contract';
 import {
 	type ScheduleFormState,
 	RECURRENCE_OPTIONS,
@@ -10,7 +11,7 @@ import {
 	renderCounterRow,
 	renderScheduleModal,
 	resolveScheduleMode,
-} from '../../../shared/ui/ScheduleForm';
+} from './ScheduleForm';
 
 /** Book releases once, manga usually serializes — both overridable. */
 function defaultMode(kind: 'book' | 'manga'): 'single' | 'recurring' {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { titleFromProperties, titleToProperties, titleToCache } from '../../src/shared/storage/titleCodec';
 import type { EntryCache } from '../../src/shared/storage/storageTypes';
-import type { HoardTitle } from '../../src/shared/domain/types';
+import type { HoardTitle } from '../../src/modules/watchlist/contract';
 import { cacheAll, fullTitle, minimalTitle } from './titleFixtures';
 
 // Pins what the codec returns today, value by value, so its structure can change without its behaviour.

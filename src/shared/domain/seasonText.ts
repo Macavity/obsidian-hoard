@@ -1,4 +1,4 @@
-import type { Season } from './types';
+import type { Season } from '../../modules/watchlist/contract';
 
 /**
  * The text form of a season: "Name: N", optionally followed by the episodes to skip, " (5,8,33-37)".

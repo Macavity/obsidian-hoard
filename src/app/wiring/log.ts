@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import { confirmWith } from '../../shared/ui/ConfirmModal';
+import { confirmWith } from '../../design-system/ConfirmModal';
 import { LogTab, type LogTabHistory } from '../../modules/log/ui/LogTab';
 
 /** The core objects the Log tab is built from. */

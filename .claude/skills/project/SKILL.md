@@ -9,13 +9,14 @@ Media library (movies, TV, anime, books, manga, games) stored as vault notes. Ty
 
 ## Layers
 
-`src/` has three zones; the rules are tool-enforced (`.fallowrc.json` `boundaries`, `eslint.config.mjs`, proven by `test/architecture.test.ts`; wiki: `docs/architecture/overview.md`).
+`src/` has four zones; the rules are tool-enforced (`.fallowrc.json` `boundaries`, `eslint.config.mjs`, proven by `test/architecture.test.ts`; wiki: `docs/architecture/overview.md`).
 
-1. `src/app/` — composition root: `main.ts` (builds stores, managers, services; loads data, runs the WatchLog import offer, registers view, commands, widgets, status bar, scheduler), `HoardView.ts` (ItemView with the `TABS` registry), `AddRouter.ts`. The only place that may `new` a `*Manager` / `*Service`.
-2. `src/modules/<x>/{ui,services}/` — one folder per feature: watchlist, reading, games, airtime, covers, dashboard, log, drafts, custom-lists, widgets, settings, backup, import. `services/` holds managers and logic (`DataManager`, `ReadingDataManager`, `GameDataManager`, `CustomListManager`, WatchLog import in `import/services/watchlog/`), `ui/` tabs (`*Tab.ts`) and modals (`*Modal.ts`).
-3. `src/shared/` in layer order `ui` → `services` → `api` → `storage` → `domain` (`i18n` and `domain` are leaves). `storage`: codecs and stores (`VaultLayout`, `SharedConfigStore`, `LocalStore`, `HistoryStore`, `EntryIndex`, `titleCodec`, …), knows only `hoard:` and `Hoard.base`, free of i18n. `services`: `SettingsService`, `HistoryManager`, `LibraryIndex`, `changeSignal`, `settingsSplit`. `api`: `ApiService`, `PosterService`, source adapters. `domain`: `types.ts`, pure helpers.
+1. `src/app/` — composition root: `main.ts` (builds stores, managers, services; loads data, runs the WatchLog import offer, registers view, commands, widgets, status bar, scheduler), `HoardView.ts` (ItemView with the `TABS` registry), `AddRouter.ts`. The only place that may `new` a `*Manager` / `*Service`, and the only zone that imports module internals.
+2. `src/modules/<x>/` — one folder per feature: watchlist, reading, games, airtime, dashboard, log, drafts, custom-lists, widgets, settings, backup, import. `services/` holds managers and logic, `ui/` tabs and modals, `domain/` helpers only this module uses. `contract.ts` is the module's public face: **types only** (its models, settings slices, role interfaces such as `TitleReader`, `AirtimeStore`, `ReadingSnapshot`, `Open<X>` factory types). The models live there: `HoardTitle` in `watchlist/contract.ts`, `Book`/`Manga` in `reading/contract.ts`, `Game` in `games/contract.ts`, `HoardPluginSettings` and `SettingsReader` in `settings/contract.ts`.
+3. `src/design-system/` — the UI kit: reusable components only (`IconButton`, `ConfirmModal`, `VirtualGrid`, `PosterCard`, …). It knows no module and no settings: it takes values or declares its own structural interface (`TypeBadgeStyle`, `ThemeSource`).
+4. `src/shared/` — what at least two modules use: `storage` (codecs and stores, incl. the settings codec; knows only `hoard:` and `Hoard.base`, free of i18n), `services` (`HistoryManager`, `LibraryIndex`, `coverRefresh`, `titleSearch`, `changeSignal`), `api` (`ApiService`, `PosterService`, source adapters), `domain` (pure helpers and cross-cutting types: dates, tags, rows, columns, history), `i18n`.
 
-Rule: dependencies point downward; modules import only `shared` and the module edges listed in `.fallowrc.json`.
+Rules: a module imports `shared`, `design-system` and, **type-only**, other modules' contracts. `shared` imports nothing outside itself except contract types. `design-system` imports only `shared`. A contract imports only types (from `shared` and other contracts). Values a second module needs go to `shared`, never into a contract.
 
 ## How a module looks
 
@@ -43,7 +44,7 @@ Reference: `src/modules/watchlist/` (`ListTab` + `DataManager`). Conventions:
   // src/app/wiring/reading.ts, the only place that `new`s UI
   const openAddReading: OpenAddReading = (opts) => new AddReadingModal(app, settings, reading, opts).open();
   ```
-- **K2 Port belongs to the consumer.** If A needs B and B needs A, the consumer declares its own interface (or `OpenX` factory type) in its file; `src/app/wiring` implements it. No import edge, no module cycle. Entry types come from `shared/domain/types.ts`, never from a manager.
+- **K2 Port belongs to the consumer.** If A needs B and B needs A, the consumer declares its own interface (or `OpenX` factory type) in its file; `src/app/wiring` implements it. No import edge, no module cycle. Entry types and roles come from the owning module's `contract.ts`, never from a manager file.
 - **K3 Settings** only through `SettingsService`: read `this.settings.get()` (read-only view), change `await this.settings.update((s) => { s.x = … })` (`stage` for text typed key by key, `flush` on unload). Never save directly.
 - **K4 Obsidian objects are injected narrowly.** `App` only for `super(app)` or inside `src/app`; elsewhere take `Vault`, `Workspace`, `MetadataCache` or a `Pick` (`this.app` is a lint error in `modules`/`shared`, `App` import in services too). `registerEvent`/`register`: inject the `Plugin` type or one bound function, never `HoardPlugin`.
 - Tests construct classes directly with fakes (`test/fakes/fakeApp.ts`, `test/helpers/*`, `fakeSettings`).
@@ -51,8 +52,8 @@ Reference: `src/modules/watchlist/` (`ListTab` + `DataManager`). Conventions:
 
 The authority is `eslint.config.mjs` and `.fallowrc.json`; this list is a summary. Changing either is a reviewed rule change (CI job `rules-changed` flags it) and needs the maintainer's approval.
 
-**New module:** create `src/modules/<x>/{ui,services}/`; add a zone `modules/<x>` (pattern `src/modules/<x>/**`) and a `from: "modules/<x>"` rule in `.fallowrc.json` (allowed: shared zones plus needed module edges), and list it in the `test` and `app` rules; zones are explicit, not `autoDiscover`, so `fallow audit` against an older base without the folder still runs (`requireAllFiles` fails a module without zone); add `src/app/wiring/<x>.ts` (`<x>Ui(core)` builds the `Open<X>` factories and the tab, the only place that `new`s the module's UI), call it from `src/app/main.ts` and add the tab to `hoardTabs` in `src/app/wiring/tabs.ts` for a tab; update the wiki.
-**New module edge:** add the target to the `allow` list of the importing module in `.fallowrc.json`. First try a consumer-owned port (K2); an edge must not create a cycle.
+**New module:** create `src/modules/<x>/{ui,services}/` and, if other modules need its types, `contract.ts` (types only); add a zone `modules/<x>` (pattern `src/modules/<x>/**`, after `module-contracts`) and a rule `{ "from": "modules/<x>", "allow": ["design-system", "shared", "obsidian-mock"], "allowTypeOnly": ["module-contracts"] }` in `.fallowrc.json` (every module rule is identical), and list it in the `test` and `app` rules; zones are explicit, not `autoDiscover`, so `fallow audit` against an older base without the folder still runs (`requireAllFiles` fails a module without zone); add `src/app/wiring/<x>.ts` (`<x>Ui(core)` builds the `Open<X>` factories and the tab, the only place that `new`s the module's UI), call it from `src/app/main.ts` and add the tab to `hoardTabs` in `src/app/wiring/tabs.ts` for a tab; update the wiki.
+**A module needs another module:** depend on a role interface or type from the other module's `contract.ts` (type-only) and let `src/app/wiring` inject the implementation. A shared value moves to `shared`. There are no module-to-module value edges.
 
 ## The note is the record
 
@@ -85,4 +86,4 @@ Entries, groups, progress, ratings live in note properties (frontmatter). `<root
 
 ## Key files
 
-`manifest.json`, `src/styles/` (CSS partials, bundled to `dist/styles.css`), `src/shared/domain/types.ts` (data model), `src/shared/storage/VaultLayout.ts` (paths), `src/app/HoardView.ts`, `src/app/main.ts`, `docs/index.md` (wiki router).
+`manifest.json`, `src/styles/` (CSS partials, bundled to `dist/styles.css`), `src/modules/*/contract.ts` (data model, per module), `src/shared/storage/VaultLayout.ts` (paths), `src/app/HoardView.ts`, `src/app/main.ts`, `docs/index.md` (wiki router).

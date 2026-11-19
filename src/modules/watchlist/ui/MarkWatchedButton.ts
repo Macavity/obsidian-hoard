@@ -1,6 +1,6 @@
 import type { DataManager } from '../services/DataManager';
-import type { HoardTitle } from '../../../shared/domain/types';
-import { todayIso } from '../../../shared/domain/types';
+import type { HoardTitle } from '../contract';
+import { todayIso } from '../../../shared/domain/date';
 import { t } from '../../../shared/i18n';
 
 /** What the button reads and writes. */

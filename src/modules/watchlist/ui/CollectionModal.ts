@@ -4,27 +4,16 @@ import { App, Modal, Notice } from 'obsidian';
 import { t } from '../../../shared/i18n';
 import type { DataManager } from '../services/DataManager';
 import type { ApiService } from '../../../shared/api/ApiService';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import { newTitle } from '../../../shared/domain/entryFactories';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
-import type {
-	HoardTitle,
-	HoardGroup,
-	TmdbCollectionDetail,
-	TmdbCollectionPart,
-} from '../../../shared/domain/types';
-import {
-	COLLECTION_NONE,
-	getCollectionId,
-	isCollectionNone,
-	imdbIdFromLink,
-	getThemedColor,
-	getDisplayPoster,
-	getApiGroupForType,
-} from '../../../shared/domain/types';
-import { buildPosterCard } from '../../../shared/ui/PosterCard';
-import type { CardMenuContext } from '../../../shared/ui/PosterCard';
-import { pinModalFooter } from '../../../shared/ui/StickyModal';
+import type { HoardGroup, HoardTitle, TmdbCollectionDetail, TmdbCollectionPart } from '../contract';
+import { COLLECTION_NONE, getCollectionId, isCollectionNone } from '../domain/titleHelpers';
+import { getThemedColor } from '../../../shared/domain/tags';
+import { getApiGroupForType, getDisplayPoster, imdbIdFromLink } from '../../../shared/domain/titles';
+import { buildPosterCard } from '../../../design-system/PosterCard';
+import type { CardMenuContext } from '../../../design-system/PosterCard';
+import { pinModalFooter } from '../../../design-system/StickyModal';
 
 /** The API methods resolving a title's TMDB collection calls. */
 export type CollectionResolveApi = Pick<

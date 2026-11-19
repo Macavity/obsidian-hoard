@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Modal } from 'obsidian';
-import { searchHelpWith } from '../../src/shared/ui/SearchHelpModal';
+import { searchHelpWith } from '../../src/design-system/SearchHelpModal';
 
 afterEach(() => { vi.restoreAllMocks(); });
 

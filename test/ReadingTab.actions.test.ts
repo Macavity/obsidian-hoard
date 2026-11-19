@@ -1,8 +1,9 @@
 import { newReadingTab } from './helpers/newReadingTab';
-import { searchBooks, fetchReadingCoverById, firstBookCover } from '../src/modules/covers/services/coverRefresh';
+import { searchBooks, fetchReadingCoverById, firstBookCover } from '../src/shared/services/coverRefresh';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ReadingTab } from '../src/modules/reading/ui/ReadingTab';
-import { READING_STATUSES, type Book, type Manga } from '../src/shared/domain/types';
+import type { Book, Manga } from '../src/modules/reading/contract';
+import { READING_STATUSES } from '../src/shared/domain/reading';
 import { fakeSettings } from './helpers/fakeSettings';
 
 

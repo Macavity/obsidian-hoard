@@ -1,6 +1,6 @@
 import { TFile, type FileManager, type Vault } from 'obsidian';
 import type { Fm, YamlIO } from '../../../../shared/storage/storageTypes';
-import type { ImportReport } from '../../../../shared/domain/importReport';
+import type { ImportReport } from '../../domain/importReport';
 import { isRecord } from './schema1Types';
 
 const FM_RE = /^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(\r?\n|$)/;

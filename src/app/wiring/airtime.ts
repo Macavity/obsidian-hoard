@@ -1,12 +1,12 @@
 import type { App } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../shared/services/SettingsService';
+import type { SettingsReader, SettingsWriter } from '../../modules/settings/contract';
 import type { ApiService } from '../../shared/api/ApiService';
 import type { PosterService } from '../../shared/api/PosterService';
 import type { DataManager } from '../../modules/watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';
-import type { TitleSearchApi } from '../../modules/watchlist/ui/titleSearch';
-import { confirmWith } from '../../shared/ui/ConfirmModal';
+import type { TitleSearchApi } from '../../shared/services/titleSearch';
+import { confirmWith } from '../../design-system/ConfirmModal';
 import { AirtimeScheduleModal } from '../../modules/airtime/ui/AirtimeScheduleModal';
 import { AirtimeTab, type AirtimeTabHost } from '../../modules/airtime/ui/AirtimeTab';
 import { GameScheduleModal } from '../../modules/airtime/ui/GameScheduleModal';

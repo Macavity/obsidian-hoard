@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../src/shared/ui/CollageUtil', () => ({ renderGroupCollage: vi.fn() }));
-vi.mock('../../src/shared/ui/PosterCard', async (importOriginal) => ({
-	...(await importOriginal<typeof import('../../src/shared/ui/PosterCard')>()),
+vi.mock('../../src/design-system/CollageUtil', () => ({ renderGroupCollage: vi.fn() }));
+vi.mock('../../src/design-system/PosterCard', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../src/design-system/PosterCard')>()),
 	openCardMenu: vi.fn(),
 }));
 
-import { groupCountLabel, groupLetter, renderGroupCard, type GroupCardOptions } from '../../src/shared/ui/GroupCard';
-import { renderGroupCollage } from '../../src/shared/ui/CollageUtil';
-import { openCardMenu } from '../../src/shared/ui/PosterCard';
+import { groupCountLabel, groupLetter, renderGroupCard, type GroupCardOptions } from '../../src/design-system/GroupCard';
+import { renderGroupCollage } from '../../src/design-system/CollageUtil';
+import { openCardMenu } from '../../src/design-system/PosterCard';
 
 /** Minimal element double: only what the group card touches. */
 class El {

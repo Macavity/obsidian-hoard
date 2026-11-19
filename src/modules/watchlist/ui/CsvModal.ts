@@ -1,12 +1,14 @@
+import type { CsvOptions } from '../contract';
 import type { App } from 'obsidian';
-import { CsvModalBase, rowsToCsv, type CsvExportRow, type CsvFieldDef, type CsvSelectOption } from '../../../shared/ui/CsvModalBase';
+import { CsvModalBase, rowsToCsv, type CsvExportRow, type CsvFieldDef, type CsvSelectOption } from '../../../design-system/CsvModalBase';
 import { safeTypeName } from '../../../shared/domain/typeName';
 import { t } from '../../../shared/i18n';
 import { statusLabel, typeLabel } from '../../../shared/i18n/labels';
 import type { DataManager } from '../services/DataManager';
-import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
-import type { HoardTitle, ImportProgress } from '../../../shared/domain/types';
-import { getTitleCredits, normalizeManualCredits } from '../../../shared/domain/types';
+import type { SettingsReader, SettingsWriter } from '../../settings/contract';
+import type { HoardTitle, ImportProgress } from '../contract';
+import { normalizeManualCredits } from '../domain/titleHelpers';
+import { getTitleCredits } from '../../../shared/domain/titles';
 import { completedEpisodes, newTitle } from '../../../shared/domain/entryFactories';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 
@@ -29,7 +31,6 @@ const CSV_COLUMNS = [
 	'dateStarted', 'dateFinished', 'releaseDate', 'dateAdded',
 	'externalLink', 'notes', 'studio',
 ] as const;
-
 
 function titlesToCsv(titles: HoardTitle[]): string {
 	return rowsToCsv(CSV_COLUMNS, titles, (t, col) =>
@@ -57,7 +58,6 @@ const IMPORT_FIELDS: CsvFieldDef[] = [
 	{ key: 'studio',         labelKey: 'csv.fields.studio',        coercion: 'none', autoDetect: ['studio', 'studios', 'network', 'production', 'production company'] },
 ];
 
-
 // fields that make an imported row non-empty (priority alone does not)
 const NON_EMPTY_KEYS = [
 	'type', 'status', 'rating', 'totalEpisodes', 'episodeDuration',
@@ -78,7 +78,6 @@ function randomAutoColor(theme: string): string {
 	const palette = TYPE_AUTO_COLORS[theme] ?? TYPE_AUTO_COLORS['default']!;
 	return palette[Math.floor(Math.random() * palette.length)] ?? '#888780';
 }
-
 
 /** Complete title from a mapped CSV entry; a Completed status marks all episodes watched. */
 export function buildImportedTitle(entry: Partial<HoardTitle>, id: string, defaultType: string | undefined): HoardTitle {
@@ -126,12 +125,6 @@ export function missingTypeNames(
 // Modal
 
 export type CsvStore = Pick<DataManager, 'getTitles' | 'generateId' | 'addTitleBatch' | 'notifyChange'>;
-
-export interface CsvOptions {
-	mode: 'export' | 'import';
-}
-
-export type OpenCsv = (opts: CsvOptions) => void;
 
 export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 	constructor(

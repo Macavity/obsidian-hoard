@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { cloneColumns, moveColumn, normalizeColumns, renderColumnsEditor, validateColumns } from '../../src/shared/ui/ColumnsEditor';
-import type { CustomListColumn, CustomListRow } from '../../src/shared/domain/types';
+import { cloneColumns, moveColumn, normalizeColumns, renderColumnsEditor, validateColumns } from '../../src/design-system/ColumnsEditor';
+import type { CustomListColumn, CustomListRow } from '../../src/shared/domain/columns';
 
 const col = (over: Partial<CustomListColumn> = {}): CustomListColumn => ({
 	id: 'c1', label: 'A', type: 'text', bold: false, italic: false, ...over,

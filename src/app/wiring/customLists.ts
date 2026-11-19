@@ -1,10 +1,10 @@
 import { MarkdownRenderer, type App } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../shared/services/SettingsService';
+import type { SettingsReader, SettingsWriter } from '../../modules/settings/contract';
 import type { DataManager } from '../../modules/watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';
-import type { OpenAddRoute } from '../../shared/ui/addRoute';
-import { confirmWith } from '../../shared/ui/ConfirmModal';
+import type { OpenAddRoute } from '../../shared/services/addRoute';
+import { confirmWith } from '../../design-system/ConfirmModal';
 import {
 	CustomListsTab,
 	DefaultColumnsModal,

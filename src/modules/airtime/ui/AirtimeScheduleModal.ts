@@ -1,6 +1,7 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../../../shared/i18n';
-import type { HoardTitle, AirtimeSchedule } from '../../../shared/domain/types';
+import type { AirtimeSchedule } from '../contract';
+import type { HoardTitle } from '../../watchlist/contract';
 import {
 	type ScheduleFormState,
 	RECURRENCE_OPTIONS,
@@ -10,7 +11,7 @@ import {
 	renderCounterRow,
 	renderScheduleModal,
 	resolveScheduleMode,
-} from '../../../shared/ui/ScheduleForm';
+} from './ScheduleForm';
 
 /** Without a schedule the title's shape only picks the DEFAULT mode; the toggle makes it overridable. */
 function defaultScheduleMode(title: HoardTitle): 'single' | 'recurring' {

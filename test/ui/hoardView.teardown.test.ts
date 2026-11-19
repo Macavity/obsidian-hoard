@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { HoardView } from '../../src/app/HoardView';
-import type { TabInstance } from '../../src/shared/ui/TabInstance';
+import type { TabInstance } from '../../src/design-system/TabInstance';
 import { newHoardView } from '../helpers/newHoardView';
 
 const destroyed: string[] = [];

@@ -1,35 +1,34 @@
-import type { TabInstance } from '../../../shared/ui/TabInstance';
+import type { TabInstance } from '../../../design-system/TabInstance';
 import { Notice, TFile } from 'obsidian';
 import { t, type TranslationKey } from '../../../shared/i18n';
 import { gameStatusLabel } from '../../../shared/i18n/labels';
-import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
-import {
-	Game, GameGroup, GamesSavedFilterPreset, GAME_AUTO_STATUS, GAME_FINISHED_STATUS,
-	normalizeRowsLayout, GAMES_ROWS_SHELVES, ROWS_EXCLUSIVE_SHELVES, sortByFavorited,
-	migratePriorityExclude,
-	priorityExcludeMatches,
-	setsMatch,
-} from '../../../shared/domain/types';
+import type { SettingsReader, SettingsWriter } from '../../settings/contract';
+import type { Game, GameGroup, GamesSavedFilterPreset } from '../contract';
+import { GAMES_ROWS_SHELVES } from '../domain/gameShelves';
+import { GAME_AUTO_STATUS, GAME_FINISHED_STATUS } from '../../../shared/domain/gameDefaults';
+import { ROWS_EXCLUSIVE_SHELVES, normalizeRowsLayout, sortByFavorited } from '../../../shared/domain/rows';
+import { migratePriorityExclude, priorityExcludeMatches, setsMatch } from '../../../shared/domain/tags';
 import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domain/SearchQuery';
-import { renderSearchHelpButton, type OpenSearchHelp } from '../../../shared/ui/SearchHelpModal';
-import type { OpenRowsCustomize } from '../../../shared/ui/RowsCustomizeModal';
-import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from '../../../shared/ui/VirtualGrid';
-import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
-import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
-import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from '../../../shared/ui/PosterCard';
-import { renderRowsLayout, renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
-import { renderSearchBox, type OpenRenameGroup, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, type SortFields } from '../../../shared/ui/TabToolbar';
-import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from '../../../shared/ui/ActionBar';
-import { renderGroupCard } from '../../../shared/ui/GroupCard';
-import { createIconButton } from '../../../shared/ui/IconButton';
-import { PRIORITY_ORDER, mountVirtualCardGrid, pickRandom, compareUnsetLast, comparePriority, isRecentlyReleased } from '../../../shared/ui/TabHelpers';
-import { renderHeaderToolbar } from '../../../shared/ui/MobileToolbar';
+import { renderSearchHelpButton, type OpenSearchHelp } from '../../../design-system/SearchHelpModal';
+import type { OpenRowsCustomize } from '../../../design-system/RowsCustomizeModal';
+import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from '../../../design-system/VirtualGrid';
+import { VirtualScroller } from '../../../design-system/VirtualScroller';
+import { LazyCardObserver } from '../../../design-system/LazyCardObserver';
+import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from '../../../design-system/PosterCard';
+import { renderRowsLayout, renderShelf, renderShelfTitle, type ShelfSelect } from '../../../design-system/RowsView';
+import { renderSearchBox, type OpenRenameGroup, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, type SortFields } from '../../../design-system/TabToolbar';
+import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from '../../../design-system/ActionBar';
+import { renderGroupCard } from '../../../design-system/GroupCard';
+import { createIconButton } from '../../../design-system/IconButton';
+import { mountVirtualCardGrid } from '../../../design-system/TabHelpers';
+import { PRIORITY_ORDER, comparePriority, compareUnsetLast, isRecentlyReleased, pickRandom } from '../../../shared/domain/listOrder';
+import { renderHeaderToolbar } from '../../../design-system/MobileToolbar';
 import { rawgResizedCover } from '../../../shared/api/ApiService';
-import type { resolveGameCover, GameCover, GameCoverApi } from '../../covers/services/coverRefresh';
+import type { resolveGameCover, GameCover, GameCoverApi } from '../../../shared/services/coverRefresh';
 import { effectiveGameSource } from '../../../shared/api/apiSources';
-import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../shared/ui/TabFilters';
-import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
-import type { NoteFiles } from '../../../shared/ui/NoteLinkButton';
+import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../design-system/TabFilters';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
+import type { NoteFiles } from '../../../design-system/NoteLinkButton';
 import type { GameDataManager } from '../services/GameDataManager';
 import { gameGroupProgress, type OpenGameDetail, type OpenGameGroupDetail } from './GameDetailModal';
 import type { OpenAddGame } from './AddGameModal';

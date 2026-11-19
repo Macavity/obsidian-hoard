@@ -1,6 +1,6 @@
 import { newReadingTab } from './helpers/newReadingTab';
 import { describe, expect, it, vi } from 'vitest';
-import type { Book, Manga, ReadingCustomColumn } from '../src/shared/domain/types';
+import type { Book, Manga, ReadingCustomColumn } from '../src/modules/reading/contract';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const item = (id: string, customFields: Record<string, string | number> = {}, over: Partial<Book> = {}): Book =>

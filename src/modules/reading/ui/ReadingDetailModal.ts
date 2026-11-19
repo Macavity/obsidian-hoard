@@ -1,25 +1,25 @@
 import { App, Modal, Notice, Platform, TFile } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import type { ReadingDataManager } from '../services/ReadingDataManager';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import {
-	Book, Manga, ReadingCustomColumn, ReadingStatus, SELECTABLE_READING_STATUSES,
-	DEFAULT_FIELD_COLOR, BookProgressUnit,
-	bookProgressUnit, bookUnitProgress, formatCount,
-	formatDateDisplay, todayIso,
-} from '../../../shared/domain/types';
-import { createDatePicker } from '../../../shared/ui/DatePicker';
-import { deriveFillColor, deriveBorderColor } from '../../../shared/ui/ColorPicker';
+import type { Book, BookProgressUnit, Manga, ReadingCustomColumn, ReadingStatus } from '../contract';
+import { bookUnitProgress } from '../domain/readingHelpers';
+import { formatDateDisplay, todayIso } from '../../../shared/domain/date';
+import { formatCount } from '../../../shared/domain/format';
+import { SELECTABLE_READING_STATUSES, bookProgressUnit } from '../../../shared/domain/reading';
+import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/tags';
+import { createDatePicker } from '../../../design-system/DatePicker';
+import { deriveFillColor, deriveBorderColor } from '../../../design-system/ColorPicker';
 import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
-import { appendNoteLinkButton, type NoteFiles } from '../../../shared/ui/NoteLinkButton';
-import { renderStarRating } from '../../../shared/ui/StarRating';
-import { readingStatusColor, coverFallbackColor } from './readingColors';
-import { openStatusDropdown, renderSegmentedToggle } from '../../../shared/ui/StatusDropdown';
+import { appendNoteLinkButton, type NoteFiles } from '../../../design-system/NoteLinkButton';
+import { renderStarRating } from '../../../design-system/StarRating';
+import { readingStatusColor, coverFallbackColor } from '../../../shared/domain/readingColors';
+import { openStatusDropdown, renderSegmentedToggle } from '../../../design-system/StatusDropdown';
 import type { ManageColumnsOptions } from './ReadingManageColumnsModal';
-import { pinModalFooter } from '../../../shared/ui/StickyModal';
+import { pinModalFooter } from '../../../design-system/StickyModal';
 import { t } from '../../../shared/i18n';
-import { paintFavoriteButton, renderEditableTitle, wireInlineEdit } from '../../../shared/ui/detailShared';
-import { createFavoriteButton, markDetailRoot, mobileRowClass } from '../../../shared/ui/detailFrame';
+import { paintFavoriteButton, renderEditableTitle, wireInlineEdit } from '../../../design-system/detailShared';
+import { createFavoriteButton, markDetailRoot, mobileRowClass } from '../../../design-system/detailFrame';
 import { readingStatusLabel } from '../../../shared/i18n/labels';
 
 interface ParsedQuote {

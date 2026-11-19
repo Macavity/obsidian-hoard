@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildFilterSections, buildRatingOpts, formatRatingOpt, type CommonFilterDraft } from '../../src/shared/ui/TabFilters';
+import { buildFilterSections, buildRatingOpts, formatRatingOpt, type CommonFilterDraft } from '../../src/design-system/TabFilters';
 
 const draft = (): CommonFilterDraft => ({
 	statusExclude: new Set(),

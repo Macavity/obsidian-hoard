@@ -9,8 +9,8 @@ import {
 	resultIdKeys,
 	searchTitles,
 	type TitlePick,
-} from '../src/modules/watchlist/ui/titleSearch';
-import type { AnimeSearchResult, MediaSearchResult } from '../src/shared/domain/types';
+} from '../src/shared/services/titleSearch';
+import type { AnimeSearchResult, MediaSearchResult } from '../src/modules/watchlist/contract';
 import { SEARCH_RESULT_LIMIT } from '../src/shared/api/ApiService';
 import { fakeSettings } from './helpers/fakeSettings';
 

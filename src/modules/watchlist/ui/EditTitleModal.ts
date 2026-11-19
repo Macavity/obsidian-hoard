@@ -1,7 +1,7 @@
 import { App, Modal, Notice } from 'obsidian';
 import { t } from '../../../shared/i18n';
 import { typeLabel } from '../../../shared/i18n/labels';
-import { blockDuplicate, createDuplicateGuard } from '../../../shared/ui/DuplicateGuard';
+import { blockDuplicate, createDuplicateGuard } from '../../../design-system/DuplicateGuard';
 import {
 	linkField,
 	makeCell,
@@ -11,10 +11,10 @@ import {
 	renderGroupPicker,
 	titleField,
 	type GroupPickerState,
-} from '../../../shared/ui/FormCells';
+} from '../../../design-system/FormCells';
 import type { DataManager } from '../services/DataManager';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
-import type { HoardTitle, HoardGroup, Season } from '../../../shared/domain/types';
+import type { SettingsReader } from '../../settings/contract';
+import type { HoardGroup, HoardTitle, Season } from '../contract';
 import { completedEpisodes } from '../../../shared/domain/entryFactories';
 import { formatSeasonLine, parseSeasonLine, seasonsOf } from '../../../shared/domain/seasonText';
 

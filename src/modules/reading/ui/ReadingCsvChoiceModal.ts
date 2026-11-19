@@ -1,7 +1,6 @@
+import type { ReadingCsvKind } from '../contract';
 import { App, Modal } from 'obsidian';
 import { t } from '../../../shared/i18n';
-
-export type ReadingCsvKind = 'book' | 'manga';
 
 /**
  * Gate modal for Reading CSV import/export (the "Add draft" choice-modal shape): pick Books or

@@ -1,11 +1,11 @@
 import type { App } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../shared/services/SettingsService';
+import type { SettingsReader, SettingsWriter } from '../../modules/settings/contract';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';
-import type { resolveGameCover } from '../../modules/covers/services/coverRefresh';
-import { confirmWith } from '../../shared/ui/ConfirmModal';
-import { searchHelpWith } from '../../shared/ui/SearchHelpModal';
-import { renameGroupWith } from '../../shared/ui/TabToolbar';
-import { RowsCustomizeModal } from '../../shared/ui/RowsCustomizeModal';
+import type { resolveGameCover } from '../../shared/services/coverRefresh';
+import { confirmWith } from '../../design-system/ConfirmModal';
+import { searchHelpWith } from '../../design-system/SearchHelpModal';
+import { renameGroupWith } from '../../design-system/TabToolbar';
+import { RowsCustomizeModal } from '../../design-system/RowsCustomizeModal';
 import { AddGameModal, type AddGameApi, type OpenAddGame } from '../../modules/games/ui/AddGameModal';
 import {
 	GameDetailModal,

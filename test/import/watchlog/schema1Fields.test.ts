@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
 import watchLogData from '../../fixtures/data-v1.json';
 import { setupSchema1 } from './setupSchema1';
-import type { HoardTitle } from '../../../src/shared/domain/types';
+import type { HoardTitle } from '../../../src/modules/watchlist/contract';
 import type { WatchLogData } from '../../../src/modules/import/services/watchlog/schema1Types';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>

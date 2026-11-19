@@ -1,13 +1,21 @@
 import { Notice, Platform, PluginSettingTab, Setting, SliderComponent, normalizePath, setIcon, type App, type Plugin, type Vault } from 'obsidian';
 import { t, type TranslationKey } from '../../../shared/i18n';
-import { createIconButton } from '../../../shared/ui/IconButton';
+import { createIconButton } from '../../../design-system/IconButton';
 import { statusLabel, typeLabel, readingStatusLabel } from '../../../shared/i18n/labels';
-import { typeNameProblemText } from '../../../shared/ui/problemText';
-import { cardSizeToMinWidth } from '../../../shared/ui/VirtualGrid';
-import type { HoardPluginSettings, ImportProgress, TagDefinition, ReadingStatus, GamesSettings, DateFormatPref, CardStyleTab, CardTextStyle } from '../../../shared/domain/types';
-import { SELECTABLE_READING_STATUSES, READING_STATUSES, LAST_USED_TYPE_SENTINEL, formatDateDisplay, needsStudioFetch, getApiGroupForType } from '../../../shared/domain/types';
-import { readingStatusColor } from '../../reading/ui/readingColors';
-import { gamesKeyChip } from '../../../shared/ui/gamesKeyChip';
+import { typeNameProblemText } from './problemText';
+import { cardSizeToMinWidth } from '../../../design-system/VirtualGrid';
+import type { GamesSettings } from '../../games/contract';
+import type { ReadingStatus } from '../../reading/contract';
+import type { CardStyleTab, CardTextStyle, DateFormatPref, HoardPluginSettings } from '../contract';
+import type { ImportProgress } from '../../watchlist/contract';
+import type { TagDefinition } from '../../../shared/domain/tags';
+import { needsStudioFetch } from '../domain/settingsHelpers';
+import { formatDateDisplay } from '../../../shared/domain/date';
+import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../../../shared/domain/reading';
+import { LAST_USED_TYPE_SENTINEL } from '../../../shared/domain/settingsDefaults';
+import { getApiGroupForType } from '../../../shared/domain/titles';
+import { readingStatusColor } from '../../../shared/domain/readingColors';
+import { gamesKeyChip } from './gamesKeyChip';
 import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from '../../../shared/api/apiSources';
 import type { ApiService, SteamFailureReason } from '../../../shared/api/ApiService';
 import { FAILED } from '../../../shared/api/lookup';
@@ -136,16 +144,17 @@ interface ApiProviderHandle {
 	setActive: (active: boolean | null) => void;
 	refreshStatus: () => void;
 }
-import type { OpenCsv } from '../../watchlist/ui/CsvModal';
-import type { DataManager } from '../../watchlist/services/DataManager';
-import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
-import type { GameDataManager } from '../../games/services/GameDataManager';
-import type { BackupFile, parseBackup } from '../../backup/services/backup';
-import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
-import type { OpenSteamSync } from '../../games/ui/SteamSyncModal';
-import type { ReadingCsvKind } from '../../reading/ui/ReadingCsvChoiceModal';
-import type { OpenReadingCsv } from '../../reading/ui/ReadingCsvModal';
-import type { CoverRefresher } from '../../covers/services/coverRefresh';
+import type { OpenCsv } from '../../watchlist/contract';
+import type { TitleMaintenance, TitleReader } from '../../watchlist/contract';
+import type { ReadingReader, ReadingSettingsAccess } from '../../reading/contract';
+import type { GameReader, GameSettingsAccess } from '../../games/contract';
+import type { BackupParseResult } from '../../backup/contract';
+import type { BackupFile } from '../../backup/contract';
+import type { SettingsReader, SettingsWriter } from '../contract';
+import type { OpenSteamSync } from '../../games/contract';
+import type { ReadingCsvKind } from '../../reading/contract';
+import type { OpenReadingCsv } from '../../reading/contract';
+import type { CoverRefresher } from '../../../shared/services/coverRefresh';
 import { apiErrorMessage, apiErrorShort } from '../../../shared/api/ApiService';
 import { TENRAI_BASE, parseJikanEndpoint, resolveJikanEndpoint } from '../../../shared/api/jikanBase';
 import { emitDataChanged } from '../../../shared/services/changeSignal';
@@ -197,7 +206,7 @@ export interface SettingsTabHost {
 export interface SettingsTabBackup {
 	build(): BackupFile;
 	withoutSecrets(backup: BackupFile): BackupFile;
-	parse(text: string): ReturnType<typeof parseBackup>;
+	parse(text: string): BackupParseResult;
 	restore(backup: BackupFile): Promise<void>;
 }
 
@@ -222,14 +231,14 @@ export class HoardSettingsTab extends PluginSettingTab {
 		app: App,
 		plugin: Plugin,
 		private readonly settings: SettingsReader & SettingsWriter,
-		private readonly titles: DataManager,
-		private readonly reading: ReadingDataManager,
-		private readonly games: GameDataManager,
+		private readonly titles: TitleReader & TitleMaintenance,
+		private readonly reading: ReadingReader & ReadingSettingsAccess,
+		private readonly games: GameReader & GameSettingsAccess,
 		private readonly api: ApiService,
 		private readonly vault: Vault,
 		private readonly layout: () => { readonly root: string },
 		private readonly backup: SettingsTabBackup,
-		/** Bulk cover refresh of the covers module. */
+		/** Bulk cover refresh (shared/services/coverRefresh). */
 		private readonly coverRefresher: Pick<CoverRefresher, 'refreshAll'>,
 		private readonly host: SettingsTabHost,
 		private readonly modals: SettingsTabModals,

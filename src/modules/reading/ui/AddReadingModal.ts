@@ -1,25 +1,20 @@
 import { App, FuzzySuggestModal, Modal, Notice, TFile, type Vault, type Workspace } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import type { ReadingDataManager } from '../services/ReadingDataManager';
 import { newBook, newManga } from '../../../shared/domain/entryFactories';
 import type { ApiService, BookSearchResult, MangaSearchResult } from '../../../shared/api/ApiService';
 import { apiErrorMessage } from '../../../shared/api/ApiService';
-import { renderSearchResultRow } from '../../../shared/ui/SearchThumbnail';
-import type { searchBooks, BookSearchApi } from '../../covers/services/coverRefresh';
+import { renderSearchResultRow } from '../../../design-system/SearchThumbnail';
+import type { searchBooks, BookSearchApi } from '../../../shared/services/coverRefresh';
 import { LibraryIndex, bookResultIdKeys, mangaResultIdKeys } from '../../../shared/services/LibraryIndex';
-import { renderStarRating } from '../../../shared/ui/StarRating';
-import { createDatePicker } from '../../../shared/ui/DatePicker';
-import { renderSegmentedToggle } from '../../../shared/ui/StatusDropdown';
+import { renderStarRating } from '../../../design-system/StarRating';
+import { createDatePicker } from '../../../design-system/DatePicker';
+import { renderSegmentedToggle } from '../../../design-system/StatusDropdown';
 import { t } from '../../../shared/i18n';
 import { readingStatusLabel } from '../../../shared/i18n/labels';
-import {
-	Book,
-	BookProgressUnit,
-	Manga,
-	ReadingStatus,
-	SELECTABLE_READING_STATUSES,
-} from '../../../shared/domain/types';
-import { markViewRoot } from '../../../shared/ui/detailFrame';
+import type { Book, BookProgressUnit, Manga, ReadingStatus } from '../contract';
+import { SELECTABLE_READING_STATUSES } from '../../../shared/domain/reading';
+import { markViewRoot } from '../../../design-system/detailFrame';
 
 export type ReadingMode = 'book' | 'manga';
 
@@ -135,7 +130,7 @@ export class AddReadingModal extends Modal {
 		private readonly reading: ReadingDataManager,
 		private readonly vault: Pick<Vault, 'getAbstractFileByPath'>,
 		private readonly workspace: Pick<Workspace, 'getLeaf'>,
-		/** Book search through the configured source (covers module). */
+		/** Book search through the configured source (shared cover lookups). */
 		private readonly searchBooks: BookSearcher,
 		private readonly api: AddReadingApi,
 		private readonly opts: AddReadingOptions,

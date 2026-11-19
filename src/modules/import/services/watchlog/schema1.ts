@@ -1,5 +1,6 @@
 import { normalizePath, type DataAdapter } from 'obsidian';
-import type { Book, EntryAirtime, Manga, ReadingCustomColumn } from '../../../../shared/domain/types';
+import type { EntryAirtime } from '../../../airtime/contract';
+import type { Book, Manga, ReadingCustomColumn } from '../../../reading/contract';
 import { SHARED_SETTING_KEYS } from '../../../../shared/storage/SharedConfigStore';
 import type { EntryCache, EntryKind, Fm } from '../../../../shared/storage/storageTypes';
 import { titleToProperties, titleToCache, pinSeasonsWithoutIdentity } from '../../../../shared/storage/titleCodec';
@@ -14,7 +15,7 @@ import {
 	REMOVED_SETTINGS, WISHLIST, isRecord,
 	type IdMaps, type ImportContext, type ImportHooks, type PreparedData, type WatchLogData, type WatchLogTitle,
 } from './schema1Types';
-import { emptyImportReport, type ImportReport } from '../../../../shared/domain/importReport';
+import { emptyImportReport, type ImportReport } from '../../domain/importReport';
 
 /** Adds groups and the recurring schedule to an entry. */
 type Extras = <T extends { groups?: string[]; airtime?: EntryAirtime }>(item: T, key: string) => T;

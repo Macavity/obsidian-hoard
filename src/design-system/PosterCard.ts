@@ -1,0 +1,252 @@
+// PosterCard — shared builder for the Watchlist-style poster card (`hoard-card`): letter placeholder +
+// lazy <img> + status badge + overlay (title, type badge, year, progress bar) + ⋮ menu. Extracted
+// from ListTab so every poster-card grid builds the same DOM; the caller supplies data + callbacks.
+//
+// Also exports openCardMenu — the card context-menu plumbing that was duplicated across ListTab,
+// ReadingTab and AirtimeTab. The class prefix parameterises the CSS, so each tab keeps its styling.
+
+import { setIcon } from 'obsidian';
+import { createIconButton } from './IconButton';
+import { t } from '../shared/i18n';
+
+export interface CardMenuItem {
+	label: string;
+	/** Receives the card element the menu belongs to. */
+	onClick: (card: HTMLElement) => void;
+}
+
+export interface CardMenuContext {
+	/** Scopes "close any open menu" and the right-edge alignment box. */
+	container: HTMLElement;
+	/** Render-scoped cleanup registry — the document-level dismiss listener is
+	 *  pushed here so a re-render can't leave it dangling. */
+	cleanups: (() => void)[];
+}
+
+/**
+ * Pin the height of a card, or of its cell in text-under mode. The modifier class (not the variable alone)
+ * selects the element, so the poster inside a pinned cell does not inherit the height.
+ */
+export function pinCardHeight(cell: HTMLElement | null, card: HTMLElement, height: number): void {
+	const pinned = cell ?? card;
+	pinned.addClass(cell ? 'hoard-card__cell--pinned' : 'hoard-card--pinned');
+	pinned.setCssProps({ '--hoard-card-pinned-height': `${height}px` });
+}
+
+/**
+ * Open a card's ⋮ menu: closes any other open menu, right-aligns near the container's right edge,
+ * and dismisses on any outside click (registered on the card's own document, so popouts work).
+ */
+export function openCardMenu(
+	card: HTMLElement,
+	anchorBtn: HTMLElement,
+	items: CardMenuItem[],
+	ctx: CardMenuContext,
+	clsPrefix = 'hoard-card',
+): void {
+	ctx.container.querySelectorAll(`.${clsPrefix}-context-menu`).forEach((el) => el.remove());
+
+	const menu = card.createDiv({ cls: `${clsPrefix}-context-menu` });
+	const cardRect = card.getBoundingClientRect();
+	const containerRect = ctx.container.getBoundingClientRect();
+	if (cardRect.right > containerRect.right - 180) {
+		menu.classList.add('is-right-aligned');
+	}
+
+	// capture the owning document once so add/remove can't desync across popout windows
+	const doc = card.ownerDocument;
+	const closeMenu = (): void => {
+		menu.remove();
+		doc.removeEventListener('click', onDocClick, true);
+	};
+	const onDocClick = (e: MouseEvent): void => {
+		if (!menu.contains(e.target as Node) && e.target !== anchorBtn) {
+			closeMenu();
+		}
+	};
+	// defer registration so the click that opened the menu doesn't close it
+	window.setTimeout(() => doc.addEventListener('click', onDocClick, true), 0);
+	ctx.cleanups.push(() => doc.removeEventListener('click', onDocClick, true));
+
+	for (const item of items) {
+		const itemEl = menu.createDiv({ cls: `${clsPrefix}-context-item`, text: item.label });
+		itemEl.addEventListener('click', (e) => {
+			e.stopPropagation();
+			closeMenu();
+			item.onClick(card);
+		});
+	}
+}
+
+/**
+ * Height (px) of the text block under a poster card in text-under mode — title + type/year +
+ * progress bar. Grid metrics add this to the poster height; must match .hoard-card__under-info in
+ * styles.css.
+ */
+export const POSTER_CARD_TEXT_H = 54;
+
+export interface PosterCardSpec {
+	/** Stamped into the card's dataset (e.g. `{ titleId: id }`) so the lazy
+	 *  observer / poster refresh can resolve the item later. */
+	dataset?: Record<string, string>;
+	title: string;
+	/** Resolved display image URL — applied immediately when it's an http(s) URL. */
+	posterUrl?: string | null;
+	/** Flag the card for the lazy poster observer (`data-needs-poster`). */
+	needsPoster?: boolean;
+	/** Letter-placeholder background colour. */
+	placeholderColor: string;
+	cardWidth?: number;
+	cardHeight?: number;
+	selected?: boolean;
+	statusLabel?: string;
+	statusColor?: string;
+	typeLabel?: string;
+	typeColor?: string;
+	/** Release year beside the type badge; omitted entirely when unknown. */
+	year?: string;
+	/** 0..1 fill ratio for the progress bar; omit for no bar. */
+	progressRatio?: number;
+	/**
+	 * Card text placement (the cardTextStyle setting): true renders name + type/year + progress in a
+	 * block under the poster inside a `hoard-card__cell` wrapper, instead of the bottom overlay. The status
+	 * badge and ⋮ menu stay on the poster either way; `cardHeight` is then the whole cell.
+	 */
+	textUnder?: boolean;
+	/** Small always-visible corner marker left of the ⋮ button (Games wishlist). `icon` is a Lucide id. */
+	flag?: { icon: string; label: string };
+	menuAriaLabel?: string;
+	/** Omit for no ⋮ button. */
+	menuItems?: CardMenuItem[];
+	onClick: (card: HTMLElement) => void;
+}
+
+export function buildPosterCard(
+	parent: HTMLElement,
+	spec: PosterCardSpec,
+	menuCtx: CardMenuContext,
+): HTMLElement {
+	// text-under mode wraps the poster in a cell (the Upcoming tracker-cell pattern): the cell carries
+	// the total height, the poster keeps its 2:3 ratio via CSS, and the text block fills the rest
+	const cell = spec.textUnder ? parent.createDiv({ cls: 'hoard-card__cell' }) : null;
+	const card = (cell ?? parent).createDiv({ cls: 'hoard-card' });
+	for (const [key, value] of Object.entries(spec.dataset ?? {})) {
+		card.dataset[key] = value;
+	}
+	// cards built while scrolling during selection mode must show their state
+	if (spec.selected) card.addClass('hoard-card--selected');
+	// width is distributed by the parent CSS grid (1fr columns) — do NOT set an explicit width here.
+	// Fractional pixel widths per card made flex-wrap overflow and shift the grid a slot per scroll.
+	if (spec.cardHeight !== undefined) pinCardHeight(cell, card, spec.cardHeight);
+
+	createPosterPlaceholder(card, spec.title, spec.placeholderColor);
+
+	const img = card.createEl('img', { cls: 'hoard-card__poster' });
+	img.alt = spec.title;
+	// decode off the main thread — the letter placeholder covers the extra frame, and a synchronous
+	// decode of a large cover janks the scroll
+	img.decoding = 'async';
+	// give the <img> definite intrinsic dimensions so it never momentarily lays out at its natural
+	// (post-load) size; the CSS (absolute inset:0 + object-fit:cover) then fills the card's box. Shelf
+	// cards pass only cardWidth, so derive the height from the same 2:3 ratio.
+	if (spec.cardWidth !== undefined) {
+		img.width = Math.round(spec.cardWidth);
+		img.height = Math.round(
+			spec.textUnder ? spec.cardWidth * 1.5 : spec.cardHeight ?? spec.cardWidth * 1.5,
+		);
+	}
+
+	if (spec.posterUrl && spec.posterUrl.startsWith('http')) {
+		// reveal synchronously: gating on onload made every re-render flash the letter placeholder for a
+		// frame, because onload is async even for a fully cached image. An <img> paints nothing until its
+		// data arrives, so the placeholder still covers a genuinely slow load; onerror re-hides the img and
+		// restores the placeholder. Attach onerror before src so a cached failure still fires.
+		img.onerror = () => {
+			card.removeClass('has-poster');
+		};
+		card.addClass('has-poster');
+		img.src = spec.posterUrl;
+	} else if (spec.needsPoster) {
+		card.dataset.needsPoster = 'true';
+	}
+
+	if (spec.statusLabel) {
+		const statusBadge = card.createSpan({
+			cls: 'hoard-card__status-badge',
+			text: spec.statusLabel,
+		});
+		if (spec.statusColor) statusBadge.setCssProps({ '--hoard-card-status-color': spec.statusColor });
+	}
+
+	// name + type/year + progress live either in the classic bottom overlay (inside mode) or in the
+	// under-info block below the poster (under mode)
+	const textHost = cell
+		? cell.createDiv({ cls: 'hoard-card__under-info' })
+		: card.createDiv({ cls: 'hoard-card__overlay' });
+	textHost.createSpan({
+		cls: cell ? 'hoard-card__under-title' : 'hoard-card__title',
+		text: spec.title,
+	});
+	if (spec.typeLabel) {
+		const metaRow = textHost.createDiv({ cls: 'hoard-card__meta-row' });
+		const typeBadge = metaRow.createSpan({
+			cls: 'hoard-card__type-badge',
+			text: spec.typeLabel,
+		});
+		if (spec.typeColor) typeBadge.setCssProps({ '--hoard-card-type-color': spec.typeColor });
+		if (spec.year) {
+			metaRow.createSpan({
+				cls: cell ? 'hoard-card__under-year' : 'hoard-card__year',
+				text: spec.year,
+			});
+		}
+	}
+
+	if (spec.flag) {
+		const flag = card.createSpan({ cls: 'hoard-card__flag-badge' });
+		flag.setAttr('aria-label', spec.flag.label);
+		flag.title = spec.flag.label;
+		setIcon(flag, spec.flag.icon);
+	}
+
+	if (spec.progressRatio !== undefined) {
+		const bar = textHost.createDiv({ cls: 'hoard-card__progress-bar' });
+		const fill = bar.createDiv({ cls: 'hoard-card__progress-fill' });
+		fill.setCssProps({ '--hoard-card-progress-width': `${Math.max(0, Math.min(1, spec.progressRatio)) * 100}%` });
+	}
+
+	const menuItems = spec.menuItems;
+	if (menuItems && menuItems.length > 0) {
+		const menuBtn = createIconButton(card, {
+			icon: 'more-vertical',
+			label: spec.menuAriaLabel ?? t('list.card.moreActions'),
+			cls: 'hoard-card__menu-btn',
+		});
+		menuBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			openCardMenu(card, menuBtn, menuItems, menuCtx);
+		});
+	}
+
+	// in under mode the whole cell is clickable (poster AND text), but the callback still receives the
+	// card — selection styling lives there
+	(cell ?? card).addEventListener('click', () => spec.onClick(card));
+	return card;
+}
+
+/** The letter tile a card shows until, or instead of, its poster image. */
+export function createPosterPlaceholder(card: HTMLElement, title: string, color: string): HTMLElement {
+	const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
+	placeholder.setCssProps({ '--hoard-card-placeholder-color': color });
+	placeholder.createSpan({ text: (title.trim().charAt(0) || '?').toUpperCase() });
+	return placeholder;
+}
+
+/** Points the card's poster image at `url`: the card is marked once it loads, `onError` handles a broken image. */
+export function loadCardPoster(card: HTMLElement, url: string, onError: () => void): void {
+	const img = card.querySelector<HTMLImageElement>('.hoard-card__poster');
+	if (!img) return;
+	img.onload = () => { card.addClass('has-poster'); };
+	img.onerror = onError;
+	img.src = url;
+}

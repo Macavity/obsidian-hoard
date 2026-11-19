@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
-import { CsvModalBase, type CsvImportRow } from '../src/shared/ui/CsvModalBase';
+import { CsvModalBase, type CsvImportRow } from '../src/design-system/CsvModalBase';
 import { setLocale } from '../src/shared/i18n';
 import { El } from './helpers/fakeEl';
 

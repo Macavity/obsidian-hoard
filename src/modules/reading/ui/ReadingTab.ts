@@ -1,31 +1,36 @@
-import type { TabInstance } from '../../../shared/ui/TabInstance';
+import type { TabInstance } from '../../../design-system/TabInstance';
 import { Notice } from 'obsidian';
 import { t, type TranslationKey } from '../../../shared/i18n';
 import { readingStatusLabel } from '../../../shared/i18n/labels';
 import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
-import type { fetchReadingCoverById, firstBookCover, BookSearchApi, ReadingCoverApi } from '../../covers/services/coverRefresh';
-import type { ReadingDataManager, ReadingKind } from '../services/ReadingDataManager';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
-import { Book, Manga, ReadingStatus, ReadingCustomColumn, ReadingSavedFilterPreset, READING_STATUSES, SELECTABLE_READING_STATUSES, normalizeRowsLayout, READING_ROWS_SHELVES, bookUnitProgress, formatCount, sortByFavorited } from '../../../shared/domain/types';
+import type { fetchReadingCoverById, firstBookCover, BookSearchApi, ReadingCoverApi } from '../../../shared/services/coverRefresh';
+import type { ReadingDataManager } from '../services/ReadingDataManager';
+import type { ReadingKind } from '../contract';
+import type { SettingsReader } from '../../settings/contract';
+import type { Book, Manga, ReadingCustomColumn, ReadingSavedFilterPreset, ReadingStatus } from '../contract';
+import { READING_ROWS_SHELVES, bookUnitProgress } from '../domain/readingHelpers';
+import { formatCount } from '../../../shared/domain/format';
+import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../../../shared/domain/reading';
+import { normalizeRowsLayout, sortByFavorited } from '../../../shared/domain/rows';
 import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domain/SearchQuery';
-import { renderSearchHelpButton, type OpenSearchHelp } from '../../../shared/ui/SearchHelpModal';
-import { renderShelf, renderShelfTitle, type ShelfSelect } from '../../../shared/ui/RowsView';
-import type { OpenRowsCustomize } from '../../../shared/ui/RowsCustomizeModal';
+import { renderSearchHelpButton, type OpenSearchHelp } from '../../../design-system/SearchHelpModal';
+import { renderShelf, renderShelfTitle, type ShelfSelect } from '../../../design-system/RowsView';
+import type { OpenRowsCustomize } from '../../../design-system/RowsCustomizeModal';
 import type { OpenAddReading } from './AddReadingModal';
-import type { searchBooks } from '../../covers/services/coverRefresh';
+import type { searchBooks } from '../../../shared/services/coverRefresh';
 import type { OpenReadingDetail } from './ReadingDetailModal';
-import { coverFallbackColor, readingStatusColor } from './readingColors';
+import { coverFallbackColor, readingStatusColor } from '../../../shared/domain/readingColors';
 import type { OpenManageColumns } from './ReadingManageColumnsModal';
-import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
-import { renderToolbarWithMobileToggle } from '../../../shared/ui/MobileToolbar';
-import { createIconButton } from '../../../shared/ui/IconButton';
-import { renderSearchBox, renderSelectionButtons } from '../../../shared/ui/TabToolbar';
-import { createSortSelectRow } from '../../../shared/ui/SortPopover';
-import { renderAllToggleRow } from '../../../shared/ui/FilterPanel';
-import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from '../../../shared/ui/VirtualGrid';
-import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
-import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
-import { openCardMenu } from '../../../shared/ui/PosterCard';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
+import { renderToolbarWithMobileToggle } from '../../../design-system/MobileToolbar';
+import { createIconButton } from '../../../design-system/IconButton';
+import { renderSearchBox, renderSelectionButtons } from '../../../design-system/TabToolbar';
+import { createSortSelectRow } from '../../../design-system/SortPopover';
+import { renderAllToggleRow } from '../../../design-system/FilterPanel';
+import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from '../../../design-system/VirtualGrid';
+import { VirtualScroller } from '../../../design-system/VirtualScroller';
+import { LazyCardObserver } from '../../../design-system/LazyCardObserver';
+import { openCardMenu } from '../../../design-system/PosterCard';
 
 type SubTab = 'books' | 'manga';
 
@@ -118,7 +123,7 @@ function selectValueOf(item: Book | Manga, colId: string): string {
 	return v === undefined || v === null ? '' : String(v);
 }
 
-/** Cover lookups of the covers module. */
+/** Cover lookups (shared/services/coverRefresh). */
 export interface ReadingCovers {
 	searchBooks: typeof searchBooks;
 	fetchReadingCoverById: typeof fetchReadingCoverById;

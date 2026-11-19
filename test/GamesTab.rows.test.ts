@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { newGamesTab } from './helpers/newGamesTab';
-import { defaultGamesSettings, DEFAULT_SETTINGS, type Game, type GameGroup } from '../src/shared/domain/types';
+import type { Game, GameGroup } from '../src/modules/games/contract';
+import { defaultGamesSettings } from '../src/shared/domain/gameDefaults';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 

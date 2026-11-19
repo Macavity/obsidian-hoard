@@ -81,9 +81,30 @@
         ]
       },
       {
+        "name": "tooling",
+        "patterns": [
+          "scripts/**",
+          "*.mjs",
+          "vitest.config.ts"
+        ]
+      },
+      {
+        "name": "styles",
+        "patterns": [
+          "src/styles/**"
+        ]
+      },
+      {
         "name": "app",
         "patterns": [
           "src/app/**"
+        ]
+      },
+      {
+        "name": "module-contracts",
+        "patterns": [
+          "src/modules/*/contract.ts",
+          "src/modules/*/contract/**"
         ]
       },
       {
@@ -96,12 +117,6 @@
         "name": "modules/backup",
         "patterns": [
           "src/modules/backup/**"
-        ]
-      },
-      {
-        "name": "modules/covers",
-        "patterns": [
-          "src/modules/covers/**"
         ]
       },
       {
@@ -165,53 +180,15 @@
         ]
       },
       {
-        "name": "shared-ui",
+        "name": "design-system",
         "patterns": [
-          "src/shared/ui/**"
+          "src/design-system/**"
         ]
       },
       {
-        "name": "shared-services",
+        "name": "shared",
         "patterns": [
-          "src/shared/services/**"
-        ]
-      },
-      {
-        "name": "shared-api",
-        "patterns": [
-          "src/shared/api/**"
-        ]
-      },
-      {
-        "name": "shared-storage",
-        "patterns": [
-          "src/shared/storage/**"
-        ]
-      },
-      {
-        "name": "shared-domain",
-        "patterns": [
-          "src/shared/domain/**"
-        ]
-      },
-      {
-        "name": "shared-i18n",
-        "patterns": [
-          "src/shared/i18n/**"
-        ]
-      },
-      {
-        "name": "styles",
-        "patterns": [
-          "src/styles/**"
-        ]
-      },
-      {
-        "name": "tooling",
-        "patterns": [
-          "scripts/**",
-          "*.mjs",
-          "vitest.config.ts"
+          "src/shared/**"
         ]
       }
     ],
@@ -219,10 +196,13 @@
       {
         "from": "test",
         "allow": [
+          "obsidian-mock",
+          "tooling",
+          "styles",
           "app",
+          "module-contracts",
           "modules/airtime",
           "modules/backup",
-          "modules/covers",
           "modules/custom-lists",
           "modules/dashboard",
           "modules/drafts",
@@ -233,269 +213,12 @@
           "modules/settings",
           "modules/watchlist",
           "modules/widgets",
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "styles",
-          "obsidian-mock",
-          "tooling"
+          "design-system",
+          "shared"
         ]
       },
       {
-        "from": "app",
-        "allow": [
-          "modules/airtime",
-          "modules/backup",
-          "modules/covers",
-          "modules/custom-lists",
-          "modules/dashboard",
-          "modules/drafts",
-          "modules/games",
-          "modules/import",
-          "modules/log",
-          "modules/reading",
-          "modules/settings",
-          "modules/watchlist",
-          "modules/widgets",
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "styles",
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "modules/airtime",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock",
-          "modules/games",
-          "modules/reading",
-          "modules/watchlist"
-        ]
-      },
-      {
-        "from": "modules/backup",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock",
-          "modules/games",
-          "modules/reading",
-          "modules/watchlist"
-        ]
-      },
-      {
-        "from": "modules/covers",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "modules/custom-lists",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock",
-          "modules/games",
-          "modules/reading",
-          "modules/watchlist"
-        ]
-      },
-      {
-        "from": "modules/dashboard",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock",
-          "modules/games",
-          "modules/reading",
-          "modules/watchlist"
-        ]
-      },
-      {
-        "from": "modules/drafts",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock",
-          "modules/games",
-          "modules/reading",
-          "modules/watchlist"
-        ]
-      },
-      {
-        "from": "modules/games",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock",
-          "modules/covers",
-          "modules/watchlist"
-        ]
-      },
-      {
-        "from": "modules/import",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "modules/log",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "modules/reading",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock",
-          "modules/covers",
-          "modules/watchlist"
-        ]
-      },
-      {
-        "from": "modules/settings",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock",
-          "modules/backup",
-          "modules/covers",
-          "modules/custom-lists",
-          "modules/games",
-          "modules/reading",
-          "modules/watchlist"
-        ]
-      },
-      {
-        "from": "modules/watchlist",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "modules/widgets",
-        "allow": [
-          "shared-ui",
-          "shared-services",
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock",
-          "modules/watchlist"
-        ]
-      },
-      {
-        "from": "shared-ui",
-        "allow": [
-          "shared-services",
-          "shared-api",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "shared-services",
-        "allow": [
-          "shared-api",
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "shared-api",
-        "allow": [
-          "shared-storage",
-          "shared-domain",
-          "shared-i18n",
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "shared-storage",
-        "allow": [
-          "shared-domain",
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "shared-domain",
-        "allow": [
-          "obsidian-mock"
-        ]
-      },
-      {
-        "from": "shared-i18n",
+        "from": "tooling",
         "allow": [
           "obsidian-mock"
         ]
@@ -505,13 +228,184 @@
         "allow": []
       },
       {
+        "from": "app",
+        "allow": [
+          "modules/airtime",
+          "modules/backup",
+          "modules/custom-lists",
+          "modules/dashboard",
+          "modules/drafts",
+          "modules/games",
+          "modules/import",
+          "modules/log",
+          "modules/reading",
+          "modules/settings",
+          "modules/watchlist",
+          "modules/widgets",
+          "module-contracts",
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ]
+      },
+      {
         "from": "obsidian-mock",
         "allow": []
       },
       {
-        "from": "tooling",
+        "from": "module-contracts",
+        "allow": [],
+        "allowTypeOnly": [
+          "shared",
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/airtime",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/backup",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/custom-lists",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/dashboard",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/drafts",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/games",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/import",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/log",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/reading",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/settings",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/watchlist",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "modules/widgets",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
+        ]
+      },
+      {
+        "from": "design-system",
+        "allow": [
+          "shared",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "shared",
         "allow": [
           "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "module-contracts"
         ]
       }
     ],

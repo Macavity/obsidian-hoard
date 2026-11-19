@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from '../__mocks__/obsidian';
 import { t } from '../../src/shared/i18n';
 import { statusLabel } from '../../src/shared/i18n/labels';
-import { DEFAULT_SETTINGS, GAME_AUTO_STATUS } from '../../src/shared/domain/types';
-import type { Book, Game, Manga } from '../../src/shared/domain/types';
+import { GAME_AUTO_STATUS } from '../../src/shared/domain/gameDefaults';
+import { DEFAULT_SETTINGS } from '../../src/shared/domain/settingsDefaults';
+import type { Game } from '../../src/modules/games/contract';
+import type { Book, Manga } from '../../src/modules/reading/contract';
 import { qsa } from '../helpers/dom';
 import type { Captures } from './airtimeTab.harness';
 import { entry, isoOffset, makeTab, newWorld, title, useCaptures } from './airtimeTab.harness';
@@ -13,21 +15,21 @@ const cap = vi.hoisted<Captures>(() => ({
 }));
 useCaptures(cap);
 
-vi.mock('../../src/shared/ui/ScheduleForm', async (orig) => ({
-	...(await orig<typeof import('../../src/shared/ui/ScheduleForm')>()),
+vi.mock('../../src/modules/airtime/ui/ScheduleForm', async (orig) => ({
+	...(await orig<typeof import('../../src/modules/airtime/ui/ScheduleForm')>()),
 	renderScheduleModal: (_el: unknown, form: unknown, opts: Captures['forms'][number]['opts']) => {
 		cap.forms.push({ form, opts });
 	},
 }));
-vi.mock('../../src/shared/ui/VirtualScroller', () => ({
+vi.mock('../../src/design-system/VirtualScroller', () => ({
 	VirtualScroller: class {
 		addSection(): void {}
 		attach(): void {}
 		destroy(): void {}
 	},
 }));
-vi.mock('../../src/shared/ui/VirtualGrid', async (orig) => ({
-	...(await orig<typeof import('../../src/shared/ui/VirtualGrid')>()),
+vi.mock('../../src/design-system/VirtualGrid', async (orig) => ({
+	...(await orig<typeof import('../../src/design-system/VirtualGrid')>()),
 	VirtualGrid: class {
 		constructor(_s: unknown, grid: HTMLElement, count: number, cb: { buildItem: (i: number, w: number) => HTMLElement | null }) {
 			for (let i = 0; i < count; i++) {

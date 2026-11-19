@@ -1,11 +1,13 @@
-import {
-	COLUMN_TYPES, GAME_TBA_STATUS, defaultGamesSettings, getTitleCredits, parsePlaytimeInput,
-} from '../../../../shared/domain/types';
-import type {
-	Game, GamesData, GamesSettings, HoardTitle, ReadingData, ReadingCustomColumn, TagDefinition,
-} from '../../../../shared/domain/types';
+import { parsePlaytimeInput } from '../../../../shared/domain/format';
+import { GAME_TBA_STATUS, defaultGamesSettings } from '../../../../shared/domain/gameDefaults';
+import { COLUMN_TYPES } from '../../../../shared/domain/columns';
+import { getTitleCredits } from '../../../../shared/domain/titles';
+import type { Game, GamesData, GamesSettings } from '../../../games/contract';
+import type { ReadingCustomColumn, ReadingData } from '../../../reading/contract';
+import type { HoardTitle } from '../../../watchlist/contract';
+import type { TagDefinition } from '../../../../shared/domain/tags';
 import { readBook, readGame, readGameGroup, readManga } from '../../../../shared/storage/entryReaders';
-import { readGamesSettings, readReadingSettings } from '../../../../shared/domain/featureSettings';
+import { readGamesSettings, readReadingSettings } from '../../../../shared/storage/featureSettings';
 import { at, readList, readOneOf, readOptionalString, readRecord, readString, readStringList } from '../../../../shared/domain/read';
 import { defined } from '../../../../shared/domain/sharedHelpers';
 import { TITLE_PROPS } from '../../../../shared/storage/properties';

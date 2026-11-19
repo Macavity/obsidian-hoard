@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SteamSyncModal } from '../src/modules/games/ui/SteamSyncModal';
 import type { SteamOwnedGame } from '../src/shared/api/ApiService';
 import { steamLibraryCover } from '../src/shared/api/steamStoreApi';
-import { GAME_AUTO_STATUS, type Game, type SteamSyncUpdate } from '../src/shared/domain/types';
+import type { Game, SteamSyncUpdate } from '../src/modules/games/contract';
+import { GAME_AUTO_STATUS } from '../src/shared/domain/gameDefaults';
 import { clickByText, shownNotices } from './helpers/csvWizard';
 import { fakeSettings } from './helpers/fakeSettings';
 

@@ -3,8 +3,11 @@ import { vi } from 'vitest';
 import { AirtimeTab } from '../../src/modules/airtime/ui/AirtimeTab';
 import { AirtimeScheduleModal } from '../../src/modules/airtime/ui/AirtimeScheduleModal';
 import { fakeSettings } from '../helpers/fakeSettings';
-import type { AirtimeEntry, Book, Game, HoardTitle, Manga } from '../../src/shared/domain/types';
-import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
+import type { AirtimeEntry } from '../../src/modules/airtime/contract';
+import type { Game } from '../../src/modules/games/contract';
+import type { Book, Manga } from '../../src/modules/reading/contract';
+import type { HoardTitle } from '../../src/modules/watchlist/contract';
+import { DEFAULT_SETTINGS } from '../../src/shared/domain/settingsDefaults';
 
 /** Modal constructor captures shared with the vi.mock factories of the airtime tests. */
 export interface Captures {

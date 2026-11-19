@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { ApiService } from '../src/shared/api/ApiService';
-import type { Game } from '../src/shared/domain/types';
+import type { Game } from '../src/modules/games/contract';
 import { steamLibraryCover } from '../src/shared/api/steamStoreApi';
 import { parse } from 'yaml';
-import { CoverRefresher, resolveGameCover, searchBooks, type GameCoverApi, type ReadingCoverApi, type BookSearchApi } from '../src/modules/covers/services/coverRefresh';
+import { CoverRefresher, resolveGameCover, searchBooks, type GameCoverApi, type ReadingCoverApi, type BookSearchApi } from '../src/shared/services/coverRefresh';
 import { ApiCheckQueue } from '../src/shared/api/apiCheckQueue';
 import { setupGames } from './helpers/setupGameDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';

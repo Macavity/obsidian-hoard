@@ -1,6 +1,6 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../../../shared/i18n';
-import { renderChoiceGrid } from '../../../shared/ui/choiceGrid';
+import { renderChoiceGrid } from '../../../design-system/choiceGrid';
 
 export type AddTitleChoice = 'url' | 'manual';
 

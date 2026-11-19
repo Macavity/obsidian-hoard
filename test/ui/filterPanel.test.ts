@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { toggleFilterPanel, type FilterPanelConfig } from '../../src/shared/ui/FilterPanel';
+import { toggleFilterPanel, type FilterPanelConfig } from '../../src/design-system/FilterPanel';
 
 let teardowns: Array<() => void> = [];
 

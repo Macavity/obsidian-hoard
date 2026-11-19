@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice, Platform } from 'obsidian';
 import { GameDetailModal } from '../src/modules/games/ui/GameDetailModal';
-import { DEFAULT_SETTINGS, type Game, type GameGroup } from '../src/shared/domain/types';
+import type { Game, GameGroup } from '../src/modules/games/contract';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
-vi.mock('../src/shared/ui/NoteLinkButton', () => ({
+vi.mock('../src/design-system/NoteLinkButton', () => ({
 	appendNoteLinkButton: (_app: unknown, parent: HTMLElement) => parent.createSpan({ cls: 'note-link-stub' }),
 }));
 

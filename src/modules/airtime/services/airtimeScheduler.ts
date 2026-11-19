@@ -1,7 +1,7 @@
-import type { AirtimeEntry, AirtimeSchedule } from '../../../shared/domain/types';
-import type { DataManager } from '../../watchlist/services/DataManager';
-import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
-import type { GameDataManager } from '../../games/services/GameDataManager';
+import type { AirtimeStore, TitleReader } from '../../watchlist/contract';
+import type { ReadingReader } from '../../reading/contract';
+import type { GameReader } from '../../games/contract';
+import type { AirtimeEntry, AirtimeSchedule } from '../contract';
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 
@@ -17,9 +17,9 @@ const AIRTIME_CATCH_UP_MINUTES = 12 * 60;
  * API airing pointer refreshed (forced on the notifying tick, otherwise throttled by refreshAiring).
  */
 export function runAirtimeScheduler(
-	dataManager: Pick<DataManager, 'getAirtimeEntries' | 'getTitle' | 'refreshAiring'>,
-	readingDataManager: Pick<ReadingDataManager, 'getBook' | 'getManga'>,
-	gameDataManager: Pick<GameDataManager, 'getGame'>,
+	dataManager: Pick<AirtimeStore, 'getAirtimeEntries' | 'refreshAiring'> & Pick<TitleReader, 'getTitle'>,
+	readingDataManager: Pick<ReadingReader, 'getBook' | 'getManga'>,
+	gameDataManager: Pick<GameReader, 'getGame'>,
 	notify: (name: string) => void,
 	notified: Set<string>,
 	now = new Date(),
@@ -47,9 +47,9 @@ function isRecurringWatch(entry: AirtimeEntry): boolean {
 /** The title of the entry's subject: a watch title, a reading item, or a game. */
 function subjectName(
 	entry: AirtimeEntry,
-	dataManager: Pick<DataManager, 'getTitle'>,
-	readingDataManager: Pick<ReadingDataManager, 'getBook' | 'getManga'>,
-	gameDataManager: Pick<GameDataManager, 'getGame'>,
+	dataManager: Pick<TitleReader, 'getTitle'>,
+	readingDataManager: Pick<ReadingReader, 'getBook' | 'getManga'>,
+	gameDataManager: Pick<GameReader, 'getGame'>,
 ): string | undefined {
 	if (entry.source === 'game') return gameDataManager.getGame(entry.titleId)?.title;
 	if (entry.source === 'reading') {

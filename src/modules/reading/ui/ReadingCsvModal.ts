@@ -1,12 +1,13 @@
+import type { ReadingCsvOptions } from '../contract';
 import type { App } from 'obsidian';
-import { CsvModalBase, rowsToCsv, type CsvFieldDef, type CsvExportRow, type CsvSelectOption } from '../../../shared/ui/CsvModalBase';
+import { CsvModalBase, rowsToCsv, type CsvFieldDef, type CsvExportRow, type CsvSelectOption } from '../../../design-system/CsvModalBase';
 import { t } from '../../../shared/i18n';
 import { readingStatusLabel } from '../../../shared/i18n/labels';
 import type { ReadingDataManager } from '../services/ReadingDataManager';
 import { newBook, newManga } from '../../../shared/domain/entryFactories';
-import type { Book, Manga, ReadingStatus } from '../../../shared/domain/types';
-import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../../../shared/domain/types';
-import type { ReadingCsvKind } from './ReadingCsvChoiceModal';
+import type { Book, Manga, ReadingStatus } from '../contract';
+import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../../../shared/domain/reading';
+import type { ReadingCsvKind } from '../contract';
 
 // Schemas (Books and Manga kept fully separate)
 
@@ -76,7 +77,6 @@ function schemaFor(kind: ReadingCsvKind): ReadingSchema {
 		: { exportColumns: MANGA_EXPORT_COLUMNS, importFields: MANGA_IMPORT_FIELDS };
 }
 
-
 /**
  * An explicit Progress Unit column wins; otherwise a CSV carrying only word counts is taken to be
  * words-tracked.
@@ -92,13 +92,6 @@ export type ReadingCsvStore = Pick<
 	ReadingDataManager,
 	'getBooks' | 'getMangaList' | 'generateBookId' | 'generateMangaId' | 'getSettings' | 'addBookBatch' | 'addMangaBatch' | 'notifyChange'
 >;
-
-export interface ReadingCsvOptions {
-	kind: ReadingCsvKind;
-	mode: 'export' | 'import';
-}
-
-export type OpenReadingCsv = (opts: ReadingCsvOptions) => void;
 
 export class ReadingCsvModal extends CsvModalBase<Partial<Book & Manga>> {
 	private schema: ReadingSchema;

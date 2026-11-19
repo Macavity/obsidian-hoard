@@ -1,17 +1,17 @@
 import { App, Modal, Notice } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import type { GameDataManager } from '../services/GameDataManager';
-import { Game, SteamSyncUpdate, GAME_AUTO_STATUS, formatTime } from '../../../shared/domain/types';
+import type { Game, SteamSyncUpdate } from '../contract';
+import { formatTime } from '../../../shared/domain/format';
+import { GAME_AUTO_STATUS } from '../../../shared/domain/gameDefaults';
 import { t } from '../../../shared/i18n';
 import { steamAppIdFromUrl, type ApiService, type SteamAppDetails, type SteamOwnedGame, type SteamFailureReason } from '../../../shared/api/ApiService';
 import { newGame } from '../../../shared/domain/entryFactories';
 import { steamLibraryCover } from '../../../shared/api/steamStoreApi';
-import { markViewRoot } from '../../../shared/ui/detailFrame';
+import { markViewRoot } from '../../../design-system/detailFrame';
 
 export type SteamSyncGames = Pick<GameDataManager, 'addGame' | 'applySteamSync' | 'generateGameId' | 'getGames' | 'getSettings'>;
 export type SteamSyncApi = Pick<ApiService, 'getSteamOwnedGames' | 'getSteamAchievements' | 'getSteamAppDetails'>;
-
-export type OpenSteamSync = () => void;
 
 /**
  * Steam library sync.

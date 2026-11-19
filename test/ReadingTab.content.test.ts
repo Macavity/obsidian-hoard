@@ -1,6 +1,6 @@
 import { newReadingTab } from './helpers/newReadingTab';
 import { describe, expect, it, vi } from 'vitest';
-import type { Book } from '../src/shared/domain/types';
+import type { Book } from '../src/modules/reading/contract';
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 

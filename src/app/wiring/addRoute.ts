@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import type { OpenAddRoute } from '../../shared/ui/addRoute';
+import type { OpenAddRoute } from '../../shared/services/addRoute';
 import type { OpenAddTitle } from '../../modules/watchlist/ui/AddTitleModal';
 import type { OpenAddReading } from '../../modules/reading/ui/AddReadingModal';
 import type { OpenAddGame } from '../../modules/games/ui/AddGameModal';

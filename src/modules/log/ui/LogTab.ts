@@ -1,13 +1,13 @@
-import type { TabInstance } from '../../../shared/ui/TabInstance';
+import type { TabInstance } from '../../../design-system/TabInstance';
 import { t, type TranslationKey } from '../../../shared/i18n';
 import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from '../../../shared/i18n/labels';
-import { dayName, monthName } from '../../../shared/ui/dateNames';
-import { createIconButton } from '../../../shared/ui/IconButton';
+import { dayName, monthName } from '../../../shared/i18n/dateNames';
+import { createIconButton } from '../../../design-system/IconButton';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { HistoryEntry } from '../../../shared/domain/types';
+import type { HistoryEntry } from '../../../shared/domain/history';
 import { inferHistoryAction, inferHistorySource } from '../../../shared/services/HistoryManager';
-import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
-import { getActiveDateFormat } from '../../../shared/domain/types';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
+import { getActiveDateFormat } from '../../../shared/domain/date';
 
 type SourceFilter = 'all' | 'Watchlist' | 'Reading' | 'Games';
 

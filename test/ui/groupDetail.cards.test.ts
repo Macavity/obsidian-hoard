@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { GroupDetailModal } from '../../src/modules/watchlist/ui/TitleDetailModal';
 import { makeTitle } from '../helpers/setupDataManager';
 import { fakeSettings } from '../helpers/fakeSettings';
-import type { HoardTitle } from '../../src/shared/domain/types';
+import type { HoardTitle } from '../../src/modules/watchlist/contract';
 
 const settings = fakeSettings({
 	colorTheme: 'default',

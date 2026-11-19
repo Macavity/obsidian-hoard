@@ -3,7 +3,7 @@ import type { LocalStore } from '../../../../shared/storage/LocalStore';
 import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
 import { planCleanup, runCleanup, type CleanupItem } from './cleanup';
 import type { WatchLogSourceKind, WatchLogSources } from './detect';
-import type { ImportReport, Progress } from '../../../../shared/domain/importReport';
+import type { ImportReport, Progress } from '../../domain/importReport';
 import { importFork } from './importFork';
 import { importOriginal } from './importOriginal';
 import { setDecision, type ImportDecision } from './onboardingState';

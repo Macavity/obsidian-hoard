@@ -8,7 +8,7 @@ import {
 	renderToolbarCore,
 	syncSelectionClasses,
 	toggleCardSelected,
-} from '../../src/shared/ui/TabToolbar';
+} from '../../src/design-system/TabToolbar';
 
 /** Minimal element double: only what TabToolbar touches. */
 class El {

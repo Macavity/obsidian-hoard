@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddReadingModal, type ReadingFormState, type ReadingMode } from '../src/modules/reading/ui/AddReadingModal';
-import type { Book, Manga } from '../src/shared/domain/types';
+import type { Book, Manga } from '../src/modules/reading/contract';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const NOW = '2026-03-04T05:06:07.000Z';

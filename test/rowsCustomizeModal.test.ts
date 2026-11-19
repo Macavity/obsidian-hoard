@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RowsCustomizeModal, type RowsCustomizeConfig } from '../src/shared/ui/RowsCustomizeModal';
-import type { RowsShelfLayoutEntry } from '../src/shared/domain/types';
+import { RowsCustomizeModal, type RowsCustomizeConfig } from '../src/design-system/RowsCustomizeModal';
+import type { RowsShelfLayoutEntry } from '../src/shared/domain/rows';
 
 const shelves = [
 	{ id: 'a', label: 'Alpha' },
@@ -18,7 +18,7 @@ function open(stored: RowsShelfLayoutEntry[], exclusiveGroups: string[][] | null
 		...(exclusiveGroups ? { exclusiveGroups } : {}),
 		persist: vi.fn(),
 	};
-	const modal = new RowsCustomizeModal({} as never, { get: () => ({}) } as never, config);
+	const modal = new RowsCustomizeModal({} as never, { get: () => ({}) }, config);
 	modal.open();
 	const rows = (): HTMLElement[] => Array.from(modal.contentEl.querySelectorAll<HTMLElement>('.hoard-rows-customize__row'));
 	const names = (): string[] => rows().map((r) => r.querySelector('.hoard-rows-customize__name')!.textContent ?? '');

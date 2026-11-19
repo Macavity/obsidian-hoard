@@ -1,6 +1,6 @@
 import { App, Modal } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
-import type { MediaSearchResult } from '../../../shared/domain/types';
+import type { SettingsReader } from '../../settings/contract';
+import type { MediaSearchResult } from '../contract';
 import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
 import type { OpenAddTitle } from './AddTitleModal';
 import { t } from '../../../shared/i18n';

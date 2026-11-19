@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildPosterCard, type PosterCardSpec } from '../src/shared/ui/PosterCard';
-import { renderTypeBadge } from '../src/shared/ui/typeBadge';
-import { renderStarRating } from '../src/shared/ui/StarRating';
-import type { RatingTier } from '../src/shared/domain/types';
+import { buildPosterCard, type PosterCardSpec } from '../src/design-system/PosterCard';
+import { renderTypeBadge } from '../src/design-system/typeBadge';
+import { renderStarRating } from '../src/design-system/StarRating';
+import type { RatingTier } from '../src/shared/domain/tags';
 
 const ctx = (): { container: HTMLElement; cleanups: (() => void)[] } => ({ container: document.createElement('div'), cleanups: [] });
 const spec = (over: Partial<PosterCardSpec> = {}): PosterCardSpec => ({

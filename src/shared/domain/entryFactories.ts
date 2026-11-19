@@ -1,4 +1,6 @@
-import type { Book, Game, HoardTitle, Manga } from './types';
+import type { Game } from '../../modules/games/contract';
+import type { Book, Manga } from '../../modules/reading/contract';
+import type { HoardTitle } from '../../modules/watchlist/contract';
 import { defined } from './sharedHelpers';
 
 /**

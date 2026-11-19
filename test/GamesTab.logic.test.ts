@@ -1,6 +1,8 @@
 import { newGamesTab } from './helpers/newGamesTab';
 import { describe, expect, it, vi } from 'vitest';
-import { defaultGamesSettings, DEFAULT_SETTINGS, type Game } from '../src/shared/domain/types';
+import type { Game } from '../src/modules/games/contract';
+import { defaultGamesSettings } from '../src/shared/domain/gameDefaults';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const game = (id: string, over: Partial<Game> = {}): Game => ({

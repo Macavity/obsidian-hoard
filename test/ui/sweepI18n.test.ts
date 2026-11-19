@@ -2,13 +2,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { setLocale } from '../../src/shared/i18n';
 import de from '../../src/shared/i18n/de';
 import { apiErrorMessage, apiErrorShort } from '../../src/shared/api/ApiService';
-import { renderBatchStatusSelect } from '../../src/shared/ui/ActionBar';
-import { nameSelect } from '../../src/shared/ui/FormCells';
-import { scheduleText } from '../../src/shared/ui/scheduleText';
-import { buildFilterSections, formatPriorityOpt, type CommonFilterDraft } from '../../src/shared/ui/TabFilters';
+import { renderBatchStatusSelect } from '../../src/design-system/ActionBar';
+import { nameSelect } from '../../src/design-system/FormCells';
+import { scheduleText } from '../../src/modules/airtime/ui/scheduleText';
+import { buildFilterSections, formatPriorityOpt, type CommonFilterDraft } from '../../src/design-system/TabFilters';
 import { statusLabel, typeLabel } from '../../src/shared/i18n/labels';
 import { parseBackup } from '../../src/modules/backup/services/backup';
-import { ROWS_SHELVES } from '../../src/shared/domain/types';
+import { ROWS_SHELVES } from '../../src/shared/domain/rows';
 import { El } from '../helpers/fakeEl';
 
 afterEach(() => setLocale('en'));

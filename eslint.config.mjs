@@ -192,7 +192,7 @@ export default defineConfig([
           message: `Services must not use Obsidian UI classes or App: inject Vault, Workspace or a Pick, and report a code (ManagerNotice) for the UI to show. ${ARCH_DOC}`,
         }],
         patterns: [{
-          group: ["**/ui/**", "**/shared/ui/**"],
+          group: ["**/ui/**", "**/design-system/**"],
           message: `Services must not import UI: expose data or a code and let the UI call you. ${ARCH_DOC}`,
         }],
       }],
@@ -209,11 +209,8 @@ export default defineConfig([
       "src/shared/api/openLibraryApi.ts",
       "src/shared/api/steamStoreApi.ts",
       "src/shared/api/lookup.ts",
-      "src/shared/domain/settingsNormalize.ts",
-      "src/shared/services/settingsSplit.ts",
+      "src/modules/settings/services/settingsSplit.ts",
       "src/modules/backup/services/backup.ts",
-      "src/shared/storage/entryReaders.ts",
-      "src/shared/domain/featureSettings.ts",
     ],
     rules: {
       "@typescript-eslint/no-unsafe-type-assertion": "error",

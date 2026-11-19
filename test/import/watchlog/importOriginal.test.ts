@@ -3,7 +3,7 @@ import watchLogData from '../../fixtures/data-v1.json';
 import { WATCHLOG_NOTES, setupOriginal } from './setupSchema1';
 import { snapshot } from './helpers';
 import { importOriginal } from '../../../src/modules/import/services/watchlog/importOriginal';
-import type { ImportPhase } from '../../../src/shared/domain/importReport';
+import type { ImportPhase } from '../../../src/modules/import/domain/importReport';
 
 const data = watchLogData;
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SearchFormModal, type SearchPickerOptions } from '../../src/shared/ui/SearchFormModal';
+import { SearchFormModal, type SearchPickerOptions } from '../../src/design-system/SearchFormModal';
 import type { App } from 'obsidian';
 import { El } from '../helpers/fakeEl';
 

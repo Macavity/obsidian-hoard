@@ -1,8 +1,9 @@
 import type { RequestUrlParam } from 'obsidian';
 import { explicitMediaKind, titleMediaKind } from './cinemetaApi';
 import type { LookupKind } from '../storage/storageTypes';
-import type { HoardTitle, HoardPluginSettings, MediaSearchResult } from '../domain/types';
-import { getApiGroupForType } from '../domain/types';
+import type { HoardPluginSettings } from '../../modules/settings/contract';
+import type { HoardTitle, MediaSearchResult } from '../../modules/watchlist/contract';
+import { getApiGroupForType } from '../domain/titles';
 import type { DeepReadonly } from '../domain/deepReadonly';
 import { httpsOrEmpty } from './httpsUrl';
 import { found, attempt, firstFound, FAILED, NO_KEY, type LookupResult, type LookupSource } from './lookup';

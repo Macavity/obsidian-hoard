@@ -2,10 +2,11 @@
 import { vi } from 'vitest';
 import { setupDataManager } from './setupDataManager';
 import { ListTab, type ListTabHost, type ListTabModals } from '../../src/modules/watchlist/ui/ListTab';
-import { confirmWith } from '../../src/shared/ui/ConfirmModal';
-import { RowsCustomizeModal } from '../../src/shared/ui/RowsCustomizeModal';
+import { confirmWith } from '../../src/design-system/ConfirmModal';
+import { RowsCustomizeModal } from '../../src/design-system/RowsCustomizeModal';
 import { fakeSettings } from './fakeSettings';
-import type { HoardPluginSettings, HoardTitle } from '../../src/shared/domain/types';
+import type { HoardPluginSettings } from '../../src/modules/settings/contract';
+import type { HoardTitle } from '../../src/modules/watchlist/contract';
 
 // Obsidian's activeDocument (popout-aware document); common.ts stubs it with a bare object
 (globalThis as { activeDocument?: Document }).activeDocument = document;

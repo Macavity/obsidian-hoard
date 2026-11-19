@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ROWS_SHELVES } from '../../src/shared/domain/types';
+import { ROWS_SHELVES } from '../../src/shared/domain/rows';
 import { movieNote, setupListTab } from '../helpers/setupListTab';
 
 const q = (root: ParentNode, sel: string): HTMLElement => root.querySelector<HTMLElement>(sel)!;

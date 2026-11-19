@@ -57,6 +57,11 @@ describe("architecture lint rules", () => {
 		expect(m).toHaveLength(1);
 	});
 
+	it("rejects a service importing the design system", async () => {
+		const m = await errorsOf(`import { ConfirmModal } from "../../../design-system/ConfirmModal";\nexport const x = ConfirmModal;`, SERVICE_FILE, "no-restricted-imports");
+		expect(m).toHaveLength(1);
+	});
+
 	it("rejects a service importing obsidian as namespace or default", async () => {
 		const ns = await errorsOf(`import * as obsidian from "obsidian";\nexport const x = obsidian;`, SERVICE_FILE, "no-restricted-syntax");
 		expect(ns).toHaveLength(1);
@@ -71,7 +76,7 @@ describe("architecture lint rules", () => {
 	});
 
 	it("allows a UI file to import shared/services as a value", async () => {
-		const m = await errorsOf(`import { SettingsService } from "../../../shared/services/SettingsService";\nexport const x = SettingsService;`, UI_FILE, "no-restricted-imports");
+		const m = await errorsOf(`import { HistoryManager } from "../../../shared/services/HistoryManager";\nexport const x = HistoryManager;`, UI_FILE, "no-restricted-imports");
 		expect(m).toEqual([]);
 	});
 
@@ -122,13 +127,13 @@ describe("architecture lint rules", () => {
 			expect(ui).toHaveLength(1);
 			expect(ui[0]?.message).toContain(DOC);
 			expect(await errorsOf(code, SERVICE_FILE, "no-restricted-syntax")).toHaveLength(1);
-			expect(await errorsOf(code, "src/shared/ui/RowsCustomizeModal.ts", "no-restricted-syntax")).toHaveLength(1);
+			expect(await errorsOf(code, "src/design-system/RowsCustomizeModal.ts", "no-restricted-syntax")).toHaveLength(1);
 			expect(await errorsOf(code, "src/app/main.ts", "no-restricted-syntax")).toEqual([]);
 		});
 
 		it("rejects importing App in services, storage and api, allows it in src/app", async () => {
 			const code = `import { App } from "obsidian";\nexport type X = App;`;
-			for (const file of [SERVICE_FILE, "src/shared/services/SettingsService.ts", "src/shared/storage/VaultLayout.ts", "src/shared/api/ApiService.ts"]) {
+			for (const file of [SERVICE_FILE, "src/shared/services/HistoryManager.ts", "src/shared/storage/VaultLayout.ts", "src/shared/api/ApiService.ts"]) {
 				const m = await errorsOf(code, file, "no-restricted-imports");
 				expect(m, file).toHaveLength(1);
 				expect(m[0]?.message).toContain(DOC);

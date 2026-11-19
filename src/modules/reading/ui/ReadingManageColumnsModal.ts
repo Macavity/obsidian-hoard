@@ -1,13 +1,15 @@
 import { App, Modal, Notice } from 'obsidian';
 import { t } from '../../../shared/i18n';
-import { createIconButton } from '../../../shared/ui/IconButton';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
-import type { ReadingDataManager, ReadingKind } from '../services/ReadingDataManager';
-import { ReadingCustomColumn, DEFAULT_FIELD_COLOR } from '../../../shared/domain/types';
-import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
-import { openColorPicker } from '../../../shared/ui/ColorPicker';
-import { attachCardDrag, renderTypeSelect, type DragState } from '../../../shared/ui/ColumnsEditor';
-import { markViewRoot } from '../../../shared/ui/detailFrame';
+import { createIconButton } from '../../../design-system/IconButton';
+import type { SettingsReader } from '../../settings/contract';
+import type { ReadingDataManager } from '../services/ReadingDataManager';
+import type { ReadingKind } from '../contract';
+import type { ReadingCustomColumn } from '../contract';
+import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/tags';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
+import { openColorPicker } from '../../../design-system/ColorPicker';
+import { attachCardDrag, renderTypeSelect, type DragState } from '../../../design-system/ColumnsEditor';
+import { markViewRoot } from '../../../design-system/detailFrame';
 
 export type ManageColumnsStore = Pick<
 	ReadingDataManager,

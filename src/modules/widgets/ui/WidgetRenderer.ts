@@ -1,8 +1,11 @@
+import type { AirtimeStore, TitleReader, TitleStats, TitleWriter } from '../../watchlist/contract';
 import { MarkdownPostProcessorContext } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
-import type { DataManager } from '../../watchlist/services/DataManager';
-import type { HoardTitle, HoardGroup, TagDefinition } from '../../../shared/domain/types';
-import { formatTime, getThemedColor, formatDateDisplay, formatShortDateDisplay } from '../../../shared/domain/types';
+import type { SettingsReader } from '../../settings/contract';
+import type { HoardGroup, HoardTitle } from '../../watchlist/contract';
+import type { TagDefinition } from '../../../shared/domain/tags';
+import { formatDateDisplay, formatShortDateDisplay } from '../../../shared/domain/date';
+import { formatTime } from '../../../shared/domain/format';
+import { getThemedColor } from '../../../shared/domain/tags';
 import { t } from '../../../shared/i18n';
 import { statusLabel, typeLabel } from '../../../shared/i18n/labels';
 import { onDataChanged } from '../../../shared/services/changeSignal';
@@ -18,7 +21,7 @@ export function groupProgress(members: HoardTitle[], effectiveTotal: (t: HoardTi
 
 /** The one-off airtime entry with the soonest release at or after `now`, or null. */
 export function findNextRelease(
-	entries: ReturnType<DataManager['getAirtimeEntries']>,
+	entries: ReturnType<AirtimeStore['getAirtimeEntries']>,
 	titles: HoardTitle[],
 	now: number,
 ): NextRelease | null {
@@ -48,9 +51,11 @@ export function findNextRelease(
 
 type WidgetLanguage = 'hoard' | 'hoard-todo' | 'hoard-stat' | 'hoard-upcoming' | 'hoard-now' | 'hoard-now-next';
 
-export type WidgetTitles = Pick<DataManager,
-	'getTitle' | 'getTitles' | 'getProgress' | 'getNextUnwatchedEpisode' | 'getEffectiveTotal' | 'getTotalTimeWatched'
-	| 'getTotalTimeRemaining' | 'getCompletedCount' | 'getPinnedGroupId' | 'getGroups' | 'getAirtimeEntries' | 'markEpisodeWatched'>;
+export type WidgetTitles = Pick<TitleReader, 'getTitle' | 'getTitles'>
+	& Pick<TitleStats,
+		'getProgress' | 'getNextUnwatchedEpisode' | 'getEffectiveTotal' | 'getTotalTimeWatched'
+		| 'getTotalTimeRemaining' | 'getCompletedCount' | 'getPinnedGroupId' | 'getGroups'>
+	& Pick<AirtimeStore, 'getAirtimeEntries'> & Pick<TitleWriter, 'markEpisodeWatched'>;
 
 /**
  * Renders the `hoard-*` code-block widgets inside notes and keeps them in step with the data.

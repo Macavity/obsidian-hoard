@@ -1,20 +1,21 @@
 import { App, Notice, setIcon } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import type { GameDataManager } from '../services/GameDataManager';
 import { rawgResizedCover, steamAppIdFromUrl, type ApiService, type GameDetailsResult, type GameSearchResult } from '../../../shared/api/ApiService';
-import type { GameCoverApi } from '../../covers/services/coverRefresh';
+import type { GameCoverApi } from '../../../shared/services/coverRefresh';
 import { effectiveGameSource } from '../../../shared/api/apiSources';
 import { newGame } from '../../../shared/domain/entryFactories';
-import { GameGroup, GAME_AUTO_STATUS } from '../../../shared/domain/types';
-import { renderSearchResultRow } from '../../../shared/ui/SearchThumbnail';
+import type { GameGroup } from '../contract';
+import { GAME_AUTO_STATUS } from '../../../shared/domain/gameDefaults';
+import { renderSearchResultRow } from '../../../design-system/SearchThumbnail';
 import { t } from '../../../shared/i18n';
 import { gameStatusLabel, priorityLabel } from '../../../shared/i18n/labels';
-import { SearchFormModal, type SearchPickerOptions } from '../../../shared/ui/SearchFormModal';
+import { SearchFormModal, type SearchPickerOptions } from '../../../design-system/SearchFormModal';
 import { LibraryIndex, gameResultIdKeys } from '../../../shared/services/LibraryIndex';
-import { renderModePill } from '../../../shared/ui/ModePill';
-import { renderTagChips } from '../../../shared/ui/StatusDropdown';
-import { createDatePicker } from '../../../shared/ui/DatePicker';
-import { blockDuplicate, createDuplicateGuard } from '../../../shared/ui/DuplicateGuard';
+import { renderModePill } from './ModePill';
+import { renderTagChips } from '../../../design-system/StatusDropdown';
+import { createDatePicker } from '../../../design-system/DatePicker';
+import { blockDuplicate, createDuplicateGuard } from '../../../design-system/DuplicateGuard';
 import {
 	linkField,
 	makeCell,
@@ -26,7 +27,7 @@ import {
 	textInput,
 	titleField,
 	type GroupPickerState,
-} from '../../../shared/ui/FormCells';
+} from '../../../design-system/FormCells';
 
 /** Lowercased word tokens of a platform name, split into alpha and numeric. */
 function platformTokens(name: string): { alpha: Set<string>; num: Set<string> } {

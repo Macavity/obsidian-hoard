@@ -3,7 +3,7 @@ import { createFakeApp } from './fakes/fakeApp';
 import { VaultLayout } from '../src/shared/storage/VaultLayout';
 import { HistoryStore } from '../src/shared/storage/HistoryStore';
 import { resolveRecentlyWatched } from '../src/shared/services/HistoryManager';
-import type { HistoryEntry } from '../src/shared/domain/types';
+import type { HistoryEntry } from '../src/shared/domain/history';
 
 const t = (id: string, title: string, type = 'TV Show') => ({ id, title, type });
 let n = 0;

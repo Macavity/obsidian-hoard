@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ReadingScheduleModal } from '../../src/modules/airtime/ui/ReadingScheduleModal';
-import type { Book, Manga } from '../../src/shared/domain/types';
+import type { Book, Manga } from '../../src/modules/reading/contract';
 
 type Counters = { totalChapters: number | null; totalVolumes: number | null; currentVolume: number | null; currentChapter: number | null };
 

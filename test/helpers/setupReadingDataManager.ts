@@ -1,6 +1,6 @@
 // FakeApp + storage stores + ReadingDataManager wired like main.ts (root 'W', base file present).
 import { createStores, newReadingManager } from './common';
-import type { Book, Manga } from '../../src/shared/domain/types';
+import type { Book, Manga } from '../../src/modules/reading/contract';
 
 /** Reading without an Upcoming tracker behind it. */
 const noUpcoming = { autoAddReadingToUpcoming: () => Promise.resolve(), removeReadingAirtimeEntries: () => Promise.resolve() };

@@ -1,17 +1,17 @@
 import { newReadingTab } from './helpers/newReadingTab';
-import { searchBooks, fetchReadingCoverById, firstBookCover } from '../src/modules/covers/services/coverRefresh';
+import { searchBooks, fetchReadingCoverById, firstBookCover } from '../src/shared/services/coverRefresh';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
 import { ReadingTab } from '../src/modules/reading/ui/ReadingTab';
 import { t } from '../src/shared/i18n';
-import type { Book, Manga, ReadingCustomColumn } from '../src/shared/domain/types';
+import type { Book, Manga, ReadingCustomColumn } from '../src/modules/reading/contract';
 
-vi.mock('../src/shared/ui/PosterCard', () => ({
+vi.mock('../src/design-system/PosterCard', () => ({
 	openCardMenu: vi.fn(),
 	buildPosterCard: vi.fn(),
 	POSTER_CARD_TEXT_H: 40,
 }));
-import { openCardMenu } from '../src/shared/ui/PosterCard';
+import { openCardMenu } from '../src/design-system/PosterCard';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;

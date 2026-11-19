@@ -5,8 +5,9 @@ import { Notice as RealNotice } from 'obsidian';
 const Notice = RealNotice as unknown as { shown: string[] };
 const gamesKeyChip = (source: 'rawg' | 'igdb', s: Record<string, string>) => realChip(source, s as never);
 import { newSettingsTab } from './helpers/newSettingsTab';
-import { gamesKeyChip as realChip } from '../src/shared/ui/gamesKeyChip';
-import type { HoardTitle, TagDefinition } from '../src/shared/domain/types';
+import { gamesKeyChip as realChip } from '../src/modules/settings/ui/gamesKeyChip';
+import type { HoardTitle } from '../src/modules/watchlist/contract';
+import type { TagDefinition } from '../src/shared/domain/tags';
 import { fakeSettings } from './helpers/fakeSettings';
 
 /** The private members under test, reached through a cast. */

@@ -1,13 +1,13 @@
-import type { TabInstance } from '../../../shared/ui/TabInstance';
+import type { DraftStore, TitleReader } from '../../watchlist/contract';
+import type { ReadingReader } from '../../reading/contract';
+import type { GameReader } from '../../games/contract';
+import type { TabInstance } from '../../../design-system/TabInstance';
 import Fuse from 'fuse.js';
 import type { EventRef, MetadataCache, Vault, Workspace } from 'obsidian';
-import { createIconButton } from '../../../shared/ui/IconButton';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
-import type { DataManager } from '../../watchlist/services/DataManager';
-import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
-import type { GameDataManager } from '../../games/services/GameDataManager';
-import type { DraftPersistState } from '../../../shared/domain/types';
-import type { OpenAddRoute } from '../../../shared/ui/addRoute';
+import { createIconButton } from '../../../design-system/IconButton';
+import type { SettingsReader } from '../../settings/contract';
+import type { DraftPersistState } from '../contract';
+import type { OpenAddRoute } from '../../../shared/services/addRoute';
 import { t } from '../../../shared/i18n';
 
 /** Libraries a draft can already live in — used for the "In …" duplicate label. */
@@ -43,9 +43,9 @@ export interface DraftsNotes {
 	workspace: Pick<Workspace, 'openLinkText'>;
 }
 
-export type DraftTitles = Pick<DataManager, 'getDrafts' | 'getTitles'>;
-export type DraftReading = Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>;
-export type DraftGames = Pick<GameDataManager, 'getGames'>;
+export type DraftTitles = Pick<DraftStore, 'getDrafts'> & Pick<TitleReader, 'getTitles'>;
+export type DraftReading = Pick<ReadingReader, 'getBooks' | 'getMangaList'>;
+export type DraftGames = Pick<GameReader, 'getGames'>;
 
 export class DraftsTab implements TabInstance {
 	private containerEl: HTMLElement;
@@ -65,7 +65,7 @@ export class DraftsTab implements TabInstance {
 	constructor(
 		containerEl: HTMLElement,
 		private readonly settings: SettingsReader,
-		private readonly titles: DraftTitles & Pick<DataManager, 'setDrafts'>,
+		private readonly titles: DraftTitles & Pick<DraftStore, 'setDrafts'>,
 		private readonly reading: DraftReading,
 		private readonly games: DraftGames,
 		private readonly notes: DraftsNotes,

@@ -1,11 +1,12 @@
 import { Notice } from 'obsidian';
 import type { DataManager } from '../services/DataManager';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
-import type { HoardTitle, AnimeSearchResult } from '../../../shared/domain/types';
-import { formatVoteCount, getApiGroupForType, getCommunityRating } from '../../../shared/domain/types';
+import type { SettingsReader } from '../../settings/contract';
+import type { AnimeSearchResult, HoardTitle } from '../contract';
+import { formatVoteCount, getCommunityRating } from '../domain/titleHelpers';
+import { getApiGroupForType } from '../../../shared/domain/titles';
 import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
 import { t } from '../../../shared/i18n';
-import { createIconButton } from '../../../shared/ui/IconButton';
+import { createIconButton } from '../../../design-system/IconButton';
 
 /** The title store the community-rating helpers read and write. */
 export type CommunityRatingStore = Pick<DataManager, 'getTitle' | 'updateTitle' | 'updateCommunityRating'>;

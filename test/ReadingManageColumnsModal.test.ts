@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
 import { t } from '../src/shared/i18n';
-import { confirmWith } from '../src/shared/ui/ConfirmModal';
+import { confirmWith } from '../src/design-system/ConfirmModal';
 import { ReadingManageColumnsModal } from '../src/modules/reading/ui/ReadingManageColumnsModal';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
 import { tick } from './helpers/common';

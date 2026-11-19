@@ -1,12 +1,12 @@
 import type { App } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../shared/services/SettingsService';
+import type { SettingsReader, SettingsWriter } from '../../modules/settings/contract';
 import type { HistoryManager } from '../../shared/services/HistoryManager';
 import type { PosterService } from '../../shared/api/PosterService';
 import type { DataManager } from '../../modules/watchlist/services/DataManager';
-import { confirmWith } from '../../shared/ui/ConfirmModal';
-import { searchHelpWith } from '../../shared/ui/SearchHelpModal';
-import { renameGroupWith } from '../../shared/ui/TabToolbar';
-import { RowsCustomizeModal } from '../../shared/ui/RowsCustomizeModal';
+import { confirmWith } from '../../design-system/ConfirmModal';
+import { searchHelpWith } from '../../design-system/SearchHelpModal';
+import { renameGroupWith } from '../../design-system/TabToolbar';
+import { RowsCustomizeModal } from '../../design-system/RowsCustomizeModal';
 import { AddCreditModal, type OpenAddCredit } from '../../modules/watchlist/ui/AddCreditModal';
 import { AddFromUrlModal, type AddFromUrlApi, type OpenAddFromUrl } from '../../modules/watchlist/ui/AddFromUrlModal';
 import { AddTitleChoiceModal, type OpenAddTitleChoice } from '../../modules/watchlist/ui/AddTitleChoiceModal';

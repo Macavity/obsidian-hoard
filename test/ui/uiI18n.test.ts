@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setLocale } from '../../src/shared/i18n';
 import de from '../../src/shared/i18n/de';
-import { columnsProblemText } from '../../src/shared/ui/ColumnsEditor';
-import { typeNameProblemText } from '../../src/shared/ui/problemText';
-import { renderSelectionButtons } from '../../src/shared/ui/TabToolbar';
+import { columnsProblemText } from '../../src/design-system/ColumnsEditor';
+import { typeNameProblemText } from '../../src/modules/settings/ui/problemText';
+import { renderSelectionButtons } from '../../src/design-system/TabToolbar';
 import { El } from '../helpers/fakeEl';
 
 afterEach(() => setLocale('en'));

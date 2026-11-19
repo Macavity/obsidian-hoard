@@ -1,4 +1,4 @@
-import type { HistoryAction, HistorySource } from '../domain/types';
+import type { HistoryAction, HistorySource } from '../domain/history';
 import { defined } from '../domain/sharedHelpers';
 
 export type HistoryLineAction = HistoryAction | 'group-created';

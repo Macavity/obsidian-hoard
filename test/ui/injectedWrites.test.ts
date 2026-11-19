@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DefaultColumnsModal } from '../../src/modules/custom-lists/ui/CustomListsTab';
-import { DEFAULT_SETTINGS } from '../../src/shared/domain/types';
+import { DEFAULT_SETTINGS } from '../../src/shared/domain/settingsDefaults';
 import { qsa } from '../helpers/dom';
 import { fakeSettings } from '../helpers/fakeSettings';
 import { makeList, setupCustomLists } from '../helpers/setupCustomLists';
 import { makeTab, newWorld } from './airtimeTab.harness';
 
-vi.mock('../../src/shared/ui/VirtualScroller', () => ({
+vi.mock('../../src/design-system/VirtualScroller', () => ({
 	VirtualScroller: class { addSection(): void {} attach(): void {} detach(): void {} destroy(): void {} },
 }));
 

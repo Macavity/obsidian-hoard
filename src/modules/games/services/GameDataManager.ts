@@ -5,7 +5,7 @@ import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteW
 import { ChangeNotifier } from '../../../shared/services/changeListeners';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import { followIndex } from '../../../shared/services/followIndex';
 import type { EntryIndex } from '../../../shared/storage/EntryIndex';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
@@ -16,23 +16,16 @@ import { splitNested } from '../../../shared/storage/SharedConfigStore';
 import { decodeGame, encodeGame } from '../../../shared/storage/gameCodec';
 import { COMMON_PROPS } from '../../../shared/storage/properties';
 import { extractNotes, replaceNotesSection } from '../../../shared/storage/noteBody';
-import {
-	Game,
-	GameGroup,
-	GamesData,
-	GamesSettings,
-	GamesSavedFilterPreset,
-	RecommendedDaily,
-	SteamSyncUpdate,
-	defaultGamesSettings,
-	GAME_AUTO_STATUS,
-	GAME_FINISHED_STATUS,
-	isReleaseDateFuture,
-	todayIso,
-} from '../../../shared/domain/types';
+import type {
+	Game, GameGroup, GameReader, GamesData, GamesSavedFilterPreset, GameSettingsAccess, GamesSettings, GameSnapshot,
+	GameWriter, SteamSyncUpdate,
+} from '../contract';
+import { isReleaseDateFuture, todayIso } from '../../../shared/domain/date';
+import { GAME_AUTO_STATUS, GAME_FINISHED_STATUS, defaultGamesSettings } from '../../../shared/domain/gameDefaults';
+import type { RecommendedDaily } from '../../../shared/domain/rows';
 import { omit, sameJson, slugify, toRecord } from '../../../shared/domain/sharedHelpers';
 import { readRecord } from '../../../shared/domain/read';
-import { readGamesSettings } from '../../../shared/domain/featureSettings';
+import { readGamesSettings } from '../../../shared/storage/featureSettings';
 
 const GAMES_FOLDER_PREFIX = 'Games/';
 
@@ -51,7 +44,8 @@ export interface GameUpcomingSync {
  * tracker and removed when the date passes or the game is deleted; applyReleaseStatus maintains the
  * auto "To be released" status.
  */
-export class GameDataManager extends ChangeNotifier {
+export class GameDataManager extends ChangeNotifier
+	implements GameReader, GameWriter, GameSettingsAccess, GameSnapshot {
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from,
 	// `base` its normalized form: the baseline a write diffs against, so only changed fields reach the note.

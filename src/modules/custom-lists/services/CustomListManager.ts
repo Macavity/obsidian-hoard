@@ -1,5 +1,6 @@
 import { normalizePath, TFile, type FileManager, type Vault } from 'obsidian';
-import type { CustomList, CustomListColumn, CustomListRow } from '../../../shared/domain/types';
+import type { CustomList } from '../contract';
+import type { CustomListColumn, CustomListRow } from '../../../shared/domain/columns';
 import { at } from '../../../shared/domain/read';
 import type { VaultLayout } from '../../../shared/storage/VaultLayout';
 

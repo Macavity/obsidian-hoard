@@ -1,32 +1,39 @@
-import type { TabInstance } from '../../../shared/ui/TabInstance';
+import type { AirtimeStore, TitleReader, TitleWriter } from '../../watchlist/contract';
+import type { ReadingReader, ReadingWriter } from '../../reading/contract';
+import type { GameReader, GameSettingsAccess, GameWriter } from '../../games/contract';
+import type { TabInstance } from '../../../design-system/TabInstance';
 import { Notice } from 'obsidian';
 import { t } from '../../../shared/i18n';
 import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
-import { monthName } from '../../../shared/ui/dateNames';
-import { scheduleText } from '../../../shared/ui/scheduleText';
-import { createIconButton } from '../../../shared/ui/IconButton';
-import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
+import { monthName } from '../../../shared/i18n/dateNames';
+import { scheduleText } from './scheduleText';
+import { createIconButton } from '../../../design-system/IconButton';
+import type { SettingsReader, SettingsWriter } from '../../settings/contract';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { PosterService } from '../../../shared/api/PosterService';
-import type { DataManager } from '../../watchlist/services/DataManager';
-import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
-import type { GameDataManager } from '../../games/services/GameDataManager';
-import type { HoardTitle, AirtimeEntry, AirtimeSchedule, MaybeTitle, Book, Manga, Game } from '../../../shared/domain/types';
-import { getThemedColor, getReadingTypeColor, getDisplayPoster, isReleaseDateFuture, formatDateDisplay, todayIso, toIsoDate, GAME_AUTO_STATUS } from '../../../shared/domain/types';
+import type { AirtimeEntry, AirtimeSchedule } from '../contract';
+import type { Game } from '../../games/contract';
+import type { Book, Manga } from '../../reading/contract';
+import type { HoardTitle, MaybeTitle } from '../../watchlist/contract';
+import { formatDateDisplay, isReleaseDateFuture, toIsoDate, todayIso } from '../../../shared/domain/date';
+import { GAME_AUTO_STATUS } from '../../../shared/domain/gameDefaults';
+import { getReadingTypeColor } from '../../../shared/domain/reading';
+import { getThemedColor } from '../../../shared/domain/tags';
+import { getDisplayPoster } from '../../../shared/domain/titles';
 import { rawgResizedCover } from '../../../shared/api/ApiService';
-import { VirtualGrid, computeGridMetrics, type GridMetrics } from '../../../shared/ui/VirtualGrid';
-import { VirtualScroller } from '../../../shared/ui/VirtualScroller';
-import { LazyCardObserver } from '../../../shared/ui/LazyCardObserver';
-import { openCardMenu } from '../../../shared/ui/PosterCard';
-import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
+import { VirtualGrid, computeGridMetrics, type GridMetrics } from '../../../design-system/VirtualGrid';
+import { VirtualScroller } from '../../../design-system/VirtualScroller';
+import { LazyCardObserver } from '../../../design-system/LazyCardObserver';
+import { openCardMenu } from '../../../design-system/PosterCard';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
 import type { OpenMaybeAdd } from './MaybeAddModal';
 import type { OpenReadingSchedule } from './ReadingScheduleModal';
 import type { OpenGameSchedule } from './GameScheduleModal';
 import type { OpenAirtimeSchedule } from './AirtimeScheduleModal';
 import type { OpenUpcomingFinder, UpcomingFinderItem } from './UpcomingFinderModal';
-import { renderAddButton, renderSelectAllButton, renderViewDropdown } from '../../../shared/ui/TabToolbar';
-import { renderTypeBadge } from '../../../shared/ui/typeBadge';
-import { renderActionBar } from '../../../shared/ui/ActionBar';
+import { renderAddButton, renderSelectAllButton, renderViewDropdown } from '../../../design-system/TabToolbar';
+import { renderTypeBadge } from '../../../design-system/typeBadge';
+import { renderActionBar } from '../../../design-system/ActionBar';
 
 /**
  * A normalized Upcoming card subject — a watchlist title, a reading item or a game — so the
@@ -293,8 +300,8 @@ export interface AirtimeTabModals {
 function isOrphan(
 	entry: AirtimeEntry,
 	titleIds: Set<string>,
-	reading: Pick<ReadingDataManager, 'getBook' | 'getManga'> | undefined,
-	games: Pick<GameDataManager, 'getGame'> | undefined,
+	reading: Pick<ReadingReader, 'getBook' | 'getManga'> | undefined,
+	games: Pick<GameReader, 'getGame'> | undefined,
 ): boolean {
 	if (entry.source === 'game') return !!games && !games.getGame(entry.titleId);
 	if (entry.source === 'reading') {
@@ -333,9 +340,9 @@ export class AirtimeTab implements TabInstance {
 	constructor(
 		container: HTMLElement,
 		private readonly settings: SettingsReader & SettingsWriter,
-		private readonly titles: DataManager,
-		private readonly reading: Pick<ReadingDataManager, 'getBook' | 'getManga' | 'getBooks' | 'getMangaList' | 'updateBook' | 'updateManga'>,
-		private readonly games: Pick<GameDataManager, 'getGame' | 'getGames' | 'getSettings' | 'updateGame'>,
+		private readonly titles: TitleReader & AirtimeStore & Pick<TitleWriter, 'updateTitle' | 'removeTitle' | 'removeMaybeTitle'>,
+		private readonly reading: ReadingReader & ReadingWriter,
+		private readonly games: GameReader & GameWriter & Pick<GameSettingsAccess, 'getSettings'>,
 		private readonly api: Pick<ApiService, 'getAnimeScheduleByMalId'>,
 		private readonly posters: Pick<PosterService, 'clearQueue' | 'enqueue'>,
 		private readonly host: AirtimeTabHost,
@@ -434,7 +441,7 @@ export class AirtimeTab implements TabInstance {
 	}
 
 	/** Count of Due entries in the Maybe list — usable without rendering the tab. */
-	static getMaybeDueCount(dataManager: Pick<DataManager, 'getMaybeTitles'>): number {
+	static getMaybeDueCount(dataManager: Pick<TitleReader, 'getMaybeTitles'>): number {
 		const todayStr = todayIso();
 		return dataManager.getMaybeTitles().filter(
 			(mt) => !!mt.releaseDate && mt.releaseDate <= todayStr,
@@ -443,9 +450,9 @@ export class AirtimeTab implements TabInstance {
 
 	/** Count of Aired/Due entries — usable without rendering the tab. */
 	static getAiredDueCount(
-		dataManager: Pick<DataManager, 'getAirtimeEntries' | 'getTitles'>,
-		readingDataManager?: Pick<ReadingDataManager, 'getBook' | 'getManga'>,
-		gameDataManager?: Pick<GameDataManager, 'getGame'>,
+		dataManager: Pick<AirtimeStore, 'getAirtimeEntries'> & Pick<TitleReader, 'getTitles'>,
+		readingDataManager?: Pick<ReadingReader, 'getBook' | 'getManga'>,
+		gameDataManager?: Pick<GameReader, 'getGame'>,
 	): number {
 		const titleIds = new Set(dataManager.getTitles().map((t) => t.id));
 		let count = 0;

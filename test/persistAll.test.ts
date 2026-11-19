@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import HoardPlugin from '../src/app/main';
-import * as types from '../src/shared/domain/types';
-import * as split from '../src/shared/services/settingsSplit';
+import * as types from '../src/shared/domain/date';
+import * as split from '../src/modules/settings/services/settingsSplit';
 
-vi.mock('../src/shared/services/settingsSplit', async (orig) => ({ ...(await orig<typeof import('../src/shared/services/settingsSplit')>()), persistSettings: vi.fn(() => Promise.resolve()) }));
-vi.mock('../src/shared/domain/types', async (orig) => ({ ...(await orig<typeof import('../src/shared/domain/types')>()), setActiveDateFormat: vi.fn() }));
+vi.mock('../src/modules/settings/services/settingsSplit', async (orig) => ({ ...(await orig<typeof import('../src/modules/settings/services/settingsSplit')>()), persistSettings: vi.fn(() => Promise.resolve()) }));
+vi.mock('../src/shared/domain/date', async (orig) => ({ ...(await orig<typeof import('../src/shared/domain/date')>()), setActiveDateFormat: vi.fn() }));
 
 interface Private {
 	settingsService: { update(fn: (s: { dateFormat: string }) => void): Promise<void> };

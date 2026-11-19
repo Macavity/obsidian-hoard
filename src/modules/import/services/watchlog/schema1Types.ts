@@ -1,15 +1,18 @@
 import type { FileManager, Vault } from 'obsidian';
-import type {
-	AirtimeEntry, DraftPersistState, GamesData, HoardGroup, HoardPluginSettings, HoardTitle, MaybeTitle,
-	ReadingData, RecommendedDaily, SavedFilterPreset,
-} from '../../../../shared/domain/types';
-import type { HistoryEntry } from '../../../../shared/domain/types';
+import type { AirtimeEntry } from '../../../airtime/contract';
+import type { DraftPersistState } from '../../../drafts/contract';
+import type { GamesData } from '../../../games/contract';
+import type { ReadingData } from '../../../reading/contract';
+import type { HoardPluginSettings } from '../../../settings/contract';
+import type { HoardGroup, HoardTitle, MaybeTitle, SavedFilterPreset } from '../../../watchlist/contract';
+import type { RecommendedDaily } from '../../../../shared/domain/rows';
+import type { HistoryEntry } from '../../../../shared/domain/history';
 import type { LocalStore } from '../../../../shared/storage/LocalStore';
 import type { SharedConfigStore } from '../../../../shared/storage/SharedConfigStore';
 import type { HistoryStore } from '../../../../shared/storage/HistoryStore';
 import type { VaultLayout } from '../../../../shared/storage/VaultLayout';
 import type { EntryKind, YamlIO } from '../../../../shared/storage/storageTypes';
-import type { Progress } from '../../../../shared/domain/importReport';
+import type { Progress } from '../../domain/importReport';
 
 /** A title as WatchLog stored it; `manualPosterUrl` wins over `posterUrl`. */
 export type WatchLogTitle = HoardTitle & { manualPosterUrl?: string };
@@ -66,5 +69,5 @@ export interface IdMaps {
 }
 
 export const WISHLIST = 'Wishlist';
-export { REMOVED_SETTINGS } from '../../../../shared/domain/settingsNormalize';
+export { REMOVED_SETTINGS } from '../../../../shared/storage/settingsCodec';
 export { isRecord } from '../../../../shared/domain/sharedHelpers';

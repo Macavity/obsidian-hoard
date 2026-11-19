@@ -9,8 +9,9 @@ import { setupDataManager } from '../helpers/setupDataManager';
 import { titleFromProperties } from '../../src/shared/storage/titleCodec';
 import { decodeBook, decodeManga } from '../../src/shared/storage/readingCodec';
 import { decodeGame } from '../../src/shared/storage/gameCodec';
-import { getDisplayPoster, getDisplayTrailer, getTitleCredits } from '../../src/shared/domain/types';
-import type { HoardTitle } from '../../src/shared/domain/types';
+import { getDisplayTrailer } from '../../src/modules/watchlist/domain/titleHelpers';
+import { getDisplayPoster, getTitleCredits } from '../../src/shared/domain/titles';
+import type { HoardTitle } from '../../src/modules/watchlist/contract';
 import type { Decoded, EntryCache } from '../../src/shared/storage/storageTypes';
 
 /**

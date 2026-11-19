@@ -1,45 +1,30 @@
-import type { DataManager } from '../../watchlist/services/DataManager';
-import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
-import type { GameDataManager } from '../../games/services/GameDataManager';
+import type { BackupFile, BackupParseResult } from '../contract';
+import type { TitleBackup, TitleReader } from '../../watchlist/contract';
+import type { ReadingSnapshot } from '../../reading/contract';
+import type { GameSnapshot } from '../../games/contract';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { HistoryEntry } from '../../../shared/domain/types';
-import { DEFAULT_SETTINGS, defaultGamesSettings } from '../../../shared/domain/types';
-import type { GamesData, MaybeTitle, ReadingData, HoardTitle } from '../../../shared/domain/types';
+import type { HistoryEntry } from '../../../shared/domain/history';
+import { defaultGamesSettings } from '../../../shared/domain/gameDefaults';
+import { DEFAULT_SETTINGS } from '../../../shared/domain/settingsDefaults';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
 import { withoutCredentials } from '../../../shared/api/jikanBase';
 import { SECRET_KEYS } from '../../../shared/storage/SecretStore';
 import { isRecord, toRecord } from '../../../shared/domain/sharedHelpers';
 import { at, readList, readRecord, readString } from '../../../shared/domain/read';
-import { normalizeSettings } from '../../../shared/domain/settingsNormalize';
-import { readColumns, readGamesSettings, readReadingSettings } from '../../../shared/domain/featureSettings';
+import { normalizeSettings } from '../../../shared/storage/settingsCodec';
+import { readColumns, readGamesSettings, readReadingSettings } from '../../../shared/storage/featureSettings';
 import { readBook, readGame, readGameGroup, readManga, readMaybe, readTitle } from '../../../shared/storage/entryReaders';
 
 export interface BackupManagers {
-	dataManager: DataManager;
-	readingDataManager: ReadingDataManager;
-	gameDataManager: GameDataManager;
+	dataManager: Pick<TitleReader, 'getTitle' | 'getTitles' | 'getMaybeTitles'> & TitleBackup;
+	readingDataManager: ReadingSnapshot;
+	gameDataManager: GameSnapshot;
 	historyManager: HistoryManager;
 	storage: {
 		local: LocalStore;
 		shared: SharedConfigStore;
 	};
-}
-
-/** JSON backup. `shared` is the base config, `local` the device-local settings without secrets (API keys live in Obsidian's secret storage). */
-export interface BackupFile {
-	version: 2;
-	exportedAt: string;
-	entries: {
-		titles: HoardTitle[];
-		maybe: MaybeTitle[];
-		reading: ReadingData;
-		games: GamesData;
-	};
-	shared: Record<string, unknown>;
-	/** Device-local settings without secrets; keys of an old backup only fill empty secret storage on restore. */
-	local: Record<string, unknown>;
-	history: HistoryEntry[];
 }
 
 /** A key restored or imported but not yet moved into secret storage must not reach the file either. */
@@ -82,11 +67,6 @@ export function withoutSecrets(b: BackupFile): BackupFile {
 	return { ...b, local };
 }
 
-/** Why a backup file was rejected; the settings tab renders it (`settings.backup.restore.errors.<code>`). */
-export type BackupErrorCode =
-	| 'parseJson' | 'notObject' | 'titlesMissing' | 'readingMissing' | 'gamesMissing' | 'sharedMissing'
-	| 'historyInvalid' | 'localInvalid' | 'unsupportedFormat';
-
 function readHistoryEntry(v: unknown): HistoryEntry | undefined {
 	const id = at(v, 'id');
 	const timestamp = at(v, 'timestamp');
@@ -96,7 +76,7 @@ function readHistoryEntry(v: unknown): HistoryEntry | undefined {
 }
 
 /** Validates the whole file before anything is written. */
-export function parseBackup(text: string): { backup: BackupFile } | { error: BackupErrorCode } {
+export function parseBackup(text: string): BackupParseResult {
 	let parsed: unknown;
 	try { parsed = JSON.parse(text); } catch { return { error: 'parseJson' }; }
 	if (!isRecord(parsed)) return { error: 'notObject' };

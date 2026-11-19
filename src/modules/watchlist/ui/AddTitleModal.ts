@@ -1,15 +1,16 @@
 import { App, Notice } from 'obsidian';
 import type { DataManager } from '../services/DataManager';
 import type { ApiService } from '../../../shared/api/ApiService';
-import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
-import type { HoardTitle, HoardGroup, Season } from '../../../shared/domain/types';
-import { getApiGroupForType, todayIso } from '../../../shared/domain/types';
+import type { SettingsReader, SettingsWriter } from '../../settings/contract';
+import type { HoardGroup, HoardTitle, Season } from '../contract';
+import { todayIso } from '../../../shared/domain/date';
+import { getApiGroupForType } from '../../../shared/domain/titles';
 import { completedEpisodes, newTitle } from '../../../shared/domain/entryFactories';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 import { t } from '../../../shared/i18n';
 import { found, type LookupResult } from '../../../shared/api/lookup';
 import { priorityLabel, statusLabel } from '../../../shared/i18n/labels';
-import { renderSearchResultRow } from '../../../shared/ui/SearchThumbnail';
+import { renderSearchResultRow } from '../../../design-system/SearchThumbnail';
 import {
 	episodesLabel,
 	fillMediaFields,
@@ -17,16 +18,17 @@ import {
 	resultIdKeys,
 	searchTitles,
 	titlePickerBase,
+	type MediaFields,
 	type TitlePick,
 	type TitleSearchApi,
 	type TitleSearchResult,
-} from './titleSearch';
-import { SearchFormModal, type SearchPickerOptions } from '../../../shared/ui/SearchFormModal';
+} from '../../../shared/services/titleSearch';
+import { SearchFormModal, type SearchPickerOptions } from '../../../design-system/SearchFormModal';
 import { LibraryIndex } from '../../../shared/services/LibraryIndex';
 import { effectiveMediaSource } from '../../../shared/api/apiSources';
-import { createDatePicker } from '../../../shared/ui/DatePicker';
-import { renderStarRating } from '../../../shared/ui/StarRating';
-import { blockDuplicate, createDuplicateGuard } from '../../../shared/ui/DuplicateGuard';
+import { createDatePicker } from '../../../design-system/DatePicker';
+import { renderStarRating } from '../../../design-system/StarRating';
+import { blockDuplicate, createDuplicateGuard } from '../../../design-system/DuplicateGuard';
 import {
 	makeCell,
 	makeRow as makeFormRow,
@@ -35,8 +37,7 @@ import {
 	renderMediaFields,
 	resetForm,
 	type GroupPickerState,
-	type MediaFields,
-} from '../../../shared/ui/FormCells';
+} from '../../../design-system/FormCells';
 
 export type AddTitleStore = Pick<
 	DataManager,

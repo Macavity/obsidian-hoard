@@ -5,7 +5,7 @@ import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteW
 import { ChangeNotifier } from '../../../shared/services/changeListeners';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import type { EntryIndex } from '../../../shared/storage/EntryIndex';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
 import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
@@ -16,23 +16,17 @@ import { FOLDERS } from '../../../shared/domain/typeName';
 import { AIRTIME_PROPS, COMMON_PROPS, READING_PROPS, CUSTOM_FIELD_PREFIX, columnNameTaken, customFieldKey } from '../../../shared/storage/properties';
 import { decodeBook, decodeManga, encodeBook, encodeManga } from '../../../shared/storage/readingCodec';
 import type { Fm } from '../../../shared/storage/storageTypes';
-import {
-	Book,
-	Manga,
-	ReadingCustomColumn,
-	ReadingData,
-	ReadingSettings,
-	DEFAULT_READING_SETTINGS,
-	isReleaseDateFuture,
-	todayIso,
-} from '../../../shared/domain/types';
+import type {
+	Book, Manga, ReadingCustomColumn, ReadingData, ReadingItem, ReadingKind, ReadingReader, ReadingSettings,
+	ReadingSettingsAccess, ReadingSnapshot, ReadingWriter,
+} from '../contract';
+import { isReleaseDateFuture, todayIso } from '../../../shared/domain/date';
+import { DEFAULT_READING_SETTINGS } from '../../../shared/domain/reading';
 import { omit, slugify } from '../../../shared/domain/sharedHelpers';
 import { readRecord } from '../../../shared/domain/read';
-import { readColumns, readReadingSettings } from '../../../shared/domain/featureSettings';
+import { readColumns, readReadingSettings } from '../../../shared/storage/featureSettings';
 
-export type ReadingKind = 'book' | 'manga';
 
-export type ReadingItem = Book | Manga;
 
 /** Keys both kinds can emit; the full rewrite deletes the ones the encoder omits. */
 const COMMON_KEYS: readonly string[] = [
@@ -73,7 +67,8 @@ export interface ReadingUpcomingSync {
  * to the note via processFrontMatter and only touch keys whose encoded value changed. Reading
  * settings and table columns live in the shared config (Hoard.base).
  */
-export class ReadingDataManager extends ChangeNotifier {
+export class ReadingDataManager extends ChangeNotifier
+	implements ReadingReader, ReadingWriter, ReadingSettingsAccess, ReadingSnapshot {
 
 	private settings: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
 	private bookColumns: ReadingCustomColumn[] = [];

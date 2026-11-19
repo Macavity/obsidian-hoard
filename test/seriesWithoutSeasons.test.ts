@@ -3,7 +3,7 @@ import { Notice } from 'obsidian';
 import { setupDataManager } from './helpers/setupDataManager';
 import { tick } from './helpers/common';
 import type { LookupResult } from '../src/shared/api/lookup';
-import type { Season } from '../src/shared/domain/types';
+import type { Season } from '../src/modules/watchlist/contract';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 const NOTE = '---\nName: N\nType: TV Show\nExternal ID: tmdb:tv:1\nTotal Episodes: 10\n---\n';

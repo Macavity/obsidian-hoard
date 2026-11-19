@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestUrl } from 'obsidian';
 import { PosterService } from '../src/shared/api/PosterService';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../src/shared/domain/types';
+import type { HoardTitle } from '../src/modules/watchlist/contract';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
 import type { ApiService } from '../src/shared/api/ApiService';
 import { FAILED, NOT_FOUND } from '../src/shared/api/lookup';
 import { setupDataManager } from './helpers/setupDataManager';
-import { buildPosterCard } from '../src/shared/ui/PosterCard';
+import { buildPosterCard } from '../src/design-system/PosterCard';
 import { movieNote, setupListTab } from './helpers/setupListTab';
 import type { DataManager } from '../src/modules/watchlist/services/DataManager';
 

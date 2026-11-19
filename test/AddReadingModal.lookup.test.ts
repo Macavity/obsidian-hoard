@@ -1,4 +1,4 @@
-import { searchBooks } from '../src/modules/covers/services/coverRefresh';
+import { searchBooks } from '../src/shared/services/coverRefresh';
 import { describe, expect, it, vi } from 'vitest';
 import { AddReadingModal, type ReadingMode } from '../src/modules/reading/ui/AddReadingModal';
 import { t } from '../src/shared/i18n';

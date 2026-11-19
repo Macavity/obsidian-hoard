@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
 import { El } from '../helpers/fakeEl';
-import { renderHeaderToolbar, renderToolbarWithMobileToggle } from '../../src/shared/ui/MobileToolbar';
+import { renderHeaderToolbar, renderToolbarWithMobileToggle } from '../../src/design-system/MobileToolbar';
 
 const asEl = (e: El): HTMLElement => e as unknown as HTMLElement;
 const setMobile = (on: boolean): void => { (Platform as { isMobile: boolean }).isMobile = on; };

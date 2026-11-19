@@ -1,7 +1,7 @@
 import { WorkspaceLeaf } from 'obsidian';
 import { fakeSettings } from './fakeSettings';
 import { HoardView, type TabBadge, type TabFactory, type TabName } from '../../src/app/HoardView';
-import type { TabInstance } from '../../src/shared/ui/TabInstance';
+import type { TabInstance } from '../../src/design-system/TabInstance';
 
 /** A tab that renders nothing. */
 const stubTab = (): TabInstance => ({ render: () => {} });

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { VirtualScroller } from '../src/shared/ui/VirtualScroller';
-import type { GridMetrics, VirtualGrid } from '../src/shared/ui/VirtualGrid';
+import { VirtualScroller } from '../src/design-system/VirtualScroller';
+import type { GridMetrics, VirtualGrid } from '../src/design-system/VirtualGrid';
 
 const metricsOf = (rowHeight: number): GridMetrics => ({ rowHeight }) as GridMetrics;
 

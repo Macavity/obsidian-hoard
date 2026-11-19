@@ -1,7 +1,8 @@
-import { READING_STATUSES } from '../domain/types';
-import type {
-	AirtimeRecurrence, Book, EntryAirtime, Game, GameGroup, HoardTitle, Manga, MaybeTitle, ReadingStatus, TitleOverrides,
-} from '../domain/types';
+import { READING_STATUSES } from '../domain/reading';
+import type { AirtimeRecurrence, EntryAirtime } from '../../modules/airtime/contract';
+import type { Game, GameGroup } from '../../modules/games/contract';
+import type { Book, Manga, ReadingStatus } from '../../modules/reading/contract';
+import type { HoardTitle, MaybeTitle, TitleOverrides } from '../../modules/watchlist/contract';
 import { newBook, newGame, newManga, newTitle } from '../domain/entryFactories';
 import { readSeason } from './readCache';
 import { at, readList, readOptionalNumber, readOptionalString, readString, readStringList } from '../domain/read';

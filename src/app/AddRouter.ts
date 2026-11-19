@@ -2,7 +2,7 @@ import type { OpenAddTitle } from '../modules/watchlist/ui/AddTitleModal';
 import type { OpenAddReading } from '../modules/reading/ui/AddReadingModal';
 import type { OpenAddGame } from '../modules/games/ui/AddGameModal';
 import type { OpenDraftChoice } from '../modules/drafts/ui/DraftChoiceModal';
-import type { OpenAddRoute } from '../shared/ui/addRoute';
+import type { OpenAddRoute } from '../shared/services/addRoute';
 
 /**
  * Builds the Watchlist / Book / Manga / Game chooser for a loose title string, then the matching Add

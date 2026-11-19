@@ -1,12 +1,12 @@
 import type { App, Plugin } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../shared/services/SettingsService';
+import type { SettingsReader, SettingsWriter } from '../../modules/settings/contract';
 import type { ApiService } from '../../shared/api/ApiService';
 import type { DataManager } from '../../modules/watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';
-import type { CoverRefresher } from '../../modules/covers/services/coverRefresh';
-import type { ImportProgress } from '../../shared/domain/types';
-import { confirmWith } from '../../shared/ui/ConfirmModal';
+import type { CoverRefresher } from '../../shared/services/coverRefresh';
+import type { ImportProgress } from '../../modules/watchlist/contract';
+import { confirmWith } from '../../design-system/ConfirmModal';
 import {
 	buildBackup,
 	parseBackup,

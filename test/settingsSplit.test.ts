@@ -6,8 +6,8 @@ import { SecretStore } from '../src/shared/storage/SecretStore';
 import { LocalStore } from '../src/shared/storage/LocalStore';
 import { SharedConfigStore } from '../src/shared/storage/SharedConfigStore';
 import { VaultLayout } from '../src/shared/storage/VaultLayout';
-import { composeSettings, persistSettings } from '../src/shared/services/settingsSplit';
-import { DEFAULT_SETTINGS } from '../src/shared/domain/types';
+import { composeSettings, persistSettings } from '../src/modules/settings/services/settingsSplit';
+import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
 
 /** A base whose hoard block holds no setting yet. */
 const BARE_BASE = 'hoard:\n  version: 1\n';

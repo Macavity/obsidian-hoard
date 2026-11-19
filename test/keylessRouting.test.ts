@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { effectiveMediaSource } from '../src/shared/api/apiSources';
 import { LibraryIndex } from '../src/shared/services/LibraryIndex';
-import { resultIdKeys } from '../src/modules/watchlist/ui/titleSearch';
-import type { Game, MediaSearchResult } from '../src/shared/domain/types';
+import { resultIdKeys } from '../src/shared/services/titleSearch';
+import type { Game } from '../src/modules/games/contract';
+import type { MediaSearchResult } from '../src/modules/watchlist/contract';
 import type { GameDetailsResult, GameSearchResult } from '../src/shared/api/ApiService';
 import { AddGameModal } from '../src/modules/games/ui/AddGameModal';
 import { fakeSettings } from './helpers/fakeSettings';

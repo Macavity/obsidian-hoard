@@ -1,20 +1,22 @@
 import { App, Modal, Notice, Platform, setIcon } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import type { GameDataManager } from '../services/GameDataManager';
-import { Game, GameGroup, GAME_AUTO_STATUS, formatTime, parsePlaytimeInput } from '../../../shared/domain/types';
-import { buildPosterCard } from '../../../shared/ui/PosterCard';
+import type { Game, GameGroup } from '../contract';
+import { formatTime, parsePlaytimeInput } from '../../../shared/domain/format';
+import { GAME_AUTO_STATUS } from '../../../shared/domain/gameDefaults';
+import { buildPosterCard } from '../../../design-system/PosterCard';
 import { rawgResizedCover, steamAppIdFromUrl, type ApiService } from '../../../shared/api/ApiService';
-import { renderStarRating } from '../../../shared/ui/StarRating';
-import { renderTagPill, renderTagChips } from '../../../shared/ui/StatusDropdown';
-import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
-import { renderModePill } from '../../../shared/ui/ModePill';
-import { appendNoteLinkButton, type NoteFiles } from '../../../shared/ui/NoteLinkButton';
-import { createDatePicker } from '../../../shared/ui/DatePicker';
-import { pinModalFooter } from '../../../shared/ui/StickyModal';
+import { renderStarRating } from '../../../design-system/StarRating';
+import { renderTagPill, renderTagChips } from '../../../design-system/StatusDropdown';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
+import { renderModePill } from './ModePill';
+import { appendNoteLinkButton, type NoteFiles } from '../../../design-system/NoteLinkButton';
+import { createDatePicker } from '../../../design-system/DatePicker';
+import { pinModalFooter } from '../../../design-system/StickyModal';
 import { t } from '../../../shared/i18n';
 import { gameStatusLabel, priorityLabel } from '../../../shared/i18n/labels';
-import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader, wireInlineEdit } from '../../../shared/ui/detailShared';
-import { createFavoriteButton, markDetailRoot, markViewRoot } from '../../../shared/ui/detailFrame';
+import { paintFavoriteButton, renderEditableTitle, renderGroupDetailHeader, wireInlineEdit } from '../../../design-system/detailShared';
+import { createFavoriteButton, markDetailRoot, markViewRoot } from '../../../design-system/detailFrame';
 
 export type GameDetailApi = Pick<ApiService, 'hasSteamCredentials' | 'getSteamOwnedGames' | 'getSteamAchievements'>;
 

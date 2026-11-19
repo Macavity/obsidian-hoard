@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { describe, expect, it } from 'vitest';
@@ -16,15 +16,24 @@ const importFiles = readdirSync(join(root, 'src/modules/import/services/watchlog
 	.filter((f) => f.endsWith('.ts'))
 	.map((f) => `src/modules/import/services/watchlog/${f}`);
 
+// the domain model: shared helpers and the module contracts
+const domainFiles = readdirSync(join(root, 'src/shared/domain'))
+	.filter((f) => f.endsWith('.ts'))
+	.map((f) => `src/shared/domain/${f}`);
+const contractFiles = readdirSync(join(root, 'src/modules'))
+	.map((m) => `src/modules/${m}/contract.ts`)
+	.filter((f) => existsSync(join(root, f)));
+
 const files = [
 	...storageFiles,
 	...importFiles,
-	'src/shared/domain/types.ts',
+	...domainFiles,
+	...contractFiles,
 	'src/modules/watchlist/services/DataManager.ts',
 	'src/modules/reading/services/ReadingDataManager.ts',
 	'src/modules/games/services/GameDataManager.ts',
 	'src/shared/services/HistoryManager.ts',
-	'src/shared/services/settingsSplit.ts',
+	'src/modules/settings/services/settingsSplit.ts',
 	'src/modules/backup/services/backup.ts',
 	'src/modules/airtime/services/airtimeScheduler.ts',
 ];

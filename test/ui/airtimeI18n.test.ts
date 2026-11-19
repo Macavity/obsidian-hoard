@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Platform } from 'obsidian';
 import { setLocale } from '../../src/shared/i18n';
 import { formatDaysWithMonths, getDetailedCountdown } from '../../src/modules/airtime/ui/AirtimeTab';
-import { renderToolbarWithMobileToggle } from '../../src/shared/ui/MobileToolbar';
+import { renderToolbarWithMobileToggle } from '../../src/design-system/MobileToolbar';
 import { El } from '../helpers/fakeEl';
 
 afterEach(() => {

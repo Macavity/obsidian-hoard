@@ -1,5 +1,5 @@
-import { formatDateDisplay } from '../domain/types';
-import type { HistoryAction, HistoryEntry, HistorySource } from '../domain/types';
+import { formatDateDisplay } from '../domain/date';
+import type { HistoryAction, HistoryEntry, HistorySource } from '../domain/history';
 import type { HistoryStore } from '../storage/HistoryStore';
 
 /**

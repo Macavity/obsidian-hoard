@@ -1,11 +1,11 @@
 import type { App } from 'obsidian';
-import type { SettingsReader } from '../../shared/services/SettingsService';
+import type { SettingsReader } from '../../modules/settings/contract';
 import type { HistoryManager } from '../../shared/services/HistoryManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
-import type { searchBooks } from '../../modules/covers/services/coverRefresh';
-import { confirmWith } from '../../shared/ui/ConfirmModal';
-import { searchHelpWith } from '../../shared/ui/SearchHelpModal';
-import { RowsCustomizeModal } from '../../shared/ui/RowsCustomizeModal';
+import type { searchBooks } from '../../shared/services/coverRefresh';
+import { confirmWith } from '../../design-system/ConfirmModal';
+import { searchHelpWith } from '../../design-system/SearchHelpModal';
+import { RowsCustomizeModal } from '../../design-system/RowsCustomizeModal';
 import { AddReadingModal, VaultFilePicker, type AddReadingApi, type OpenAddReading } from '../../modules/reading/ui/AddReadingModal';
 import {
 	ReadingDetailModal,

@@ -1,16 +1,22 @@
-import type { TabInstance } from '../../../shared/ui/TabInstance';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { TitleReader, TitleStats } from '../../watchlist/contract';
+import type { ReadingReader } from '../../reading/contract';
+import type { GameReader } from '../../games/contract';
+import type { TabInstance } from '../../../design-system/TabInstance';
+import type { SettingsReader } from '../../settings/contract';
 import { t, type TranslationKey } from '../../../shared/i18n';
 import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
 import en from '../../../shared/i18n/en';
-import type { DataManager } from '../../watchlist/services/DataManager';
-import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
-import type { GameDataManager } from '../../games/services/GameDataManager';
-import type { Book, Game, Manga, HoardTitle } from '../../../shared/domain/types';
-import { formatTime, getTitleCredits, getReadingTypeColor, GAME_FINISHED_STATUS, bookPageEquivalents, formatCount } from '../../../shared/domain/types';
-import type { CreditsField } from '../../../shared/domain/types';
-import { renderTypeBadge } from '../../../shared/ui/typeBadge';
-import { createIconButton } from '../../../shared/ui/IconButton';
+import type { Game } from '../../games/contract';
+import type { Book, Manga } from '../../reading/contract';
+import type { HoardTitle } from '../../watchlist/contract';
+import { bookPageEquivalents } from '../domain/pageEquivalents';
+import { formatCount, formatTime } from '../../../shared/domain/format';
+import { GAME_FINISHED_STATUS } from '../../../shared/domain/gameDefaults';
+import { getReadingTypeColor } from '../../../shared/domain/reading';
+import { getTitleCredits } from '../../../shared/domain/titles';
+import type { CreditsField } from '../../watchlist/contract';
+import { renderTypeBadge } from '../../../design-system/typeBadge';
+import { createIconButton } from '../../../design-system/IconButton';
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 45; // r=45
 
@@ -59,10 +65,10 @@ function statTypeLabel(type: string): string {
 	return typeLabel(type);
 }
 
-export type DashboardTitles = Pick<
-	DataManager,
+export type DashboardTitles = Pick<TitleReader, 'getTitles'> & Pick<
+	TitleStats,
 	| 'calcTimeWatched' | 'getNextUnwatchedEpisode' | 'getProgress' | 'getRecentlyAdded'
-	| 'getRecentlyWatched' | 'getTitles' | 'getTotalTimeRemaining' | 'getTotalTimeWatched'
+	| 'getRecentlyWatched' | 'getTotalTimeRemaining' | 'getTotalTimeWatched'
 >;
 
 export class DashboardTab implements TabInstance {
@@ -79,8 +85,8 @@ export class DashboardTab implements TabInstance {
 		container: HTMLElement,
 		private readonly settings: SettingsReader,
 		private readonly titles: DashboardTitles,
-		private readonly reading: Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>,
-		private readonly games: Pick<GameDataManager, 'getGames'>,
+		private readonly reading: Pick<ReadingReader, 'getBooks' | 'getMangaList'>,
+		private readonly games: Pick<GameReader, 'getGames'>,
 	) {
 		this.container = container;
 	}

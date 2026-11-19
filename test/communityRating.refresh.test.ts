@@ -3,7 +3,7 @@ import { Notice as RealNotice } from 'obsidian';
 import { refreshCommunityRating, renderCommunityRating } from '../src/modules/watchlist/ui/CommunityRating';
 import { makeTitle } from './helpers/setupDataManager';
 import { fakeSettings } from './helpers/fakeSettings';
-import type { AnimeSearchResult, HoardTitle } from '../src/shared/domain/types';
+import type { AnimeSearchResult, HoardTitle } from '../src/modules/watchlist/contract';
 
 const Notice = RealNotice as unknown as { shown: string[] };
 

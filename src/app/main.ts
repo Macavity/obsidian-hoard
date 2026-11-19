@@ -1,12 +1,16 @@
 import { App, Editor, FuzzySuggestModal, Notice, Platform, Plugin, getLanguage, parseYaml, setIcon, stringifyYaml } from 'obsidian';
-import { CoverRefresher, resolveGameCover, fetchReadingCoverById, firstBookCover, searchBooks } from '../modules/covers/services/coverRefresh';
+import { CoverRefresher, resolveGameCover, fetchReadingCoverById, firstBookCover, searchBooks } from '../shared/services/coverRefresh';
 import { CustomListManager } from '../modules/custom-lists/services/CustomListManager';
 import { setLocale, t } from '../shared/i18n';
 import { statusLabel, typeLabel } from '../shared/i18n/labels';
 import type { ManagerNotice } from '../shared/storage/storageTypes';
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL, HoardPluginSettings, setActiveDateFormat } from '../shared/domain/types';
-import { cardSizeToMinWidth } from '../shared/ui/VirtualGrid';
-import type { CardStyleTab, CustomList, ImportProgress } from '../shared/domain/types';
+import type { HoardPluginSettings } from '../modules/settings/contract';
+import { setActiveDateFormat } from '../shared/domain/date';
+import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../shared/domain/settingsDefaults';
+import { cardSizeToMinWidth } from '../design-system/VirtualGrid';
+import type { CustomList } from '../modules/custom-lists/contract';
+import type { CardStyleTab } from '../modules/settings/contract';
+import type { ImportProgress } from '../modules/watchlist/contract';
 import { DataManager } from '../modules/watchlist/services/DataManager';
 import { ReadingDataManager } from '../modules/reading/services/ReadingDataManager';
 import { GameDataManager } from '../modules/games/services/GameDataManager';
@@ -41,11 +45,11 @@ import type { WatchLogSourceKind, WatchLogSources } from '../modules/import/serv
 import { createImporter } from '../modules/import/services/watchlog/importer';
 import { getDecision, pendingSources } from '../modules/import/services/watchlog/onboardingState';
 import type { ImportContext } from '../modules/import/services/watchlog/schema1Types';
-import { composeSettings, persistSettings } from '../shared/services/settingsSplit';
+import { composeSettings, persistSettings } from '../modules/settings/services/settingsSplit';
 import { toRecord } from '../shared/domain/sharedHelpers';
 import { resolveJikanEndpoint } from '../shared/api/jikanBase';
 import { emitDataChanged, onDataChanged } from '../shared/services/changeSignal';
-import { SettingsService } from '../shared/services/SettingsService';
+import { SettingsService } from '../modules/settings/services/SettingsService';
 import { EntryNotes } from '../shared/services/EntryNotes';
 
 /** Root folder created on a fresh install (no `.base` with a `hoard:` key found). */

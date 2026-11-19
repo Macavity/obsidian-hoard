@@ -1,5 +1,5 @@
 import { HoardSettingsTab, type SettingsTabHost, type SettingsTabModals } from '../../src/modules/settings/ui/SettingsTab';
-import { confirmWith } from '../../src/shared/ui/ConfirmModal';
+import { confirmWith } from '../../src/design-system/ConfirmModal';
 
 /** Fakes for the settings pane; whatever a test leaves out is an empty object. The host and modal ports are flat here. */
 export type SettingsTabFakes = Partial<SettingsTabHost> & Partial<SettingsTabModals> & {

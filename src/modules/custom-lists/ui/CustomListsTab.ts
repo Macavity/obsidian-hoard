@@ -1,19 +1,20 @@
-import type { TabInstance } from '../../../shared/ui/TabInstance';
+import type { TitleReader, TitleStats } from '../../watchlist/contract';
+import type { ReadingReader } from '../../reading/contract';
+import type { GameReader } from '../../games/contract';
+import type { TabInstance } from '../../../design-system/TabInstance';
 import { App, Component, Modal, Notice, Platform, normalizePath, Setting, type EventRef, type TAbstractFile, type Vault } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../../shared/services/SettingsService';
-import type { DataManager } from '../../watchlist/services/DataManager';
-import type { ReadingDataManager } from '../../reading/services/ReadingDataManager';
-import type { GameDataManager } from '../../games/services/GameDataManager';
+import type { SettingsReader, SettingsWriter } from '../../settings/contract';
 import type { CustomListManager } from '../services/CustomListManager';
-import type { CustomListColumn, CustomListRow, CustomList } from '../../../shared/domain/types';
-import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/types';
-import type { OpenConfirm } from '../../../shared/ui/ConfirmModal';
-import { openColorPicker, deriveFillColor, deriveBorderColor } from '../../../shared/ui/ColorPicker';
-import { openStatusDropdown } from '../../../shared/ui/StatusDropdown';
-import type { OpenAddRoute } from '../../../shared/ui/addRoute';
-import { cloneColumns, renderCancelSave, renderColumnsEditor } from '../../../shared/ui/ColumnsEditor';
+import type { CustomList } from '../contract';
+import type { CustomListColumn, CustomListRow } from '../../../shared/domain/columns';
+import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/tags';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
+import { openColorPicker, deriveFillColor, deriveBorderColor } from '../../../design-system/ColorPicker';
+import { openStatusDropdown } from '../../../design-system/StatusDropdown';
+import type { OpenAddRoute } from '../../../shared/services/addRoute';
+import { cloneColumns, renderCancelSave, renderColumnsEditor } from '../../../design-system/ColumnsEditor';
 import { t } from '../../../shared/i18n';
-import { createIconButton } from '../../../shared/ui/IconButton';
+import { createIconButton } from '../../../design-system/IconButton';
 import { statusLabel, typeLabel, readingStatusLabel } from '../../../shared/i18n/labels';
 
 /** Row name, trimmed — the index signature types it loosely. */
@@ -450,9 +451,9 @@ export class CustomListsTab implements TabInstance {
 		private readonly settings: SettingsReader & SettingsWriter,
 		createListManager: CreateListManager,
 		private readonly vault: Pick<Vault, 'on' | 'offref'>,
-		private readonly titles: Pick<DataManager, 'getTitles' | 'calcTimeRemainingForModal'>,
-		private readonly reading: Pick<ReadingDataManager, 'getBooks' | 'getMangaList'>,
-		private readonly games: Pick<GameDataManager, 'getGames'>,
+		private readonly titles: Pick<TitleReader, 'getTitles'> & Pick<TitleStats, 'calcTimeRemainingForModal'>,
+		private readonly reading: Pick<ReadingReader, 'getBooks' | 'getMangaList'>,
+		private readonly games: Pick<GameReader, 'getGames'>,
 		private readonly modals: CustomListsTabModals,
 	) {
 		this.container = container;

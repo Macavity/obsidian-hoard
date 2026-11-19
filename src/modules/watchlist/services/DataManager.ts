@@ -2,13 +2,23 @@ import { TFile, stringifyYaml } from 'obsidian';
 import type { TAbstractFile } from 'obsidian';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import { toEntryAirtime } from '../../../shared/domain/airtime';
-import type { DraftPersistState, Season, HoardTitle, HoardGroup, AirtimeEntry, AirtimeSchedule, EntryAirtime, MaybeTitle, RecommendedDaily, SavedFilterPreset, Book, Manga, Game } from '../../../shared/domain/types';
+import type { AirtimeEntry, AirtimeSchedule, EntryAirtime } from '../../airtime/contract';
+import type { DraftPersistState } from '../../drafts/contract';
+import type { Game } from '../../games/contract';
+import type { Book, Manga } from '../../reading/contract';
+import type {
+	AirtimeStore, DraftStore, HoardGroup, HoardTitle, MaybeTitle, SavedFilterPreset, Season,
+	TitleBackup, TitleMaintenance, TitleReader, TitleStats, TitleWriter,
+} from '../contract';
+import type { RecommendedDaily } from '../../../shared/domain/rows';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import { formatHistoryDate } from '../../../shared/services/HistoryManager';
-import { pruneManualCredits, normalizeManualCredits, isReleaseDateFuture, todayIso, GAME_AUTO_STATUS } from '../../../shared/domain/types';
-import type { CreditsField } from '../../../shared/domain/types';
+import { normalizeManualCredits, pruneManualCredits } from '../domain/titleHelpers';
+import { isReleaseDateFuture, todayIso } from '../../../shared/domain/date';
+import { GAME_AUTO_STATUS } from '../../../shared/domain/gameDefaults';
+import type { CreditsField } from '../contract';
 import { newTitle } from '../../../shared/domain/entryFactories';
 import type { AnyEntry, EntryIndex } from '../../../shared/storage/EntryIndex';
 import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBaseline } from '../../../shared/storage/baseline';
@@ -71,7 +81,8 @@ const COUNTED_REMAINING: readonly string[] = ['Plan to watch', 'Watching'];
  * Watchlist titles, backed by one note per title. Reads come from the EntryIndex (frontmatter) plus
  * the LocalStore cache; writes go to the note via processFrontMatter and only touch what changed.
  */
-export class DataManager extends ChangeNotifier {
+export class DataManager extends ChangeNotifier
+	implements TitleReader, TitleStats, TitleWriter, AirtimeStore, DraftStore, TitleMaintenance, TitleBackup {
 	private historyManager: HistoryManager | null = null;
 
 	// Mutable copies handed to the UI, one per id. `src` is the index entry the copy was made from:

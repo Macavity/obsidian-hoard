@@ -1,26 +1,26 @@
+import type { TitleWriter } from '../../watchlist/contract';
 import { App, Notice } from 'obsidian';
-import type { SettingsReader } from '../../../shared/services/SettingsService';
+import type { SettingsReader } from '../../settings/contract';
 import { t } from '../../../shared/i18n';
-import type { DataManager } from '../../watchlist/services/DataManager';
-import type { MaybeTitle } from '../../../shared/domain/types';
-import { formatDateDisplay } from '../../../shared/domain/types';
+import type { MaybeTitle } from '../../watchlist/contract';
+import { formatDateDisplay } from '../../../shared/domain/date';
 import {
 	renderMediaFields,
 	resetForm,
-	type MediaFields,
-} from '../../../shared/ui/FormCells';
+} from '../../../design-system/FormCells';
 import {
 	episodesLabel,
 	fillMediaFields,
 	resolvePick,
 	searchTitles,
 	titlePickerBase,
+	type MediaFields,
 	type TitleSearchApi,
 	type TitleSearchResult,
-} from '../../watchlist/ui/titleSearch';
-import { SearchFormModal, type SearchPickerOptions } from '../../../shared/ui/SearchFormModal';
+} from '../../../shared/services/titleSearch';
+import { SearchFormModal, type SearchPickerOptions } from '../../../design-system/SearchFormModal';
 
-export type MaybeAddStore = Pick<DataManager, 'generateMaybeId' | 'addMaybeTitle'>;
+export type MaybeAddStore = Pick<TitleWriter, 'generateMaybeId' | 'addMaybeTitle'>;
 
 export interface MaybeAddOptions {
 	onAdded: () => void;

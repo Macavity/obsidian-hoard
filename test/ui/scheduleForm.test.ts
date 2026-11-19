@@ -6,7 +6,7 @@ import {
 	resolveScheduleMode,
 	renderScheduleModal,
 	type ScheduleFormState,
-} from '../../src/shared/ui/ScheduleForm';
+} from '../../src/modules/airtime/ui/ScheduleForm';
 
 const state = (over: Partial<ScheduleFormState> = {}): ScheduleFormState => ({
 	mode: 'single', recurrence: 'weekly', releaseDate: '', releaseTime: '', dayOfWeek: 6, dayOfMonth: 1, ...over,
