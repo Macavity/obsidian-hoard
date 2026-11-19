@@ -5,7 +5,7 @@ description: The fixed Title Case property names of entry notes per medium, the 
 source:
   - src/shared/storage/properties.ts
   - guide/migrate-notes/watchlog.md
-source_commit: 0bc1a4e
+source_commit: dd764b7
 ---
 
 # Property names

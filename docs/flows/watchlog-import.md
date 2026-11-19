@@ -6,7 +6,7 @@ source:
   - guide/migrate-notes/README.md
   - guide/migrate-notes/watchlog.md
   - guide/migrate-notes/library.md
-source_commit: HEAD
+source_commit: dd764b7
 ---
 
 # Migrating from another tracker

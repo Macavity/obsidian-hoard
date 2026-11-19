@@ -7,7 +7,7 @@ source:
   - src/modules/widgets/ui/InsertWidgetModal.ts
   - src/app/main.ts
   - guide/migrate-notes/watchlog.md
-source_commit: a08c524
+source_commit: dd764b7
 ---
 
 # Widgets
