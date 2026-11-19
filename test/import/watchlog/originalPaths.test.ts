@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { originalFolders, originalNotePath } from '../../../src/import/watchlog/originalPaths';
-import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
+import { originalFolders, originalNotePath } from '../../../src/modules/import/services/watchlog/originalPaths';
+import type { WatchLogData } from '../../../src/modules/import/services/watchlog/schema1Types';
 
 const data = (over: Record<string, unknown>): WatchLogData => ({ titles: [], groups: [], settings: {}, ...over });
 

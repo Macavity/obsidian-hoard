@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ReadingCsvModal } from '../src/ReadingCsvModal';
-import type { Book, Manga } from '../src/types';
-import type { ReadingCsvKind } from '../src/ReadingCsvChoiceModal';
+import { ReadingCsvModal } from '../src/modules/reading/ui/ReadingCsvModal';
+import type { Book, Manga } from '../src/modules/reading/domain/model';
+import type { ReadingCsvKind } from '../src/modules/reading/domain/model';
 import { clickByText, clickNext, shownNotices, uploadCsv, valueSelect } from './helpers/csvWizard';
 
 function setup(kind: ReadingCsvKind, defaultStatus?: string) {
@@ -18,7 +18,7 @@ function setup(kind: ReadingCsvKind, defaultStatus?: string) {
 		addMangaBatch: (c: Manga[]) => { manga.push(c); return Promise.resolve(); },
 		notifyChange,
 	};
-	const modal = new ReadingCsvModal({} as never, { readingDataManager } as never, kind, 'import');
+	const modal = new ReadingCsvModal({} as never, readingDataManager as never, { kind, mode: 'import' });
 	return { modal, books, manga, notifyChange };
 }
 

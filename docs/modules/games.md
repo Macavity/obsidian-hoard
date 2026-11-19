@@ -3,30 +3,42 @@ type: Module
 title: Games
 description: The game model and its text-encoded fields, how Steam sync matches and updates, and how covers are resolved.
 source:
-  - src/GameDataManager.ts
-  - src/storage/gameCodec.ts
-  - src/GamesTab.ts
-  - src/GameDetailModal.ts
-  - src/AddGameModal.ts
-  - src/GameScheduleModal.ts
-  - src/SteamSyncModal.ts
-  - src/ApiService.ts
-  - src/coverRefresh.ts
-  - src/entryFactories.ts
-source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
+  - src/modules/games/exports.ts
+  - src/modules/games/domain/model.ts
+  - src/modules/games/services/roles.ts
+  - src/modules/games/domain/steamSync.ts
+  - src/modules/games/services/GameDataManager.ts
+  - src/shared/storage/gameCodec.ts
+  - src/modules/games/ui/GamesTab.ts
+  - src/modules/games/ui/GameDetailModal.ts
+  - src/modules/games/ui/AddGameModal.ts
+  - src/modules/games/ui/SteamSyncModal.ts
+  - src/modules/airtime/ui/GameScheduleModal.ts
+  - src/shared/services/coverRefresh.ts
+  - src/modules/games/domain/gameDefaults.ts
+  - src/modules/games/domain/newGame.ts
+source_commit: cc203bf
 ---
 
 # Games
 
-One note per game under `Games/`. [GameDataManager.ts](../../src/GameDataManager.ts) owns copies,
-writes, derived groups, Upcoming sync and history; [gameCodec.ts](../../src/storage/gameCodec.ts)
-maps properties to `Game`. Writes follow [flows/entry-write](../flows/entry-write.md); one
+One note per game under `Games/`. [exports.ts](../../src/modules/games/exports.ts) is the module's public surface (what other modules
+and `shared` may import); it only re-exports by name: the types (`domain/model.ts`) `Game`, `GamesSettings`, `GamesData`, `OpenSteamSync`, the roles (`services/roles.ts`) `GameReader`, `GameWriter`,
+`GameSettingsAccess`, `GameSnapshot` (backup), plus the values `GAME_AUTO_STATUS` / `GAME_FINISHED_STATUS` /
+`GAME_TBA_STATUS`, `defaultGamesSettings` (`domain/gameDefaults.ts`) and `newGame` (`domain/newGame.ts`). `SteamSyncUpdate` is module-internal
+(`domain/steamSync.ts`). [GameDataManager.ts](../../src/modules/games/services/GameDataManager.ts)
+`implements` the four roles and owns copies, writes, derived groups, Upcoming sync (through the injected
+`GameUpcomingSync`) and history; consumers outside the module (dashboard, drafts, custom lists, backup) type against
+the roles. [gameCodec.ts](../../src/shared/storage/gameCodec.ts) maps properties to `Game`. Writes follow [flows/entry-write](../flows/entry-write.md); one
 difference to reading: `flushViews` also diffs handed-out copies against their baseline, so an
-in-place mutation without a `*Silent` call is still written. UI: [GamesTab.ts](../../src/GamesTab.ts),
-[AddGameModal.ts](../../src/AddGameModal.ts) (Steam Store by default, RAWG or IGDB once keyed, per `effectiveGameSource`; never a "no API" panel),
-[GameDetailModal.ts](../../src/GameDetailModal.ts) (draft object, persisted on Save),
-[GameScheduleModal.ts](../../src/GameScheduleModal.ts) (single date, also sets `releaseDate`),
-[SteamSyncModal.ts](../../src/SteamSyncModal.ts) (from the Steam settings card).
+in-place mutation without a `*Silent` call is still written. UI, built in [wiring/games.ts](../../src/app/wiring/games.ts): [GamesTab.ts](../../src/modules/games/ui/GamesTab.ts),
+[AddGameModal.ts](../../src/modules/games/ui/AddGameModal.ts) (Steam Store by default, RAWG or IGDB once keyed, per `effectiveGameSource`; never a "no API" panel),
+[GameDetailModal.ts](../../src/modules/games/ui/GameDetailModal.ts) (draft object, persisted on Save),
+[GameScheduleModal.ts](../../src/modules/airtime/ui/GameScheduleModal.ts) (single date, also sets `releaseDate`),
+[SteamSyncModal.ts](../../src/modules/games/ui/SteamSyncModal.ts) (from the Steam settings card via `OpenSteamSync`);
+`ModePill.ts` (Solo / Co-op / Multi pill) is shared by the add and detail modals; the Rows shelf ids are `GAMES_ROWS_SHELVES` in `domain/gameShelves.ts`.
+
+Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pending edit, so an edit not yet written survives a rename ([entry id](../concepts/entry-id.md)).
 
 ## Model
 
@@ -63,7 +75,7 @@ in-place mutation without a `*Silent` call is still written. UI: [GamesTab.ts](.
 
 ## Search and add
 
-`AddGameModal.search` follows `effectiveGameSource` ([apiSources.ts](../../src/apiSources.ts)): the
+`AddGameModal.search` follows `effectiveGameSource` ([apiSources.ts](../../src/shared/api/apiSources.ts)): the
 chosen source if keyed, else the keyless **Steam Store** search (`searchSteamStore`, apps only, rows
 with the portrait capsule). A pick fetches details by the row's own source (Steam: `appdetails`
 mapped through `getSteamStoreDetails`; missing details fall back to the search row) and stores `apiSource` + `apiId`; a Steam pick also sets
@@ -72,21 +84,24 @@ Steam store link. See [api layer](../architecture/api-layer.md).
 
 ## Covers
 
-`resolveGameCover` ([coverRefresh.ts](../../src/coverRefresh.ts)): a game with stored source and
+`resolveGameCover` ([coverRefresh.ts](../../src/shared/services/coverRefresh.ts), injected into the tab): a game with stored source and
 id uses that source's cover regardless of the setting (Steam: `steamLibraryCover`, stored only after
 `steamCoverExists` confirms the capsule with a HEAD request; a missing one leaves the cover unchanged); otherwise a title search in the effective source, first result with a cover
-wins. Only the cover is persisted, only when empty; the found id is
-not written. "Refresh all" is id-only. IGDB uses a cached Twitch token; RAWG images are rewritten
+wins and returns its source and id too. The lazy fetch of the tab (cards without a cover) persists only the
+cover, and only when the note's `Cover` is empty (`updateCoverUrl`; `updateCoverAndSource` drops the found
+source and id); the card menu's refresh replaces an existing cover and also stores the found source and id.
+"Refresh all" (`CoverRefresher`) is id-only and writes only the cover. IGDB uses a cached Twitch token; RAWG images are rewritten
 to a smaller size for display.
 
 ## Where to change what
 
 | Change | Place |
 |---|---|
-| Property format, playtime, achievements | `gameCodec.ts`; `formatTime`, `parsePlaytimeInput` in `types.ts` |
-| Default statuses, genres, platforms | `defaultGamesSettings()` in `types.ts` |
+| Property format, playtime, achievements | `gameCodec.ts`; `formatTime`, `parsePlaytimeInput` in `shared/domain/format.ts` |
+| Default statuses, genres, platforms | `defaultGamesSettings()` in `domain/gameDefaults.ts` |
 | Release status and Upcoming | `applyReleaseStatus`, `syncUpcoming` in the manager |
-| Defaults of a new game | `newGame` in [entryFactories.ts](../../src/entryFactories.ts); the WatchLog import keeps its own |
+| Defaults of a new game | `newGame` in [domain/newGame.ts](../../src/modules/games/domain/newGame.ts); the WatchLog import keeps its own |
+| Anything other modules or `shared` import from games | `exports.ts`; the changed surface goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed |
 | Steam matching, and what an imported game takes from library and storefront | `matchAgainstLibrary`, `buildGame`, `storefrontFields` in `SteamSyncModal.ts` |
 | Steam, RAWG, IGDB requests | `ApiService.ts`; Steam Store mapping and `steamLibraryCover` in `steamStoreApi.ts` |
 | Recommended and Recently played shelves | `getRecommendedGames`, `getRecentlyPlayedGames` in `GamesTab.ts` |

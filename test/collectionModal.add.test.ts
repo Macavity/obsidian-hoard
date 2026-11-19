@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CollectionModal } from '../src/CollectionModal';
-import type { HoardGroup, HoardTitle, MediaSearchResult, TmdbCollectionDetail } from '../src/types';
+import { CollectionModal } from '../src/modules/watchlist/ui/CollectionModal';
+import { fakeSettings } from './helpers/fakeSettings';
+import type { HoardGroup, HoardTitle, MediaSearchResult, TmdbCollectionDetail } from '../src/modules/watchlist/domain/model';
 
 const NOW = '2026-03-04T05:06:07.000Z';
 
@@ -40,15 +41,18 @@ function setup(opts: Opts) {
 		addGroup: recordGroup('addGroup'),
 		updateGroup: recordGroup('updateGroup'),
 	};
-	const plugin = {
-		dataManager,
-		settings: {
+	const deps = {
+		app: {} as never,
+		titles: dataManager,
+		settings: fakeSettings({
 			statuses: opts.statuses ?? [{ name: 'Watching' }, { name: 'Plan to watch' }],
 			priorities: opts.priorities ?? [{ name: 'High' }, { name: 'Medium' }],
-		},
-		apiService: { getTmdbMovieDetails: (id: string) => Promise.resolve(opts.details[id] ?? null) },
+		}),
+		api: { getTmdbMovieDetails: (id: string) => Promise.resolve(opts.details[id] ?? null) },
 	};
-	const modal = new CollectionModal({} as never, plugin as never, collection, 'Movie', () => {});
+	const modal = new CollectionModal(deps.app, deps.settings as never, deps.titles as never, deps.api as never, {
+		collection, movieType: 'Movie', onOpenTitle: () => {},
+	});
 	const internals = modal as unknown as { selected: Set<number>; createGroup: boolean; addSelected: () => Promise<void> };
 	return {
 		batches,

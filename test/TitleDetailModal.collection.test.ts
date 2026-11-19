@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
-import { TitleDetailModal } from '../src/TitleDetailModal';
-import { DEFAULT_SETTINGS, type HoardTitle, type TmdbCollectionDetail } from '../src/types';
-import { t } from '../src/i18n';
-import { resolveCollection, countMissing } from '../src/CollectionModal';
+import { fakeSettings } from './helpers/fakeSettings';
+import { newTitleDetail } from './helpers/newTitleDetail';
+import type { HoardTitle, TmdbCollectionDetail } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
+import { t } from '../src/shared/i18n';
+import { resolveCollection, countMissing } from '../src/modules/watchlist/ui/CollectionModal';
 
-vi.mock('../src/CollectionModal', () => ({
+vi.mock('../src/modules/watchlist/ui/CollectionModal', () => ({
 	resolveCollection: vi.fn(),
 	countMissing: vi.fn(() => 0),
 	CollectionModal: class { open(): void {} },
@@ -16,11 +18,11 @@ const collection = (parts: number): TmdbCollectionDetail =>
 	({ id: 1, name: 'Alien Collection', parts: Array.from({ length: parts }, (_, i) => ({ id: i })) });
 
 function build() {
-	const plugin = {
-		settings: { ...DEFAULT_SETTINGS },
-		dataManager: { getCollapsedSeasonsForTitle: () => new Set<number>(), getTitles: () => [title] },
+	const deps = {
+		settings: fakeSettings({ ...DEFAULT_SETTINGS }),
+		titles: { getCollapsedSeasonsForTitle: () => new Set<number>(), getTitles: () => [title] },
 	};
-	const modal = new TitleDetailModal({} as never, plugin as never, title) as unknown as {
+	const modal = newTitleDetail(deps, { title }) as unknown as {
 		maybeRenderCollectionButton: (host: HTMLElement) => Promise<void>;
 	};
 	const footer = document.createElement('div');

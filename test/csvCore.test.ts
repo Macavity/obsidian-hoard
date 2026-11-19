@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escapeCsvField, parseCSV, parseCsvDate } from '../src/csv/csvCore';
+import { escapeCsvField, parseCSV, parseCsvDate } from '../src/shared/domain/csvCore';
 
 describe('parseCSV', () => {
 	it('parses plain rows', () => {

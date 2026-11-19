@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
-import { CsvModalBase, type CsvImportRow } from '../src/csv/CsvModalBase';
-import { setLocale } from '../src/i18n';
+import { CsvModalBase, type CsvImportRow } from '../src/design-system/CsvModalBase';
+import { setLocale } from '../src/shared/i18n';
 import { El } from './helpers/fakeEl';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;

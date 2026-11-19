@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractNotes, replaceNotesSection } from '../../src/storage/noteBody';
+import { extractNotes, replaceNotesSection } from '../../src/shared/storage/noteBody';
 
 describe('extractNotes', () => {
 	it('returns null when the section is missing', () => {

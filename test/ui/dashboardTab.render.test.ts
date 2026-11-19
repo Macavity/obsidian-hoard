@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DashboardTab } from '../../src/DashboardTab';
-import type HoardPlugin from '../../src/main';
-import type { DataManager } from '../../src/DataManager';
-import type { ReadingDataManager } from '../../src/ReadingDataManager';
-import type { Book, Game, HoardTitle, Manga } from '../../src/types';
-import { DEFAULT_SETTINGS } from '../../src/types';
+import { DashboardTab } from '../../src/modules/dashboard/ui/DashboardTab';
+import { fakeSettings } from '../helpers/fakeSettings';
+import type { Game } from '../../src/modules/games/domain/model';
+import type { Book, Manga } from '../../src/modules/reading/domain/model';
+import type { HoardTitle } from '../../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/domain/settingsDefaults';
 import { qsa, textsOf as texts } from '../helpers/dom';
-import { t } from '../../src/i18n';
+import { t } from '../../src/shared/i18n';
 
 const title = (over: Partial<HoardTitle>): HoardTitle =>
 	({
@@ -28,10 +28,6 @@ function render(o: Opts = {}): HTMLElement {
 		types: [{ name: 'Anime', color: '#f00' }, { name: 'Movie', color: '#0f0' }],
 		dashboardCardStyle: o.cardStyle ?? 'rings',
 	};
-	const plugin = {
-		settings,
-		gameDataManager: { getGames: () => o.games ?? [] },
-	} as unknown as HoardPlugin;
 	const titles = o.titles ?? [];
 	const dm = {
 		getTitles: () => titles,
@@ -42,13 +38,19 @@ function render(o: Opts = {}): HTMLElement {
 		getRecentlyAdded: () => titles.slice(0, 3),
 		getNextUnwatchedEpisode: () => 2,
 		getProgress: () => 40,
-	} as unknown as DataManager;
+	};
 	const rdm = {
 		getBooks: () => o.books ?? [],
 		getMangaList: () => o.manga ?? [],
-	} as unknown as ReadingDataManager;
+	};
 	const container = document.createElement('div');
-	new DashboardTab(container, plugin, dm, rdm).render();
+	new DashboardTab(
+		container,
+		fakeSettings(settings) as never,
+		dm,
+		rdm,
+		{ getGames: () => o.games ?? [] },
+	).render();
 	return container;
 }
 

@@ -1,15 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../src/CollageUtil', () => ({ renderGroupCollage: vi.fn() }));
-vi.mock('../../src/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
-vi.mock('../../src/PosterCard', async (importOriginal) => ({
-	...(await importOriginal<typeof import('../../src/PosterCard')>()),
+vi.mock('../../src/design-system/CollageUtil', () => ({ renderGroupCollage: vi.fn() }));
+vi.mock('../../src/design-system/PosterCard', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../src/design-system/PosterCard')>()),
 	openCardMenu: vi.fn(),
 }));
 
-import { groupCountLabel, groupLetter, renderGroupCard, type GroupCardOptions } from '../../src/ui/GroupCard';
-import { renderGroupCollage } from '../../src/CollageUtil';
-import { openCardMenu } from '../../src/PosterCard';
+import { groupCountLabel, groupLetter, renderGroupCard, type GroupCardOptions } from '../../src/design-system/GroupCard';
+import { renderGroupCollage } from '../../src/design-system/CollageUtil';
+import { openCardMenu } from '../../src/design-system/PosterCard';
 
 /** Minimal element double: only what the group card touches. */
 class El {
@@ -53,7 +52,7 @@ class El {
 }
 
 const opts = (over: Partial<GroupCardOptions<string>> = {}): GroupCardOptions<string> => ({
-	app: {} as never,
+	confirm: vi.fn(),
 	group: { id: 'g1', name: 'zelda' },
 	members: ['a', 'b'],
 	getCover: (m) => m,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { comparePriority, compareUnsetLast, isRecentlyReleased, pickRandom } from '../../src/ui/TabHelpers';
+import { comparePriority, compareUnsetLast, isRecentlyReleased, pickRandom } from '../../src/shared/domain/listOrder';
 
 describe('pickRandom', () => {
 	it('returns count distinct items from the pool without mutating it', () => {

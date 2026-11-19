@@ -1,0 +1,1465 @@
+import { App, Modal, Notice, Platform, TFile } from 'obsidian';
+import type { SettingsReader } from '../../settings/exports';
+import type { ReadingDataManager } from '../services/ReadingDataManager';
+import type { HistoryManager } from '../../../shared/services/HistoryManager';
+import type { Book, BookProgressUnit, Manga, ReadingCustomColumn, ReadingStatus } from '../domain/model';
+import { bookUnitProgress } from '../domain/readingHelpers';
+import { formatDateDisplay, todayIso } from '../../../shared/domain/date';
+import { formatCount } from '../../../shared/domain/format';
+import { SELECTABLE_READING_STATUSES, bookProgressUnit } from '../domain/readingDefaults';
+import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/tags';
+import { createDatePicker } from '../../../design-system/DatePicker';
+import { deriveFillColor, deriveBorderColor } from '../../../design-system/ColorPicker';
+import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
+import { appendNoteLinkButton, type NoteFiles } from '../../../design-system/NoteLinkButton';
+import { renderStarRating } from '../../../design-system/StarRating';
+import { coverFallbackColor } from '../domain/coverColor';
+import { readingStatusColor } from '../domain/readingColors';
+import { openStatusDropdown, renderSegmentedToggle } from '../../../design-system/StatusDropdown';
+import type { ManageColumnsOptions } from './ReadingManageColumnsModal';
+import { pinModalFooter } from '../../../design-system/StickyModal';
+import { t } from '../../../shared/i18n';
+import { paintFavoriteButton, renderEditableTitle, wireInlineEdit } from '../../../design-system/detailShared';
+import { createFavoriteButton, markDetailRoot, mobileRowClass } from '../../../design-system/detailFrame';
+import { readingStatusLabel } from '../../../shared/i18n/labels';
+
+interface ParsedQuote {
+	reference: string;
+	text: string;
+}
+
+function parseQuotesSection(content: string): ParsedQuote[] {
+	const match = content.match(/(^|\n)## Quotes[ \t]*\r?\n([\s\S]*?)(?=\n## |\n# |$)/);
+	if (!match) return [];
+	const section = match[2] ?? '';
+	const quotes: ParsedQuote[] = [];
+
+	const lines = section.split(/\r?\n/);
+	let current: { reference: string; body: string[] } | null = null;
+	const flush = (): void => {
+		if (current) {
+			const text = current.body.join('\n').trim();
+			if (text) quotes.push({ reference: current.reference, text });
+		}
+		current = null;
+	};
+
+	for (const raw of lines) {
+		const header = raw.match(/^>\s*\[!quote\](.*)$/i);
+		if (header) {
+			flush();
+			current = { reference: (header[1] ?? '').trim(), body: [] };
+			continue;
+		}
+		if (current) {
+			const cont = raw.match(/^>\s?(.*)$/);
+			if (cont) {
+				current.body.push(cont[1] ?? '');
+			} else if (raw.trim() === '') {
+				flush();
+			} else {
+				flush();
+			}
+		}
+	}
+	flush();
+	return quotes;
+}
+
+interface ProgressDraft {
+	pagesRead: number;
+	wordsRead: number;
+	chaptersRead: number;
+	volumesRead: number;
+}
+
+interface ProgressSnapshot {
+	pagesRead: number;
+	wordsRead: number;
+	chaptersRead: number;
+	volumesRead: number;
+}
+
+/**
+ * Step for the −/+ buttons in words mode — single-word steps are useless at six digits. The number
+ * input still takes an exact value.
+ */
+const WORDS_STEP = 100;
+
+/** Display noun of an arc gauge's counter unit. */
+function unitLabel(unit: string): string {
+	switch (unit) {
+		case 'pages': return t('reading.card.units.pages');
+		case 'words': return t('reading.card.units.words');
+		case 'chapters': return t('detail.reading.unitChapters');
+		default: return t('detail.reading.unitVolumes');
+	}
+}
+
+/** Splits a translated sentence around one slot, so each language orders the text around it. */
+function splitAtSlot(text: string, slot: string): [string, string] {
+	const at = text.indexOf(slot);
+	return at < 0 ? [text, ''] : [text.slice(0, at), text.slice(at + slot.length)];
+}
+
+export type ReadingDetailApi = Pick<ApiService, 'hasGoogleBooksKey' | 'getGoogleBookById' | 'getMangaByMalId'>;
+
+export interface ReadingDetailOptions {
+	mode: 'book' | 'manga';
+	id: string;
+	onChanged: () => void;
+}
+
+export type OpenReadingDetail = (opts: ReadingDetailOptions) => void;
+
+/** The dialogs the detail modal opens; the wiring layer builds them. */
+export interface ReadingDetailModals {
+	openManageColumns(opts: ManageColumnsOptions): void;
+	/** Lets the user pick a vault note; `onPick` gets the chosen file. */
+	pickVaultFile(onPick: (file: TFile) => void): void;
+	confirm(message: string, onConfirm: () => void): void;
+}
+
+export class ReadingDetailModal extends Modal {
+	private mode: 'book' | 'manga';
+	private id: string;
+	private onChanged: () => void;
+	private draft: ProgressDraft;
+	private openSnapshot: ProgressSnapshot;
+	private starsWrapEl: HTMLElement | null = null;
+
+	constructor(
+		app: App,
+		private readonly settings: SettingsReader,
+		private readonly reading: ReadingDataManager,
+		private readonly api: ReadingDetailApi,
+		private readonly history: Pick<HistoryManager, 'log'>,
+		private readonly files: NoteFiles,
+		private readonly modals: ReadingDetailModals,
+		opts: ReadingDetailOptions,
+	) {
+		super(app);
+		this.mode = opts.mode;
+		this.id = opts.id;
+		this.onChanged = opts.onChanged;
+		const item = this.getItem();
+		this.draft = {
+			pagesRead: item && this.mode === 'book' ? (item as Book).pagesRead : 0,
+			wordsRead: item && this.mode === 'book' ? ((item as Book).wordsRead ?? 0) : 0,
+			chaptersRead: item ? (item).chaptersRead : 0,
+			volumesRead: item && this.mode === 'manga' ? (item as Manga).volumesRead : 0,
+		};
+		this.openSnapshot = { ...this.draft };
+	}
+
+	private getItem(): Book | Manga | undefined {
+		return this.mode === 'book'
+			? this.reading.getBook(this.id)
+			: this.reading.getManga(this.id);
+	}
+
+	onOpen(): void {
+		markDetailRoot(this.modalEl, this.contentEl, this.settings.get().colorTheme);
+		this.contentEl.addClass('hoard-reading-detail');
+		this.renderAll();
+	}
+
+	onClose(): void {
+		void this.commitOnClose();
+		this.contentEl.empty();
+	}
+
+	private async commitOnClose(): Promise<void> {
+		const draftChanged =
+			this.draft.pagesRead !== this.openSnapshot.pagesRead ||
+			this.draft.wordsRead !== this.openSnapshot.wordsRead ||
+			this.draft.chaptersRead !== this.openSnapshot.chaptersRead ||
+			this.draft.volumesRead !== this.openSnapshot.volumesRead;
+		if (!draftChanged) return;
+
+		const item = this.getItem();
+		if (!item) return;
+
+		await this.persistDraft(item);
+		this.onChanged();
+	}
+
+	/** Writes the draft counters onto the item, applies auto-complete and logs the change. */
+	private async persistDraft(item: Book | Manga): Promise<void> {
+		if (this.mode === 'book') {
+			const book = item as Book;
+			const updated: Book = {
+				...book,
+				pagesRead: this.draft.pagesRead,
+				wordsRead: this.draft.wordsRead,
+				chaptersRead: this.draft.chaptersRead,
+			};
+			this.applyAutoComplete(updated);
+			await this.reading.updateBook(updated);
+		} else {
+			const manga = item as Manga;
+			const updated: Manga = {
+				...manga,
+				chaptersRead: this.draft.chaptersRead,
+				volumesRead: this.draft.volumesRead,
+			};
+			this.applyAutoComplete(updated);
+			await this.reading.updateManga(updated);
+		}
+
+		this.logProgressChange(item);
+	}
+
+	private logProgressChange(item: Book | Manga): void {
+		const snap = this.openSnapshot;
+		const typeLabel = this.mode === 'book' ? 'Book' : 'Manga';
+
+		if (this.mode === 'book') {
+			const book = item as Book;
+			// only the unit the book is tracked in is worth a log line
+			if (bookProgressUnit(book) === 'words') {
+				if (this.draft.wordsRead !== snap.wordsRead && book.totalWords > 0) {
+					void this.history.log(
+						`${item.title} (${typeLabel}) At word ${formatCount(this.draft.wordsRead)} / ${formatCount(book.totalWords)}`,
+						{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
+					);
+				}
+			} else if (this.draft.pagesRead !== snap.pagesRead && book.totalPages > 0) {
+				void this.history.log(
+					`${item.title} (${typeLabel}) At page ${formatCount(this.draft.pagesRead)} / ${formatCount(book.totalPages)}`,
+					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
+				);
+			}
+			if (this.draft.chaptersRead !== snap.chaptersRead && book.totalChapters > 0) {
+				void this.history.log(
+					`${item.title} (${typeLabel}) At chapter ${this.draft.chaptersRead} / ${book.totalChapters}`,
+					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
+				);
+			}
+		} else {
+			const manga = item as Manga;
+			if (this.draft.chaptersRead !== snap.chaptersRead && manga.totalChapters > 0) {
+				void this.history.log(
+					`${item.title} (${typeLabel}) At chapter ${this.draft.chaptersRead} / ${manga.totalChapters}`,
+					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
+				);
+			}
+			if (this.draft.volumesRead !== snap.volumesRead && manga.totalVolumes > 0) {
+				void this.history.log(
+					`${item.title} (${typeLabel}) At volume ${this.draft.volumesRead} / ${manga.totalVolumes}`,
+					{ source: 'Reading', action: 'watched', titleName: item.title, titleId: item.id },
+				);
+			}
+		}
+	}
+
+	private renderAll(): void {
+		this.contentEl.empty();
+		const item = this.getItem();
+		if (!item) {
+			this.contentEl.createDiv({ text: t('detail.reading.gone') });
+			return;
+		}
+		this.renderHeader(item);
+		this.renderProgressSection(item);
+		this.renderDetailsSection(item);
+		this.contentEl.createDiv({ cls: 'hoard-reading-modal__divider' });
+		this.renderCustomFieldsSection(item);
+		this.contentEl.createDiv({ cls: 'hoard-reading-modal__divider' });
+		this.renderQuotesSection(item);
+		this.renderFooter(item);
+		pinModalFooter(this.contentEl.querySelector<HTMLElement>('.hoard-reading-detail__footer'));
+	}
+
+	private renderHeader(item: Book | Manga): void {
+		const header = this.contentEl.createDiv({ cls: 'hoard-reading-detail__header' });
+
+		const cover = header.createDiv({ cls: 'hoard-reading-detail__cover' });
+		if (item.coverUrl) {
+			cover.createEl('img', {
+				cls: 'hoard-reading-detail__cover-img',
+				attr: { src: item.coverUrl, alt: item.title },
+			});
+		} else {
+			cover.setCssProps({ '--hoard-reading-detail-cover-color': coverFallbackColor(item.id) });
+			cover.createSpan({
+				cls: 'hoard-reading-detail__cover-icon',
+				text: this.mode === 'book' ? '📖' : '📓',
+			});
+		}
+
+		const info = header.createDiv({ cls: 'hoard-reading-detail__info' });
+
+		const titleWrap = info.createDiv({ cls: 'hoard-reading-detail__title-wrap' });
+		this.renderTitleDisplay(titleWrap);
+
+		const authorWrap = info.createDiv({ cls: 'hoard-reading-detail__author-wrap' });
+		this.renderAuthorDisplay(authorWrap);
+
+		const meta = info.createDiv({ cls: mobileRowClass('hoard-reading-detail__meta-row', 'hoard-reading-detail__meta-row--mobile') });
+
+		const statusWrap = meta.createSpan({ cls: 'hoard-reading-detail__status-wrap' });
+		this.renderStatusBadge(statusWrap);
+
+		// open this entry's .md note; Reading resolves its own path (Books/Manga have their own folder) and
+		// the shared helper handles the rest
+		appendNoteLinkButton(
+			this.files,
+			meta,
+			this.reading.noteFilePath(this.mode, item.title),
+			() => this.close(),
+		);
+
+		// mobile: status pill + note icon fill the meta row, so the stars take their own line
+		const starsHost = Platform.isMobile
+			? info.createDiv({ cls: 'hoard-reading-detail__stars-row' })
+			: meta;
+		this.starsWrapEl = starsHost.createDiv({ cls: 'hoard-star-rating--row hoard-reading-detail__stars' });
+		this.renderStars();
+
+		// external link + vault page share one row; each keeps its own container so the two
+		// rebuild-in-place renderers stay independent
+		const links = info.createDiv({ cls: mobileRowClass('hoard-reading-detail__links-row', 'hoard-reading-detail__links-row--mobile') });
+
+		const actions = links.createDiv({ cls: 'hoard-reading-detail__actions' });
+		this.renderExternalLinkActions(actions);
+
+		const vaultRow = links.createDiv({ cls: 'hoard-reading-detail__vault-row' });
+		this.renderVaultRow(vaultRow);
+	}
+
+	private renderTitleDisplay(wrap: HTMLElement): void {
+		renderEditableTitle(wrap, this.getItem()?.title ?? '', () => this.editTitle(wrap));
+	}
+
+	private editTitle(wrap: HTMLElement): void {
+		wrap.empty();
+		const fresh = this.getItem();
+		const input = wrap.createEl('input', {
+			cls: 'hoard-modal__input hoard-reading-detail__title-input',
+			attr: { type: 'text' },
+		});
+		input.value = fresh?.title ?? '';
+		const commit = (): void => {
+			const val = input.value.trim();
+			if (!val) { this.renderTitleDisplay(wrap); return; }
+			void (async () => {
+				const curr = this.getItem();
+				if (curr && val !== curr.title) {
+					if (this.mode === 'book') {
+						await this.reading.updateBook({ ...(curr as Book), title: val });
+					} else {
+						await this.reading.updateManga({ ...(curr as Manga), title: val });
+					}
+					this.onChanged();
+				}
+				this.renderTitleDisplay(wrap);
+			})();
+		};
+		wireInlineEdit(input, commit, () => this.renderTitleDisplay(wrap));
+	}
+
+	private renderAuthorDisplay(wrap: HTMLElement): void {
+		wrap.empty();
+		const fresh = this.getItem();
+		const authorEl = wrap.createDiv({
+			cls: 'hoard-reading-detail__author hoard-reading-detail__editable-text',
+			text: fresh?.author || '—',
+		});
+		authorEl.title = t('detail.clickToEdit');
+		authorEl.addEventListener('click', () => this.editAuthor(wrap));
+	}
+
+	private editAuthor(wrap: HTMLElement): void {
+		wrap.empty();
+		const fresh = this.getItem();
+		const input = wrap.createEl('input', {
+			cls: 'hoard-modal__input hoard-reading-detail__author-input',
+			attr: { type: 'text' },
+		});
+		input.value = fresh?.author ?? '';
+		const commit = (): void => {
+			const val = input.value.trim();
+			void (async () => {
+				const curr = this.getItem();
+				if (curr && val !== curr.author) {
+					if (this.mode === 'book') {
+						await this.reading.updateBook({ ...(curr as Book), author: val });
+					} else {
+						await this.reading.updateManga({ ...(curr as Manga), author: val });
+					}
+					this.onChanged();
+				}
+				this.renderAuthorDisplay(wrap);
+			})();
+		};
+		wireInlineEdit(input, commit, () => this.renderAuthorDisplay(wrap));
+	}
+
+	private renderStatusBadge(wrap: HTMLElement): void {
+		wrap.empty();
+		const fresh = this.getItem();
+		const status = fresh?.status ?? 'Plan to Read';
+		const badge = wrap.createSpan({ cls: 'hoard-reading-detail__status', text: readingStatusLabel(status) });
+		badge.setCssProps({ '--hoard-reading-detail-status-color': readingStatusColor(status, this.reading.getSettings().statusColors) });
+		badge.title = t('detail.clickToChangeStatus');
+		badge.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.openStatusDropdown(badge, wrap);
+		});
+	}
+
+	private openStatusDropdown(anchor: HTMLElement, wrap: HTMLElement): void {
+		openStatusDropdown({
+			anchor,
+			container: this.contentEl,
+			options: SELECTABLE_READING_STATUSES.map((status) => ({ value: status, label: readingStatusLabel(status) })),
+			getOptionColor: (status) => readingStatusColor(status as ReadingStatus, this.reading.getSettings().statusColors),
+			onSelect: (status) =>
+				void this.saveStatus(status as ReadingStatus).then(() => this.renderStatusBadge(wrap)),
+		});
+	}
+
+	private async saveStatus(status: ReadingStatus): Promise<void> {
+		const curr = this.getItem();
+		if (!curr) return;
+		const patch: Partial<Book & Manga> = { status };
+		if (status === 'Completed' && !curr.dateFinished) {
+			patch.dateFinished = todayIso();
+		}
+		if (this.mode === 'book') {
+			await this.reading.updateBook({ ...(curr as Book), ...patch });
+		} else {
+			await this.reading.updateManga({ ...(curr as Manga), ...patch });
+		}
+		this.onChanged();
+	}
+
+	private renderExternalLinkActions(container: HTMLElement): void {
+		container.empty();
+		const item = this.getItem();
+		if (!item) return;
+
+		const hasLink = !!item.externalLink;
+
+		const linkBtn = container.createEl('button', {
+			cls: 'hoard-btn hoard-btn--sm',
+			text: hasLink ? t('detail.reading.changeLink') : t('detail.reading.externalLink'),
+		});
+		linkBtn.addEventListener('click', () => {
+			container.empty();
+			const inputWrap = container.createDiv({ cls: 'hoard-reading-detail__external-link-wrap' });
+			const inp = inputWrap.createEl('input', {
+				cls: 'hoard-modal__input hoard-reading-detail__external-link-input',
+				attr: { type: 'url', placeholder: 'https://…' },
+			});
+			inp.value = item.externalLink ?? '';
+			const saveBtn = inputWrap.createEl('button', { cls: 'hoard-reading-modal__add-btn hoard-btn--success', text: t('common.save') });
+			const cancelBtn = inputWrap.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('common.cancel') });
+			const commit = (): void => {
+				const url = inp.value.trim();
+				void (async () => {
+					const curr = this.getItem();
+					if (!curr) return;
+					if (this.mode === 'book') {
+						await this.reading.updateBook({ ...(curr as Book), externalLink: url });
+					} else {
+						await this.reading.updateManga({ ...(curr as Manga), externalLink: url });
+					}
+					this.onChanged();
+					this.renderExternalLinkActions(container);
+				})();
+			};
+			saveBtn.addEventListener('click', commit);
+			cancelBtn.addEventListener('click', () => this.renderExternalLinkActions(container));
+			inp.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') { e.preventDefault(); commit(); }
+				else if (e.key === 'Escape') { e.preventDefault(); this.renderExternalLinkActions(container); }
+			});
+			inp.focus();
+		});
+
+		if (hasLink) {
+			const openBtn = container.createEl('button', {
+				cls: 'hoard-btn hoard-btn--sm',
+				text: t('detail.reading.open'),
+			});
+			openBtn.title = item.externalLink ?? '';
+			openBtn.addEventListener('click', () => {
+				const curr = this.getItem();
+				if (curr?.externalLink) {
+					activeWindow.open(curr.externalLink, '_blank', 'noopener,noreferrer');
+				}
+			});
+		}
+	}
+
+	private renderVaultRow(row: HTMLElement): void {
+		row.empty();
+		const item = this.getItem();
+		if (!item) return;
+
+		// the button carries the "Vault page" wording, so the value beside it is just the state
+		const linkBtn = row.createEl('button', {
+			cls: 'hoard-btn hoard-btn--sm',
+			text: t('detail.reading.vaultPage'),
+		});
+		linkBtn.title = item.vaultPage
+			? t('detail.reading.linked', { path: item.vaultPage })
+			: t('detail.reading.linkVaultNote');
+		linkBtn.addEventListener('click', () => {
+			this.modals.pickVaultFile((file) => {
+				void this.updateVaultPage(file.path).then(() => this.renderVaultRow(row));
+			});
+		});
+
+		if (item.vaultPage) {
+			const openBtn = row.createEl('button', {
+				cls: 'hoard-btn hoard-btn--sm',
+				text: t('detail.reading.open'),
+			});
+			openBtn.title = t('detail.reading.openVaultPage');
+			openBtn.addEventListener('click', () => this.openLinkedVaultPage());
+		}
+
+		if (item.vaultPage) {
+			const filename = item.vaultPage.split('/').pop() || item.vaultPage;
+			const pathSpan = row.createSpan({
+				cls: 'hoard-reading-detail__vault-path',
+				text: filename,
+			});
+			pathSpan.title = item.vaultPage;
+		} else {
+			row.createSpan({
+				cls: 'hoard-reading-detail__vault-empty',
+				text: t('detail.reading.notLinked'),
+			});
+		}
+	}
+
+	private async updateVaultPage(newPath: string): Promise<void> {
+		const item = this.getItem();
+		if (!item) return;
+		if (this.mode === 'book') {
+			const updated: Book = { ...(item as Book), vaultPage: newPath };
+			await this.reading.updateBook(updated);
+		} else {
+			const updated: Manga = { ...(item as Manga), vaultPage: newPath };
+			await this.reading.updateManga(updated);
+		}
+	}
+
+	private openLinkedVaultPage(): void {
+		const item = this.getItem();
+		if (!item || !item.vaultPage) return;
+		const file = this.files.vault.getAbstractFileByPath(item.vaultPage);
+		if (file instanceof TFile) {
+			void this.files.workspace.getLeaf('tab').openFile(file);
+			this.close();
+		} else {
+			new Notice(t('detail.reading.vaultMissing'));
+		}
+	}
+
+	private renderStars(): void {
+		if (!this.starsWrapEl) return;
+		const item = this.getItem();
+		if (!item) {
+			this.starsWrapEl.empty();
+			return;
+		}
+		renderStarRating(this.starsWrapEl, item.rating, {
+			allowHalf: this.settings.get().halfStarRatings ?? false,
+			tiers: this.settings.get().ratingSystem,
+			showLabel: true,
+			onChange: (value) => {
+				const fresh = this.getItem();
+				if (!fresh) return;
+				void (async () => {
+					if (this.mode === 'book') {
+						const updated = { ...(fresh as Book), rating: value };
+						await this.reading.updateBook(updated);
+					} else {
+						const updated = { ...(fresh as Manga), rating: value };
+						await this.reading.updateManga(updated);
+					}
+					this.renderStars();
+				})();
+			},
+		});
+	}
+
+	private renderProgressSection(item: Book | Manga): void {
+		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail__progress' });
+		const label = section.createDiv({ cls: 'hoard-reading-modal__section-label' });
+		label.createSpan({ text: t('detail.progress') });
+		// only books carry a unit switch, so only they need the taller flex row
+		if (this.mode === 'book') {
+			label.addClass('hoard-reading-modal__section-label--row');
+			this.renderUnitToggle(label, item as Book);
+		}
+
+		const gaugeRow = section.createDiv({ cls: 'hoard-reading-detail__arc-row' });
+
+		// rings + controls always render, even when the total is 0
+		if (this.mode === 'book') {
+			// the primary gauge follows the book's unit; chapters are unit-agnostic
+			if (bookProgressUnit(item as Book) === 'words') {
+				this.renderArcGauge(
+					gaugeRow, 'words', '#8b5cf6',
+					() => this.draft.wordsRead,
+					(v) => { this.draft.wordsRead = v; },
+					() => (this.getItem() as Book | undefined)?.totalWords ?? 0,
+					(v) => this.commitTotal('totalWords', v),
+					WORDS_STEP,
+				);
+			} else {
+				this.renderArcGauge(
+					gaugeRow, 'pages', '#8b5cf6',
+					() => this.draft.pagesRead,
+					(v) => { this.draft.pagesRead = v; },
+					() => (this.getItem() as Book | undefined)?.totalPages ?? 0,
+					(v) => this.commitTotal('totalPages', v),
+				);
+			}
+			this.renderArcGauge(
+				gaugeRow, 'chapters', '#06b6d4',
+				() => this.draft.chaptersRead,
+				(v) => { this.draft.chaptersRead = v; },
+				() => (this.getItem() as Book | undefined)?.totalChapters ?? 0,
+				(v) => this.commitTotal('totalChapters', v),
+			);
+		} else {
+			this.renderArcGauge(
+				gaugeRow, 'chapters', '#06b6d4',
+				() => this.draft.chaptersRead,
+				(v) => { this.draft.chaptersRead = v; },
+				() => (this.getItem() as Manga | undefined)?.totalChapters ?? 0,
+				(v) => this.commitTotal('totalChapters', v),
+			);
+			this.renderArcGauge(
+				gaugeRow, 'volumes', '#f59e0b',
+				() => this.draft.volumesRead,
+				(v) => { this.draft.volumesRead = v; },
+				() => (this.getItem() as Manga | undefined)?.totalVolumes ?? 0,
+				(v) => this.commitTotal('totalVolumes', v),
+			);
+		}
+
+		// the "of N …" totals are click-to-edit, which isn't discoverable on its own — gated on the same
+		// "Show hint banners" setting as the other hints
+		if (this.settings.get().showHintBanners) {
+			const primary = this.mode === 'book'
+				? (bookProgressUnit(item as Book) === 'words' ? 'words' : 'pages')
+				: 'chapters';
+			const secondary = this.mode === 'book' ? 'chapters' : 'volumes';
+			section.createDiv({
+				cls: 'hoard-custom-lists__draft-banner',
+				text: `⚠ ${t('detail.reading.totalHint', { primary: unitLabel(primary), secondary: unitLabel(secondary) })}`,
+			});
+		}
+	}
+
+	/** Pages/Words switch on the Progress label row. Books only. */
+	private renderUnitToggle(parent: HTMLElement, book: Book): void {
+		renderSegmentedToggle<BookProgressUnit>({
+			parent,
+			options: [
+				{ value: 'pages', label: t('detail.reading.pages'), title: t('detail.reading.trackPages') },
+				{ value: 'words', label: t('detail.reading.words'), title: t('detail.reading.trackWords') },
+			],
+			value: bookProgressUnit(book),
+			onPick: (unit) => { void this.switchProgressUnit(unit); },
+		});
+	}
+
+	/**
+	 * Persists the new tracking unit and repaints. Uncommitted counter edits are folded in first, so
+	 * typing a page count and *then* switching never drops it. The other unit's numbers are untouched,
+	 * which is what makes switching back lossless.
+	 */
+	private async switchProgressUnit(unit: BookProgressUnit): Promise<void> {
+		const curr = this.getItem() as Book | undefined;
+		if (!curr) return;
+		const updated: Book = {
+			...curr,
+			progressUnit: unit,
+			pagesRead: this.draft.pagesRead,
+			wordsRead: this.draft.wordsRead,
+			chaptersRead: this.draft.chaptersRead,
+		};
+		await this.reading.updateBook(updated);
+		this.openSnapshot = { ...this.draft };
+		this.onChanged();
+		this.renderAll();
+	}
+
+	/** Persists an edited total (pages/words/chapters/volumes) to the underlying item. */
+	private async commitTotal(
+		field: 'totalPages' | 'totalWords' | 'totalChapters' | 'totalVolumes',
+		value: number,
+	): Promise<void> {
+		const curr = this.getItem();
+		if (!curr) return;
+		if (this.mode === 'book') {
+			await this.reading.updateBook({ ...(curr as Book), [field]: value });
+		} else {
+			await this.reading.updateManga({ ...(curr as Manga), [field]: value });
+		}
+		this.onChanged();
+	}
+
+	private renderArcGauge(
+		parent: HTMLElement,
+		unit: string,
+		color: string,
+		getValue: () => number,
+		setValue: (v: number) => void,
+		getTotal: () => number,
+		commitTotal: (v: number) => Promise<void>,
+		step = 1,
+	): void {
+		const col = parent.createDiv({ cls: 'hoard-reading-detail__arc-column' });
+		// word counters need wider fields and coarser steps than page/chapter ones
+		if (step > 1) col.addClass('hoard-reading-detail__arc-column--wide');
+
+		const svgSize = 100;
+		const strokeWidth = 8;
+		const radius = (svgSize - strokeWidth) / 2;
+		const cx = svgSize / 2;
+		const cy = svgSize / 2;
+
+		const svgWrap = col.createDiv({ cls: 'hoard-reading-detail__arc-svg-wrap' });
+		const svg = svgWrap.createSvg('svg');
+		svg.setAttribute('viewBox', `0 0 ${svgSize} ${svgSize}`);
+		svg.setAttribute('class', 'hoard-reading-detail__arc-svg');
+
+		const arcLength = Math.PI * radius;
+
+		const bgArc = svg.createSvg('path');
+		const arcPath = `M ${cx - radius} ${cy} A ${radius} ${radius} 0 1 1 ${cx + radius} ${cy}`;
+		bgArc.setAttribute('d', arcPath);
+		bgArc.setAttribute('fill', 'none');
+		bgArc.setAttribute('stroke', '#2a2a2a');
+		bgArc.setAttribute('stroke-width', String(strokeWidth));
+		bgArc.setAttribute('stroke-linecap', 'round');
+
+		const fgArc = svg.createSvg('path');
+		fgArc.setAttribute('d', arcPath);
+		fgArc.setAttribute('fill', 'none');
+		fgArc.setAttribute('stroke', color);
+		fgArc.setAttribute('stroke-width', String(strokeWidth));
+		fgArc.setAttribute('stroke-linecap', 'round');
+		fgArc.setAttribute('stroke-dasharray', String(arcLength));
+
+		const pctText = svg.createSvg('text');
+		pctText.setAttribute('x', String(cx));
+		pctText.setAttribute('y', String(cy + 4));
+		pctText.setAttribute('text-anchor', 'middle');
+		pctText.setAttribute('class', 'hoard-reading-detail__arc-percent');
+
+		const clamp = (n: number): number => {
+			const total = getTotal();
+			if (isNaN(n) || n < 0) return 0;
+			if (total > 0 && n > total) return total;
+			return n;
+		};
+
+		const controls = col.createDiv({ cls: 'hoard-reading-detail__arc-controls' });
+		const decBtn = controls.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-reading-detail__step-btn', text: `−${step}` });
+		const input = controls.createEl('input', {
+			cls: 'hoard-modal__input hoard-modal__input--sm hoard-reading-detail__arc-input',
+			attr: { type: 'number', min: '0', max: String(getTotal()), step: String(step) },
+		});
+		const incBtn = controls.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-reading-detail__step-btn', text: `+${step}` });
+
+		const label = col.createDiv({ cls: 'hoard-reading-detail__arc-label' });
+
+		const sync = (): void => {
+			const total = getTotal();
+			const v = getValue();
+			input.value = String(v);
+			input.setAttribute('max', String(total));
+			const pct = total > 0 ? Math.min(1, v / total) : 0;
+			const dashOffset = arcLength * (1 - pct);
+			fgArc.setAttribute('stroke-dashoffset', String(dashOffset));
+			pctText.textContent = `${Math.round(pct * 100)}%`;
+		};
+
+		// static "of … <unit>" line with only the total inline-editable
+		const fillOfLabel = <E extends HTMLElement>(buildTotal: () => E): E => {
+			const [before, after] = splitAtSlot(
+				t('detail.reading.arcOf', { total: '{total}', unit: unitLabel(unit) }),
+				'{total}',
+			);
+			label.empty();
+			label.createSpan({ text: before });
+			const el = buildTotal();
+			label.createSpan({ text: after });
+			return el;
+		};
+
+		const renderLabel = (): void => {
+			const numEl = fillOfLabel(() => label.createSpan({
+				cls: 'hoard-reading-detail__arc-total hoard-reading-detail__editable-text',
+				text: formatCount(getTotal()),
+			}));
+			numEl.title = t('detail.clickToEdit');
+			numEl.addEventListener('click', () => editTotal());
+		};
+
+		const editTotal = (): void => {
+			const totalInput = fillOfLabel(() => label.createEl('input', {
+				cls: 'hoard-modal__input hoard-modal__input--sm hoard-reading-detail__arc-total-input',
+				attr: { type: 'number', min: '0' },
+			}));
+			totalInput.value = String(getTotal());
+			let committed = false;
+			const commit = (): void => {
+				if (committed) return;
+				committed = true;
+				const raw = parseInt(totalInput.value, 10);
+				const v = isNaN(raw) || raw < 0 ? 0 : raw;
+				void (async () => {
+					if (v !== getTotal()) {
+						await commitTotal(v);
+						sync();
+					}
+					renderLabel();
+				})();
+			};
+			wireInlineEdit(totalInput, commit, () => { committed = true; renderLabel(); });
+		};
+
+		renderLabel();
+		sync();
+
+		input.addEventListener('input', () => {
+			const v = clamp(parseInt(input.value, 10));
+			setValue(v);
+			sync();
+		});
+		decBtn.addEventListener('click', () => {
+			setValue(clamp(getValue() - step));
+			sync();
+		});
+		incBtn.addEventListener('click', () => {
+			setValue(clamp(getValue() + step));
+			sync();
+		});
+	}
+
+	private renderDetailsSection(item: Book | Manga): void {
+		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail__details' });
+		section.createDiv({ cls: 'hoard-reading-modal__section-label', text: t('detail.details') });
+
+		const grid = section.createDiv({ cls: 'hoard-reading-detail__grid' });
+
+		this.renderIdCell(grid, item);
+
+		this.renderEditableDateCell(
+			grid, t('detail.reading.started'),
+			() => this.getItem()?.dateStarted ?? null,
+			async (val) => {
+				const curr = this.getItem();
+				if (!curr) return;
+				if (this.mode === 'book') {
+					await this.reading.updateBook({ ...(curr as Book), dateStarted: val });
+				} else {
+					await this.reading.updateManga({ ...(curr as Manga), dateStarted: val });
+				}
+				this.onChanged();
+			},
+		);
+
+		this.renderAddedReleaseCell(grid, item);
+
+		this.renderEditableDateCell(
+			grid, t('detail.reading.finished'),
+			() => this.getItem()?.dateFinished ?? null,
+			async (val) => {
+				const curr = this.getItem();
+				if (!curr) return;
+				if (this.mode === 'book') {
+					await this.reading.updateBook({ ...(curr as Book), dateFinished: val });
+				} else {
+					await this.reading.updateManga({ ...(curr as Manga), dateFinished: val });
+				}
+				this.onChanged();
+			},
+		);
+	}
+
+	/**
+	 * DETAILS ID row (Google Books ID / MAL ID). The ID links to the title's web page — the editable
+	 * `URL` property when set, else a URL derived from the ID. The edit button to the right sets the
+	 * source ID itself (`Google Books ID` / `MAL ID`), which re-fetches the cover.
+	 */
+	private renderIdCell(grid: HTMLElement, item: Book | Manga): void {
+		const label = this.mode === 'book' ? 'Google Books ID' : 'MAL ID';
+		const value = this.makeDetailCell(grid, label);
+		value.addClass('hoard-reading-detail__id-value');
+		this.fillIdValue(value, item);
+	}
+
+	private idText(item: Book | Manga): string {
+		return this.mode === 'book' ? (item as Book).googleBooksId : (item as Manga).malId;
+	}
+
+	/** Resolves the URL the clickable ID points to: explicit link, else derived from the ID. */
+	private resolveItemLink(item: Book | Manga): string {
+		if (item.externalLink) return item.externalLink;
+		if (this.mode === 'manga') {
+			const malId = (item as Manga).malId;
+			return malId ? `https://myanimelist.net/manga/${encodeURIComponent(malId)}` : '';
+		}
+		const volumeId = (item as Book).googleBooksId;
+		if (!volumeId) return '';
+		return `https://books.google.com/books?id=${encodeURIComponent(volumeId)}`;
+	}
+
+	private fillIdValue(value: HTMLElement, item: Book | Manga): void {
+		value.empty();
+		const idText = this.idText(item);
+		const linkUrl = this.resolveItemLink(item);
+
+		if (idText) {
+			if (linkUrl) {
+				value.createEl('a', {
+					cls: 'hoard-reading-detail__link',
+					text: idText,
+					attr: { href: linkUrl, target: '_blank', rel: 'noopener noreferrer' },
+				});
+			} else {
+				value.createSpan({ text: idText });
+			}
+		} else {
+			value.createSpan({ text: '—' });
+		}
+
+		const editBtn = value.createEl('button', {
+			cls: 'hoard-btn hoard-btn--sm hoard-reading-detail__id-edit',
+			text: '✎',
+			attr: { title: t('detail.reading.editId', { name: this.mode === 'book' ? 'Google Books ID' : 'MAL ID' }) },
+		});
+		editBtn.addEventListener('click', () => this.editIdLink(value, item));
+	}
+
+	private editIdLink(value: HTMLElement, item: Book | Manga): void {
+		value.empty();
+		const wrap = value.createDiv({ cls: 'hoard-reading-detail__external-link-wrap' });
+		const inp = wrap.createEl('input', {
+			cls: 'hoard-modal__input hoard-reading-detail__external-link-input',
+			attr: {
+				type: 'text',
+				placeholder: this.mode === 'book'
+					? t('detail.reading.googleBooksIdPlaceholder')
+					: t('detail.reading.malIdPlaceholder'),
+			},
+		});
+		inp.value = this.idText(item);
+		const saveBtn = wrap.createEl('button', { cls: 'hoard-reading-modal__add-btn hoard-btn--success', text: t('common.save') });
+		const cancelBtn = wrap.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('common.cancel') });
+
+		const restore = (): void => {
+			const fresh = this.getItem();
+			if (fresh) this.fillIdValue(value, fresh);
+		};
+		const commit = (): void => {
+			const newId = inp.value.trim();
+			void (async () => {
+				const curr = this.getItem();
+				if (!curr) return;
+				if (newId === this.idText(curr)) { restore(); return; }
+				if (this.mode === 'book') {
+					await this.reading.updateBook({ ...(curr as Book), googleBooksId: newId });
+				} else {
+					await this.reading.updateManga({ ...(curr as Manga), malId: newId });
+				}
+				this.onChanged();
+				restore();
+				if (newId) await this.refetchCoverFromId(newId);
+			})();
+		};
+		saveBtn.addEventListener('click', commit);
+		cancelBtn.addEventListener('click', restore);
+		inp.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') { e.preventDefault(); commit(); }
+			else if (e.key === 'Escape') { e.preventDefault(); restore(); }
+		});
+		inp.focus();
+	}
+
+	/**
+	 * Re-resolves ONLY the cover from a freshly-edited source ID and persists it — pages/dates/other
+	 * fields untouched. `onChanged()` re-renders the card so the new cover shows without a scroll.
+	 * Notifies when the volume has no cover, or when the lookup fails.
+	 */
+	private async refetchCoverFromId(newId: string): Promise<void> {
+		try {
+			if (this.mode === 'book') {
+				if (!this.api.hasGoogleBooksKey()) {
+					new Notice(t('reading.notices.googleBooksKeyRequired'));
+					return;
+				}
+				const result = await this.api.getGoogleBookById(newId);
+				if (!result || !result.coverUrl) {
+					new Notice(t('detail.reading.noBookCover'));
+					return;
+				}
+				const fresh = this.getItem();
+				if (!fresh) return;
+				await this.reading.updateBook({ ...(fresh as Book), coverUrl: result.coverUrl });
+			} else {
+				const result = await this.api.getMangaByMalId(Number(newId));
+				if (!result || !result.coverUrl) {
+					new Notice(t('detail.reading.noMangaCover'));
+					return;
+				}
+				const fresh = this.getItem();
+				if (!fresh) return;
+				await this.reading.updateManga({ ...(fresh as Manga), coverUrl: result.coverUrl });
+			}
+			this.onChanged();
+		} catch (err) {
+			new Notice(apiErrorMessage(err));
+		}
+	}
+
+	/**
+	 * Renders ADDED (static) and RELEASE (editable) side by side in one grid cell so the modal keeps
+	 * its height. Release date drives the auto "To be released" status, so a change re-renders.
+	 */
+	private renderAddedReleaseCell(grid: HTMLElement, item: Book | Manga): void {
+		const cell = grid.createDiv({ cls: 'hoard-reading-detail__cell hoard-reading-detail__cell--pair' });
+
+		const added = cell.createDiv({ cls: 'hoard-reading-detail__pair-column' });
+		added.createDiv({ cls: 'hoard-reading-detail__cell-label', text: t('detail.reading.added') });
+		added.createDiv({
+			cls: 'hoard-reading-detail__cell-value',
+			text: formatDateDisplay(item.dateAdded.slice(0, 10)),
+		});
+
+		const rel = cell.createDiv({ cls: 'hoard-reading-detail__pair-column' });
+		rel.createDiv({ cls: 'hoard-reading-detail__cell-label', text: t('detail.reading.release') });
+		createDatePicker({
+			parent: rel,
+			inputCls: 'hoard-reading-detail__date-input',
+			value: this.getItem()?.releaseDate ?? null,
+			lenient: true,
+			onChange: (iso) => {
+				void (async () => {
+					const curr = this.getItem();
+					if (!curr) return;
+					if (this.mode === 'book') {
+						await this.reading.updateBook({ ...(curr as Book), releaseDate: iso });
+					} else {
+						await this.reading.updateManga({ ...(curr as Manga), releaseDate: iso });
+					}
+					this.onChanged();
+					// status may have flipped to/from "To be released"
+					this.renderAll();
+				})();
+			},
+		});
+	}
+
+	private makeDetailCell(parent: HTMLElement, label: string): HTMLElement {
+		const cell = parent.createDiv({ cls: 'hoard-reading-detail__cell' });
+		cell.createDiv({ cls: 'hoard-reading-detail__cell-label', text: label });
+		const value = cell.createDiv({ cls: 'hoard-reading-detail__cell-value' });
+		return value;
+	}
+
+	private renderEditableDateCell(
+		parent: HTMLElement,
+		label: string,
+		getValue: () => string | null,
+		save: (val: string | null) => Promise<void>,
+	): void {
+		const cell = parent.createDiv({ cls: 'hoard-reading-detail__cell' });
+		cell.createDiv({ cls: 'hoard-reading-detail__cell-label', text: label });
+		const valueArea = cell.createDiv({ cls: 'hoard-reading-detail__cell-date' });
+
+		const todayBtn = valueArea.createEl('button', {
+			cls: 'hoard-btn hoard-btn--sm hoard-reading-detail__today-btn',
+			text: t('list.footer.today'),
+			attr: { title: t('list.footer.fillToday') },
+		});
+		const picker = createDatePicker({
+			parent: valueArea,
+			inputCls: 'hoard-reading-detail__date-input',
+			value: getValue(),
+			onChange: (iso) => {
+				refreshTodayBtn();
+				void save(iso);
+			},
+		});
+
+		const refreshTodayBtn = (): void => {
+			todayBtn.toggleClass('is-dimmed', !!picker.getValue());
+		};
+		refreshTodayBtn();
+
+		todayBtn.addEventListener('click', () => {
+			if (picker.getValue()) return;
+			picker.setValue(todayIso());
+		});
+	}
+
+	private renderFooter(item: Book | Manga): void {
+		const footer = this.contentEl.createDiv({ cls: 'hoard-reading-detail__footer' });
+
+		const left = footer.createDiv({ cls: 'hoard-reading-detail__footer-left' });
+		const deleteBtn = left.createEl('button', {
+			cls: 'hoard-accordion__delete-btn hoard-btn--danger hoard-reading-detail__delete',
+			text: t('common.delete'),
+		});
+		deleteBtn.addEventListener('click', () => {
+			this.modals.confirm(
+				t('detail.reading.deleteConfirm', { title: item.title }),
+				() => {
+					void (async () => {
+						if (this.mode === 'book') {
+							await this.reading.removeBook(item.id);
+						} else {
+							await this.reading.removeManga(item.id);
+						}
+						this.onChanged();
+						this.close();
+					})();
+				},
+			);
+		});
+
+		// favorite heart, centered by the footer's space-between (the Watchlist/Games spot). Persists
+		// immediately — this modal saves field-by-field, unlike the Games draft.
+		const favBtn = createFavoriteButton(footer);
+		const paintFav = (): void => {
+			const fav = this.getItem()?.favorite === true;
+			paintFavoriteButton(favBtn, fav);
+		};
+		paintFav();
+		let writing = false;
+		favBtn.addEventListener('click', () => {
+			// the item is replaced only when the write is done, so a second click would read the old state
+			if (writing) return;
+			writing = true;
+			const fav = this.getItem()?.favorite === true;
+			void this.reading.setFavorite(this.mode, item.id, !fav).catch(() => {
+				new Notice(t('detail.favorite.failed'));
+			}).finally(() => {
+				writing = false;
+				paintFav();
+			});
+		});
+
+		const right = footer.createDiv({ cls: 'hoard-reading-detail__footer-right' });
+
+		const updateBtn = right.createEl('button', {
+			cls: 'hoard-reading-modal__add-btn hoard-btn--success',
+			text: t('detail.reading.updateProgress'),
+		});
+		updateBtn.addEventListener('click', () => void this.commitDraft());
+	}
+
+	private getColumns(): ReadingCustomColumn[] {
+		return this.mode === 'book'
+			? this.reading.getBookColumns()
+			: this.reading.getMangaColumns();
+	}
+
+	private openManageColumns(): void {
+		this.modals.openManageColumns({ kind: this.mode, onChanged: () => this.renderAll() });
+	}
+
+	private renderCustomFieldsSection(item: Book | Manga): void {
+		const section = this.contentEl.createDiv({ cls: 'hoard-reading-detail__custom' });
+
+		const heading = section.createDiv({ cls: 'hoard-reading-custom-fields__heading' });
+		heading.createSpan({ cls: 'hoard-reading-modal__section-label', text: t('detail.reading.customFields') });
+		const manageLink = heading.createEl('a', {
+			cls: 'hoard-reading-custom-fields__manage',
+			text: t('detail.reading.manage'),
+		});
+		manageLink.addEventListener('click', (e) => {
+			e.preventDefault();
+			this.openManageColumns();
+		});
+
+		const cols = this.getColumns();
+		if (cols.length === 0) {
+			const empty = section.createDiv({ cls: 'hoard-reading-custom-fields__empty' });
+			const [before, after] = splitAtSlot(
+				t('detail.reading.noCustomFields', { manage: '{manage}' }),
+				'{manage}',
+			);
+			empty.createSpan({ text: before });
+			const link = empty.createEl('a', {
+				cls: 'hoard-reading-custom-fields__manage',
+				text: t('detail.reading.manage'),
+			});
+			link.addEventListener('click', (e) => {
+				e.preventDefault();
+				this.openManageColumns();
+			});
+			empty.createSpan({ text: after });
+			return;
+		}
+
+		const settings = this.reading.getSettings();
+		const fieldStyle = this.mode === 'book'
+			? (settings.bookCustomFieldStyle ?? 'fill')
+			: (settings.mangaCustomFieldStyle ?? 'fill');
+		const tableCls = fieldStyle === 'border'
+			? 'hoard-reading-custom-fields__table is-border-mode'
+			: 'hoard-reading-custom-fields__table';
+		const table = section.createDiv({ cls: tableCls });
+		for (const col of cols) {
+			this.renderCustomFieldRow(table, item, col);
+		}
+	}
+
+	private renderCustomFieldRow(parent: HTMLElement, item: Book | Manga, col: ReadingCustomColumn): void {
+		const row = parent.createDiv({ cls: 'hoard-reading-custom-fields__row' });
+		const labelCell = row.createDiv({ cls: 'hoard-reading-custom-fields__label', text: col.name });
+		const valueCell = row.createDiv({ cls: 'hoard-reading-custom-fields__value' });
+
+		const settings = this.reading.getSettings();
+		const style = this.mode === 'book'
+			? (settings.bookCustomFieldStyle ?? 'fill')
+			: (settings.mangaCustomFieldStyle ?? 'fill');
+		const color = col.color ?? DEFAULT_FIELD_COLOR;
+
+		// fill/border looks live in CSS keyed off the table's is-border-mode class; only the per-column
+		// colour is dynamic
+		if (style === 'fill') {
+			labelCell.setCssProps({ '--hoard-reading-custom-fields-background': deriveFillColor(color) });
+		} else {
+			labelCell.setCssProps({ '--hoard-reading-custom-fields-border': deriveBorderColor(color) });
+		}
+
+		const raw = item.customFields?.[col.id];
+		this.renderCustomValueDisplay(valueCell, item, col, raw);
+	}
+
+	private renderCustomValueDisplay(
+		cell: HTMLElement,
+		item: Book | Manga,
+		col: ReadingCustomColumn,
+		raw: string | number | undefined,
+	): void {
+		cell.empty();
+		const hasValue = raw !== undefined && raw !== null && raw !== '';
+		const display = cell.createSpan({
+			cls: `hoard-reading-custom-fields__display${hasValue ? '' : ' is-placeholder'}`,
+			text: hasValue ? String(raw) : '—',
+		});
+		display.addEventListener('click', () => {
+			this.renderCustomValueEditor(cell, item, col, raw);
+		});
+	}
+
+	private renderCustomValueEditor(
+		cell: HTMLElement,
+		item: Book | Manga,
+		col: ReadingCustomColumn,
+		current: string | number | undefined,
+	): void {
+		cell.empty();
+		if (col.type === 'select') {
+			const select = cell.createEl('select', { cls: 'hoard-input__select hoard-reading-custom-fields__input' });
+			const blank = select.createEl('option', { value: '', text: '—' });
+			if (current === undefined || current === null || current === '') blank.selected = true;
+			for (const opt of col.options) {
+				const o = select.createEl('option', { value: opt, text: opt });
+				if (String(current ?? '') === opt) o.selected = true;
+			}
+			const commit = (): void => {
+				const v = select.value;
+				void this.saveCustomField(item, col, v === '' ? null : v).then(() => {
+					const fresh = this.getItem();
+					this.renderCustomValueDisplay(cell, fresh ?? item, col, fresh?.customFields?.[col.id]);
+				});
+			};
+			select.addEventListener('change', commit);
+			select.addEventListener('blur', commit);
+			select.focus();
+			return;
+		}
+
+		const input = cell.createEl('input', {
+			cls: 'hoard-modal__input hoard-reading-custom-fields__input',
+			attr: {
+				type: col.type === 'number' ? 'number' : 'text',
+				placeholder: t('detail.reading.enterValue'),
+			},
+		});
+		if (current !== undefined && current !== null) input.value = String(current);
+
+		const commit = (): void => {
+			const raw = input.value.trim();
+			let value: string | number | null;
+			if (raw === '') {
+				value = null;
+			} else if (col.type === 'number') {
+				const n = Number(raw);
+				value = isNaN(n) ? null : n;
+			} else {
+				value = raw;
+			}
+			void this.saveCustomField(item, col, value).then(() => {
+				const fresh = this.getItem();
+				this.renderCustomValueDisplay(cell, fresh ?? item, col, fresh?.customFields?.[col.id]);
+			});
+		};
+		wireInlineEdit(input, commit, () => {
+			const fresh = this.getItem();
+			this.renderCustomValueDisplay(cell, fresh ?? item, col, fresh?.customFields?.[col.id]);
+		});
+	}
+
+	private async saveCustomField(
+		item: Book | Manga,
+		col: ReadingCustomColumn,
+		value: string | number | null,
+	): Promise<void> {
+		await this.reading.setCustomField(this.mode, item.id, col.id, value);
+	}
+
+	private renderQuotesSection(item: Book | Manga): void {
+		const section = this.contentEl.createDiv({ cls: 'hoard-reading-quotes' });
+
+		const heading = section.createDiv({ cls: 'hoard-reading-quotes__heading' });
+		heading.createSpan({ cls: 'hoard-reading-modal__section-label', text: t('detail.reading.quotes') });
+		const addBtn = heading.createEl('button', {
+			cls: 'hoard-btn hoard-btn--sm hoard-reading-quotes__add',
+			text: t('detail.reading.addQuote'),
+		});
+
+		const listEl = section.createDiv({ cls: 'hoard-reading-quotes__list' });
+		const formHost = section.createDiv({ cls: 'hoard-reading-quotes__form-host' });
+
+		const refresh = async (): Promise<void> => {
+			listEl.empty();
+			try {
+				const content = await this.reading.readReadingNote(this.mode, item);
+				const quotes = content ? parseQuotesSection(content) : [];
+				if (quotes.length === 0) {
+					listEl.createDiv({
+						cls: 'hoard-reading-quotes__empty',
+						text: t('detail.reading.noQuotes'),
+					});
+				} else {
+					for (const q of quotes) {
+						this.renderQuoteCard(listEl, q);
+					}
+				}
+			} catch (e) {
+				console.warn('[Hoard] quotes read failed:', e);
+			}
+		};
+
+		addBtn.addEventListener('click', () => {
+			formHost.empty();
+			this.renderAddQuoteForm(formHost, item, async () => {
+				await refresh();
+			});
+		});
+
+		void refresh();
+	}
+
+	private renderQuoteCard(parent: HTMLElement, q: ParsedQuote): void {
+		const card = parent.createDiv({ cls: 'hoard-reading-quotes__card' });
+		card.createDiv({ cls: 'hoard-reading-quotes__text', text: q.text });
+		if (q.reference) {
+			card.createDiv({ cls: 'hoard-reading-quotes__reference', text: q.reference });
+		}
+	}
+
+	private renderAddQuoteForm(
+		parent: HTMLElement,
+		item: Book | Manga,
+		onSaved: () => Promise<void>,
+	): void {
+		parent.empty();
+		const form = parent.createDiv({ cls: 'hoard-reading-quotes__form' });
+
+		const textarea = form.createEl('textarea', {
+			cls: 'hoard-modal__input hoard-reading-quotes__textarea',
+			attr: { placeholder: t('detail.reading.quotePlaceholder'), rows: '3' },
+		});
+
+		const refInput = form.createEl('input', {
+			cls: 'hoard-modal__input hoard-reading-quotes__reference-input',
+			attr: { type: 'text', placeholder: t('detail.reading.quoteRefPlaceholder') },
+		});
+
+		const actions = form.createDiv({ cls: 'hoard-reading-quotes__form-actions' });
+		const cancelBtn = actions.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('common.cancel') });
+		cancelBtn.addEventListener('click', () => parent.empty());
+
+		const saveBtn = actions.createEl('button', {
+			cls: 'hoard-reading-modal__add-btn hoard-btn--success hoard-reading-quotes__save',
+			text: t('detail.reading.saveQuote'),
+		});
+		saveBtn.addEventListener('click', () => {
+			const text = textarea.value.trim();
+			if (!text) {
+				new Notice(t('detail.reading.enterQuote'));
+				return;
+			}
+			void (async () => {
+				try {
+					await this.reading.appendQuote(this.mode, item, text, refInput.value);
+					parent.empty();
+					await onSaved();
+				} catch (e) {
+					console.warn('[Hoard] appendQuote failed:', e);
+					new Notice(t('detail.reading.quoteFailed'));
+				}
+			})();
+		});
+
+		textarea.focus();
+	}
+
+	private async commitDraft(): Promise<void> {
+		const item = this.getItem();
+		if (!item) return;
+
+		await this.persistDraft(item);
+		this.openSnapshot = { ...this.draft };
+
+		new Notice(t('detail.reading.progressUpdated'));
+		this.onChanged();
+		this.close();
+	}
+
+	private applyAutoComplete(item: Book | Manga): void {
+		const isComplete = this.mode === 'book'
+			? this.isBookComplete(item as Book)
+			: this.isMangaComplete(item as Manga);
+		if (isComplete && item.status !== 'Completed') {
+			item.status = 'Completed';
+		}
+		if (item.status === 'Completed' && !item.dateFinished) {
+			item.dateFinished = todayIso();
+		}
+	}
+
+	private isBookComplete(book: Book): boolean {
+		// only the tracked unit counts — a stale page count left by a switch to words must not
+		// auto-complete the book
+		const { read, total } = bookUnitProgress(book);
+		if (total > 0 && read >= total) return true;
+		if (book.totalChapters > 0 && book.chaptersRead >= book.totalChapters) return true;
+		return false;
+	}
+
+	private isMangaComplete(manga: Manga): boolean {
+		if (manga.totalChapters > 0 && manga.chaptersRead >= manga.totalChapters) return true;
+		return false;
+	}
+}

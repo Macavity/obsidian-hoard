@@ -1,16 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice, Platform } from 'obsidian';
-import { TitleDetailModal } from '../src/TitleDetailModal';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
-import { t } from '../src/i18n';
-import type { LookupResult } from '../src/lookup';
+import { fakeSettings } from './helpers/fakeSettings';
+import { newTitleDetail } from './helpers/newTitleDetail';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
+import { t } from '../src/shared/i18n';
+import type { LookupResult } from '../src/shared/api/lookup';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
-vi.mock('../src/NoteLinkButton', () => ({
+vi.mock('../src/design-system/NoteLinkButton', () => ({
 	appendNoteLinkButton: (_app: unknown, parent: HTMLElement) => parent.createSpan({ cls: 'note-link-stub' }),
 }));
-vi.mock('../src/CommunityRating', () => ({
+vi.mock('../src/modules/watchlist/ui/CommunityRating', () => ({
 	renderCommunityRating: vi.fn(),
 	maybeAutoRefreshCommunityRating: vi.fn(),
 }));
@@ -48,14 +50,14 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: LookupResult<
 		hasTmdbKey: vi.fn(() => o.tmdbKey ?? true),
 		hasOmdbKey: vi.fn(() => false),
 	};
-	const plugin = {
-		settings: { ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] },
-		dataManager,
-		apiService,
-		posterService: undefined,
+	const deps = {
+		settings: fakeSettings({ ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] }),
+		titles: dataManager,
+		api: apiService,
+		posters: { enqueue: () => Promise.resolve(null) },
 	};
 	(Platform as { isMobile: boolean }).isMobile = o.mobile ?? false;
-	const modal = new TitleDetailModal({} as never, plugin as never, title, undefined, o.onPerson ? () => {} : undefined);
+	const modal = newTitleDetail(deps, { title, onPersonClick: o.onPerson ? () => {} : undefined });
 	const x = modal as unknown as {
 		headerEl: HTMLElement | null;
 		contentEl: HTMLElement;
@@ -66,7 +68,7 @@ function build(title: HoardTitle, o: { mobile?: boolean; trailer?: LookupResult<
 		renderEpisodesSection: (p: HTMLElement) => void;
 		collapsedSeasons: Set<number>;
 	};
-	return { modal: x, dataManager, apiService, plugin };
+	return { modal: x, dataManager, apiService, deps };
 }
 
 function header(m: ReturnType<typeof build>['modal']): HTMLElement {

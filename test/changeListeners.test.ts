@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ChangeListeners } from '../src/changeListeners';
+import { ChangeListeners } from '../src/shared/services/changeListeners';
 
 describe('ChangeListeners', () => {
 	it('calls the listeners in the order they were added', () => {

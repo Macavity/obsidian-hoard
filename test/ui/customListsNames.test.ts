@@ -62,9 +62,8 @@ describe('list tab rename', () => {
 describe('name cell editing', () => {
 	async function setup() {
 		const ctx = await setupCustomLists([makeList()], [{ id: 'w1', title: 'Alien', type: 'Movie', status: 'Completed' }]);
-		const p = ctx.plugin as unknown as Record<string, unknown>;
-		p.readingDataManager = { getBooks: () => [{ title: 'Aliens Book', status: 'Reading' }], getMangaList: () => [] };
-		p.gameDataManager = { getGames: () => [{ title: 'Alien Isolation', status: 'Playing' }] };
+		Object.assign(ctx.env.reading, { getBooks: () => [{ title: 'Aliens Book', status: 'Reading' }], getMangaList: () => [] });
+		Object.assign(ctx.env.games, { getGames: () => [{ title: 'Alien Isolation', status: 'Playing' }] });
 		const nameCell = (): HTMLElement => qa(ctx.container, '.hoard-custom-list-table__tr--body')[0]!.querySelector<HTMLElement>('.hoard-custom-list-table__td--name')!;
 		const edit = (): HTMLInputElement => {
 			nameCell().click();

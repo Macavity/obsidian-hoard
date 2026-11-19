@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from './__mocks__/obsidian';
-import HoardPlugin from '../src/main';
-vi.mock('../src/import/watchlog/detect', () => ({
+import HoardPlugin from '../src/app/main';
+vi.mock('../src/modules/import/services/watchlog/detect', () => ({
 	detectWatchLogSources: () => Promise.resolve({ original: null, fork: null, hoardHasData: false }),
 }));
-import type { VaultLayout } from '../src/storage/VaultLayout';
+import type { VaultLayout } from '../src/shared/storage/VaultLayout';
 
 interface Harness {
 	plugin: HoardPlugin;
@@ -28,7 +28,7 @@ function harness(o: Opts = {}): Harness {
 	const files = Object.entries(o.bases ?? {}).map(([path]) => ({ path, extension: 'base' }));
 	const plugin = Object.create(HoardPlugin.prototype) as Record<string, unknown>;
 	Object.assign(plugin, {
-		settings: { types: [{ name: 'Movie' }] },
+		state: { types: [{ name: 'Movie' }] },
 		local: { data: { ui: {} } },
 		app: { vault: { getFiles: () => files, cachedRead: (f: { path: string }) => Promise.resolve(o.bases?.[f.path] ?? '') } },
 		applySharedSettings: track('applySettings'),

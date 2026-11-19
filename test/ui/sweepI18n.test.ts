@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { apiErrorMessage, apiErrorShort } from '../../src/ApiService';
-import { renderBatchStatusSelect } from '../../src/ui/ActionBar';
-import { nameSelect } from '../../src/ui/FormCells';
-import { scheduleText } from '../../src/ui/scheduleText';
-import { buildFilterSections, formatPriorityOpt, type CommonFilterDraft } from '../../src/ui/TabFilters';
-import { statusLabel, typeLabel } from '../../src/i18n/labels';
-import { parseBackup } from '../../src/backup';
-import { ROWS_SHELVES } from '../../src/types';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { apiErrorMessage, apiErrorShort } from '../../src/shared/api/ApiService';
+import { renderBatchStatusSelect } from '../../src/design-system/ActionBar';
+import { nameSelect } from '../../src/design-system/FormCells';
+import { scheduleText } from '../../src/modules/airtime/ui/scheduleText';
+import { buildFilterSections, formatPriorityOpt, type CommonFilterDraft } from '../../src/design-system/TabFilters';
+import { statusLabel, typeLabel } from '../../src/shared/i18n/labels';
+import { parseBackup } from '../../src/modules/backup/services/backup';
+import { ROWS_SHELVES } from '../../src/shared/domain/rows';
 import { El } from '../helpers/fakeEl';
 
 afterEach(() => setLocale('en'));

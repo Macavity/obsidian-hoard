@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Modal, Notice } from './__mocks__/obsidian';
-import HoardPlugin from '../src/main';
-import { HoardView } from '../src/HoardView';
-import { HoardSettingsTab } from '../src/SettingsTab';
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/types';
+import HoardPlugin from '../src/app/main';
+import { HoardView } from '../src/app/HoardView';
+import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/modules/settings/domain/settingsDefaults';
 
 const plugin = (props: Record<string, unknown>): HoardPlugin =>
 	Object.assign(Object.create(HoardPlugin.prototype) as HoardPlugin, props);
 const priv = (p: HoardPlugin) => p as unknown as {
+	resolveDefaultAddType(): string;
+	applyCardSizeCssVar(): void;
 	activateView(tab?: string): Promise<void>;
 	openWidgetPalette(editor: { replaceSelection(s: string): void }): void;
 };
@@ -19,16 +20,16 @@ afterEach(() => {
 
 describe('settings before they are loaded', () => {
 	it('are a copy of the defaults, not the defaults themselves', () => {
-		const fresh = new (HoardPlugin as unknown as new () => HoardPlugin)();
-		expect(fresh.settings).toEqual(DEFAULT_SETTINGS);
-		expect(fresh.settings).not.toBe(DEFAULT_SETTINGS);
-		expect(fresh.settings.types).not.toBe(DEFAULT_SETTINGS.types);
+		const fresh = priv(new (HoardPlugin as unknown as new () => HoardPlugin)()) as unknown as { state: typeof DEFAULT_SETTINGS };
+		expect(fresh.state).toEqual(DEFAULT_SETTINGS);
+		expect(fresh.state).not.toBe(DEFAULT_SETTINGS);
+		expect(fresh.state.types).not.toBe(DEFAULT_SETTINGS.types);
 	});
 });
 
 describe('resolveDefaultAddType', () => {
 	const types = [{ name: 'Movie' }, { name: 'Anime' }];
-	const resolve = (s: Record<string, unknown>) => plugin({ settings: { types, ...s } }).resolveDefaultAddType();
+	const resolve = (s: Record<string, unknown>) => priv(plugin({ state: { types, ...s } })).resolveDefaultAddType();
 
 	it('follows the last added type for the sentinel and falls back to the first', () => {
 		expect(resolve({ defaultAddType: LAST_USED_TYPE_SENTINEL, lastAddedType: 'Anime' })).toBe('Anime');
@@ -38,7 +39,7 @@ describe('resolveDefaultAddType', () => {
 	it('keeps an existing chosen type and falls back when it is gone', () => {
 		expect(resolve({ defaultAddType: 'Anime' })).toBe('Anime');
 		expect(resolve({ defaultAddType: 'Gone' })).toBe('Movie');
-		expect(plugin({ settings: { types: [] } }).resolveDefaultAddType()).toBe('');
+		expect(priv(plugin({ state: { types: [] } })).resolveDefaultAddType()).toBe('');
 	});
 });
 
@@ -48,7 +49,7 @@ describe('applyCardSizeCssVar', () => {
 		const settingsWindow = document.implementation.createHTMLDocument('settings');
 		vi.stubGlobal('activeDocument', settingsWindow);
 		try {
-			plugin({ settings: { cardSize: 3, cardSizeMobile: 3 } }).applyCardSizeCssVar();
+			priv(plugin({ state: { cardSize: 3, cardSizeMobile: 3 } })).applyCardSizeCssVar();
 		} finally {
 			vi.unstubAllGlobals();
 		}
@@ -117,22 +118,5 @@ describe('openWidgetPalette', () => {
 		choose('hoard-todo:mini');
 		opened[2]!.onChooseItem({ title: 'Dark' });
 		expect(written).toEqual(['```hoard-todo\nDark\n```', '```hoard-todo\nDark\nmini\n```']);
-	});
-});
-
-describe('HoardSettingsTab.gamesFilterRefs', () => {
-	it('lists the live and saved-preset exclusions of the axis', () => {
-		const live = { genreExclude: ['RPG'], platformExclude: ['PC'] };
-		const preset = { genreExclude: ['Indie'] };
-		const tab = Object.assign(Object.create(HoardSettingsTab.prototype) as HoardSettingsTab, {
-			plugin: { settings: { gamesFilters: live }, gameDataManager: { getSettings: () => ({ savedFilterPreset: preset }) } },
-		});
-		const refs = (kind: 'type' | 'platform') => (tab as unknown as { gamesFilterRefs(k: string): string[][] }).gamesFilterRefs(kind);
-		expect(refs('type')).toEqual([['RPG'], ['Indie']]);
-		expect(refs('platform')).toEqual([['PC']]);
-		// the very arrays, so renames and deletions reach the stored exclusions
-		expect(refs('type')[0]).toBe(live.genreExclude);
-		expect(refs('type')[1]).toBe(preset.genreExclude);
-		expect(refs('platform')[0]).toBe(live.platformExclude);
 	});
 });

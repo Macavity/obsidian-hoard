@@ -1,6 +1,6 @@
 import { requestUrl } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService } from '../src/ApiService';
+import { ApiService } from '../src/shared/api/ApiService';
 
 const sent = vi.mocked(requestUrl);
 const ok = (json: unknown) => ({ status: 200, text: JSON.stringify(json), json }) as never;

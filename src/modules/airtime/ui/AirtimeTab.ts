@@ -1,0 +1,1641 @@
+import type { TitleReader, TitleWriter } from '../../watchlist/exports';
+import type { ReadingReader, ReadingWriter } from '../../reading/exports';
+import type { GameReader, GameSettingsAccess, GameWriter } from '../../games/exports';
+import type { TabInstance } from '../../../design-system/TabInstance';
+import { Notice } from 'obsidian';
+import { t } from '../../../shared/i18n';
+import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
+import { monthName } from '../../../shared/i18n/dateNames';
+import { scheduleText } from './scheduleText';
+import { createIconButton } from '../../../design-system/IconButton';
+import type { SettingsReader, SettingsWriter } from '../../settings/exports';
+import type { ApiService } from '../../../shared/api/ApiService';
+import type { PosterService } from '../../../shared/api/PosterService';
+import type { AirtimeEntry, AirtimeSchedule } from '../domain/model';
+import type { AirtimeReader, AirtimeStore } from '../services/roles';
+import type { Game } from '../../games/exports';
+import type { Book, Manga } from '../../reading/exports';
+import type { HoardTitle, MaybeTitle } from '../../watchlist/exports';
+import { formatDateDisplay, isReleaseDateFuture, toIsoDate, todayIso } from '../../../shared/domain/date';
+import { GAME_AUTO_STATUS } from '../../games/exports';
+import { getReadingTypeColor } from '../../reading/exports';
+import { getThemedColor } from '../../../shared/domain/tags';
+import { getDisplayPoster } from '../../watchlist/exports';
+import { rawgResizedCover } from '../../../shared/api/ApiService';
+import { VirtualGrid, computeGridMetrics, type GridMetrics } from '../../../design-system/VirtualGrid';
+import { VirtualScroller } from '../../../design-system/VirtualScroller';
+import { LazyCardObserver } from '../../../design-system/LazyCardObserver';
+import { openCardMenu } from '../../../design-system/PosterCard';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
+import type { OpenMaybeAdd } from './MaybeAddModal';
+import type { OpenReadingSchedule } from './ReadingScheduleModal';
+import type { OpenGameSchedule } from './GameScheduleModal';
+import type { OpenAirtimeSchedule } from './AirtimeScheduleModal';
+import type { OpenUpcomingFinder, UpcomingFinderItem } from './UpcomingFinderModal';
+import { renderAddButton, renderSelectAllButton, renderViewDropdown } from '../../../design-system/TabToolbar';
+import { renderTypeBadge } from '../../../design-system/typeBadge';
+import { renderActionBar } from '../../../design-system/ActionBar';
+
+/**
+ * A normalized Upcoming card subject — a watchlist title, a reading item or a game — so the
+ * tracker renders and acts on all three through one path.
+ */
+type ResolvedUpcoming = {
+	source: 'watchlist' | 'reading' | 'game';
+	id: string;
+	title: string;
+	/** Stored type: a watch type ("Anime", "Movie", …), "Book" / "Manga", or "Game". */
+	typeName: string;
+	/** typeName as shown in the badge, in the active locale. */
+	typeLabel: string;
+	/** Colored-badge color, or null for a plain badge (reading/games). */
+	typeColor: string | null;
+	externalLink: string;
+	/** True for a single release (movie/book/game): 0 or 1 total units. */
+	isSingle: boolean;
+	/** Total episodes (watch) or chapters (reading). Games have none (0). */
+	totalUnits: number;
+	/** Incrementing unit: episodes for watch items, chapters for reading, a single release for games. */
+	unit: 'episode' | 'chapter' | 'release';
+	/** Grouping unit: seasons for watch items and games, volumes for reading. */
+	group: 'season' | 'volume';
+	/** Badge tail: airing / reading / releasing next. */
+	next: 'nextWatch' | 'nextReading' | 'nextGame';
+	/** Status to revert to on a single-release tick. */
+	planStatus: string;
+};
+
+// Helpers
+
+export function formatDaysWithMonths(days: number): string {
+	if (days < 30) return t('airtime.countdown.inDays', { count: days });
+	return t('airtime.countdown.inDaysMonths', { days, count: Math.round(days / 30) });
+}
+
+// Card state helpers
+
+export type DetailedCountdown = {
+	kind: 'future' | 'today-before' | 'aired' | 'due';
+	label: string;
+	daysUntil: number;
+};
+
+/** One renderable tracker entry: the airtime entry, its resolved subject and its countdown state. */
+/** Countdown badge state class per kind; spelled out so every class name appears literally. */
+const COUNTDOWN_KIND_CLASSES: Record<DetailedCountdown['kind'], string> = {
+	'future': 'is-future',
+	'today-before': 'is-today-before',
+	'aired': 'is-aired',
+	'due': 'is-due',
+};
+
+type TrackerCardData = { entry: AirtimeEntry; r: ResolvedUpcoming; countdown: DetailedCountdown };
+
+/** What both card layouts derive from an entry: movie or series, last episode, tick button shown. */
+function cardFlags(entry: AirtimeEntry, r: ResolvedUpcoming, countdown: DetailedCountdown) {
+	const isMovie = r.isSingle;
+	const totalEps = r.totalUnits;
+	const isFinalEpisode =
+		!isMovie &&
+		entry.currentEpisode !== undefined &&
+		totalEps > 0 &&
+		entry.currentEpisode >= totalEps;
+	const showTick =
+		(isMovie && countdown.kind === 'due') ||
+		(!isMovie && countdown.kind === 'aired');
+	return { isMovie, isFinalEpisode, showTick };
+}
+
+/**
+ * True when the scheduled HH:MM has already passed today. No releaseTime ⇒ the whole day counts
+ * as passed (show aired/due).
+ */
+function isAirtimePassedNow(schedule: AirtimeSchedule): boolean {
+	if (!schedule.releaseTime) return true;
+	const now = new Date();
+	const [hStr, mStr] = schedule.releaseTime.split(':');
+	const h = parseInt(hStr ?? '0', 10);
+	const m = parseInt(mStr ?? '0', 10);
+	return now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m);
+}
+
+const MS_PER_DAY = 86400000;
+
+function localDateStamp(d: Date): string {
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Airtime reached: movies are due, everything else has aired. */
+function passedCountdown(isMovie: boolean): DetailedCountdown {
+	return isMovie
+		? { kind: 'due', label: t('airtime.countdown.due'), daysUntil: 0 }
+		: { kind: 'aired', label: t('airtime.countdown.aired'), daysUntil: 0 };
+}
+
+/** Today is a release day not yet ticked: aired once the time passed, otherwise still ahead. */
+function releaseDayCountdown(schedule: AirtimeSchedule): DetailedCountdown {
+	if (isAirtimePassedNow(schedule)) return { kind: 'aired', label: t('airtime.countdown.aired'), daysUntil: 0 };
+	return { kind: 'today-before', label: t('airtime.countdown.today'), daysUntil: 0 };
+}
+
+function futureCountdown(daysUntil: number): DetailedCountdown {
+	if (daysUntil === 1) return { kind: 'future', label: t('airtime.countdown.tomorrow'), daysUntil: 1 };
+	return { kind: 'future', label: formatDaysWithMonths(daysUntil), daysUntil };
+}
+
+const NO_COUNTDOWN: DetailedCountdown = { kind: 'future', label: '—', daysUntil: 9999 };
+
+function onceCountdown(schedule: AirtimeSchedule, isMovie: boolean, today: Date): DetailedCountdown {
+	if (!schedule.releaseDate) return NO_COUNTDOWN;
+	const rel = new Date(schedule.releaseDate + 'T00:00:00');
+	const relDay = new Date(rel.getFullYear(), rel.getMonth(), rel.getDate());
+	if (relDay.getTime() < today.getTime()) return passedCountdown(isMovie);
+	if (relDay.getTime() === today.getTime()) {
+		return isAirtimePassedNow(schedule) ? passedCountdown(isMovie) : releaseDayCountdown(schedule);
+	}
+	return futureCountdown(Math.round((relDay.getTime() - today.getTime()) / MS_PER_DAY));
+}
+
+function dailyCountdown(schedule: AirtimeSchedule, acknowledgedToday: boolean): DetailedCountdown {
+	// already ticked today → advance to tomorrow
+	if (acknowledgedToday && isAirtimePassedNow(schedule)) return futureCountdown(1);
+	return releaseDayCountdown(schedule);
+}
+
+function weeklyCountdown(schedule: AirtimeSchedule, dayOfWeek: number, now: Date, acknowledgedToday: boolean): DetailedCountdown {
+	const currentDay = now.getDay();
+	const isScheduledDay = currentDay === dayOfWeek;
+	if (isScheduledDay && !acknowledgedToday) return releaseDayCountdown(schedule);
+	// acknowledged on the scheduled day → a full week until the next occurrence
+	const daysUntil = (dayOfWeek - currentDay + 7) % 7;
+	return futureCountdown(daysUntil === 0 ? 7 : daysUntil);
+}
+
+function monthlyCountdown(schedule: AirtimeSchedule, dayOfMonth: number, now: Date, today: Date, acknowledgedToday: boolean): DetailedCountdown {
+	const isScheduledDay = now.getDate() === dayOfMonth;
+	if (isScheduledDay && !acknowledgedToday) return releaseDayCountdown(schedule);
+	const thisMonth = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+	// acknowledged on the scheduled day, or the day already passed → next month
+	const rollOver = isScheduledDay || thisMonth.getTime() <= today.getTime();
+	const nextDate = rollOver ? new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth) : thisMonth;
+	return futureCountdown(Math.round((nextDate.getTime() - today.getTime()) / MS_PER_DAY));
+}
+
+/**
+ * Countdown state for a card, handling the "airtime passed today" case that getAirtimeCountdown
+ * rolls over to next week. `lastAcknowledgedDate` makes recurring cards reset to the next
+ * occurrence right after you tick an episode.
+ */
+export function getDetailedCountdown(
+	schedule: AirtimeSchedule,
+	isMovie: boolean,
+	lastAcknowledgedDate?: string,
+): DetailedCountdown {
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const acknowledgedToday = lastAcknowledgedDate === localDateStamp(now);
+
+	switch (schedule.recurrence) {
+		case 'once':
+			return onceCountdown(schedule, isMovie, today);
+		case 'daily':
+			return dailyCountdown(schedule, acknowledgedToday);
+		case 'weekly':
+			if (schedule.dayOfWeek !== undefined) return weeklyCountdown(schedule, schedule.dayOfWeek, now, acknowledgedToday);
+			break;
+		case 'monthly':
+			if (schedule.dayOfMonth) return monthlyCountdown(schedule, schedule.dayOfMonth, now, today, acknowledgedToday);
+			break;
+	}
+	return NO_COUNTDOWN;
+}
+
+// "X days ago" label
+
+function formatDaysAgo(releaseDateStr: string): string {
+	const release = new Date(releaseDateStr + 'T00:00:00');
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const diffDays = Math.floor((today.getTime() - release.getTime()) / 86400000);
+	if (diffDays <= 0) return t('airtime.countdown.today');
+	if (diffDays === 1) return t('airtime.countdown.yesterday');
+	return t('airtime.countdown.daysAgo', { count: diffDays });
+}
+
+/** "Season 2 · Ep 7 · Airing next" — the progress badge of a multi-part title. */
+function progressBadgeText(entry: AirtimeEntry, r: ResolvedUpcoming): string {
+	const parts: string[] = [];
+	if (entry.currentSeason !== undefined) {
+		parts.push(t(r.group === 'volume' ? 'airtime.badge.volume' : 'airtime.badge.season', { n: entry.currentSeason }));
+	}
+	if (entry.currentEpisode !== undefined) {
+		parts.push(t(`airtime.badge.${r.unit}`, { n: entry.currentEpisode }));
+	}
+	parts.push(t(`airtime.badge.${r.next}`));
+	return parts.join(' · ');
+}
+
+/** Tooltip of the green tick button. */
+function tickTooltip(r: ResolvedUpcoming, isFinalEpisode: boolean): string {
+	if (r.isSingle) return t('airtime.actions.markReleased');
+	const chapter = r.unit === 'chapter';
+	if (isFinalEpisode) return t(chapter ? 'airtime.actions.finalChapter' : 'airtime.actions.finalEpisode');
+	return t(chapter ? 'airtime.actions.markChapter' : 'airtime.actions.markEpisode');
+}
+
+/** The plan status a single-release tick reverts to, in the UI language of its library. */
+function planStatusLabel(r: ResolvedUpcoming): string {
+	if (r.unit === 'release') return gameStatusLabel(r.planStatus);
+	if (r.unit === 'chapter') return readingStatusLabel(r.planStatus);
+	return statusLabel(r.planStatus);
+}
+
+/** Confirm text of a tick: single release, final unit, an out unit being tracked, or the next unit. */
+function tickConfirmMessage(r: ResolvedUpcoming, current: number | undefined, isFinal: boolean, tracked: boolean): string {
+	if (r.isSingle) return t('airtime.confirm.released', { title: r.title, status: planStatusLabel(r) });
+	const unit = r.unit === 'chapter' ? 'chapter' : 'episode';
+	const kind = isFinal ? 'final' : tracked ? 'out' : 'next';
+	return t(`airtime.confirm.${unit}.${kind}`, { title: r.title, n: current ?? '' });
+}
+
+/** The schedule line of a Cards entry, with the long "Release date" lead shortened. */
+function trackerSubText(schedule: AirtimeSchedule): string {
+	return scheduleText(schedule, t('airtime.sub.releasePrefix'));
+}
+
+/** Opens the entry's external page, or tells the user none is set. */
+function openExternalLink(link: string, noLinkKey: 'airtime.notices.noLink' | 'airtime.notices.noLinkTitle'): void {
+	if (link) activeWindow.open(link, '_blank');
+	else new Notice(t(noLinkKey));
+}
+
+/** Shows a remote cover on the card image; anything that is not an http(s) URL leaves the placeholder. */
+function showTrackerCover(card: HTMLElement, img: HTMLImageElement, src: string): boolean {
+	if (!src.startsWith('http')) return false;
+	img.onerror = () => card.removeClass('has-poster');
+	card.addClass('has-poster');
+	img.src = src;
+	return true;
+}
+
+// AirtimeTab
+
+export interface AirtimeTabHost {
+	getCardMinWidth(): number;
+	isCardTextUnder(tab: 'upcoming'): boolean;
+	/** Keeps the background scheduler from notifying again for an airing the user just handled. */
+	markAirtimeHandled(key: string): void;
+}
+
+/** The dialogs the Upcoming tab opens; the wiring layer builds them, so the tab needs none of their collaborators. */
+export interface AirtimeTabModals {
+	openMaybeAdd: OpenMaybeAdd;
+	openUpcomingFinder: OpenUpcomingFinder;
+	openGameSchedule: OpenGameSchedule;
+	openReadingSchedule: OpenReadingSchedule;
+	openAirtimeSchedule: OpenAirtimeSchedule;
+	confirm: OpenConfirm;
+}
+
+/** True when the entry's subject is gone; reading items and games are only checked when their manager is at hand. */
+function isOrphan(
+	entry: AirtimeEntry,
+	titleIds: Set<string>,
+	reading: Pick<ReadingReader, 'getBook' | 'getManga'> | undefined,
+	games: Pick<GameReader, 'getGame'> | undefined,
+): boolean {
+	if (entry.source === 'game') return !!games && !games.getGame(entry.titleId);
+	if (entry.source === 'reading') {
+		if (!reading) return false;
+		const item = (entry.readingKind ?? 'book') === 'book' ? reading.getBook(entry.titleId) : reading.getManga(entry.titleId);
+		return !item;
+	}
+	return !titleIds.has(entry.titleId);
+}
+
+export class AirtimeTab implements TabInstance {
+	private container: HTMLElement;
+	private onCountChange?: (count: number) => void;
+
+	currentSubTab: 'tracker' | 'history' | 'maybe' = 'tracker';
+
+	selectionMode = false;
+	selectedItems: Set<string> = new Set(); // AirtimeEntry ids
+
+	searchQuery = '';
+
+	// tracker presentation (List rows / Cards grid) — persisted in settings
+	trackerView: 'list' | 'cards' = 'list';
+
+	// one VirtualGrid per month section, all on the shared VirtualScroller
+	private trackerScroller: VirtualScroller | null = null;
+	// survives re-renders (tick, search, data change) within this tab instance
+	private _trackerPersistentScrollTop = 0;
+
+	// watchlist titles only — reading items already carry their coverUrl
+	private trackerObserver: LazyCardObserver | null = null;
+
+	// document-level click handlers for transient card menus, cleaned on render
+	private activeCleanups: (() => void)[] = [];
+
+	constructor(
+		container: HTMLElement,
+		private readonly settings: SettingsReader & SettingsWriter,
+		private readonly titles: TitleReader & AirtimeStore & Pick<TitleWriter, 'updateTitle' | 'removeTitle' | 'removeMaybeTitle'>,
+		private readonly reading: ReadingReader & ReadingWriter,
+		private readonly games: GameReader & GameWriter & Pick<GameSettingsAccess, 'getSettings'>,
+		private readonly api: Pick<ApiService, 'getAnimeScheduleByMalId'>,
+		private readonly posters: Pick<PosterService, 'clearQueue' | 'enqueue'>,
+		private readonly host: AirtimeTabHost,
+		private readonly modals: AirtimeTabModals,
+		onCountChange?: (count: number) => void,
+	) {
+		this.container = container;
+		this.onCountChange = onCountChange;
+		this.trackerView = settings.get().upcomingTrackerView === 'cards' ? 'cards' : 'list';
+	}
+
+	/**
+	 * Normalizes an airtime entry into a renderable subject, resolving the underlying title or
+	 * reading item. null for orphan entries.
+	 */
+	private resolveEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
+		if (entry.source === 'reading') return this.resolveReadingEntry(entry);
+		if (entry.source === 'game') return this.resolveGameEntry(entry);
+		return this.resolveWatchEntry(entry);
+	}
+
+	private resolveReadingEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
+		const kind = entry.readingKind ?? 'book';
+		const item: Book | Manga | undefined =
+			kind === 'book' ? this.reading.getBook(entry.titleId) : this.reading.getManga(entry.titleId);
+		if (!item) return null;
+		const totalUnits = entry.totalEpisodes ?? item.totalChapters ?? 0;
+		return {
+			source: 'reading',
+			id: item.id,
+			title: item.title,
+			typeName: kind === 'book' ? 'Book' : 'Manga',
+			typeLabel: t(`airtime.type.${kind}`),
+			typeColor: this.settings.get().coloredTypeBadges
+				? getReadingTypeColor(kind, this.settings.get())
+				: null,
+			externalLink: item.externalLink ?? '',
+			// the schedule's mode decides single vs recurring — a multi-chapter item scheduled as a one-off
+			// release date still ticks like one
+			isSingle: entry.schedule.recurrence === 'once',
+			totalUnits,
+			unit: 'chapter',
+			group: 'volume',
+			next: 'nextReading',
+			planStatus: 'Plan to Read',
+		};
+	}
+
+	private resolveGameEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
+		const game = this.games.getGame(entry.titleId);
+		if (!game) return null;
+		return {
+			source: 'game',
+			id: game.id,
+			title: game.title,
+			typeName: 'Game',
+			typeLabel: t('airtime.type.game'),
+			// games have no per-source badge color setting — always plain
+			typeColor: null,
+			// store page first (the GameDetailModal priority), then external link
+			externalLink: game.storeUrl || game.externalLink,
+			// games are always single releases — no episode/chapter counters
+			isSingle: true,
+			totalUnits: 0,
+			unit: 'release',
+			group: 'season',
+			next: 'nextGame',
+			planStatus: this.games.getSettings().defaultStatus || 'Not started',
+		};
+	}
+
+	private resolveWatchEntry(entry: AirtimeEntry): ResolvedUpcoming | null {
+		const title = this.titles.getTitle(entry.titleId);
+		if (!title) return null;
+		const typeDef = this.settings.get().types.find((t) => t.name === title.type);
+		const colored = this.settings.get().coloredTypeBadges;
+		return {
+			source: 'watchlist',
+			id: title.id,
+			title: title.title,
+			typeName: title.type,
+			typeLabel: typeLabel(title.type),
+			typeColor: colored && typeDef
+				? getThemedColor(title.type, typeDef.color, this.settings.get().colorTheme)
+				: null,
+			externalLink: title.externalLink,
+			// same rule as reading: the schedule's mode decides, so a series set to "Single release" gets the
+			// movie-style due/tick flow
+			isSingle: entry.schedule.recurrence === 'once',
+			totalUnits: entry.totalEpisodes ?? title.totalEpisodes,
+			unit: 'episode',
+			group: 'season',
+			next: 'nextWatch',
+			planStatus: 'Plan to watch',
+		};
+	}
+
+	/** Count of Due entries in the Maybe list — usable without rendering the tab. */
+	static getMaybeDueCount(dataManager: Pick<TitleReader, 'getMaybeTitles'>): number {
+		const todayStr = todayIso();
+		return dataManager.getMaybeTitles().filter(
+			(mt) => !!mt.releaseDate && mt.releaseDate <= todayStr,
+		).length;
+	}
+
+	/** Count of Aired/Due entries — usable without rendering the tab. */
+	static getAiredDueCount(
+		dataManager: Pick<AirtimeReader, 'getAirtimeEntries'> & Pick<TitleReader, 'getTitles'>,
+		readingDataManager?: Pick<ReadingReader, 'getBook' | 'getManga'>,
+		gameDataManager?: Pick<GameReader, 'getGame'>,
+	): number {
+		const titleIds = new Set(dataManager.getTitles().map((t) => t.id));
+		let count = 0;
+		for (const entry of dataManager.getAirtimeEntries()) {
+			if (isOrphan(entry, titleIds, readingDataManager, gameDataManager)) continue;
+			// same rule as resolveEntry, so the due count matches what the cards/rows show
+			const isSingle = entry.schedule.recurrence === 'once';
+			const cd = getDetailedCountdown(entry.schedule, isSingle, entry.lastAcknowledgedDate);
+			if (cd.kind === 'aired' || cd.kind === 'due') count++;
+		}
+		return count;
+	}
+
+	/**
+	 * Tear down document-level listeners and the Cards virtual-scroll machinery. Called by
+	 * HoardView when the tab instance is replaced or the view closes.
+	 */
+	destroy(): void {
+		this.activeCleanups.forEach((fn) => fn());
+		this.activeCleanups = [];
+		this.destroyTrackerVirtual();
+	}
+
+	render(): void {
+		this.activeCleanups.forEach((fn) => fn());
+		this.activeCleanups = [];
+		this.destroyTrackerVirtual();
+		this.container.empty();
+		this.container.addClass('hoard-airtime');
+		if (this.onCountChange) {
+			this.onCountChange(AirtimeTab.getAiredDueCount(this.titles, this.reading, this.games) + AirtimeTab.getMaybeDueCount(this.titles));
+		}
+		this.renderInnerTabBar();
+		if (this.currentSubTab === 'tracker') {
+			this.renderTracker();
+		} else if (this.currentSubTab === 'history') {
+			this.renderHistory();
+		} else {
+			this.renderMaybe();
+		}
+	}
+
+	private renderInnerTabBar(): void {
+		const bar = this.container.createDiv({ cls: 'hoard-inner-tabs' });
+		const trackerCount = AirtimeTab.getAiredDueCount(this.titles, this.reading, this.games);
+		const maybeCount = AirtimeTab.getMaybeDueCount(this.titles);
+		const tabs: Array<{ key: 'tracker' | 'history' | 'maybe'; label: string; badge: number }> = [
+			{ key: 'tracker', label: t('airtime.tabs.tracker'), badge: trackerCount },
+			{ key: 'history', label: t('app.tabs.log'), badge: 0 },
+			{ key: 'maybe', label: t('airtime.tabs.maybe'), badge: maybeCount },
+		];
+		for (const { key, label, badge } of tabs) {
+			const text = badge > 0 ? `${label} (${badge})` : label;
+			const btn = bar.createEl('button', {
+				cls: `hoard-inner-tabs__btn${this.currentSubTab === key ? ' is-active' : ''}`,
+				text,
+			});
+			btn.addEventListener('click', () => {
+				if (this.currentSubTab === key) return;
+				this.currentSubTab = key;
+				this.selectionMode = false;
+				this.selectedItems.clear();
+				this.searchQuery = '';
+				this.render();
+			});
+		}
+	}
+
+	private renderTracker(): void {
+		if (this.settings.get().showHintBanners) {
+			this.container.createDiv({
+				cls: 'hoard-custom-lists__draft-banner',
+				text: `⚠ ${t('airtime.hint', { status: statusLabel('To be released') })}`,
+			});
+		}
+		this.renderHeader();
+		this.renderSearch();
+		if (this.trackerView === 'cards') {
+			this.renderTrackerCardsGrid();
+		} else {
+			this.renderCards();
+		}
+	}
+
+	private renderHistory(): void {
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		const todayStr = toIsoDate(today);
+
+		const cutoff = new Date(today);
+		cutoff.setMonth(cutoff.getMonth() - 6);
+		const cutoffStr = toIsoDate(cutoff);
+
+		const pastTitles = this.titles.getTitles()
+			.filter((t) => !!t.releaseDate && t.releaseDate <= todayStr && t.releaseDate >= cutoffStr)
+			.sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''));
+
+		if (pastTitles.length === 0) {
+			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.history') });
+			return;
+		}
+
+		const cardsEl = this.container.createDiv({ cls: 'hoard-airtime__cards' });
+		for (const title of pastTitles) {
+			this.renderHistoryCard(cardsEl, title);
+		}
+	}
+
+	private renderHistoryCard(parent: HTMLElement, title: HoardTitle): void {
+		const card = parent.createDiv({ cls: 'hoard-airtime__card hoard-airtime__card--history' });
+
+		const left = card.createDiv({ cls: 'hoard-airtime__card-left' });
+		left.createDiv({ cls: 'hoard-airtime__card-title', text: title.title });
+
+		const metaRow = left.createDiv({ cls: 'hoard-airtime__card-meta' });
+		renderTypeBadge(metaRow, title.type, this.settings.get());
+		if (title.releaseDate) {
+			metaRow.createSpan({ cls: 'hoard-airtime__schedule', text: formatDateDisplay(title.releaseDate) });
+		}
+
+		const right = card.createDiv({ cls: 'hoard-airtime__card-right hoard-airtime__card-right--history' });
+		if (title.releaseDate) {
+			right.createDiv({ cls: 'hoard-airtime__pill hoard-airtime__pill--aired', text: formatDaysAgo(title.releaseDate) });
+		}
+
+		const globeBtn = createIconButton(right, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime__action-btn' });
+		globeBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			openExternalLink(title.externalLink, 'airtime.notices.noLinkTitle');
+		});
+
+		const deleteBtn = createIconButton(right, {
+			icon: 'x',
+			label: t('airtime.actions.removeFromWatchlist'),
+			cls: 'hoard-airtime__action-btn hoard-airtime__action-btn--delete hoard-btn--danger',
+		});
+		deleteBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.modals.confirm(t('airtime.confirm.removeWatchlist', { title: title.title }), () => {
+				void this.titles.removeTitle(title.id).then(() => this.render());
+			});
+		});
+	}
+
+	private renderMaybe(): void {
+		const maybeTitles = this.titles.getMaybeTitles();
+
+		const headerEl = this.container.createDiv({ cls: 'hoard-list__header' });
+		if (maybeTitles.length > 0) {
+			headerEl.createSpan({ cls: 'hoard-list__count', text: String(maybeTitles.length) });
+		}
+		const controls = headerEl.createDiv({ cls: 'hoard-toolbar__controls' });
+		const rightGroup = controls.createDiv({ cls: 'hoard-toolbar__controls-right' });
+		renderAddButton(rightGroup, () => {
+			this.modals.openMaybeAdd({ onAdded: () => this.render() });
+		});
+
+		if (maybeTitles.length === 0) {
+			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.maybe') });
+			return;
+		}
+
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+
+		const cardsEl = this.container.createDiv({ cls: 'hoard-airtime__cards' });
+		const sorted = [...maybeTitles].sort((a, b) => {
+			const ra = a.releaseDate ?? '';
+			const rb = b.releaseDate ?? '';
+			if (!ra && !rb) return a.dateAdded.localeCompare(b.dateAdded);
+			if (!ra) return 1;
+			if (!rb) return -1;
+			return ra.localeCompare(rb);
+		});
+
+		for (const mt of sorted) {
+			this.renderMaybeCard(cardsEl, mt, today);
+		}
+	}
+
+	private renderMaybeCard(parent: HTMLElement, mt: MaybeTitle, today: Date): void {
+		const schedule: AirtimeSchedule = { recurrence: 'once', releaseDate: mt.releaseDate ?? undefined };
+		const countdown = getDetailedCountdown(schedule, true);
+
+		let cardCls = 'hoard-maybe-card';
+		if (countdown.kind === 'due') cardCls += ' hoard-airtime__card--aired is-due';
+
+		const card = parent.createDiv({ cls: cardCls });
+
+		const left = card.createDiv({ cls: 'hoard-maybe-card__left' });
+
+		left.createSpan({ cls: 'hoard-maybe-card__title', text: mt.title });
+
+		renderTypeBadge(left, mt.type, this.settings.get());
+
+		const pillClsMap: Record<DetailedCountdown['kind'], string> = {
+			'today-before': 'hoard-airtime__pill hoard-airtime__pill--today-series',
+			'future': 'hoard-airtime__pill hoard-airtime__pill--days',
+			'aired': 'hoard-airtime__pill hoard-airtime__pill--aired',
+			'due': 'hoard-airtime__pill hoard-airtime__pill--due',
+		};
+		const pillCls = countdown.kind === 'future' && countdown.daysUntil === 1
+			? 'hoard-airtime__pill hoard-airtime__pill--tomorrow'
+			: pillClsMap[countdown.kind];
+		const right = card.createDiv({ cls: 'hoard-maybe-card__right' });
+		right.createDiv({ cls: pillCls, text: mt.releaseDate ? countdown.label : '—' });
+		const globeBtn = createIconButton(right, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime__action-btn' });
+		globeBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			openExternalLink(mt.externalLink, 'airtime.notices.noLink');
+		});
+		const deleteBtn = createIconButton(right, {
+			icon: 'x',
+			label: t('airtime.actions.removeFromMaybe'),
+			cls: 'hoard-airtime__action-btn hoard-airtime__action-btn--delete hoard-btn--danger',
+		});
+		deleteBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.modals.confirm(t('airtime.confirm.removeMaybe', { title: mt.title }), () => {
+				void this.titles.removeMaybeTitle(mt.id).then(() => this.render());
+			});
+		});
+	}
+
+	private renderSearch(): void {
+		const searchWrap = this.container.createDiv({ cls: 'hoard-search-box' });
+		const input = searchWrap.createEl('input', {
+			cls: 'hoard-search-box__text-input',
+			attr: { type: 'text', placeholder: t('airtime.searchPlaceholder') },
+		});
+		input.value = this.searchQuery;
+		let debounceTimer: number | null = null;
+		input.addEventListener('input', () => {
+			this.searchQuery = input.value;
+			if (debounceTimer !== null) window.clearTimeout(debounceTimer);
+			debounceTimer = window.setTimeout(() => {
+				debounceTimer = null;
+				this.rerenderCards();
+			}, 250);
+		});
+	}
+
+	private rerenderCards(): void {
+		const existing = this.container.querySelector('.hoard-airtime__cards');
+		const emptyState = this.container.querySelector('.hoard-dashboard__empty-state');
+		if (existing) existing.remove();
+		if (emptyState) emptyState.remove();
+		if (this.trackerView === 'cards') {
+			this.destroyTrackerVirtual();
+			this.container.querySelector('.hoard-tracker__scroll')?.remove();
+			this.renderTrackerCardsGrid();
+		} else {
+			this.renderCards();
+		}
+	}
+
+	// Header
+
+	private renderHeader(): void {
+		const header = this.container.createDiv({ cls: 'hoard-list__header' });
+
+		// only entries that still resolve to a watchlist or reading item
+		const count = this.titles.getAirtimeEntries().filter(
+			(e) => this.resolveEntry(e) !== null,
+		).length;
+		if (count > 0) {
+			header.createSpan({ cls: 'hoard-list__count', text: String(count) });
+		}
+
+		const controls = header.createDiv({ cls: 'hoard-toolbar__controls' });
+
+		// action bar — selection mode with items selected
+		if (this.selectionMode && this.selectedItems.size > 0) {
+			this.renderActionBar(controls);
+		}
+
+		if (this.selectionMode) {
+			renderSelectAllButton(controls, this.selectedItems.size > 0, () => {
+				if (this.selectedItems.size > 0) {
+					this.selectedItems.clear();
+				} else {
+					for (const entry of this.titles.getAirtimeEntries()) {
+						this.selectedItems.add(entry.id);
+					}
+				}
+				this.render();
+			});
+		}
+
+		const rightGroup = controls.createDiv({ cls: 'hoard-toolbar__controls-right' });
+
+		const selBtn = rightGroup.createEl('button', {
+			cls: `hoard-btn hoard-btn--sm${this.selectionMode ? ' is-active' : ''}`,
+			text: t('ui.toolbar.select'),
+		});
+		selBtn.addEventListener('click', () => {
+			this.selectionMode = !this.selectionMode;
+			this.selectedItems.clear();
+			this.render();
+		});
+
+		this.renderViewDropdown(rightGroup);
+
+		const addBtnWrap = rightGroup.createDiv({ cls: 'hoard-toolbar__add-btn-wrap' });
+		const addBtn = addBtnWrap.createEl('button', { cls: 'hoard-toolbar__add-btn hoard-btn--success', text: t('ui.toolbar.add') });
+		addBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.openAddFlow();
+		});
+	}
+
+	/** The Watchlist view popover, reduced to List / Cards. Persisted in upcomingTrackerView. */
+	private renderViewDropdown(parent: HTMLElement): void {
+		renderViewDropdown<'cards' | 'list'>(parent, {
+			current: this.trackerView,
+			options: [
+				{ key: 'cards', label: t('airtime.view.cards'), icon: 'layout-grid' },
+				{ key: 'list', label: t('airtime.view.list'), icon: 'list' },
+			],
+			registerCleanup: (fn) => this.activeCleanups.push(fn),
+			onSelect: (key) => {
+				this.trackerView = key;
+				this._trackerPersistentScrollTop = 0;
+				void this.settings.update((s) => { s.upcomingTrackerView = key; });
+				this.render();
+			},
+		});
+	}
+
+	private renderActionBar(parent: HTMLElement): void {
+		renderActionBar(parent, this.modals.confirm, {
+			title: t('airtime.actions.removeFromUpcoming'),
+			selected: this.selectedItems,
+			message: (count) => t('airtime.confirm.removeSelected', { count }),
+			onConfirm: async () => {
+				await this.titles.removeAirtimeEntriesBatch(Array.from(this.selectedItems));
+				this.selectedItems.clear();
+				this.render();
+			},
+		});
+	}
+
+	// Add flow
+
+	private openAddFlow(): void {
+		const entries = this.titles.getAirtimeEntries();
+		// already-added keys, kept per source so a watchlist id and a reading id that happen to match
+		// don't shadow each other
+		const addedWatch = new Set(entries.filter((e) => e.source === undefined || e.source === 'watchlist').map((e) => e.titleId));
+		const addedReading = new Set(entries.filter((e) => e.source === 'reading').map((e) => e.titleId));
+		const addedGame = new Set(entries.filter((e) => e.source === 'game').map((e) => e.titleId));
+
+		const items: UpcomingFinderItem[] = [];
+		for (const t of this.titles.getTitles()) {
+			if (addedWatch.has(t.id)) continue;
+			items.push({ source: 'watchlist', id: t.id, title: t.title, typeLabel: typeLabel(t.type) });
+		}
+		for (const b of this.reading.getBooks()) {
+			if (addedReading.has(b.id)) continue;
+			items.push({ source: 'reading', kind: 'book', id: b.id, title: b.title, typeLabel: t('airtime.type.book') });
+		}
+		for (const m of this.reading.getMangaList()) {
+			if (addedReading.has(m.id)) continue;
+			items.push({ source: 'reading', kind: 'manga', id: m.id, title: m.title, typeLabel: t('airtime.type.manga') });
+		}
+		for (const g of this.games.getGames()) {
+			if (addedGame.has(g.id)) continue;
+			items.push({ source: 'game', id: g.id, title: g.title, typeLabel: t('airtime.type.game') });
+		}
+
+		if (this.titles.getTitles().length === 0 &&
+			this.reading.getBooks().length === 0 &&
+			this.reading.getMangaList().length === 0 &&
+			this.games.getGames().length === 0) {
+			new Notice(t('airtime.notices.noTitles'));
+			return;
+		}
+		if (items.length === 0) {
+			new Notice(t('airtime.notices.allAdded'));
+			return;
+		}
+
+		this.modals.openUpcomingFinder({ items, onSelect: (item) => {
+			if (item.source === 'reading') {
+				const kind = item.kind ?? 'book';
+				const readItem = kind === 'book'
+					? this.reading.getBook(item.id)
+					: this.reading.getManga(item.id);
+				if (readItem) this.startAddWithReading(readItem, kind);
+			} else if (item.source === 'game') {
+				const game = this.games.getGame(item.id);
+				if (game) this.startAddWithGame(game);
+			} else {
+				const title = this.titles.getTitle(item.id);
+				if (title) void this.startAddWithTitle(title);
+			}
+		} });
+	}
+
+	private startAddWithGame(game: Game): void {
+		const prefilled: AirtimeSchedule | null =
+			game.releaseDate && /^\d{4}-\d{2}-\d{2}$/.test(game.releaseDate)
+				? { recurrence: 'once', releaseDate: game.releaseDate }
+				: null;
+
+		this.modals.openGameSchedule({ game, existingSchedule: prefilled, onSave: async (schedule) => {
+			const entry: AirtimeEntry = {
+				id: this.titles.generateGameAirtimeId(game.id),
+				titleId: game.id,
+				source: 'game',
+				schedule,
+				dateAdded: new Date().toISOString(),
+			};
+			await this.titles.addAirtimeEntry(entry);
+			await this.syncGameFromSchedule(game.id, schedule);
+			this.render();
+		} });
+	}
+
+	/**
+	 * Push the scheduled release date back onto the game — future dates only, so a past/due date
+	 * doesn't auto-remove the just-added entry.
+	 */
+	private async syncGameFromSchedule(gameId: string, schedule: AirtimeSchedule): Promise<void> {
+		const g = this.games.getGame(gameId);
+		if (!g) return;
+		if (schedule.recurrence === 'once' && isReleaseDateFuture(schedule.releaseDate)) {
+			const newDate = schedule.releaseDate ?? null;
+			if (g.releaseDate !== newDate) {
+				g.releaseDate = newDate;
+				await this.games.updateGame(g);
+			}
+		}
+	}
+
+	private startAddWithReading(item: Book | Manga, kind: 'book' | 'manga'): void {
+		const prefilled: AirtimeSchedule | null =
+			item.releaseDate && /^\d{4}-\d{2}-\d{2}$/.test(item.releaseDate)
+				? { recurrence: 'once', releaseDate: item.releaseDate }
+				: null;
+
+		this.modals.openReadingSchedule({
+			item,
+			kind,
+			existingSchedule: prefilled,
+			currentVolume: null,
+			currentChapter: null,
+			totalVolumes: null,
+			totalChapters: null,
+			onSave: async (schedule, volume, chapter, totalVolumes, totalChapters) => {
+				const entry: AirtimeEntry = {
+					id: this.titles.generateReadingAirtimeId(item.id),
+					titleId: item.id,
+					source: 'reading',
+					readingKind: kind,
+					schedule,
+					currentSeason: volume ?? undefined,
+					currentEpisode: chapter ?? undefined,
+					totalSeasons: totalVolumes ?? undefined,
+					totalEpisodes: totalChapters ?? undefined,
+					dateAdded: new Date().toISOString(),
+				};
+				await this.titles.addAirtimeEntry(entry);
+				await this.syncReadingItemFromSchedule(item.id, kind, schedule, totalVolumes, totalChapters);
+				this.render();
+			},
+		});
+	}
+
+	/** Pushes schedule-derived totals / release date back onto the reading item. */
+	private async syncReadingItemFromSchedule(
+		itemId: string,
+		kind: 'book' | 'manga',
+		schedule: AirtimeSchedule,
+		totalVolumes: number | null,
+		totalChapters: number | null,
+	): Promise<void> {
+		if (kind === 'book') {
+			const b = this.reading.getBook(itemId);
+			if (!b) return;
+			let changed = false;
+			if (totalChapters !== null && totalChapters !== b.totalChapters) { b.totalChapters = totalChapters; changed = true; }
+			// only write a future 'once' date back (it drives the auto "To be released"); a past/due date is
+			// left alone so the just-added entry isn't auto-removed
+			if (schedule.recurrence === 'once' && isReleaseDateFuture(schedule.releaseDate)) {
+				const newDate = schedule.releaseDate ?? null;
+				if (b.releaseDate !== newDate) { b.releaseDate = newDate; changed = true; }
+			}
+			if (changed) await this.reading.updateBook(b);
+		} else {
+			const m = this.reading.getManga(itemId);
+			if (!m) return;
+			let changed = false;
+			if (totalChapters !== null && totalChapters !== m.totalChapters) { m.totalChapters = totalChapters; changed = true; }
+			if (totalVolumes !== null && totalVolumes !== m.totalVolumes) { m.totalVolumes = totalVolumes; changed = true; }
+			// only write a future 'once' date back (it drives the auto "To be released"); a past/due date is
+			// left alone so the just-added entry isn't auto-removed
+			if (schedule.recurrence === 'once' && isReleaseDateFuture(schedule.releaseDate)) {
+				const newDate = schedule.releaseDate ?? null;
+				if (m.releaseDate !== newDate) { m.releaseDate = newDate; changed = true; }
+			}
+			if (changed) await this.reading.updateManga(m);
+		}
+	}
+
+	/** On a single-release tick, revert the item's auto "To be released" back to its plan status. */
+	private async revertToBeReleasedStatus(entry: AirtimeEntry, r: ResolvedUpcoming): Promise<void> {
+		if (r.source === 'reading') {
+			const kind = entry.readingKind ?? 'book';
+			if (kind === 'book') {
+				const b = this.reading.getBook(entry.titleId);
+				if (b && b.status === 'To be released') { b.status = 'Plan to Read'; await this.reading.updateBook(b); }
+			} else {
+				const m = this.reading.getManga(entry.titleId);
+				if (m && m.status === 'To be released') { m.status = 'Plan to Read'; await this.reading.updateManga(m); }
+			}
+		} else if (r.source === 'game') {
+			const g = this.games.getGame(entry.titleId);
+			if (g && g.status === GAME_AUTO_STATUS) {
+				g.status = this.games.getSettings().defaultStatus || 'Not started';
+				await this.games.updateGame(g);
+			}
+		} else {
+			const t = this.titles.getTitle(entry.titleId);
+			if (t && t.status === 'To be released') { t.status = 'Plan to watch'; await this.titles.updateTitle(t); }
+		}
+	}
+
+	/** Pushes the schedule-derived episode total and (single release) release date back onto the Watchlist title. */
+	private async syncTitleFromSchedule(titleId: string, schedule: AirtimeSchedule, totalEpisodes: number | null): Promise<void> {
+		const title = this.titles.getTitle(titleId);
+		if (!title) return;
+		let changed = false;
+		if (totalEpisodes !== null && totalEpisodes !== title.totalEpisodes) {
+			title.totalEpisodes = totalEpisodes;
+			changed = true;
+		}
+		if (schedule.recurrence === 'once') {
+			const newDate = schedule.releaseDate ?? null;
+			if (title.releaseDate !== newDate) {
+				title.releaseDate = newDate;
+				changed = true;
+			}
+		}
+		if (changed) await this.titles.updateTitle(title);
+	}
+
+	private async startAddWithTitle(title: HoardTitle): Promise<void> {
+		let prefilled: AirtimeSchedule | null = null;
+
+		// try Jikan auto-fill for Anime with a known malId
+		if (title.type === 'Anime' && title.malId) {
+			try {
+				const sched = await this.api.getAnimeScheduleByMalId(title.malId);
+				if (sched) {
+					prefilled = { recurrence: 'weekly', dayOfWeek: sched.dayOfWeek, releaseTime: sched.time };
+					new Notice(t('airtime.notices.autoFilled'));
+				}
+			} catch {
+				// ignore — fields stay empty for manual entry
+			}
+		}
+
+		if (!prefilled && title.releaseDate && /^\d{4}-\d{2}-\d{2}$/.test(title.releaseDate)) {
+			prefilled = { recurrence: 'once', releaseDate: title.releaseDate };
+		}
+
+		this.modals.openAirtimeSchedule({
+			title,
+			existingSchedule: prefilled,
+			currentSeason: null,
+			currentEpisode: null,
+			totalSeasons: null,
+			totalEpisodes: null,
+			onSave: async (schedule, season, episode, totalSeasons, totalEpisodes) => {
+				const entry: AirtimeEntry = {
+					id: this.titles.generateAirtimeId(title.id),
+					titleId: title.id,
+					schedule,
+					currentSeason: season ?? undefined,
+					currentEpisode: episode ?? undefined,
+					totalSeasons: totalSeasons ?? undefined,
+					totalEpisodes: totalEpisodes ?? undefined,
+					dateAdded: new Date().toISOString(),
+				};
+				await this.titles.addAirtimeEntry(entry);
+
+				await this.syncTitleFromSchedule(title.id, schedule, totalEpisodes);
+
+				this.render();
+			},
+		});
+	}
+
+	// Card list
+
+	/**
+	 * Resolved + search-filtered + sorted tracker entries — shared by the List rows and the Cards
+	 * grid, so both show the same data in the same order.
+	 */
+	private computeTrackerCardData(): TrackerCardData[] {
+		const q = this.searchQuery.trim().toLowerCase();
+		return this.titles.getAirtimeEntries()
+			.map((entry) => {
+				const r = this.resolveEntry(entry);
+				if (!r) return null;
+				if (q && !r.title.toLowerCase().includes(q)) return null;
+				const countdown = getDetailedCountdown(entry.schedule, r.isSingle, entry.lastAcknowledgedDate);
+				return { entry, r, countdown };
+			})
+			.filter((d): d is TrackerCardData => d !== null)
+			.sort((a, b) => {
+				// aired/due → first; today → second; future → last
+				const rankKind = (k: DetailedCountdown['kind']) =>
+					k === 'aired' || k === 'due' ? 0 : k === 'today-before' ? 1 : 2;
+				const ra = rankKind(a.countdown.kind);
+				const rb = rankKind(b.countdown.kind);
+				if (ra !== rb) return ra - rb;
+				return a.countdown.daysUntil - b.countdown.daysUntil;
+			});
+	}
+
+	/** The green tick button; confirms advancing the entry to its next episode/chapter. */
+	private renderTickButton(
+		parent: HTMLElement,
+		cls: string,
+		entry: AirtimeEntry,
+		r: ResolvedUpcoming,
+		isFinalEpisode: boolean,
+	): void {
+		const tickBtn = createIconButton(parent, { icon: 'check', label: tickTooltip(r, isFinalEpisode), cls });
+		tickBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.confirmTick(entry, r);
+		});
+	}
+
+	/** Card data to render, or null after the matching empty state has been shown. */
+	private trackerCardDataOrEmpty(): TrackerCardData[] | null {
+		if (this.titles.getAirtimeEntries().length === 0) {
+			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.tracker') });
+			return null;
+		}
+		const cardData = this.computeTrackerCardData();
+		if (cardData.length === 0) {
+			this.container.createDiv({ cls: 'hoard-dashboard__empty-state', text: t('airtime.empty.search') });
+			return null;
+		}
+		return cardData;
+	}
+
+	private renderCards(): void {
+		const cardData = this.trackerCardDataOrEmpty();
+		if (!cardData) return;
+
+		const cardsEl = this.container.createDiv({ cls: 'hoard-airtime__cards' });
+		for (const { entry, r, countdown } of cardData) {
+			this.renderCard(cardsEl, entry, r, countdown);
+		}
+	}
+
+	// Single card
+
+	private renderCard(
+		parent: HTMLElement,
+		entry: AirtimeEntry,
+		r: ResolvedUpcoming,
+		countdown: DetailedCountdown,
+	): void {
+		const { isMovie, isFinalEpisode, showTick } = cardFlags(entry, r, countdown);
+
+		let cardCls = 'hoard-airtime__card';
+		if (countdown.kind === 'aired' || countdown.kind === 'due') {
+			cardCls += ' hoard-airtime__card--aired';
+		}
+		if (countdown.kind === 'aired') cardCls += ' is-aired';
+		if (countdown.kind === 'due') cardCls += ' is-due';
+		if (this.selectionMode && this.selectedItems.has(entry.id)) {
+			cardCls += ' hoard-list__row--selected';
+		}
+		const card = parent.createDiv({ cls: cardCls });
+
+		if (this.selectionMode) {
+			const cb = card.createEl('input', { attr: { type: 'checkbox' } });
+			cb.addClass('hoard-airtime__select-checkbox');
+			cb.checked = this.selectedItems.has(entry.id);
+			cb.addEventListener('click', (e) => e.stopPropagation());
+			cb.addEventListener('change', () => {
+				if (cb.checked) { this.selectedItems.add(entry.id); }
+				else { this.selectedItems.delete(entry.id); }
+				this.render();
+			});
+			card.addEventListener('click', () => {
+				if (this.selectedItems.has(entry.id)) { this.selectedItems.delete(entry.id); }
+				else { this.selectedItems.add(entry.id); }
+				this.render();
+			});
+		}
+
+		// left
+		const left = card.createDiv({ cls: 'hoard-airtime__card-left' });
+		left.createDiv({ cls: 'hoard-airtime__card-title', text: r.title });
+
+		// type badge + schedule string; reading entries render plain, watch entries may be colored
+		const metaRow = left.createDiv({ cls: 'hoard-airtime__card-meta' });
+		const typeBadge = metaRow.createSpan({
+			cls: r.typeColor ? 'hoard-badge hoard-badge--sm' : 'hoard-badge__plain',
+			text: r.typeLabel,
+		});
+		if (r.typeColor) typeBadge.setCssProps({ '--hoard-badge-color': r.typeColor });
+		metaRow.createSpan({ cls: 'hoard-airtime__schedule', text: scheduleText(entry.schedule) });
+
+		// progress badge — multi-part titles only (series / manga)
+		if (!isMovie && (entry.currentSeason !== undefined || entry.currentEpisode !== undefined)) {
+			const badgeCls = isFinalEpisode
+				? 'hoard-badge__episode hoard-badge__episode--final'
+				: 'hoard-badge__episode';
+			left.createDiv({ cls: badgeCls, text: progressBadgeText(entry, r) });
+		}
+
+		// right
+		const right = card.createDiv({ cls: 'hoard-airtime__card-right' });
+
+		const pillClsMap: Record<DetailedCountdown['kind'], string> = {
+			'today-before': 'hoard-airtime__pill hoard-airtime__pill--today-series',
+			'future':       'hoard-airtime__pill hoard-airtime__pill--days',
+			'aired':        'hoard-airtime__pill hoard-airtime__pill--aired',
+			'due':          'hoard-airtime__pill hoard-airtime__pill--due',
+		};
+		// "Tomorrow" within 'future' gets its own style
+		const pillCls =
+			countdown.kind === 'future' && countdown.daysUntil === 1
+				? 'hoard-airtime__pill hoard-airtime__pill--tomorrow'
+				: pillClsMap[countdown.kind];
+		right.createDiv({ cls: pillCls, text: countdown.label });
+
+		const actions = right.createDiv({ cls: 'hoard-airtime__actions' });
+
+		// green tick, shown once the airtime/release passes
+		if (showTick) this.renderTickButton(actions, 'hoard-airtime__action-btn hoard-airtime__action-btn--tick', entry, r, isFinalEpisode);
+
+		const globeBtn = createIconButton(actions, { icon: 'globe', label: t('airtime.actions.openPage'), cls: 'hoard-airtime__action-btn' });
+		globeBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			openExternalLink(r.externalLink, 'airtime.notices.noLinkTitle');
+		});
+
+		const editBtn = createIconButton(actions, { icon: 'pencil', label: t('airtime.actions.editSchedule'), cls: 'hoard-airtime__action-btn' });
+		editBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			if (r.source === 'reading') {
+				this.openEditReadingSchedule(entry);
+			} else if (r.source === 'game') {
+				this.openEditGameSchedule(entry);
+			} else {
+				this.openEditWatchSchedule(entry);
+			}
+		});
+
+		const deleteBtn = createIconButton(actions, {
+			icon: 'x',
+			label: t('airtime.actions.removeFromUpcoming'),
+			cls: 'hoard-airtime__action-btn hoard-airtime__action-btn--delete hoard-btn--danger',
+		});
+		deleteBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.confirmRemove(entry, r);
+		});
+	}
+
+	/** Removes what the card shows: a derived card clears the release date, a manual schedule only itself. */
+	private confirmRemove(entry: AirtimeEntry, r: ResolvedUpcoming): void {
+		const msg = this.titles.removeClearsReleaseDate(entry)
+			? t('airtime.confirm.removeUpcomingClear', { title: r.title })
+			: t('airtime.confirm.removeUpcoming', { title: r.title });
+		this.modals.confirm(msg, () => {
+			void this.titles.removeAirtimeEntry(entry.id).then(() => this.render());
+		});
+	}
+
+	/** Tick confirm + apply, shared by the List row button and the Cards overlay button/menu. */
+	private confirmTick(entry: AirtimeEntry, r: ResolvedUpcoming): void {
+		const isMovie = r.isSingle;
+		const totalEps = r.totalUnits;
+		const isFinalEpisode =
+			!isMovie &&
+			entry.currentEpisode !== undefined &&
+			totalEps > 0 &&
+			entry.currentEpisode >= totalEps;
+
+		const confirmMsg = tickConfirmMessage(r, entry.currentEpisode, isFinalEpisode, this.titles.isAiringTracked(entry));
+
+		// single releases get an escape hatch: a due title that turns out to be a serial jumps into the
+		// schedule modal in Recurring mode instead of being removed. Games have no recurring units.
+		const extraButton = isMovie && r.source !== 'game'
+			? {
+				label: t(r.source === 'reading' ? 'airtime.actions.switchChapters' : 'airtime.actions.switchEpisodes'),
+				onClick: () => {
+					if (r.source === 'reading') this.openEditReadingSchedule(entry, 'recurring');
+					else this.openEditWatchSchedule(entry, 'recurring');
+				},
+			}
+			: undefined;
+
+		this.modals.confirm(confirmMsg, () => {
+			void (async () => {
+				const today = new Date();
+				const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+				// prevent a scheduler double-fire for the same airtime
+				this.host.markAirtimeHandled(`${entry.id}-${todayStr}`);
+
+				if (isMovie) {
+					// a derived premiere card goes with the status change; its release date stays
+					if (!this.titles.removeClearsReleaseDate(entry)) await this.titles.removeAirtimeEntry(entry.id);
+					await this.revertToBeReleasedStatus(entry, r);
+				} else if (isFinalEpisode) {
+					// final unit: remove from Upcoming, do NOT change status
+					await this.titles.removeAirtimeEntry(entry.id);
+				} else {
+					// non-final: acknowledge so the countdown resets; without an API pointer also advance the unit
+					await this.titles.tickAirtimeEntry(entry, todayStr);
+				}
+				this.render();
+			})();
+		}, extraButton);
+	}
+
+	// Cards view (poster grid, month-grouped)
+
+	/**
+	 * Extra height under the 2:3 poster for title + release line + episode badge. Must match
+	 * .hoard-tracker__card-info in styles.css.
+	 */
+	private static readonly TRACKER_CARD_TEXT_H = 74;
+
+	/**
+	 * Month bucket for a card: today + daysUntil (what drives the List countdown). Entries with no
+	 * usable date go to a trailing group.
+	 */
+	private static monthGroupOf(daysUntil: number): { key: string; label: string } {
+		if (daysUntil >= 9999) return { key: 'none', label: t('airtime.noDate') };
+		const d = new Date();
+		d.setHours(0, 0, 0, 0);
+		d.setDate(d.getDate() + daysUntil);
+		return { key: `${d.getFullYear()}-${d.getMonth()}`, label: `${monthName(d.getMonth())} ${d.getFullYear()}` };
+	}
+
+	private renderTrackerCardsGrid(): void {
+		const cardData = this.trackerCardDataOrEmpty();
+		if (!cardData) return;
+
+		// sequential grouping — the sort is monotonic in next-occurrence date (aired/due resolve to
+		// today), so one pass preserves card order
+		const groups: Array<{ label: string; items: TrackerCardData[] }> = [];
+		let lastKey = '';
+		for (const d of cardData) {
+			const { key, label } = AirtimeTab.monthGroupOf(d.countdown.daysUntil);
+			if (groups.length === 0 || key !== lastKey) {
+				groups.push({ label, items: [] });
+				lastKey = key;
+			}
+			groups[groups.length - 1]!.items.push(d);
+		}
+
+		const scroll = this.container.createDiv({ cls: 'hoard-tracker__scroll' });
+
+		const observer = new LazyCardObserver(
+			'.hoard-tracker__cell[data-needs-poster="true"]',
+			(cells) => this.handleTrackerCardsVisible(cells),
+		);
+		this.trackerObserver = observer;
+		const scroller = new VirtualScroller({
+			scroll,
+			metrics: (w) => this.trackerMetrics(w),
+			onWindowChanged: () => observer.observeNew(scroll),
+			onScrollPos: (top) => { this._trackerPersistentScrollTop = top; },
+		});
+		this.trackerScroller = scroller;
+
+		for (const group of groups) {
+			const titleEl = scroll.createDiv({ cls: 'hoard-tracker__month-title' });
+			titleEl.createSpan({ text: group.label });
+			titleEl.createSpan({ cls: 'hoard-rows-view__shelf-count', text: `(${group.items.length})` });
+
+			const spacer = scroll.createDiv({ cls: 'hoard-tracker__month-spacer' });
+			const grid = spacer.createDiv({ cls: 'hoard-card-grid hoard-card-grid--virtual' });
+			const items = group.items;
+			const vgrid = new VirtualGrid(spacer, grid, items.length, {
+				buildItem: (i, w) => {
+					const item = items[i];
+					return item ? this.buildTrackerCard(item, w) : null;
+				},
+				removeItem: (el) => observer.unobserveAndRemove(el),
+			});
+			scroller.addSection(vgrid, spacer);
+		}
+
+		// attach() reserves every section's full height up-front, so offsets are final before any window
+		// materialises (zero layout shift by construction)
+		scroller.attach(this._trackerPersistentScrollTop);
+	}
+
+	/**
+	 * Cards geometry: the Watchlist poster metrics, plus the fixed text block below each poster when
+	 * the card text style is 'under'; in 'inside' mode the cell is the bare 2:3 card.
+	 */
+	private trackerMetrics(containerWidth: number): GridMetrics {
+		const base = computeGridMetrics(containerWidth, this.host.getCardMinWidth());
+		if (!this.host.isCardTextUnder('upcoming')) return base;
+		const cardHeight = base.cardHeight + AirtimeTab.TRACKER_CARD_TEXT_H;
+		return { cols: base.cols, cardWidth: base.cardWidth, cardHeight, rowHeight: cardHeight + 12 };
+	}
+
+	private destroyTrackerVirtual(): void {
+		this.trackerScroller?.destroy();
+		this.trackerScroller = null;
+		this.trackerObserver?.destroy();
+		this.trackerObserver = null;
+		// same hygiene as the Watchlist Cards teardown: stale pending fetches would just be re-enqueued
+		this.posters.clearQueue();
+	}
+
+	// Cards view: single card
+
+	private buildTrackerCard(data: TrackerCardData, cardWidth: number): HTMLElement {
+		const { entry, r, countdown } = data;
+		const { isMovie, isFinalEpisode, showTick } = cardFlags(entry, r, countdown);
+
+		const cell = createDiv({ cls: 'hoard-tracker__cell' });
+		cell.dataset.entryId = entry.id;
+
+		// poster box (the Watchlist card)
+		const card = cell.createDiv({ cls: 'hoard-card hoard-tracker__card' });
+		if (this.selectionMode && this.selectedItems.has(entry.id)) card.addClass('hoard-card--selected');
+
+		const placeholder = card.createDiv({ cls: 'hoard-card__poster-placeholder' });
+		placeholder.setCssProps({ '--hoard-card-placeholder-color': this.trackerPlaceholderColor(entry, r) });
+		placeholder.createSpan({ text: (r.title.trim().charAt(0) || '?').toUpperCase() });
+
+		const posterHeight = Math.round(cardWidth * 1.5);
+		const img = card.createEl('img', { cls: 'hoard-card__poster' });
+		img.alt = r.title;
+		img.width = Math.round(cardWidth);
+		img.height = posterHeight;
+
+		this.loadTrackerPoster(cell, card, img, entry);
+
+		// text block: below the poster ('under') or overlaid at its bottom ('inside', the classic
+		// Watchlist overlay). Built before the corner buttons so an overlay paints below them (later
+		// absolute siblings win).
+		const info = this.host.isCardTextUnder('upcoming')
+			? cell.createDiv({ cls: 'hoard-tracker__card-info' })
+			: card.createDiv({ cls: 'hoard-card__overlay hoard-tracker__card-overlay' });
+		info.createDiv({ cls: 'hoard-tracker__card-title', text: r.title });
+		// the same schedule info the List row shows
+		info.createDiv({
+			cls: 'hoard-tracker__card-subtitle',
+			text: trackerSubText(entry.schedule),
+		});
+		if (!isMovie && (entry.currentSeason !== undefined || entry.currentEpisode !== undefined)) {
+			info.createDiv({
+				cls: `${isFinalEpisode ? 'hoard-badge__episode hoard-badge__episode--final' : 'hoard-badge__episode'} hoard-tracker__episode-badge`,
+				text: progressBadgeText(entry, r),
+			});
+		}
+
+		// type badge — top-left over the poster
+		const typeBadge = card.createSpan({
+			cls: `hoard-tracker__type-badge${r.typeColor ? '' : ' is-plain'}`,
+			text: r.typeLabel,
+		});
+		if (r.typeColor) typeBadge.setCssProps({ '--hoard-tracker-type-color': r.typeColor });
+
+		this.renderTrackerCountdown(card, countdown);
+
+		// green tick overlay (same due/aired gate as the List tick button)
+		if (showTick) this.renderTickButton(card, 'hoard-tracker__tick-btn', entry, r, isFinalEpisode);
+
+		// ⋮ menu (Remove only) — stacked above the globe, bottom-right
+		const menuBtn = createIconButton(card, {
+			icon: 'more-vertical',
+			label: t('airtime.actions.moreActions'),
+			cls: 'hoard-card__menu-btn hoard-tracker__menu-btn',
+		});
+		menuBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.openTrackerCardMenu(card, menuBtn, data);
+		});
+
+		// globe — bottom-right, opens the external page
+		const globeBtn = createIconButton(card, {
+			icon: 'globe',
+			label: t('airtime.actions.openPage'),
+			cls: 'hoard-card__menu-btn hoard-tracker__globe-btn',
+		});
+		globeBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			openExternalLink(r.externalLink, 'airtime.notices.noLinkTitle');
+		});
+
+		// selection mode: a click anywhere on the cell toggles (full re-render, like the List rows, so
+		// the header action bar stays in sync; scroll survives via _trackerPersistentScrollTop).
+		// Otherwise a click opens the Edit-schedule modal.
+		cell.addEventListener('click', () => {
+			if (this.selectionMode) {
+				if (this.selectedItems.has(entry.id)) this.selectedItems.delete(entry.id);
+				else this.selectedItems.add(entry.id);
+				this.render();
+				return;
+			}
+			if (r.source === 'reading') this.openEditReadingSchedule(entry);
+			else if (r.source === 'game') this.openEditGameSchedule(entry);
+			else this.openEditWatchSchedule(entry);
+		});
+
+		return cell;
+	}
+
+	/** Placeholder colour: the type colour regardless of the colored-badges setting. */
+	private trackerPlaceholderColor(entry: AirtimeEntry, r: ResolvedUpcoming): string {
+		if (entry.source === 'reading') {
+			return getReadingTypeColor(entry.readingKind ?? 'book', this.settings.get());
+		}
+		if (entry.source === 'game') {
+			// the Games-tab placeholder colour: the game's genre colour
+			const game = this.games.getGame(entry.titleId);
+			return this.games.getSettings().types
+				.find((t) => t.name === game?.type)?.color ?? '#888780';
+		}
+		const typeDef = this.settings.get().types.find((t) => t.name === r.typeName);
+		return typeDef
+			? getThemedColor(r.typeName, typeDef.color, this.settings.get().colorTheme)
+			: '#888780';
+	}
+
+	/** Points the card image at the item's cover; watchlist titles without one are marked for the lazy poster fetch. */
+	private loadTrackerPoster(cell: HTMLElement, card: HTMLElement, img: HTMLImageElement, entry: AirtimeEntry): void {
+		if (entry.source === 'reading') {
+			// reading items carry their cover directly — no lazy fetch machinery
+			const item = entry.readingKind === 'manga'
+				? this.reading.getManga(entry.titleId)
+				: this.reading.getBook(entry.titleId);
+			showTrackerCover(card, img, item?.coverUrl ?? '');
+		} else if (entry.source === 'game') {
+			// games also carry their cover directly (RAWG-resized like the Games tab)
+			const cover = this.games.getGame(entry.titleId)?.coverUrl ?? '';
+			showTrackerCover(card, img, cover.startsWith('http') ? rawgResizedCover(cover) : '');
+		} else {
+			this.loadWatchPoster(cell, card, img, entry);
+		}
+	}
+
+	private loadWatchPoster(cell: HTMLElement, card: HTMLElement, img: HTMLImageElement, entry: AirtimeEntry): void {
+		const title = this.titles.getTitle(entry.titleId);
+		if (!title) return;
+		cell.dataset.titleId = title.id;
+		const display = getDisplayPoster(title);
+		if (!showTrackerCover(card, img, display ?? '') && !title.posterUrl) cell.dataset.needsPoster = 'true';
+	}
+
+	/** Countdown badge — top-right: big number + DAYS, or the state word. */
+	private renderTrackerCountdown(card: HTMLElement, countdown: TrackerCardData['countdown']): void {
+		const cd = card.createDiv({ cls: `hoard-tracker__countdown ${COUNTDOWN_KIND_CLASSES[countdown.kind]}` });
+		if (countdown.kind === 'future') {
+			if (countdown.daysUntil >= 9999) {
+				cd.createSpan({ cls: 'hoard-tracker__countdown-word', text: '—' });
+			} else {
+				cd.createSpan({ cls: 'hoard-tracker__countdown-number', text: String(countdown.daysUntil) });
+				cd.createSpan({ cls: 'hoard-tracker__countdown-label', text: t('airtime.countdown.dayUnit', { count: countdown.daysUntil }) });
+			}
+		} else {
+			const word = countdown.kind === 'today-before'
+				? t('airtime.countdown.today')
+				: countdown.kind === 'aired' ? t('airtime.countdown.aired') : t('airtime.countdown.due');
+			cd.createSpan({ cls: 'hoard-tracker__countdown-word', text: word.toUpperCase() });
+		}
+	}
+
+	private openTrackerCardMenu(card: HTMLElement, anchorBtn: HTMLElement, data: TrackerCardData): void {
+		const { entry, r } = data;
+		// tick lives on the card overlay, edit on card click, open-page on the globe — the menu only
+		// carries Remove
+		openCardMenu(card, anchorBtn, [
+			{
+				label: t('airtime.actions.removeFromUpcoming'),
+				onClick: () => this.confirmRemove(entry, r),
+			},
+		], { container: this.container, cleanups: this.activeCleanups });
+	}
+
+	// Cards view: lazy poster fetch (watchlist titles)
+
+	/**
+	 * Lazy poster fetch for tracker cells that scrolled into view (handed over once, already
+	 * unobserved).
+	 */
+	private handleTrackerCardsVisible(cells: HTMLElement[]): void {
+		for (const cell of cells) {
+			const titleId = cell.dataset.titleId;
+			if (!titleId) continue;
+
+			const title = this.titles.getTitle(titleId);
+			if (!title) continue;
+			// same gate as the Watchlist cards
+			if (!this.titles.lookupDue(title.id, 'poster')) continue;
+
+			const placeholder = cell.querySelector('.hoard-card__poster-placeholder');
+			placeholder?.addClass('is-loading');
+
+			void this.posters.enqueue(title).then((url) => {
+				placeholder?.removeClass('is-loading');
+				if (!url) return;
+				const card = cell.querySelector<HTMLElement>('.hoard-card');
+				const img = cell.querySelector<HTMLImageElement>('.hoard-card__poster');
+				if (!card || !img) return;
+				img.onload = () => card.addClass('has-poster');
+				img.src = url;
+			});
+		}
+	}
+
+	private openEditWatchSchedule(entry: AirtimeEntry, initialMode?: 'single' | 'recurring'): void {
+		const title = this.titles.getTitle(entry.titleId);
+		if (!title) return;
+		this.modals.openAirtimeSchedule({
+			title,
+			existingSchedule: { ...entry.schedule },
+			currentSeason: entry.currentSeason ?? null,
+			currentEpisode: entry.currentEpisode ?? null,
+			totalSeasons: entry.totalSeasons ?? null,
+			totalEpisodes: entry.totalEpisodes ?? null,
+			onSave: async (schedule, season, episode, totalSeasons, totalEpisodes) => {
+				entry.schedule = schedule;
+				entry.currentSeason = season ?? undefined;
+				entry.currentEpisode = episode ?? undefined;
+				entry.totalSeasons = totalSeasons ?? undefined;
+				entry.totalEpisodes = totalEpisodes ?? undefined;
+				await this.titles.updateAirtimeEntry(entry);
+
+				await this.syncTitleFromSchedule(entry.titleId, schedule, totalEpisodes);
+
+				this.render();
+			},
+			initialMode,
+		});
+	}
+
+	private openEditGameSchedule(entry: AirtimeEntry): void {
+		const game = this.games.getGame(entry.titleId);
+		if (!game) return;
+		this.modals.openGameSchedule({ game, existingSchedule: { ...entry.schedule }, onSave: async (schedule) => {
+			entry.schedule = schedule;
+			await this.titles.updateAirtimeEntry(entry);
+			await this.syncGameFromSchedule(entry.titleId, schedule);
+			this.render();
+		} });
+	}
+
+	private openEditReadingSchedule(entry: AirtimeEntry, initialMode?: 'single' | 'recurring'): void {
+		const kind = entry.readingKind ?? 'book';
+		const item: Book | Manga | undefined =
+			kind === 'book' ? this.reading.getBook(entry.titleId) : this.reading.getManga(entry.titleId);
+		if (!item) return;
+		this.modals.openReadingSchedule({
+			item,
+			kind,
+			existingSchedule: { ...entry.schedule },
+			currentVolume: entry.currentSeason ?? null,
+			currentChapter: entry.currentEpisode ?? null,
+			totalVolumes: entry.totalSeasons ?? null,
+			totalChapters: entry.totalEpisodes ?? null,
+			onSave: async (schedule, volume, chapter, totalVolumes, totalChapters) => {
+				entry.schedule = schedule;
+				entry.currentSeason = volume ?? undefined;
+				entry.currentEpisode = chapter ?? undefined;
+				entry.totalSeasons = totalVolumes ?? undefined;
+				entry.totalEpisodes = totalChapters ?? undefined;
+				await this.titles.updateAirtimeEntry(entry);
+				await this.syncReadingItemFromSchedule(entry.titleId, kind, schedule, totalVolumes, totalChapters);
+				this.render();
+			},
+			initialMode,
+		});
+	}
+}

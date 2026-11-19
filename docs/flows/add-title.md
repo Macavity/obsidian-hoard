@@ -3,22 +3,24 @@ type: Flow
 title: Add title
 description: From the Add modal's search box to a new note, including API routing, the in-library marker and the duplicate guard.
 source:
-  - src/AddTitleModal.ts
-  - src/ui/SearchFormModal.ts
-  - src/ui/DuplicateGuard.ts
-  - src/titleSearch.ts
-  - src/apiSources.ts
-  - src/LibraryIndex.ts
-  - src/DataManager.ts
-  - src/entryFactories.ts
-  - src/lookup.ts
-source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
+  - src/modules/watchlist/ui/AddTitleModal.ts
+  - src/design-system/SearchFormModal.ts
+  - src/design-system/DuplicateGuard.ts
+  - src/shared/services/titleSearch.ts
+  - src/modules/watchlist/ui/AddFromUrlModal.ts
+  - src/app/AddRouter.ts
+  - src/shared/api/apiSources.ts
+  - src/shared/services/LibraryIndex.ts
+  - src/modules/watchlist/services/DataManager.ts
+  - src/modules/watchlist/domain/newTitle.ts
+  - src/modules/watchlist/domain/completedEpisodes.ts
+source_commit: cc203bf
 ---
 
 # Add title
 
 Trigger: the `add-title` command, the Watchlist toolbar, a Drafts or Custom Lists row
-(`AddRouter`), or a pasted URL (`AddFromUrlModal`). Book, manga and game adds share the same
+([`AddRouter`](../../src/app/AddRouter.ts)), or a pasted URL (`AddFromUrlModal`). Book, manga and game adds share the same
 skeleton with their own modals ([reading](../modules/reading.md), [games](../modules/games.md)).
 
 ```mermaid
@@ -42,12 +44,12 @@ sequenceDiagram
 
 ## Steps
 
-1. **Skeleton**: `SearchFormModal` ([ui/SearchFormModal.ts](../../src/ui/SearchFormModal.ts))
+1. **Skeleton**: `SearchFormModal` ([SearchFormModal.ts](../../src/design-system/SearchFormModal.ts))
    mounts a `SearchPicker` above a form and asks the subclass for picker options, `search`,
    `noApiMessage`, `renderResult`, `selectResult`, `renderForm`. A prefilled query searches at once.
-2. **Routing**: `searchTitles` ([titleSearch.ts](../../src/titleSearch.ts)) maps the selected type
+2. **Routing**: `searchTitles` ([titleSearch.ts](../../src/shared/services/titleSearch.ts)) maps the selected type
    through `typeApiMapping` to anime (Jikan or AniList) or movie/series, where
-   `effectiveMediaSource` ([apiSources.ts](../../src/apiSources.ts)) picks Cinemeta, OMDb or TMDB:
+   `effectiveMediaSource` ([apiSources.ts](../../src/shared/api/apiSources.ts)) picks Cinemeta, OMDb or TMDB:
    the chosen one if keyed, else keyless Cinemeta, so Movie and TV Show always search. The "No API
    configured" panel (`noApiMessage`) now only shows for a custom type with no entry in
    `typeApiMapping`. The default type comes from `resolveDefaultAddType`.
@@ -61,13 +63,13 @@ sequenceDiagram
    (`recordLookup`) so an empty trailer is not looked up again at once. Under Cinemeta
    the pick also carries the row's poster (`posterUrl`), which lands in the new note; OMDb and TMDB
    picks leave it empty and the poster queue fills it later ([api layer](../architecture/api-layer.md)).
-   A pasted IMDb link (`AddFromUrlModal`) resolves the same way and opens this modal prefilled,
+   A pasted IMDb or TMDB link (`AddFromUrlModal`; TMDB needs a key) resolves the same way and opens this modal prefilled,
    without a poster.
 5. **Submit**: `addTitle` requires a name, then `blockDuplicate`
-   ([ui/DuplicateGuard.ts](../../src/ui/DuplicateGuard.ts)) warns on a same-name title with
+   ([DuplicateGuard.ts](../../src/design-system/DuplicateGuard.ts)) warns on a same-name title with
    Continue/Cancel (Continue lets the next attempt pass once). "To be released" is not selectable;
    it follows the release date. The entry comes from `newTitle`
-   ([entryFactories.ts](../../src/entryFactories.ts)), which owns the defaults of a new title; the
+   ([newTitle.ts](../../src/modules/watchlist/domain/newTitle.ts)), which owns the defaults of a new title; the
    modal passes only its form fields. A `Completed` add marks all episodes watched
    (`completedEpisodes`) and may set the finish date.
 6. **Write**: `DataManager.addTitle` creates the note (or takes over a

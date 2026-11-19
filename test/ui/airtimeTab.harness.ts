@@ -1,8 +1,13 @@
 
-import { AirtimeTab } from '../../src/AirtimeTab';
-import type HoardPlugin from '../../src/main';
-import type { AirtimeEntry, Book, Game, HoardTitle, Manga } from '../../src/types';
-import { DEFAULT_SETTINGS } from '../../src/types';
+import { vi } from 'vitest';
+import { AirtimeTab } from '../../src/modules/airtime/ui/AirtimeTab';
+import { AirtimeScheduleModal } from '../../src/modules/airtime/ui/AirtimeScheduleModal';
+import { fakeSettings } from '../helpers/fakeSettings';
+import type { AirtimeEntry } from '../../src/modules/airtime/domain/model';
+import type { Game } from '../../src/modules/games/domain/model';
+import type { Book, Manga } from '../../src/modules/reading/domain/model';
+import type { HoardTitle } from '../../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/domain/settingsDefaults';
 
 /** Modal constructor captures shared with the vi.mock factories of the airtime tests. */
 export interface Captures {
@@ -11,6 +16,12 @@ export interface Captures {
 	readingModals: unknown[][];
 	gameModals: unknown[][];
 	forms: { form: unknown; opts: { onSave: () => Promise<void>; hint: (m: string) => string; timeNote: (time: string) => string } }[];
+}
+
+/** Where the spy dialogs record what the tab opened; `useCaptures` swaps in a test file's own arrays. */
+export const captures: Captures = { confirms: [], finders: [], readingModals: [], gameModals: [], forms: [] };
+export function useCaptures(own: Partial<Captures>): void {
+	Object.assign(captures, own);
 }
 
 export interface World {
@@ -83,31 +94,39 @@ export function makeTab(w: World) {
 		getSettings: () => ({ defaultStatus: '', types: [{ name: 'RPG', color: '#123456' }] }),
 		updateGame: rec('updateGame'),
 	};
-	const plugin = {
-		app: {},
-		settings: {
-			...DEFAULT_SETTINGS,
-			types: [{ name: 'Anime', color: '#f00' }],
-			coloredTypeBadges: w.colored ?? false,
-			upcomingTrackerView: w.view ?? 'list',
-			showHintBanners: false,
+	const settingsService = fakeSettings({
+		...DEFAULT_SETTINGS,
+		types: [{ name: 'Anime', color: '#f00' }],
+		coloredTypeBadges: w.colored ?? false,
+		upcomingTrackerView: w.view ?? 'list',
+		showHintBanners: false,
+	});
+	const api = {
+		getAnimeScheduleByMalId: () => (w.animeThrows
+			? Promise.reject(new Error('offline'))
+			: Promise.resolve(w.anime ?? null)),
+	};
+	const posters = { clearQueue: () => {}, enqueue: () => Promise.resolve('') };
+	const host = { markAirtimeHandled: rec('markAirtimeHandled'), getCardMinWidth: () => 150, isCardTextUnder: () => true };
+	const modals = {
+		openMaybeAdd: vi.fn(),
+		openUpcomingFinder: (opts: { items: Captures['finders'][number]['items']; onSelect: (i: unknown) => void }) => {
+			captures.finders.push({ items: opts.items, onPick: opts.onSelect });
 		},
-		readingDataManager: rdm,
-		gameDataManager: gdm,
-		apiService: {
-			getAnimeScheduleByMalId: () => (w.animeThrows
-				? Promise.reject(new Error('offline'))
-				: Promise.resolve(w.anime ?? null)),
+		// the recorded shape keeps the options at index 1, where the former constructor args had them
+		openReadingSchedule: (opts: unknown) => { captures.readingModals.push([null, opts]); },
+		openGameSchedule: (opts: unknown) => { captures.gameModals.push([null, opts]); },
+		// the real dialog, so its form capture in the ScheduleForm mock keeps working
+		openAirtimeSchedule: (opts: ConstructorParameters<typeof AirtimeScheduleModal>[1]) => {
+			new AirtimeScheduleModal({} as never, opts).open();
 		},
-		posterService: { clearQueue: () => {}, enqueue: () => Promise.resolve('') },
-		markAirtimeHandled: rec('markAirtimeHandled'),
-		saveSettings: rec('saveSettings'),
-		getCardMinWidth: () => 150,
-		isCardTextUnder: () => true,
+		confirm: (message: string, onConfirm: () => void, extra?: { label: string; onClick: () => void }) => {
+			captures.confirms.push({ message, onConfirm, extra });
+		},
 	};
 	const container = document.createElement('div');
 	document.body.appendChild(container);
-	const tab = new AirtimeTab(container, plugin as unknown as HoardPlugin, dm as never, () => {});
+	const tab = new AirtimeTab(container, settingsService, dm as never, rdm, gdm as never, api, posters, host, modals, () => {});
 	const priv = tab as unknown as Record<'resolveEntry' | 'openAddFlow' | 'startAddWithTitle' | 'openEditWatchSchedule', (...a: unknown[]) => unknown>;
-	return { tab, priv, container, calls, dm, plugin, rdm, gdm };
+	return { tab, priv, container, calls, dm, posters, settingsService, rdm, gdm };
 }

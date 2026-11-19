@@ -1,0 +1,49 @@
+import type { ReadingCsvKind } from '../domain/model';
+import { App, Modal } from 'obsidian';
+import { t } from '../../../shared/i18n';
+
+/**
+ * Gate modal for Reading CSV import/export (the "Add draft" choice-modal shape): pick Books or
+ * Manga, then the kind-specific Reading CSV modal opens.
+ */
+export class ReadingCsvChoiceModal extends Modal {
+	constructor(
+		app: App,
+		private mode: 'export' | 'import',
+		private onChoice: (kind: ReadingCsvKind) => void,
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass('hoard-draft-choice');
+
+		this.titleEl.setText(this.mode === 'export' ? t('csv.exportTitle') : t('csv.importTitle'));
+		contentEl.createDiv({
+			cls: 'hoard-draft-choice__subtitle',
+			text: this.mode === 'export'
+				? t('csv.chooseExport')
+				: t('csv.chooseImport'),
+		});
+
+		const grid = contentEl.createDiv({ cls: 'hoard-draft-choice__grid' });
+
+		const makeOption = (label: string, kind: ReadingCsvKind): void => {
+			const btn = grid.createEl('button', { cls: 'hoard-draft-choice__btn' });
+			btn.createDiv({ cls: 'hoard-draft-choice__label', text: label });
+			btn.addEventListener('click', () => {
+				this.close();
+				this.onChoice(kind);
+			});
+		};
+
+		makeOption(t('csv.library.book'), 'book');
+		makeOption(t('csv.library.manga'), 'manga');
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}

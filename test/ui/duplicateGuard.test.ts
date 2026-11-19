@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { blockDuplicate, createDuplicateGuard } from '../../src/ui/DuplicateGuard';
+import { blockDuplicate, createDuplicateGuard } from '../../src/design-system/DuplicateGuard';
 import { El } from '../helpers/fakeEl';
 
 function setup() {

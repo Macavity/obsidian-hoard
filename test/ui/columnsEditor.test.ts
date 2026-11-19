@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { App } from 'obsidian';
-import { cloneColumns, moveColumn, normalizeColumns, renderColumnsEditor, validateColumns } from '../../src/ui/ColumnsEditor';
-import type { CustomListColumn, CustomListRow } from '../../src/types';
+import { cloneColumns, moveColumn, normalizeColumns, renderColumnsEditor, validateColumns } from '../../src/design-system/ColumnsEditor';
+import type { CustomListColumn, CustomListRow } from '../../src/shared/domain/columns';
 
 const col = (over: Partial<CustomListColumn> = {}): CustomListColumn => ({
 	id: 'c1', label: 'A', type: 'text', bold: false, italic: false, ...over,
@@ -65,7 +64,7 @@ describe('renderColumnsEditor format toggles', () => {
 	const render = (cols: CustomListColumn[]): HTMLElement => {
 		const host = document.createElement('div');
 		renderColumnsEditor(host, { cols }, {
-			app: {} as App,
+			confirm: () => {},
 			rows: [],
 			renderHeader: () => {},
 			newColumnId: () => 'col_x',
@@ -99,7 +98,7 @@ describe('renderColumnsEditor select columns', () => {
 		const host = document.createElement('div');
 		document.body.appendChild(host);
 		renderColumnsEditor(host, { cols }, {
-			app: {} as App,
+			confirm: () => {},
 			rows,
 			renderHeader: () => {},
 			newColumnId: () => 'col_x',

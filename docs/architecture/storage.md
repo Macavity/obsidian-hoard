@@ -3,24 +3,28 @@ type: Architecture
 title: Storage
 description: Where every piece of state lives (notes, Hoard.base, History.md, data.json), who reads and writes it, and how changes propagate.
 source:
-  - src/storage/VaultLayout.ts
-  - src/storage/EntryIndex.ts
-  - src/storage/LocalStore.ts
-  - src/storage/SharedConfigStore.ts
-  - src/storage/HistoryStore.ts
-  - src/storage/baseFile.ts
-  - src/storage/noteBody.ts
-  - src/storage/storageTypes.ts
-  - src/storage/titleCodec.ts
-  - src/storage/properties.ts
-  - src/storage/noteWrite.ts
-  - src/storage/read.ts
-  - src/storage/readCache.ts
-  - src/storage/cacheMigration.ts
-  - src/storage/sharedHelpers.ts
-  - src/storage/gameCodec.ts
-  - src/storage/readingCodec.ts
-source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
+  - src/shared/storage/VaultLayout.ts
+  - src/shared/storage/EntryIndex.ts
+  - src/shared/storage/LocalStore.ts
+  - src/shared/storage/SharedConfigStore.ts
+  - src/shared/storage/HistoryStore.ts
+  - src/shared/storage/baseFile.ts
+  - src/shared/storage/noteBody.ts
+  - src/shared/storage/storageTypes.ts
+  - src/shared/storage/titleCodec.ts
+  - src/shared/storage/properties.ts
+  - src/shared/storage/noteWrite.ts
+  - src/shared/domain/read.ts
+  - src/shared/storage/readCache.ts
+  - src/shared/storage/cacheMigration.ts
+  - src/shared/domain/sharedHelpers.ts
+  - src/shared/storage/gameCodec.ts
+  - src/shared/storage/readingCodec.ts
+  - src/modules/settings/domain/settingsCodec.ts
+  - src/modules/settings/domain/settingsDefaults.ts
+  - src/shared/storage/featureSettings.ts
+  - src/modules/settings/services/settingsSplit.ts
+source_commit: cc203bf
 ---
 
 # Storage
@@ -52,7 +56,7 @@ flowchart LR
 
 ## Reading: EntryIndex
 
-[EntryIndex.ts](../../src/storage/EntryIndex.ts) scans `vault.getMarkdownFiles()`, classifies each
+[EntryIndex.ts](../../src/shared/storage/EntryIndex.ts) scans `vault.getMarkdownFiles()`, classifies each
 path with `VaultLayout.classify` ([entry id](../concepts/entry-id.md)), decodes the cached
 frontmatter with the matching codec and keeps `id → {entry, invalidFields}`. It never writes a
 note; on vault `delete`/`rename` it does drop or re-key the entry's cache in `data.json`.
@@ -65,31 +69,31 @@ Codecs are pure: `titleFromProperties(id, properties, cache)` / `titleToProperti
 wrong type instead of failing; those properties are left untouched on write. The title codec builds
 its result as one expression composed from parts and assigns nothing afterwards; the order of the
 parts in `titleToProperties` is the order of properties in a new note. Property names come
-only from [properties.ts](../../src/storage/properties.ts) ([property names](../concepts/properties.md)).
-The book and manga codecs also take that kind's custom columns, because a custom value's key is
+only from [properties.ts](../../src/shared/storage/properties.ts) ([property names](../concepts/properties.md)).
+Storage imports module models and reference data (defaults, status lists) from `modules/<x>/exports.ts` only, never module internals ([overview](overview.md)). The book and manga codecs also take that kind's custom columns, because a custom value's key is
 `Custom <column name>`; `EntryIndex.setColumns` re-decodes reading notes when a column name changes.
 
 ## Reading outside data
 
 Everything that enters from outside (notes, `data.json`, `Hoard.base`, API responses, backups, the
 WatchLog import) is read from `unknown`, field by field, never asserted
-([read.ts](../../src/storage/read.ts)): `readString`, `readNumber`, `readBoolean`, `readStringList`,
+([read.ts](../../src/shared/domain/read.ts)): `readString`, `readNumber`, `readBoolean`, `readStringList`,
 `readList(v, readItem)` (drops items the reader rejects), `readOneOf`, `readRecord`, `readOptional*` and
 `at(v, ...path)`. They are pure and never throw; a wrong or missing field becomes its empty value, so one
-bad field never breaks the entry. `no-unsafe-type-assertion` is on for `src/storage/`, `src/import/`, the
-API modules, `lookup.ts`, `settingsNormalize`, `settingsSplit` and `backup.ts` (`eslint.config.mjs`).
+bad field never breaks the entry. `no-unsafe-type-assertion` is on for `src/shared/storage/`, `src/modules/import/`, the
+API modules, `lookup.ts`, `settingsSplit` and `backup.ts` (`eslint.config.mjs`). The settings readers: `settingsCodec.ts` (`normalizeSettings`, key by key) lives in `src/modules/settings/domain/` (explicitly listed in the lint rule), `featureSettings.ts` (`readGamesSettings`, `readReadingSettings`) in `src/shared/storage/`.
 Entries are built as one expression with `defined()` / conditional spreads and `omit()`
-([sharedHelpers.ts](../../src/storage/sharedHelpers.ts)); no key is `delete`d from an entry afterwards, so
+([sharedHelpers.ts](../../src/shared/domain/sharedHelpers.ts)); no key is `delete`d from an entry afterwards, so
 an optional field is absent, not present-and-undefined (maps keyed by id keep `delete`).
 
 ## Writing: the managers
 
-All three managers write through `writeEntry` in [noteWrite.ts](../../src/storage/noteWrite.ts): it
+All three managers write through `writeEntry` in [noteWrite.ts](../../src/shared/storage/noteWrite.ts): it
 encodes the entry, diffs against the [baseline](../concepts/baseline.md) and sets only changed keys
 through `app.fileManager.processFrontMatter`; inside the callback the manager's `afterWrite` calls
 `EntryIndex.applyLocal` so the write's own `changed` event finds nothing new. What differs per
 manager is a set of hooks. The `## Notes` body
-goes through `vault.process` with `replaceNotesSection` ([noteBody.ts](../../src/storage/noteBody.ts)),
+goes through `vault.process` with `replaceNotesSection` ([noteBody.ts](../../src/shared/storage/noteBody.ts)),
 which keeps every other section. Creates use `vault.create` with a `---` block plus `## Notes`;
 deletes use `fileManager.trashFile`. Custom lists and the vault copy of a backup also go through the Vault API (`vault.process` / `vault.create`), not `vault.adapter`. Details in [flows/entry-write](../flows/entry-write.md).
 
@@ -97,13 +101,14 @@ deletes use `fileManager.trashFile`. Custom lists and the vault copy of a backup
 
 Stores and managers never build user-facing text. A manager failure (unreadable YAML, rename target
 taken, lost edit, unreadable shared block) is a `ManagerNotice` code passed to the injected `Notify`;
-`updateFrontMatter` and `renameTargetFree` in [noteWrite.ts](../../src/storage/noteWrite.ts) are
+`updateFrontMatter` and `renameTargetFree` in [noteWrite.ts](../../src/shared/storage/noteWrite.ts) are
 where the write pipeline emits them. `main.ts` renders the code in the active language
 ([i18n](i18n.md)).
 
 ## Config and cache
 
-- `SharedConfigStore` (takes a `Notify`) reads/writes only the `hoard:` block ([baseFile.ts](../../src/storage/baseFile.ts)
+- Settings are composed by `composeSettings` / `persistSettings` ([settingsSplit.ts](../../src/modules/settings/services/settingsSplit.ts), in the settings module): defaults ← local ← secrets ← shared, then `normalizeSettings`.
+- `SharedConfigStore` (takes a `Notify`) reads/writes only the `hoard:` block ([baseFile.ts](../../src/shared/storage/baseFile.ts)
   finds the block by indentation and replaces it line-wise; `ensureFilter` keeps the base's
   `file.inFolder("<root>")` filter pointing at the root). Whitelist and sync rules:
   [shared vs local](../concepts/shared-vs-local.md).
@@ -111,10 +116,10 @@ where the write pipeline emits them. `main.ts` renders the code in the active la
   `reading`/`games`/`drafts`). It refuses to write, for the whole session, when the file is a
   WatchLog schema-1 file (device settings and cache then start empty; notes in the vault are indexed as
   usual) or from a newer plugin version; both show a sticky Notice. A schema-2 file is read field by
-  field ([readCache.ts](../../src/storage/readCache.ts)) and its legacy `'none'` markers become
+  field ([readCache.ts](../../src/shared/storage/readCache.ts)) and its legacy `'none'` markers become
   `notfound` checks ([entry cache](../concepts/entry-cache.md#reading-datajson)). The per-device WatchLog
   import decision lives in `ui.watchlogImport` ([flows/watchlog-import](../flows/watchlog-import.md)).
-- `SecretStore` ([SecretStore.ts](../../src/storage/SecretStore.ts)) wraps `getSecret`/`setSecret`; `write`
+- `SecretStore` ([SecretStore.ts](../../src/shared/storage/SecretStore.ts)) wraps `getSecret`/`setSecret`; `write`
   verifies by read-back and returns the keys it could not store, `absorb` migrates keys out of a settings
   record. `LocalStore` takes it as an optional dependency and absorbs on load and before every save
   (marker `secretsInStorage`), so a key never stays in `data.json`. Details:
@@ -124,10 +129,11 @@ where the write pipeline emits them. `main.ts` renders the code in the active la
 ## Where to change what
 
 - A new note property for titles: the matching part of `titleFromProperties` and of
-  `titleToProperties` in [titleCodec.ts](../../src/storage/titleCodec.ts) (`coreFields`/`coreProps`,
-  `userFields`/`linkAndFlagProps`, …), `HoardTitle` in `types.ts`, and `TITLE_CACHE_KEYS` with
+  `titleToProperties` in [titleCodec.ts](../../src/shared/storage/titleCodec.ts) (`coreFields`/`coreProps`,
+  `userFields`/`linkAndFlagProps`, …), `HoardTitle` in `src/modules/watchlist/domain/model.ts`, and `TITLE_CACHE_KEYS` with
   `cachedApiFields`/`titleToCache` if it is API data. Reading and games: their codecs; cache merge does not exist there.
 - A new entry kind: `EntryKind`, `FOLDERS` and `classify` in `VaultLayout`, a codec, an `EntryIndex`
   case, a manager.
 - A new secret setting: `SECRET_SETTINGS` / `SecretKey` in `SecretStore.ts`.
-- A new shared setting: the whitelist in `SharedConfigStore` ([settings](../modules/settings.md)).
+- A new shared setting: the whitelist in `SharedConfigStore` ([settings](../modules/settings.md)), its default in
+  `modules/settings/domain/settingsDefaults.ts`, its type in `modules/settings/domain/model.ts`, its reader in `settingsCodec.ts` (same folder); new public symbols also need a line in `settings/exports.ts`.

@@ -1,25 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Platform, WorkspaceLeaf } from 'obsidian';
-import { HoardView } from '../../src/HoardView';
-
-const { Stub } = vi.hoisted(() => ({
-	Stub: class {
-		render(): void {}
-	},
-}));
-
-vi.mock('../../src/DashboardTab', () => ({ DashboardTab: Stub }));
-vi.mock('../../src/ListTab', () => ({ ListTab: Stub }));
-vi.mock('../../src/ReadingTab', () => ({ ReadingTab: Stub }));
-vi.mock('../../src/GamesTab', () => ({ GamesTab: Stub }));
-vi.mock('../../src/CustomListsTab', () => ({ CustomListsTab: Stub }));
-vi.mock('../../src/LogTab', () => ({ LogTab: Stub }));
-vi.mock('../../src/AirtimeTab', () => ({
-	AirtimeTab: Object.assign(class extends Stub {}, { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 }),
-}));
-vi.mock('../../src/DraftsTab', () => ({
-	DraftsTab: Object.assign(class extends Stub {}, { computePendingCount: () => Promise.resolve(0) }),
-}));
+import { Platform } from 'obsidian';
+import { HoardView } from '../../src/app/HoardView';
+import { newHoardView } from '../helpers/newHoardView';
 
 const PINNED = 'hoard-view__tab-content--pinned';
 const HEIGHT_VAR = '--hoard-view-pinned-tab-height';
@@ -31,14 +13,7 @@ async function open(mobile: boolean) {
 		mockImplementation(fn: (el: HTMLElement, type: string, cb: EventListener) => void): void;
 	};
 	register.mockImplementation((el, type, cb) => el.addEventListener(type, cb));
-	const plugin = {
-		settings: { colorTheme: 'default' },
-		app: { metadataCache: { on: () => ({}) } },
-		readingDataManager: {},
-		gameDataManager: {},
-	};
-	const dm = { onChange: () => {}, offChange: () => {} };
-	const view = new HoardView(new WorkspaceLeaf(), plugin as never, dm as never);
+	const view = newHoardView();
 	document.body.appendChild(view.contentEl);
 	await view.onOpen();
 	const tabBar = view.contentEl.querySelector<HTMLElement>('.hoard-tab-bar')!;

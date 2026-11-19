@@ -1,7 +1,7 @@
 import { requestUrl } from 'obsidian';
 import { vi } from 'vitest';
-import { ApiService, requestVia } from '../../src/ApiService';
-import { TENRAI_BASE, resolveJikanEndpoint } from '../../src/jikanBase';
+import { ApiService, requestVia } from '../../src/shared/api/ApiService';
+import { TENRAI_BASE, resolveJikanEndpoint } from '../../src/shared/api/jikanBase';
 
 /** The network stand-in from the obsidian mock. */
 export const sent = vi.mocked(requestUrl);

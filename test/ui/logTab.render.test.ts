@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { LogTab } from '../../src/LogTab';
-import type HoardPlugin from '../../src/main';
-import type { HistoryEntry } from '../../src/HistoryManager';
+import { LogTab } from '../../src/modules/log/ui/LogTab';
+import type { HistoryEntry } from '../../src/shared/domain/history';
 import { qsa } from '../helpers/dom';
 
 afterEach(() => {
@@ -14,10 +13,8 @@ const entry = (id: string, source: HistoryEntry['source'], ts: string): HistoryE
 function mount(entries: HistoryEntry[]): HTMLElement {
 	const container = document.createElement('div');
 	document.body.appendChild(container);
-	const plugin = {
-		historyManager: { getEntries: () => entries, onChange: () => {}, offChange: () => {} },
-	} as unknown as HoardPlugin;
-	new LogTab(container, plugin).render();
+	const history = { getEntries: () => entries, onChange: () => {}, offChange: () => {} };
+	new LogTab(container, history as never, () => {}).render();
 	return container;
 }
 

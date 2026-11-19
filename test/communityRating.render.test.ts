@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { renderCommunityRating } from '../src/CommunityRating';
+import { renderCommunityRating } from '../src/modules/watchlist/ui/CommunityRating';
 import { makeTitle } from './helpers/setupDataManager';
-import { t } from '../src/i18n';
-import type { HoardTitle } from '../src/types';
+import { t } from '../src/shared/i18n';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
 
 function render(title: HoardTitle | undefined): HTMLElement {
 	const parent = document.createElement('div');
-	const plugin = { dataManager: { getTitle: () => title } };
-	renderCommunityRating(parent, plugin as never, 'a');
+	const titles = { getTitle: () => title };
+	renderCommunityRating(parent, titles as never, {} as never, {} as never, 'a');
 	return parent;
 }
 

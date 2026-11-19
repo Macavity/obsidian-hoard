@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parse, stringify } from 'yaml';
-import * as base from '../../src/storage/baseFile';
+import * as base from '../../src/shared/storage/baseFile';
 
 const yaml = { parse, stringify };
 const src = `improved-bases:

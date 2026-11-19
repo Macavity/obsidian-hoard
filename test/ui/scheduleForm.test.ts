@@ -4,8 +4,9 @@ import {
 	initialScheduleState,
 	isScheduleValid,
 	resolveScheduleMode,
+	renderScheduleModal,
 	type ScheduleFormState,
-} from '../../src/ui/ScheduleForm';
+} from '../../src/modules/airtime/ui/ScheduleForm';
 
 const state = (over: Partial<ScheduleFormState> = {}): ScheduleFormState => ({
 	mode: 'single', recurrence: 'weekly', releaseDate: '', releaseTime: '', dayOfWeek: 6, dayOfMonth: 1, ...over,
@@ -59,5 +60,44 @@ describe('resolveScheduleMode', () => {
 		expect(resolveScheduleMode({ recurrence: 'once' }, undefined, 'recurring')).toBe('single');
 		expect(resolveScheduleMode({ recurrence: 'daily' }, undefined, 'single')).toBe('recurring');
 		expect(resolveScheduleMode(null, undefined, 'single')).toBe('single');
+	});
+});
+
+describe('renderScheduleModal recurring fields', () => {
+	const options = (over: object = {}) => ({
+		withTime: true,
+		withRecurring: true,
+		recurrenceLabel: 'Airs',
+		recurrenceOptions: [{ value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' }, { value: 'daily', label: 'Daily' }],
+		modeLabels: ['Single', 'Recurring'] as [string, string],
+		hint: () => 'hint',
+		timeNote: (t: string) => `JST ${t}`,
+		renderCounters: (p: HTMLElement) => { p.createDiv({ cls: 'counters' }); },
+		modal: { close: () => undefined },
+		onSave: () => Promise.resolve(),
+		...over,
+	});
+
+	it('switches the extra field with the cadence', () => {
+		const parent = document.createElement('div');
+		const st = state({ mode: 'recurring', recurrence: 'weekly' });
+		renderScheduleModal(parent, st, options());
+		expect(parent.querySelector('.counters')).not.toBeNull();
+		expect(parent.querySelectorAll('select')).toHaveLength(2);
+		const sel = parent.querySelector('select') as HTMLSelectElement;
+		sel.value = 'monthly';
+		sel.dispatchEvent(new Event('change'));
+		expect(st.recurrence).toBe('monthly');
+		expect(parent.querySelectorAll('select')).toHaveLength(1);
+		expect(parent.querySelector('input[type=number]')).not.toBeNull();
+		sel.value = 'daily';
+		sel.dispatchEvent(new Event('change'));
+		expect(parent.querySelector('input[type=number]')).toBeNull();
+	});
+
+	it('omits the time row without withTime', () => {
+		const parent = document.createElement('div');
+		renderScheduleModal(parent, state({ mode: 'recurring', recurrence: 'daily' }), options({ withTime: false }));
+		expect(parent.querySelector('input[type=time]')).toBeNull();
 	});
 });

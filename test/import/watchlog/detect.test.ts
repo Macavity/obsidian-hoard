@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { createFakeApp } from '../../fakes/fakeApp';
 import { readFileSync } from 'node:fs';
-import { detectWatchLogSources, findWatchLogBase } from '../../../src/import/watchlog/detect';
+import { detectWatchLogSources, findWatchLogBase } from '../../../src/modules/import/services/watchlog/detect';
 import { snapshot } from './helpers';
-import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
+import type { WatchLogData } from '../../../src/modules/import/services/watchlog/schema1Types';
 
 const data = JSON.parse(readFileSync('test/fixtures/data-v1.json', 'utf8')) as WatchLogData;
 
 describe('findWatchLogBase', () => {
 	it('finds a WatchLog.base by name, even without its key', async () => {
 		const { app } = createFakeApp({ 'Media/WatchLog.base': 'views: []\n' });
-		expect((await findWatchLogBase(app))?.path).toBe('Media/WatchLog.base');
+		expect((await findWatchLogBase(app.vault))?.path).toBe('Media/WatchLog.base');
 	});
 
 	it('finds any base with a top-level watchlog key; the first path wins', async () => {
@@ -19,12 +19,12 @@ describe('findWatchLogBase', () => {
 			'a/Other.base': 'filters: {}\nwatchlog:\n  version: 1\n',
 			'0/Nested.base': 'views:\n  watchlog: 1\n',
 		});
-		expect((await findWatchLogBase(app))?.path).toBe('a/Other.base');
+		expect((await findWatchLogBase(app.vault))?.path).toBe('a/Other.base');
 	});
 
 	it('finds nothing in a Hoard vault', async () => {
 		const { app } = createFakeApp({ 'H/Hoard.base': 'hoard:\n  version: 1\n', 'H/Note.md': 'watchlog:\n' });
-		expect(await findWatchLogBase(app)).toBeNull();
+		expect(await findWatchLogBase(app.vault)).toBeNull();
 	});
 });
 
@@ -39,7 +39,7 @@ describe('detectWatchLogSources', () => {
 			schemaVersion: 2, settings: { tmdbApiKey: 'k' }, cache: {}, ui: {},
 		}));
 		const before = snapshot(f);
-		const s = await detectWatchLogSources(f.app);
+		const s = await detectWatchLogSources(f.app.vault, () => false);
 		expect(s.original?.counts.titles).toBe(data.titles.length + (data.maybe?.length ?? 0));
 		expect(s.fork?.root).toBe('WatchLog');
 		expect(s.fork?.counts).toMatchObject({ titles: 1, notes: 1 });
@@ -51,7 +51,7 @@ describe('detectWatchLogSources', () => {
 	it('counts Maybe titles and custom lists of the original', async () => {
 		const f = createFakeApp({ 'Lists/Shopping.md': '# S\n\n## Data\n```json\n{}\n```\n', 'Lists/Plain.md': 'x' });
 		f.adapterFiles.set('.obsidian/plugins/watchlog/data.json', JSON.stringify(data));
-		const c = (await detectWatchLogSources(f.app)).original!.counts;
+		const c = (await detectWatchLogSources(f.app.vault, () => false)).original!.counts;
 		expect(c.titles).toBe(data.titles.length + (data.maybe?.length ?? 0));
 		expect(c.lists).toBe(1);
 	});
@@ -61,18 +61,18 @@ describe('detectWatchLogSources', () => {
 			'Media/Hoard.base': 'hoard:\n  types: []\n', 'Media/WatchLog/WatchLog.base': 'watchlog:\n  types:\n    - name: Movie\n',
 			'Media/WatchLog/Movie/Heat.md': '',
 		});
-		expect((await detectWatchLogSources(f.app)).fork?.counts.titles).toBe(1);
+		expect((await detectWatchLogSources(f.app.vault, () => false)).fork?.counts.titles).toBe(1);
 	});
 
 	it('treats unreadable data.json as absent', async () => {
 		const f = createFakeApp({});
 		f.adapterFiles.set('.obsidian/plugins/watchlog/data.json', '{nope');
-		expect((await detectWatchLogSources(f.app)).original).toBeNull();
+		expect((await detectWatchLogSources(f.app.vault, () => false)).original).toBeNull();
 	});
 
 	it('reports hoardHasData when a hoard: base exists', async () => {
 		const f = createFakeApp({ 'Hoard/Hoard.base': 'hoard:\n  settings: {}\n' });
-		expect((await detectWatchLogSources(f.app)).hoardHasData).toBe(true);
+		expect((await detectWatchLogSources(f.app.vault, () => false)).hoardHasData).toBe(true);
 	});
 
 	it('uses configured type names, counts other folders and skips a nested Hoard root', async () => {
@@ -82,7 +82,7 @@ describe('detectWatchLogSources', () => {
 			'Film/A.md': '', 'Movie/B.md': '', 'Books/C.md': '', 'Manga/M.md': '', 'CustomLists/D.md': '',
 			'Hoard/Hoard.base': 'hoard:\n', 'Hoard/Film/E.md': '',
 		});
-		const s = await detectWatchLogSources(f.app);
+		const s = await detectWatchLogSources(f.app.vault, () => false);
 		expect(s.fork?.root).toBe('');
 		expect(s.fork?.typeNames).toEqual(['Film']);
 		expect(s.fork?.counts).toEqual({ titles: 1, books: 1, manga: 1, games: 0, lists: 1, notes: 4 });

@@ -1,8 +1,10 @@
 import { requestUrl } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService } from '../src/ApiService';
-import { TitleDetailModal } from '../src/TitleDetailModal';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
+import { ApiService } from '../src/shared/api/ApiService';
+import { fakeSettings } from './helpers/fakeSettings';
+import { newTitleDetail } from './helpers/newTitleDetail';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import { setupDataManager } from './helpers/setupDataManager';
 
 const sent = vi.mocked(requestUrl);
@@ -236,8 +238,7 @@ describe('detail modal backfills', () => {
 	const NOTE = '---\nName: Alien\nType: Movie\nURL: https://www.imdb.com/title/tt0078748/\nCover: https://p/x.jpg\n---\n';
 	const open = async (api: ApiService) => {
 		const { dm, local } = await setupDataManager({ 'W/Movie/Alien.md': NOTE });
-		const plugin = { settings: { ...DEFAULT_SETTINGS }, dataManager: dm, apiService: api };
-		const modal = new TitleDetailModal({} as never, plugin as never, dm.getTitle('Movie/Alien')!) as unknown as {
+		const modal = newTitleDetail({ settings: fakeSettings({ ...DEFAULT_SETTINGS }), titles: dm, api }, { title: dm.getTitle('Movie/Alien')! }) as unknown as {
 			maybeBackfillCredits: () => void;
 			maybeBackfillStudio: () => void;
 		};

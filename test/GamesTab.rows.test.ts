@@ -1,22 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GamesTab } from '../src/GamesTab';
-import { defaultGamesSettings, DEFAULT_SETTINGS, type Game, type GameGroup } from '../src/types';
-import { t } from '../src/i18n';
+import { newGamesTab } from './helpers/newGamesTab';
+import type { Game, GameGroup } from '../src/modules/games/domain/model';
+import { defaultGamesSettings } from '../src/modules/games/domain/gameDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
+import { t } from '../src/shared/i18n';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const groupModalOpened = vi.hoisted(() => vi.fn());
-
-vi.mock('../src/RowsCustomizeModal', () => ({
-	RowsCustomizeModal: class {
-		constructor(_app: unknown, _plugin: unknown, opts: unknown) { customizeOpts = opts as CustomizeOpts; }
-		open = vi.fn();
-	},
-}));
-
-vi.mock('../src/GameDetailModal', () => ({
-	GameDetailModal: class { open = vi.fn(); },
-	GameGroupDetailModal: class { open = (): void => { groupModalOpened(); }; },
-	gameGroupProgress: () => 0,
-}));
 
 const game = (id: string, over: Partial<Game> = {}): Game => ({
 	id, title: id, developer: '', publisher: '', type: 'RPG', status: 'Playing', priority: '', favorite: false,
@@ -50,21 +40,24 @@ function build(o: Setup = {}) {
 		getRecommendedDaily: () => ({ date: '', ids: [] as string[] }),
 		setRecommendedDaily: vi.fn(),
 	};
-	const plugin = {
-		app: {},
-		settings: { ...DEFAULT_SETTINGS, gamesFilters: o.favoritesOnly ? { favoritesOnly: true } : undefined },
-		isCardTextUnder: () => false,
-		getCardMinWidth: () => 150,
-	};
+	const settingsService = fakeSettings({ ...DEFAULT_SETTINGS, gamesFilters: o.favoritesOnly ? { favoritesOnly: true } : undefined });
 	const container = document.createElement('div');
 	const content = document.createElement('div');
 	container.appendChild(content);
-	const tab = new GamesTab(container, plugin as never, gameData as never);
+	const tab = newGamesTab(container, {
+		settings: settingsService,
+		games: gameData,
+		isCardTextUnder: () => false,
+		modals: {
+			openRowsCustomize: (opts) => { customizeOpts = opts as unknown as CustomizeOpts; },
+			openGroupDetail: () => { groupModalOpened(); },
+		},
+	});
 	const internals = tab as unknown as { contentEl: HTMLElement; renderContent: () => void; searchQuery: string };
 	internals.contentEl = content;
 	if (o.query) internals.searchQuery = o.query;
 	internals.renderContent();
-	return { tab, content, internals };
+	return { tab, content, internals, settingsService };
 }
 
 const only = (ids: string[]) => ['favorites', 'recommended', 'recentlyAdded', 'recentlyPlayed', 'groups', 'recentlyReleased', 'byType', 'byStatus']
@@ -187,5 +180,15 @@ describe('GamesTab.renderContent', () => {
 		expect(content.querySelector('.hoard-rows-view__strip')!.textContent).toContain('Zelda');
 		card!.click();
 		expect(groupModalOpened).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('GamesTab settings access', () => {
+	it('writes the live filters through the settings service, once per change', () => {
+		const { tab, settingsService } = build();
+		(tab as unknown as { filterGenreExclude: Set<string> }).filterGenreExclude.add('RPG');
+		(tab as unknown as { persistFilters(): void }).persistFilters();
+		expect(settingsService.update).toHaveBeenCalledOnce();
+		expect((settingsService.get().gamesFilters as { genreExclude?: string[] } | undefined)?.genreExclude).toEqual(['RPG']);
 	});
 });

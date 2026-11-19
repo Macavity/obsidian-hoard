@@ -1,11 +1,12 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { renderCommunityRating } from '../../src/CommunityRating';
-import { GroupDetailModal, renderCreditsRows } from '../../src/TitleDetailModal';
-import { GameGroupDetailModal } from '../../src/GameDetailModal';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { renderCommunityRating } from '../../src/modules/watchlist/ui/CommunityRating';
+import { GroupDetailModal, renderCreditsRows } from '../../src/modules/watchlist/ui/TitleDetailModal';
+import { GameGroupDetailModal } from '../../src/modules/games/ui/GameDetailModal';
 import { El } from '../helpers/fakeEl';
 import { makeTitle } from '../helpers/setupDataManager';
+import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));
 
@@ -25,8 +26,8 @@ describe('detail modals i18n', () => {
 		setLocale('de');
 		const parent = new El('root');
 		const title = makeTitle({ id: 'a' });
-		const plugin = { dataManager: { getTitle: () => title } };
-		renderCommunityRating(parent as never, plugin as never, 'a');
+		const titles = { getTitle: () => title };
+		renderCommunityRating(parent as never, titles as never, {} as never, {} as never, 'a');
 		const texts = allText(parent);
 		expect(texts).toContain(de.detail.community.empty);
 		expect(texts).toContain(de.detail.community.refresh);
@@ -34,10 +35,10 @@ describe('detail modals i18n', () => {
 
 	it('renders the group modal header in German', () => {
 		setLocale('de');
-		const modal = new GroupDetailModal({} as never, {
-			settings: {},
-			dataManager: { getEffectiveTotal: () => 0 },
-		} as never, { name: 'Marvel' } as never, []);
+		const modal = new GroupDetailModal(
+			{} as never, {} as never, { getEffectiveTotal: () => 0 }, {} as never, vi.fn(), vi.fn(),
+			{ group: { name: 'Marvel' } as never, members: [] },
+		);
 		(modal as unknown as { renderAll: () => void }).renderAll();
 		const texts = domText(modal.contentEl);
 		expect(texts).toContain('0 Titel');
@@ -46,11 +47,13 @@ describe('detail modals i18n', () => {
 
 	it('renders the game group modal count in German', () => {
 		setLocale('de');
-		const modal = new GameGroupDetailModal({} as never, {
-			settings: {},
-		} as never, {
-			getSettings: () => ({ types: [], statuses: [] }),
-		} as never, { name: 'Zelda' } as never, []);
+		const modal = new GameGroupDetailModal(
+			{} as never,
+			fakeSettings({}) as never,
+			{ getSettings: () => ({ types: [], statuses: [] }) } as never,
+			vi.fn(),
+			{ group: { name: 'Zelda' } as never, members: [] },
+		);
 		(modal as unknown as { renderAll: () => void }).renderAll();
 		expect(domText(modal.contentEl)).toContain('0 Spiele');
 	});

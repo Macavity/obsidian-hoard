@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, apiErrorMessage, apiErrorShort, requestVia } from '../src/ApiService';
-import { TENRAI_BASE } from '../src/jikanBase';
+import { ApiService, apiErrorMessage, apiErrorShort, requestVia } from '../src/shared/api/ApiService';
+import { TENRAI_BASE } from '../src/shared/api/jikanBase';
 import {
 	CALLS, afterToken, answer, answerAll, answerWith, failure, isTokenRequest, reply, respondWith, sent, urlOfCall, type Reply, type Service,
 } from './helpers/apiFailures';

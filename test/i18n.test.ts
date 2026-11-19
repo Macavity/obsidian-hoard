@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { setLocale, getLocale, t } from '../src/i18n';
-import en from '../src/i18n/en';
-import de from '../src/i18n/de';
+import { setLocale, getLocale, t } from '../src/shared/i18n';
+import en from '../src/shared/i18n/en';
+import de from '../src/shared/i18n/de';
 
 type Plural = { one: string; other: string; zero?: string };
 type Leaf = string | Plural;

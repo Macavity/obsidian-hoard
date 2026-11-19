@@ -289,11 +289,7 @@ describe('name cell Escape', () => {
 	});
 
 	it('closes only the suggestion dropdown while it is open', async () => {
-		const { container, plugin } = await setup([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
-		Object.assign(plugin, {
-			readingDataManager: { getBooks: () => [], getMangaList: () => [] },
-			gameDataManager: { getGames: () => [] },
-		});
+		const { container } = await setup([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
 		nameCell(container).click();
 		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		input.value = 'a';
@@ -318,11 +314,7 @@ describe('name cell Escape', () => {
 	});
 
 	it('keeps the dropdown open when Escape aborts an IME composition', async () => {
-		const { container, plugin } = await setup([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
-		Object.assign(plugin, {
-			readingDataManager: { getBooks: () => [], getMangaList: () => [] },
-			gameDataManager: { getGames: () => [] },
-		});
+		const { container } = await setup([nameList()], [{ title: 'Alpha Quest', type: 'movie', status: 'watching' }]);
 		nameCell(container).click();
 		const input = q(container, '.hoard-custom-list-table__cell-input') as HTMLInputElement;
 		input.value = 'a';

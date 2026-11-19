@@ -1,43 +1,31 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { WorkspaceLeaf } from 'obsidian';
-import { HoardView } from '../../src/HoardView';
+import { afterEach, describe, expect, it } from 'vitest';
+import type { HoardView } from '../../src/app/HoardView';
+import type { TabInstance } from '../../src/design-system/TabInstance';
+import { newHoardView } from '../helpers/newHoardView';
 
-const { tab, destroyed } = vi.hoisted(() => {
-	const destroyed: string[] = [];
-	const tab = (name: string, withDestroy: boolean, statics: Record<string, unknown> = {}) => {
-		class Stub {
-			render(): void {}
-		}
-		if (withDestroy) (Stub.prototype as { destroy?: () => void }).destroy = () => { destroyed.push(name); };
-		return Object.assign(Stub, statics);
-	};
-	return { tab, destroyed };
+const destroyed: string[] = [];
+
+/** A tab that records its teardown, or none when it has no destroy (the dashboard). */
+const tab = (name: string, withDestroy: boolean) => (): TabInstance => ({
+	render: () => {},
+	...(withDestroy ? { destroy: () => { destroyed.push(name); } } : {}),
 });
-
-vi.mock('../../src/DashboardTab', () => ({ DashboardTab: tab('dashboard', false) }));
-vi.mock('../../src/ListTab', () => ({ ListTab: tab('watchlist', true) }));
-vi.mock('../../src/ReadingTab', () => ({ ReadingTab: tab('reading', true) }));
-vi.mock('../../src/GamesTab', () => ({ GamesTab: tab('games', true) }));
-vi.mock('../../src/CustomListsTab', () => ({ CustomListsTab: tab('custom-lists', true) }));
-vi.mock('../../src/LogTab', () => ({ LogTab: tab('log', true) }));
-vi.mock('../../src/AirtimeTab', () => ({
-	AirtimeTab: tab('upcoming', true, { getAiredDueCount: () => 0, getMaybeDueCount: () => 0 }),
-}));
-vi.mock('../../src/DraftsTab', () => ({
-	DraftsTab: tab('drafts', true, { computePendingCount: () => Promise.resolve(0) }),
-}));
 
 afterEach(() => { destroyed.length = 0; });
 
 async function open(): Promise<HoardView> {
-	const plugin = {
-		settings: { colorTheme: 'default' },
-		app: { metadataCache: { on: () => ({}) } },
-		readingDataManager: {},
-		gameDataManager: {},
-	};
-	const dm = { onChange: () => {}, offChange: () => {} };
-	const view = new HoardView(new WorkspaceLeaf(), plugin as never, dm as never);
+	const view = newHoardView({
+		create: {
+			watchlist: tab('watchlist', true),
+			reading: tab('reading', true),
+			games: tab('games', true),
+			upcoming: tab('upcoming', true),
+			'custom-lists': tab('custom-lists', true),
+			drafts: tab('drafts', true),
+			dashboard: tab('dashboard', false),
+			log: tab('log', true),
+		},
+	});
 	await view.onOpen();
 	return view;
 }

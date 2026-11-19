@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rewriteWidgetFences } from '../../../src/import/watchlog/widgets';
+import { rewriteWidgetFences } from '../../../src/modules/import/services/watchlog/widgets';
 
 describe('rewriteWidgetFences', () => {
 	it('renames every WatchLog widget language', () => {

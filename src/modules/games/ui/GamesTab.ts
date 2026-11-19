@@ -1,0 +1,1367 @@
+import type { TabInstance } from '../../../design-system/TabInstance';
+import { Notice, TFile } from 'obsidian';
+import { t, type TranslationKey } from '../../../shared/i18n';
+import { gameStatusLabel } from '../../../shared/i18n/labels';
+import type { SettingsReader, SettingsWriter } from '../../settings/exports';
+import type { Game, GameGroup, GamesSavedFilterPreset } from '../domain/model';
+import { GAMES_ROWS_SHELVES } from '../domain/gameShelves';
+import { GAME_AUTO_STATUS, GAME_FINISHED_STATUS } from '../domain/gameDefaults';
+import { ROWS_EXCLUSIVE_SHELVES, normalizeRowsLayout, sortByFavorited } from '../../../shared/domain/rows';
+import { migratePriorityExclude, priorityExcludeMatches, setsMatch } from '../../../shared/domain/tags';
+import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domain/SearchQuery';
+import { renderSearchHelpButton, type OpenSearchHelp } from '../../../design-system/SearchHelpModal';
+import type { OpenRowsCustomize } from '../../../design-system/RowsCustomizeModal';
+import { VirtualGrid, computeGridMetrics, setRowsCardWidth, type GridMetrics } from '../../../design-system/VirtualGrid';
+import { VirtualScroller } from '../../../design-system/VirtualScroller';
+import { LazyCardObserver } from '../../../design-system/LazyCardObserver';
+import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from '../../../design-system/PosterCard';
+import { renderRowsLayout, renderShelf, renderShelfTitle, type ShelfSelect } from '../../../design-system/RowsView';
+import { renderSearchBox, type OpenRenameGroup, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, type SortFields } from '../../../design-system/TabToolbar';
+import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } from '../../../design-system/ActionBar';
+import { renderGroupCard } from '../../../design-system/GroupCard';
+import { createIconButton } from '../../../design-system/IconButton';
+import { mountVirtualCardGrid } from '../../../design-system/TabHelpers';
+import { PRIORITY_ORDER, comparePriority, compareUnsetLast, isRecentlyReleased, pickRandom } from '../../../shared/domain/listOrder';
+import { renderHeaderToolbar } from '../../../design-system/MobileToolbar';
+import { rawgResizedCover } from '../../../shared/api/ApiService';
+import type { resolveGameCover, GameCover, GameCoverApi } from '../../../shared/services/coverRefresh';
+import { effectiveGameSource } from '../../../shared/api/apiSources';
+import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../design-system/TabFilters';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
+import type { NoteFiles } from '../../../design-system/NoteLinkButton';
+import type { GameDataManager } from '../services/GameDataManager';
+import { gameGroupProgress, type OpenGameDetail, type OpenGameGroupDetail } from './GameDetailModal';
+import type { OpenAddGame } from './AddGameModal';
+
+/** One entry in the merged grid: an ungrouped game, or a group card with its resolved members. */
+type GameDisplayItem =
+	| { kind: 'game'; data: Game }
+	| { kind: 'group'; data: GameGroup; members: Game[] };
+
+
+export type GamesTabApi = GameCoverApi;
+
+export type ResolveGameCover = typeof resolveGameCover;
+
+export interface GamesTabHost {
+	getCardMinWidth(): number;
+	isCardTextUnder(tab: 'games'): boolean;
+}
+
+/** The dialogs the Games tab opens; the wiring layer builds them, so the tab needs none of their collaborators. */
+export interface GamesTabModals {
+	openAddGame: OpenAddGame;
+	openGameDetail: OpenGameDetail;
+	openGroupDetail: OpenGameGroupDetail;
+	openRowsCustomize: OpenRowsCustomize;
+	renameGroup: OpenRenameGroup;
+	searchHelp: OpenSearchHelp;
+	confirm: OpenConfirm;
+}
+
+/**
+ * Games tab: the Watchlist toolbar (search + Saved filter / Filters / Sorting / Select / + Add,
+ * on the shared FilterPanel + SortPopover + mobile-toggle modules) over the customizable Rows
+ * layout (GAMES_ROWS_SHELVES + RowsCustomizeModal) — shelves, the exclusive By genre / By status
+ * grids, and the flat "All games" fallback, all on the shared card infrastructure. + Add opens
+ * AddGameModal; a card click opens GameDetailModal, or toggles selection in Select mode.
+ */
+type GamesFilterState = NonNullable<ReturnType<SettingsReader['get']>['gamesFilters']>;
+
+export class GamesTab implements TabInstance {
+	private container: HTMLElement;
+	private dataChangeListener: () => void;
+	private scroller: VirtualScroller | null = null;
+	// lazy cover re-fetch — one observer per rendered view (see handleCoversVisible).
+	// coverFetchFailed suppresses retries for the rest of the session, so a game the API can't
+	// resolve doesn't re-search on every scroll past its card
+	private coversObserver: LazyCardObserver | null = null;
+	private coverFetchFailed = new Set<string>();
+	// survives re-renders within this tab instance, so grid scroll is restored after a rebuild
+	private persistentScrollTop = 0;
+	private activeCleanups: (() => void)[] = [];
+	private searchQuery = '';
+
+	// filter state (the Watchlist model — persisted live in settings.gamesFilters)
+	private filterGenreExclude = new Set<string>();
+	private filterStatusExclude = new Set<string>();
+	private filterRatingExclude = new Set<string>();
+	private filterPriorityExclude = new Set<string>();
+	private filterPlatformExclude = new Set<string>();
+	private filterGroupExclude = new Set<string>();
+	private filterRatingEmptyOnly = false;
+	private filterRecentlyArrivedOnly = false;
+	private filterFavoritesOnly = false;
+	private filterWishlistOnly = false;
+	// hides standalone games, shows only groups
+	private filterGroupsOnly = false;
+	private readonly sort: SortFields = {
+		filterSort: 'dateAdded', filterSortDir: 'desc', filterSecondSort: 'none', filterSecondSortDir: 'asc',
+	};
+
+	private savedFilterActive = false;
+	private savedFilterBtnEl: HTMLButtonElement | null = null;
+
+	private selectionMode = false;
+	private selectedIds = new Set<string>();
+	// header select-all boxes of the current Rows render; re-synced on every selection change
+	private shelfSelectRefreshers: (() => void)[] = [];
+
+	// mobile toolbar toggle (shared crossfade slot) + isolated button rebuilds
+	private toolbarExpanded = false;
+	private toolbarActionsEl: HTMLElement | null = null;
+	private contentEl: HTMLElement | null = null;
+
+	constructor(
+		container: HTMLElement,
+		private readonly settings: SettingsReader & SettingsWriter,
+		private readonly games: GameDataManager,
+		private readonly api: GamesTabApi,
+		private readonly resolveGameCover: ResolveGameCover,
+		private readonly files: NoteFiles,
+		private readonly host: GamesTabHost,
+		private readonly modals: GamesTabModals,
+	) {
+		this.container = container;
+		this.dataChangeListener = () => this.render();
+		this.games.onChange(this.dataChangeListener);
+
+		const saved = settings.get().gamesFilters;
+		if (saved) this.restoreFilters(saved);
+		// keep the preset button green while filters still match it
+		const savedPreset = games.getSavedFilterPreset();
+		if (savedPreset) this.savedFilterActive = this.matchesPreset(savedPreset);
+	}
+
+	private restoreFilters(saved: GamesFilterState): void {
+		this.filterGenreExclude    = new Set(saved.genreExclude    ?? []);
+		this.filterRatingExclude   = new Set(saved.ratingExclude   ?? []);
+		this.filterStatusExclude   = new Set(saved.statusExclude   ?? []);
+		this.filterPlatformExclude = new Set(saved.platformExclude ?? []);
+		this.filterGroupExclude    = new Set(saved.groupExclude    ?? []);
+		this.filterPriorityExclude = migratePriorityExclude(
+			saved.priorityExclude,
+			saved.priorityEmptyOnly,
+			this.settings.get().priorities,
+		);
+		this.sort.filterSort          = saved.sort ?? 'dateAdded';
+		this.sort.filterSortDir       = saved.sortDir ?? 'desc';
+		this.sort.filterSecondSort    = saved.secondSort ?? 'none';
+		this.sort.filterSecondSortDir = saved.secondSortDir ?? 'asc';
+		this.restoreFlags(saved);
+	}
+
+	private restoreFlags(saved: GamesFilterState): void {
+		this.filterRatingEmptyOnly     = saved.ratingEmptyOnly     ?? false;
+		this.filterRecentlyArrivedOnly = saved.recentlyArrivedOnly ?? false;
+		this.filterFavoritesOnly       = saved.favoritesOnly       ?? false;
+		this.filterWishlistOnly        = saved.wishlistOnly        ?? false;
+		this.filterGroupsOnly          = saved.groupsOnly          ?? false;
+	}
+
+	private matchesPreset(preset: GamesSavedFilterPreset): boolean {
+		return this.excludesMatchPreset(preset) && this.flagsMatchPreset(preset);
+	}
+
+	private excludesMatchPreset(preset: GamesSavedFilterPreset): boolean {
+		return setsMatch(this.filterGenreExclude, preset.genreExclude) &&
+			setsMatch(this.filterStatusExclude, preset.statusExclude) &&
+			setsMatch(this.filterRatingExclude, preset.ratingExclude) &&
+			priorityExcludeMatches(this.filterPriorityExclude, preset, this.settings.get().priorities) &&
+			setsMatch(this.filterPlatformExclude, preset.platformExclude) &&
+			setsMatch(this.filterGroupExclude, preset.groupExclude ?? []);
+	}
+
+	private flagsMatchPreset(preset: GamesSavedFilterPreset): boolean {
+		return (this.filterRatingEmptyOnly === (preset.ratingEmptyOnly ?? false)) &&
+			(this.filterRecentlyArrivedOnly === (preset.recentlyArrivedOnly ?? false)) &&
+			(this.filterFavoritesOnly === (preset.favoritesOnly ?? false)) &&
+			(this.filterWishlistOnly === (preset.wishlistOnly ?? false)) &&
+			(this.filterGroupsOnly === (preset.groupsOnly ?? false));
+	}
+
+	destroy(): void {
+		this.games.offChange(this.dataChangeListener);
+		this.scroller?.destroy();
+		this.scroller = null;
+		this.coversObserver?.destroy();
+		this.coversObserver = null;
+		for (const fn of this.activeCleanups) fn();
+		this.activeCleanups = [];
+	}
+
+	// Filter state helpers (the Watchlist pattern)
+
+	/** Saves the live filters and drops the saved-preset highlight. */
+	private persistFilters(): void {
+		this.saveFiltersToSettings();
+		this.deactivateSavedFilter();
+	}
+
+	private saveFiltersToSettings(): void {
+		const filters = {
+			genreExclude:    Array.from(this.filterGenreExclude),
+			statusExclude:   Array.from(this.filterStatusExclude),
+			ratingExclude:   Array.from(this.filterRatingExclude),
+			priorityExclude: Array.from(this.filterPriorityExclude),
+			platformExclude: Array.from(this.filterPlatformExclude),
+			groupExclude:    Array.from(this.filterGroupExclude),
+			sort:          this.sort.filterSort,
+			sortDir:       this.sort.filterSortDir,
+			secondSort:    this.sort.filterSecondSort,
+			secondSortDir: this.sort.filterSecondSortDir,
+			ratingEmptyOnly:     this.filterRatingEmptyOnly,
+			recentlyArrivedOnly: this.filterRecentlyArrivedOnly,
+			favoritesOnly:       this.filterFavoritesOnly,
+			wishlistOnly:        this.filterWishlistOnly,
+			groupsOnly:          this.filterGroupsOnly,
+		};
+		void this.settings.update((s) => { s.gamesFilters = filters; });
+	}
+
+	private hasActiveFilter(): boolean {
+		return this.filterGenreExclude.size > 0 ||
+			this.filterStatusExclude.size > 0 ||
+			this.filterRatingExclude.size > 0 ||
+			this.filterPriorityExclude.size > 0 ||
+			this.filterPlatformExclude.size > 0 ||
+			this.filterGroupExclude.size > 0 ||
+			this.filterRatingEmptyOnly ||
+			this.filterRecentlyArrivedOnly ||
+			this.filterFavoritesOnly ||
+			this.filterWishlistOnly ||
+			this.filterGroupsOnly;
+	}
+
+	private clearAllFilters(): void {
+		this.filterGenreExclude.clear();
+		this.filterStatusExclude.clear();
+		this.filterRatingExclude.clear();
+		this.filterPriorityExclude.clear();
+		this.filterPlatformExclude.clear();
+		this.filterGroupExclude.clear();
+		this.filterRatingEmptyOnly     = false;
+		this.filterRecentlyArrivedOnly = false;
+		this.filterFavoritesOnly       = false;
+		this.filterWishlistOnly        = false;
+		this.filterGroupsOnly          = false;
+	}
+
+	/** Applies the stored preset and persists it as the active filter. */
+	private activatePreset(preset: GamesSavedFilterPreset): void {
+		this.applyPreset(preset);
+		this.savedFilterActive = true;
+		this.saveFiltersToSettings();
+	}
+
+	private applyPreset(preset: GamesSavedFilterPreset): void {
+		this.filterGenreExclude    = new Set(preset.genreExclude);
+		this.filterStatusExclude   = new Set(preset.statusExclude);
+		this.filterRatingExclude   = new Set(preset.ratingExclude);
+		this.filterPriorityExclude = migratePriorityExclude(
+			preset.priorityExclude,
+			preset.priorityEmptyOnly,
+			this.settings.get().priorities,
+		);
+		this.filterPlatformExclude = new Set(preset.platformExclude);
+		this.filterGroupExclude    = new Set(preset.groupExclude ?? []);
+		this.filterRatingEmptyOnly     = preset.ratingEmptyOnly     ?? false;
+		this.filterRecentlyArrivedOnly = preset.recentlyArrivedOnly ?? false;
+		this.filterFavoritesOnly       = preset.favoritesOnly       ?? false;
+		this.filterWishlistOnly        = preset.wishlistOnly        ?? false;
+		this.filterGroupsOnly          = preset.groupsOnly          ?? false;
+	}
+
+	private deactivateSavedFilter(): void {
+		if (this.savedFilterActive) {
+			this.savedFilterActive = false;
+			this.savedFilterBtnEl?.removeClass('hoard-btn--preset-active');
+		}
+	}
+
+	private gamePassesFilters(g: Game): boolean {
+		if (this.filterFavoritesOnly && !g.favorite) return false;
+		if (this.filterWishlistOnly && !g.wishlist) return false;
+		if (this.filterGenreExclude.size > 0 && this.filterGenreExclude.has(g.type)) return false;
+		if (this.filterRecentlyArrivedOnly) {
+			if (!isRecentlyReleased(g.releaseDate)) return false;
+		} else if (this.filterStatusExclude.size > 0 && this.filterStatusExclude.has(g.status)) {
+			return false;
+		}
+		// rating 0 = un-rated, not a real value; only the Empty toggle shows those
+		if (this.filterRatingEmptyOnly) {
+			if (g.rating !== 0) return false;
+		} else if (this.filterRatingExclude.size > 0 && (g.rating === 0 || this.filterRatingExclude.has(`${g.rating}★`))) {
+			return false;
+		}
+		// '' is a real option here — no-priority games are excludable like any other
+		if (this.filterPriorityExclude.size > 0 && this.filterPriorityExclude.has(g.priority)) {
+			return false;
+		}
+		// a game hides only when EVERY one of its platforms is excluded; games with none set are
+		// unaffected (the Group rule)
+		if (
+			this.filterPlatformExclude.size > 0 &&
+			g.platforms.length > 0 &&
+			g.platforms.every((p) => this.filterPlatformExclude.has(p))
+		) {
+			return false;
+		}
+		return true;
+	}
+
+	// Sorting (the Watchlist comparator semantics)
+
+	private static readonly SORT_DEFAULT_DIR: Record<string, 'asc' | 'desc'> = {
+		title:        'asc',
+		dateAdded:    'desc',
+		progress:     'desc',
+		playtime:     'desc',
+		rating:       'desc',
+		priority:     'asc',
+		started:      'asc',
+		status:       'asc',
+		dateFinished: 'desc',
+		releaseDate:  'desc',
+	};
+
+	private static readonly SORT_KEYS = [
+		'title', 'dateAdded', 'progress', 'playtime', 'rating', 'priority',
+		'started', 'status', 'dateFinished', 'releaseDate',
+	] as const;
+
+	private sortLabelToKey(label: string): string {
+		return GamesTab.SORT_KEYS.find((k) => t(`games.sort.${k}`) === label) ?? 'dateAdded';
+	}
+
+	private getStatusIndex(status: string): number {
+		const idx = this.games.getSettings().statuses.findIndex((s) => s.name === status);
+		return idx === -1 ? 99 : idx;
+	}
+
+	/** Nullable YYYY-MM-DD → ms, nulls last in either direction. */
+	private static compareNullableDates(a: string | null, b: string | null, dir: 'asc' | 'desc'): number {
+		const ta = a ? new Date(a).getTime() : null;
+		const tb = b ? new Date(b).getTime() : null;
+		if (ta == null && tb == null) return 0;
+		if (ta == null) return 1;
+		if (tb == null) return -1;
+		return dir === 'asc' ? ta - tb : tb - ta;
+	}
+
+	private compareGamesByKey(key: string, dir: 'asc' | 'desc', a: Game, b: Game): number {
+		switch (key) {
+			case 'title':
+				return dir === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
+			case 'dateAdded': {
+				const cmp = new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime();
+				return dir === 'asc' ? cmp : -cmp;
+			}
+			case 'progress':
+				return dir === 'asc' ? a.progress - b.progress : b.progress - a.progress;
+			// untracked (0) sorts below every real playtime, like the rating rule
+			case 'playtime':
+				return compareUnsetLast(a.playtimeMinutes, b.playtimeMinutes, dir);
+			// un-rated (0) sorts below every real rating
+			case 'rating':
+				return compareUnsetLast(a.rating, b.rating, dir);
+			// direction-agnostic High → Low, empty last (the Watchlist rule)
+			case 'priority':
+				return comparePriority(a.priority, b.priority);
+			case 'started':
+				return GamesTab.compareNullableDates(a.dateStarted, b.dateStarted, dir);
+			case 'status': {
+				const cmp = this.getStatusIndex(a.status) - this.getStatusIndex(b.status);
+				return dir === 'asc' ? cmp : -cmp;
+			}
+			case 'dateFinished':
+				return GamesTab.compareNullableDates(a.dateFinished, b.dateFinished, dir);
+			case 'releaseDate':
+				return GamesTab.compareNullableDates(a.releaseDate, b.releaseDate, dir);
+			default:
+				return 0;
+		}
+	}
+
+	/** Fields the Games search covers — also drives the "?" help panel. */
+	searchFields(): SearchFieldSpec<Game>[] {
+		return [
+			{ name: 'title', label: t('games.fields.title'), weight: 0.6, text: (g) => [g.title] },
+			{ name: 'developer', label: t('games.fields.developer'), weight: 0.15, aliases: ['dev'], text: (g) => [g.developer] },
+			{ name: 'publisher', label: t('games.fields.publisher'), weight: 0.1, aliases: ['pub'], text: (g) => [g.publisher] },
+			{ name: 'platform', label: t('games.fields.platform'), weight: 0.1, aliases: ['platforms'], text: (g) => g.platforms },
+			{ name: 'year', label: t('games.fields.year'), weight: 0.05, text: (g) => { const y = yearOf(g.releaseDate); return y ? [String(y)] : []; }, number: (g) => yearOf(g.releaseDate) },
+			{ name: 'rating', label: t('games.fields.rating'), number: (g) => g.rating },
+			{ name: 'hours', label: t('games.fields.hours'), number: (g) => g.playtimeMinutes / 60 },
+		];
+	}
+
+	/** Matching game ids, or null for an empty query. */
+	private getSearchMatchedIds(): Set<string> | null {
+		return searchItems(this.games.getGames(), { id: (g) => g.id, fields: this.searchFields() }, this.searchQuery);
+	}
+
+	/** An empty query (null set) matches everything. */
+	private gameMatchesSearch(g: Game, matched: Set<string> | null): boolean {
+		return matched === null || matched.has(g.id);
+	}
+
+	/**
+	 * The active two-level Sorting selection applied to a copy of `list` — shared by the flat
+	 * pipeline, the shelves, and the grouped grids, which sort within each bucket.
+	 */
+	private sortGames(list: Game[]): Game[] {
+		return [...list].sort((a, b) => {
+			const primary = this.compareGamesByKey(this.sort.filterSort, this.sort.filterSortDir, a, b);
+			if (primary !== 0) return primary;
+			if (this.sort.filterSecondSort !== 'none') {
+				return this.compareGamesByKey(this.sort.filterSecondSort, this.sort.filterSecondSortDir, a, b);
+			}
+			return 0;
+		});
+	}
+
+	/** Search + filters + primary/secondary sort applied to the games list. */
+	private getDisplayGames(): Game[] {
+		const matched = this.getSearchMatchedIds();
+		return this.sortGames(this.games.getGames().filter((g) =>
+			this.gameMatchesSearch(g, matched) && this.gamePassesFilters(g),
+		));
+	}
+
+	// Display items (merged groups + top-level games)
+
+	/**
+	 * The grid's item list: groups plus ungrouped games, sorted together. A group survives search
+	 * when its name or any member matches, survives the name exclude, and survives filters when any
+	 * member passes. "Groups only" drops every standalone game.
+	 */
+	private getDisplayItems(): GameDisplayItem[] {
+		const groupedIds = this.games.getGroupedGameIds();
+
+		const topLevel = this.filterGroupsOnly
+			? []
+			: this.getDisplayGames().filter((g) => !groupedIds.has(g.id));
+
+		const items: GameDisplayItem[] = [
+			...this.getVisibleGroups().map((g) => ({ kind: 'group' as const, data: g.data, members: g.members })),
+			...topLevel.map((g) => ({ kind: 'game' as const, data: g })),
+		];
+		items.sort((a, b) => {
+			const primary = this.compareItemsByKey(this.sort.filterSort, this.sort.filterSortDir, a, b);
+			if (primary !== 0) return primary;
+			if (this.sort.filterSecondSort !== 'none') {
+				return this.compareItemsByKey(this.sort.filterSecondSort, this.sort.filterSecondSortDir, a, b);
+			}
+			return 0;
+		});
+		return items;
+	}
+
+	/**
+	 * Groups surviving the active search/filters — the shared rule for the grid and the Groups
+	 * shelf: the name exclude drops the group, a search must hit the name or a member, and any
+	 * active filter must pass for at least one member.
+	 */
+	private getVisibleGroups(): Array<{ data: GameGroup; members: Game[] }> {
+		const groups = this.games.getGroups();
+		const gameMap = new Map(this.games.getGames().map((g) => [g.id, g]));
+		const q = this.searchQuery.trim().toLowerCase();
+		const matched = this.getSearchMatchedIds();
+		const anyFilterActive = this.hasActiveFilter();
+
+		const out: Array<{ data: GameGroup; members: Game[] }> = [];
+		for (const group of groups) {
+			if (this.filterGroupExclude.size > 0 && this.filterGroupExclude.has(group.name)) continue;
+
+			const members = group.gameIds
+				.map((id) => gameMap.get(id))
+				.filter((g): g is Game => g !== undefined);
+
+			if (q) {
+				const nameMatch = group.name.toLowerCase().includes(q);
+				const memberMatch = members.some((m) => this.gameMatchesSearch(m, matched));
+				if (!nameMatch && !memberMatch) continue;
+			}
+
+			if (anyFilterActive && !members.some((m) => this.gamePassesFilters(m))) continue;
+
+			out.push({ data: group, members });
+		}
+		return out;
+	}
+
+	/**
+	 * Item-level comparator: games compare via compareGamesByKey; a group compares through a
+	 * synthetic aggregate of its members (newest dateAdded, mean progress/rating over rated members,
+	 * most-urgent priority, earliest start, most-active status, latest finish/release).
+	 */
+	private compareItemsByKey(key: string, dir: 'asc' | 'desc', a: GameDisplayItem, b: GameDisplayItem): number {
+		return this.compareGamesByKey(key, dir, this.itemSortProxy(a), this.itemSortProxy(b));
+	}
+
+	/** A game whose sort-relevant fields carry the group's aggregate values (games pass through). */
+	private itemSortProxy(item: GameDisplayItem): Game {
+		if (item.kind === 'game') return item.data;
+		const m = item.members;
+		const maxDate = (dates: Array<string | null>): string | null => {
+			const real = dates.filter((d): d is string => !!d);
+			return real.length > 0 ? real.reduce((x, y) => (x > y ? x : y)) : null;
+		};
+		const minDate = (dates: Array<string | null>): string | null => {
+			const real = dates.filter((d): d is string => !!d);
+			return real.length > 0 ? real.reduce((x, y) => (x < y ? x : y)) : null;
+		};
+		const rated = m.filter((g) => g.rating > 0);
+		const priorityIdx = m
+			.map((g) => PRIORITY_ORDER.indexOf(g.priority as typeof PRIORITY_ORDER[number]))
+			.filter((i) => i !== -1);
+		const statusIdx = m.map((g) => this.getStatusIndex(g.status));
+		const statuses = this.games.getSettings().statuses;
+		const first = m[0];
+		return {
+			...(first ?? ({} as Game)),
+			title: item.data.name,
+			dateAdded: maxDate(m.map((g) => g.dateAdded)) ?? item.data.dateAdded,
+			progress: gameGroupProgress(m),
+			playtimeMinutes: m.reduce((sum, g) => sum + g.playtimeMinutes, 0),
+			rating: rated.length > 0 ? rated.reduce((s, g) => s + g.rating, 0) / rated.length : 0,
+			priority: priorityIdx.length > 0 ? PRIORITY_ORDER[Math.min(...priorityIdx)] ?? '' : '',
+			dateStarted: minDate(m.map((g) => g.dateStarted)),
+			status: statusIdx.length > 0 ? statuses[Math.min(...statusIdx)]?.name ?? '' : '',
+			dateFinished: maxDate(m.map((g) => g.dateFinished)),
+			releaseDate: maxDate(m.map((g) => g.releaseDate)),
+		};
+	}
+
+	// Render
+
+	render(): void {
+		this.container.empty();
+		this.container.addClass('hoard-games');
+
+		// header — the Watchlist toolbar structure (search + action buttons, crossfading behind a
+		// toggle on mobile)
+		const header = this.container.createDiv({ cls: 'hoard-list__header' });
+		renderHeaderToolbar(header, {
+			renderSearch: (parent) => this.renderSearch(parent),
+			renderActions: (wrap) => {
+				this.toolbarActionsEl = wrap;
+				this.renderToolbarActions(wrap);
+			},
+			// add button, far right on the toolbar row
+			onAdd: () => this.openAddPrompt(),
+			expanded: this.toolbarExpanded,
+			onToggleChange: (expanded) => { this.toolbarExpanded = expanded; },
+		});
+
+		this.contentEl = this.container.createDiv({ cls: 'hoard-games__content' });
+		this.renderContent();
+	}
+
+	/**
+	 * Rebuilds only the content below the toolbar (count, shelves, grids), so filter/sort/search
+	 * changes never tear down the search input.
+	 */
+	private renderContent(): void {
+		const content = this.contentEl;
+		if (!content) return;
+		this.scroller?.destroy();
+		this.scroller = null;
+		this.coversObserver?.destroy();
+		this.coversObserver = null;
+		for (const fn of this.activeCleanups) fn();
+		this.activeCleanups = [];
+		content.empty();
+
+		const allGames = this.games.getGames();
+		if (allGames.length === 0 && this.games.getGroups().length === 0) {
+			const empty = content.createDiv({ cls: 'hoard-card-grid__empty' });
+			empty.createSpan({ cls: 'hoard-card-grid__empty-icon', text: '🎮' });
+			empty.createEl('p', { cls: 'hoard-card-grid__empty-message', text: t('games.empty') });
+			return;
+		}
+
+		// search/filter keeps the sections layout; a section with no matches disappears entirely
+		const matched = this.getSearchMatchedIds();
+		const filtering = matched !== null || this.hasActiveFilter();
+		const gameVisible = (g: Game): boolean =>
+			!filtering ||
+			(!this.filterGroupsOnly && this.gameMatchesSearch(g, matched) && this.gamePassesFilters(g));
+
+		const items = this.getDisplayItems();
+		const visibleGroups = this.getVisibleGroups();
+		const gameCount = items.reduce((n, item) => n + (item.kind === 'game' ? 1 : 0), 0);
+		const groupCount = items.length - gameCount;
+		const countParts = [t('ui.group.countGame', { count: gameCount })];
+		if (groupCount > 0) countParts.push(t('games.countGroup', { count: groupCount }));
+		const countEl = content.createDiv({
+			cls: 'hoard-toolbar__results-count hoard-toolbar__results-count--rows',
+			text: countParts.join(', '),
+		});
+		const gearBtn = createIconButton(countEl, {
+			icon: 'settings',
+			label: t('games.customizeRows'),
+			cls: 'hoard-rows-customize__btn',
+		});
+		gearBtn.addEventListener('click', () => {
+			this.modals.openRowsCustomize({
+				shelves: GAMES_ROWS_SHELVES.map((sh) => ({
+					id: sh.id,
+					label: t(`games.shelves.${sh.id === 'byType' ? 'byGenre' : sh.id}` as TranslationKey),
+				})),
+				getLayout: () => this.games.getSettings().rowsLayout,
+				setLayout: (layout) => { this.games.getSettings().rowsLayout = layout; },
+				// the layout lives inside data.json's games key, not the global settings — persist through the games
+				// data manager (quiet: onChanged re-renders this tab itself)
+				persist: () => this.games.persistQuiet(),
+				onChanged: () => this.renderContent(),
+				hint: t('games.customizeHint'),
+				exclusiveGroups: ROWS_EXCLUSIVE_SHELVES,
+			});
+		});
+
+		const scroll = content.createDiv({ cls: 'hoard-rows-view__scroll-container' });
+		// shelf cards mirror the grids' *computed* card width (setRowsCardWidth); one metrics source
+		// keeps shelves matching grids across resizes. Heights come from the CSS 2:3 ratio.
+		const metrics = (w: number): GridMetrics => {
+			const m = computeGridMetrics(w, this.host.getCardMinWidth());
+			setRowsCardWidth(scroll, m.cardWidth);
+			// text-under cells are poster + text block
+			if (this.host.isCardTextUnder('games')) {
+				const cardHeight = m.cardHeight + POSTER_CARD_TEXT_H;
+				return { cols: m.cols, cardWidth: m.cardWidth, cardHeight, rowHeight: cardHeight + 12 };
+			}
+			return m;
+		};
+		const cardW = metrics(scroll.clientWidth).cardWidth;
+		// the observer serves the eager shelf cards and the virtualised grids alike
+		const observer = new LazyCardObserver(
+			'.hoard-card[data-needs-poster="true"]',
+			(cards) => this.handleCoversVisible(cards),
+		);
+		this.coversObserver = observer;
+		const scroller = new VirtualScroller({
+			scroll,
+			metrics,
+			onWindowChanged: () => observer.observeNew(scroll),
+			onScrollPos: (top) => { this.persistentScrollTop = top; },
+		});
+		this.scroller = scroller;
+		const gameCard = (strip: HTMLElement, g: Game): void =>
+			this.renderGameCard(strip, g, cardW);
+		this.shelfSelectRefreshers = [];
+
+		// section builders keyed by rowsLayout id — each computes its own list (so a disabled section
+		// costs nothing), then hides non-matching games: Recently Added stays the 10 newest overall, not
+		// the 10 newest matches. Grouped favorites stay on the shelf — a game only leaves the flat grid.
+		const shelfRenderers: Record<string, () => void> = {
+			favorites: () => {
+				// newest favorite first — this shelf ignores the tab sort
+				const favorites = sortByFavorited(allGames.filter((g) => g.favorite && gameVisible(g)));
+				renderShelf(
+					scroll, t('games.shelves.favorites'), favorites,
+					t('games.shelves.emptyFavorites'),
+					filtering, gameCard, this.shelfSelect(favorites.map((i) => i.id)),
+				);
+			},
+			recommended: () => {
+				const recommended = this.getRecommendedGames(allGames).filter(gameVisible);
+				renderShelf(
+					scroll, t('games.shelves.recommended'), recommended,
+					t('games.shelves.emptyRecommended'),
+					filtering, gameCard, this.shelfSelect(recommended.map((i) => i.id)),
+				);
+			},
+			recentlyAdded: () => {
+				const recentlyAdded = [...allGames]
+					.sort((a, b) => (b.dateAdded ?? '').localeCompare(a.dateAdded ?? ''))
+					.slice(0, 10)
+					.filter(gameVisible);
+				renderShelf(
+					scroll, t('games.shelves.recentlyAdded'), recentlyAdded,
+					t('games.shelves.emptyRecentlyAdded'),
+					filtering, gameCard, this.shelfSelect(recentlyAdded.map((i) => i.id)),
+				);
+			},
+			recentlyPlayed: () => {
+				const recentlyPlayed = this.getRecentlyPlayedGames(allGames).filter(gameVisible);
+				renderShelf(
+					scroll, t('games.shelves.recentlyPlayed'), recentlyPlayed,
+					t('games.shelves.emptyRecentlyPlayed'),
+					filtering, gameCard, this.shelfSelect(recentlyPlayed.map((i) => i.id)),
+				);
+			},
+			groups: () => {
+				this.renderGroupsShelf(scroll, visibleGroups, filtering);
+			},
+			recentlyReleased: () => {
+				// past releases only; today counts as released
+				const today = GamesTab.todayStamp();
+				const recentlyReleased = allGames
+					.filter(
+						(g) =>
+							g.status !== GAME_AUTO_STATUS &&
+							!!g.releaseDate &&
+							/^\d{4}-\d{2}-\d{2}$/.test(g.releaseDate) &&
+							g.releaseDate <= today,
+					)
+					.sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''))
+					.slice(0, 10)
+					.filter(gameVisible);
+				renderShelf(
+					scroll, t('games.shelves.recentlyReleased'), recentlyReleased,
+					t('games.shelves.emptyRecentlyReleased'),
+					filtering, gameCard, this.shelfSelect(recentlyReleased.map((i) => i.id)),
+				);
+			},
+			// the grouped grids are mutually exclusive (normalizeRowsLayout guarantees it)
+			byType: () => {
+				this.renderGroupedGridsSection(scroll, gameVisible, filtering, 'byType');
+			},
+			byStatus: () => {
+				this.renderGroupedGridsSection(scroll, gameVisible, filtering, 'byStatus');
+			},
+		};
+
+		// user order + visibility: with BOTH grouped grids off, the flat "All games" grid renders at the
+		// first grid entry's position
+		const layout = normalizeRowsLayout(this.games.getSettings().rowsLayout, GAMES_ROWS_SHELVES);
+		renderRowsLayout(layout, shelfRenderers, (anyShelfEnabled) => this.renderAllGamesSection(scroll, anyShelfEnabled, items));
+
+		observer.observeNew(scroll);
+		scroller.attach(this.persistentScrollTop);
+	}
+
+	/** Horizontal strip of group cover cards. `groups` is already visibility-filtered. */
+	private renderGroupsShelf(
+		parent: HTMLElement,
+		groups: Array<{ data: GameGroup; members: Game[] }>,
+		filtering: boolean,
+	): void {
+		if (filtering && groups.length === 0) return;
+		const shelf = parent.createDiv({ cls: 'hoard-rows-view__shelf' });
+		renderShelfTitle(shelf, t('games.shelves.groups'), groups.length, this.shelfSelect(groups.map((g) => g.data.id)));
+		if (groups.length === 0) {
+			shelf.createDiv({
+				cls: 'hoard-rows-view__shelf-empty',
+				text: t('games.shelves.emptyGroups'),
+			});
+			return;
+		}
+		const strip = shelf.createDiv({ cls: 'hoard-rows-view__strip' });
+		for (const group of groups) {
+			this.renderGroupCard(strip, group.data, group.members);
+		}
+	}
+
+	/**
+	 * "By genre" / "By status" — one grid per configured genre (or status), in settings order; empty
+	 * buckets are skipped and each game appears once under its own bucket (grouped games included —
+	 * a game only leaves the flat grid). Virtualised per bucket.
+	 */
+	private renderGroupedGridsSection(
+		parent: HTMLElement,
+		gameVisible: (g: Game) => boolean,
+		filtering: boolean,
+		mode: 'byType' | 'byStatus',
+	): void {
+		const byType = mode === 'byType';
+		const settings = this.games.getSettings();
+		const defs = byType ? settings.types : settings.statuses;
+		const keyOf = (g: Game): string => (byType ? g.type : g.status);
+
+		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
+		section.createDiv({ cls: 'hoard-rows-view__grouped-title', text: byType ? t('games.shelves.byGenre') : t('games.shelves.byStatus') });
+
+		const allGames = this.games.getGames();
+		let rendered = 0;
+		for (const def of defs) {
+			const bucketGames = this.sortGames(
+				allGames.filter((g) => keyOf(g) === def.name && gameVisible(g)),
+			);
+			if (bucketGames.length === 0) continue;
+			rendered++;
+			renderShelfTitle(section, byType ? def.name : gameStatusLabel(def.name), bucketGames.length, this.shelfSelect(bucketGames.map((g) => g.id)));
+			const spacer = section.createDiv({ cls: 'hoard-rows-view__grouped-spacer' });
+			const grid = spacer.createDiv({ cls: 'hoard-card-grid hoard-card-grid--virtual' });
+			const vgrid = new VirtualGrid(spacer, grid, bucketGames.length, {
+				buildItem: (i, w, h) => {
+					const game = bucketGames[i];
+					if (!game) return null;
+					const tmp = createDiv();
+					this.renderGameCard(tmp, game, w, h);
+					return tmp.firstElementChild as HTMLElement | null;
+				},
+				removeItem: (el) => el.remove(),
+			});
+			this.scroller?.addSection(vgrid, spacer);
+		}
+		if (rendered === 0) {
+			if (filtering) {
+				section.remove();
+				return;
+			}
+			section.createDiv({
+				cls: 'hoard-rows-view__shelf-empty',
+				text: byType ? t('games.shelves.emptyByGenre') : t('games.shelves.emptyByStatus'),
+			});
+		}
+	}
+
+	/**
+	 * The flat grid over groups + ungrouped games — the Rows fallback, rendered only when neither
+	 * grouped grid is on. `titled` adds the "All games" header when other sections exist.
+	 */
+	private renderAllGamesSection(parent: HTMLElement, titled: boolean, items: GameDisplayItem[]): void {
+		if (items.length === 0) {
+			if (!titled) {
+				parent.createDiv({
+					cls: 'hoard-reading__empty-search',
+					text: this.searchQuery.trim()
+						? t('games.noMatchesQuery', { query: this.searchQuery.trim() })
+						: t('games.noMatchesFilters'),
+				});
+			}
+			return;
+		}
+		const section = parent.createDiv({ cls: 'hoard-rows-view__grouped' });
+		if (titled) renderShelfTitle(section, t('games.shelves.allGames'), items.length, this.shelfSelect(items.map((i) => i.data.id)));
+		const { spacer, vgrid } = mountVirtualCardGrid(section, items.length, {
+			buildItem: (i, w, h) => {
+				const item = items[i];
+				if (!item) return null;
+				const tmp = createDiv();
+				if (item.kind === 'game') {
+					this.renderGameCard(tmp, item.data, w, h);
+				} else {
+					this.renderGroupCard(tmp, item.data, item.members, h);
+				}
+				return tmp.firstElementChild as HTMLElement | null;
+			},
+			// no lazy cover observer — covers are filled at add time, so a plain remove suffices
+			removeItem: (el) => el.remove(),
+		});
+		this.scroller?.addSection(vgrid, spacer);
+	}
+
+	/** Local calendar day as YYYY-MM-DD. */
+	private static todayStamp(): string {
+		const now = new Date();
+		return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+	}
+
+	// daily picks the Recommended shelf shows (pool permitting)
+	private static readonly RECOMMENDED_COUNT = 10;
+
+	/**
+	 * Daily random picks for the Recommended shelf: up to 10 games from the not-yet-finished pool
+	 * (everything except Finished / Dropped / To be released — status names are configurable, so
+	 * exclusion beats listing the plan/playing names). Stored in data.json and re-rolled only on a
+	 * new calendar day; a short same-day list is topped up without re-rolling the kept picks.
+	 */
+	private getRecommendedGames(allGames: Game[]): Game[] {
+		const pool = allGames.filter(
+			(g) => g.status !== GAME_FINISHED_STATUS && g.status !== 'Dropped' && g.status !== GAME_AUTO_STATUS,
+		);
+		const today = GamesTab.todayStamp();
+
+		const stored = this.games.getRecommendedDaily();
+		if (stored.date === today) {
+			const byId = new Map(pool.map((g) => [g.id, g]));
+			const picks = stored.ids
+				.map((id) => byId.get(id))
+				.filter((g): g is Game => g !== undefined);
+			if (picks.length < GamesTab.RECOMMENDED_COUNT && picks.length < pool.length) {
+				const used = new Set(picks.map((g) => g.id));
+				picks.push(...pickRandom(
+					pool.filter((g) => !used.has(g.id)),
+					GamesTab.RECOMMENDED_COUNT - picks.length,
+				));
+				this.games.setRecommendedDaily({ date: today, ids: picks.map((g) => g.id) });
+			}
+			return picks;
+		}
+
+		const picks = pickRandom(pool, GamesTab.RECOMMENDED_COUNT);
+		this.games.setRecommendedDaily({ date: today, ids: picks.map((g) => g.id) });
+		return picks;
+	}
+
+	/**
+	 * Games with any play signal (Steam playtime, progress, a start date or a finish date), most
+	 * recently played first (max 10).
+	 *
+	 * `lastPlayed` is a real timestamp and comes from a Steam sync, so it sorts ahead of every game
+	 * without one. Games log no session history, so unsynced entries fall back to dateModified —
+	 * which can surface a merely-edited game, the accepted tradeoff.
+	 */
+	private getRecentlyPlayedGames(allGames: Game[]): Game[] {
+		return allGames
+			.filter((g) => g.progress > 0 || g.playtimeMinutes > 0 || !!g.dateStarted || !!g.dateFinished)
+			.sort((a, b) => {
+				if (a.lastPlayed && b.lastPlayed) return b.lastPlayed.localeCompare(a.lastPlayed);
+				if (a.lastPlayed) return -1;
+				if (b.lastPlayed) return 1;
+				return (b.dateModified ?? '').localeCompare(a.dateModified ?? '');
+			})
+			.slice(0, 10);
+	}
+
+	private renderSearch(parent: HTMLElement): void {
+		renderSearchBox(parent, {
+			value: this.searchQuery,
+			placeholder: t('games.searchPlaceholder'),
+			help: (host) => renderSearchHelpButton(host, this.modals.searchHelp, t('app.tabs.games'), () => this.searchFields()),
+			onChange: (q) => { this.searchQuery = q; },
+			onCommit: () => this.renderContent(),
+		});
+	}
+
+	/**
+	 * Rebuilds only the toolbar action buttons, so selection changes never tear down the grid or the
+	 * search input.
+	 */
+	private refreshToolbarActions(): void {
+		const wrap = this.toolbarActionsEl;
+		if (!wrap || !wrap.isConnected) return;
+		wrap.empty();
+		this.renderToolbarActions(wrap);
+	}
+
+	private renderToolbarActions(controls: HTMLElement): void {
+		// saved filter preset (only when one is stored)
+		const preset = this.games.getSavedFilterPreset();
+		this.savedFilterBtnEl = renderToolbarCore(controls, {
+			preset: preset && {
+				active: this.savedFilterActive,
+				onApply: () => {
+					this.activatePreset(preset);
+					this.refreshToolbarActions();
+					this.renderContent();
+				},
+			},
+			renderFilters: (parent) => this.renderFiltersDropdown(parent),
+			renderSorting: (parent) => this.renderSortingDropdown(parent),
+			// action bar — selection mode with items selected
+			renderActionBar: this.selectionMode && this.selectedIds.size > 0
+				? (parent) => this.renderActionBar(parent)
+				: undefined,
+			selection: {
+				selectionMode: this.selectionMode,
+				hasSelection: this.selectedIds.size > 0,
+				onToggleAll: () => {
+					if (this.selectedIds.size > 0) {
+						this.selectedIds.clear();
+					} else {
+						for (const item of this.getDisplayItems()) {
+							this.selectedIds.add(item.data.id);
+						}
+					}
+					this.refreshToolbarActions();
+					this.syncCardSelectionClasses();
+				},
+				onToggleMode: () => this.setSelectionMode(!this.selectionMode),
+			},
+		});
+	}
+
+	private renderFiltersDropdown(parent: HTMLElement): void {
+		renderFiltersDropdown(parent, {
+			hasActiveFilter: () => this.hasActiveFilter(),
+			clearAll: () => this.clearAllFilters(),
+			rerender: () => this.renderContent(),
+			persist: () => this.persistFilters(),
+			rerenderAll: () => this.render(),
+			registerCleanup: (fn) => this.activeCleanups.push(fn),
+			preset: {
+				exists: () => this.games.getSavedFilterPreset() !== null,
+				remove: async () => {
+					await this.games.setSavedFilterPreset(null);
+					this.savedFilterActive = false;
+				},
+			},
+			openDraft: () => {
+				const settings = this.games.getSettings();
+				const platformOpts = settings.platforms.map((p) => p.name);
+
+				// draft — live filter state only changes on Apply
+				const draft = {
+					genreExclude:    new Set(this.filterGenreExclude),
+					statusExclude:   new Set(this.filterStatusExclude),
+					ratingExclude:   new Set(this.filterRatingExclude),
+					priorityExclude: new Set(this.filterPriorityExclude),
+					platformExclude: new Set(this.filterPlatformExclude),
+					groupExclude:    new Set(this.filterGroupExclude),
+					filterRatingEmptyOnly:     this.filterRatingEmptyOnly,
+					filterRecentlyArrivedOnly: this.filterRecentlyArrivedOnly,
+					filterFavoritesOnly:       this.filterFavoritesOnly,
+					filterWishlistOnly:        this.filterWishlistOnly,
+					filterGroupsOnly:          this.filterGroupsOnly,
+				};
+
+				return {
+					sections: buildFilterSections({
+						lead: [{ label: t('games.filters.genre'), opts: settings.types.map((ty) => ty.name), excludeSet: draft.genreExclude }],
+						statusOpts: settings.statuses.map((s) => s.name),
+						formatStatus: gameStatusLabel,
+						// half options appear only when a game holds that exact rating (the Watchlist rule)
+						ratingOpts: buildRatingOpts(this.games.getGames().map((g) => g.rating)),
+						priorities: this.settings.get().priorities,
+						middle: platformOpts.length > 0
+							? [{ label: t('games.filters.platform'), opts: platformOpts, excludeSet: draft.platformExclude }]
+							: [],
+						groupOpts: this.games.getGroups().map((g) => g.name),
+						draft,
+					}),
+					favorites: {
+						get: () => draft.filterFavoritesOnly,
+						set: (v) => { draft.filterFavoritesOnly = v; },
+					},
+					standaloneRows: [{
+						text: `🎁 ${t('games.filters.wishlist')}`,
+						spanCls: 'hoard-filter-panel__wishlist-filter',
+						get: () => draft.filterWishlistOnly,
+						set: (v) => { draft.filterWishlistOnly = v; },
+					}],
+					savePreset: () => this.games.setSavedFilterPreset({
+						genreExclude:    Array.from(draft.genreExclude),
+						statusExclude:   Array.from(draft.statusExclude),
+						ratingExclude:   Array.from(draft.ratingExclude),
+						priorityExclude: Array.from(draft.priorityExclude),
+						platformExclude: Array.from(draft.platformExclude),
+						groupExclude:    Array.from(draft.groupExclude),
+						ratingEmptyOnly:     draft.filterRatingEmptyOnly,
+						recentlyArrivedOnly: draft.filterRecentlyArrivedOnly,
+						favoritesOnly:       draft.filterFavoritesOnly,
+						wishlistOnly:        draft.filterWishlistOnly,
+						groupsOnly:          draft.filterGroupsOnly,
+					}),
+					commit: () => {
+						this.filterGenreExclude    = draft.genreExclude;
+						this.filterStatusExclude   = draft.statusExclude;
+						this.filterRatingExclude   = draft.ratingExclude;
+						this.filterPriorityExclude = draft.priorityExclude;
+						this.filterPlatformExclude = draft.platformExclude;
+						this.filterGroupExclude    = draft.groupExclude;
+						this.filterRatingEmptyOnly     = draft.filterRatingEmptyOnly;
+						this.filterRecentlyArrivedOnly = draft.filterRecentlyArrivedOnly;
+						this.filterFavoritesOnly       = draft.filterFavoritesOnly;
+						this.filterWishlistOnly        = draft.filterWishlistOnly;
+						this.filterGroupsOnly          = draft.filterGroupsOnly;
+					},
+				};
+			},
+		});
+	}
+
+	private renderSortingDropdown(parent: HTMLElement): void {
+		renderSortingDropdown(parent, this.sort, {
+			registerCleanup: (fn) => this.activeCleanups.push(fn),
+			options: GamesTab.SORT_KEYS.map((k) => t(`games.sort.${k}`)),
+			labelToKey: (label) => this.sortLabelToKey(label),
+			defaultDirs: GamesTab.SORT_DEFAULT_DIR,
+			onSorted: () => {
+				this.saveFiltersToSettings();
+				// sorting only reorders content
+				this.renderContent();
+			},
+		});
+	}
+
+	// Selection mode
+
+	/**
+	 * Enters/exits selection mode without a full rebuild — the grid DOM is untouched; only the
+	 * toolbar buttons and card selection classes change.
+	 */
+	private setSelectionMode(on: boolean): void {
+		this.selectionMode = on;
+		this.selectedIds.clear();
+		// full rebuild: the section headers gain/lose their select-all box
+		this.render();
+	}
+
+	/**
+	 * Select-all spec for one Rows section. undefined outside selection mode, which is what keeps
+	 * the box out of the header. Ids, not DOM: the grid sections are virtualised.
+	 */
+	private shelfSelect(ids: string[]): ShelfSelect | undefined {
+		return buildShelfSelect(this.selectionMode, ids, this.selectedIds, this.shelfSelectRefreshers, () => {
+			this.syncCardSelectionClasses();
+			this.refreshToolbarActions();
+		});
+	}
+
+	/** Applies/removes hoard-card--selected on every currently rendered card. */
+	private syncCardSelectionClasses(): void {
+		syncSelectionClasses(this.container, this.selectedIds, (card) => card.dataset.gameId ?? card.dataset.groupId);
+		refreshShelfSelects(this.shelfSelectRefreshers);
+	}
+
+	/**
+	 * Selection click — state + class only. A game can render twice (Favorites shelf AND grid), so
+	 * every instance of the id is synced.
+	 */
+	private toggleCardSelection(card: HTMLElement, id: string): void {
+		const esc = CSS.escape(id);
+		toggleCardSelected(
+			this.container,
+			this.selectedIds,
+			id,
+			`.hoard-card[data-game-id="${esc}"], .hoard-card[data-group-id="${esc}"]`,
+		);
+		refreshShelfSelects(this.shelfSelectRefreshers);
+		this.refreshToolbarActions();
+	}
+
+	private renderActionBar(parent: HTMLElement): void {
+		const bar = renderActionBar(parent, this.modals.confirm, {
+			title: t('games.deleteSelected'),
+			selected: this.selectedIds,
+			message: (count) => t('games.deleteSelectedConfirm', { count }),
+			onConfirm: async () => {
+				// selected groups are dissolved (games return to the grid); selected games are batch-deleted
+				// with their note files
+				const groupIds = new Set(this.games.getGroups().map((g) => g.id));
+				const gameIds: string[] = [];
+				for (const id of Array.from(this.selectedIds)) {
+					if (groupIds.has(id)) {
+						await this.games.removeGroup(id);
+					} else {
+						gameIds.push(id);
+					}
+				}
+				if (gameIds.length > 0) {
+					await this.games.removeGamesBatch(gameIds);
+				}
+				this.selectedIds.clear();
+				this.render();
+			},
+		});
+
+		// batch status change (the auto "To be released" stays release-date-driven; groups are skipped —
+		// status belongs to the member games)
+		renderBatchStatusSelect(
+			bar,
+			this.games.getSettings().statuses.map((s) => s.name).filter((name) => name !== GAME_AUTO_STATUS),
+			async (newStatus) => {
+				for (const id of this.selectedIds) {
+					const game = this.games.getGame(id);
+					if (game) {
+						this.games.updateGameSilent({ ...game, status: newStatus });
+					}
+				}
+				await this.games.saveAndNotify();
+			},
+			gameStatusLabel,
+		);
+
+		const allGroups = this.games.getGroups();
+		const groupIds = new Set(allGroups.map((g) => g.id));
+		const selectedGameIds = () => Array.from(this.selectedIds).filter((id) => !groupIds.has(id));
+		renderMoveToGroupSelect(bar, {
+			groups: allGroups,
+			disabled: Array.from(this.selectedIds).some((id) => groupIds.has(id)),
+			onMove: async (groupId) => {
+				const gameIds = selectedGameIds();
+				this.selectedIds.clear();
+				this.selectionMode = false;
+				for (const id of gameIds) {
+					await this.games.addGameToGroup(groupId, id);
+				}
+			},
+			onCreate: async (name) => {
+				const newGroup: GameGroup = {
+					id: this.games.generateGroupId(name),
+					name,
+					gameIds: selectedGameIds(),
+					dateAdded: new Date().toISOString(),
+				};
+				this.selectedIds.clear();
+				this.selectionMode = false;
+				await this.games.addGroup(newGroup);
+			},
+			onCancel: () => this.refreshToolbarActions(),
+		});
+	}
+
+	// Cards
+
+	/**
+	 * `cardHeight` comes from the virtual grids (inline-pinned); shelf cards omit it and take their
+	 * height from the CSS 2:3 ratio.
+	 */
+	private renderGameCard(parent: HTMLElement, game: Game, cardWidth: number, cardHeight?: number): void {
+		const settings = this.games.getSettings();
+		const typeColor = settings.types.find((ty) => ty.name === game.type)?.color ?? '#888780';
+		const statusColor = settings.statuses.find((s) => s.name === game.status)?.color;
+
+		buildPosterCard(parent, {
+			dataset: { gameId: game.id },
+			title: game.title,
+			posterUrl: rawgResizedCover(game.coverUrl),
+			needsPoster: true,
+			placeholderColor: typeColor,
+			cardWidth,
+			cardHeight,
+			selected: this.selectedIds.has(game.id),
+			statusLabel: gameStatusLabel(game.status),
+			statusColor,
+			typeLabel: game.type || undefined,
+			typeColor,
+			year: game.releaseDate?.match(/^(\d{4})/)?.[1],
+			progressRatio: game.progress > 0 ? game.progress / 100 : undefined,
+			textUnder: this.host.isCardTextUnder('games'),
+			flag: game.wishlist ? { icon: 'gift', label: t('games.card.onWishlist') } : undefined,
+			menuItems: [
+				{
+					label: game.favorite ? t('games.card.unfavorite') : t('games.card.favorite'),
+					onClick: () => { void this.games.updateGame({ ...game, favorite: !game.favorite }); },
+				},
+				{
+					label: game.wishlist ? t('games.card.removeFromWishlist') : t('games.card.addToWishlist'),
+					onClick: () => { void this.games.updateGame({ ...game, wishlist: !game.wishlist }); },
+				},
+				{ label: t('games.card.refreshCover'), onClick: () => { void this.refreshCover(game); } },
+				{ label: t('games.card.openNote'), onClick: () => { void this.openGameNote(game); } },
+				{
+					label: t('common.delete'),
+					onClick: () => {
+						this.modals.confirm(
+							t('games.card.deleteConfirm', { title: game.title }),
+							() => { void this.games.removeGame(game.id); },
+						);
+					},
+				},
+			],
+			onClick: (card) => {
+				if (this.selectionMode) {
+					this.toggleCardSelection(card, game.id);
+				} else {
+					this.openDetailModal(game);
+				}
+			},
+		}, { container: this.container, cleanups: this.activeCleanups });
+	}
+
+	// Lazy cover re-fetch. Games added before an API was configured (or after "Re-fetch all
+	// posters") carry no coverUrl; their cards fetch one the first time they scroll into view.
+
+	/** LazyCardObserver callback: cards are handed over once, already unobserved. */
+	private handleCoversVisible(cards: HTMLElement[]): void {
+		// built once per batch — a per-card find() would be O(cards × games)
+		let gameById: Map<string, Game> | null = null;
+		for (const card of cards) {
+			const id = card.dataset.gameId;
+			if (!id) continue;
+			if (gameById === null) {
+				gameById = new Map(this.games.getGames().map((g) => [g.id, g]));
+			}
+			const game = gameById.get(id);
+			// skip if it vanished, already has a cover, or failed earlier this session
+			if (!game || game.coverUrl || this.coverFetchFailed.has(id)) continue;
+
+			const placeholder = card.querySelector('.hoard-card__poster-placeholder');
+			placeholder?.addClass('is-loading');
+			void this.resolveCover(game).then((res) => {
+				placeholder?.removeClass('is-loading');
+				if (!res.url) {
+					this.coverFetchFailed.add(id);
+					return;
+				}
+				// persist silently (no re-render, so scroll survives) and swap this card's <img>. A title search
+				// that resolved an id stores it too, so the next fetch takes the cheap id path.
+				if (res.source) void this.games.updateCoverAndSource(id, res.url, res.source, res.apiId);
+				else void this.games.updateCoverUrl(id, res.url);
+				this.applyCoverToCard(card, res.url);
+			});
+		}
+	}
+
+	private resolveCover(game: Game): Promise<GameCover> {
+		const api = this.api;
+		return this.resolveGameCover(api, effectiveGameSource(this.settings.get(), api), game);
+	}
+
+	private applyCoverToCard(card: HTMLElement, url: string): void {
+		loadCardPoster(card, rawgResizedCover(url), () => { card.removeClass('has-poster'); });
+	}
+
+	/** ⋮ menu action: re-fetch this game's cover even when it already has one. */
+	private async refreshCover(game: Game): Promise<void> {
+		const res = await this.resolveCover(game);
+		if (!res.url) {
+			new Notice(t('games.notices.coverFetchFailed'));
+			return;
+		}
+		const fresh = this.games.getGame(game.id);
+		if (!fresh) return;
+		// an explicit refresh replaces the cover in the note
+		const updated: Game = { ...fresh, coverUrl: res.url };
+		if (res.source) {
+			updated.apiSource = res.source;
+			updated.apiId = res.apiId;
+		}
+		await this.games.updateGame(updated);
+		new Notice(t('games.notices.coverRefreshed'));
+	}
+
+	/**
+	 * Group cover card: member-cover collage, name + "N games" badge, ⋮ menu; click opens
+	 * GameGroupDetailModal.
+	 */
+	private renderGroupCard(parent: HTMLElement, group: GameGroup, members: Game[], cardHeight?: number): void {
+		const settings = this.games.getSettings();
+		const primaryType = members[0]?.type ?? '';
+		renderGroupCard(parent, {
+			confirm: this.modals.confirm,
+			group,
+			members,
+			getCover: (g) => rawgResizedCover(g.coverUrl),
+			typeColor: settings.types.find((ty) => ty.name === primaryType)?.color ?? '#888780',
+			textUnder: this.host.isCardTextUnder('games'),
+			selected: this.selectedIds.has(group.id),
+			cardHeight,
+			unit: 'game',
+			container: this.container,
+			cleanups: this.activeCleanups,
+			onRename: () => this.openRenameGroupPrompt(group),
+			deleteMessage: t('games.card.deleteGroupConfirm', { name: group.name }),
+			onDelete: () => { void this.games.removeGroup(group.id); },
+			onActivate: (card) => {
+				if (this.selectionMode) {
+					this.toggleCardSelection(card, group.id);
+					return;
+				}
+				this.modals.openGroupDetail({ group, members });
+			},
+		});
+	}
+
+	private openRenameGroupPrompt(group: GameGroup): void {
+		this.modals.renameGroup(group.name, (name) => {
+			void this.games.updateGroup({ ...group, name });
+		});
+	}
+
+	private openDetailModal(game: Game): void {
+		// re-resolve so a stale card built before an edit can't reopen old data
+		const fresh = this.games.getGame(game.id);
+		if (!fresh) return;
+		this.modals.openGameDetail({ game: fresh });
+	}
+
+	private async openGameNote(game: Game): Promise<void> {
+		const path = await this.games.ensureGameNote(game);
+		const file = this.files.vault.getAbstractFileByPath(path);
+		if (file instanceof TFile) {
+			void this.files.workspace.getLeaf('tab').openFile(file);
+		}
+	}
+
+	/** Opens the API-assisted Add modal (the tab re-renders via its data listener). */
+	private openAddPrompt(): void {
+		this.modals.openAddGame({ onAdded: () => {} });
+	}
+}

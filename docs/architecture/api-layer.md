@@ -3,22 +3,25 @@ type: Architecture
 title: API layer
 description: Which external services exist, how requests, errors and rate limits are handled, and how fetched data reaches notes and cache.
 source:
-  - src/ApiService.ts
-  - src/api/apiError.ts
-  - src/PosterService.ts
-  - src/apiSources.ts
-  - src/titleSearch.ts
-  - src/coverRefresh.ts
-  - src/cinemetaApi.ts
-  - src/openLibraryApi.ts
-  - src/steamStoreApi.ts
-  - src/apiCheckQueue.ts
-  - src/lookup.ts
-  - src/storage/read.ts
-source_commit: 297e1a7
+  - src/shared/api/ApiService.ts
+  - src/shared/api/apiError.ts
+  - src/shared/api/PosterService.ts
+  - src/shared/api/apiSources.ts
+  - src/shared/services/titleSearch.ts
+  - src/shared/services/coverRefresh.ts
+  - src/shared/api/apiGroup.ts
+  - src/shared/api/cinemetaApi.ts
+  - src/shared/api/openLibraryApi.ts
+  - src/shared/api/steamStoreApi.ts
+  - src/shared/api/apiCheckQueue.ts
+  - src/shared/api/lookup.ts
+  - src/shared/domain/read.ts
+source_commit: cc203bf
 ---
 
 # API layer
+
+The API code, `titleSearch` and `coverRefresh` all live in `shared` (`api/`, `services/`): modules and the design system call them, and they see module models and reference data only through `modules/<x>/exports.ts` ([overview](overview.md)).
 
 Search, autofill, posters and covers work without a key: Cinemeta (movies/TV), Open Library
 (books) and the Steam Store (games) are keyless defaults. Community ratings, airing, season refill,
@@ -50,20 +53,20 @@ flowchart LR
 
 ## ApiService
 
-One class ([ApiService.ts](../../src/ApiService.ts)) holding the keys and every request method,
+One class ([ApiService.ts](../../src/shared/api/ApiService.ts)) holding the keys and every request method,
 grouped by service: anime (`searchAnime` via the Jikan-compatible endpoint, `searchAniList`,
 `fetchAiring`), movies/TV (`searchOmdb`, `searchTmdb`, details, seasons, collections, `findTmdbMovieIdByImdbId`),
 books (`searchGoogleBooks`), manga (`searchManga`, `getMangaByMalId`), games (`searchRawgGames`,
 `searchIgdbGames`, details), Steam (`resolveSteamId`, `getSteamOwnedGames`). Keyed services have a
 `check*Connection` for the Settings "Test" button and `has*Key` guards. Keys reach it through
-`applyApiKeys` in [main.ts](../../src/main.ts) on every `loadSettings` / `saveSettings`, so a restored
+`applyApiKeys` in [main.ts](../../src/app/main.ts) on every `loadSettings` / `persistAll`, so a restored
 backup or a WatchLog import takes effect without a restart; the Settings tab also sets them directly.
 
 - Every request that can fail with an `ApiError` goes through `requestJson` in `ApiService.ts`
   (`requestVia` picks the source from the URL and adds the Jikan headers; Google Books, the Twitch
   token and IGDB call it with a fixed source): Obsidian's `requestUrl` with `throw: false`, one
   shared timeout (`withTimeout`), and everything that is not a response becomes reason `network`.
-- The error model is [apiError.ts](../../src/api/apiError.ts): `ApiError { source, reason }` with
+- The error model is [apiError.ts](../../src/shared/api/apiError.ts): `ApiError { source, reason }` with
   the reasons `no-key`, `auth`, `not-enabled`, `rate-limited`, `not-found`, `server`, `http`,
   `parse`, `network`. Two tables decide everything:
   - `HTTP_RULES` turns a response outside 2xx into a reason. It is ordered and the first match
@@ -83,19 +86,19 @@ backup or a WatchLog import takes effect without a restart; the Settings tab als
 - **Keyless sources** need no credential and are never reported as `auth` (the one exception: a
   Jikan endpoint that was sent a login answers 401 or 403). Their request URLs and
   response mappers are pure modules, so the service methods are one `request` plus a map:
-  [cinemetaApi.ts](../../src/cinemetaApi.ts) (`searchCinemeta`, `getCinemetaDetails`; rows carry
+  [cinemetaApi.ts](../../src/shared/api/cinemetaApi.ts) (`searchCinemeta`, `getCinemetaDetails`; rows carry
   an IMDb id, a poster and the start year; details add seasons from `videos`, runtime and credits;
   a meta record without a top-level `year` is foreign (Cinemeta answers a wrong-kind id with an
   unrelated title) and maps to `null`),
-  [openLibraryApi.ts](../../src/openLibraryApi.ts) (`searchOpenLibrary`, `getOpenLibraryWork`; a
-  work id `OL…W`, cover by `cover_i`) and [steamStoreApi.ts](../../src/steamStoreApi.ts)
+  [openLibraryApi.ts](../../src/shared/api/openLibraryApi.ts) (`searchOpenLibrary`, `getOpenLibraryWork`; a
+  work id `OL…W`, cover by `cover_i`) and [steamStoreApi.ts](../../src/shared/api/steamStoreApi.ts)
   (`searchSteamStore`, `getSteamStoreDetails` = the existing `getSteamAppDetails` mapped to a game;
   also `steamLibraryCover`, the portrait capsule). `ApiSource` gained `cinemeta`, `openLibrary`,
   `steamStore` for error wording.
 - AniList calls are serialised with a minimum gap; GraphQL errors in a 200 body are detected.
 - IGDB needs a Twitch app token (`getIgdbToken`, cached with expiry); a rejected client id/secret
   reports source `twitch`, not `igdb`.
-- The Jikan endpoint is configurable ([jikanBase.ts](../../src/jikanBase.ts)): https only, optional
+- The Jikan endpoint is configurable ([jikanBase.ts](../../src/shared/api/jikanBase.ts)): https only, optional
   Basic auth from the URL, Tenrai as default, credentials never sent to Tenrai.
 - URLs from responses pass `httpsOrEmpty` before they are stored.
 - Search limits: 9 results per page, 3 pages (`SEARCH_RESULT_LIMIT`); year filters accept only a
@@ -103,17 +106,17 @@ backup or a WatchLog import takes effect without a restart; the Settings tab als
 
 ## Routing
 
-[apiSources.ts](../../src/apiSources.ts) is the one resolver: `effectiveMediaSource`,
+[apiSources.ts](../../src/shared/api/apiSources.ts) is the one resolver: `effectiveMediaSource`,
 `effectiveBookSource`, `effectiveGameSource` return the chosen source (`activeApi`,
 `booksApiSource`, `gamesApiSource`) if it is keyless or its key is set, else the keyless one
 (Cinemeta, Open Library, Steam). Nothing is migrated: an old `activeApi: 'OMDb'` without a key just
 resolves to Cinemeta. Every reader goes through it, never through the raw setting.
 
-- [titleSearch.ts](../../src/titleSearch.ts): `getApiGroupForType(type, typeApiMapping)` → anime
+- [titleSearch.ts](../../src/shared/services/titleSearch.ts): `getApiGroupForType(type, typeApiMapping)` (from `shared/api/apiGroup.ts`) → anime
   (Jikan or AniList by `animeApiSource`) or movie/series by the effective media source (Cinemeta,
   OMDb, TMDB; `fetchMediaDetails` follows the same). `resultIdKeys` takes that source, because
   `imdbId` on a row is a TMDB id under TMDB.
-- [coverRefresh.ts](../../src/coverRefresh.ts): `searchBooks` (Google Books or Open Library) and
+- [coverRefresh.ts](../../src/shared/services/coverRefresh.ts): `searchBooks` (Google Books or Open Library) and
   `resolveGameCover` (stored id → that source, else title search in the effective game source);
   reading covers by Open Library, Google Books or MAL id. Bulk refresh needs an id (Google-only
   books also need a key).
@@ -123,7 +126,7 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
 
 ## Background work
 
-- [PosterService](../../src/PosterService.ts): a serial queue with per-service delays (none for a title that
+- [PosterService](../../src/shared/api/PosterService.ts): a serial queue with per-service delays (none for a title that
   sent no request, e.g. one whose lookup is not due); movie/TV
   order is TMDB key → OMDb key → Cinemeta (by IMDb id, else title search with year; with no kind signal
   series before movie; a 404 for one kind goes on to the other, then to the search), regardless of
@@ -132,7 +135,7 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
   (or always on explicit refresh); any other outcome is recorded as a lookup check (see
   [lookup results](#lookup-results-and-fetch-state)), so a bad key or an offline moment is a retryable
   `transient`, never "no poster".
-- [ApiCheckQueue](../../src/apiCheckQueue.ts): at most 2 parallel tasks, 250 ms apart. Used by
+- [ApiCheckQueue](../../src/shared/api/apiCheckQueue.ts): at most 2 parallel tasks, 250 ms apart. Used by
   `DataManager.refillSeasons` and `refreshAiring`; the result (`ok | transient | nokey | notfound`)
   is stamped into `cache.apiCheck` with a per-outcome retry deadline (`apiCheckDue`), and
   `resetNoKeyChecks` re-arms `nokey` checks when a key changes. Community rating, airing, season
@@ -142,10 +145,10 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
 
 ## Lookup results and fetch state
 
-[lookup.ts](../../src/lookup.ts) keeps "nothing found" apart from "failed". A lookup returns a
+[lookup.ts](../../src/shared/api/lookup.ts) keeps "nothing found" apart from "failed". A lookup returns a
 `LookupResult<T>`: `found { value }`, `notfound`, `failed` or `nokey` (no usable key, so not asked; a title without an id to ask with is `notfound`).
 `attempt(call)` adapts one request (a value is `found`, null or `[]` is `notfound`, a throw is `failed`,
-or what `onError` makes of it); `lookupOfError` ([apiError.ts](../../src/api/apiError.ts), read off `REASONS`) is that
+or what `onError` makes of it); `lookupOfError` ([apiError.ts](../../src/shared/api/apiError.ts), read off `REASONS`) is that
 `onError` for an `ApiError` (404 is `notfound`, a missing or rejected credential is `nokey`, the rest
 `failed`, and anything that is no `ApiError` too). `firstFound(sources)` runs an ordered list: the first `found` wins, a throwing source counts as
 `failed`, `nokey` sources are skipped, and the verdict of the rest is `failed` over `notfound` over `nokey`
@@ -157,7 +160,7 @@ it; a source reports failure instead of swallowing it in a `catch`.
 `apiCheck`. Deadlines, "found is final" and the migration of the old `'none'` markers:
 [entry cache](../concepts/entry-cache.md#fetch-state).
 
-Responses are read from `unknown` with the readers of [read.ts](../../src/storage/read.ts) (`readString`,
+Responses are read from `unknown` with the readers of [read.ts](../../src/shared/domain/read.ts) (`readString`,
 `readNumber`, `readList`, `at`, ...), never asserted: a field of the wrong type (Jikan `studios: null`, a
 TMDB cast item without a name, an AniList `trailer: "x"`) becomes its empty value and the entry is still
 built. `no-unsafe-type-assertion` is on for the API modules, so they stay that way
@@ -172,4 +175,4 @@ built. `no-unsafe-type-assertion` is on for the API modules, so they stay that w
   `apiError.ts`) + `apiSourceFromUrl`, a value in the `apiSources.ts` union and resolver, an
   [external id](../concepts/external-id.md) source and a `LibraryIndex` key.
 - A new failure reason: `ApiErrorReason` and its row in `REASONS`; the compiler asks for the row.
-- New per-type routing: `typeApiMapping` and `getApiGroupForType` in `types.ts`.
+- New per-type routing: `typeApiMapping` (`modules/settings/domain/model.ts`) and `getApiGroupForType` in `src/shared/api/apiGroup.ts`.

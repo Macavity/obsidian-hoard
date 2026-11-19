@@ -3,6 +3,66 @@ import tsparser from "@typescript-eslint/parser";
 import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
+import { readdirSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import importX, { createNodeResolver } from "eslint-plugin-import-x";
+
+const ARCH_DOC = "See docs/architecture/overview.md.";
+
+const NO_NEW_SERVICE = {
+  selector: "NewExpression[callee.name=/(Manager|Service)$/]",
+  message: `Do not construct a Manager or Service here: take it as a constructor dependency and let src/app wire it. ${ARCH_DOC}`,
+};
+
+// A module's public surface is src/modules/<m>/exports.ts. import-x 4.17.1 matches `except` against the
+// absolute import path, and `**` does not cross dot folders (.claude/worktrees), hence the absolute glob.
+const ROOT = fileURLToPath(new URL(".", import.meta.url));
+const MODULES = readdirSync(`${ROOT}src/modules`).filter((m) => statSync(`${ROOT}src/modules/${m}`).isDirectory());
+const MODULE_EXPORTS = [`${ROOT}src/modules/*/exports.ts`];
+const BARREL_MSG = `Import another module only through its exports.ts; adding a symbol there goes through the exports-reviewer agent. ${ARCH_DOC}`;
+const EXPORTS_SELECTORS = [{
+  selector: "Program > :not(ExportNamedDeclaration[source])",
+  message: `exports.ts only re-exports by name (\`export { a } from './x'\`); define the symbol in the module file where it belongs. ${ARCH_DOC}`,
+}, {
+  // exports.ts sits at the module root, so any `../` leaves the module (esquery cannot parse `/` inside a regex)
+  selector: "ExportNamedDeclaration[source.value=/^\\.\\./]",
+  message: `exports.ts only re-exports files of its own module. ${ARCH_DOC}`,
+}];
+
+const STYLE_SELECTORS = [{
+  selector: "MemberExpression[property.name='style']",
+  message: "Use CSS classes or setCssProps with custom properties.",
+}, {
+  // a plain key (`top: …`) is an inline style by another name; computed keys hold `--hoard-…` constants
+  selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[computed=false][key.type='Identifier']",
+  message: "setCssProps takes custom properties only (keys starting with --).",
+}, {
+  selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[key.type='Literal']:not([key.value=/^--/])",
+  message: "setCssProps takes custom properties only (keys starting with --).",
+}];
+
+// Constructor injection (docs/architecture/overview.md): no `*Deps` bags, no `deps` names, dependencies are separate parameters.
+const DI_SELECTORS = [{
+  selector: "TSInterfaceDeclaration[id.name=/Deps$/]",
+  message: `Do not declare a *Deps type: take each dependency as a private readonly constructor parameter. ${ARCH_DOC}`,
+}, {
+  selector: "TSTypeAliasDeclaration[id.name=/Deps$/]",
+  message: `Do not declare a *Deps type: take each dependency as a private readonly constructor parameter. ${ARCH_DOC}`,
+}, {
+  selector: "Identifier[name='deps']",
+  message: `Do not pass dependencies as a \`deps\` bag: use explicit constructor parameters. ${ARCH_DOC}`,
+}, {
+  selector: "MethodDefinition[kind='constructor'] RestElement",
+  message: `Constructors take named parameters, not a rest tuple of dependencies. ${ARCH_DOC}`,
+}];
+
+// Only src/app may hold App; modules and shared take Vault, Workspace, MetadataCache or a Pick instead.
+const NO_THIS_APP = {
+  selector: "MemberExpression[object.type='ThisExpression'][property.name='app']",
+  message: `Do not reach for this.app: inject Vault, Workspace, MetadataCache or a Pick of them (App only for super(app)). ${ARCH_DOC}`,
+};
+
+const BASE_SELECTORS = [...STYLE_SELECTORS, ...DI_SELECTORS];
 
 export default defineConfig([
   {
@@ -93,38 +153,106 @@ export default defineConfig([
     }
   },
   {
+    // Inline `eslint-disable` would let a change switch the architecture rules off: source files take no inline config.
+    files: ["src/**/*.ts"],
+    linterOptions: { noInlineConfig: true },
+  },
+  {
     // Obsidian guideline: no inline styles from code.
     files: ["src/**/*.ts"],
+    rules: { "no-restricted-syntax": ["error", ...BASE_SELECTORS] },
+  },
+  {
+    // Objects are wired once, in src/app. Same rule key as above, so it repeats the style selectors.
+    files: ["src/**/*.ts"],
+    ignores: ["src/app/**"],
     rules: {
-      "no-restricted-syntax": ["error", {
-        selector: "MemberExpression[property.name='style']",
-        message: "Use CSS classes or setCssProps with custom properties.",
+      "no-restricted-syntax": ["error", ...BASE_SELECTORS, NO_THIS_APP, NO_NEW_SERVICE],
+    },
+  },
+  {
+    // Module boundaries: other modules, shared and design-system reach a module only through its exports.ts.
+    // fallow (.fallowrc.json) decides which module edges exist; this decides that they go through the barrel.
+    files: ["src/**/*.ts"],
+    ignores: ["src/app/**"],
+    plugins: { "import-x": importX },
+    settings: { "import-x/resolver-next": [createNodeResolver({ extensions: [".ts", ".js"] })] },
+    rules: {
+      "import-x/no-restricted-paths": ["error", {
+        zones: [
+          ...MODULES.map((m) => ({ target: `./src/modules/${m}/**/*`, from: `./src/modules/!(${m})/**/*`, except: MODULE_EXPORTS, message: BARREL_MSG })),
+          { target: ["./src/shared/**/*", "./src/design-system/**/*"], from: "./src/modules/**/*", except: MODULE_EXPORTS, message: BARREL_MSG },
+        ],
+      }],
+    },
+  },
+  {
+    // exports.ts only re-exports by name from its own module. Same rule key as above, so it repeats those selectors.
+    files: ["src/modules/*/exports.ts"],
+    rules: { "no-restricted-syntax": ["error", ...BASE_SELECTORS, NO_THIS_APP, NO_NEW_SERVICE, ...EXPORTS_SELECTORS] },
+  },
+  {
+    // UI reaches data and services only through injected dependencies.
+    files: ["src/modules/*/ui/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": ["error", {
+        patterns: [
+          {
+            group: ["**/shared/storage/**"],
+            message: `UI must not touch storage: depend on an injected service interface instead. ${ARCH_DOC}`,
+          },
+          {
+            group: ["**/app/**"],
+            message: `UI must not import from app: receive what you need as a constructor dependency. ${ARCH_DOC}`,
+          },
+          {
+            group: ["**/services/**", "!**/shared/services/**"],
+            allowTypeImports: true,
+            message: `UI may only use \`import type\` from a services file: take the service as an injected dependency, and move pure helpers to shared/domain. ${ARCH_DOC}`,
+          },
+        ],
+      }],
+    },
+  },
+  {
+    // Services report codes (ManagerNotice); they never show UI.
+    files: ["src/modules/*/services/**/*.ts", "src/shared/services/**/*.ts", "src/shared/storage/**/*.ts", "src/shared/api/**/*.ts"],
+    rules: {
+      // Named imports are caught below; a namespace or default import would reach the same UI classes.
+      "no-restricted-syntax": ["error", ...BASE_SELECTORS, NO_THIS_APP, {
+        selector: "ImportDeclaration[source.value='obsidian'] > :matches(ImportNamespaceSpecifier, ImportDefaultSpecifier)",
+        message: `Services must not use Obsidian UI classes: import only what you need by name, and report a code (ManagerNotice) instead of showing UI. ${ARCH_DOC}`,
       }, {
-        // a plain key (`top: …`) is an inline style by another name; computed keys hold `--hoard-…` constants
-        selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[computed=false][key.type='Identifier']",
-        message: "setCssProps takes custom properties only (keys starting with --).",
-      }, {
-        selector: "CallExpression[callee.property.name='setCssProps'] > ObjectExpression > Property[key.type='Literal']:not([key.value=/^--/])",
-        message: "setCssProps takes custom properties only (keys starting with --).",
+        selector: "NewExpression[callee.name=/(Manager|Service)$/]",
+        message: `Do not construct a Manager or Service here: take it as a constructor dependency and let src/app wire it. ${ARCH_DOC}`,
+      }],
+      "@typescript-eslint/no-restricted-imports": ["error", {
+        paths: [{
+          name: "obsidian",
+          importNames: ["App", "Modal", "Notice", "Setting", "PluginSettingTab", "ItemView", "Menu"],
+          message: `Services must not use Obsidian UI classes or App: inject Vault, Workspace or a Pick, and report a code (ManagerNotice) for the UI to show. ${ARCH_DOC}`,
+        }],
+        patterns: [{
+          group: ["**/ui/**", "**/design-system/**"],
+          message: `Services must not import UI: expose data or a code and let the UI call you. ${ARCH_DOC}`,
+        }],
       }],
     },
   },
   {
     // Outside data is read from `unknown`, never asserted (docs/architecture/storage.md): the data layer stays assertion-free.
     files: [
-      "src/storage/**/*.ts",
-      "src/import/**/*.ts",
-      "src/ApiService.ts",
-      "src/PosterService.ts",
-      "src/cinemetaApi.ts",
-      "src/openLibraryApi.ts",
-      "src/steamStoreApi.ts",
-      "src/lookup.ts",
-      "src/settingsNormalize.ts",
-      "src/settingsSplit.ts",
-      "src/backup.ts",
-      "src/backupEntries.ts",
-      "src/featureSettings.ts",
+      "src/shared/storage/**/*.ts",
+      "src/modules/import/services/**/*.ts",
+      "src/shared/api/ApiService.ts",
+      "src/shared/api/PosterService.ts",
+      "src/shared/api/cinemetaApi.ts",
+      "src/shared/api/openLibraryApi.ts",
+      "src/shared/api/steamStoreApi.ts",
+      "src/shared/api/lookup.ts",
+      "src/modules/settings/services/settingsSplit.ts",
+      "src/modules/settings/domain/settingsCodec.ts",
+      "src/modules/backup/services/backup.ts",
     ],
     rules: {
       "@typescript-eslint/no-unsafe-type-assertion": "error",

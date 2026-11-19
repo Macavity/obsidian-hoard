@@ -3,9 +3,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createFakeApp } from "./fakes/fakeApp";
 import { importContext } from "./import/watchlog/helpers";
-import { LocalStore } from "../src/storage/LocalStore";
-import { detectWatchLogSources, type WatchLogSourceKind } from "../src/import/watchlog/detect";
-import { createImporter } from "../src/import/watchlog/importer";
+import { LocalStore } from "../src/shared/storage/LocalStore";
+import { detectWatchLogSources, type WatchLogSourceKind } from "../src/modules/import/services/watchlog/detect";
+import { createImporter } from "../src/modules/import/services/watchlog/importer";
 import { scenarioDir } from "./e2e/scenario.mjs";
 import { ORIGINAL_EXPECT as ORIGINAL } from "./e2e/scenarios/watchlog-original/expect.mjs";
 import { FORK_EXPECT as FORK } from "./e2e/scenarios/watchlog-fork/expect.mjs";
@@ -34,13 +34,13 @@ describe.each([
 ] as const)("scenario %s", (name, EXPECT) => {
 	it("is detected and imports the expected titles", async () => {
 		const f = loadScenario(name);
-		const sources = await detectWatchLogSources(f.app);
+		const sources = await detectWatchLogSources(f.app.vault, () => false);
 		const kind = EXPECT.kind as WatchLogSourceKind;
 		const src = sources[kind];
 		expect(src).not.toBeNull();
 		const types = kind === "fork" ? sources.fork!.typeNames : (sources.original!.data.settings.types ?? []).map((t) => t.name);
 		const ctx = importContext(f, new LocalStore(f.plugin), "Hoard", types);
-		const importer = createImporter({ app: f.app, local: new LocalStore(f.plugin), ctx: () => ctx, layout: () => ctx.layout, openFile: () => {} }, sources);
+		const importer = createImporter(f.app.vault, f.app.fileManager, new LocalStore(f.plugin), () => ctx, () => ctx.layout, () => {}, sources);
 		const report = await importer.run(kind, () => {});
 		expect(report.errors).toEqual([]);
 		const titles = [...f.files.keys()].filter((p) => ctx.layout.classify(p)?.kind === "title");

@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CsvModal } from '../src/CsvModal';
-import type { HoardTitle } from '../src/types';
+import { CsvModal } from '../src/modules/watchlist/ui/CsvModal';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { fakeSettings } from './helpers/fakeSettings';
 import { clickByText, clickNext, shownNotices, previewTitles, uploadCsv, valueSelect } from './helpers/csvWizard';
 
 interface Harness {
 	modal: CsvModal;
 	added: HoardTitle[][];
 	settings: { statuses: { name: string }[]; types: { name: string; color?: string }[]; colorTheme: string };
-	plugin: { settings: Harness['settings']; saveSettings: ReturnType<typeof vi.fn>; importProgress: unknown };
+	settingsService: ReturnType<typeof fakeSettings<Harness['settings']>>;
+	setImportProgress: ReturnType<typeof vi.fn>;
 }
 
 function setup(existing: string[] = []): Harness {
@@ -17,15 +19,16 @@ function setup(existing: string[] = []): Harness {
 		types: [{ name: 'Anime' }, { name: 'Movie' }],
 		colorTheme: 'default',
 	};
-	const plugin = { settings, saveSettings: vi.fn(() => Promise.resolve()), importProgress: null as unknown };
+	const settingsService = fakeSettings(settings);
+	const setImportProgress = vi.fn();
 	const dataManager = {
 		getTitles: () => existing.map((title) => ({ title })),
 		generateId: (name: string) => `id-${name}`,
 		addTitleBatch: (chunk: HoardTitle[]) => { added.push(chunk); return Promise.resolve(); },
 		notifyChange: vi.fn(),
 	};
-	const modal = new CsvModal({} as never, plugin as never, dataManager as never, 'import');
-	return { modal, added, settings, plugin };
+	const modal = new CsvModal({} as never, settingsService as never, dataManager as never, setImportProgress, { mode: 'import' });
+	return { modal, added, settings, settingsService, setImportProgress };
 }
 
 beforeEach(() => { shownNotices.length = 0; });
@@ -41,7 +44,7 @@ describe('CsvModal import wizard', () => {
 	});
 
 	it('maps unknown statuses, types and ratings, then imports with created types', async () => {
-		const { modal, added, settings, plugin } = setup(['Dune']);
+		const { modal, added, settings, settingsService, setImportProgress } = setup(['Dune']);
 		await uploadCsv(modal, [
 			'Title,Type,Status,Rating',
 			'Dune,anime,Finished,Great',
@@ -70,7 +73,10 @@ describe('CsvModal import wizard', () => {
 			['Heat', 'Movie', 'Plan to watch', 3],
 		]);
 		expect(settings.types.map((x) => x.name)).toEqual(['Anime', 'Movie', 'Doku']);
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(settingsService.update).toHaveBeenCalledTimes(1);
+		// the header progress starts at zero and is cleared when the run ends
+		expect(setImportProgress.mock.calls[0]![0]).toMatchObject({ current: 0, total: 2 });
+		expect(setImportProgress.mock.calls.at(-1)![0]).toBeNull();
 		await vi.waitFor(() => expect(shownNotices.at(-1)).toContain('2'));
 	});
 
@@ -135,7 +141,7 @@ describe('CsvModal import wizard', () => {
 	});
 
 	it('shows progress UI while importing and cancel marks the run as cancelling', async () => {
-		const { modal, plugin } = setup();
+		const { modal, setImportProgress } = setup();
 		await uploadCsv(modal, 'Title\nA');
 		clickNext(modal);
 		const cancelBtn = Array.from(modal.contentEl.querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent === 'Cancel')!;
@@ -149,7 +155,7 @@ describe('CsvModal import wizard', () => {
 		cancelBtn.click();
 		expect(cancelBtn.disabled).toBe(true);
 		expect(cancelBtn.textContent).toBe('Cancelling…');
-		expect(plugin.importProgress).toBeNull();
+		expect(setImportProgress).not.toHaveBeenCalled();
 	});
 
 	it('warns when nothing selected is importable', async () => {

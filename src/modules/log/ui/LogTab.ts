@@ -1,0 +1,451 @@
+import type { TabInstance } from '../../../design-system/TabInstance';
+import { t, type TranslationKey } from '../../../shared/i18n';
+import { gameStatusLabel, historyTypeLabel, readingStatusLabel, statusLabel } from '../../../shared/i18n/labels';
+import { dayName, monthName } from '../../../shared/i18n/dateNames';
+import { createIconButton } from '../../../design-system/IconButton';
+import type { HistoryManager } from '../../../shared/services/HistoryManager';
+import type { HistoryEntry } from '../../../shared/domain/history';
+import { inferHistoryAction, inferHistorySource } from '../../../shared/services/HistoryManager';
+import type { OpenConfirm } from '../../../design-system/ConfirmModal';
+import { getActiveDateFormat } from '../../../shared/domain/date';
+
+type SourceFilter = 'all' | 'Watchlist' | 'Reading' | 'Games';
+
+const ACTION_COLORS: Record<string, string> = {
+	completed: '#1D9E75',
+	watched: '#1D9E75',
+	added: '#378ADD',
+	group: '#8B5CF6',
+	deleted: '#E24B4A',
+	status: '#BA7517',
+	rating: '#BA7517',
+};
+
+// the leading dot is coloured by source, not action: green Reading, blue Watchlist, purple Games
+const SOURCE_COLORS: Record<string, string> = {
+	Reading: '#1D9E75',
+	Watchlist: '#378ADD',
+	Games: '#8B5CF6',
+};
+
+/** The stored status of a history line, shown in the UI language: watch, reading, then game statuses; anything else as stored. */
+function storedStatusLabel(status: string): string {
+	for (const toLabel of [statusLabel, readingStatusLabel, gameStatusLabel]) {
+		const shown = toLabel(status);
+		if (shown !== status) return shown;
+	}
+	return status;
+}
+
+// the patterns match the stored History.md lines; only the label built from them is localized
+/** Exported for tests. */
+export function actionLabel(entry: HistoryEntry): string {
+	const action = inferHistoryAction(entry);
+	const m = entry.message;
+	switch (action) {
+		case 'added': return t('dashboard.log.action.added');
+		case 'group': return t('dashboard.log.action.group');
+		case 'deleted': return t('dashboard.log.action.deleted');
+		case 'rating': {
+			const rm = m.match(/Rating → (\d+\/5)/);
+			if (rm) return t('dashboard.log.action.rating', { value: rm[1]! });
+			return t('dashboard.log.action.ratingChanged');
+		}
+		case 'status': {
+			const sm = m.match(/status changed to (.+)$/);
+			return sm ? t('dashboard.log.action.status', { status: storedStatusLabel(sm[1]!) }) : t('dashboard.log.action.statusChanged');
+		}
+		case 'completed': return t('dashboard.log.action.completed');
+		case 'watched': {
+			const pm = m.match(/At (page|chapter|volume) (\d+) \/ (\d+)/i);
+			if (pm) {
+				const key = `dashboard.log.action.at${pm[1]!.charAt(0).toUpperCase()}${pm[1]!.slice(1).toLowerCase()}`;
+				return t(key as TranslationKey, { n: pm[2]!, total: pm[3]! });
+			}
+			const seasonM = m.match(/\)\s+(.+?)\s+was fully watched on/i);
+			if (seasonM) return t('dashboard.log.action.seasonWatched', { name: seasonM[1]! });
+			const em = m.match(/episode (\d+)/i);
+			return em ? t('dashboard.log.action.episodeWatched', { n: em[1]! }) : t('dashboard.log.action.watched');
+		}
+	}
+	return t('dashboard.log.action.updated');
+}
+
+/** A History source as shown in the tab chrome (the tab names). */
+function sourceLabel(source: Exclude<SourceFilter, 'all'>): string {
+	return t(`app.tabs.${source.toLowerCase()}` as TranslationKey);
+}
+
+function typeFromEntry(entry: HistoryEntry): string {
+	const m = entry.message.match(/\(([^)]+)\)/);
+	return m ? m[1]! : '';
+}
+
+/** Exported for tests. */
+export function titleFromEntry(entry: HistoryEntry): string {
+	let title: string;
+	if (entry.titleName) {
+		title = entry.titleName;
+	} else {
+		const m = entry.message.match(/^(.+?)\s*\(/);
+		title = m ? m[1]! : entry.message;
+	}
+	const type = typeFromEntry(entry);
+	if (type) return `${title} (${historyTypeLabel(type)})`;
+	return title;
+}
+
+/** Exported for tests. */
+export function formatDayHeader(dateStr: string): string {
+	const d = new Date(dateStr + 'T12:00:00');
+	// month name, ordered by the user's date-format setting
+	if (getActiveDateFormat() === 'american') {
+		return `${dayName(d.getDay())}, ${monthName(d.getMonth())} ${d.getDate()}, ${d.getFullYear()}`;
+	}
+	if (getActiveDateFormat() === 'iso') {
+		return `${dayName(d.getDay())}, ${dateStr}`;
+	}
+	return t('dashboard.log.dayHeader', { weekday: dayName(d.getDay()), day: d.getDate(), month: monthName(d.getMonth()), year: d.getFullYear() });
+}
+
+function formatTime(isoTs: string): string {
+	const d = new Date(isoTs);
+	return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function dateKey(isoTs: string): string {
+	const d = new Date(isoTs);
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+interface VirtualRow {
+	type: 'header' | 'entry';
+	date?: string;
+	entry?: HistoryEntry;
+	isLastInGroup?: boolean;
+}
+
+const ROW_HEIGHT = 32;
+const HEADER_HEIGHT = 40;
+
+export type LogTabHistory = Pick<HistoryManager, 'onChange' | 'offChange' | 'getEntries' | 'deleteEntry'>;
+
+export class LogTab implements TabInstance {
+	private container: HTMLElement;
+	private sourceFilter: SourceFilter = 'all';
+
+	private scrollContainer: HTMLElement | null = null;
+	private spacer: HTMLElement | null = null;
+	private viewport: HTMLElement | null = null;
+	private rows: VirtualRow[] = [];
+	private rowOffsets: number[] = [];
+	private totalHeight = 0;
+	private scrollHandler: (() => void) | null = null;
+	private scrollRAF: number | null = null;
+	private resizeObserver: ResizeObserver | null = null;
+	private lastFirst = -1;
+	private lastLast = -1;
+	private renderedNodes: Map<number, HTMLElement> = new Map();
+	// scroll offset to restore after a delete re-render
+	private pendingScroll: number | null = null;
+
+	constructor(
+		container: HTMLElement,
+		private readonly history: LogTabHistory,
+		private readonly confirm: OpenConfirm,
+	) {
+		this.container = container;
+		history.onChange(this.onHistoryChange);
+	}
+
+	// History.md changed outside the plugin; a tab that left the DOM unsubscribes itself
+	private onHistoryChange = (): void => {
+		if (!this.container.isConnected) {
+			this.history.offChange(this.onHistoryChange);
+			return;
+		}
+		this.pendingScroll = this.scrollContainer?.scrollTop ?? null;
+		this.render();
+	};
+
+	destroy(): void {
+		this.history.offChange(this.onHistoryChange);
+		this.destroyVirtualScroll();
+	}
+
+	render(): void {
+		this.destroyVirtualScroll();
+		this.container.empty();
+		this.container.addClass('hoard-log');
+
+		this.renderFilterBar();
+
+		const allEntries = this.history.getEntries();
+		const filtered = this.sourceFilter === 'all'
+			? allEntries
+			: allEntries.filter((e) => inferHistorySource(e) === this.sourceFilter);
+
+		if (filtered.length === 0) {
+			this.pendingScroll = null;
+			this.container.createDiv({
+				cls: 'hoard-log__empty',
+				text: this.sourceFilter === 'all'
+					? t('dashboard.log.empty')
+					: t('dashboard.log.emptySource', { source: sourceLabel(this.sourceFilter) }),
+			});
+			return;
+		}
+
+		this.buildVirtualRows(filtered);
+		this.renderVirtualTimeline();
+	}
+
+	private renderFilterBar(): void {
+		const bar = this.container.createDiv({ cls: 'hoard-log__filter-bar' });
+
+		const filters: { label: string; value: SourceFilter }[] = [
+			{ label: t('ui.toolbar.all'), value: 'all' },
+			{ label: sourceLabel('Watchlist'), value: 'Watchlist' },
+			{ label: sourceLabel('Reading'), value: 'Reading' },
+			{ label: sourceLabel('Games'), value: 'Games' },
+		];
+
+		for (const f of filters) {
+			const btn = bar.createEl('button', {
+				cls: `hoard-log__filter-btn${this.sourceFilter === f.value ? ' is-active' : ''}`,
+				text: f.label,
+			});
+			btn.addEventListener('click', () => {
+				if (this.sourceFilter === f.value) return;
+				this.sourceFilter = f.value;
+				this.render();
+			});
+		}
+	}
+
+	private buildVirtualRows(entries: HistoryEntry[]): void {
+		this.rows = [];
+		this.rowOffsets = [];
+
+		const map = new Map<string, HistoryEntry[]>();
+		for (const entry of entries) {
+			const key = dateKey(entry.timestamp);
+			let list = map.get(key);
+			if (!list) {
+				list = [];
+				map.set(key, list);
+			}
+			list.push(entry);
+		}
+
+		const groups: { date: string; entries: HistoryEntry[] }[] = [];
+		for (const [date, list] of map) {
+			groups.push({ date, entries: list });
+		}
+
+		let offset = 0;
+		for (const group of groups) {
+			this.rows.push({ type: 'header', date: group.date });
+			this.rowOffsets.push(offset);
+			offset += HEADER_HEIGHT;
+
+			for (let i = 0; i < group.entries.length; i++) {
+				this.rows.push({
+					type: 'entry',
+					entry: group.entries[i],
+					isLastInGroup: i === group.entries.length - 1,
+				});
+				this.rowOffsets.push(offset);
+				offset += ROW_HEIGHT;
+			}
+		}
+		this.totalHeight = offset;
+	}
+
+	private renderVirtualTimeline(): void {
+		const scroll = this.container.createDiv({ cls: 'hoard-log__timeline hoard-log__virtual-scroll' });
+		const spacer = scroll.createDiv({ cls: 'hoard-log__spacer' });
+		const viewport = spacer.createDiv({ cls: 'hoard-log__viewport' });
+
+		this.scrollContainer = scroll;
+		this.spacer = spacer;
+		this.viewport = viewport;
+		this.renderedNodes.clear();
+		this.lastFirst = -1;
+		this.lastLast = -1;
+
+		spacer.setCssProps({ '--hoard-log-spacer-height': `${this.totalHeight}px` });
+		viewport.setCssProps({ '--hoard-log-viewport-height': `${this.totalHeight}px` });
+
+		this.scrollHandler = () => {
+			if (this.scrollRAF !== null) return;
+			this.scrollRAF = window.requestAnimationFrame(() => {
+				this.scrollRAF = null;
+				this.renderVisibleRows();
+			});
+		};
+		scroll.addEventListener('scroll', this.scrollHandler, { passive: true });
+
+		this.resizeObserver = new ResizeObserver(() => {
+			this.renderedNodes.clear();
+			if (this.viewport) this.viewport.empty();
+			this.lastFirst = -1;
+			this.lastLast = -1;
+			this.renderVisibleRows();
+		});
+		this.resizeObserver.observe(scroll);
+
+		// restore the offset a delete re-render came from (browser clamps to the new height)
+		if (this.pendingScroll !== null) {
+			scroll.scrollTop = this.pendingScroll;
+			this.pendingScroll = null;
+		}
+
+		this.renderVisibleRows();
+	}
+
+	private renderVisibleRows(): void {
+		const scroll = this.scrollContainer;
+		const viewport = this.viewport;
+		if (!scroll || !viewport) return;
+
+		const scrollTop = scroll.scrollTop;
+		const viewHeight = scroll.clientHeight;
+		if (viewHeight <= 0) return;
+
+		const first = this.findFirstVisible(scrollTop);
+		const last = this.findLastVisible(scrollTop + viewHeight);
+
+		if (first === this.lastFirst && last === this.lastLast) return;
+
+		this.lastFirst = first;
+		this.lastLast = last;
+
+		// remove rows that left the visible window
+		for (const [idx, el] of this.renderedNodes) {
+			if (idx < first || idx > last) {
+				el.remove();
+				this.renderedNodes.delete(idx);
+			}
+		}
+
+		// add rows that newly entered the visible window
+		for (let i = first; i <= last; i++) {
+			if (this.renderedNodes.has(i)) continue;
+			const row = this.rows[i];
+			if (!row) continue;
+
+			let el: HTMLElement;
+			if (row.type === 'header') {
+				el = createDiv({ cls: 'hoard-log__day-header', text: formatDayHeader(row.date!) });
+				el.setCssProps({ '--hoard-log-day-header-height': `${HEADER_HEIGHT}px` });
+			} else {
+				el = this.buildEntryRow(row);
+			}
+
+			const offset = this.rowOffsets[i] ?? 0;
+			el.setCssProps({ '--hoard-log-row-top': `${offset}px` });
+
+			viewport.appendChild(el);
+			this.renderedNodes.set(i, el);
+		}
+	}
+
+	private buildEntryRow(row: VirtualRow): HTMLElement {
+		const entry = row.entry!;
+		const action = inferHistoryAction(entry);
+		const color = ACTION_COLORS[action] ?? '#888780';
+		const source = inferHistorySource(entry);
+		const dotColor = SOURCE_COLORS[source] ?? '#888780';
+
+		const el = createDiv({ cls: 'hoard-log__entry' });
+		el.setCssProps({ '--hoard-log-entry-height': `${ROW_HEIGHT}px` });
+
+		const dotCol = el.createDiv({ cls: 'hoard-log__dot-column' });
+		const dot = dotCol.createDiv({ cls: 'hoard-log__dot' });
+		dot.setCssProps({ '--hoard-log-dot-color': dotColor });
+		if (!row.isLastInGroup) dotCol.createDiv({ cls: 'hoard-log__connector' });
+
+		const content = el.createDiv({ cls: 'hoard-log__content' });
+		content.createSpan({ cls: 'hoard-log__source', text: sourceLabel(source) });
+		content.createSpan({ cls: 'hoard-log__separator', text: ' · ' });
+		content.createSpan({ cls: 'hoard-log__title', text: titleFromEntry(entry) });
+		content.createSpan({ cls: 'hoard-log__separator', text: ' · ' });
+		const actionSpan = content.createSpan({ cls: 'hoard-log__action', text: actionLabel(entry) });
+		actionSpan.setCssProps({ '--hoard-log-action-color': color });
+
+		el.createDiv({ cls: 'hoard-log__time', text: formatTime(entry.timestamp) });
+
+		const delBtn = createIconButton(el, {
+			icon: 'x',
+			label: t('dashboard.log.deleteEvent'),
+			cls: 'hoard-log__delete',
+		});
+		delBtn.addEventListener('click', (ev) => {
+			ev.stopPropagation();
+			this.confirmDelete(entry);
+		});
+
+		return el;
+	}
+
+	private confirmDelete(entry: HistoryEntry): void {
+		this.confirm(
+			t('dashboard.log.confirmDelete', { title: titleFromEntry(entry), action: actionLabel(entry) }),
+			() => {
+				this.pendingScroll = this.scrollContainer?.scrollTop ?? null;
+				void this.history.deleteEntry(entry.id).then(() => this.render());
+			},
+		);
+	}
+
+	private findFirstVisible(scrollTop: number): number {
+		let lo = 0;
+		let hi = this.rows.length - 1;
+		while (lo < hi) {
+			const mid = (lo + hi) >>> 1;
+			const rowEnd = this.rowOffsets[mid]! + (this.rows[mid]!.type === 'header' ? HEADER_HEIGHT : ROW_HEIGHT);
+			if (rowEnd <= scrollTop) {
+				lo = mid + 1;
+			} else {
+				hi = mid;
+			}
+		}
+		return Math.max(0, lo - 2);
+	}
+
+	private findLastVisible(bottom: number): number {
+		let lo = 0;
+		let hi = this.rows.length - 1;
+		while (lo < hi) {
+			const mid = (lo + hi + 1) >>> 1;
+			if (this.rowOffsets[mid]! >= bottom) {
+				hi = mid - 1;
+			} else {
+				lo = mid;
+			}
+		}
+		return Math.min(this.rows.length - 1, lo + 2);
+	}
+
+	private destroyVirtualScroll(): void {
+		if (this.scrollRAF !== null) {
+			window.cancelAnimationFrame(this.scrollRAF);
+			this.scrollRAF = null;
+		}
+		if (this.resizeObserver) {
+			this.resizeObserver.disconnect();
+			this.resizeObserver = null;
+		}
+		if (this.scrollContainer && this.scrollHandler) {
+			this.scrollContainer.removeEventListener('scroll', this.scrollHandler);
+		}
+		this.scrollHandler = null;
+		this.scrollContainer = null;
+		this.spacer = null;
+		this.viewport = null;
+		this.renderedNodes.clear();
+		this.lastFirst = -1;
+		this.lastLast = -1;
+	}
+}

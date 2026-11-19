@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setMockLanguage } from './__mocks__/obsidian';
-import { getLocale, setLocale, t } from '../src/i18n';
-import deApp from '../src/i18n/de/app';
-import { HoardView } from '../src/HoardView';
+import { getLocale, setLocale, t } from '../src/shared/i18n';
+import deApp from '../src/shared/i18n/de/app';
+import { HoardView } from '../src/app/HoardView';
 
 afterEach(() => {
 	setMockLanguage('en');
@@ -19,7 +19,7 @@ describe('plugin shell i18n', () => {
 
 	it('translates the view title', () => {
 		setLocale('de');
-		const view = new HoardView({} as never, {} as never, {} as never);
+		const view = new HoardView({} as never, {} as never, {} as never, {} as never, [], () => false);
 		expect(view.getDisplayText()).toBe(deApp.viewTitle);
 	});
 
@@ -31,7 +31,7 @@ describe('plugin shell i18n', () => {
 
 	it('follows the Obsidian language on load', async () => {
 		setMockLanguage('de');
-		const { default: Plugin } = await import('../src/main');
+		const { default: Plugin } = await import('../src/app/main');
 		const plugin = Object.create(Plugin.prototype) as { onload(): Promise<void> };
 		await plugin.onload().catch(() => undefined);
 		expect(getLocale()).toBe('de');

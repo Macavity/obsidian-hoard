@@ -1,13 +1,13 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { ReadingDataManager } from '../src/ReadingDataManager';
-import { GameDataManager } from '../src/GameDataManager';
+import type { ReadingDataManager } from '../src/modules/reading/services/ReadingDataManager';
+import type { GameDataManager } from '../src/modules/games/services/GameDataManager';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
-import { tick } from './helpers/common';
-import type { HoardTitle } from '../src/types';
-import { PosterService } from '../src/PosterService';
-import { DEFAULT_SETTINGS } from '../src/types';
-import type { ApiService } from '../src/ApiService';
-import { NOT_FOUND, FAILED, NO_KEY, found } from '../src/lookup';
+import { tick, newReadingManager, newGameManager } from './helpers/common';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { PosterService } from '../src/shared/api/PosterService';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
+import type { ApiService } from '../src/shared/api/ApiService';
+import { NOT_FOUND, FAILED, NO_KEY, found } from '../src/shared/api/lookup';
 
 describe('DataManager on vault storage', () => {
 	it('adds a title as a note and keeps it out of data.json', async () => {
@@ -42,6 +42,17 @@ describe('DataManager on vault storage', () => {
 		expect(f.files.get('W/Movie/A2.md')).toContain('keep');
 		expect(dm.getTitle('Movie/A2')?.title).toBe('A2');
 		expect(dm.getTitle('Movie/A')).toBeUndefined();
+	});
+
+	it('keeps a pending silent edit when its note is renamed', async () => {
+		const { dm, f } = await setupDataManager({ 'W/Movie/A.md': '---\nName: A\nType: Movie\n---\n' });
+		const t = dm.getTitle('Movie/A')!;
+		dm.updateTitleSilent({ ...t, status: 'Completed' });
+		f.externalRename('W/Movie/A.md', 'W/Movie/B.md');
+		await tick();
+		await dm.save();
+		expect(f.files.get('W/Movie/B.md')).toContain('Status: Completed');
+		expect(f.files.has('W/Movie/A.md')).toBe(false);
 	});
 
 	it('does not overwrite an invalid field it did not change', async () => {
@@ -156,14 +167,13 @@ describe('DataManager on vault storage', () => {
 	});
 
 	it('removing a derived book or game entry clears its release date', async () => {
-		const { dm, f, plugin, index, shared, local, layout } = await setupDataManager({
+		const { dm, f, plugin, base } = await setupDataManager({
 			'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',
 			'W/Games/Halo.md': '---\nName: Halo\nType: game\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',
 		});
-		const deps = { index, local, shared, layout: () => layout, notify: () => {} };
 		const p = plugin as unknown as Record<string, unknown>;
-		p.readingDataManager = new ReadingDataManager(plugin, deps);
-		p.gameDataManager = new GameDataManager(plugin, deps);
+		p.readingDataManager = newReadingManager(base, dm);
+		p.gameDataManager = newGameManager(base, dm);
 		await (p.readingDataManager as ReadingDataManager).init();
 		await (p.gameDataManager as GameDataManager).init();
 		const entries = dm.getAirtimeEntries();
@@ -210,12 +220,11 @@ describe('DataManager on vault storage', () => {
 	});
 
 	it('removing a manual card of a future book keeps its release date', async () => {
-		const { dm, f, plugin, index, shared, local, layout } = await setupDataManager({
+		const { dm, f, plugin, base } = await setupDataManager({
 			'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: To be released\nRelease Date: 2099-01-01\nAirtime Recurrence: monthly\nAirtime Day: 5\n---\n',
 		});
-		const deps = { index, local, shared, layout: () => layout, notify: () => {} };
 		const p = plugin as unknown as Record<string, unknown>;
-		p.readingDataManager = new ReadingDataManager(plugin, deps);
+		p.readingDataManager = newReadingManager(base, dm);
 		await (p.readingDataManager as ReadingDataManager).init();
 		const [entry] = dm.getAirtimeEntries();
 		expect(entry!.schedule.recurrence).toBe('monthly');

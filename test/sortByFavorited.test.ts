@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sortByFavorited } from '../src/types';
+import { sortByFavorited } from '../src/shared/domain/rows';
 
 const item = (id: string, dateFavorited?: string) => ({ id, dateFavorited });
 const ids = (xs: { id: string }[]) => xs.map((x) => x.id);

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddGameModal } from '../src/AddGameModal';
-import type { Game } from '../src/types';
+import { AddGameModal } from '../src/modules/games/ui/AddGameModal';
+import type { Game } from '../src/modules/games/domain/model';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const NOW = '2026-03-04T05:06:07.000Z';
 
@@ -21,8 +22,8 @@ function setup() {
 		generateGameId: (title: string) => `g-${title}`,
 		addGame: (g: Game) => { added.push(g); return Promise.resolve(); },
 	};
-	const plugin = { settings: { gamesApiSource: 'rawg', priorities: [] }, apiService: {} };
-	const modal = new AddGameModal({} as never, plugin as never, gameData as never, () => {});
+	const deps = { app: {}, settings: fakeSettings({ gamesApiSource: 'rawg', priorities: [] }), games: gameData, api: {} };
+	const modal = new AddGameModal(deps.app as never, deps.settings as never, deps.games as never, deps.api as never, { onAdded: () => {} });
 	return { form: modal as unknown as Form, added };
 }
 

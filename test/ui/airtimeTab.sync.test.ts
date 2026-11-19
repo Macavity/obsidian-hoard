@@ -1,12 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Book, Game, Manga } from '../../src/types';
-import { entry, isoOffset, makeTab, newWorld } from './airtimeTab.harness';
+import type { Game } from '../../src/modules/games/domain/model';
+import type { Book, Manga } from '../../src/modules/reading/domain/model';
+import { captures as cap, entry, isoOffset, makeTab, newWorld } from './airtimeTab.harness';
 
-const cap = vi.hoisted(() => ({ readingModals: [] as unknown[][] }));
-vi.mock('../../src/ReadingScheduleModal', () => ({ ReadingScheduleModal: class { constructor(...a: unknown[]) { cap.readingModals.push(a); } open(): void {} } }));
-vi.mock('../../src/ConfirmModal', () => ({ ConfirmModal: class { open(): void {} } }));
-vi.mock('../../src/MaybeAddModal', () => ({ MaybeAddModal: class { open(): void {} } }));
-vi.mock('../../src/VirtualScroller', () => ({ VirtualScroller: class { addSection(): void {} attach(): void {} detach(): void {} destroy(): void {} } }));
+vi.mock('../../src/design-system/VirtualScroller', () => ({ VirtualScroller: class { addSection(): void {} attach(): void {} detach(): void {} destroy(): void {} } }));
 
 const book = (over: Partial<Book> = {}): Book => ({ id: 'b1', title: 'Dune', totalChapters: 10, releaseDate: null, ...over }) as unknown as Book;
 const manga = (over: Partial<Manga> = {}): Manga => ({ id: 'm1', title: 'Berserk', totalChapters: 1, totalVolumes: 1, releaseDate: null, ...over }) as unknown as Manga;
@@ -19,9 +16,24 @@ type Priv = {
 	handleTrackerCardsVisible: (cells: HTMLElement[]) => void;
 };
 
-afterEach(() => document.body.replaceChildren());
+afterEach(() => {
+	document.body.replaceChildren();
+	cap.readingModals.length = 0;
+});
 
 const once = (d: string) => ({ recurrence: 'once' as const, releaseDate: d });
+
+describe('startAddWithReading', () => {
+	it('adds a reading entry and writes the schedule totals back to the item', async () => {
+		const b = book();
+		const { tab, calls } = makeTab(newWorld({ books: [b] }));
+		(tab as unknown as { startAddWithReading: (i: Book, k: 'book') => void }).startAddWithReading(b, 'book');
+		const onSave = (cap.readingModals.at(-1)![1] as { onSave: (...a: unknown[]) => Promise<void> }).onSave;
+		await onSave(once(isoOffset(3)), null, null, null, 12);
+		expect(calls.filter((c) => c.startsWith('addAirtimeEntry'))).toHaveLength(1);
+		expect(b.totalChapters).toBe(12);
+	});
+});
 
 describe('syncReadingItemFromSchedule', () => {
 	it('writes totals and a future date back to a book, once', async () => {
@@ -122,9 +134,9 @@ describe('handleTrackerCardsVisible', () => {
 
 	it('fetches a poster for titles without one and wires the image', async () => {
 		const w = newWorld({ titles: [{ id: 't1', title: 'Show', posterUrl: '' } as never, { id: 't2', title: 'Has', posterUrl: 'x' } as never] });
-		const { tab, plugin, calls } = makeTab(w);
+		const { tab, posters, calls } = makeTab(w);
 		const enqueue = vi.fn((t: { id: string }) => Promise.resolve(t.id === 't1' ? 'http://img/1.png' : ''));
-		(plugin.posterService as { enqueue: unknown }).enqueue = enqueue;
+		(posters as { enqueue: unknown }).enqueue = enqueue;
 		const fetched = cell('t1');
 		const skipped = cell('t2');
 		const unknownTitle = cell('zzz');
@@ -162,7 +174,7 @@ describe('edit reading schedule save', () => {
 		const e = entry({ titleId: 'b1', source: 'reading', readingKind: 'book' });
 		const { tab, calls } = makeTab(newWorld({ books: [b], entries: [e] }));
 		(tab as unknown as { openEditReadingSchedule: (e: unknown) => void }).openEditReadingSchedule(e);
-		const save = cap.readingModals[0]![8] as (...a: unknown[]) => Promise<void>;
+		const save = (cap.readingModals[0]![1] as { onSave: (...a: unknown[]) => Promise<void> }).onSave;
 		await save(once(isoOffset(6)), 2, 7, null, 55);
 		expect(e.currentEpisode).toBe(7);
 		expect(b.totalChapters).toBe(55);

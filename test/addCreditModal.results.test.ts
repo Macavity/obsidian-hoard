@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { AddCreditModal } from '../src/AddCreditModal';
-import type { CreditsField, HoardTitle } from '../src/types';
+import { AddCreditModal } from '../src/modules/watchlist/ui/AddCreditModal';
+import { fakeSettings } from './helpers/fakeSettings';
+import type { CreditsField, HoardTitle } from '../src/modules/watchlist/domain/model';
 
 const title = (over: Partial<HoardTitle>): HoardTitle => ({ id: 'x', title: 'X', ...over }) as HoardTitle;
 
 function open(field: CreditsField, edited: Partial<HoardTitle>, others: Partial<HoardTitle>[]) {
 	const editedTitle = title({ id: 'edited', ...edited });
-	const plugin = {
-		settings: { colorTheme: 'default' },
-		dataManager: { getTitles: () => [editedTitle, ...others.map(title)] },
+	const deps = {
+		app: {} as never,
+		settings: fakeSettings({ colorTheme: 'default' }) as never,
+		titles: { getTitles: () => [editedTitle, ...others.map(title)], updateManualCredits: () => Promise.resolve() },
 	};
-	const modal = new AddCreditModal({} as never, plugin as never, editedTitle, field, () => {});
+	const modal = new AddCreditModal(deps.app, deps.settings, deps.titles, { title: editedTitle, field, onSaved: () => {} });
 	modal.open();
 	const input = modal.contentEl.querySelector<HTMLInputElement>('.hoard-credits__search-input')!;
 	const type = (q: string): void => {

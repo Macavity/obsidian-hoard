@@ -33,3 +33,14 @@ export function findDisableIssues(lines) {
 	});
 	return issues;
 }
+
+/** Every `fallow-ignore` comment (any form) switches a fallow check off; never allowed in src without the maintainer's approval. */
+export function findFallowIgnores(lines) {
+	const issues = [];
+	lines.forEach((raw, i) => {
+		if (raw.includes("fallow-ignore")) {
+			issues.push({ line: i + 1, content: raw.trim(), problem: "fallow exceptions need the maintainer's approval (see docs/architecture/overview.md)" });
+		}
+	});
+	return issues;
+}

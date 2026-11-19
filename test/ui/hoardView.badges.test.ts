@@ -1,31 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Platform, WorkspaceLeaf } from 'obsidian';
-import { HoardView } from '../../src/HoardView';
+import { Platform } from 'obsidian';
 import { qsa } from '../helpers/dom';
+import { newHoardView } from '../helpers/newHoardView';
 
-const { Stub, pending, aired, maybe } = vi.hoisted(() => ({
-	Stub: class {
-		render(): void {}
-	},
+const { pending, aired, maybe } = vi.hoisted(() => ({
 	pending: vi.fn(() => Promise.resolve(4)),
 	aired: vi.fn(() => 2),
 	maybe: vi.fn(() => 1),
-}));
-
-vi.mock('../../src/DashboardTab', () => ({ DashboardTab: Stub }));
-vi.mock('../../src/ListTab', () => ({ ListTab: Stub }));
-vi.mock('../../src/ReadingTab', () => ({ ReadingTab: Stub }));
-vi.mock('../../src/GamesTab', () => ({ GamesTab: Stub }));
-vi.mock('../../src/CustomListsTab', () => ({ CustomListsTab: Stub }));
-vi.mock('../../src/LogTab', () => ({ LogTab: Stub }));
-vi.mock('../../src/AirtimeTab', () => ({
-	AirtimeTab: Object.assign(class extends Stub {}, {
-		getAiredDueCount: aired,
-		getMaybeDueCount: maybe,
-	}),
-}));
-vi.mock('../../src/DraftsTab', () => ({
-	DraftsTab: Object.assign(class extends Stub {}, { computePendingCount: pending }),
 }));
 
 afterEach(() => {
@@ -37,14 +18,13 @@ afterEach(() => {
 
 async function open() {
 	let resolved: () => void = () => {};
-	const plugin = {
-		settings: { colorTheme: 'default' },
-		app: { metadataCache: { on: (_n: string, cb: () => void) => { resolved = cb; return {}; } } },
-		readingDataManager: {},
-		gameDataManager: {},
-	};
-	const dm = { onChange: () => {}, offChange: () => {} };
-	const view = new HoardView(new WorkspaceLeaf(), plugin as never, dm as never);
+	const view = newHoardView({
+		onResolved: (cb) => { resolved = cb; },
+		badges: {
+			upcoming: { count: () => aired() + maybe(), refreshOn: 'data-change' },
+			drafts: { count: () => pending(), refreshOn: 'metadata-resolved' },
+		},
+	});
 	await view.onOpen();
 	const tabs = (): HTMLButtonElement[] => qsa<HTMLButtonElement>(view.contentEl, '.hoard-tab-bar__btn');
 	const label = (name: string): string | undefined => tabs().find((b) => b.textContent?.startsWith(name))?.textContent ?? undefined;

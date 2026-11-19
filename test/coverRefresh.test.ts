@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { ApiService } from '../src/ApiService';
-import type { Game } from '../src/types';
-import { steamLibraryCover } from '../src/steamStoreApi';
+import type { ApiService } from '../src/shared/api/ApiService';
+import type { Game } from '../src/modules/games/domain/model';
+import { steamLibraryCover } from '../src/shared/api/steamStoreApi';
 import { parse } from 'yaml';
-import { refreshAllCovers, resolveGameCover, searchBooks, type CoverRefreshDeps } from '../src/coverRefresh';
-import { ApiCheckQueue } from '../src/apiCheckQueue';
+import { CoverRefresher, resolveGameCover, searchBooks, type GameCoverApi, type ReadingCoverApi, type BookSearchApi } from '../src/shared/services/coverRefresh';
+import { ApiCheckQueue } from '../src/shared/api/apiCheckQueue';
 import { setupGames } from './helpers/setupGameDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
-import type { DataManager } from '../src/DataManager';
+import type { DataManager } from '../src/modules/watchlist/services/DataManager';
 import { setupDataManager } from './helpers/setupDataManager';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>
@@ -17,22 +17,21 @@ const GAME = (cover: string) => `---\nName: Hades\nStatus: Playing\nType: game\n
 const BOOK = '---\nName: Dune\nStatus: Reading\nType: book\nCover: https://mine\nExternal ID: gbooks:abc\n---\n';
 const MANGA = '---\nName: Berserk\nStatus: Reading\nType: manga\nCover: https://mine\nExternal ID: mal:manga:2\n---\n';
 
-type Api = Partial<CoverRefreshDeps['api']>;
+type Api = Partial<GameCoverApi & ReadingCoverApi & BookSearchApi>;
 
 async function run(files: Record<string, string>, api: Api, poster?: (dm: DataManager, id: string) => Promise<string | null>) {
 	const g = await setupGames(files);
 	const r = await setupReadingDataManager(files);
 	const d = await setupDataManager(files);
-	const deps: CoverRefreshDeps = {
-		api: { hasGoogleBooksKey: () => true, ...api } as CoverRefreshDeps['api'],
-		gamesApiSource: 'rawg',
-		dataManager: d.dm,
-		posterService: { enqueue: (t) => poster?.(d.dm, t.id) ?? Promise.resolve(null) },
-		readingData: r.rdm,
-		gameData: g.gdm,
-		queue: new ApiCheckQueue(2, 0),
-	};
-	const res = await refreshAllCovers(deps);
+	const refresher = new CoverRefresher(
+		{ hasGoogleBooksKey: () => true, ...api } as GameCoverApi & ReadingCoverApi & BookSearchApi,
+		d.dm,
+		{ enqueue: (t) => poster?.(d.dm, t.id) ?? Promise.resolve(null) },
+		r.rdm,
+		g.gdm,
+		new ApiCheckQueue(2, 0),
+	);
+	const res = await refresher.refreshAll({ gamesApiSource: 'rawg' });
 	return { res, g, r, d };
 }
 

@@ -1,8 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const CODECS = ['titleCodec', 'readingCodec', 'gameCodec'].map((n) => `src/storage/${n}.ts`);
-const MANAGERS = ['DataManager', 'ReadingDataManager', 'GameDataManager'].map((n) => `src/${n}.ts`);
+const CODECS = ['titleCodec', 'readingCodec', 'gameCodec'].map((n) => `src/shared/storage/${n}.ts`);
+const MANAGERS = [
+	'src/modules/watchlist/services/DataManager.ts',
+	'src/modules/reading/services/ReadingDataManager.ts',
+	'src/modules/games/services/GameDataManager.ts',
+];
 
 const Q = `['"]`; // either quote style
 const NO_LITERALS: Array<[string, RegExp]> = [

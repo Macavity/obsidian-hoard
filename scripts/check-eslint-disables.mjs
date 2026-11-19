@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Checks every eslint-disable directive under src/ the way the Obsidian review bot does:
 // a description (`-- reason`) is required, and the rules in DISALLOWED_RULES may not be disabled.
-// Exit 1 with a list of offenders, else 0.
+// Any `fallow-ignore` comment is refused too (fallow exceptions need the maintainer's approval). Exit 1 with a list of offenders, else 0.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DISALLOWED_RULES, findDisableIssues } from "./lib/eslint-disables.mjs";
+import { DISALLOWED_RULES, findFallowIgnores, findDisableIssues } from "./lib/eslint-disables.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const srcDir = join(root, "src");
@@ -16,7 +16,7 @@ const files = existsSync(srcDir)
 
 const offenders = files.flatMap((file) => {
 	const lines = readFileSync(file, "utf8").split("\n");
-	return findDisableIssues(lines).map((issue) => ({ file: relative(root, file).replace(/\\/g, "/"), ...issue }));
+	return [...findDisableIssues(lines), ...findFallowIgnores(lines)].map((issue) => ({ file: relative(root, file).replace(/\\/g, "/"), ...issue }));
 });
 
 if (offenders.length === 0) {
@@ -29,6 +29,7 @@ for (const { file, line, content, problem } of offenders) {
 	console.error(`  ${file}:${line}  ${problem}`);
 	console.error(`    ${content}\n`);
 }
+console.error("fallow-ignore comments are not allowed in src (exceptions need the maintainer's approval): fix the cause (docs/architecture/overview.md).");
 console.error("Every directive needs a description: // eslint-disable-next-line rule -- reason");
 console.error(`These rules can never be disabled: ${DISALLOWED_RULES.join(", ")}`);
 console.error("See .claude/skills/obsidian-ops/references/scorecard-compliance.md for how to fix them.\n");

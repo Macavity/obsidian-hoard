@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildImportedTitle, missingTypeNames } from '../src/CsvModal';
-import { mapImportRows } from '../src/csv/CsvModalBase';
+import { buildImportedTitle, missingTypeNames } from '../src/modules/watchlist/ui/CsvModal';
+import { mapImportRows } from '../src/design-system/CsvModalBase';
 
 describe('buildImportedTitle', () => {
 	it('fills defaults for a bare entry', () => {

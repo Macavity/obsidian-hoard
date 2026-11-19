@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createIconButton } from '../../src/ui/IconButton';
+import { createIconButton } from '../../src/design-system/IconButton';
 
 describe('createIconButton', () => {
 	const parent = () => document.createElement('div');

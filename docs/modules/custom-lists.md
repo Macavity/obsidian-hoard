@@ -3,22 +3,31 @@ type: Module
 title: Custom lists
 description: How a custom list is stored as a note with a JSON block, what a column and a row are, and how the auto time column is filled.
 source:
-  - src/CustomListsTab.ts
-  - src/ui/ColumnsEditor.ts
-  - src/storage/VaultLayout.ts
-  - src/types.ts
-source_commit: 295a691
+  - src/modules/custom-lists/domain/customList.ts
+  - src/modules/custom-lists/services/CustomListManager.ts
+  - src/modules/custom-lists/ui/CustomListsTab.ts
+  - src/app/wiring/customLists.ts
+  - src/design-system/ColumnsEditor.ts
+  - src/shared/domain/columns.ts
+  - src/shared/services/addRoute.ts
+  - src/shared/storage/VaultLayout.ts
+source_commit: cc203bf
 ---
 
 # Custom lists
 
 Free-form tables (name, typed columns, rows) beside the typed libraries. A list is one note under
 `<root>/CustomLists/`; the folder is excluded from entry classification, so lists have no
-[entry id](../concepts/entry-id.md), no codec and no place in `EntryIndex`. Everything lives in
-[CustomListsTab.ts](../../src/CustomListsTab.ts): the tab, `CustomListManager` (all file I/O,
-also used by the settings tab for default columns), `EditColumnsModal` / `DefaultColumnsModal`
-(both render [ColumnsEditor.ts](../../src/ui/ColumnsEditor.ts)), `NotesModal`, `ImportListModal`
-(paste TSV) and clipboard export (Markdown or TSV).
+[entry id](../concepts/entry-id.md), no codec and no place in `EntryIndex`. Three files:
+[CustomListManager.ts](../../src/modules/custom-lists/services/CustomListManager.ts) (all vault I/O; the UI gets an
+instance through the `CreateListManager` factory, also used by the settings tab for default columns),
+[CustomListsTab.ts](../../src/modules/custom-lists/ui/CustomListsTab.ts) (the tab, `EditColumnsModal` /
+`DefaultColumnsModal`, both rendering [ColumnsEditor.ts](../../src/design-system/ColumnsEditor.ts), `NotesModal`,
+`ListNameModal`, `ImportListModal` (paste TSV), `ExportFormatModal` and clipboard export (Markdown or TSV)) and
+[customList.ts](../../src/modules/custom-lists/domain/customList.ts) (`CustomList`, types only, module-internal: no `exports.ts`; column and row types are
+in [columns.ts](../../src/shared/domain/columns.ts)). [wiring/customLists.ts](../../src/app/wiring/customLists.ts)
+is the only place that `new`s the dialogs and the tab; the tab types its data sources against
+`TitleReader` / `TitleStats` / `ReadingReader` / `GameReader` roles.
 
 ## File format
 
@@ -74,18 +83,18 @@ The same idea as the entries' [baseline](../concepts/baseline.md), per list obje
 
 ## Model
 
-- `CustomListColumn`: `id` (`col_N`), `label`, `type` text / number / select, `locked`,
+- `CustomListColumn` (`columns.ts`): `id` (`col_N`), `label`, `type` text / number / select, `locked`,
   `options` + `optionColors`, `bold` / `italic`, `autoTime`, `width`.
-- `CustomListRow`: `id` (`row_N`), `checked`, `name` (built-in first column), one key per column id.
+- `CustomListRow` (`columns.ts`): `id` (`row_N`), `checked`, `name` (built-in first column), one key per column id.
   Removing a column strips its key from every row.
 
 ## Behaviour
 
 - Cells edit in place; every commit rewrites the `## Data` block through `saveList`. The name editor
-  autocompletes from all libraries, and a row can open the add flow via `openAddForTitle`
-  (`AddRouter`), shared with [drafts](drafts.md).
+  autocompletes from all libraries, and a row can open the add flow via the injected `openAdd`
+  (`OpenAddRoute`, built from `createAddRoute` in `app/AddRouter.ts`), shared with [drafts](drafts.md).
 - **Auto time column**: a number column with `autoTime` is filled by `autoPopulateTimeColumn`:
-  exact match of the row name against watchlist titles, then `DataManager.calcTimeRemainingForModal`;
+  exact match of the row name against watchlist titles, then `TitleStats.calcTimeRemainingForModal` (the watchlist manager);
   no match writes the string `Not found`; rows with an empty name are skipped and keep their value. Runs after saving columns and on the header refresh
   button, not on data changes. Books and games are not matched.
 - Name-cell editor: while open, a document-level capture guard swallows Escape so it never closes the view or modal. Escape keydown on the input itself passes the guard: it closes the suggestion dropdown if open, otherwise cancels the edit without saving (`handleEditKey`).
@@ -97,7 +106,7 @@ The same idea as the entries' [baseline](../concepts/baseline.md), per list obje
 |---|---|
 | File format, corrupt-file guard | `CustomListManager.parse` / `serialize` / `saveList`, `replaceDataBlock` / `replaceNotes` |
 | Foreign-edit guard | `CustomListManager.writeChecked` / `isStale`, `CustomListsTab.onVaultModify` / `onSaveConflict` |
-| Column types | `CustomListColumn` in `types.ts`, `ColumnsEditor.ts`, `renderCustomCell` |
+| Column types | `CustomListColumn` in `shared/domain/columns.ts`, `ColumnsEditor.ts`, `renderCustomCell` |
 | Inline editing and key navigation | `startNameEdit`, `handleEditKey`; where Tab / Shift+Tab / Enter lead is the pure `cellNavTarget`, `navigateCell` only clicks the target |
 | Auto time | `autoPopulateTimeColumn` |
 | Import and export | `ImportListModal`, `gatherExportData`, `buildMarkdown`, `buildTsv` |

@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
   "entry": [
-    "src/main.ts",
+    "src/app/main.ts",
     "src/styles/index.css",
     "scripts/*.mjs",
     "esbuild.config.mjs",
@@ -65,5 +65,368 @@
   },
   "rules": {
     "css-dead-surface": "off"
+  },
+  "boundaries": {
+    "zones": [
+      {
+        "name": "obsidian-mock",
+        "patterns": [
+          "test/__mocks__/obsidian.ts"
+        ]
+      },
+      {
+        "name": "test",
+        "patterns": [
+          "test/**"
+        ]
+      },
+      {
+        "name": "tooling",
+        "patterns": [
+          "scripts/**",
+          "*.mjs",
+          "vitest.config.ts"
+        ]
+      },
+      {
+        "name": "styles",
+        "patterns": [
+          "src/styles/**"
+        ]
+      },
+      {
+        "name": "app",
+        "patterns": [
+          "src/app/**"
+        ]
+      },
+      {
+        "name": "modules/airtime",
+        "patterns": [
+          "src/modules/airtime/**"
+        ]
+      },
+      {
+        "name": "modules/backup",
+        "patterns": [
+          "src/modules/backup/**"
+        ]
+      },
+      {
+        "name": "modules/custom-lists",
+        "patterns": [
+          "src/modules/custom-lists/**"
+        ]
+      },
+      {
+        "name": "modules/dashboard",
+        "patterns": [
+          "src/modules/dashboard/**"
+        ]
+      },
+      {
+        "name": "modules/drafts",
+        "patterns": [
+          "src/modules/drafts/**"
+        ]
+      },
+      {
+        "name": "modules/games",
+        "patterns": [
+          "src/modules/games/**"
+        ]
+      },
+      {
+        "name": "modules/import",
+        "patterns": [
+          "src/modules/import/**"
+        ]
+      },
+      {
+        "name": "modules/log",
+        "patterns": [
+          "src/modules/log/**"
+        ]
+      },
+      {
+        "name": "modules/reading",
+        "patterns": [
+          "src/modules/reading/**"
+        ]
+      },
+      {
+        "name": "modules/settings",
+        "patterns": [
+          "src/modules/settings/**"
+        ]
+      },
+      {
+        "name": "modules/watchlist",
+        "patterns": [
+          "src/modules/watchlist/**"
+        ]
+      },
+      {
+        "name": "modules/widgets",
+        "patterns": [
+          "src/modules/widgets/**"
+        ]
+      },
+      {
+        "name": "design-system",
+        "patterns": [
+          "src/design-system/**"
+        ]
+      },
+      {
+        "name": "shared",
+        "patterns": [
+          "src/shared/**"
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "from": "test",
+        "allow": [
+          "obsidian-mock",
+          "tooling",
+          "styles",
+          "app",
+          "modules/airtime",
+          "modules/backup",
+          "modules/custom-lists",
+          "modules/dashboard",
+          "modules/drafts",
+          "modules/games",
+          "modules/import",
+          "modules/log",
+          "modules/reading",
+          "modules/settings",
+          "modules/watchlist",
+          "modules/widgets",
+          "design-system",
+          "shared"
+        ]
+      },
+      {
+        "from": "tooling",
+        "allow": [
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "styles",
+        "allow": []
+      },
+      {
+        "from": "app",
+        "allow": [
+          "modules/airtime",
+          "modules/backup",
+          "modules/custom-lists",
+          "modules/dashboard",
+          "modules/drafts",
+          "modules/games",
+          "modules/import",
+          "modules/log",
+          "modules/reading",
+          "modules/settings",
+          "modules/watchlist",
+          "modules/widgets",
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "obsidian-mock",
+        "allow": []
+      },
+      {
+        "from": "modules/airtime",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/settings"
+        ]
+      },
+      {
+        "from": "modules/backup",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock",
+          "modules/games",
+          "modules/settings"
+        ],
+        "allowTypeOnly": [
+          "modules/reading",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/custom-lists",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "modules/games",
+          "modules/reading",
+          "modules/settings",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/dashboard",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/settings"
+        ]
+      },
+      {
+        "from": "modules/drafts",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "modules/games",
+          "modules/reading",
+          "modules/settings",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "modules/games",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "modules/airtime",
+          "modules/settings"
+        ]
+      },
+      {
+        "from": "modules/import",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock",
+          "modules/airtime",
+          "modules/games",
+          "modules/settings",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/drafts",
+          "modules/reading"
+        ]
+      },
+      {
+        "from": "modules/log",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "modules/reading",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock",
+          "modules/settings"
+        ],
+        "allowTypeOnly": [
+          "modules/airtime"
+        ]
+      },
+      {
+        "from": "modules/settings",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock",
+          "modules/reading",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/backup",
+          "modules/games"
+        ]
+      },
+      {
+        "from": "modules/watchlist",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock",
+          "modules/airtime",
+          "modules/games"
+        ],
+        "allowTypeOnly": [
+          "modules/drafts",
+          "modules/reading",
+          "modules/settings"
+        ]
+      },
+      {
+        "from": "modules/widgets",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ],
+        "allowTypeOnly": [
+          "modules/airtime",
+          "modules/settings",
+          "modules/watchlist"
+        ]
+      },
+      {
+        "from": "design-system",
+        "allow": [
+          "shared",
+          "obsidian-mock"
+        ]
+      },
+      {
+        "from": "shared",
+        "allow": [
+          "obsidian-mock",
+          "modules/games",
+          "modules/reading",
+          "modules/watchlist"
+        ],
+        "allowTypeOnly": [
+          "modules/airtime",
+          "modules/drafts",
+          "modules/settings"
+        ]
+      }
+    ],
+    "coverage": {
+      "requireAllFiles": true
+    }
   }
 }

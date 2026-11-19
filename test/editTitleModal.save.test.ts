@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { EditTitleModal } from '../src/EditTitleModal';
-import type { HoardTitle } from '../src/types';
+import { EditTitleModal } from '../src/modules/watchlist/ui/EditTitleModal';
+import { fakeSettings } from './helpers/fakeSettings';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
 
 const ORIGINAL: HoardTitle = {
 	id: 'TV Show/Dark', title: 'Dark', type: 'TV Show', status: 'Completed', priority: '', review: 'Good', rating: 4, notes: 'n',
@@ -18,7 +19,7 @@ function setup(original: HoardTitle) {
 		getTitles: () => [original],
 		updateTitle: (t: HoardTitle) => { updated.push(structuredClone(t)); return Promise.resolve(); },
 	};
-	const modal = new EditTitleModal({} as never, { settings: { types: [] } } as never, dataManager as never, original, () => {});
+	const modal = new EditTitleModal({} as never, fakeSettings({ types: [] }) as never, dataManager as never, { title: original, onSaved: () => {} });
 	return { form: modal as unknown as Form, updated };
 }
 

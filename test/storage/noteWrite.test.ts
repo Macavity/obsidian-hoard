@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFakeApp } from '../fakes/fakeApp';
-import { VaultLayout } from '../../src/storage/VaultLayout';
-import { getBaseline } from '../../src/storage/baseline';
-import type { ManagerNotice } from '../../src/storage/storageTypes';
+import { VaultLayout } from '../../src/shared/storage/VaultLayout';
+import { getBaseline } from '../../src/shared/storage/baseline';
+import type { ManagerNotice } from '../../src/shared/storage/storageTypes';
 import {
 	dropOldId, ensureFolder, freeNotePath, noteFile, parentOf, rewriteOwnedKeys, setChangedKeys, trashNote, writeEntry,
 	type EntryWriteHooks, type NoteIo,
-} from '../../src/storage/noteWrite';
+} from '../../src/shared/storage/noteWrite';
 
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -15,21 +15,21 @@ afterEach(() => {
 describe('noteFile', () => {
 	it('finds a file, and neither a folder nor nothing', () => {
 		const { app } = createFakeApp({ 'W/Movie/A.md': 'a' });
-		expect(noteFile(app, 'W/Movie/A.md')?.path).toBe('W/Movie/A.md');
-		expect(noteFile(app, 'W/Movie')).toBeNull();
-		expect(noteFile(app, 'W/Movie/B.md')).toBeNull();
+		expect(noteFile(app.vault, 'W/Movie/A.md')?.path).toBe('W/Movie/A.md');
+		expect(noteFile(app.vault, 'W/Movie')).toBeNull();
+		expect(noteFile(app.vault, 'W/Movie/B.md')).toBeNull();
 	});
 });
 
 describe('freeNotePath', () => {
 	it('keeps a free path', () => {
 		const { app } = createFakeApp({});
-		expect(freeNotePath(app, 'W/Movie/A.md')).toBe('W/Movie/A.md');
+		expect(freeNotePath(app.vault, 'W/Movie/A.md')).toBe('W/Movie/A.md');
 	});
 
 	it('counts up from 2 past the names that are taken', () => {
 		const { app } = createFakeApp({ 'W/Movie/A.md': '', 'W/Movie/A 2.md': '', 'W/Movie/A 4.md': '' });
-		expect(freeNotePath(app, 'W/Movie/A.md')).toBe('W/Movie/A 3.md');
+		expect(freeNotePath(app.vault, 'W/Movie/A.md')).toBe('W/Movie/A 3.md');
 	});
 });
 
@@ -43,7 +43,7 @@ describe('parentOf', () => {
 describe('ensureFolder', () => {
 	it('creates a missing folder with its parents', async () => {
 		const { app } = createFakeApp({});
-		await ensureFolder(app, 'W/Movie');
+		await ensureFolder(app.vault, 'W/Movie');
 		expect(app.vault.getAbstractFileByPath('W/Movie')).not.toBeNull();
 		expect(app.vault.getAbstractFileByPath('W')).not.toBeNull();
 	});
@@ -51,30 +51,30 @@ describe('ensureFolder', () => {
 	it('does not create a folder that exists, nor the vault root', async () => {
 		const { app } = createFakeApp({ 'W/Movie/A.md': '' });
 		const create = vi.spyOn(app.vault, 'createFolder');
-		await ensureFolder(app, 'W/Movie');
-		await ensureFolder(app, '');
-		await ensureFolder(app, '/');
+		await ensureFolder(app.vault, 'W/Movie');
+		await ensureFolder(app.vault, '');
+		await ensureFolder(app.vault, '/');
 		expect(create).not.toHaveBeenCalled();
 	});
 
 	it('is fine with a folder that appeared in the meantime', async () => {
 		const { app } = createFakeApp({});
 		vi.spyOn(app.vault, 'createFolder').mockRejectedValueOnce(new Error('Folder already exists.'));
-		await expect(ensureFolder(app, 'W/Movie')).resolves.toBeUndefined();
+		await expect(ensureFolder(app.vault, 'W/Movie')).resolves.toBeUndefined();
 	});
 });
 
 describe('trashNote', () => {
 	it('trashes the note at the path', async () => {
 		const { app, files } = createFakeApp({ 'W/Movie/A.md': 'a', 'W/Movie/B.md': 'b' });
-		await trashNote(app, 'W/Movie/A.md');
+		await trashNote(app.vault, app.fileManager, 'W/Movie/A.md');
 		expect([...files.keys()]).toEqual(['W/Movie/B.md']);
 	});
 
 	it('does nothing for a path without a note', async () => {
 		const { app, files } = createFakeApp({ 'W/Movie/A.md': 'a' });
-		await trashNote(app, 'W/Movie/B.md');
-		await trashNote(app, 'W/Movie');
+		await trashNote(app.vault, app.fileManager, 'W/Movie/B.md');
+		await trashNote(app.vault, app.fileManager, 'W/Movie');
 		expect([...files.keys()]).toEqual(['W/Movie/A.md']);
 	});
 });
@@ -104,7 +104,7 @@ function harness(files: Record<string, string>, opts: { baseline?: Entry; live?:
 		create: () => { calls.push('create'); return Promise.resolve(); },
 		...opts.hooks,
 	};
-	const io: NoteIo = { app: f.app, layout: () => layout, notify: (n) => { notices.push(n); } };
+	const io: NoteIo = { vault: f.app.vault, fileManager: f.app.fileManager, layout: () => layout, notify: (n) => { notices.push(n); } };
 	return { f, io, hooks, calls, written, notices, write: (entry: Entry) => writeEntry(io, hooks, entry) };
 }
 
@@ -278,12 +278,14 @@ describe('rewriteOwnedKeys', () => {
 });
 
 describe('dropOldId', () => {
+	interface Slot { src: { id: string }; view: { id: string } }
+	const slot = (id: string): Slot => ({ src: { id }, view: { id } });
 	const state = (pending: string[]) => {
 		const removed: string[] = [];
 		return {
 			removed,
 			index: { removeLocal: (id: string) => { removed.push(id); } },
-			views: new Map<string, unknown>([['Books/A', 'view of A'], ['Books/C', 'view of C']]),
+			views: new Map<string, Slot>([['Books/A', slot('Books/A')], ['Books/C', slot('Books/C')]]),
 			dirty: new Set(pending),
 		};
 	};
@@ -300,5 +302,15 @@ describe('dropOldId', () => {
 		const s = state(['Books/A', 'Books/C']);
 		dropOldId(s, 'Books/A', 'Books/B');
 		expect([...s.dirty].sort()).toEqual(['Books/B', 'Books/C']);
+	});
+
+	it('moves the view of a pending id to the new id, same object, carrying the new id', () => {
+		const s = state(['Books/A']);
+		const view = s.views.get('Books/A')!.view;
+		dropOldId(s, 'Books/A', 'Books/B');
+		expect(s.views.has('Books/A')).toBe(false);
+		expect(s.views.get('Books/B')!.view).toBe(view);
+		expect(view.id).toBe('Books/B');
+		expect(s.views.get('Books/B')!.src.id).toBe('Books/B');
 	});
 });

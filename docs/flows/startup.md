@@ -3,18 +3,18 @@ type: Flow
 title: Startup
 description: What happens from plugin load to a ready library, including fresh install, second device and the WatchLog import offer.
 source:
-  - src/main.ts
-  - src/storage/LocalStore.ts
-  - src/storage/SharedConfigStore.ts
-  - src/storage/VaultLayout.ts
-  - src/storage/EntryIndex.ts
-  - src/settingsSplit.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+  - src/app/main.ts
+  - src/shared/storage/LocalStore.ts
+  - src/shared/storage/SharedConfigStore.ts
+  - src/shared/storage/VaultLayout.ts
+  - src/shared/storage/EntryIndex.ts
+  - src/modules/settings/services/settingsSplit.ts
+source_commit: cc203bf
 ---
 
 # Startup
 
-Trigger: Obsidian enables the plugin. Two phases in [main.ts](../../src/main.ts): `onload` runs
+Trigger: Obsidian enables the plugin. Two phases in [main.ts](../../src/app/main.ts): `onload` runs
 with only `data.json` (its first call is `setLocale(getLanguage())`, see [i18n](../architecture/i18n.md)), `startVaultStorage` runs once the workspace layout is ready (vault and
 metadata cache usable).
 
@@ -50,13 +50,14 @@ sequenceDiagram
    for the session (such a file is never overwritten; for WatchLog Hoard starts empty); both show a
    sticky Notice, since device settings typed in that session are not saved.
 2. **`loadSettings`** composes defaults + local + secret storage (+ shared, empty for now) and mirrors the date
-   format into `types.ts`; the card-size CSS variable is set before any grid renders. Then
+   format into [date.ts](../../src/shared/domain/date.ts) (`setActiveDateFormat`); the card-size CSS variable is set before any grid renders. Then
    `maybeShowSecretsNotice` shows a sticky one-time Notice (flag `hoard-secrets-notice` in
    `app.saveLocalStorage`) when `data.json` carries the `secretsInStorage` marker but this device's
    secret storage is empty: keys do not sync.
 3. Services and UI are registered: `ApiService` with the keys, managers get the `HistoryManager`,
-   `History.md` is loaded, the 60 s airtime scheduler starts, view, commands, `WidgetRenderer`,
-   settings tab and status bar are registered.
+   `History.md` is loaded, the per-module UI factories of `src/app/wiring/` (`watchlistUi`, `airtimeUi`, ...,
+   the only place that `new`s their dialogs and tabs) are built, the 60 s airtime scheduler starts, view
+   (tabs from `hoardTabs`), commands, `WidgetRenderer`, settings tab and status bar are registered.
 4. **`startVaultStorage`**: `detectRoot` (the folder of the first base with `hoard:`, else `Hoard`)
    builds the `VaultLayout`.
 5. **Fresh install** (no base): `deferBase` registers a creator; the base is
@@ -81,5 +82,6 @@ sequenceDiagram
 - A failing wizard is caught inside `runOnboarding` (console error) and startup continues.
 - Type-name changes after start trigger `syncTypeNames` → `index.rebuild()`.
 
-Shutdown (`onunload`) flushes pending debounced note and cache writes synchronously, stops the
-index and the shared store, and flushes `LocalStore` last.
+Shutdown (`onunload`) flushes pending debounced note and cache writes synchronously, flushes the
+reading and game managers and a pending `SettingsService.stage`, stops the index and the shared
+store, and flushes `LocalStore` last.

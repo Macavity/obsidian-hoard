@@ -1,6 +1,8 @@
+import { searchBooks } from '../src/shared/services/coverRefresh';
 import { describe, expect, it, vi } from 'vitest';
-import { AddReadingModal, type ReadingMode } from '../src/AddReadingModal';
-import { t } from '../src/i18n';
+import { AddReadingModal, type ReadingMode } from '../src/modules/reading/ui/AddReadingModal';
+import { t } from '../src/shared/i18n';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const flush = () => new Promise<void>((r) => setTimeout(r, 0));
 
@@ -27,20 +29,27 @@ function setup(mode: ReadingMode, over: ApiOver = {}, opts: { prefill?: string; 
 		getMangaByMalId: vi.fn((id: number) => Promise.resolve(over.single !== undefined ? over.single : (id === 7 ? over.mangaDetail : null))),
 		getGoogleBookById: vi.fn(() => Promise.resolve(over.bookDetail ?? null)),
 	};
-	const plugin = {
-		settings: { booksApiSource: over.source ?? 'google' },
-		apiService: api,
-		readingDataManager: {
-			getBooks: () => [{ title: 'Dune', googleBooksId: 'g-owned' }],
-			getMangaList: () => [{ title: 'Berserk', malId: '2' }],
-		},
-	};
 	const added: unknown[] = [];
-	const readingData = { getSettings: () => ({}), generateBookId: () => 'b1', addBook: vi.fn((b: unknown) => { added.push(b); return Promise.resolve(); }) };
+	const reading = {
+		getBooks: () => [{ title: 'Dune', googleBooksId: 'g-owned' }],
+		getMangaList: () => [{ title: 'Berserk', malId: '2' }],
+		getSettings: () => ({}),
+		generateBookId: () => 'b1',
+		addBook: vi.fn((b: unknown) => { added.push(b); return Promise.resolve(); }),
+	};
 	const initial = opts.initialState
 		? { id: 'x', state: { vaultPage: 'a.md' } as never }
 		: undefined;
-	const modal = new AddReadingModal({} as never, plugin as never, readingData as never, mode, () => {}, initial, opts.prefill);
+	const modal = new AddReadingModal(
+		{} as never,
+		fakeSettings({ booksApiSource: over.source ?? 'google' }) as never,
+		reading as never,
+		{} as never,
+		{} as never,
+		searchBooks,
+		api as never,
+		{ mode, onSaved: () => {}, initial, prefillSearch: opts.prefill },
+	);
 	modal.open();
 	const results = () => modal.contentEl.querySelector('.hoard-modal__results') as HTMLElement;
 	const state = () => (modal as unknown as { state: Record<string, unknown> }).state;

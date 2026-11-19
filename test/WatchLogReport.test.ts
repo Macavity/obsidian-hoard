@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../src/i18n';
-import { reportMarkdown, reviewDetail } from '../src/WatchLogReport';
-import type { ImportReport } from '../src/import/watchlog/report';
+import { setLocale } from '../src/shared/i18n';
+import { reportMarkdown, reviewDetail } from '../src/modules/import/ui/WatchLogReport';
+import type { ImportReport } from '../src/modules/import/domain/importReport';
 
 const report: ImportReport = {
 	created: 1, filled: 0,

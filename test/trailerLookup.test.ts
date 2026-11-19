@@ -1,8 +1,10 @@
 import { requestUrl } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService } from '../src/ApiService';
-import { TitleDetailModal } from '../src/TitleDetailModal';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
+import { ApiService } from '../src/shared/api/ApiService';
+import { fakeSettings } from './helpers/fakeSettings';
+import { newTitleDetail } from './helpers/newTitleDetail';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import { setupDataManager } from './helpers/setupDataManager';
 
 const sent = vi.mocked(requestUrl);
@@ -140,8 +142,7 @@ describe('maybeBackfillTrailer', () => {
 	const NOTE = '---\nName: Dune\nType: Movie\nExternal ID: tmdb:movie:438631\nCover: https://p/x.jpg\n---\n';
 	const open = async (api: ApiService) => {
 		const { dm } = await setupDataManager({ 'W/Movie/Dune.md': NOTE });
-		const plugin = { settings: { ...DEFAULT_SETTINGS }, dataManager: dm, apiService: api };
-		const modal = new TitleDetailModal({} as never, plugin as never, dm.getTitle('Movie/Dune')!);
+		const modal = newTitleDetail({ settings: fakeSettings({ ...DEFAULT_SETTINGS }), titles: dm, api }, { title: dm.getTitle('Movie/Dune')! });
 		const backfill = () => (modal as unknown as { maybeBackfillTrailer: () => Promise<void> }).maybeBackfillTrailer();
 		return { dm, backfill };
 	};

@@ -1,8 +1,8 @@
 import { requestUrl } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, apiErrorMessage, apiErrorShort, requestVia } from '../src/ApiService';
-import type { JikanEndpoint } from '../src/jikanBase';
-import type { HoardTitle } from '../src/types';
+import { ApiService, apiErrorMessage, apiErrorShort, requestVia } from '../src/shared/api/ApiService';
+import type { JikanEndpoint } from '../src/shared/api/jikanBase';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
 import anilistMedia from './fixtures/anilist-media.json';
 import anilistSearch from './fixtures/anilist-search.json';
 import jikanAnime from './fixtures/jikan-anime.json';

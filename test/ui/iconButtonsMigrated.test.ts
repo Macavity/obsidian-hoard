@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { renderSearchBox } from '../../src/ui/TabToolbar';
-import { renderSearchHelpButton } from '../../src/SearchHelpModal';
-import { renderActionBar } from '../../src/ui/ActionBar';
-import { createDatePicker } from '../../src/DatePicker';
+import { renderSearchBox } from '../../src/design-system/TabToolbar';
+import { renderSearchHelpButton } from '../../src/design-system/SearchHelpModal';
+import { renderActionBar } from '../../src/design-system/ActionBar';
+import { createDatePicker } from '../../src/design-system/DatePicker';
 
 (globalThis as { activeDocument?: Document }).activeDocument = document;
 
@@ -24,14 +24,14 @@ describe('migrated icon buttons', () => {
 
 	it('search help button carries the help-circle icon', () => {
 		const wrap = document.createElement('div');
-		const btn = renderSearchHelpButton(wrap, {} as never, 'Tab', () => []);
+		const btn = renderSearchHelpButton(wrap, vi.fn(), 'Tab', () => []);
 		expect(btn.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(btn.getAttribute('data-icon')).toBe('help-circle');
 	});
 
 	it('selection action bar delete is an x icon button', () => {
 		const parent = document.createElement('div');
-		const bar = renderActionBar(parent, {} as never, { title: 'Delete', selected: new Set(['a']), message: () => 'm', onConfirm: () => Promise.resolve() });
+		const bar = renderActionBar(parent, vi.fn(), { title: 'Delete', selected: new Set(['a']), message: () => 'm', onConfirm: () => Promise.resolve() });
 		const btn = bar.querySelector<HTMLButtonElement>('button.hoard-group-header__action-btn--delete')!;
 		expect(btn.classList.contains('hoard-icon-btn')).toBe(true);
 		expect(btn.getAttribute('data-icon')).toBe('x');

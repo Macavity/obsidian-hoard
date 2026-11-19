@@ -3,12 +3,12 @@ type: Domain
 title: External id
 description: The External ID property, its source:kind:id grammar, and how it is derived from links and API ids.
 source:
-  - src/storage/externalId.ts
-  - src/storage/titleCodec.ts
-  - src/storage/readingCodec.ts
-  - src/storage/gameCodec.ts
-  - src/LibraryIndex.ts
-source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
+  - src/shared/storage/externalId.ts
+  - src/shared/storage/titleCodec.ts
+  - src/shared/storage/readingCodec.ts
+  - src/shared/storage/gameCodec.ts
+  - src/shared/services/LibraryIndex.ts
+source_commit: cc203bf
 ---
 
 # External id
@@ -22,7 +22,7 @@ survives sync and hand edits: `source:id` or `source:kind:id`.
 | `mal`, `anilist` | `anime` / `manga` | `mal:anime:5114` |
 | `imdb`, `gbooks`, `openlibrary`, `rawg`, `igdb`, `steam` | none | `imdb:tt0903747`, `openlibrary:OL45883W`, `steam:620` |
 
-[externalId.ts](../../src/storage/externalId.ts): `parseExternalId` (null on unknown source,
+[externalId.ts](../../src/shared/storage/externalId.ts): `parseExternalId` (null on unknown source,
 missing kind, or an id outside `[\w-]+`), `formatExternalId`, and `externalIdFromLink` which derives
 the identity from a pasted IMDb, TMDB, MyAnimeList or AniList URL, one small matcher per host
 (`LINK_MATCHERS`). Only title sources derive from links: Open Library and Steam URLs are not matched,
@@ -30,7 +30,7 @@ since only titles call it and books and games carry their id in their own fields
 
 ## Per kind
 
-- **Titles** ([titleCodec](../../src/storage/titleCodec.ts)): on decode, `External ID` wins over cached
+- **Titles** ([titleCodec](../../src/shared/storage/titleCodec.ts)): on decode, `External ID` wins over cached
   ids and sets `tmdbId`+`tmdbMediaType`, `malId` or `anilistId`; an `imdb` id without a link
   synthesises `URL`. On encode, `identityFor` picks the first available in order
   MAL → AniList → TMDB for type `Anime`, TMDB → MAL → AniList otherwise, then falls back to the link.
@@ -45,7 +45,7 @@ since only titles call it and books and games carry their id in their own fields
 
 ## Duplicate detection
 
-[LibraryIndex.ts](../../src/LibraryIndex.ts) keys the library by the same vocabulary (`mal:`,
+[LibraryIndex.ts](../../src/shared/services/LibraryIndex.ts) keys the library by the same vocabulary (`mal:`,
 `anilist:`, `tmdb:<type>:`, `imdb:`, `gbooks:`, `openlibrary:`, `<source>:<id>` and `steam:<steamAppId>`
 for games) plus a normalised title key, so an add modal can warn before creating a second note for
 the same work. A movie/TV search row's keys depend on the effective source

@@ -9,11 +9,12 @@ import {
 	resultIdKeys,
 	searchTitles,
 	type TitlePick,
-} from '../src/titleSearch';
-import type { AnimeSearchResult, MediaSearchResult } from '../src/types';
-import { SEARCH_RESULT_LIMIT } from '../src/ApiService';
+} from '../src/shared/services/titleSearch';
+import type { AnimeSearchResult, MediaSearchResult } from '../src/modules/watchlist/domain/model';
+import { SEARCH_RESULT_LIMIT } from '../src/shared/api/ApiService';
+import { fakeSettings } from './helpers/fakeSettings';
 
-function makePlugin(rawSettings: Record<string, unknown>, keys: { omdb?: boolean; tmdb?: boolean } = {}) {
+function makeDeps(rawSettings: Record<string, unknown>, keys: { omdb?: boolean; tmdb?: boolean } = {}) {
 	const settings = { ...rawSettings, activeApi: rawSettings.activeApi ?? 'OMDb' };
 	// legacy cases name OMDb/TMDB explicitly (or rely on the default) and test the keyed path
 	const omdb = keys.omdb ?? settings.activeApi !== 'TMDB';
@@ -35,7 +36,7 @@ function makePlugin(rawSettings: Record<string, unknown>, keys: { omdb?: boolean
 		getTmdbMovieDetails: vi.fn().mockResolvedValue('tmdb-movie'),
 		getOmdbMovieDetails: vi.fn().mockResolvedValue('omdb-movie'),
 	};
-	return { plugin: { apiService: api, settings } as never, api };
+	return { deps: { api: api as never, settings: fakeSettings(settings) as never }, api };
 }
 
 const media = (mediaType: 'movie' | 'tv'): MediaSearchResult => ({
@@ -44,66 +45,66 @@ const media = (mediaType: 'movie' | 'tv'): MediaSearchResult => ({
 
 describe('searchTitles', () => {
 	it('returns null for a type without an API', async () => {
-		const { plugin } = makePlugin({ typeApiMapping: {} });
-		expect(await searchTitles(plugin, 'Books', 'q', '')).toBeNull();
+		const { deps } = makeDeps({ typeApiMapping: {} });
+		expect(await searchTitles(deps.settings, deps.api, 'Books', 'q', '')).toBeNull();
 	});
 
 	it('uses the mapping for custom types', async () => {
-		const { plugin, api } = makePlugin({ typeApiMapping: { Docs: 'movie' } });
-		expect(await searchTitles(plugin, 'Docs', 'q', '1999')).toEqual(['omdb']);
+		const { deps, api } = makeDeps({ typeApiMapping: { Docs: 'movie' } });
+		expect(await searchTitles(deps.settings, deps.api, 'Docs', 'q', '1999')).toEqual(['omdb']);
 		expect(api.searchOmdb).toHaveBeenCalledWith('q', 'series', '1999');
 	});
 
 	it('searches Jikan with the result limit by default', async () => {
-		const { plugin, api } = makePlugin({});
-		expect(await searchTitles(plugin, 'Anime', 'q', '2001')).toEqual(['jikan']);
+		const { deps, api } = makeDeps({});
+		expect(await searchTitles(deps.settings, deps.api, 'Anime', 'q', '2001')).toEqual(['jikan']);
 		expect(api.searchAnime).toHaveBeenCalledWith('q', '2001', SEARCH_RESULT_LIMIT);
 	});
 
 	it('searches AniList when configured', async () => {
-		const { plugin, api } = makePlugin({ animeApiSource: 'anilist' });
-		expect(await searchTitles(plugin, 'Anime', 'q', '')).toEqual(['anilist']);
+		const { deps, api } = makeDeps({ animeApiSource: 'anilist' });
+		expect(await searchTitles(deps.settings, deps.api, 'Anime', 'q', '')).toEqual(['anilist']);
 		expect(api.searchAniList).toHaveBeenCalledWith('q', '');
 	});
 
 	it('maps Movie to the movie kind on TMDB', async () => {
-		const { plugin, api } = makePlugin({ activeApi: 'TMDB' });
-		expect(await searchTitles(plugin, 'Movie', 'q', '')).toEqual(['tmdb']);
+		const { deps, api } = makeDeps({ activeApi: 'TMDB' });
+		expect(await searchTitles(deps.settings, deps.api, 'Movie', 'q', '')).toEqual(['tmdb']);
 		expect(api.searchTmdb).toHaveBeenCalledWith('q', 'movie', '');
 	});
 });
 
 describe('keyless routing', () => {
 	it('falls back to cinemeta when OMDb has no key', async () => {
-		const { plugin, api } = makePlugin({ activeApi: 'OMDb' }, { omdb: false });
-		expect(await searchTitles(plugin, 'Movie', 'q', '')).toEqual(['cinemeta']);
+		const { deps, api } = makeDeps({ activeApi: 'OMDb' }, { omdb: false });
+		expect(await searchTitles(deps.settings, deps.api, 'Movie', 'q', '')).toEqual(['cinemeta']);
 		expect(api.searchCinemeta).toHaveBeenCalledWith('q', 'movie', '');
 		expect(api.searchOmdb).not.toHaveBeenCalled();
 	});
 
 	it('uses OMDb once it has a key', async () => {
-		const { plugin, api } = makePlugin({ activeApi: 'OMDb' }, { omdb: true });
-		expect(await searchTitles(plugin, 'Movie', 'q', '')).toEqual(['omdb']);
+		const { deps, api } = makeDeps({ activeApi: 'OMDb' }, { omdb: true });
+		expect(await searchTitles(deps.settings, deps.api, 'Movie', 'q', '')).toEqual(['omdb']);
 		expect(api.searchCinemeta).not.toHaveBeenCalled();
 	});
 
 	it('searches cinemeta by default and fetches its details', async () => {
-		const { plugin, api } = makePlugin({ activeApi: 'Cinemeta' });
-		expect(await searchTitles(plugin, 'TV Show', 'q', '')).toEqual(['cinemeta']);
+		const { deps, api } = makeDeps({ activeApi: 'Cinemeta' });
+		expect(await searchTitles(deps.settings, deps.api, 'TV Show', 'q', '')).toEqual(['cinemeta']);
 		expect(api.searchCinemeta).toHaveBeenCalledWith('q', 'series', '');
-		expect(await fetchMediaDetails(plugin, media('tv'))).toBe('cinemeta-detail');
+		expect(await fetchMediaDetails(deps.settings, deps.api, media('tv'))).toBe('cinemeta-detail');
 		expect(api.getCinemetaDetails).toHaveBeenCalledWith('tt1', 'tv');
 	});
 
 	it('keeps the cinemeta poster in the pick only for cinemeta', async () => {
-		const { plugin, api } = makePlugin({ activeApi: 'Cinemeta' });
+		const { deps, api } = makeDeps({ activeApi: 'Cinemeta' });
 		api.getCinemetaDetails.mockResolvedValue({ ...media('movie'), posterUrl: 'https://p/1.jpg' });
 		const apply = vi.fn<(p: TitlePick) => void>();
-		await resolvePick(plugin, media('movie'), () => true, apply);
+		await resolvePick(deps.settings, deps.api, media('movie'), () => true, apply);
 		expect(apply.mock.calls[0]![0].posterUrl).toBe('https://p/1.jpg');
-		const keyed = makePlugin({ activeApi: 'OMDb' });
+		const keyed = makeDeps({ activeApi: 'OMDb' });
 		const applyKeyed = vi.fn<(p: TitlePick) => void>();
-		await resolvePick(keyed.plugin, media('movie'), () => true, applyKeyed);
+		await resolvePick(keyed.deps.settings, keyed.deps.api, media('movie'), () => true, applyKeyed);
 		expect(applyKeyed.mock.calls[0]![0].posterUrl).toBeUndefined();
 	});
 });
@@ -115,8 +116,8 @@ describe('fetchMediaDetails', () => {
 		['OMDb', 'tv', 'omdb-tv'],
 		[undefined, 'movie', 'omdb-movie'],
 	] as const)('%s %s', async (activeApi, mediaType, expected) => {
-		const { plugin } = makePlugin({ activeApi });
-		expect(await fetchMediaDetails(plugin, media(mediaType))).toBe(expected);
+		const { deps } = makeDeps({ activeApi });
+		expect(await fetchMediaDetails(deps.settings, deps.api, media(mediaType))).toBe(expected);
 	});
 });
 
@@ -152,61 +153,61 @@ describe('resolvePick', () => {
 	const full = { ...media('tv'), title: 'Full', episodeDuration: 40, director: ['D'], studio: ['S'] };
 
 	it('applies an anime pick without fetching', async () => {
-		const { plugin, api } = makePlugin({});
+		const { deps, api } = makeDeps({});
 		const apply = vi.fn();
-		expect(await resolvePick(plugin, anime(), () => true, apply)).toBe(true);
+		expect(await resolvePick(deps.settings, deps.api, anime(), () => true, apply)).toBe(true);
 		expect((apply.mock.calls[0]![0] as TitlePick).animeIds).toEqual({ malId: 7, anilistId: null });
 		expect(api.getOmdbTvDetails).not.toHaveBeenCalled();
 	});
 
 	it('prefers AniList ids, falls back to MAL and clears credits', async () => {
-		const { plugin } = makePlugin({});
+		const { deps } = makeDeps({});
 		const apply = vi.fn<(p: TitlePick) => void>();
-		await resolvePick(plugin, anime({ anilistId: 3, trailerUrl: 'yt' }), () => true, apply);
+		await resolvePick(deps.settings, deps.api, anime({ anilistId: 3, trailerUrl: 'yt' }), () => true, apply);
 		const pick = apply.mock.calls[0]![0];
 		expect(pick.animeIds).toEqual({ malId: null, anilistId: 3 });
 		expect(pick.trailer).toEqual({ status: 'found', value: 'yt' });
 		expect([pick.director, pick.cast, pick.studio]).toEqual([[], [], []]);
-		await resolvePick(plugin, anime({ anilistId: 0 }), () => true, apply);
+		await resolvePick(deps.settings, deps.api, anime({ anilistId: 0 }), () => true, apply);
 		expect(apply.mock.calls[1]![0].animeIds).toEqual({ malId: 7, anilistId: null });
 	});
 
 	it('applies the detail record for movie/TV rows', async () => {
-		const { plugin, api } = makePlugin({});
+		const { deps, api } = makeDeps({});
 		api.getOmdbTvDetails.mockResolvedValue(full);
 		const apply = vi.fn<(p: TitlePick) => void>();
-		expect(await resolvePick(plugin, media('tv'), () => true, apply)).toBe(true);
+		expect(await resolvePick(deps.settings, deps.api, media('tv'), () => true, apply)).toBe(true);
 		expect(apply.mock.calls[0]![0]).toMatchObject({ title: 'Full', duration: 40, director: ['D'], studio: ['S'], cast: [] });
 		expect(apply.mock.calls[0]![0].animeIds).toBeUndefined();
 	});
 
 	it('falls back to the search row when the detail record is missing', async () => {
-		const { plugin, api } = makePlugin({});
+		const { deps, api } = makeDeps({});
 		api.getOmdbTvDetails.mockResolvedValue(null);
 		const apply = vi.fn<(p: TitlePick) => void>();
 		const row = { ...media('tv'), title: 'Row' };
-		expect(await resolvePick(plugin, row, () => true, apply)).toBe(true);
+		expect(await resolvePick(deps.settings, deps.api, row, () => true, apply)).toBe(true);
 		expect(apply.mock.calls[0]![0]).toMatchObject({ title: 'Row' });
-		expect(await resolvePick(plugin, row, () => false, apply)).toBe(false);
+		expect(await resolvePick(deps.settings, deps.api, row, () => false, apply)).toBe(false);
 		expect(apply).toHaveBeenCalledTimes(1);
 	});
 
 	it('reports a stale selection and applies nothing', async () => {
-		const { plugin, api } = makePlugin({});
+		const { deps, api } = makeDeps({});
 		api.getOmdbTvDetails.mockResolvedValue(full);
 		const apply = vi.fn();
-		expect(await resolvePick(plugin, media('tv'), () => false, apply)).toBe(false);
+		expect(await resolvePick(deps.settings, deps.api, media('tv'), () => false, apply)).toBe(false);
 		expect(apply).not.toHaveBeenCalled();
 	});
 
 	it('falls back to the search row when the fetch fails', async () => {
-		const { plugin, api } = makePlugin({});
+		const { deps, api } = makeDeps({});
 		api.getOmdbMovieDetails.mockRejectedValue(new Error('x'));
 		const apply = vi.fn<(p: TitlePick) => void>();
 		const row = { ...media('movie'), title: 'Row', episodeDuration: 99, cast: ['C'] };
-		expect(await resolvePick(plugin, row, () => true, apply)).toBe(true);
+		expect(await resolvePick(deps.settings, deps.api, row, () => true, apply)).toBe(true);
 		expect(apply.mock.calls[0]![0]).toMatchObject({ title: 'Row', duration: 99, cast: ['C'] });
-		expect(await resolvePick(plugin, row, () => false, apply)).toBe(false);
+		expect(await resolvePick(deps.settings, deps.api, row, () => false, apply)).toBe(false);
 		expect(apply).toHaveBeenCalledTimes(1); // a stale failure must not touch the form either
 	});
 });
@@ -221,8 +222,8 @@ describe('fillMediaFields', () => {
 
 describe('titlePickerBase', () => {
 	it('lists the configured types', () => {
-		const { plugin } = makePlugin({ types: [{ name: 'Anime' }, { name: 'Movie' }] });
-		const base = titlePickerBase(plugin, 'Movie', () => {});
+		const { deps } = makeDeps({ types: [{ name: 'Anime' }, { name: 'Movie' }] });
+		const base = titlePickerBase(deps.settings, 'Movie', () => {});
 		expect(base.typeSelect).toMatchObject({ names: ['Anime', 'Movie'], selected: 'Movie' });
 		expect(base.withYear).toBe(true);
 	});

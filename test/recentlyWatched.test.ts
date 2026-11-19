@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { createFakeApp } from './fakes/fakeApp';
-import { VaultLayout } from '../src/storage/VaultLayout';
-import { HistoryStore } from '../src/storage/HistoryStore';
-import { resolveRecentlyWatched, type HistoryEntry } from '../src/HistoryManager';
+import { VaultLayout } from '../src/shared/storage/VaultLayout';
+import { HistoryStore } from '../src/shared/storage/HistoryStore';
+import { resolveRecentlyWatched } from '../src/shared/services/HistoryManager';
+import type { HistoryEntry } from '../src/shared/domain/history';
 
 const t = (id: string, title: string, type = 'TV Show') => ({ id, title, type });
 let n = 0;
@@ -51,7 +52,7 @@ describe('resolveRecentlyWatched', () => {
 		const f = createFakeApp({
 			'W/History.md': '# History\n\n- 2026-01-01T00:00:00.000Z · watched · [[TV Show/Alien- Covenant]] · Alien: Covenant (TV Show) S1E1 watched #watchlist\n',
 		});
-		const entries = (await new HistoryStore(f.app, () => new VaultLayout('W', () => [])).load()).reverse();
+		const entries = (await new HistoryStore(f.app.vault, () => new VaultLayout('W', () => [])).load()).reverse();
 		expect(resolveRecentlyWatched(entries, [dark, alien])).toEqual([alien]);
 	});
 });

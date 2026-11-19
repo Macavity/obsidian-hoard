@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { VirtualGrid, setRowsCardWidth, computeGridMetrics } from "../src/VirtualGrid";
+import { VirtualGrid, setRowsCardWidth, computeGridMetrics } from "../src/design-system/VirtualGrid";
 
 (globalThis as { createFragment?: () => DocumentFragment }).createFragment ??= () => document.createDocumentFragment();
 

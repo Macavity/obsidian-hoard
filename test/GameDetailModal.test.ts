@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice, Platform } from 'obsidian';
-import { GameDetailModal } from '../src/GameDetailModal';
-import { DEFAULT_SETTINGS, type Game, type GameGroup } from '../src/types';
-import { t } from '../src/i18n';
+import { GameDetailModal } from '../src/modules/games/ui/GameDetailModal';
+import type { Game, GameGroup } from '../src/modules/games/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
+import { t } from '../src/shared/i18n';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
-vi.mock('../src/NoteLinkButton', () => ({
+vi.mock('../src/design-system/NoteLinkButton', () => ({
 	appendNoteLinkButton: (_app: unknown, parent: HTMLElement) => parent.createSpan({ cls: 'note-link-stub' }),
 }));
 
@@ -69,13 +71,16 @@ function build(o: Opts = {}) {
 		getSteamOwnedGames: vi.fn(() => Promise.resolve(steam.library ?? { ok: true, games: [] })),
 		getSteamAchievements: vi.fn(() => Promise.resolve(steam.achievements ?? null)),
 	};
-	const plugin = {
-		settings: { ...DEFAULT_SETTINGS },
-		apiService,
-		app: {},
-	};
 	(Platform as { isMobile: boolean }).isMobile = o.mobile ?? false;
-	const modal = new GameDetailModal({} as never, plugin as never, gameData as never, game);
+	const modal = new GameDetailModal(
+		{} as never,
+		fakeSettings({ ...DEFAULT_SETTINGS }),
+		gameData as never,
+		apiService as never,
+		{} as never,
+		vi.fn(),
+		{ game },
+	);
 	modal.open();
 	const root = (modal as unknown as { contentEl: HTMLElement }).contentEl;
 	const draft = () => (modal as unknown as { draft: Game }).draft;

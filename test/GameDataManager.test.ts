@@ -40,6 +40,16 @@ describe('GameDataManager on vault storage', () => {
 		expect(gdm.getGame('Games/B')?.title).toBe('B');
 	});
 
+	it('keeps a pending silent edit when its note is renamed', async () => {
+		const { gdm, f } = await setupGames({ 'W/Games/A.md': '---\nName: A\nType: game\nRating: 1\n---\n' });
+		gdm.updateGameSilent({ ...gdm.getGame('Games/A')!, rating: 4 });
+		f.externalRename('W/Games/A.md', 'W/Games/B.md');
+		await tick();
+		await gdm.flushPending();
+		expect(f.files.get('W/Games/B.md')).toMatch(/Rating: 4/);
+		expect(f.files.has('W/Games/A.md')).toBe(false);
+	});
+
 	it('does not overwrite an invalid field it did not change', async () => {
 		const { gdm, f } = await setupGames({ 'W/Games/A.md': '---\nName: A\nType: game\nPlaytime: lots\nmyKey: 1\n---\n' });
 		const g = gdm.getGame('Games/A')!;

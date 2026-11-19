@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SteamSyncModal } from '../src/SteamSyncModal';
-import type { SteamOwnedGame } from '../src/ApiService';
-import { steamLibraryCover } from '../src/steamStoreApi';
-import { GAME_AUTO_STATUS, type Game, type SteamSyncUpdate } from '../src/types';
+import { SteamSyncModal } from '../src/modules/games/ui/SteamSyncModal';
+import type { SteamOwnedGame } from '../src/shared/api/ApiService';
+import { steamLibraryCover } from '../src/shared/api/steamStoreApi';
+import type { Game } from '../src/modules/games/domain/model';
+import type { SteamSyncUpdate } from '../src/modules/games/domain/steamSync';
+import { GAME_AUTO_STATUS } from '../src/modules/games/domain/gameDefaults';
 import { clickByText, shownNotices } from './helpers/csvWizard';
+import { fakeSettings } from './helpers/fakeSettings';
 
-type Details = Awaited<ReturnType<import('../src/ApiService').ApiService['getSteamAppDetails']>>;
+type Details = Awaited<ReturnType<import('../src/shared/api/ApiService').ApiService['getSteamAppDetails']>>;
 type Achievements = { earned: number; total: number } | null;
 
 const owned = (appId: string, name: string, playtimeMinutes = 0): SteamOwnedGame =>
@@ -34,8 +37,8 @@ function setup(opts: Opts = {}) {
 		types: opts.types ?? [{ name: 'Action' }, { name: 'RPG' }],
 	};
 	const plugin = {
-		settings: { colorTheme: 'default' },
-		apiService: {
+		settings: fakeSettings({ colorTheme: 'default' }),
+		api: {
 			getSteamOwnedGames: () => Promise.resolve({ ok: true, games: opts.library ?? [] }),
 			getSteamAchievements: () => { opts.onAchievements?.(); return Promise.resolve(opts.achievements ?? { earned: 3, total: 10 }); },
 			getSteamAppDetails: (id: string) => Promise.resolve(opts.details?.[id] ?? null),
@@ -48,7 +51,7 @@ function setup(opts: Opts = {}) {
 		applySteamSync: (u: SteamSyncUpdate[]) => { updates.push(...u); return Promise.resolve(u.length); },
 		addGame: (g: Game) => { added.push(g); return Promise.resolve(); },
 	};
-	const modal = new SteamSyncModal({} as never, plugin as never, gameData as never);
+	const modal = new SteamSyncModal({} as never, plugin.settings as never, gameData as never, plugin.api as never);
 	return { modal, updates, added };
 }
 

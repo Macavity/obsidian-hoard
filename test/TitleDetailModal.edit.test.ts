@@ -1,14 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Platform } from 'obsidian';
-import { TitleDetailModal, renderCreditsRefreshButton } from '../src/TitleDetailModal';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
-import { t } from '../src/i18n';
-import { FAILED, found, type LookupResult } from '../src/lookup';
+import { fakeSettings } from './helpers/fakeSettings';
+import { renderCreditsRefreshButton } from '../src/modules/watchlist/ui/TitleDetailModal';
+import { newTitleDetail } from './helpers/newTitleDetail';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
+import { t } from '../src/shared/i18n';
+import { FAILED, found, type LookupResult } from '../src/shared/api/lookup';
 
-vi.mock('../src/NoteLinkButton', () => ({
+vi.mock('../src/design-system/NoteLinkButton', () => ({
 	appendNoteLinkButton: (_app: unknown, parent: HTMLElement) => parent.createSpan({ cls: 'note-link-stub' }),
 }));
-vi.mock('../src/CommunityRating', () => ({
+vi.mock('../src/modules/watchlist/ui/CommunityRating', () => ({
 	renderCommunityRating: vi.fn(),
 	maybeAutoRefreshCommunityRating: vi.fn(),
 }));
@@ -44,19 +47,19 @@ function buildPlugin(stored: HoardTitle | null, over: Record<string, unknown> = 
 		hasTmdbKey: vi.fn(() => true),
 		hasOmdbKey: vi.fn(() => false),
 	};
-	const plugin = {
-		settings: { ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] },
-		dataManager,
-		apiService,
-		posterService: undefined,
+	const deps = {
+		settings: fakeSettings({ ...DEFAULT_SETTINGS, seasonPalette: ['#111', '#222'] }),
+		titles: dataManager,
+		api: apiService,
+		posters: { enqueue: () => Promise.resolve(null) },
 	};
-	return { plugin, dataManager, apiService };
+	return { deps, dataManager, apiService };
 }
 
 describe('TitleDetailModal title editing', () => {
 	function open(title: HoardTitle, stored: HoardTitle | null = title) {
 		const built = buildPlugin(stored);
-		const modal = new TitleDetailModal({} as never, built.plugin as never, title) as unknown as {
+		const modal = newTitleDetail(built.deps, { title }) as unknown as {
 			headerEl: HTMLElement | null;
 			contentEl: HTMLElement;
 			mobile: boolean;
@@ -183,9 +186,9 @@ describe('renderCreditsRefreshButton', () => {
 
 	const render = (id: string, stored: HoardTitle | null, fetched: LookupResult<{ director: string[]; cast: string[] }>, onDone = vi.fn()) => {
 		const title = mkTitle({ id });
-		const { plugin, dataManager, apiService } = buildPlugin(stored);
+		const { deps, dataManager, apiService } = buildPlugin(stored);
 		apiService.fetchCredits.mockResolvedValue(fetched);
-		renderCreditsRefreshButton(parent, plugin as never, title, onDone);
+		renderCreditsRefreshButton(parent, deps.titles as never, deps.settings, deps.api, title, onDone);
 		const btn = parent.querySelector('button.hoard-credits__refresh') as HTMLButtonElement;
 		return { btn, title, dataManager, apiService, onDone };
 	};
@@ -241,8 +244,8 @@ describe('renderCreditsRefreshButton', () => {
 		const first = render('r5', null, FAILED);
 		first.btn.click();
 		const second = document.createElement('div');
-		const { plugin } = buildPlugin(null);
-		renderCreditsRefreshButton(second, plugin as never, mkTitle({ id: 'r5' }), vi.fn());
+		const { deps } = buildPlugin(null);
+		renderCreditsRefreshButton(second, deps.titles as never, deps.settings, deps.api, mkTitle({ id: 'r5' }), vi.fn());
 		expect(second.querySelector('.hoard-credits__refresh')!.classList.contains('is-loading')).toBe(true);
 		await flush();
 	});

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ListTab } from '../../src/ListTab';
-import * as ActionBar from '../../src/ui/ActionBar';
-import type { HoardTitle, SavedFilterPreset } from '../../src/types';
+import { ListTab } from '../../src/modules/watchlist/ui/ListTab';
+import { fakeSettings } from '../helpers/fakeSettings';
+import * as ActionBar from '../../src/design-system/ActionBar';
+import type { HoardTitle, SavedFilterPreset } from '../../src/modules/watchlist/domain/model';
 
-vi.mock('../../src/ui/ActionBar', () => ({
+vi.mock('../../src/design-system/ActionBar', () => ({
 	renderActionBar: vi.fn(() => ({})),
 	renderBatchStatusSelect: vi.fn(),
 	renderMoveToGroupSelect: vi.fn(),
@@ -22,7 +23,7 @@ describe('ListTab.applyPreset', () => {
 	const settings = { priorities: [{ name: 'High' }, { name: 'Low' }] };
 
 	it('copies every filter from the preset', () => {
-		const host = make({ plugin: { settings } }) as Record<string, unknown>;
+		const host = make({ settings: fakeSettings(settings) }) as Record<string, unknown>;
 		call(host, 'applyPreset', preset);
 		expect(host['filterTypeExclude']).toEqual(new Set(['Movie']));
 		expect(host['filterStatusExclude']).toEqual(new Set(['Dropped']));
@@ -36,7 +37,7 @@ describe('ListTab.applyPreset', () => {
 	});
 
 	it('defaults missing flags to false and migrates the legacy empty-priority flag', () => {
-		const host = make({ plugin: { settings } }) as Record<string, unknown>;
+		const host = make({ settings: fakeSettings(settings) }) as Record<string, unknown>;
 		const legacy = { ...preset, priorityExclude: [], priorityEmptyOnly: true } as unknown as SavedFilterPreset;
 		for (const k of ['ratingEmptyOnly', 'recentlyArrivedOnly', 'groupsOnly', 'favoritesOnly']) {
 			delete (legacy as unknown as Record<string, unknown>)[k];
@@ -66,8 +67,8 @@ describe('ListTab.handleCardsVisible', () => {
 		poster.removeClass.mockClear();
 		enqueue = vi.fn(() => Promise.resolve('http://new'));
 		host = make({
-			dataManager: { getTitles: vi.fn(() => titles), lookupDue: (id: string) => !titles.find((t) => t.id === id)?.posterUrl },
-			plugin: { posterService: { enqueue } },
+			titles: { getTitles: vi.fn(() => titles), lookupDue: (id: string) => !titles.find((t) => t.id === id)?.posterUrl },
+			posters: { enqueue },
 			applyPosterToCard: vi.fn(),
 		});
 	});
@@ -111,8 +112,7 @@ describe('ListTab.renderActionBar batch status', () => {
 		};
 		const render = vi.fn();
 		const host = make({
-			plugin: { app: {}, settings: { statuses: [{ name: 'Watching' }, { name: 'To be released' }] } },
-			dataManager: dm,
+			settings: fakeSettings({ statuses: [{ name: 'Watching' }, { name: 'To be released' }] }), titles: dm, modals: { confirm: vi.fn() },
 			selectedItems: new Set(['t1', 'group:g1', 'ghost', 't2']),
 			render,
 		});
@@ -137,8 +137,8 @@ describe('ListTab.renderActionBar batch status', () => {
 		};
 		const render = vi.fn();
 		const host = make({
-			plugin: { app: {}, settings: { statuses: [] } },
-			dataManager: dm, selectedItems: new Set(['ghost']), render,
+			settings: fakeSettings({ statuses: [] }), titles: dm, modals: { confirm: vi.fn() },
+			selectedItems: new Set(['ghost']), render,
 		});
 		vi.mocked(ActionBar.renderBatchStatusSelect).mockClear();
 		call(host, 'renderActionBar', {});

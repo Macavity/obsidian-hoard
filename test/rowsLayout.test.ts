@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { GAMES_ROWS_SHELVES, READING_ROWS_SHELVES, normalizeRowsLayout, shelvesExclude, type RowsShelfLayoutEntry } from '../src/types';
+import { GAMES_ROWS_SHELVES } from '../src/modules/games/domain/gameShelves';
+import { READING_ROWS_SHELVES } from '../src/modules/reading/domain/readingHelpers';
+import { normalizeRowsLayout, shelvesExclude, type RowsShelfLayoutEntry } from '../src/shared/domain/rows';
 
 /** `id` for an enabled shelf, `-id` for a disabled one: a layout on one line. */
 const brief = (layout: RowsShelfLayoutEntry[]): string[] => layout.map((e) => (e.enabled ? e.id : `-${e.id}`));

@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FuzzySuggestModal, Notice } from 'obsidian';
-import { ReadingDetailModal } from '../src/ReadingDetailModal';
-import { t } from '../src/i18n';
-import type { Book, Manga, ReadingCustomColumn } from '../src/types';
+import { Notice } from 'obsidian';
+import { newReadingDetail } from './helpers/newReadingDetail';
+import { t } from '../src/shared/i18n';
+import type { Book, Manga, ReadingCustomColumn } from '../src/modules/reading/domain/model';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
@@ -25,7 +26,6 @@ interface Opts {
 	result?: { coverUrl: string } | null;
 	fail?: boolean;
 	onFile?: unknown;
-	files?: unknown[];
 	columns?: ReadingCustomColumn[];
 	fieldStyle?: 'fill' | 'border';
 }
@@ -51,16 +51,19 @@ function build(o: Opts = {}) {
 	};
 	const getAbstractFileByPath = vi.fn(() => o.onFile ?? null);
 	const openFile = vi.fn();
-	const plugin = {
-		settings: {},
-		apiService,
-		app: {
-			vault: { getAbstractFileByPath, getMarkdownFiles: () => o.files ?? [] },
+	const pickVaultFile = vi.fn();
+	const parts = {
+		settings: fakeSettings({}),
+		api: apiService,
+		reading: readingData,
+		files: {
+			vault: { getAbstractFileByPath },
 			workspace: { getLeaf: () => ({ openFile }) },
 		},
+		modals: { pickVaultFile },
 	};
 	const onChanged = vi.fn();
-	const modal = new ReadingDetailModal({} as never, plugin as never, readingData as never, mode, 'x', onChanged);
+	const modal = newReadingDetail(parts, { mode, id: 'x', onChanged });
 	const x = modal as unknown as {
 		refetchCoverFromId: (id: string) => Promise<void>;
 		renderCustomValueEditor: (cell: HTMLElement, item: Book | Manga, col: ReadingCustomColumn, cur: string | number | undefined) => void;
@@ -71,7 +74,7 @@ function build(o: Opts = {}) {
 		renderCustomFieldsSection: (item: Book | Manga) => void;
 		contentEl: HTMLElement;
 	};
-	return { modal: x, readingData, apiService, onChanged, openFile, getAbstractFileByPath };
+	return { modal: x, readingData, apiService, onChanged, openFile, getAbstractFileByPath, pickVaultFile };
 }
 
 beforeEach(() => { shown.length = 0; });
@@ -327,13 +330,11 @@ describe('ReadingDetailModal.renderVaultRow', () => {
 	});
 
 	it('opens the vault file picker from the link button', () => {
-		const { modal } = build({ files: [] });
+		const { modal, pickVaultFile } = build();
 		const row = document.createElement('div');
 		modal.renderVaultRow(row);
-		const opened = vi.spyOn(FuzzySuggestModal.prototype, 'open');
 		(row.querySelector('button') as HTMLElement).click();
-		expect(opened).toHaveBeenCalledTimes(1);
-		opened.mockRestore();
+		expect(pickVaultFile).toHaveBeenCalledTimes(1);
 	});
 });
 

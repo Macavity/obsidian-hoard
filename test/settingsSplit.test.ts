@@ -2,12 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { parse, stringify } from 'yaml';
 import type { TFile } from 'obsidian';
 import { createFakeApp } from './fakes/fakeApp';
-import { SecretStore } from '../src/storage/SecretStore';
-import { LocalStore } from '../src/storage/LocalStore';
-import { SharedConfigStore } from '../src/storage/SharedConfigStore';
-import { VaultLayout } from '../src/storage/VaultLayout';
-import { composeSettings, persistSettings } from '../src/settingsSplit';
-import { DEFAULT_SETTINGS } from '../src/types';
+import { SecretStore } from '../src/shared/storage/SecretStore';
+import { LocalStore } from '../src/shared/storage/LocalStore';
+import { SharedConfigStore } from '../src/shared/storage/SharedConfigStore';
+import { VaultLayout } from '../src/shared/storage/VaultLayout';
+import { composeSettings, persistSettings } from '../src/modules/settings/services/settingsSplit';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 
 /** A base whose hoard block holds no setting yet. */
 const BARE_BASE = 'hoard:\n  version: 1\n';
@@ -17,7 +17,7 @@ async function setup(files: Record<string, string>) {
 	const local = new LocalStore(f.plugin);
 	await local.load();
 	const layout = new VaultLayout('W', () => []);
-	const shared = new SharedConfigStore(f.app, () => layout, { parse, stringify });
+	const shared = new SharedConfigStore(f.app.vault, () => layout, { parse, stringify });
 	await shared.load();
 	return { f, local, shared };
 }

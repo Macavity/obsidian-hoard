@@ -3,19 +3,19 @@ type: Domain
 title: Property names
 description: The fixed Title Case property names of entry notes per medium, the naming rules, the old-name mapping used by the import, and the stability rule from 1.0.
 source:
-  - src/storage/properties.ts
-  - src/import/watchlog/propertyNames.ts
-source_commit: bdcc2201df9227e8f0bcbf9685cc0dde9311e628
+  - src/shared/storage/properties.ts
+  - src/modules/import/services/watchlog/propertyNames.ts
+source_commit: cc203bf
 ---
 
 # Property names
 
 Every entry field lives in a note property ([storage](../architecture/storage.md)). The names are
-constants in [properties.ts](../../src/storage/properties.ts) (`COMMON_PROPS`, `AIRTIME_PROPS`,
+constants in [properties.ts](../../src/shared/storage/properties.ts) (`COMMON_PROPS`, `AIRTIME_PROPS`,
 `TITLE_PROPS`, `READING_PROPS`, `GAME_PROPS`, `ALL_PROPERTY_NAMES`); codecs and managers use only
 these, never literals. Code identifiers and model fields stay camelCase. The "older name" column is
 what Hoard 0.1 / WatchLog Sync wrote; the codecs no longer read it, only
-`translateProperties` ([propertyNames.ts](../../src/import/watchlog/propertyNames.ts)) does.
+`translateProperties` ([propertyNames.ts](../../src/modules/import/services/watchlog/propertyNames.ts)) does.
 
 ## Rules
 
@@ -37,7 +37,7 @@ what Hoard 0.1 / WatchLog Sync wrote; the codecs no longer read it, only
 | URL | externalLink | the entry's page at its source |
 | External ID | externalId | [grammar](external-id.md) |
 | Cover | poster (titles), coverUrl (books, manga, games) | |
-| Airtime Recurrence / Day / Time / Season / Episode / Acknowledged | airtimeRecurrence ... airtimeAcknowledged | titles, books, manga ([airtime](airtime.md)) |
+| Airtime Recurrence / Day / Time / Season / Episode / Acknowledged | airtimeRecurrence ... airtimeAcknowledged | titles, books, manga, games ([airtime](airtime.md)) |
 
 Watchlist titles:
 
@@ -82,7 +82,7 @@ migrated at startup.
 
 Reading custom columns (book and manga) are user data, not part of the frozen set. Only the key
 pattern is stable: `Custom <column name>` (e.g. `Custom Format`), the name exactly as typed; the codec
-maps it to the column by name (`customFieldKey` in [properties.ts](../../src/storage/properties.ts)).
+maps it to the column by name (`customFieldKey` in [properties.ts](../../src/shared/storage/properties.ts)).
 Names are unique per kind, ignoring case. Renaming a column moves the key in every note of that kind
 (a note that already has the new key keeps both). Hoard never deletes custom values: deleting a column
 and the full frontmatter rewrite leave them in the notes; only clearing a value on an entry removes that

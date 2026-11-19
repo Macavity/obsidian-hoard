@@ -3,23 +3,24 @@ type: Flow
 title: Entry write
 description: What happens between a user edit in a tab or modal and the note on disk, and how the UI learns about it without a double render.
 source:
-  - src/DataManager.ts
-  - src/ReadingDataManager.ts
-  - src/GameDataManager.ts
-  - src/storage/noteWrite.ts
-  - src/storage/EntryIndex.ts
-  - src/storage/titleCodec.ts
-  - src/storage/baseline.ts
-  - src/storage/noteBody.ts
-  - src/storage/LocalStore.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+  - src/modules/watchlist/services/DataManager.ts
+  - src/modules/reading/services/ReadingDataManager.ts
+  - src/modules/games/services/GameDataManager.ts
+  - src/shared/storage/noteWrite.ts
+  - src/shared/services/EntryNotes.ts
+  - src/shared/storage/EntryIndex.ts
+  - src/shared/storage/titleCodec.ts
+  - src/shared/storage/baseline.ts
+  - src/shared/storage/noteBody.ts
+  - src/shared/storage/LocalStore.ts
+source_commit: cc203bf
 ---
 
 # Entry write
 
 Trigger: a tab or modal mutates its copy of an entry and calls `updateTitle` / `updateBook` /
 `updateGame` (or a silent variant plus `save()`). All three managers write through one pipeline,
-`writeEntry` in [noteWrite.ts](../../src/storage/noteWrite.ts) (steps 2 to 4 below), and tell it
+`writeEntry` in [noteWrite.ts](../../src/shared/storage/noteWrite.ts) (steps 2 to 4 below), and tell it
 what differs through `EntryWriteHooks`. The diagram shows the title path.
 
 | Hook | Titles | Books and manga | Games |
@@ -30,7 +31,7 @@ what differs through `EntryWriteHooks`. The diagram shows the title path.
 | `unchanged`: nothing to write, copy made from the stored state | syncs the API cache; replaces the view of an existing slot | becomes the view, with a new slot if there was none (only when a baseline is known) | replaces the view of an existing slot |
 | after the pipeline | the `## Notes` body | nothing | nothing |
 
-`createNote`, `afterWrite` and `basedOnStored` stay in each manager; the hooks call them.
+The managers reach the vault through [EntryNotes](../../src/shared/services/EntryNotes.ts) (paths, ids, read, rename following, `updateProperties`); `createNote`, `afterWrite` and `basedOnStored` stay in each manager; the hooks call them.
 
 ```mermaid
 sequenceDiagram
@@ -59,8 +60,8 @@ sequenceDiagram
    change and a change to Completed ([history line](../concepts/history-line.md)); other status
    changes are not logged here.
 2. **Rename**: if `title` or `type` differ from the [baseline](../concepts/baseline.md), the note
-   moves to `VaultLayout.notePath` (unless the target exists: Notice, old name kept; the target's
-   folder is created when missing) and `moveId` re-keys notes, cache and pending sets and drops the
+   moves to `EntryNotes.pathFor` (`VaultLayout.notePath`; unless the target exists: Notice, old name kept; the target's
+   folder is created when missing) and `moveId` re-keys notes, cache and pending sets (the move itself is `moveNote` in noteWrite.ts) and drops the
    old view slot ([entry id](../concepts/entry-id.md)). Only then does the copy get its new id.
 3. **Diff and write**: both baseline and copy are encoded; only keys whose JSON differs are set
    or deleted in `processFrontMatter`. Unreadable properties survive. A non-empty season list
@@ -76,7 +77,7 @@ sequenceDiagram
 5. **Body**: the `## Notes` text is written through `replaceNotesSection` only when the copy
    changed it, so a copy that left the body alone cannot undo a body edit from another device
    (a competing local edit still wins).
-6. **Notify**: `notifyListeners` runs manager listeners and dispatches `hoard-data-changed`; the
+6. **Notify**: `notifyListeners` runs manager listeners and dispatches `hoard-data-changed` ([changeSignal.ts](../../src/shared/services/changeSignal.ts)); the
    view re-renders the active tab in place, widgets and status bar refresh.
 7. **Echo**: the vault's `changed` event reaches `EntryIndex.upsert`, which decodes the note and
    finds it deep-equal to what `applyLocal` installed. No second notify.

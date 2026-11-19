@@ -1,0 +1,51 @@
+import { App, Modal } from 'obsidian';
+import { t } from '../shared/i18n';
+
+/**
+ * Optional third action between Confirm and Cancel — an alternative way out (e.g. "Switch to
+ * Recurring episodes" on the single-release tick confirm). Clicking it closes the modal first.
+ */
+export interface ConfirmExtraButton {
+	label: string;
+	onClick: () => void;
+}
+
+/** Opens a confirm dialog; lets a modal ask for confirmation without holding the App. */
+export type OpenConfirm = (message: string, onConfirm: () => void, extraButton?: ConfirmExtraButton) => void;
+
+/** Confirm dialog opener bound to an App; the wiring layer builds it so modals need no App of their own. */
+export function confirmWith(app: App): OpenConfirm {
+	return (message, onConfirm, extraButton) => new ConfirmModal(app, message, onConfirm, extraButton).open();
+}
+
+export class ConfirmModal extends Modal {
+	private message: string;
+	private onConfirm: () => void;
+	private extraButton: ConfirmExtraButton | null;
+
+	constructor(app: App, message: string, onConfirm: () => void, extraButton?: ConfirmExtraButton) {
+		super(app);
+		this.message = message;
+		this.onConfirm = onConfirm;
+		this.extraButton = extraButton ?? null;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.createDiv({ cls: 'hoard-confirm__message', text: this.message });
+		const btnRow = contentEl.createDiv({ cls: 'hoard-modal__btn-row' });
+		btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--danger', text: t('misc.confirm.confirm') })
+			.addEventListener('click', () => { this.close(); this.onConfirm(); });
+		if (this.extraButton) {
+			const extra = this.extraButton;
+			btnRow.createEl('button', { cls: 'hoard-btn', text: extra.label })
+				.addEventListener('click', () => { this.close(); extra.onClick(); });
+		}
+		btnRow.createEl('button', { cls: 'hoard-btn', text: t('common.cancel') })
+			.addEventListener('click', () => this.close());
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}

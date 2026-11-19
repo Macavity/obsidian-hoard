@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { GamesTab } from '../../src/GamesTab';
-import { GameDetailModal } from '../../src/GameDetailModal';
-import { defaultGamesSettings, DEFAULT_SETTINGS } from '../../src/types';
-import { ReadingManageColumnsModal } from '../../src/ReadingManageColumnsModal';
-import { ReadingTab } from '../../src/ReadingTab';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { newGamesTab } from '../helpers/newGamesTab';
+import { GameDetailModal } from '../../src/modules/games/ui/GameDetailModal';
+import { defaultGamesSettings } from '../../src/modules/games/domain/gameDefaults';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/domain/settingsDefaults';
+import { ReadingManageColumnsModal } from '../../src/modules/reading/ui/ReadingManageColumnsModal';
+import { newReadingTab } from '../helpers/newReadingTab';
 import { El } from '../helpers/fakeEl';
+import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));
 
@@ -18,11 +20,14 @@ describe('reading and games i18n', () => {
 	it('renders the reading empty state in German', () => {
 		setLocale('de');
 		const container = new El('root');
-		const tab = new ReadingTab(container as never, {} as never, {
-			onChange: () => {}, offChange: () => {},
-			getSettings: () => ({ defaultSubTab: 'books' }),
-			getBooks: () => [],
-		} as never);
+		const tab = newReadingTab(container, {
+			settings: fakeSettings({}),
+			reading: {
+				onChange: () => {}, offChange: () => {},
+				getSettings: () => ({ defaultSubTab: 'books' }),
+				getBooks: () => [],
+			},
+		});
 		(tab as unknown as { contentEl: El }).contentEl = container;
 		(tab as unknown as { renderContent: () => void }).renderContent();
 		const texts = allText(container);
@@ -32,11 +37,16 @@ describe('reading and games i18n', () => {
 
 	it('renders the manage fields modal in German', () => {
 		setLocale('de');
-		const modal = new ReadingManageColumnsModal({} as never, { settings: {} } as never, {
-			getSettings: () => ({}),
-			getBookColumns: () => [],
-			getMangaColumns: () => [],
-		} as never, 'book', () => {});
+		const modal = new ReadingManageColumnsModal(
+			{} as never,
+			fakeSettings({}) as never,			{
+				getSettings: () => ({}),
+				getBookColumns: () => [],
+				getMangaColumns: () => [],
+			} as never,
+			() => {},
+			{ kind: 'book', onChanged: () => {} },
+		);
 		const internals = modal as unknown as {
 			renderStyleToggle: (parent: El) => void;
 			renderList: () => void;
@@ -54,12 +64,15 @@ describe('reading and games i18n', () => {
 	it('renders the games empty state in German', () => {
 		setLocale('de');
 		const container = new El('root');
-		const tab = new GamesTab(container as never, { settings: {} } as never, {
-			onChange: () => {}, offChange: () => {},
-			getSavedFilterPreset: () => null,
-			getGames: () => [],
-			getGroups: () => [],
-		} as never);
+		const tab = newGamesTab(container, {
+			settings: fakeSettings({}),
+			games: {
+				onChange: () => {}, offChange: () => {},
+				getSavedFilterPreset: () => null,
+				getGames: () => [],
+				getGroups: () => [],
+			},
+		});
 		(tab as unknown as { contentEl: El }).contentEl = container;
 		(tab as unknown as { renderContent: () => void }).renderContent();
 		expect(allText(container)).toContain(de.games.empty);
@@ -71,9 +84,12 @@ describe('reading and games i18n', () => {
 		const game = { id: 'g1', title: 'Hades', status: 'Playing', priority: 'High', type: '', platforms: [] };
 		const modal = new GameDetailModal(
 			{} as never,
-			{ settings: { priorities: DEFAULT_SETTINGS.priorities.map((p) => ({ name: p.name })) } } as never,
+			fakeSettings({ priorities: DEFAULT_SETTINGS.priorities.map((p) => ({ name: p.name })) }) as never,
 			{ getGroups: () => [], getSettings: () => ({ ...defaultGamesSettings(), statuses: defaultGamesSettings().statuses.map((s) => ({ name: s.name })) }) } as never,
-			game as never,
+			{} as never,
+			{} as never,
+			() => {},
+			{ game: game as never },
 		);
 		const badgeRow = new El('div') as El & { empty: () => void };
 		badgeRow.empty = () => { badgeRow.children = []; };

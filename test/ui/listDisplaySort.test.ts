@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { ListTab } from '../../src/ListTab';
-import type { HoardGroup, HoardTitle } from '../../src/types';
+import { ListTab } from '../../src/modules/watchlist/ui/ListTab';
+import type { HoardGroup, HoardTitle } from '../../src/modules/watchlist/domain/model';
 
 type Item = { kind: 'title'; data: HoardTitle } | { kind: 'group'; data: HoardGroup; members: HoardTitle[] };
 type Compare = (key: string, a: Item, b: Item) => number;
 
 const host = Object.assign(Object.create(ListTab.prototype) as object, {
 	STATUS_ORDER: ['Watching', 'Plan to watch', 'Completed', 'To be released', 'Dropped'],
-	dataManager: {
+	titles: {
 		getProgress: (t: HoardTitle) => (t as unknown as { p: number }).p,
 		calcTimeRemaining: (t: HoardTitle) => (t as unknown as { left: number }).left,
 		calcTimeWatched: (t: HoardTitle) => (t as unknown as { watched: number }).watched,

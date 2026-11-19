@@ -1,10 +1,10 @@
 import { parse, stringify } from 'yaml';
 import type { createFakeApp } from '../../fakes/fakeApp';
-import { VaultLayout } from '../../../src/storage/VaultLayout';
-import type { LocalStore } from '../../../src/storage/LocalStore';
-import { SharedConfigStore } from '../../../src/storage/SharedConfigStore';
-import { HistoryStore } from '../../../src/storage/HistoryStore';
-import type { ImportContext, WatchLogData } from '../../../src/import/watchlog/schema1Types';
+import { VaultLayout } from '../../../src/shared/storage/VaultLayout';
+import type { LocalStore } from '../../../src/shared/storage/LocalStore';
+import { SharedConfigStore } from '../../../src/shared/storage/SharedConfigStore';
+import { HistoryStore } from '../../../src/shared/storage/HistoryStore';
+import type { ImportContext, WatchLogData } from '../../../src/modules/import/services/watchlog/schema1Types';
 
 const yaml = { parse, stringify };
 
@@ -18,9 +18,9 @@ export function importContext(
 	f: ReturnType<typeof createFakeApp>, local: LocalStore, root: string, types: string[],
 ): ImportContext {
 	const layout = new VaultLayout(root, () => types);
-	const shared = new SharedConfigStore(f.app, () => layout, yaml);
-	const history = new HistoryStore(f.app, () => layout);
-	return { app: f.app, local, shared, history, yaml, layout };
+	const shared = new SharedConfigStore(f.app.vault, () => layout, yaml);
+	const history = new HistoryStore(f.app.vault, () => layout);
+	return { vault: f.app.vault, fileManager: f.app.fileManager, local, shared, history, yaml, layout };
 }
 
 /** The type names of WatchLog data. */

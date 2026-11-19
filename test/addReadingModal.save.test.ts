@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AddReadingModal, type ReadingFormState, type ReadingMode } from '../src/AddReadingModal';
-import type { Book, Manga } from '../src/types';
+import { AddReadingModal, type ReadingFormState, type ReadingMode } from '../src/modules/reading/ui/AddReadingModal';
+import type { Book, Manga } from '../src/modules/reading/domain/model';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const NOW = '2026-03-04T05:06:07.000Z';
 
@@ -41,7 +42,7 @@ function setup(mode: ReadingMode, existingId?: string) {
 		addBook: record('addBook'), addManga: record('addManga'), updateBook: record('updateBook'), updateManga: record('updateManga'),
 	};
 	const initial = existingId ? { id: existingId, state: FORM } : undefined;
-	const modal = new AddReadingModal({} as never, {} as never, readingData as never, mode, () => {}, initial);
+	const modal = new AddReadingModal({} as never, fakeSettings({}) as never, readingData as never, {} as never, {} as never, (() => Promise.resolve([])), {} as never, { mode, onSaved: () => {}, initial });
 	const internals = modal as unknown as { state: ReadingFormState; save: () => Promise<void> };
 	if (!existingId) internals.state = { ...FORM };
 	return { calls, save: () => internals.save() };

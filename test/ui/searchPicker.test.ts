@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createSearchPicker, type SearchPickerConfig } from '../../src/ui/SearchPicker';
+import { createSearchPicker, type SearchPickerConfig } from '../../src/design-system/SearchPicker';
 import { El } from '../helpers/fakeEl';
 
 const flush = async (): Promise<void> => { await Promise.resolve(); await Promise.resolve(); };

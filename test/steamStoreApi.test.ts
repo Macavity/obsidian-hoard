@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import search from './fixtures/steamstore-search.json';
-import { mapSteamStoreSearch, steamDetailsToGameDetails, steamStoreSearchUrl } from '../src/steamStoreApi';
+import { mapSteamStoreSearch, steamDetailsToGameDetails, steamStoreSearchUrl } from '../src/shared/api/steamStoreApi';
 
 describe('steam store', () => {
 	it('builds the search url', () => {

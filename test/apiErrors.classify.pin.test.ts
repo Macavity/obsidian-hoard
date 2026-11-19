@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ApiService, apiErrorMessage, apiErrorShort } from '../src/ApiService';
-import { setLocale } from '../src/i18n';
+import { ApiService, apiErrorMessage, apiErrorShort } from '../src/shared/api/ApiService';
+import { setLocale } from '../src/shared/i18n';
 import { ERROR_ROWS } from './apiErrors.fixture';
 import { CALLS, answer, failure, sent } from './helpers/apiFailures';
 

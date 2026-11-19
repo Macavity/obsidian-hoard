@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { httpsOrEmpty } from '../src/httpsUrl';
-import { ApiService } from '../src/ApiService';
+import { httpsOrEmpty } from '../src/shared/api/httpsUrl';
+import { ApiService } from '../src/shared/api/ApiService';
 
 // Private mappers are exercised directly.
 type Mapper = (input: unknown) => Record<string, unknown>;

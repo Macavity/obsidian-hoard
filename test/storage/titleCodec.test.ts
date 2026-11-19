@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { titleFromProperties, titleToProperties, titleToCache } from '../../src/storage/titleCodec';
-import { ALL_PROPERTY_NAMES } from '../../src/storage/properties';
+import { titleFromProperties, titleToProperties, titleToCache } from '../../src/shared/storage/titleCodec';
+import { ALL_PROPERTY_NAMES } from '../../src/shared/storage/properties';
 import { fullTitle } from './titleFixtures';
 const seasons = [{ name: 'Season 1', episodes: 8, offset: 0 }, { name: 'Season 2', episodes: 8, offset: 8 }];
 

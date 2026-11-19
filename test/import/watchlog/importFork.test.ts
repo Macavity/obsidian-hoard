@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { importFork } from '../../../src/import/watchlog/importFork';
+import { importFork } from '../../../src/modules/import/services/watchlog/importFork';
 import { setupFork } from './setupFork';
 import { snapshot } from './helpers';
-import { titleFromProperties } from '../../../src/storage/titleCodec';
+import { titleFromProperties } from '../../../src/shared/storage/titleCodec';
 import { parse } from 'yaml';
 
 const fmOf = (content: string | undefined): Record<string, unknown> =>

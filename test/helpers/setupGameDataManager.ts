@@ -1,21 +1,15 @@
 // FakeApp + storage stores + GameDataManager wired like main.ts (root 'W'); DataManager stubbed to the airtime bridge.
-import { createStores } from './common';
-import { GameDataManager } from '../../src/GameDataManager';
-import { newGame } from '../../src/entryFactories';
-import type { Game } from '../../src/types';
+import { createStores, newGameManager } from './common';
+import { newGame } from '../../src/modules/games/domain/newGame';
+import type { Game } from '../../src/modules/games/domain/model';
 
 export async function setupGames(files: Record<string, string>) {
 	const airtime = { added: [] as string[], removed: [] as string[] };
-	const { f, plugin, local, shared, index, stores, notices } = await createStores(files, {
-		loadShared: true,
-		pluginExtra: {
-			dataManager: {
-				autoAddGameToUpcoming: (game: Game) => { airtime.added.push(game.id); return Promise.resolve(); },
-				removeGameAirtimeEntries: (id: string) => { airtime.removed.push(id); return Promise.resolve(); },
-			},
-		},
+	const { f, local, shared, index, base, notices } = await createStores(files, { loadShared: true });
+	const gdm = newGameManager(base, {
+		autoAddGameToUpcoming: (game: Game) => { airtime.added.push(game.id); return Promise.resolve(); },
+		removeGameAirtimeEntries: (id: string) => { airtime.removed.push(id); return Promise.resolve(); },
 	});
-	const gdm = new GameDataManager(plugin, stores);
 	await gdm.init();
 	return { gdm, f, local, index, shared, airtime, notices };
 }

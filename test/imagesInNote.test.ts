@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
-import { titleFromProperties, titleToProperties, titleToCache } from '../src/storage/titleCodec';
-import { decodeBook, encodeBook } from '../src/storage/readingCodec';
-import { decodeGame, encodeGame } from '../src/storage/gameCodec';
-import { getDisplayPoster } from '../src/types';
+import { titleFromProperties, titleToProperties, titleToCache } from '../src/shared/storage/titleCodec';
+import { decodeBook, encodeBook } from '../src/shared/storage/readingCodec';
+import { decodeGame, encodeGame } from '../src/shared/storage/gameCodec';
+import { getDisplayPoster } from '../src/modules/watchlist/domain/titles';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
 import { setupGames } from './helpers/setupGameDataManager';

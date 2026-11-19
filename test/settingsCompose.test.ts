@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parse, stringify } from 'yaml';
 import { createFakeApp } from './fakes/fakeApp';
-import { LocalStore } from '../src/storage/LocalStore';
-import { SHARED_SETTING_KEYS, SharedConfigStore } from '../src/storage/SharedConfigStore';
-import { SECRET_KEYS } from '../src/storage/SecretStore';
-import { VaultLayout } from '../src/storage/VaultLayout';
-import { composeSettings, persistSettings } from '../src/settingsSplit';
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/types';
+import { LocalStore } from '../src/shared/storage/LocalStore';
+import { SHARED_SETTING_KEYS, SharedConfigStore } from '../src/shared/storage/SharedConfigStore';
+import { SECRET_KEYS } from '../src/shared/storage/SecretStore';
+import { VaultLayout } from '../src/shared/storage/VaultLayout';
+import { composeSettings, persistSettings } from '../src/modules/settings/services/settingsSplit';
+import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/modules/settings/domain/settingsDefaults';
 import { STORED } from './settingsCompose.fixture';
 
 type Loose = Record<string, unknown>;
@@ -341,7 +341,7 @@ describe('composeSettings and persistSettings', () => {
 		const local = new LocalStore(f.plugin);
 		await local.load();
 		const layout = new VaultLayout('W', () => []);
-		const shared = new SharedConfigStore(f.app, () => layout, { parse, stringify });
+		const shared = new SharedConfigStore(f.app.vault, () => layout, { parse, stringify });
 		await shared.load();
 		local.data.settings = { futureKey: 1, cardSize: 2 };
 		const settings = composeSettings(local.data.settings, shared.get().settings);

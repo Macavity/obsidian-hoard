@@ -1,6 +1,9 @@
+import { newGamesTab } from './helpers/newGamesTab';
 import { describe, expect, it, vi } from 'vitest';
-import { GamesTab } from '../src/GamesTab';
-import { defaultGamesSettings, DEFAULT_SETTINGS, type Game } from '../src/types';
+import type { Game } from '../src/modules/games/domain/model';
+import { defaultGamesSettings } from '../src/modules/games/domain/gameDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const game = (id: string, over: Partial<Game> = {}): Game => ({
 	id, title: id, type: 'RPG', status: 'Playing', priority: '', favorite: false, wishlist: false, rating: 0,
@@ -35,8 +38,7 @@ function build(games: Game[] = []) {
 		updateCoverAndSource: vi.fn(() => Promise.resolve()),
 		updateCoverUrl: vi.fn(() => Promise.resolve()),
 	};
-	const plugin = { app: {}, settings: { ...DEFAULT_SETTINGS }, isCardTextUnder: () => false, getCardMinWidth: () => 150 };
-	const tab = new GamesTab(document.createElement('div'), plugin as never, gameData as never);
+	const tab = newGamesTab(document.createElement('div'), { settings: fakeSettings({ ...DEFAULT_SETTINGS }), games: gameData, isCardTextUnder: () => false });
 	return { p: tab as unknown as Priv, gameData, settings };
 }
 

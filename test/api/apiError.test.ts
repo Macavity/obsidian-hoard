@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
 	ApiError, apiErrorMessage, apiErrorShort, apiLabel, httpError, lookupOfError, rethrowAuth,
-} from '../../src/api/apiError';
-import { setLocale } from '../../src/i18n';
+} from '../../src/shared/api/apiError';
+import { setLocale } from '../../src/shared/i18n';
 
 afterEach(() => setLocale('en'));
 

@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestUrl } from 'obsidian';
-import { PosterService } from '../src/PosterService';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../src/types';
-import type { ApiService } from '../src/ApiService';
-import { FAILED, NOT_FOUND } from '../src/lookup';
+import { PosterService } from '../src/shared/api/PosterService';
+import type { HoardTitle } from '../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
+import type { ApiService } from '../src/shared/api/ApiService';
+import { FAILED, NOT_FOUND } from '../src/shared/api/lookup';
 import { setupDataManager } from './helpers/setupDataManager';
-import { buildPosterCard } from '../src/PosterCard';
+import { buildPosterCard } from '../src/design-system/PosterCard';
 import { movieNote, setupListTab } from './helpers/setupListTab';
-import type { DataManager } from '../src/DataManager';
+import type { DataManager } from '../src/modules/watchlist/services/DataManager';
 
 const sent = vi.mocked(requestUrl);
 interface Reply { status: number; json?: unknown }
@@ -269,12 +270,12 @@ describe('a poster that fails to load', () => {
 
 describe('the card gate', () => {
 	const visible = async (setupEach: (dm: DataManager) => void) => {
-		const { tab, dm, plugin } = await setupListTab({ 'W/Movie/A.md': movieNote('A') });
+		const { tab, dm, posters } = await setupListTab({ 'W/Movie/A.md': movieNote('A') });
 		setupEach(dm);
 		const card = document.createElement('div');
 		card.dataset.titleId = 'Movie/A';
 		(tab as unknown as { handleCardsVisible(c: HTMLElement[]): void }).handleCardsVisible([card]);
-		return (plugin as unknown as { posterService: { enqueue: ReturnType<typeof vi.fn> } }).posterService.enqueue;
+		return posters.enqueue;
 	};
 
 	it('enqueues a title that was never looked up', async () => {

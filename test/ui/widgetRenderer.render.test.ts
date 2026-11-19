@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { WidgetRenderer } from '../../src/WidgetRenderer';
-import type { HoardGroup, HoardTitle } from '../../src/types';
+import { WidgetRenderer } from '../../src/modules/widgets/ui/WidgetRenderer';
+import type { HoardGroup, HoardTitle } from '../../src/modules/watchlist/domain/model';
 import { textsOf as text } from '../helpers/dom';
+import { fakeSettings } from '../helpers/fakeSettings';
 
 type Processor = (source: string, el: HTMLElement) => void;
 
@@ -22,11 +23,6 @@ interface Fixture {
 function setup(f: Fixture) {
 	const map = new Map<string, Processor>();
 	const marked: unknown[][] = [];
-	const plugin = {
-		registerMarkdownCodeBlockProcessor: (lang: string, fn: Processor) => map.set(lang, fn),
-		register: () => {},
-		settings: { types: [{ name: 'Anime', color: '#f00' }], statuses: [], coloredTypeBadges: true, colorTheme: 'default' },
-	};
 	const dm = {
 		getAirtimeEntries: () => f.airtime ?? [],
 		getTitles: () => f.titles,
@@ -38,7 +34,12 @@ function setup(f: Fixture) {
 		getNextUnwatchedEpisode: () => (f.nextEp === undefined ? 2 : f.nextEp),
 		markEpisodeWatched: (...a: unknown[]) => { marked.push(a); return Promise.resolve(); },
 	};
-	new WidgetRenderer(plugin as never, dm as never);
+	new WidgetRenderer(
+		fakeSettings({ types: [{ name: 'Anime', color: '#f00' }], statuses: [], coloredTypeBadges: true, colorTheme: 'default' }) as never,
+		dm as never,
+		((lang: string, fn: Processor) => map.set(lang, fn)) as never,
+		() => {},
+	);
 	return { map, marked };
 }
 

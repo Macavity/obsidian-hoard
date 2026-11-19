@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseEpisodeRange, formatEpisodeRange, toAbsolute, fromAbsolute, outsideSeasons } from '../../src/storage/episodeRange';
+import { parseEpisodeRange, formatEpisodeRange, toAbsolute, fromAbsolute, outsideSeasons } from '../../src/shared/storage/episodeRange';
 
 const seasons = [{ name: 'Season 1', episodes: 12, offset: 0 }, { name: 'Season 2', episodes: 10, offset: 12 }];
 

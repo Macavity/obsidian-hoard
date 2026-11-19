@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ReadingDetailModal } from '../src/ReadingDetailModal';
-import { t } from '../src/i18n';
-import type { Book } from '../src/types';
+import { newReadingDetail } from './helpers/newReadingDetail';
+import { t } from '../src/shared/i18n';
+import type { Book } from '../src/modules/reading/domain/model';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const flush = () => new Promise<void>((r) => setTimeout(r, 0));
 const book = { id: 'b1', title: 'Dune', customFields: {} } as unknown as Book;
@@ -12,7 +13,7 @@ function build(read: () => Promise<string | null>) {
 		readReadingNote: vi.fn(read),
 		appendQuote: vi.fn(() => Promise.resolve()),
 	};
-	const modal = new ReadingDetailModal({} as never, { settings: {}, apiService: {}, app: {} } as never, readingData as never, 'book', 'b1', vi.fn());
+	const modal = newReadingDetail({ settings: fakeSettings({}), reading: readingData }, { mode: 'book', id: 'b1', onChanged: vi.fn() });
 	const m = modal as unknown as { renderQuotesSection: (i: Book) => void; contentEl: HTMLElement };
 	m.renderQuotesSection(book);
 	const list = () => m.contentEl.querySelector<HTMLElement>('.hoard-reading-quotes__list')!;

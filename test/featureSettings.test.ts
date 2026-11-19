@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readColumns, readGamesSettings, readReadingSettings } from '../src/featureSettings';
-import { DEFAULT_READING_SETTINGS, DEFAULT_READING_STATUS_COLORS, defaultGamesSettings } from '../src/types';
+import { readColumns, readGamesSettings, readReadingSettings } from '../src/shared/storage/featureSettings';
+import { defaultGamesSettings } from '../src/modules/games/domain/gameDefaults';
+import { DEFAULT_READING_SETTINGS, DEFAULT_READING_STATUS_COLORS } from '../src/modules/reading/domain/readingDefaults';
 
 describe('readGamesSettings', () => {
 	const defaults = defaultGamesSettings();

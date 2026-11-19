@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { effectiveMediaSource } from '../src/apiSources';
-import { LibraryIndex } from '../src/LibraryIndex';
-import { resultIdKeys } from '../src/titleSearch';
-import type HoardPlugin from '../src/main';
-import type { Game, MediaSearchResult } from '../src/types';
-import type { GameDetailsResult, GameSearchResult } from '../src/ApiService';
-import { AddGameModal } from '../src/AddGameModal';
+import { effectiveMediaSource } from '../src/shared/api/apiSources';
+import { LibraryIndex } from '../src/shared/services/LibraryIndex';
+import { resultIdKeys } from '../src/shared/services/titleSearch';
+import type { Game } from '../src/modules/games/domain/model';
+import type { MediaSearchResult } from '../src/modules/watchlist/domain/model';
+import type { GameDetailsResult, GameSearchResult } from '../src/shared/api/ApiService';
+import { AddGameModal } from '../src/modules/games/ui/AddGameModal';
+import { fakeSettings } from './helpers/fakeSettings';
 
 const row: MediaSearchResult = {
 	imdbId: 'tt0903747', title: 'Breaking Bad', mediaType: 'tv', episodes: 0, episodeDuration: 0, releaseDate: '', url: '', seasons: [],
@@ -21,8 +22,7 @@ describe('keyless watchlist routing', () => {
 
 	it('finds the stored note with that External ID as already in the library', () => {
 		const titles = [{ title: 'Other', malId: '', anilistId: '', tmdbId: '', tmdbMediaType: '', externalLink: 'https://www.imdb.com/title/tt0903747/' }];
-		const plugin = { dataManager: { getTitles: vi.fn(() => titles) } } as unknown as HoardPlugin;
-		const idx = LibraryIndex.build(plugin, ['watchlist']);
+		const idx = LibraryIndex.build({ watchlist: vi.fn(() => titles) as never }, ['watchlist']);
 		expect(idx.lookup(['imdb:tt0903747'], 'Unrelated')).toBe('Watchlist');
 	});
 });
@@ -50,8 +50,8 @@ describe('Steam pick in AddGameModal', () => {
 			generateGameId: () => 'g1',
 			addGame: vi.fn((g: Game) => { added.push(g); return Promise.resolve(); }),
 		};
-		const plugin = { settings: { gamesApiSource: 'rawg', priorities: [] }, apiService: api };
-		const modal = new AddGameModal({} as never, plugin as never, gameData as never, () => {});
+		const deps = { app: {}, settings: fakeSettings({ gamesApiSource: 'rawg', priorities: [] }), games: gameData, api };
+		const modal = new AddGameModal(deps.app as never, deps.settings as never, deps.games as never, deps.api as never, { onAdded: () => {} });
 		modal.open();
 		return { modal, api, added };
 	}

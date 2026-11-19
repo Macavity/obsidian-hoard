@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LibraryIndex, bookResultIdKeys, gameResultIdKeys } from '../src/LibraryIndex';
-import type HoardPlugin from '../src/main';
+import { LibraryIndex, bookResultIdKeys, gameResultIdKeys } from '../src/shared/services/LibraryIndex';
 
 const book = { title: 'H', author: '', year: 0, totalPages: 0, coverUrl: '', googleBooksId: '', openLibraryId: '', releaseDate: '', url: '' };
 
@@ -19,20 +18,18 @@ describe('result id keys', () => {
 
 describe('LibraryIndex', () => {
 	it('matches a Steam row to a game with only steamAppId', () => {
-		const plugin = { gameDataManager: { getGames: () => [{ title: 'Other', apiSource: '', apiId: '', steamAppId: '1145360' }] } } as unknown as HoardPlugin;
-		const idx = LibraryIndex.build(plugin, ['games']);
+		const idx = LibraryIndex.build({ games: () => [{ title: 'Other', apiSource: '', apiId: '', steamAppId: '1145360' }] as never }, ['games']);
 		expect(idx.lookup(['steam:1145360'], 'Unrelated')).toBe('Games');
 	});
 	it('matches an Open Library row to a stored book', () => {
-		const plugin = { readingDataManager: { getBooks: () => [{ title: 'Z', googleBooksId: '', openLibraryId: 'OL1W' }] } } as unknown as HoardPlugin;
-		const idx = LibraryIndex.build(plugin, ['books']);
+		const idx = LibraryIndex.build({ books: () => [{ title: 'Z', googleBooksId: '', openLibraryId: 'OL1W' }] as never }, ['books']);
 		expect(idx.lookup(['openlibrary:OL1W'], 'Unrelated')).toBe('Books');
 	});
 });
 
 describe('LibraryIndex stored-entry keys', () => {
 	const title = { title: 'T', malId: '', anilistId: '', tmdbId: '', tmdbMediaType: '', externalLink: '' };
-	const build = (titles: unknown[]) => LibraryIndex.build({ dataManager: { getTitles: () => titles } } as unknown as HoardPlugin, ['watchlist']);
+	const build = (titles: unknown[]) => LibraryIndex.build({ watchlist: () => titles as never }, ['watchlist']);
 
 	it('keys a title by mal and anilist ids', () => {
 		const idx = build([{ ...title, malId: '5', anilistId: '6' }]);
@@ -49,17 +46,14 @@ describe('LibraryIndex stored-entry keys', () => {
 		expect(idx.lookup(['imdb:tt123'], 'x')).toBe('Watchlist');
 	});
 	it('keys a book by Google Books id', () => {
-		const plugin = { readingDataManager: { getBooks: () => [{ title: 'B', googleBooksId: 'g1', openLibraryId: '' }] } } as unknown as HoardPlugin;
-		expect(LibraryIndex.build(plugin, ['books']).lookup(['gbooks:g1'], 'x')).toBe('Books');
+		expect(LibraryIndex.build({ books: () => [{ title: 'B', googleBooksId: 'g1', openLibraryId: '' }] as never }, ['books']).lookup(['gbooks:g1'], 'x')).toBe('Books');
 	});
 	it('keys a manga by mal id, and skips one without', () => {
-		const plugin = { readingDataManager: { getMangaList: () => [{ title: 'M', malId: '9' }, { title: 'N', malId: '' }] } } as unknown as HoardPlugin;
-		const idx = LibraryIndex.build(plugin, ['manga']);
+		const idx = LibraryIndex.build({ manga: () => [{ title: 'M', malId: '9' }, { title: 'N', malId: '' }] as never }, ['manga']);
 		expect(idx.lookup(['mal:9'], 'x')).toBe('Manga');
 		expect(idx.lookup(['mal:'], 'x')).toBeNull();
 	});
 	it('keys a game by api source and id', () => {
-		const plugin = { gameDataManager: { getGames: () => [{ title: 'G', apiSource: 'rawg', apiId: '3', steamAppId: '' }] } } as unknown as HoardPlugin;
-		expect(LibraryIndex.build(plugin, ['games']).lookup(['rawg:3'], 'x')).toBe('Games');
+		expect(LibraryIndex.build({ games: () => [{ title: 'G', apiSource: 'rawg', apiId: '3', steamAppId: '' }] as never }, ['games']).lookup(['rawg:3'], 'x')).toBe('Games');
 	});
 });

@@ -1,9 +1,11 @@
+import { newReadingTab } from './helpers/newReadingTab';
+import { searchBooks, fetchReadingCoverById, firstBookCover } from '../src/shared/services/coverRefresh';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ReadingTab } from '../src/ReadingTab';
-import { READING_STATUSES, type Book, type Manga } from '../src/types';
+import { ReadingTab } from '../src/modules/reading/ui/ReadingTab';
+import type { Book, Manga } from '../src/modules/reading/domain/model';
+import { READING_STATUSES } from '../src/modules/reading/domain/readingDefaults';
+import { fakeSettings } from './helpers/fakeSettings';
 
-vi.mock('../src/ConfirmModal', () => ({ ConfirmModal: class { constructor(_a: unknown, _m: string, public onConfirm: () => void) {} open(): void { this.onConfirm(); } } }));
-vi.mock('../src/ReadingManageColumnsModal', () => ({ ReadingManageColumnsModal: class { open(): void {} } }));
 
 interface Api {
 	getGoogleBookById: ReturnType<typeof vi.fn>;
@@ -56,8 +58,8 @@ function build(sub: 'books' | 'manga', savedFilters?: unknown) {
 		getMangaByMalId: vi.fn(),
 		searchManga: vi.fn(),
 	};
-	const plugin = { app: {}, apiService, isCardTextUnder: () => true, settings: { booksApiSource: 'google' } };
-	const tab = new ReadingTab(document.createElement('div'), plugin as never, readingData as never);
+	const deps = { api: apiService, reading: readingData, searchBooks, fetchReadingCoverById, firstBookCover, isCardTextUnder: () => true, settings: fakeSettings({ booksApiSource: 'google' }) };
+	const tab = newReadingTab(document.createElement('div'), deps);
 	const p = tab as unknown as Priv;
 	p.activeSubTab = sub;
 	return { p, items, readingData, apiService };

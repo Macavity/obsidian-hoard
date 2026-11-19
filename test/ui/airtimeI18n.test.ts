@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { Platform } from 'obsidian';
-import { setLocale } from '../../src/i18n';
-import { formatDaysWithMonths, getDetailedCountdown } from '../../src/AirtimeTab';
-import { renderToolbarWithMobileToggle } from '../../src/MobileToolbar';
+import { setLocale } from '../../src/shared/i18n';
+import { formatDaysWithMonths, getDetailedCountdown } from '../../src/modules/airtime/ui/AirtimeTab';
+import { renderToolbarWithMobileToggle } from '../../src/design-system/MobileToolbar';
 import { El } from '../helpers/fakeEl';
 
 afterEach(() => {

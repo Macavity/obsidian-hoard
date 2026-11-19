@@ -8,7 +8,7 @@ source:
   - scripts/check-css-classes.mjs
   - eslint.config.mjs
   - stylelint.config.mjs
-source_commit: 52470cc0fb7bcae43faf4c81a9543ecacb5ed178
+source_commit: cc203bf
 ---
 
 # CSS blocks
@@ -71,7 +71,7 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
 | Block | Stylesheet | Purpose |
 |---|---|---|
 | `hoard-btn` | buttons, modals, selection, steam-sync, utilities | The shared button; variants are modifiers. |
-| `hoard-icon-btn` | icon-button | The icon-only button of the UI kit. |
+| `hoard-icon-btn` | icon-button | The icon-only button of the design system. |
 | `hoard-badge` | list, list-extras, airtime, utilities | Small labels for priority, episode counts and types. |
 | `hoard-chevron` | list | The expand and collapse arrow. |
 | `hoard-input` | modals, list, custom-lists, airtime | Text, select and time inputs. |

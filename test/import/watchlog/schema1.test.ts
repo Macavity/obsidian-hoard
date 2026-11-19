@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
 import watchLogData from '../../fixtures/data-v1.json';
 import { setupSchema1 } from './setupSchema1';
-import { mergeSideFiles } from '../../../src/import/watchlog/schema1';
-import type { WatchLogData } from '../../../src/import/watchlog/schema1Types';
-import { LocalStore } from '../../../src/storage/LocalStore';
+import { mergeSideFiles } from '../../../src/modules/import/services/watchlog/schema1';
+import type { WatchLogData } from '../../../src/modules/import/services/watchlog/schema1Types';
+import { LocalStore } from '../../../src/shared/storage/LocalStore';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>
 	parse(/^---\n([\s\S]*?)\n?---/.exec(src ?? '')?.[1] ?? '') as Record<string, unknown>;

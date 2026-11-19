@@ -1,0 +1,752 @@
+import type { TitleReader, TitleStats, TitleWriter } from '../../watchlist/exports';
+import type { AirtimeReader } from '../../airtime/exports';
+import { MarkdownPostProcessorContext } from 'obsidian';
+import type { SettingsReader } from '../../settings/exports';
+import type { HoardGroup, HoardTitle } from '../../watchlist/exports';
+import type { TagDefinition } from '../../../shared/domain/tags';
+import { formatDateDisplay, formatShortDateDisplay } from '../../../shared/domain/date';
+import { formatTime } from '../../../shared/domain/format';
+import { getThemedColor } from '../../../shared/domain/tags';
+import { t } from '../../../shared/i18n';
+import { statusLabel, typeLabel } from '../../../shared/i18n/labels';
+import { onDataChanged } from '../../../shared/services/changeSignal';
+
+export interface NextRelease { titleName: string; type: string; releaseDate: string; daysUntil: number }
+
+/** Episode progress (%) over all member titles; 0 when they have no episodes. */
+export function groupProgress(members: HoardTitle[], effectiveTotal: (t: HoardTitle) => number): number {
+	const watched = members.reduce((sum, t) => sum + t.watchedEpisodes.length, 0);
+	const total = members.reduce((sum, t) => sum + effectiveTotal(t), 0);
+	return total > 0 ? Math.min(100, Math.round((watched / total) * 100)) : 0;
+}
+
+/** The one-off airtime entry with the soonest release at or after `now`, or null. */
+export function findNextRelease(
+	entries: ReturnType<AirtimeReader['getAirtimeEntries']>,
+	titles: HoardTitle[],
+	now: number,
+): NextRelease | null {
+	const titleMap = new Map(titles.map((t) => [t.id, t]));
+	// date-only releases compare by local calendar day: a release stays "today" until midnight
+	const today = new Date(now);
+	today.setHours(0, 0, 0, 0);
+	const todayMs = today.getTime();
+	let best: NextRelease | null = null;
+	let bestMs = Infinity;
+	for (const entry of entries) {
+		const title = titleMap.get(entry.titleId);
+		if (!title || entry.schedule.recurrence !== 'once' || !entry.schedule.releaseDate) continue;
+		const dayMs = new Date(entry.schedule.releaseDate + 'T00:00:00').getTime();
+		if (dayMs >= todayMs && dayMs < bestMs) {
+			bestMs = dayMs;
+			best = {
+				titleName: title.title,
+				type: title.type,
+				releaseDate: entry.schedule.releaseDate,
+				daysUntil: Math.round((dayMs - todayMs) / 86400000),
+			};
+		}
+	}
+	return best;
+}
+
+type WidgetLanguage = 'hoard' | 'hoard-todo' | 'hoard-stat' | 'hoard-upcoming' | 'hoard-now' | 'hoard-now-next';
+
+export type WidgetTitles = Pick<TitleReader, 'getTitle' | 'getTitles'>
+	& Pick<TitleStats,
+		'getProgress' | 'getNextUnwatchedEpisode' | 'getEffectiveTotal' | 'getTotalTimeWatched'
+		| 'getTotalTimeRemaining' | 'getCompletedCount' | 'getPinnedGroupId' | 'getGroups'>
+	& Pick<AirtimeReader, 'getAirtimeEntries'> & Pick<TitleWriter, 'markEpisodeWatched'>;
+
+/**
+ * Renders the `hoard-*` code-block widgets inside notes and keeps them in step with the data.
+ */
+export class WidgetRenderer {
+	/** Registry of rendered widget containers (el → titleId). Stale entries are removed lazily. */
+	private widgetRegistry = new Map<HTMLElement, string>();
+	/** Which registered widgets are in mini mode (for a correct re-render on data change). */
+	private widgetMiniRegistry = new Map<HTMLElement, boolean>();
+	/** Generic re-render hooks for non-todo widgets (stats, upcoming, now-watching, now-next). */
+	private widgetRerender = new Map<HTMLElement, () => void>();
+
+	constructor(
+		private readonly settings: SettingsReader,
+		private readonly titles: WidgetTitles,
+		/** Bound to the plugin, so the processors go away on unload. */
+		registerMarkdownCodeBlockProcessor: (language: string, handler: (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void) => unknown,
+		/** Bound to the plugin: the callback runs on unload. */
+		register: (cleanup: () => void) => void,
+	) {
+		const handlers: Record<WidgetLanguage, (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => void> = {
+			'hoard': (source, el, ctx) => this.process(source, el, ctx),
+			'hoard-todo': (source, el) => this.processWlTodo(source, el),
+			'hoard-stat': (source, el) => this.processWlStat(source, el),
+			'hoard-upcoming': (source, el) => this.processWlUpcoming(source, el),
+			'hoard-now': (source, el) => this.processNow(source, el),
+			'hoard-now-next': (source, el) => this.processWlNowNext(source, el),
+		};
+		for (const [language, handler] of Object.entries(handlers) as [WidgetLanguage, typeof handlers[WidgetLanguage]][]) {
+			registerMarkdownCodeBlockProcessor(language, (source, el, ctx) => {
+				this.applyColorTheme(el);
+				handler(source, el, ctx);
+			});
+		}
+
+		// re-render all active widgets on data change (list → widget sync)
+		// the returned remover cleans the listener up on plugin unload
+		register(onDataChanged(() => this.onDataChanged()));
+	}
+
+	/** Theme vars are keyed off data-theme (theme.css); widgets live in notes, outside the themed view. */
+	private applyColorTheme(el: HTMLElement): void {
+		const colorTheme = this.settings.get().colorTheme ?? 'default';
+		if (colorTheme !== 'default') el.setAttribute('data-theme', colorTheme);
+	}
+
+	/** Runs on the change signal (`onDataChanged`). Re-renders all live widgets. */
+	private onDataChanged(): void {
+		const stale: HTMLElement[] = [];
+
+		for (const [el, titleId] of this.widgetRegistry) {
+			if (!el.isConnected) {
+				stale.push(el);
+				continue;
+			}
+			const title = this.titles.getTitle(titleId);
+			if (!title) {
+				stale.push(el);
+				continue;
+			}
+			const isMini = this.widgetMiniRegistry.get(el) ?? false;
+			if (isMini) {
+				this.renderWidgetMinimal(el, title);
+			} else {
+				this.renderWidget(el, title);
+			}
+		}
+
+		for (const el of stale) {
+			this.widgetRegistry.delete(el);
+			this.widgetMiniRegistry.delete(el);
+		}
+
+		const staleGeneric: HTMLElement[] = [];
+		for (const [el, rerender] of this.widgetRerender) {
+			if (!el.isConnected) {
+				staleGeneric.push(el);
+				continue;
+			}
+			try { rerender(); } catch (e) { console.warn('[Hoard] widget rerender failed:', e); }
+		}
+		for (const el of staleGeneric) this.widgetRerender.delete(el);
+	}
+
+	/** Clear all widget registries (plugin unload). */
+	cleanup(): void {
+		this.widgetRegistry.clear();
+		this.widgetMiniRegistry.clear();
+		this.widgetRerender.clear();
+	}
+
+	private process(
+		source: string,
+		el: HTMLElement,
+		_ctx: MarkdownPostProcessorContext,
+	): void {
+		const idMatch = source.match(/id:\s*(.+)/);
+		const id = idMatch?.[1]?.trim();
+		if (!id) {
+			el.createDiv({ cls: 'hoard-widget__error', text: `Hoard: ${t('widget.missingId')}` });
+			return;
+		}
+
+		const title = this.titles.getTitle(id);
+		if (!title) {
+			el.createDiv({
+				cls: 'hoard-widget__error',
+				text: `Hoard: ${t('widget.titleNotFound', { id })}`,
+			});
+			return;
+		}
+
+		// register so this widget re-renders on future data changes
+		this.widgetRegistry.set(el, id);
+
+		this.renderWidget(el, title);
+	}
+
+	private renderWidget(el: HTMLElement, title: HoardTitle): void {
+		this.renderWidgetFull(el, title);
+	}
+
+	private renderWidgetFull(el: HTMLElement, title: HoardTitle): void {
+		el.empty();
+		el.addClass('hoard-widget');
+
+		const mainRow = el.createDiv({ cls: 'hoard-widget__main-row' });
+
+		// checkbox 1: visual-only task marker — does NOT modify Hoard data
+		const taskCb = mainRow.createEl('input', {
+			cls: 'hoard-widget__checkbox',
+			attr: { type: 'checkbox' },
+		});
+		taskCb.title = t('widget.taskMarker');
+		taskCb.addEventListener('change', () => {
+			const titleSpan = mainRow.querySelector<HTMLElement>('.hoard-widget__title');
+			if (titleSpan) {
+				titleSpan.toggleClass('is-done', taskCb.checked);
+			}
+		});
+
+		mainRow.createSpan({ cls: 'hoard-widget__title', text: title.title });
+
+		this.sep(mainRow);
+
+		this.renderBadge(mainRow, title.type, this.settings.get().types, typeLabel(title.type));
+
+		this.sep(mainRow);
+
+		// status badge (respects coloredTypeBadges)
+		this.renderBadge(mainRow, title.status, this.settings.get().statuses, statusLabel(title.status));
+
+		this.sep(mainRow);
+
+		const progress = this.titles.getProgress(title);
+		const barWrap = mainRow.createDiv({ cls: 'hoard-widget__bar-wrap' });
+		barWrap.createDiv({ cls: 'hoard-progress__bar' }).setCssProps({ '--hoard-progress-width': `${progress}%` });
+
+		this.sep(mainRow);
+
+		mainRow.createSpan({ cls: 'hoard-widget__percent', text: `${progress}%` });
+
+		this.sep(mainRow);
+
+		const dateStr = title.dateStarted ?? title.dateAdded;
+		const dateLabel = title.dateStarted
+			? t('widget.since', { date: this.formatShortDate(dateStr) })
+			: t('widget.addedOn', { date: this.formatShortDate(dateStr) });
+		mainRow.createSpan({ cls: 'hoard-widget__date', text: dateLabel });
+
+		// checkbox 2: "Next up" — writes to Hoard data
+		const isMovie = title.type === 'Movie';
+		if (!isMovie) {
+			const nextEp = this.titles.getNextUnwatchedEpisode(title);
+			const nextRow = el.createDiv({ cls: 'hoard-widget__next-row' });
+
+			if (nextEp !== null) {
+				this.renderEpisodeCheckbox(nextRow, title, {
+					episode: nextEp, checked: false, tooltip: t('widget.markEpisode', { episode: nextEp }), follow: false,
+				}, (t) => this.renderWidget(el, t));
+				nextRow.createSpan({ cls: 'hoard-widget__next-label', text: t('widget.nextUp', { episode: nextEp }) });
+			} else {
+				nextRow.createSpan({ cls: 'hoard-widget__next-label', text: `✓ ${t('widget.allWatched')}` });
+			}
+		} else {
+			// movie: watch checkbox that writes to Hoard data
+			const watchRow = el.createDiv({ cls: 'hoard-widget__next-row' });
+			const watched = title.watchedEpisodes.includes(1);
+			this.renderEpisodeCheckbox(watchRow, title, {
+				episode: 1, checked: watched, tooltip: t('widget.markMovie'), follow: true,
+			}, (t) => this.renderWidget(el, t));
+			watchRow.createSpan({
+				cls: 'hoard-widget__next-label',
+				text: watched ? t('widget.watched') : t('widget.markAsWatched'),
+			});
+		}
+	}
+
+	private renderWidgetMinimal(el: HTMLElement, title: HoardTitle): void {
+		el.empty();
+		el.addClass('hoard-widget-minimal');
+
+		const row = el.createDiv({ cls: 'hoard-widget-minimal__row' });
+
+		// left checkbox: visual-only task marker
+		const taskCb = row.createEl('input', {
+			cls: 'hoard-widget__checkbox',
+			attr: { type: 'checkbox' },
+		});
+		taskCb.title = t('widget.taskMarker');
+		taskCb.addEventListener('change', () => {
+			const titleSpan = row.querySelector<HTMLElement>('.hoard-widget__title');
+			if (titleSpan) {
+				titleSpan.toggleClass('is-done', taskCb.checked);
+			}
+		});
+
+		row.createSpan({ cls: 'hoard-widget__title', text: title.title });
+
+		this.sep(row);
+
+		this.renderBadge(row, title.type, this.settings.get().types, typeLabel(title.type));
+
+		this.sep(row);
+
+		// status badge (respects coloredTypeBadges)
+		this.renderBadge(row, title.status, this.settings.get().statuses, statusLabel(title.status));
+
+		this.sep(row);
+
+		const progress = this.titles.getProgress(title);
+		row.createSpan({ cls: 'hoard-widget__percent', text: `${progress}%` });
+
+		this.sep(row);
+
+		// right checkbox: "Mark as watched" / next episode
+		const isMovie = title.type === 'Movie';
+		if (isMovie) {
+			const watched = title.watchedEpisodes.includes(1);
+			this.renderEpisodeCheckbox(row, title, {
+				episode: 1, checked: watched, tooltip: t('widget.markMovie'), follow: true,
+			}, (t) => this.renderWidgetMinimal(el, t));
+		} else {
+			const nextEp = this.titles.getNextUnwatchedEpisode(title);
+			if (nextEp !== null) {
+				this.renderEpisodeCheckbox(row, title, {
+					episode: nextEp, checked: false, tooltip: t('widget.markEpisode', { episode: nextEp }), follow: false,
+				}, (t) => this.renderWidgetMinimal(el, t));
+			} else {
+				const nextCb = row.createEl('input', {
+					cls: 'hoard-widget__next-checkbox',
+					attr: { type: 'checkbox' },
+				});
+				nextCb.checked = true;
+				nextCb.disabled = true;
+				nextCb.title = t('widget.allWatched');
+			}
+		}
+	}
+
+	/** Type / status badge: coloured from the tag definition when coloured badges are on. */
+	private renderBadge(host: HTMLElement, text: string, tags: readonly TagDefinition[], display: string = text): void {
+		const def = this.getTagDef(text, tags);
+		const colored = this.settings.get().coloredTypeBadges;
+		const badge = host.createSpan({
+			cls: colored ? 'hoard-badge hoard-badge--sm' : 'hoard-badge__plain',
+			text: display,
+		});
+		if (colored && def) badge.setCssProps({ '--hoard-badge-color': getThemedColor(text, def.color, this.settings.get().colorTheme) });
+	}
+
+	/**
+	 * Checkbox that marks an episode watched. `follow` mirrors the checkbox state (movie toggle);
+	 * otherwise it only ever marks the episode as watched (next-up box).
+	 */
+	private renderEpisodeCheckbox(
+		host: HTMLElement,
+		title: HoardTitle,
+		spec: { episode: number; checked: boolean; tooltip: string; follow: boolean },
+		rerender: (updated: HoardTitle) => void,
+	): void {
+		const cb = host.createEl('input', {
+			cls: 'hoard-widget__next-checkbox',
+			attr: { type: 'checkbox' },
+		});
+		cb.checked = spec.checked;
+		cb.title = spec.tooltip;
+		cb.addEventListener('change', () => {
+			void this.titles.markEpisodeWatched(title.id, spec.episode, spec.follow ? cb.checked : true).then(() => {
+				const updated = this.titles.getTitle(title.id);
+				if (updated) rerender(updated);
+			});
+		});
+	}
+
+	/** Soonest future one-off release among the airtime entries. */
+	private nextRelease(): NextRelease | null {
+		return findNextRelease(this.titles.getAirtimeEntries(), this.titles.getTitles(), Date.now());
+	}
+
+	private getPinned(): { pinnedTitle: HoardTitle | null; pinnedGroup: HoardGroup | null } {
+		const pinnedTitle = this.titles.getTitles().find((t) => t.pinned) ?? null;
+		const pinnedGroupId = this.titles.getPinnedGroupId();
+		const pinnedGroup = pinnedGroupId
+			? this.titles.getGroups().find((g) => g.id === pinnedGroupId) ?? null
+			: null;
+		return { pinnedTitle, pinnedGroup };
+	}
+
+	/** Title count and episode progress (%) of a group's member titles. */
+	private pinnedGroupStats(group: HoardGroup): { count: number; progress: number } {
+		const byId = new Map(this.titles.getTitles().map((t) => [t.id, t]));
+		const members = group.titleIds
+			.map((id) => byId.get(id))
+			.filter((t): t is HoardTitle => t !== undefined);
+		return {
+			count: members.length,
+			progress: groupProgress(members, (t) => this.titles.getEffectiveTotal(t)),
+		};
+	}
+
+	private renderNwBarCol(bottomRow: HTMLElement, progress: number): void {
+		const barCol = bottomRow.createDiv({ cls: 'hoard-widget-now__full-bar-column' });
+		barCol.createDiv({ cls: 'hoard-widget-now__full-percent', text: `${progress}%` });
+		barCol.createDiv({ cls: 'hoard-widget__full-card-bar-wrap' }).createDiv({ cls: 'hoard-widget__full-card-bar' }).setCssProps({ '--hoard-widget-full-card-bar-width': `${progress}%` });
+	}
+
+	private sep(parent: HTMLElement): void {
+		parent.createSpan({ cls: 'hoard-widget__separator', text: '·' });
+	}
+
+	private getTagDef(name: string, tags: readonly TagDefinition[]): TagDefinition | undefined {
+		return tags.find((t) => t.name === name);
+	}
+
+	private formatShortDate(dateStr: string): string {
+		try {
+			const d = new Date(dateStr);
+			const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+			return formatShortDateDisplay(iso);
+		} catch {
+			return dateStr;
+		}
+	}
+
+	// hoard-todo
+
+	private processWlTodo(source: string, el: HTMLElement): void {
+		const lines = source.trim().split('\n').map((l) => l.trim()).filter(Boolean);
+		const isMini = lines.includes('mini');
+		const titleName = lines.find((l) => l !== 'mini') ?? '';
+		if (!titleName) {
+			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-todo: ${t('widget.todoMissingTitle')}` });
+			return;
+		}
+		const title = this.titles.getTitles().find(
+			(t) => t.title.toLowerCase() === titleName.toLowerCase(),
+		);
+		if (!title) {
+			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-todo: ${t('widget.todoNotFound', { name: titleName })}` });
+			return;
+		}
+		this.widgetRegistry.set(el, title.id);
+		this.widgetMiniRegistry.set(el, isMini);
+		if (isMini) {
+			this.renderWidgetMinimal(el, title);
+		} else {
+			this.renderWidget(el, title);
+		}
+	}
+
+	// hoard-stat
+
+	private processWlStat(source: string, el: HTMLElement): void {
+		this.widgetRerender.set(el, () => this.renderWlStat(source, el));
+		this.renderWlStat(source, el);
+	}
+
+	private renderWlStat(source: string, el: HTMLElement): void {
+		const kind = source.trim().toLowerCase();
+		el.empty();
+		el.addClass('hoard-widget-stat');
+
+		if (kind === 'watched') {
+			const minutes = this.titles.getTotalTimeWatched();
+			this.renderStatCard(el, '🕐', formatTime(minutes), t('widget.statWatched'));
+		} else if (kind === 'completed') {
+			const count = this.titles.getCompletedCount();
+			this.renderStatCard(el, '✅', t('widget.titlesCount', { count }), t('widget.statCompleted'));
+		} else if (kind === 'remaining') {
+			const minutes = this.titles.getTotalTimeRemaining();
+			this.renderStatCard(el, '⏳', formatTime(minutes), t('widget.statRemaining'));
+		} else if (kind === 'time') {
+			const watched = this.titles.getTotalTimeWatched();
+			const remaining = this.titles.getTotalTimeRemaining();
+			this.renderTimeCardMini(el, watched, remaining);
+		} else if (kind === 'time full') {
+			const watched = this.titles.getTotalTimeWatched();
+			const remaining = this.titles.getTotalTimeRemaining();
+			this.renderTimeCardFull(el, watched, remaining);
+		} else if (kind === 'completed full') {
+			const count = this.titles.getCompletedCount();
+			this.renderCompletedCardFull(el, count);
+		} else if (kind === 'time completed full') {
+			const watched = this.titles.getTotalTimeWatched();
+			const remaining = this.titles.getTotalTimeRemaining();
+			const count = this.titles.getCompletedCount();
+			this.renderTripleStatCard(el, watched, remaining, count);
+		} else {
+			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-stat: ${t('widget.unknownStat', { kind })}` });
+		}
+	}
+
+	private renderStatCard(el: HTMLElement, icon: string, value: string, label: string): void {
+		el.empty();
+		const card = el.createDiv({ cls: 'hoard-widget-stat__card' });
+		card.createSpan({ cls: 'hoard-widget-stat__icon', text: icon });
+		card.createSpan({ cls: 'hoard-widget-stat__value', text: value });
+		card.createSpan({ cls: 'hoard-widget-stat__label', text: label });
+	}
+
+	private renderTimeCardMini(el: HTMLElement, watchedMins: number, remainingMins: number): void {
+		el.empty();
+		const card = el.createDiv({ cls: 'hoard-widget-stat__card hoard-widget-stat__card--time' });
+		card.createSpan({ cls: 'hoard-widget-stat__icon', text: '🕐' });
+		card.createSpan({ cls: 'hoard-widget-stat__value', text: formatTime(watchedMins) });
+		card.createSpan({ cls: 'hoard-widget-stat__label', text: t('widget.statWatched') });
+		card.createSpan({ cls: 'hoard-widget-stat__separator', text: '·' });
+		card.createSpan({ cls: 'hoard-widget-stat__icon', text: '⏳' });
+		card.createSpan({ cls: 'hoard-widget-stat__value', text: formatTime(remainingMins) });
+		card.createSpan({ cls: 'hoard-widget-stat__label', text: t('widget.statLeft') });
+	}
+
+	private renderTimeCardFull(el: HTMLElement, watchedMins: number, remainingMins: number): void {
+		el.empty();
+		const card = el.createDiv({ cls: 'hoard-widget__full-card hoard-widget__full-card--time' });
+		card.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.timeHeader') });
+		const cols = card.createDiv({ cls: 'hoard-widget__full-card-time-columns' });
+		this.renderTimeCol(cols, 'hoard-widget__full-card-time-column', watchedMins, t('widget.statWatched'));
+		this.renderTimeCol(cols, 'hoard-widget__full-card-time-column', remainingMins, t('widget.statRemaining'));
+	}
+
+	private renderTimeCol(cols: HTMLElement, cls: string, mins: number, label: string): void {
+		const col = cols.createDiv({ cls });
+		col.createDiv({ cls: 'hoard-widget__full-card-value', text: formatTime(mins) });
+		col.createDiv({ cls: 'hoard-widget__full-card-days', text: this.formatTimeDays(mins) });
+		col.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: label });
+	}
+
+	private formatTimeDays(minutes: number): string {
+		const days = Math.floor(minutes / 1440);
+		const hours = Math.floor((minutes % 1440) / 60);
+		if (days === 0) return hours > 0 ? `${hours}h` : '0h';
+		return t('widget.daysHours', { count: days, hours });
+	}
+
+	private renderCompletedCardFull(el: HTMLElement, count: number): void {
+		el.empty();
+		const card = el.createDiv({ cls: 'hoard-widget__full-card' });
+		card.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.completedHeader') });
+		card.createDiv({ cls: 'hoard-widget__full-card-value', text: String(count) });
+		card.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.titlesCompleted') });
+	}
+
+	private renderTripleStatCard(el: HTMLElement, watchedMins: number, remainingMins: number, completed: number): void {
+		el.empty();
+		el.addClass('hoard-widget-stat--triple');
+		const card = el.createDiv({ cls: 'hoard-widget__full-card hoard-widget__full-card--triple' });
+		const cols = card.createDiv({ cls: 'hoard-widget-stat__triple-columns' });
+
+		this.renderTimeCol(cols, 'hoard-widget-stat__triple-column', watchedMins, t('widget.statWatched'));
+		cols.createDiv({ cls: 'hoard-vertical-separator' });
+		this.renderTimeCol(cols, 'hoard-widget-stat__triple-column', remainingMins, t('widget.statRemaining'));
+		cols.createDiv({ cls: 'hoard-vertical-separator' });
+
+		const completedCol = cols.createDiv({ cls: 'hoard-widget-stat__triple-column' });
+		completedCol.createDiv({ cls: 'hoard-widget__full-card-value', text: String(completed) });
+		completedCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.statCompleted') });
+	}
+
+	// hoard-upcoming
+
+	private processWlUpcoming(source: string, el: HTMLElement): void {
+		this.widgetRerender.set(el, () => this.renderWlUpcoming(source, el));
+		this.renderWlUpcoming(source, el);
+	}
+
+	private renderWlUpcoming(source: string, el: HTMLElement): void {
+		el.empty();
+		const kind = source.trim().toLowerCase();
+		const isFull = kind === 'next full';
+		if (kind !== 'next' && kind !== 'next full') {
+			el.createDiv({ cls: 'hoard-widget__error', text: `hoard-upcoming: ${t('widget.upcomingUsage')}` });
+			return;
+		}
+
+		// the entry with the soonest future release date
+		const bestEntry = this.nextRelease();
+
+		el.addClass('hoard-widget-upcoming');
+
+		if (isFull) {
+			this.renderUpcomingFull(el, bestEntry);
+			return;
+		}
+
+		if (!bestEntry) {
+			el.createDiv({ cls: 'hoard-widget-upcoming__card hoard-widget-upcoming__card--empty', text: t('widget.noUpcomingTitles') });
+			return;
+		}
+
+		const card = el.createDiv({ cls: 'hoard-widget-upcoming__card' });
+		card.createSpan({ cls: 'hoard-widget-upcoming__title', text: bestEntry.titleName });
+
+		this.renderBadge(card, bestEntry.type, this.settings.get().types, typeLabel(bestEntry.type));
+
+		card.createSpan({ cls: 'hoard-widget-upcoming__date', text: formatDateDisplay(bestEntry.releaseDate) });
+		const daysUntil = bestEntry.daysUntil;
+		const countdown = daysUntil === 0 ? t('widget.today')
+			: daysUntil === 1 ? t('widget.tomorrow')
+				: daysUntil >= 30 ? t('widget.inDaysMonths', { days: daysUntil, count: Math.round(daysUntil / 30) })
+					: t('widget.inDays', { count: daysUntil });
+		card.createSpan({ cls: 'hoard-widget-upcoming__countdown', text: countdown });
+	}
+
+	private renderUpcomingFull(
+		el: HTMLElement,
+		bestEntry: NextRelease | null,
+	): void {
+		el.empty();
+		const card = el.createDiv({ cls: 'hoard-widget__full-card' });
+		card.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.upNext') });
+		if (!bestEntry) {
+			card.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.noUpcomingTitles') });
+			return;
+		}
+		card.createDiv({ cls: 'hoard-widget__full-card-title', text: bestEntry.titleName });
+		const meta = card.createDiv({ cls: 'hoard-widget__full-card-meta' });
+		this.renderBadge(meta, bestEntry.type, this.settings.get().types, typeLabel(bestEntry.type));
+		const daysUntil = bestEntry.daysUntil;
+		const countdown = daysUntil === 0 ? t('widget.today') : daysUntil === 1 ? t('widget.tomorrow') : t('widget.inDays', { count: daysUntil });
+		meta.createSpan({ text: countdown });
+		meta.createSpan({ cls: 'hoard-widget__full-card-subtitle', text: formatDateDisplay(bestEntry.releaseDate) });
+	}
+
+	// hoard-now
+
+	private processNow(source: string, el: HTMLElement): void {
+		this.widgetRerender.set(el, () => this.renderNow(source, el));
+		this.renderNow(source, el);
+	}
+
+	private renderNow(source: string, el: HTMLElement): void {
+		el.empty();
+		const isFull = source.trim().toLowerCase() === 'full';
+		el.addClass('hoard-widget-now');
+
+		const { pinnedTitle, pinnedGroup } = this.getPinned();
+
+		if (isFull) {
+			this.renderNowFull(el, pinnedTitle, pinnedGroup);
+			return;
+		}
+
+		if (!pinnedTitle && !pinnedGroup) {
+			el.createDiv({ cls: 'hoard-widget-now__card hoard-widget-now__card--empty', text: t('widget.pinToWatch') });
+			return;
+		}
+
+		const card = el.createDiv({ cls: 'hoard-widget-now__card' });
+
+		if (pinnedGroup) {
+			card.createSpan({ cls: 'hoard-widget-now__title', text: pinnedGroup.name });
+			const { count, progress } = this.pinnedGroupStats(pinnedGroup);
+			card.createSpan({ cls: 'hoard-widget-now__episode', text: t('widget.titlesCount', { count }) });
+			const barWrap = card.createDiv({ cls: 'hoard-widget-now__bar-wrap' });
+			barWrap.createDiv({ cls: 'hoard-widget-now__bar' }).setCssProps({ '--hoard-widget-now-bar-width': `${progress}%` });
+			card.createSpan({ cls: 'hoard-widget-now__percent', text: `${progress}%` });
+			return;
+		}
+
+		const pinned = pinnedTitle!;
+		card.createSpan({ cls: 'hoard-widget-now__title', text: pinned.title });
+
+		this.renderBadge(card, pinned.type, this.settings.get().types, typeLabel(pinned.type));
+
+		if (pinned.type !== 'Movie') {
+			const nextEp = this.titles.getNextUnwatchedEpisode(pinned);
+			card.createSpan({ cls: 'hoard-widget-now__episode', text: nextEp !== null ? t('widget.episodeShort', { episode: nextEp }) : `✓ ${t('widget.completed')}` });
+		}
+
+		const progress = this.titles.getProgress(pinned);
+		const barWrap = card.createDiv({ cls: 'hoard-widget-now__bar-wrap' });
+		const bar = barWrap.createDiv({ cls: 'hoard-widget-now__bar' });
+		bar.setCssProps({ '--hoard-widget-now-bar-width': `${progress}%` });
+		card.createSpan({ cls: 'hoard-widget-now__percent', text: `${progress}%` });
+	}
+
+	private renderNowFull(
+		el: HTMLElement,
+		pinnedTitle: HoardTitle | null,
+		pinnedGroup: HoardGroup | null,
+	): void {
+		el.empty();
+		const card = el.createDiv({ cls: 'hoard-widget__full-card hoard-widget__full-card--now-watching' });
+		card.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.nowWatchingHeader') });
+
+		if (!pinnedTitle && !pinnedGroup) {
+			card.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.pinToWatch') });
+			return;
+		}
+
+		if (pinnedGroup) {
+			card.createDiv({ cls: 'hoard-widget__full-card-title', text: pinnedGroup.name });
+			const { count, progress } = this.pinnedGroupStats(pinnedGroup);
+			const bottomRow = card.createDiv({ cls: 'hoard-widget-now__full-bottom-row' });
+			bottomRow.createSpan({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.titlesCount', { count }) });
+			this.renderNwBarCol(bottomRow, progress);
+			return;
+		}
+
+		const pinned = pinnedTitle!;
+		card.createDiv({ cls: 'hoard-widget__full-card-title', text: pinned.title });
+
+		const progress = this.titles.getProgress(pinned);
+		const bottomRow = card.createDiv({ cls: 'hoard-widget-now__full-bottom-row' });
+
+		this.renderBadge(bottomRow, pinned.type, this.settings.get().types, typeLabel(pinned.type));
+
+		this.renderNwBarCol(bottomRow, progress);
+	}
+
+	// hoard-now-next
+
+	private processWlNowNext(source: string, el: HTMLElement): void {
+		this.widgetRerender.set(el, () => this.renderWlNowNext(source, el));
+		this.renderWlNowNext(source, el);
+	}
+
+	private renderWlNowNext(_source: string, el: HTMLElement): void {
+		el.empty();
+		el.addClass('hoard-widget-now-next');
+
+		const { pinnedTitle, pinnedGroup } = this.getPinned();
+
+		const bestEntry = this.nextRelease();
+
+		this.renderNowNextCard(el, pinnedTitle, pinnedGroup, bestEntry);
+	}
+
+	private renderNowNextCard(
+		el: HTMLElement,
+		pinnedTitle: HoardTitle | null,
+		pinnedGroup: HoardGroup | null,
+		bestEntry: NextRelease | null,
+	): void {
+		el.empty();
+		const card = el.createDiv({ cls: 'hoard-widget__full-card hoard-widget__full-card--now-next' });
+		const cols = card.createDiv({ cls: 'hoard-widget-now-next__columns' });
+
+		// left column: Now Watching
+		const nowCol = cols.createDiv({ cls: 'hoard-widget-now-next__column' });
+		nowCol.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.nowWatchingHeader') });
+
+		if (!pinnedTitle && !pinnedGroup) {
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.nothingPinned') });
+		} else if (pinnedGroup) {
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-title', text: pinnedGroup.name });
+			const { count, progress } = this.pinnedGroupStats(pinnedGroup);
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: `${t('widget.titlesCount', { count })} · ${progress}%` });
+		} else {
+			const pinned = pinnedTitle!;
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-title', text: pinned.title });
+			const progress = this.titles.getProgress(pinned);
+			nowCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: `${progress}%` });
+		}
+
+		cols.createDiv({ cls: 'hoard-vertical-separator' });
+
+		// right column: Up Next
+		const nextCol = cols.createDiv({ cls: 'hoard-widget-now-next__column' });
+		nextCol.createDiv({ cls: 'hoard-widget__full-card-header', text: t('widget.upcomingNextHeader') });
+
+		if (!bestEntry) {
+			nextCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: t('widget.noUpcoming') });
+		} else {
+			nextCol.createDiv({ cls: 'hoard-widget__full-card-title', text: bestEntry.titleName });
+			const daysUntil = bestEntry.daysUntil;
+			const countdown = daysUntil === 0 ? t('widget.today') : daysUntil === 1 ? t('widget.tomorrow') : t('widget.inDaysShort', { count: daysUntil });
+			nextCol.createDiv({ cls: 'hoard-widget__full-card-subtitle', text: `${bestEntry.releaseDate} · ${countdown}` });
+		}
+	}
+}

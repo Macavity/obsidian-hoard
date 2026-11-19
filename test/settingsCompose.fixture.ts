@@ -1,4 +1,4 @@
-import type { HoardPluginSettings } from '../src/types';
+import type { HoardPluginSettings } from '../src/modules/settings/domain/model';
 
 /**
  * Stored settings in which every key holds a valid value that differs from its default, falsy where

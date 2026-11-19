@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
-import { titleFromProperties, titleToProperties } from '../src/storage/titleCodec';
-import { getCommunityRating, getDisplayTrailer, getTitleCredits } from '../src/types';
+import { titleFromProperties, titleToProperties } from '../src/shared/storage/titleCodec';
+import { getCommunityRating, getDisplayTrailer } from '../src/modules/watchlist/domain/titleHelpers';
+import { getTitleCredits } from '../src/modules/watchlist/domain/titles';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>

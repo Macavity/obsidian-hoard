@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
-import HoardPlugin from '../src/main';
-import { LocalStore } from '../src/storage/LocalStore';
-import { SecretStore, shouldShowSecretsNotice } from '../src/storage/SecretStore';
+import HoardPlugin from '../src/app/main';
+import { LocalStore } from '../src/shared/storage/LocalStore';
+import { SecretStore, shouldShowSecretsNotice } from '../src/shared/storage/SecretStore';
 import { createFakeApp } from './fakes/fakeApp';
 
 vi.stubGlobal('activeDocument', document);
@@ -26,7 +26,7 @@ describe('loadSettings', () => {
 			typeNamesKey: null,
 			dataManager: { resetNoKeyChecks: reset },
 		});
-		await (plugin as unknown as HoardPlugin).loadSettings();
+		await (plugin as unknown as { loadSettings(): Promise<void> }).loadSettings();
 		expect(api.setTmdbKey).toHaveBeenCalledWith('tmdb');
 		expect(api.setSteamCredentials).toHaveBeenCalledWith('steam', '42');
 		expect(api.setIgdbCredentials).toHaveBeenCalledWith('id', 'sec');

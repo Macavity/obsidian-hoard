@@ -1,0 +1,49 @@
+import type { CreditsField, HoardTitle } from './model';
+
+/** never fetched (absent or empty) */
+export function isCreditsUnfetched(names: string[] | undefined): boolean {
+	return !names || names.length === 0;
+}
+
+/** fetched names only; unfetched gives [] */
+export function getDisplayCredits(names: string[] | undefined): string[] {
+	return names ?? [];
+}
+
+/** fetched names for a field (a note override wins), before the manual merge */
+function fetchedCredits(title: HoardTitle, field: CreditsField): string[] | undefined {
+	const override = title.overrides?.[field];
+	if (override) return override;
+	if (field === 'director') return title.director;
+	if (field === 'cast') return title.cast;
+	return title.studio;
+}
+
+/** user-added names */
+export function getManualCredits(title: HoardTitle, field: CreditsField): string[] {
+	if (field === 'director') return title.manualDirector ?? [];
+	if (field === 'cast') return title.manualCast ?? [];
+	return title.manualStudio ?? [];
+}
+
+/**
+ * What every surface renders, searches and exports: fetched first, user-added
+ * after, deduped case-insensitively.
+ */
+export function getTitleCredits(title: HoardTitle, field: CreditsField): string[] {
+	const fetched = getDisplayCredits(fetchedCredits(title, field));
+	const merged = [...fetched];
+	const seen = new Set(fetched.map((n) => n.toLowerCase()));
+	for (const name of getManualCredits(title, field)) {
+		const key = name.toLowerCase();
+		if (seen.has(key)) continue;
+		seen.add(key);
+		merged.push(name);
+	}
+	return merged;
+}
+
+/** Poster URL to render (the note's `Cover`, else the fetched one). */
+export function getDisplayPoster(title: HoardTitle): string {
+	return title.posterUrl ?? '';
+}

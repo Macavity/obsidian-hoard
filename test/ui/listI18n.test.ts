@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { renderModePill } from '../../src/ModePill';
-import { renderShelfTitle } from '../../src/RowsView';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { renderModePill } from '../../src/modules/games/ui/ModePill';
+import { renderShelfTitle } from '../../src/design-system/RowsView';
 import { El } from '../helpers/fakeEl';
 
 afterEach(() => setLocale('en'));

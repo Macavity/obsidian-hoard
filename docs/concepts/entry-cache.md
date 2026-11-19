@@ -3,24 +3,24 @@ type: Domain
 title: Entry cache
 description: What data.json keeps per entry, why API data lives there and not in the note, and how it is kept in step.
 source:
-  - src/storage/storageTypes.ts
-  - src/storage/titleCodec.ts
-  - src/storage/LocalStore.ts
-  - src/storage/EntryIndex.ts
-  - src/DataManager.ts
-  - src/storage/read.ts
-  - src/storage/readCache.ts
-  - src/storage/cacheMigration.ts
-  - src/import/watchlog/detect.ts
-  - src/lookup.ts
-source_commit: 5e0cdd3
+  - src/shared/storage/storageTypes.ts
+  - src/shared/storage/titleCodec.ts
+  - src/shared/storage/LocalStore.ts
+  - src/shared/storage/EntryIndex.ts
+  - src/modules/watchlist/services/DataManager.ts
+  - src/shared/domain/read.ts
+  - src/shared/storage/readCache.ts
+  - src/shared/storage/cacheMigration.ts
+  - src/modules/import/services/watchlog/detect.ts
+  - src/shared/api/lookup.ts
+source_commit: cc203bf
 ---
 
 # Entry cache
 
 `LocalData.cache` in `data.json` holds one `EntryCache` per entry id: **API-derived, regenerable
 data that must not become note content**. Cached fields (see
-[storageTypes.ts](../../src/storage/storageTypes.ts)): trailer, director, cast, studio,
+[storageTypes.ts](../../src/shared/storage/storageTypes.ts)): trailer, director, cast, studio,
 community rating/votes/source/last fetch, TMDB collection id, seasons, resolved ids
 (`tmdbId`, `tmdbMediaType`, `malId`, `anilistId`), the last background `apiCheck` per kind
 (`airing`, `seasons`, `poster`, `trailer`, `credits`, `studio`, with result
@@ -47,7 +47,7 @@ a `none` there would be a literal value (none seen in the real vault, so no spec
 ## Fetch state
 
 Poster, trailer, credits (director and cast together) and studio have four states, derived rather than
-stored as a field ([lookup.ts](../../src/lookup.ts), `DataManager.lookupDue` / `recordLookup`):
+stored as a field ([lookup.ts](../../src/shared/api/lookup.ts), `DataManager.lookupDue` / `recordLookup`):
 
 | State | Where it shows |
 |---|---|
@@ -66,20 +66,20 @@ load stores nothing: a dead `Cover` stays the user's value.
 
 ## Reading data.json
 
-`LocalStore.read` takes the file field by field ([readCache.ts](../../src/storage/readCache.ts), readers in
-[read.ts](../../src/storage/read.ts)): a field of the wrong type is dropped, the entry and its other
+`LocalStore.read` takes the file field by field ([readCache.ts](../../src/shared/storage/readCache.ts), readers in
+[read.ts](../../src/shared/domain/read.ts)): a field of the wrong type is dropped, the entry and its other
 fields stay; an `apiCheck` entry needs a known kind, a known result and a timestamp.
 
 **Migration of `'none'`.** Older versions kept `posterUrl: 'none'`, `trailerUrl: 'none'` and `['none']`
 for director, cast or studio in the cache. On load
-([cacheMigration.ts](../../src/storage/cacheMigration.ts), `migrateNoneMarkers`) each marker becomes
+([cacheMigration.ts](../../src/shared/storage/cacheMigration.ts), `migrateNoneMarkers`) each marker becomes
 `apiCheck[kind] = { at: <load time>, result: 'notfound' }` and the value is dropped, so migrated titles
 are re-checked a week after the upgrade, not all at once. An existing check is kept, and a note value
 is never touched (it wins over the cache anyway). `posterUrl` is no cache field any more and goes
 either way. The result is saved right after the load. A read-only store (WatchLog schema-1 or newer file)
 loads no cache at all (`emptyData`), so there is nothing to migrate there. The fork import runs the
 same migration on the fork's cache before merging it
-([detect.ts](../../src/import/watchlog/detect.ts), `readForkData`).
+([detect.ts](../../src/modules/import/services/watchlog/detect.ts), `readForkData`).
 
 ## Lifecycle
 

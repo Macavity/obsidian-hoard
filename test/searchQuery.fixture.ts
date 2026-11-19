@@ -1,4 +1,4 @@
-import type { SearchConfig } from '../src/SearchQuery';
+import type { SearchConfig } from '../src/shared/domain/SearchQuery';
 
 export interface Film {
 	id: string;

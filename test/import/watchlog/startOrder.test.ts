@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import HoardPlugin from '../../../src/main';
-import type { WatchLogSources } from '../../../src/import/watchlog/detect';
+import HoardPlugin from '../../../src/app/main';
+import type { WatchLogSources } from '../../../src/modules/import/services/watchlog/detect';
 
 const hoisted = vi.hoisted(() => ({
 	order: [] as string[],
@@ -8,7 +8,7 @@ const hoisted = vi.hoisted(() => ({
 	sources: null as WatchLogSources | Error | null,
 }));
 
-vi.mock('../../../src/WatchLogOnboardingModal', () => ({
+vi.mock('../../../src/modules/import/ui/WatchLogOnboardingModal', () => ({
 	WatchLogOnboardingModal: class {
 		finished: Promise<void>;
 		constructor() {
@@ -17,7 +17,7 @@ vi.mock('../../../src/WatchLogOnboardingModal', () => ({
 		open(): void { hoisted.order.push('wizard:open'); }
 	},
 }));
-vi.mock('../../../src/import/watchlog/detect', () => ({
+vi.mock('../../../src/modules/import/services/watchlog/detect', () => ({
 	detectWatchLogSources: () => hoisted.sources instanceof Error ? Promise.reject(hoisted.sources) : Promise.resolve(hoisted.sources),
 }));
 
@@ -32,17 +32,17 @@ function setup(sources: WatchLogSources | Error) {
 	const track = (n: string) => () => { hoisted.order.push(n); return Promise.resolve(); };
 	const plugin = Object.create(HoardPlugin.prototype) as Record<string, unknown>;
 	Object.assign(plugin, {
-		settings: { types: [] },
+		state: { types: [] },
 		local: { data: { ui: {} } },
 		app: { vault: { getFiles: () => [], cachedRead: () => Promise.resolve('') } },
 		applySharedSettings: track('applySettings'),
-		backupManagers: () => ({ storage: { importContext: () => ({}) } }),
+		importContext: () => ({}),
 		shared: { deferBase: () => {}, load: track('shared.load'), onChange: () => {}, ensureFilter: () => Promise.resolve('ok'), start: () => {} },
 		index: { onLocalWrite: () => {}, build: track('index:build'), sweepCache: () => {}, start: () => {} },
 		historyManager: { start: track('h') },
 		dataManager: {
 			init: track('d'), ensureFolders: track('e'), ensureFolder: track('f'),
-			notifyChange: () => { hoisted.order.push(`notify:${String((plugin as unknown as HoardPlugin).importRunning)}`); },
+			notifyChange: () => { hoisted.order.push(`notify:${String((plugin as unknown as { importRunning: boolean }).importRunning)}`); },
 		},
 		readingDataManager: { init: track('r') },
 		gameDataManager: { init: track('g') },
@@ -54,6 +54,8 @@ function setup(sources: WatchLogSources | Error) {
 
 vi.stubGlobal('activeDocument', document);
 
+const importRunning = (p: HoardPlugin): boolean => (p as unknown as { importRunning: boolean }).importRunning;
+
 afterEach(() => vi.restoreAllMocks());
 
 describe('start order', () => {
@@ -62,11 +64,11 @@ describe('start order', () => {
 		const started = start();
 		await flush();
 		expect(calls.filter((c) => c.startsWith('wizard') || c.startsWith('index'))).toEqual(['wizard:open']);
-		expect(plugin.importRunning).toBe(true);
+		expect(importRunning(plugin)).toBe(true);
 		hoisted.resolve!();
 		await started;
 		expect(calls.filter((c) => c.startsWith('wizard') || c.startsWith('index'))).toEqual(['wizard:open', 'wizard:finished', 'index:build']);
-		expect(plugin.importRunning).toBe(false);
+		expect(importRunning(plugin)).toBe(false);
 		// views listen on the data manager: placeholder on open, real content after close
 		expect(calls.filter((c) => c.startsWith('notify'))).toEqual(['notify:true', 'notify:false']);
 		// imported settings are applied before the views render again
@@ -82,7 +84,7 @@ describe('start order', () => {
 		await flush();
 		hoisted.resolve!();
 		await started;
-		expect(plugin.importRunning).toBe(false);
+		expect(importRunning(plugin)).toBe(false);
 		expect(calls).toContain('notify:false');
 		expect(calls).toContain('index:build');
 		expect(err).toHaveBeenCalled();

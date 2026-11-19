@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ReadingDetailModal } from '../src/ReadingDetailModal';
-import { readingStatusLabel } from '../src/i18n/labels';
-import { deriveBorderColor, deriveFillColor } from '../src/ColorPicker';
-import { t } from '../src/i18n';
-import { DEFAULT_FIELD_COLOR, formatCount, todayIso } from '../src/types';
-import type { Book, Manga, ReadingCustomColumn } from '../src/types';
+import { newReadingDetail } from './helpers/newReadingDetail';
+import { readingStatusLabel } from '../src/shared/i18n/labels';
+import { deriveBorderColor, deriveFillColor } from '../src/design-system/ColorPicker';
+import { t } from '../src/shared/i18n';
+import { todayIso } from '../src/shared/domain/date';
+import { formatCount } from '../src/shared/domain/format';
+import { DEFAULT_FIELD_COLOR } from '../src/shared/domain/tags';
+import type { Book, Manga, ReadingCustomColumn } from '../src/modules/reading/domain/model';
+import { fakeSettings } from './helpers/fakeSettings';
 
 // the shared DOM polyfills lack createSvg, which the arc gauges draw with
 const svgProto = Element.prototype as unknown as { createSvg?: (tag: string) => SVGElement };
@@ -54,14 +57,14 @@ function build(o: Opts = {}) {
 		getGoogleBookById: vi.fn(() => Promise.resolve({ coverUrl: 'http://c/n.jpg' })),
 		getMangaByMalId: vi.fn(() => Promise.resolve({ coverUrl: 'http://c/m.jpg' })),
 	};
-	const plugin = {
-		settings: { showHintBanners: o.showHints ?? false },
-		apiService,
-		historyManager: { log },
-		app: {},
+	const parts = {
+		settings: fakeSettings({ showHintBanners: o.showHints ?? false }),
+		api: apiService,
+		history: { log },
+		reading: readingData,
 	};
 	const onChanged = vi.fn();
-	const modal = new ReadingDetailModal({} as never, plugin as never, readingData as never, mode, 'x', onChanged);
+	const modal = newReadingDetail(parts, { mode, id: 'x', onChanged });
 	const x = modal as unknown as {
 		contentEl: HTMLElement;
 		close: () => void;
@@ -352,15 +355,6 @@ describe('ReadingDetailModal.logProgressChange', () => {
 		const one = build({ mode: 'manga', item: baseManga({ totalChapters: 5, totalVolumes: 2 }) });
 		await closeAfter(one, (c) => inc(c[1]!));
 		expect(logged(one)).toEqual(['Berserk (Manga) At volume 1 / 2']);
-	});
-
-	it('does not fail without a history manager', async () => {
-		const b = build({ item: baseBook({ totalPages: 10 }) });
-		const plugin = (b.modal as unknown as { plugin: { historyManager?: unknown } }).plugin;
-		plugin.historyManager = undefined;
-		await closeAfter(b, (c) => inc(c[0]!));
-		expect(b.readingData.updateBook).toHaveBeenCalled();
-		expect(b.onChanged).toHaveBeenCalledTimes(1);
 	});
 });
 

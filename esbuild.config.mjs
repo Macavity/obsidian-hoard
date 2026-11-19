@@ -12,21 +12,7 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
-// Detect entry point: prefer src/main.ts, fallback to main.ts
-const hasSrcMain = existsSync("src/main.ts");
-const hasRootMain = existsSync("main.ts");
-
-if (hasSrcMain && hasRootMain) {
-  console.warn("WARNING: Both src/main.ts and main.ts exist. Using src/main.ts as entry point.");
-  console.warn("Consider removing one to avoid confusion.");
-}
-if (!hasSrcMain && !hasRootMain) {
-  console.error("ERROR: Neither src/main.ts nor main.ts found!");
-  process.exit(1);
-}
-
-// Set entry point based on what exists
-const entryPoint = hasSrcMain ? "src/main.ts" : "main.ts";
+const entryPoint = "src/app/main.ts";
 
 // Everything Obsidian loads goes to dist/, so a vault links just that folder
 const outdir = "dist";

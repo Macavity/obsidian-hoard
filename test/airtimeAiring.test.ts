@@ -1,16 +1,15 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { setupDataManager } from './helpers/setupDataManager';
-import { runAirtimeScheduler } from '../src/airtimeScheduler';
-import type { LookupResult } from '../src/lookup';
-import type { EntryCache } from '../src/storage/storageTypes';
+import { runAirtimeScheduler } from '../src/modules/airtime/services/airtimeScheduler';
+import type { LookupResult } from '../src/shared/api/lookup';
+import type { EntryCache } from '../src/shared/storage/storageTypes';
 
 const SHOW = 'W/TV Show/C.md';
 const showNote = (extra = '') =>
-	`---\nName: C\nType: TV Show\nExternal ID: tmdb:tv:1399\nAirtime Recurrence: daily\nAirtime Time: 20:15\nAirtime Season: 2\nAirtime Episode: 5\n${extra}---\n`;
+	`---\nName: C\nType: TV Show\nExternal ID: tmdb:tv:1399\nSeasons:\n  - "S1: 8"\nAirtime Recurrence: daily\nAirtime Time: 20:15\nAirtime Season: 2\nAirtime Episode: 5\n${extra}---\n`;
 
 async function setup(files: Record<string, string>, fetchAiring = vi.fn((): Promise<LookupResult<NonNullable<EntryCache['airing']>>> => Promise.resolve({ status: 'notfound' }))) {
-	const s = await setupDataManager(files);
-	(s.plugin as unknown as Record<string, unknown>).apiService = { fetchAiring };
+	const s = await setupDataManager(files, { apiService: { fetchAiring } });
 	return { ...s, fetchAiring };
 }
 
@@ -92,10 +91,11 @@ describe('airtime scheduler', () => {
 		const before = new Map(f.files);
 		const notify = vi.fn();
 		const refresh = vi.spyOn(dm, 'refreshAiring');
-		const deps = { dataManager: dm, readingDataManager: { getBook: () => undefined, getManga: () => undefined }, gameDataManager: { getGame: () => undefined }, notify };
+		const reading = { getBook: () => undefined, getManga: () => undefined };
+		const games = { getGame: () => undefined };
 		const notified = new Set<string>();
-		runAirtimeScheduler(deps, notified, new Date(2026, 9, 19, 20, 15));
-		runAirtimeScheduler(deps, notified, new Date(2026, 9, 19, 20, 15, 30));
+		runAirtimeScheduler(dm, reading, games, notify, notified, new Date(2026, 9, 19, 20, 15));
+		runAirtimeScheduler(dm, reading, games, notify, notified, new Date(2026, 9, 19, 20, 15, 30));
 		await new Promise((r) => setTimeout(r, 0));
 		expect(notify).toHaveBeenCalledTimes(1);
 		expect(notify).toHaveBeenCalledWith('C');

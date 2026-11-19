@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ListTab } from '../../src/ListTab';
-import type { HoardTitle } from '../../src/types';
+import { ListTab } from '../../src/modules/watchlist/ui/ListTab';
+import type { HoardTitle } from '../../src/modules/watchlist/domain/model';
 
 type Compare = (key: string, a: HoardTitle, b: HoardTitle) => number;
 
 // a minimal `this` for the comparator: numbers come straight off the fixture
 const host = Object.assign(Object.create(ListTab.prototype) as object, {
-	dataManager: {
+	titles: {
 		getProgress: (t: HoardTitle) => (t as unknown as { p: number }).p,
 		calcTimeRemaining: (t: HoardTitle) => (t as unknown as { left: number }).left,
 		calcTimeWatched: (t: HoardTitle) => (t as unknown as { watched: number }).watched,

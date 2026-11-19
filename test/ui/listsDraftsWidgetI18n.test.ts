@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { setLocale } from '../../src/i18n';
-import de from '../../src/i18n/de';
-import { WidgetRenderer } from '../../src/WidgetRenderer';
-import { CustomListsTab } from '../../src/CustomListsTab';
-import { DraftsTab } from '../../src/DraftsTab';
-import { InsertWidgetModal } from '../../src/InsertWidgetModal';
+import { setLocale } from '../../src/shared/i18n';
+import de from '../../src/shared/i18n/de';
+import { WidgetRenderer } from '../../src/modules/widgets/ui/WidgetRenderer';
+import { CustomListsTab } from '../../src/modules/custom-lists/ui/CustomListsTab';
+import { newDraftsTab } from '../helpers/newDraftsTab';
+import { InsertWidgetModal } from '../../src/modules/widgets/ui/InsertWidgetModal';
 import { El } from '../helpers/fakeEl';
+import { fakeSettings } from '../helpers/fakeSettings';
 
 afterEach(() => setLocale('en'));
 
@@ -17,13 +18,13 @@ describe('widget i18n', () => {
 		const map = new Map<string, (source: string, el: HTMLElement) => void>();
 		const g = globalThis as Record<string, unknown>;
 		g.activeDocument = { addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true };
-		const plugin = {
-			registerMarkdownCodeBlockProcessor: (lang: string, fn: (s: string, e: HTMLElement) => void) => map.set(lang, fn),
-			register: () => {},
-			settings: { types: [], statuses: [], coloredTypeBadges: false },
-		};
 		const dm = { getAirtimeEntries: () => [], getTitles: () => [], getPinnedGroupId: () => null, getGroups: () => [] };
-		new WidgetRenderer(plugin as never, dm as never);
+		new WidgetRenderer(
+			fakeSettings({ types: [], statuses: [], coloredTypeBadges: false }) as never,
+			dm as never,
+			((lang: string, fn: (s: string, e: HTMLElement) => void) => map.set(lang, fn)) as never,
+			() => {},
+		);
 		return map;
 	}
 
@@ -53,7 +54,7 @@ describe('widget i18n', () => {
 		const orig = proto.setPlaceholder;
 		proto.setPlaceholder = (p: string) => { placeholder = p; };
 		try {
-			new InsertWidgetModal({} as never, [], () => {});
+			new InsertWidgetModal({} as never, { titles: [], onSelect: () => {} });
 		} finally {
 			proto.setPlaceholder = orig;
 		}
@@ -65,7 +66,7 @@ describe('custom lists and drafts i18n', () => {
 	it('renders the custom lists empty state in German', () => {
 		setLocale('de');
 		const root = new El('div');
-		const tab = new CustomListsTab(asEl(root), { app: { vault: { on: () => ({}) } }, settings: {} } as never, {} as never);
+		const tab = new CustomListsTab(asEl(root), {} as never, (() => ({})) as never, { on: () => ({}), offref: () => {} }, {} as never, {} as never, {} as never, {} as never);
 		(tab as unknown as { buildEmptyState: () => void }).buildEmptyState();
 		expect(texts(root)).toContain(de.lists.emptyText);
 		expect(texts(root)).toContain(de.lists.createFirst);
@@ -74,13 +75,13 @@ describe('custom lists and drafts i18n', () => {
 	it('renders drafts chrome in German', () => {
 		setLocale('de');
 		const root = new El('div');
-		const plugin = {
-			settings: { showHintBanners: false, draftsVaultTag: '#hoard' },
-			dataManager: { getTitles: () => [] },
-			readingDataManager: { getBooks: () => [], getMangaList: () => [] },
-			gameDataManager: { getGames: () => [] },
+		const parts = {
+			settings: fakeSettings({ showHintBanners: false, draftsVaultTag: '#hoard' }),
+			titles: { getTitles: () => [] },
+			reading: { getBooks: () => [], getMangaList: () => [] },
+			games: { getGames: () => [] },
 		};
-		const tab = new DraftsTab(asEl(root), plugin as never, {} as never, () => {});
+		const tab = newDraftsTab(asEl(root), parts);
 		(tab as unknown as { renderUI: (e: unknown[]) => void }).renderUI([]);
 		expect(texts(root)).toContain(` ${de.drafts.pending.other}`);
 		expect(texts(root)).toContain(de.drafts.empty.replace('{tag}', '#hoard'));

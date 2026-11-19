@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { emitDataChanged, onDataChanged } from '../src/changeSignal';
+import { emitDataChanged, onDataChanged } from '../src/shared/services/changeSignal';
 import { setupDataManager } from './helpers/setupDataManager';
 
 /** A second window (the settings window since Obsidian 1.15, a popout) that holds the focus. */

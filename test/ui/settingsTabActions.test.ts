@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from 'obsidian';
-import { HoardSettingsTab } from '../../src/SettingsTab';
-import { DEFAULT_SETTINGS, type HoardTitle } from '../../src/types';
+import { newSettingsTab } from '../helpers/newSettingsTab';
+import type { HoardTitle } from '../../src/modules/watchlist/domain/model';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/domain/settingsDefaults';
 import { until } from '../helpers/common';
 import { makeTitle } from '../helpers/setupDataManager';
+import { fakeSettings } from '../helpers/fakeSettings';
+import { SettingsService } from '../../src/modules/settings/services/SettingsService';
+import { emitDataChanged } from '../../src/shared/services/changeSignal';
 
 const shown = (Notice as unknown as { shown: string[] }).shown;
 
@@ -34,14 +38,25 @@ function settings() {
 	};
 }
 
-function makeTab(plugin: Record<string, unknown> = {}, app: unknown = {}) {
-	const full = {
-		settings: settings(),
-		saveSettings: vi.fn(() => Promise.resolve()),
-		...plugin,
+/** Builds the tab on fake fakes; `over` replaces or adds fakes (titles, reading, api, ...). */
+/** The real service over the fake settings, so a change reaches the main window like in the plugin. */
+const emitting = (live: ReturnType<typeof settings>) =>
+	new SettingsService(() => live, () => Promise.resolve(), emitDataChanged);
+
+function makeTab(over: Record<string, unknown> = {}, app: unknown = {}, liveSettings = false) {
+	const live = settings();
+	const settingsService = fakeSettings(live);
+	const state = { importProgress: null as null | { cancel: () => void } };
+	const fakes: Record<string, unknown> = {
+		app,
+		settings: liveSettings ? emitting(live) : settingsService,
+		layout: () => ({ root: 'W' }),
+		refreshOpenViews: vi.fn(),
+		setImportProgress: (progress: typeof state.importProgress) => { state.importProgress = progress; },
+		...over,
 	};
-	const tab = new HoardSettingsTab(app as never, full as never);
-	return { tab, priv: tab as unknown as Private, plugin: full as typeof full & Record<string, never> };
+	const tab = newSettingsTab(fakes);
+	return { tab, priv: tab as unknown as Private, settings: live, settingsService, state, fakes };
 }
 
 beforeEach(() => { shown.length = 0; });
@@ -78,8 +93,8 @@ describe('settings section routing', () => {
 
 describe('theme picker', () => {
 	it('marks the current theme and reports its label', () => {
-		const { priv, plugin } = makeTab();
-		plugin.settings.colorTheme = 'nightfall';
+		const { priv, settings } = makeTab();
+		settings.colorTheme = 'nightfall';
 		const el = document.createElement('div');
 		const onPicked = vi.fn();
 		priv.renderThemePicker(el, onPicked);
@@ -90,18 +105,15 @@ describe('theme picker', () => {
 	});
 
 	it('falls back to the default theme when none is stored', () => {
-		const { priv, plugin } = makeTab();
-		(plugin.settings as { colorTheme?: string }).colorTheme = undefined;
+		const { priv, settings } = makeTab();
+		(settings as { colorTheme?: string }).colorTheme = undefined;
 		const onPicked = vi.fn();
 		priv.renderThemePicker(document.createElement('div'), onPicked);
 		expect(onPicked).toHaveBeenCalledWith('Default');
 	});
 
 	it('saves the clicked theme, moves the selection and refreshes open views', async () => {
-		const refreshUI = vi.fn();
-		const { priv, plugin } = makeTab({
-			app: { workspace: { getLeavesOfType: () => [{ view: { refreshUI } }, { view: {} }] } },
-		});
+		const { priv, settings, fakes } = makeTab({}, {}, true);
 		const changed = vi.fn();
 		document.addEventListener('hoard-data-changed', changed);
 		const el = document.createElement('div');
@@ -110,16 +122,16 @@ describe('theme picker', () => {
 		const cards = qa(el, '.hoard-theme-picker__card');
 		cards[2]!.click();
 		await until(() => onPicked.mock.calls.length === 2);
-		expect(plugin.settings.colorTheme).toBe('bluez');
-		expect(plugin.saveSettings).toHaveBeenCalled();
+		expect(settings.colorTheme).toBe('bluez');
 		expect(cards.map((c) => c.classList.contains('is-selected'))).toEqual([false, false, true]);
 		expect(onPicked).toHaveBeenLastCalledWith('Bluez');
+		expect(fakes.refreshOpenViews).toHaveBeenCalledOnce();
 		expect(changed).toHaveBeenCalled();
 		document.removeEventListener('hoard-data-changed', changed);
 	});
 
 	it('refreshes the main window when the click happens in the settings window', async () => {
-		const { priv } = makeTab({ app: { workspace: { getLeavesOfType: () => [] } } });
+		const { priv, fakes } = makeTab({}, {}, true);
 		const changed = vi.fn();
 		document.addEventListener('hoard-data-changed', changed);
 		// Obsidian 1.15: the settings live in their own window, which has the focus during the click
@@ -134,15 +146,16 @@ describe('theme picker', () => {
 			vi.stubGlobal('activeDocument', document);
 			document.removeEventListener('hoard-data-changed', changed);
 		}
+		expect(fakes.refreshOpenViews).toHaveBeenCalled();
 		expect(changed).toHaveBeenCalled();
 	});
 
 	it('works without a picked-callback', async () => {
-		const { priv, plugin } = makeTab({ app: { workspace: { getLeavesOfType: () => [] } } });
+		const { priv, settings } = makeTab({ app: { workspace: { getLeavesOfType: () => [] } } });
 		const el = document.createElement('div');
 		priv.renderThemePicker(el);
 		qa(el, '.hoard-theme-picker__card')[1]!.click();
-		await until(() => plugin.settings.colorTheme === 'nightfall');
+		await until(() => settings.colorTheme === 'nightfall');
 	});
 });
 
@@ -151,8 +164,8 @@ describe('tag lists', () => {
 		qa(el, '.hoard-tag-editor__pill').map((p) => (q(p, '.hoard-tag-editor__name-input') as HTMLInputElement | null)?.value ?? q(p, '.hoard-tag-editor__name').textContent ?? '');
 
 	it('renders locked built-in types read-only and custom types editable', () => {
-		const { priv, plugin } = makeTab();
-		plugin.settings.types = [{ name: 'Movie', color: '#111111' }, { name: 'Docs', color: '#222222' }];
+		const { priv, settings } = makeTab();
+		settings.types = [{ name: 'Movie', color: '#111111' }, { name: 'Docs', color: '#222222' }];
 		const el = document.createElement('div');
 		const onChanged = vi.fn();
 		priv.renderTagSection(el, 'Types', 'types', onChanged);
@@ -177,16 +190,16 @@ describe('tag lists', () => {
 	});
 
 	it('recolors an entry through the picker and persists it', async () => {
-		const { priv, plugin } = makeTab();
+		const { priv, settings, settingsService } = makeTab();
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Priority', 'priorities');
 		const pill = qa(el, '.hoard-tag-editor__pill')[0]!;
 		const picker = q(pill, '.hoard-tag-editor__color-picker') as HTMLInputElement;
 		picker.value = '#123456';
 		picker.dispatchEvent(new Event('change'));
-		await until(() => plugin.settings.priorities[0]!.color === '#123456');
+		await until(() => settings.priorities[0]!.color === '#123456');
 		expect(q(pill, '.hoard-tag-editor__dot').style.getPropertyValue('--hoard-tag-editor-dot-color')).not.toBe('');
-		expect(plugin.saveSettings).toHaveBeenCalled();
+		expect(settingsService.update).toHaveBeenCalled();
 	});
 
 	it('forwards a click on the dot to the colour picker', () => {
@@ -201,7 +214,7 @@ describe('tag lists', () => {
 	});
 
 	it('adds an entry with the chosen colour and clears the inputs', async () => {
-		const { priv, plugin } = makeTab();
+		const { priv, settings } = makeTab();
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Priority', 'priorities');
 		const input = q(el, '.hoard-tag-editor__add-row input[type=text]') as HTMLInputElement;
@@ -210,16 +223,16 @@ describe('tag lists', () => {
 		color.value = '#ff0000';
 		q(el, '.hoard-tag-editor__add-row button').click();
 		await until(() => input.value === '');
-		expect(plugin.settings.priorities.at(-1)).toEqual({ name: 'Urgent', color: '#ff0000' });
+		expect(settings.priorities.at(-1)).toEqual({ name: 'Urgent', color: '#ff0000' });
 		expect(pills(el)).toContain('Urgent');
 	});
 
 	it('ignores an empty name and rejects duplicates and invalid type names', async () => {
-		const { priv, plugin } = makeTab();
+		const { priv, settings } = makeTab();
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Types', 'types');
 		const input = q(el, '.hoard-tag-editor__add-row input[type=text]') as HTMLInputElement;
-		const before = plugin.settings.types.length;
+		const before = settings.types.length;
 		q(el, '.hoard-tag-editor__add-row button').click();
 		input.value = 'movie';
 		q(el, '.hoard-tag-editor__add-row button').click();
@@ -228,17 +241,17 @@ describe('tag lists', () => {
 		input.value = 'Bad/Name';
 		q(el, '.hoard-tag-editor__add-row button').click();
 		await until(() => shown.length === 2);
-		expect(plugin.settings.types).toHaveLength(before);
+		expect(settings.types).toHaveLength(before);
 	});
 
 	it('removes an entry and announces it', async () => {
-		const { priv, plugin } = makeTab();
-		plugin.settings.types = [{ name: 'Docs', color: '#222222' }];
+		const { priv, settings } = makeTab();
+		settings.types = [{ name: 'Docs', color: '#222222' }];
 		const el = document.createElement('div');
 		priv.renderTagSection(el, 'Types', 'types');
 		q(el, '.hoard-tag-editor__delete').click();
 		await until(() => shown.length === 1);
-		expect(plugin.settings.types).toEqual([]);
+		expect(settings.types).toEqual([]);
 		expect(el.querySelector('.hoard-tag-editor__pill')).toBeNull();
 	});
 
@@ -306,7 +319,7 @@ describe('card settings', () => {
 	const setup = () => {
 		const notifyChange = vi.fn();
 		const applyCardSizeCssVar = vi.fn();
-		const ctx = makeTab({ dataManager: { notifyChange }, applyCardSizeCssVar });
+		const ctx = makeTab({ titles: { notifyChange }, applyCardSizeCssVar });
 		const el = document.createElement('div');
 		const setChip = vi.fn();
 		ctx.priv.renderCardSettings(el, setChip);
@@ -322,23 +335,23 @@ describe('card settings', () => {
 	});
 
 	it('applies a tile style to every tab and persists it', async () => {
-		const { el, plugin, setChip, notifyChange } = setup();
+		const { el, settings, settingsService, setChip, notifyChange } = setup();
 		qa(el, '.hoard-card-style__option')[1]!.click();
-		expect(Object.values(plugin.settings.cardTextStyles)).toEqual(['inside', 'inside', 'inside', 'inside']);
+		expect(Object.values(settings.cardTextStyles)).toEqual(['inside', 'inside', 'inside', 'inside']);
 		expect(setChip).toHaveBeenLastCalledWith('Text inside · 160 px');
 		expect(qa(el, '.hoard-card-style__option').map((x) => x.classList.contains('is-active'))).toEqual([false, true]);
 		await until(() => notifyChange.mock.calls.length === 1);
-		expect(plugin.saveSettings).toHaveBeenCalled();
+		expect(settingsService.update).toHaveBeenCalled();
 	});
 
 	it('changes one tab and reports a mixed chip; a repeated click is a no-op', async () => {
-		const { el, plugin, setChip, notifyChange } = setup();
+		const { el, settings, setChip, notifyChange } = setup();
 		const row = qa(el, '.hoard-card-style__tab-row')[1]!;
 		const [under, inside] = qa(row, '.hoard-card-style__tab-btn') as [HTMLElement, HTMLElement];
 		under.click();
 		expect(notifyChange).not.toHaveBeenCalled();
 		inside.click();
-		expect(plugin.settings.cardTextStyles.games).toBe('inside');
+		expect(settings.cardTextStyles.games).toBe('inside');
 		expect(setChip).toHaveBeenLastCalledWith('Mixed · 160 px');
 		expect(inside.classList.contains('is-active')).toBe(true);
 		expect(qa(el, '.hoard-card-style__option').some((x) => x.classList.contains('is-active'))).toBe(false);
@@ -346,19 +359,22 @@ describe('card settings', () => {
 	});
 
 	it('moves a size slider, saves, republishes the CSS var and updates the chip', async () => {
-		const { el, plugin, setChip, applyCardSizeCssVar, notifyChange } = setup();
+		const { el, settings, settingsService, setChip, applyCardSizeCssVar, notifyChange } = setup();
 		const sliders = qa(el, 'input[type=range]') as HTMLInputElement[];
 		expect(sliders).toHaveLength(2);
 		sliders[0]!.value = '2';
 		sliders[0]!.dispatchEvent(new Event('input'));
 		await until(() => applyCardSizeCssVar.mock.calls.length === 1);
-		expect(plugin.settings.cardSize).toBe(2);
+		expect(settings.cardSize).toBe(2);
+		// a drag fires per step: staged (saved once it settles), never one save per step
+		expect(settingsService.stage).toHaveBeenCalledTimes(1);
+		expect(settingsService.update).not.toHaveBeenCalled();
 		expect(notifyChange).toHaveBeenCalled();
 		expect(q(el, '.hoard-card-size__value').textContent).toContain('px');
 		expect(setChip.mock.calls.length).toBeGreaterThan(1);
 		sliders[1]!.value = '-1';
 		sliders[1]!.dispatchEvent(new Event('input'));
-		await until(() => plugin.settings.cardSizeMobile === -1);
+		await until(() => settings.cardSizeMobile === -1);
 	});
 });
 
@@ -375,7 +391,7 @@ describe('backup export to the vault', () => {
 			getAbstractFileByPath: vi.fn((p: string) => (paths.has(p) ? {} : null)),
 			create: vi.fn((p: string) => { paths.add(p); return Promise.resolve({}); }),
 		};
-		const ctx = makeTab({ getLayout: () => ({ root: 'W' }) }, { vault });
+		const ctx = makeTab({}, { vault });
 		return { ...ctx, vault };
 	};
 
@@ -412,8 +428,8 @@ describe('regenerate notes', () => {
 		const queue = [...created];
 		const next = () => Promise.resolve(queue.shift() ?? false);
 		const ctx = makeTab({
-			dataManager: { getTitles: () => titles, createMarkdownFileIfMissing: vi.fn(next) },
-			readingDataManager: {
+			titles: { getTitles: () => titles, createMarkdownFileIfMissing: vi.fn(next) },
+			reading: {
 				getBooks: () => books, getMangaList: () => manga,
 				createReadingNoteIfMissing: vi.fn(next),
 			},
@@ -433,16 +449,15 @@ describe('regenerate notes', () => {
 	});
 
 	it('creates missing notes for titles, books and manga and summarises', async () => {
-		const { priv, plugin, wrap, fill, text } = setup(
+		const { priv, fakes, wrap, fill, text } = setup(
 			[makeTitle({ id: 'a' }), makeTitle({ id: 'b' })], [{ id: 'book' }], [{ id: 'm' }],
 			[true, false, true, true],
 		);
 		await priv.runRegenerate(wrap, fill, text);
 		expect(fill.style.getPropertyValue('--hoard-csv-progress-width')).toBe('100%');
 		expect(text.textContent).toContain('3');
-		expect(plugin.dataManager).toBeDefined();
-		expect((plugin as unknown as { readingDataManager: { createReadingNoteIfMissing: ReturnType<typeof vi.fn> } })
-			.readingDataManager.createReadingNoteIfMissing).toHaveBeenCalledWith('manga', { id: 'm' });
+		expect((fakes as unknown as { reading: { createReadingNoteIfMissing: ReturnType<typeof vi.fn> } })
+			.reading.createReadingNoteIfMissing).toHaveBeenCalledWith('manga', { id: 'm' });
 	});
 
 	it('says nothing was created when every note already exists', async () => {
@@ -456,11 +471,11 @@ describe('bulk frontmatter rewrite', () => {
 	const setup = (titles: HoardTitle[], books: unknown[], manga: unknown[], rewrite: (id: string) => boolean) => {
 		const notifyChange = vi.fn();
 		const ctx = makeTab({
-			dataManager: {
+			titles: {
 				getTitles: () => titles, notifyChange,
 				rewriteFrontmatterIfExists: vi.fn((tt: HoardTitle) => Promise.resolve(rewrite(tt.id))),
 			},
-			readingDataManager: {
+			reading: {
 				getBooks: () => books, getMangaList: () => manga,
 				rewriteFrontmatterIfExists: vi.fn((_k: string, b: { id: string }) => Promise.resolve(rewrite(b.id))),
 			},
@@ -475,10 +490,10 @@ describe('bulk frontmatter rewrite', () => {
 	});
 
 	it('rewrites everything and clears the progress state', async () => {
-		const { priv, plugin, notifyChange } = setup([makeTitle({ id: 'a' })], [{ id: 'b' }], [{ id: 'm' }], () => true);
+		const { priv, state, notifyChange } = setup([makeTitle({ id: 'a' })], [{ id: 'b' }], [{ id: 'm' }], () => true);
 		await priv.rewriteAllFrontmatter();
 		expect(shown.at(-1)).toContain('3');
-		expect((plugin as { importProgress?: unknown }).importProgress).toBeNull();
+		expect(state.importProgress).toBeNull();
 		expect(notifyChange).toHaveBeenCalled();
 	});
 
@@ -495,11 +510,11 @@ describe('bulk frontmatter rewrite', () => {
 			Array.from({ length: 30 }, (_, i) => makeTitle({ id: `t${i}` })), [], [], () => true,
 		);
 		const run = ctx.priv.rewriteAllFrontmatter();
-		const cancel = (ctx.plugin as unknown as { importProgress: { cancel: () => void } }).importProgress.cancel;
+		const cancel = ctx.state.importProgress!.cancel;
 		cancel();
 		await run;
-		const rewrite = (ctx.plugin as unknown as { dataManager: { rewriteFrontmatterIfExists: ReturnType<typeof vi.fn> } })
-			.dataManager.rewriteFrontmatterIfExists;
+		const rewrite = (ctx.fakes as unknown as { titles: { rewriteFrontmatterIfExists: ReturnType<typeof vi.fn> } })
+			.titles.rewriteFrontmatterIfExists;
 		expect(rewrite.mock.calls.length).toBeLessThan(30);
 		expect(shown.at(-1)).toContain('ancel');
 	});
@@ -513,8 +528,8 @@ describe('bulk studio fetch', () => {
 		const fetchStudioSpy = vi.fn(fetchStudio);
 		const notDue = new Set<string>();
 		const ctx = makeTab({
-			dataManager: { getTitles: () => titles, updateStudio, notifyChange, recordLookup, lookupDue: (id: string) => !notDue.has(id) },
-			apiService: { fetchStudio: fetchStudioSpy, hasTmdbKey: () => true },
+			titles: { getTitles: () => titles, updateStudio, notifyChange, recordLookup, lookupDue: (id: string) => !notDue.has(id) },
+			api: { fetchStudio: fetchStudioSpy, hasTmdbKey: () => true },
 		});
 		return { ...ctx, updateStudio, notifyChange, recordLookup, notDue, fetchStudio: fetchStudioSpy };
 	};
@@ -527,7 +542,7 @@ describe('bulk studio fetch', () => {
 	});
 
 	it('stores found studios and records every miss without storing it', async () => {
-		const { priv, updateStudio, recordLookup, plugin } = setup(
+		const { priv, updateStudio, recordLookup, state } = setup(
 			[unfetched('hit'), unfetched('miss'), unfetched('fail'), unfetched('offline'), unfetched('nokey')],
 			(tt) => {
 				if (tt.id === 'hit') return Promise.resolve({ status: 'found', value: { studio: ['Ghibli'], tmdbId: 5, tmdbMediaType: 'movie' } });
@@ -546,7 +561,7 @@ describe('bulk studio fetch', () => {
 			['offline', 'studio', { status: 'failed' }],
 			['nokey', 'studio', { status: 'nokey' }],
 		]);
-		expect((plugin as { importProgress?: unknown }).importProgress).toBeNull();
+		expect(state.importProgress).toBeNull();
 		const last = shown.at(-1)!;
 		expect(last).toContain('1');
 		expect(last).toContain('4');
@@ -571,7 +586,7 @@ describe('bulk studio fetch', () => {
 	it('stops when cancelled', async () => {
 		const ctx = setup([unfetched('a'), unfetched('b'), unfetched('c')], () => Promise.resolve({ status: 'found', value: { studio: ['A'] } }));
 		const run = ctx.priv.fetchAllStudios();
-		(ctx.plugin as unknown as { importProgress: { cancel: () => void } }).importProgress.cancel();
+		ctx.state.importProgress!.cancel();
 		await run;
 		expect(ctx.updateStudio).toHaveBeenCalledTimes(1);
 		expect(shown.at(-1)).toContain('ancel');

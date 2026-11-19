@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Notice as RealNotice, type App, type TFile } from 'obsidian';
-import { WatchLogOnboardingModal, type WatchLogImporter } from '../src/WatchLogOnboardingModal';
-import type { ForkSource, OriginalSource } from '../src/import/watchlog/detect';
+import { WatchLogOnboardingModal, type WatchLogImporter } from '../src/modules/import/ui/WatchLogOnboardingModal';
+import type { ForkSource, OriginalSource } from '../src/modules/import/services/watchlog/detect';
 
 const app = {} as App;
 const Notice = RealNotice as unknown as { shown: string[] };

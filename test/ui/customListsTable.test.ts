@@ -142,16 +142,17 @@ describe('custom list icon buttons', () => {
 
 describe('custom list tab reordering', () => {
 	it('moves a dragged list tab to the tab it is dropped on and saves the order', async () => {
-		const { container, plugin } = await setupCustomLists([makeList({ name: 'Alpha' }), makeList({ name: 'Beta' })]);
+		const { container, settingsService } = await setupCustomLists([makeList({ name: 'Alpha' }), makeList({ name: 'Beta' })]);
 		const tabNames = (): string[] => qa(container, '.hoard-custom-lists__subtab-name').map((s) => s.textContent ?? '');
 		expect(tabNames()).toEqual(['Alpha', 'Beta']);
 		const [alpha, beta] = qa(container, '.hoard-custom-lists__subtab') as [HTMLElement, HTMLElement];
 		beta.dispatchEvent(new Event('dragstart'));
 		// dropping a tab on itself is a no-op
 		beta.dispatchEvent(new Event('drop'));
-		expect(plugin.saveSettings).not.toHaveBeenCalled();
+		expect(settingsService.update).not.toHaveBeenCalled();
 		alpha.dispatchEvent(new Event('drop'));
-		expect(plugin.settings.customListTabOrder).toEqual(['Beta', 'Alpha']);
+		expect(settingsService.update).toHaveBeenCalledOnce();
+		expect(settingsService.get().customListTabOrder).toEqual(['Beta', 'Alpha']);
 		await until(() => tabNames()[0] === 'Beta');
 	});
 });

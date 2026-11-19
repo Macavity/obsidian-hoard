@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { resolveCollection } from '../src/CollectionModal';
-import { COLLECTION_NONE, DEFAULT_SETTINGS, type HoardTitle, type TmdbCollectionDetail } from '../src/types';
-import { FAILED, NO_KEY, NOT_FOUND, found, type LookupResult } from '../src/lookup';
+import { resolveCollection } from '../src/modules/watchlist/ui/CollectionModal';
+import type { HoardTitle, TmdbCollectionDetail } from '../src/modules/watchlist/domain/model';
+import { COLLECTION_NONE } from '../src/modules/watchlist/domain/titleHelpers';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
+import { fakeSettings } from './helpers/fakeSettings';
+import { FAILED, NO_KEY, NOT_FOUND, found, type LookupResult } from '../src/shared/api/lookup';
 
 const detail: TmdbCollectionDetail = { id: 99, name: 'Dune Collection', parts: [] };
 
@@ -27,8 +30,8 @@ function setup(opts: Opts = {}) {
 		getTmdbCollection: vi.fn(() => Promise.resolve(detail)),
 	};
 	const updateTmdbIdentity = vi.fn();
-	const plugin = { apiService: api, settings: DEFAULT_SETTINGS, dataManager: { updateTmdbIdentity } };
-	return { api, updateTmdbIdentity, resolve: (t: HoardTitle) => resolveCollection(plugin as never, t) };
+	const settings = fakeSettings(DEFAULT_SETTINGS);
+	return { api, updateTmdbIdentity, resolve: (t: HoardTitle) => resolveCollection(settings, { updateTmdbIdentity }, api, t) };
 }
 
 describe('resolveCollection', () => {

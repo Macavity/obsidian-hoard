@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { parse, stringify } from 'yaml';
 import { createFakeApp } from '../fakes/fakeApp';
-import { VaultLayout } from '../../src/storage/VaultLayout';
-import { SharedConfigStore } from '../../src/storage/SharedConfigStore';
+import { VaultLayout } from '../../src/shared/storage/VaultLayout';
+import { SharedConfigStore } from '../../src/shared/storage/SharedConfigStore';
 const yaml = { parse, stringify };
 const mk = (files: Record<string, string>) => {
 	const f = createFakeApp(files);
-	const s = new SharedConfigStore(f.app, () => new VaultLayout('W', () => []), yaml);
+	const s = new SharedConfigStore(f.app.vault, () => new VaultLayout('W', () => []), yaml);
 	return { f, s };
 };
 describe('SharedConfigStore', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import search from './fixtures/cinemeta-search-series.json';
 import series from './fixtures/cinemeta-meta-series.json';
 import movie from './fixtures/cinemeta-meta-movie.json';
-import { cinemetaSearchUrl, cinemetaMetaUrl, mapCinemetaMeta, mapCinemetaSearch } from '../src/cinemetaApi';
+import { cinemetaSearchUrl, cinemetaMetaUrl, mapCinemetaMeta, mapCinemetaSearch } from '../src/shared/api/cinemetaApi';
 
 describe('cinemeta', () => {
 	it('builds urls', () => {
