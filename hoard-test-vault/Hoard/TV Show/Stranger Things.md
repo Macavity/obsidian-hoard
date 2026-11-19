@@ -12,4 +12,4 @@ Date Modified: 2026-06-15T00:00:00.000Z
 Release Date: 2016-01-01
 ---
 
-Migrated from Library sample via migrate-notes skill.
+Migrated from Library sample via guide/migrate-notes.

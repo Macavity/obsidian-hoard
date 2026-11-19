@@ -77,7 +77,7 @@ are re-checked a week after the upgrade, not all at once. An existing check is k
 is never touched (it wins over the cache anyway). `posterUrl` is no cache field any more and goes
 either way. The result is saved right after the load. A read-only store (WatchLog schema-1 or newer file)
 loads no cache at all (`emptyData`), so there is nothing to migrate there. When migrating a WatchLog Sync
-fork, the migrate-notes skill should apply the same `'none'` → `notfound` rules before merging any
+fork, [guide/migrate-notes/](../../guide/migrate-notes/README.md) should apply the same `'none'` → `notfound` rules before merging any
 device cache into Hoard's `data.json`.
 
 ## Lifecycle

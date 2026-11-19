@@ -1,6 +1,6 @@
 # Library plugin → Hoard
 
-Target: [obsidian-library-plugin](https://github.com/venvk/obsidian-library-plugin) (and close forks). Hoard already shares several property names with Library when meaning and value form match — see [`docs/concepts/properties.md`](../../../../docs/concepts/properties.md).
+Target: [obsidian-library-plugin](https://github.com/venvk/obsidian-library-plugin) (and close forks). Hoard already shares several property names with Library when meaning and value form match — see [`docs/concepts/properties.md`](../../docs/concepts/properties.md).
 
 ## Type and folder
 
@@ -46,11 +46,11 @@ Register any watchlist type Hoard lacks before writing notes.
 ## Value forms Hoard expects
 
 - Dates: ISO (`YYYY-MM-DD` or full timestamp).
-- `Watched Episodes`: `S01E01-E12` style ([episode-range](../../../../docs/concepts/episode-range.md)).
+- `Watched Episodes`: `S01E01-E12` style ([episode-range](../../docs/concepts/episode-range.md)).
 - `Seasons`: list of `Name: N` strings.
 - `Playtime`: `12h 30m`.
-- `External ID`: `source:id` or `source:kind:id` ([external-id](../../../../docs/concepts/external-id.md)).
+- `External ID`: `source:id` or `source:kind:id` ([external-id](../../docs/concepts/external-id.md)).
 
 ## Conflicts
 
-Same rules as the skill: fill missing keys only; report `kept-value` when the Hoard note already differs.
+Same rules as the main guide: fill missing keys only; report `kept-value` when the Hoard note already differs.

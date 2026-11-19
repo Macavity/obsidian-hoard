@@ -22,7 +22,7 @@ source_commit: 0bc1a4e
 
 Hoard is an Obsidian plugin: a media library for movies, TV, anime, books, manga and games, stored
 as Markdown notes with properties in the user's vault. A sidebar view with eight tabs, code-block
-widgets inside notes, search and autofill that work without API keys (Cinemeta, Open Library, Steam Store) plus optional keyed enrichment. Notes from WatchLog or another tracker enter via the migrate-notes agent skill.
+widgets inside notes, search and autofill that work without API keys (Cinemeta, Open Library, Steam Store) plus optional keyed enrichment. Notes from WatchLog or another tracker enter via [guide/migrate-notes/](../guide/migrate-notes/README.md).
 Read [values](values.md) first; every rule below serves one of them.
 
 - **Entry**: one note = one title, book, manga or game; its id is the note path below the root.
@@ -30,7 +30,7 @@ Read [values](values.md) first; every rule below serves one of them.
 - **Properties**: the YAML block at the top of a note; the only place entry fields live.
 - **Base**: `Hoard.base`, whose `hoard:` block carries the shared vocabulary; nothing else syncs settings.
 - **Cache**: `data.json`, device-local; fetched data, UI state. API keys live in Obsidian's secret storage, also per device.
-- **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (the import wizard writes notes once, custom lists write their own notes).
+- **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (migration writes notes via guide/migrate-notes; custom lists write their own notes).
 - **Exports**: a module's `exports.ts`, a barrel that only re-exports by name from the module's own files (`domain/model.ts`, `services/roles.ts`, …): its deliberate public surface of models, role interfaces (`TitleReader`, `ReadingSnapshot`, …) other modules depend on instead of a manager class, and the constants and pure functions others need. Reviewed by the `exports-reviewer` agent.
 - **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
 - **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
@@ -81,7 +81,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Widgets](modules/widgets.md): how the `hoard-*` code blocks render and stay live.
 - [Settings](modules/settings.md): how the settings tab is laid out, what syncs, and how to add a setting.
 - [Backup](modules/backup.md): the backup file format, the two export variants and the restore contract.
-- [Migration](modules/import.md): how notes from WatchLog or another tracker enter Hoard via the migrate-notes skill (no in-plugin wizard).
+- [Migration](modules/import.md): how notes from WatchLog or another tracker enter Hoard via guide/migrate-notes (no in-plugin wizard).
 
 # Flows
 
@@ -90,7 +90,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Add title](flows/add-title.md): from the search box to a new note, with keyless-first API routing and duplicate guard.
 - [Airtime notifications](flows/airtime-notifications.md): how the minute scheduler produces notices, badges and the status bar count.
 - [Backup and restore](flows/backup-restore.md): what a backup holds, which copy loses the keys, and the restore order (WatchLog files are not restorable).
-- [Migrating from another tracker](flows/watchlog-import.md): the migrate-notes skill path for WatchLog, Library and other sources.
+- [Migrating from another tracker](flows/watchlog-import.md): the guide/migrate-notes path for WatchLog, Library and other sources.
 
 # Concepts
 

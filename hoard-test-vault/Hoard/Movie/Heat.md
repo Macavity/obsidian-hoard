@@ -16,4 +16,4 @@ Cover: none
 
 ## Notes
 
-Migrated from WatchLog sample via migrate-notes skill.
+Migrated from WatchLog sample via guide/migrate-notes.

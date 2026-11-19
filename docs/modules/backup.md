@@ -34,8 +34,8 @@ history: all entries
   [games](games.md) exports; imported type-only). `backupManagers()` in
   [main.ts](../../src/app/main.ts) assembles them and hands them to the settings wiring
   ([wiring/settings.ts](../../src/app/wiring/settings.ts)), which passes `build` / `parse` / `restore` /
-  `withoutSecrets` to the settings tab. The [import wizard](import.md) has its own `importContext()`; backup
-  restore does not use it.
+  `withoutSecrets` to the settings tab. Tracker migration is [guide/migrate-notes/](import.md), not
+  backup restore.
 - `buildBackup` drops the nine `SECRET_KEYS` from `local` (`withoutSecretSettings`), so neither export
   variant carries keys. `withoutSecrets` stays as a guard for the vault copy: it strips key-like local
   settings (`SECRET_KEY` regex: api key, secret, client id, steam id, token) and the login part of

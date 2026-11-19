@@ -62,7 +62,7 @@ Entries, groups, progress, ratings live in note properties (frontmatter). `<root
 ## Naming rules
 
 - CSS prefix `hoard-`; view type `HOARD_VIEW_TYPE = 'hoard-view'`; event `hoard-data-changed`; base key `hoard:`; widget blocks `hoard`, `hoard-todo`, `hoard-stat`, `hoard-upcoming`, `hoard-now`, `hoard-now-next`.
-- WatchLog knowledge for migration lives in `.claude/skills/migrate-notes/` (and remaining refusal paths: LocalStore schema-1 detection, backup restore). The word "legacy" is not used in `src/` or `test/`.
+- WatchLog knowledge for migration lives in `guide/migrate-notes/` (and remaining refusal paths: LocalStore schema-1 detection, backup restore). The word "legacy" is not used in `src/` or `test/`.
 - Obsidian UI text: sentence case, "properties" for YAML metadata.
 
 ## Tests

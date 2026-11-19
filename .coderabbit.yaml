@@ -22,12 +22,12 @@ reviews:
         blocking bug: concurrent edits from another device, malformed YAML, files appearing or
         disappearing mid-operation, keys dropped on re-encode. Also report mobile-only breakage
         (no Node or Electron APIs, layout below 600px). Prefer simple, readable fixes.
-    - path: "src/import/watchlog/**"
+    - path: "guide/migrate-notes/**"
       instructions: |
-        User-driven import of WatchLog / WatchLog Sync data as a copy; the source must stay
-        untouched. This folder (plus the import wizard UI) is the only place that may know
-        WatchLog names (watchlog: key, WatchLog.base, wl-* code blocks, watchlog-sync data.json).
-        It stays free of i18n imports. Report any WatchLog knowledge that leaks elsewhere.
+        Tool-agnostic migration guide for WatchLog / Library / other trackers. Source data must
+        stay untouched until the user opts into cleanup. WatchLog names (watchlog: key,
+        WatchLog.base, wl-* code blocks, schema-1 data.json) belong here and in LocalStore /
+        backup refusal paths only. Report any WatchLog knowledge that leaks into src/modules.
     - path: "scripts/**"
       instructions: |
         Local dev tooling, run only by the maintainer on own machine.

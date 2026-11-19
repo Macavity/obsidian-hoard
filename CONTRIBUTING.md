@@ -31,7 +31,7 @@ CLI calls time out after 30 s; keep the hoard-test-vault window visible while ru
 
 ### Fixtures
 
-The notes in `hoard-test-vault/` are hand-written and cover every domain plus edge cases (broken properties, a minimal note, `Maybe`, a 2099 airtime, foreign History lines, drafts, notes migrated via the migrate-notes skill). `Welcome.md` catalogues each one and what it covers. No fixture has an external id, and fixtures that must stay offline (anime, Severance, skill-migrated samples) have `Cover: none`, so the background cover fill leaves them alone. `test/e2e/expected.mjs` holds the counts the smoke expects; change a fixture and its count in the same commit (`test/fixtures.test.ts` checks them against the codecs).
+The notes in `hoard-test-vault/` are hand-written and cover every domain plus edge cases (broken properties, a minimal note, `Maybe`, a 2099 airtime, foreign History lines, drafts, notes migrated via guide/migrate-notes). `Welcome.md` catalogues each one and what it covers. No fixture has an external id, and fixtures that must stay offline (anime, Severance, guide-migrated samples) have `Cover: none`, so the background cover fill leaves them alone. `test/e2e/expected.mjs` holds the counts the smoke expects; change a fixture and its count in the same commit (`test/fixtures.test.ts` checks them against the codecs).
 
 ### Smoke
 

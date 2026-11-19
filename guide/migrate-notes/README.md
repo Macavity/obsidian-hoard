@@ -1,21 +1,18 @@
----
-name: migrate-notes
-description: Migrate media notes from WatchLog, Library, or another tracker into Hoard entry notes. Use when the user asks to import, migrate, or convert notes from WatchLog, WatchLog Sync, Library, Media DB, or any other media tracker into Hoard.
----
-
 # Migrate notes into Hoard
 
-There is **no in-app bulk import**. This skill is the only migration path. WatchLog's former wizard is gone; treat WatchLog like any other source.
+There is **no in-app bulk import**. This guide is the migration path. WatchLog's former wizard is gone; treat WatchLog like any other source.
+
+Point any AI coding agent (or follow the steps yourself) at this folder. Existing Hoard values are never overwritten.
 
 ## When to use
 
-- User wants to move WatchLog / WatchLog Sync / Library / Media DB / ad-hoc media notes into Hoard.
-- User asks how to come from another tracker.
+- Moving WatchLog / WatchLog Sync / Library / Media DB / ad-hoc media notes into Hoard.
+- Coming from another tracker.
 
 ## Preconditions
 
 1. Confirm the Hoard root (folder that holds `Hoard.base`, usually `Hoard/`). Create `Hoard.base` with a `hoard:` block only if the vault has none — prefer adopting an existing root.
-2. Authority for property names: [`src/shared/storage/properties.ts`](../../../src/shared/storage/properties.ts) and [`docs/concepts/properties.md`](../../../docs/concepts/properties.md). Never invent keys. Title Case with spaces; acronyms upper case (`URL`, `ID`, `MAL`).
+2. Authority for property names: [`src/shared/storage/properties.ts`](../../src/shared/storage/properties.ts) and [`docs/concepts/properties.md`](../../docs/concepts/properties.md). Never invent keys. Title Case with spaces; acronyms upper case (`URL`, `ID`, `MAL`).
 3. One note = one entry. Place files under `<root>/<Type>/`, `Books/`, `Manga/`, or `Games/`. The path under the root is the entry id.
 4. Existing Hoard values win: when a note already exists, fill only missing properties; leave differing values alone. Never overwrite user data with source data.
 5. Secrets (API keys, Steam id) stay on the device — never copy them into notes, `Hoard.base`, or backups.
@@ -28,9 +25,9 @@ There is **no in-app bulk import**. This skill is the only migration path. Watch
    - Library: notes with `Type` / `Name` / `My Rating` / `Progress: a/b` / `Source ID` style properties.
    - Other: inspect a few notes, then build a map onto Hoard names (same rules as below).
 2. **Load the matching reference**
-   - WatchLog → [references/watchlog.md](references/watchlog.md)
-   - Library → [references/library.md](references/library.md)
-   - Otherwise: map field-by-field using [docs/concepts/properties.md](../../../docs/concepts/properties.md) and [docs/concepts/external-id.md](../../../docs/concepts/external-id.md).
+   - WatchLog → [watchlog.md](watchlog.md)
+   - Library → [library.md](library.md)
+   - Otherwise: map field-by-field using [docs/concepts/properties.md](../../docs/concepts/properties.md) and [docs/concepts/external-id.md](../../docs/concepts/external-id.md).
 3. **Register types** — append any watchlist type names the source uses that Hoard's `hoard:` block lacks (by name only; keep existing colours).
 4. **Write notes** under the Hoard root with current property names. Preserve useful body text under `## Notes` when the source had notes. Skip broken entries; report them.
 5. **Optional cleanup** (ask first; nothing preselected): trash source notes that Hoard now holds as an identical copy; rename widget fences `watchlog` / `wl-*` → `hoard` / `hoard-*` (see WatchLog reference). Do not delete a source whose Hoard copy differs.

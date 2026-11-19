@@ -42,7 +42,7 @@ file shape `BackupFile` in [backup/domain/model.ts](../../src/modules/backup/dom
    wrong field takes its empty value) before anything is written. Order: invalid JSON is `parseJson`, a
    non-object `notObject`, anything else that is not a version-2 Hoard file (WatchLog exports
    included) `unsupportedFormat` (WatchLog data
-   comes in through the [migrate-notes skill](watchlog-import.md)). A rejected file
+   comes in through [guide/migrate-notes/](watchlog-import.md)). A rejected file
    yields an error code, shown by the settings tab as translated text ([i18n](../architecture/i18n.md)).
 2. `restoreBackup` writes in this order: shared settings into the base (`restoreSharedSettings`),
    local settings into `data.json` (shared keys and prototype-polluting keys skipped, so the

@@ -18,4 +18,4 @@ Type: book
 
 There and back again.
 
-Migrated from Library sample via migrate-notes skill.
+Migrated from Library sample via guide/migrate-notes.

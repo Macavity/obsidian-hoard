@@ -16,4 +16,4 @@ Director:
 
 A dream within a dream.
 
-Migrated from Library sample via migrate-notes skill.
+Migrated from Library sample via guide/migrate-notes.

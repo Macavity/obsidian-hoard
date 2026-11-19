@@ -4,7 +4,7 @@ title: Property names
 description: The fixed Title Case property names of entry notes per medium, the naming rules, the older camelCase names, and the stability rule from 1.0.
 source:
   - src/shared/storage/properties.ts
-  - .claude/skills/migrate-notes/references/watchlog.md
+  - guide/migrate-notes/watchlog.md
 source_commit: 0bc1a4e
 ---
 
@@ -15,8 +15,8 @@ constants in [properties.ts](../../src/shared/storage/properties.ts) (`COMMON_PR
 `TITLE_PROPS`, `READING_PROPS`, `GAME_PROPS`, `ALL_PROPERTY_NAMES`); codecs and managers use only
 these, never literals. Code identifiers and model fields stay camelCase. The "older name" column is
 what Hoard 0.1 / WatchLog Sync wrote; codecs no longer read those keys. The
-[migrate-notes](../../.claude/skills/migrate-notes/SKILL.md) skill renames them when migrating fork notes
-([watchlog reference](../../.claude/skills/migrate-notes/references/watchlog.md)).
+[migrate-notes](../../guide/migrate-notes/README.md) guide renames them when migrating fork notes
+([watchlog reference](../../guide/migrate-notes/watchlog.md)).
 
 ## Rules
 
@@ -66,8 +66,8 @@ Store URL, Last Played (older: camelCase equivalents).
 Also folded on migration: `manualPosterUrl` → Cover, `manualTrailerUrl` → Trailer,
 `apiSource` + `apiId` → External ID.
 
-Widget block: `hoard-nowwatching` is now `hoard-now` (WatchLog `wl-nowwatching` maps to it via the
-migrate-notes skill; [widgets](../modules/widgets.md)). Other blocks and their positional options are unchanged.
+Widget block: `hoard-nowwatching` is now `hoard-now` (WatchLog `wl-nowwatching` maps to it via
+[migrate-notes](../../guide/migrate-notes/README.md); [widgets](../modules/widgets.md)). Other blocks and their positional options are unchanged.
 
 ## Stability rule (from 1.0)
 
@@ -76,7 +76,7 @@ with an idempotent automatic migration that detects old names **by content** (no
 marker). Folder layout, `Hoard.base` and `data.json` may change in minors, also with automatic
 migration. Renaming known old keys, keeping values (except the `Progress` and manga `MAL ID` type
 fixes), and leaving an old key in place when the new one already exists so a second run changes
-nothing is the pattern. Hoard 0.1 vaults are not migrated at startup; use the migrate-notes skill.
+nothing is the pattern. Hoard 0.1 vaults are not migrated at startup; use [guide/migrate-notes/](../../guide/migrate-notes/README.md).
 
 ## Custom fields
 

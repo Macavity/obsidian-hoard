@@ -78,7 +78,7 @@ Steam needs your profile's **Game details** privacy set to Public. For custom Wa
 
 ## Coming from another tracker
 
-There is no in-app bulk import. To move notes from WatchLog, Library, or another media plugin into Hoard, use the **migrate-notes** agent skill in this repository (`.claude/skills/migrate-notes/`): open your vault with an AI coding agent that can load that skill, then ask it to migrate. Existing Hoard values are never overwritten. A user guide with the same mapping tables will live under `guide/` (see the README package).
+There is no in-app bulk import. To move notes from WatchLog, Library, or another media plugin into Hoard, follow **[guide/migrate-notes/](guide/migrate-notes/)** — yourself or by pointing any AI coding agent at that folder. Existing Hoard values are never overwritten.
 
 Hoard still refuses to treat a WatchLog-shaped `data.json` in its own plugin folder as its settings file, and WatchLog backups cannot be restored through Backup & restore.
 
