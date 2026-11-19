@@ -9,6 +9,7 @@ source:
   - src/modules/settings/domain/settingsDefaults.ts
   - src/modules/settings/services/SettingsService.ts
   - src/modules/settings/services/settingsSplit.ts
+  - src/modules/settings/domain/apiRouting.ts
   - src/modules/settings/ui/SettingsTab.ts
   - src/modules/settings/ui/problemText.ts
   - src/app/wiring/settings.ts
@@ -17,7 +18,7 @@ source:
   - src/shared/storage/SharedConfigStore.ts
   - src/shared/domain/typeName.ts
   - src/shared/api/apiSources.ts
-source_commit: cc203bf
+source_commit: a08c524
 ---
 
 # Settings
@@ -65,7 +66,7 @@ key needed" chip; a keyed choice without its key falls back at runtime through
 ([apiSources.ts](../../src/shared/api/apiSources.ts)), the chip shows "key needed" and `fallbackHint` adds
 "Uses {source} until a key is set." Stored values are never rewritten by the fallback.
 `renderTypeApiMapping` routes custom types to the anime or movie API, with
-Anime, Movie and TV Show locked. The bulk studio fetch (`SettingsTab`) still needs `getApiGroupForType`, now imported from `shared/api/apiGroup.ts`, no longer from watchlist; whether this API logic belongs in watchlist, shared or the settings module is open (issue #48).
+Anime, Movie and TV Show locked; which types are locked (and to which providers) and the select value parsing are the pure `typeApiRoute` / `parseApiGroup` in [apiRouting.ts](../../src/modules/settings/domain/apiRouting.ts). The bulk studio fetch (`SettingsTab`) still needs `getApiGroupForType`, now imported from `shared/api/apiGroup.ts`, no longer from watchlist; whether this API logic belongs in watchlist, shared or the settings module is open (issue #48).
 
 ## Types as folders
 

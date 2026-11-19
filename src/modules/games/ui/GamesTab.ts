@@ -5,6 +5,7 @@ import { gameStatusLabel } from '../../../shared/i18n/labels';
 import type { SettingsReader, SettingsWriter } from '../../settings/exports';
 import type { Game, GameGroup, GamesSavedFilterPreset } from '../domain/model';
 import { GAMES_ROWS_SHELVES } from '../domain/gameShelves';
+import { gamePassesFilters, type GameFilterCriteria } from '../domain/gameFilters';
 import { GAME_AUTO_STATUS, GAME_FINISHED_STATUS } from '../domain/gameDefaults';
 import { ROWS_EXCLUSIVE_SHELVES, normalizeRowsLayout, sortByFavorited } from '../../../shared/domain/rows';
 import { migratePriorityExclude, priorityExcludeMatches, setsMatch } from '../../../shared/domain/tags';
@@ -21,7 +22,7 @@ import { renderActionBar, renderBatchStatusSelect, renderMoveToGroupSelect } fro
 import { renderGroupCard } from '../../../design-system/GroupCard';
 import { createIconButton } from '../../../design-system/IconButton';
 import { mountVirtualCardGrid } from '../../../design-system/TabHelpers';
-import { PRIORITY_ORDER, comparePriority, compareUnsetLast, isRecentlyReleased, pickRandom } from '../../../shared/domain/listOrder';
+import { PRIORITY_ORDER, comparePriority, compareUnsetLast, pickRandom } from '../../../shared/domain/listOrder';
 import { renderHeaderToolbar } from '../../../design-system/MobileToolbar';
 import { rawgResizedCover } from '../../../shared/api/ApiService';
 import type { resolveGameCover, GameCover, GameCoverApi } from '../../../shared/services/coverRefresh';
@@ -279,35 +280,22 @@ export class GamesTab implements TabInstance {
 		}
 	}
 
+	private filterCriteria(): GameFilterCriteria {
+		return {
+			favoritesOnly:       this.filterFavoritesOnly,
+			recentlyArrivedOnly: this.filterRecentlyArrivedOnly,
+			ratingEmptyOnly:     this.filterRatingEmptyOnly,
+			typeExclude:         this.filterGenreExclude,
+			statusExclude:       this.filterStatusExclude,
+			ratingExclude:       this.filterRatingExclude,
+			priorityExclude:     this.filterPriorityExclude,
+			wishlistOnly:        this.filterWishlistOnly,
+			platformExclude:     this.filterPlatformExclude,
+		};
+	}
+
 	private gamePassesFilters(g: Game): boolean {
-		if (this.filterFavoritesOnly && !g.favorite) return false;
-		if (this.filterWishlistOnly && !g.wishlist) return false;
-		if (this.filterGenreExclude.size > 0 && this.filterGenreExclude.has(g.type)) return false;
-		if (this.filterRecentlyArrivedOnly) {
-			if (!isRecentlyReleased(g.releaseDate)) return false;
-		} else if (this.filterStatusExclude.size > 0 && this.filterStatusExclude.has(g.status)) {
-			return false;
-		}
-		// rating 0 = un-rated, not a real value; only the Empty toggle shows those
-		if (this.filterRatingEmptyOnly) {
-			if (g.rating !== 0) return false;
-		} else if (this.filterRatingExclude.size > 0 && (g.rating === 0 || this.filterRatingExclude.has(`${g.rating}★`))) {
-			return false;
-		}
-		// '' is a real option here — no-priority games are excludable like any other
-		if (this.filterPriorityExclude.size > 0 && this.filterPriorityExclude.has(g.priority)) {
-			return false;
-		}
-		// a game hides only when EVERY one of its platforms is excluded; games with none set are
-		// unaffected (the Group rule)
-		if (
-			this.filterPlatformExclude.size > 0 &&
-			g.platforms.length > 0 &&
-			g.platforms.every((p) => this.filterPlatformExclude.has(p))
-		) {
-			return false;
-		}
-		return true;
+		return gamePassesFilters(g, this.filterCriteria());
 	}
 
 	// Sorting (the Watchlist comparator semantics)

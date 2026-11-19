@@ -12,6 +12,7 @@ import type { RowsShelfLayoutEntry } from '../../../shared/domain/rows';
 import type { TagDefinition } from '../../../shared/domain/tags';
 import { formatDateDisplay, todayIso } from '../../../shared/domain/date';
 import { formatTime } from '../../../shared/domain/format';
+import { passesCommonFilters, type CommonFilterCriteria } from '../../../shared/domain/filterCriteria';
 import { ROWS_EXCLUSIVE_SHELVES, ROWS_SHELVES, normalizeRowsLayout, sortByFavorited } from '../../../shared/domain/rows';
 import { getThemedColor, migratePriorityExclude, priorityExcludeMatches, setsMatch } from '../../../shared/domain/tags';
 import { getDisplayPoster, getManualCredits, getTitleCredits } from '../domain/titles';
@@ -44,6 +45,7 @@ import { buildPosterCard, loadCardPoster, POSTER_CARD_TEXT_H } from '../../../de
 import { renderRowsLayout, renderShelf, renderShelfTitle, type ShelfSelect } from '../../../design-system/RowsView';
 import type { RowsCustomizeConfig } from '../../../design-system/RowsCustomizeModal';
 import { renderFiltersDropdown, buildFilterSections, buildRatingOpts } from '../../../design-system/TabFilters';
+import { rowOffsets, visibleRowRange } from '../../../design-system/rowWindow';
 
 
 type DisplayItem =
@@ -306,25 +308,20 @@ export class ListTab implements TabInstance {
 		}
 	}
 
+	private filterCriteria(): CommonFilterCriteria {
+		return {
+			favoritesOnly:       this.filterFavoritesOnly,
+			recentlyArrivedOnly: this.filterRecentlyArrivedOnly,
+			ratingEmptyOnly:     this.filterRatingEmptyOnly,
+			typeExclude:         this.filterTypeExclude,
+			statusExclude:       this.filterStatusExclude,
+			ratingExclude:       this.filterRatingExclude,
+			priorityExclude:     this.filterPriorityExclude,
+		};
+	}
+
 	private titlePassesFilters(t: HoardTitle): boolean {
-		if (this.filterFavoritesOnly && !t.favorite) return false;
-		if (this.filterTypeExclude.size > 0 && this.filterTypeExclude.has(t.type)) return false;
-		if (this.filterRecentlyArrivedOnly) {
-			if (!isRecentlyReleased(t.releaseDate)) return false;
-		} else if (this.filterStatusExclude.size > 0 && this.filterStatusExclude.has(t.status)) {
-			return false;
-		}
-		// rating 0 = un-rated, not a real value; only the Empty toggle shows those
-		if (this.filterRatingEmptyOnly) {
-			if (t.rating !== 0) return false;
-		} else if (this.filterRatingExclude.size > 0 && (t.rating === 0 || this.filterRatingExclude.has(`${t.rating}★`))) {
-			return false;
-		}
-		// '' is a real option here — no-priority titles are excludable like any other
-		if (this.filterPriorityExclude.size > 0 && this.filterPriorityExclude.has(t.priority)) {
-			return false;
-		}
-		return true;
+		return passesCommonFilters(t, this.filterCriteria());
 	}
 
 	destroy(): void {
@@ -1477,50 +1474,14 @@ export class ListTab implements TabInstance {
 		const BUFFER_ROWS = 5;
 		const INTER_ITEM_GAP = 8;  // px — mirrors the CSS margin-top between top-level rows
 		const FALLBACK_H = 44;     // px — used when offsetHeight returns 0 and for buffer math
+		const ROW_H = 68;          // px — covers a standard unexpanded title row with badge + progress bar
 
-		// phase 1: uniform row heights
-		const ROW_H = 68; // px — covers a standard unexpanded title row with badge + progress bar
+		// phase 1: uniform row heights, then the expanded rows measured for real
 		const heights: number[] = items.map(() => ROW_H);
-
-		// phase 1b: measure the expanded title row — only one can be open
-		if (this.expandedId !== null) {
-			const expandedIdx = items.findIndex(
-				(item) => item.kind === 'title' && item.data.id === this.expandedId,
-			);
-			if (expandedIdx !== -1) {
-				const item = items[expandedIdx];
-				if (item?.kind === 'title') {
-					const probe = activeDocument.body.createDiv({ cls: 'hoard-list__measure-probe' });
-					probe.setCssProps({ '--hoard-list-measure-probe-width': `${table.clientWidth}px` });
-					this.renderRow(probe, item.data);
-					const measured = probe.offsetHeight;
-					probe.remove();
-					if (measured > 0) heights[expandedIdx] = measured;
-				}
-			}
-		}
-
-		// phase 1c: measure expanded group rows — several can be open
-		for (let i = 0; i < items.length; i++) {
-			const item = items[i];
-			if (item?.kind !== 'group') continue;
-			if (!this.expandedGroups.has(item.data.id)) continue;
-			const probe = activeDocument.body.createDiv({ cls: 'hoard-list__measure-probe' });
-			probe.setCssProps({ '--hoard-list-measure-probe-width': `${table.clientWidth}px` });
-			this.renderGroupRow(probe, item.data, item.members);
-			const measured = probe.offsetHeight;
-			probe.remove();
-			if (measured > 0) heights[i] = measured;
-		}
+		this.measureExpandedHeights(table, items, heights);
 
 		// phase 2: cumulative offsets (incl. inter-item gap)
-		const offsets: number[] = [];
-		let totalHeight = 0;
-		for (let i = 0; i < items.length; i++) {
-			offsets.push(totalHeight);
-			totalHeight += heights[i] ?? FALLBACK_H;
-			if (i < items.length - 1) totalHeight += INTER_ITEM_GAP;
-		}
+		const { offsets, total: totalHeight } = rowOffsets(heights, INTER_ITEM_GAP);
 
 		// phase 3: fixed-height container, set once — keeps the scroll area stable
 		const virt = table.createDiv({ cls: 'hoard-list__virtual-container' });
@@ -1549,47 +1510,22 @@ export class ListTab implements TabInstance {
 			const viewH = scrollEl.clientHeight || 600;
 
 			const bufferPx = BUFFER_ROWS * FALLBACK_H;
-			const relTop   = scrollTop - containerTopOffset;
-			const windowTop = relTop - bufferPx;
-			const windowBot = relTop + viewH + bufferPx;
-
-			// binary search: first item whose bottom is past windowTop
-			let lo = 0;
-			let hi = items.length - 1;
-			while (lo <= hi) {
-				const mid = (lo + hi) >>> 1;
-				if ((offsets[mid] ?? 0) + (heights[mid] ?? FALLBACK_H) <= windowTop) {
-					lo = mid + 1;
-				} else {
-					hi = mid - 1;
-				}
-			}
-			const startIdx = Math.max(0, lo);
-
-			// scan on: last item whose top is before windowBot
-			let endIdx = startIdx;
-			for (let i = startIdx; i < items.length; i++) {
-				if ((offsets[i] ?? 0) >= windowBot) break;
-				endIdx = i;
-			}
+			const relTop = scrollTop - containerTopOffset;
+			const { start, end } = visibleRowRange(
+				offsets, heights, relTop - bufferPx, relTop + viewH + bufferPx, FALLBACK_H,
+			);
 
 			// skip DOM work if the visible range is unchanged
-			if (startIdx === lastStart && endIdx === lastEnd) return;
-			lastStart = startIdx;
-			lastEnd   = endIdx;
+			if (start === lastStart && end === lastEnd) return;
+			lastStart = start;
+			lastEnd = end;
 
 			// write phase
 			virt.empty();
-			for (let i = startIdx; i <= endIdx; i++) {
+			for (let i = start; i <= end; i++) {
 				const item = items[i];
 				if (!item) continue;  // guard: items array may be stale on concurrent re-render
-				const rowEl = virt.createDiv({ cls: 'hoard-list__virtual-item' });
-				rowEl.setCssProps({ '--hoard-list-virtual-item-top': `${offsets[i] ?? 0}px` });
-				if (item.kind === 'title') {
-					this.renderRow(rowEl, item.data);
-				} else {
-					this.renderGroupRow(rowEl, item.data, item.members);
-				}
+				this.renderVirtualItem(virt, item, offsets[i] ?? 0);
 			}
 		};
 
@@ -1611,6 +1547,38 @@ export class ListTab implements TabInstance {
 				rafId = 0;
 			}
 		};
+	}
+
+	/** Replaces the default height of the expanded title row (only one can be open) and of the expanded group rows with their real, probed height. */
+	private measureExpandedHeights(table: HTMLElement, items: DisplayItem[], heights: number[]): void {
+		const measure = (render: (probe: HTMLElement) => void): number => {
+			const probe = activeDocument.body.createDiv({ cls: 'hoard-list__measure-probe' });
+			probe.setCssProps({ '--hoard-list-measure-probe-width': `${table.clientWidth}px` });
+			render(probe);
+			const measured = probe.offsetHeight;
+			probe.remove();
+			return measured;
+		};
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+			let measured = 0;
+			if (item?.kind === 'title' && this.expandedId !== null && item.data.id === this.expandedId) {
+				measured = measure((probe) => this.renderRow(probe, item.data));
+			} else if (item?.kind === 'group' && this.expandedGroups.has(item.data.id)) {
+				measured = measure((probe) => this.renderGroupRow(probe, item.data, item.members));
+			}
+			if (measured > 0) heights[i] = measured;
+		}
+	}
+
+	private renderVirtualItem(virt: HTMLElement, item: DisplayItem, top: number): void {
+		const rowEl = virt.createDiv({ cls: 'hoard-list__virtual-item' });
+		rowEl.setCssProps({ '--hoard-list-virtual-item-top': `${top}px` });
+		if (item.kind === 'title') {
+			this.renderRow(rowEl, item.data);
+		} else {
+			this.renderGroupRow(rowEl, item.data, item.members);
+		}
 	}
 
 	// Display items (groups + top-level titles)

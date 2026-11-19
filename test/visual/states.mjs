@@ -90,7 +90,7 @@ async function openTab(tab, { watchlistView = "rows" } = {}) {
 	const leaf = app.workspace.getLeavesOfType('hoard-view')[0];
 	app.workspace.revealLeaf(leaf);
 	${SORT_INDEX_JS};
-	${PLUGIN}.settings.defaultWatchlistView = ${q(watchlistView)};
+	${PLUGIN}.state.defaultWatchlistView = ${q(watchlistView)};
 	leaf.view.setActiveTab(${q(tab === "dashboard" ? "log" : "dashboard")});
 	leaf.view.setActiveTab(${q(tab)});
 	return 'ok';
@@ -314,11 +314,11 @@ export const STATES = [
 		id: "upcoming-tracker-cards",
 		root: VIEW,
 		setup: async () => {
-			evalJs(`${PLUGIN}.settings.upcomingTrackerView = 'cards'`);
+			evalJs(`${PLUGIN}.state.upcomingTrackerView = 'cards'`);
 			await openTab("upcoming");
 		},
 		teardown: async () => {
-			evalJs(`${PLUGIN}.settings.upcomingTrackerView = 'list'`);
+			evalJs(`${PLUGIN}.state.upcomingTrackerView = 'list'`);
 		},
 	},
 	{ id: "upcoming-history", root: VIEW, setup: onTab("upcoming", () => clickEl(".hoard-inner-tabs__btn", "Verlauf")) },
@@ -328,7 +328,7 @@ export const STATES = [
 		root: VIEW,
 		setup: openTabs("watchlist", { watchlistView: "list" }),
 		teardown: async () => {
-			evalJs(`${PLUGIN}.settings.defaultWatchlistView = 'rows'`);
+			evalJs(`${PLUGIN}.state.defaultWatchlistView = 'rows'`);
 		},
 	},
 	{
@@ -339,7 +339,7 @@ export const STATES = [
 			await expandListRow("Severance");
 		},
 		teardown: async () => {
-			evalJs(`${PLUGIN}.settings.defaultWatchlistView = 'rows'`);
+			evalJs(`${PLUGIN}.state.defaultWatchlistView = 'rows'`);
 		},
 	},
 	{
@@ -353,7 +353,7 @@ export const STATES = [
 			await sleep(300);
 		},
 		teardown: async () => {
-			evalJs(`${PLUGIN}.settings.defaultWatchlistView = 'rows'`);
+			evalJs(`${PLUGIN}.state.defaultWatchlistView = 'rows'`);
 		},
 	},
 	{

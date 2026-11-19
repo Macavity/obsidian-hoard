@@ -9,6 +9,8 @@ source:
   - src/modules/games/domain/steamSync.ts
   - src/modules/games/services/GameDataManager.ts
   - src/shared/storage/gameCodec.ts
+  - src/modules/games/domain/gameFilters.ts
+  - src/shared/domain/filterCriteria.ts
   - src/modules/games/ui/GamesTab.ts
   - src/modules/games/ui/GameDetailModal.ts
   - src/modules/games/ui/AddGameModal.ts
@@ -17,7 +19,7 @@ source:
   - src/shared/services/coverRefresh.ts
   - src/modules/games/domain/gameDefaults.ts
   - src/modules/games/domain/newGame.ts
-source_commit: cc203bf
+source_commit: a08c524
 ---
 
 # Games
@@ -98,6 +100,7 @@ to a smaller size for display.
 | Change | Place |
 |---|---|
 | Property format, playtime, achievements | `gameCodec.ts`; `formatTime`, `parsePlaytimeInput` in `shared/domain/format.ts` |
+| Which games pass the filters (wishlist, platform on top of the common favourite / recently-arrived / type / status / rating / priority rules shared with the Watchlist) | `gamePassesFilters` in [gameFilters.ts](../../src/modules/games/domain/gameFilters.ts), `passesCommonFilters` in [filterCriteria.ts](../../src/shared/domain/filterCriteria.ts); `GamesTab` only builds the criteria |
 | Default statuses, genres, platforms | `defaultGamesSettings()` in `domain/gameDefaults.ts` |
 | Release status and Upcoming | `applyReleaseStatus`, `syncUpcoming` in the manager |
 | Defaults of a new game | `newGame` in [domain/newGame.ts](../../src/modules/games/domain/newGame.ts); the WatchLog import keeps its own |

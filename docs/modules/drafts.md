@@ -6,13 +6,14 @@ source:
   - src/modules/drafts/exports.ts
   - src/modules/drafts/domain/model.ts
   - src/modules/drafts/services/roles.ts
+  - src/modules/drafts/domain/draftScan.ts
   - src/modules/drafts/ui/DraftsTab.ts
   - src/modules/drafts/ui/DraftChoiceModal.ts
   - src/app/AddRouter.ts
   - src/app/wiring/drafts.ts
   - src/app/HoardView.ts
   - src/shared/services/addRoute.ts
-source_commit: cc203bf
+source_commit: a08c524
 ---
 
 # Drafts
@@ -27,7 +28,7 @@ Manga or Games. Drafts are not entries and have no note; only triage state is pe
 
 `scanTaggedFiles` is static and pure: for every Markdown file whose `metadataCache` tags contain
 the tag exactly (inline tags only, properties ignored), each line holding the tag yields the text
-after the tag, split on commas; each trimmed non-empty segment up to 100 characters is one draft.
+after the tag, split on commas; each trimmed non-empty segment up to 100 characters is one draft (that line rule is the pure `draftTitlesInLine` in [draftScan.ts](../../src/modules/drafts/domain/draftScan.ts); `scanTaggedFiles` only walks files and merges the titles).
 Key = lowercased title, sources = the file basenames. `scanVault` merges persisted state: records
 `firstSeen` and display text for new keys, drops dismissed keys, marks added ones, sorts oldest
 first. While the tab is open, `metadataCache.on('changed')` re-renders after 500 ms.
@@ -58,7 +59,7 @@ refreshes on `metadata-resolved`, not on `hoard-data-changed`, because it needs 
 
 | Change | Place |
 |---|---|
-| Tag syntax, line parsing | `scanTaggedFiles` (badge and tab) |
+| Tag syntax, line parsing | `draftTitlesInLine` in `domain/draftScan.ts`; file walk in `scanTaggedFiles` (badge and tab) |
 | Match strictness | `buildFuse`, `findLibraryMatch` |
 | Pending rule | both `renderUI` and `computePendingCount` |
 | Badge timing | `badge.refreshOn` in `HoardView.ts` |

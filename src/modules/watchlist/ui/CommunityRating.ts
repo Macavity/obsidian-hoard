@@ -165,82 +165,102 @@ export async function refreshCommunityRating(
 	btnEl: HTMLElement | null,
 	showNotice: boolean,
 ): Promise<boolean> {
-	let title = titles.getTitle(titleId);
+	const title = titles.getTitle(titleId);
 	if (!title) return false;
 	if (btnEl) btnEl.addClass('is-loading');
 	try {
-		const animeSource = settings.get().animeApiSource ?? 'jikan';
-		const group = getApiGroupForType(title.type, settings.get().typeApiMapping);
-
-		if (group === '') {
-			if (showNotice) {
-				new Notice(t('detail.community.noApi', { type: title.type }));
-			}
-			return false;
-		}
-
-		if (group === 'anime') {
-			const wantsAniList = animeSource === 'anilist';
-			const hasPreferredId = wantsAniList
-				? (title.anilistId ?? 0) > 0
-				: (title.malId ?? 0) > 0;
-
-			if (!hasPreferredId) {
-				// search by name on the preferred API
-				const matched = await searchForMatch(api, title, wantsAniList);
-				if (!matched) {
-					if (showNotice) {
-						new Notice(t('detail.community.noMatch', { source: wantsAniList ? 'AniList' : 'MAL' }));
-					}
-					return false;
-				}
-				// persist the new ID + externalLink before fetching the rating
-				const fresh = titles.getTitle(titleId);
-				if (!fresh) return false;
-				if (wantsAniList) {
-					fresh.anilistId = matched.anilistId ?? 0;
-					fresh.externalLink = `https://anilist.co/anime/${fresh.anilistId}`;
-				} else {
-					fresh.malId = matched.malId;
-					fresh.externalLink = `https://myanimelist.net/anime/${fresh.malId}`;
-				}
-				await titles.updateTitle(fresh);
-				title = fresh;
-			} else {
-				// we already have the right ID — still make externalLink match the preferred source
-				const expectedLink = wantsAniList
-					? `https://anilist.co/anime/${title.anilistId}`
-					: `https://myanimelist.net/anime/${title.malId}`;
-				if (title.externalLink !== expectedLink) {
-					title.externalLink = expectedLink;
-					await titles.updateTitle(title);
-				}
-			}
-		}
-
-		const result = await api.fetchCommunityRating(title, animeSource, group);
-		if (!result) {
-			if (showNotice) new Notice(t('detail.community.fetchFailed'));
-			return false;
-		}
-		titles.updateCommunityRating(
-			titleId,
-			result.rating,
-			result.votes,
-			result.source,
-		);
-		if (showNotice) {
-			const label = SOURCE_LABELS[result.source] ?? result.source;
-			new Notice(t('detail.community.updated', { source: label }));
-		}
-		return true;
-	} catch (err) {
-		// the name-search step now throws instead of returning an empty list
-		if (showNotice) new Notice(apiErrorMessage(err));
-		return false;
+		const outcome = await runRatingRefresh(titles, settings, api, titleId, title);
+		const message = showNotice ? ratingRefreshNotice(outcome) : null;
+		if (message !== null) new Notice(message);
+		return outcome.kind === 'updated';
 	} finally {
 		if (btnEl) btnEl.removeClass('is-loading');
 	}
+}
+
+/** How a manual rating refresh ended; the notice wording follows from it. */
+export type RatingRefreshOutcome =
+	| { kind: 'updated'; source: string } | { kind: 'noApi'; type: string }
+	| { kind: 'noMatch'; source: 'AniList' | 'MAL' } | { kind: 'fetchFailed' }
+	| { kind: 'error'; err: unknown } | { kind: 'gone' };
+
+/** The notice text for a refresh outcome, or null when it ends silently. */
+export function ratingRefreshNotice(o: RatingRefreshOutcome): string | null {
+	switch (o.kind) {
+		case 'updated': return t('detail.community.updated', { source: SOURCE_LABELS[o.source] ?? o.source });
+		case 'noApi': return t('detail.community.noApi', { type: o.type });
+		case 'noMatch': return t('detail.community.noMatch', { source: o.source });
+		case 'fetchFailed': return t('detail.community.fetchFailed');
+		case 'error': return apiErrorMessage(o.err);
+		case 'gone': return null;
+	}
+}
+
+/** The external link of an anime on the preferred source. */
+export function animeLink(wantsAniList: boolean, id: number): string {
+	return wantsAniList ? `https://anilist.co/anime/${id}` : `https://myanimelist.net/anime/${id}`;
+}
+
+async function runRatingRefresh(
+	titles: CommunityRatingStore,
+	settings: SettingsReader,
+	api: CommunityRatingApi,
+	titleId: string,
+	initial: HoardTitle,
+): Promise<RatingRefreshOutcome> {
+	try {
+		let title = initial;
+		const animeSource = settings.get().animeApiSource ?? 'jikan';
+		const wantsAniList = animeSource === 'anilist';
+		const group = getApiGroupForType(title.type, settings.get().typeApiMapping);
+		if (group === '') return { kind: 'noApi', type: title.type };
+
+		if (group === 'anime') {
+			const ensured = await ensurePreferredAnimeLink(titles, api, title, wantsAniList);
+			if (ensured === 'noMatch') return { kind: 'noMatch', source: wantsAniList ? 'AniList' : 'MAL' };
+			if (ensured === 'gone') return { kind: 'gone' };
+			title = ensured;
+		}
+
+		const result = await api.fetchCommunityRating(title, animeSource, group);
+		if (!result) return { kind: 'fetchFailed' };
+		titles.updateCommunityRating(titleId, result.rating, result.votes, result.source);
+		return { kind: 'updated', source: result.source };
+	} catch (err) {
+		// the name-search step throws instead of returning an empty list
+		return { kind: 'error', err };
+	}
+}
+
+/**
+ * Makes sure the title carries the preferred source's ID and a matching externalLink. A missing ID
+ * is searched by name and persisted; an existing one only fixes a mismatching link.
+ */
+async function ensurePreferredAnimeLink(
+	titles: CommunityRatingStore,
+	api: CommunityRatingApi,
+	title: HoardTitle,
+	wantsAniList: boolean,
+): Promise<HoardTitle | 'noMatch' | 'gone'> {
+	const preferredId = (wantsAniList ? title.anilistId : title.malId) ?? 0;
+	if (preferredId > 0) {
+		const expectedLink = animeLink(wantsAniList, preferredId);
+		if (title.externalLink !== expectedLink) {
+			title.externalLink = expectedLink;
+			await titles.updateTitle(title);
+		}
+		return title;
+	}
+	const matched = await searchForMatch(api, title, wantsAniList);
+	if (!matched) return 'noMatch';
+	const fresh = titles.getTitle(title.id);
+	if (!fresh) return 'gone';
+	const matchedId = wantsAniList ? (matched.anilistId ?? 0) : matched.malId;
+	if (wantsAniList) fresh.anilistId = matchedId;
+	else fresh.malId = matchedId;
+	fresh.externalLink = animeLink(wantsAniList, matchedId);
+	await titles.updateTitle(fresh);
+	return fresh;
 }
 
 function normalizeName(s: string): string {

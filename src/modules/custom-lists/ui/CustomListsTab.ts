@@ -6,6 +6,8 @@ import { App, Component, Modal, Notice, Platform, normalizePath, Setting, type E
 import type { SettingsReader, SettingsWriter } from '../../settings/exports';
 import type { CustomListManager } from '../services/CustomListManager';
 import type { CustomList } from '../domain/customList';
+import { customCellView } from '../domain/cellView';
+import { analyseImport, type ImportAnalysis } from '../domain/importAnalysis';
 import type { CustomListColumn, CustomListRow } from '../../../shared/domain/columns';
 import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/tags';
 import type { OpenConfirm } from '../../../design-system/ConfirmModal';
@@ -1342,32 +1344,23 @@ export class CustomListsTab implements TabInstance {
 	): void {
 		cell.empty();
 		cell.removeClass('hoard-custom-list-table__td--editing');
-		const val = (row as Record<string, string | number | undefined>)[col.id];
+		const view = customCellView(row[col.id], col);
 
-		if (col.type === 'select') {
-			const strVal = String(val ?? '');
-			if (strVal) {
-				const badge = cell.createSpan({ cls: 'hoard-custom-list-table__select-badge', text: strVal });
-				const optColor = col.optionColors?.[strVal];
-				// no colour assigned → leave the badge exactly as the default CSS renders it
-				if (optColor) {
-					badge.setCssProps({
-						'--hoard-custom-list-table-badge-fill': deriveFillColor(optColor),
-						'--hoard-custom-list-table-badge-border': deriveBorderColor(optColor),
-					});
-				}
-			} else {
-				cell.createSpan({ cls: 'hoard-custom-list-table__cell-empty', text: '—' });
+		if (view.kind === 'badge') {
+			const badge = cell.createSpan({ cls: 'hoard-custom-list-table__select-badge', text: view.text });
+			// no colour assigned → leave the badge exactly as the default CSS renders it
+			if (view.color) {
+				badge.setCssProps({
+					'--hoard-custom-list-table-badge-fill': deriveFillColor(view.color),
+					'--hoard-custom-list-table-badge-border': deriveBorderColor(view.color),
+				});
 			}
+		} else if (view.kind === 'text') {
+			const span = cell.createSpan({ cls: 'hoard-custom-list-table__cell-text', text: view.text });
+			if (view.bold) span.addClass('hoard-custom-list-table__cell-text--bold');
+			if (view.italic) span.addClass('hoard-custom-list-table__cell-text--italic');
 		} else {
-			const strVal = val !== undefined && val !== null && val !== '' ? String(val) : '';
-			if (strVal) {
-				const span = cell.createSpan({ cls: 'hoard-custom-list-table__cell-text', text: strVal });
-				if (col.bold) span.addClass('hoard-custom-list-table__cell-text--bold');
-				if (col.italic) span.addClass('hoard-custom-list-table__cell-text--italic');
-			} else {
-				cell.createSpan({ cls: 'hoard-custom-list-table__cell-empty', text: '—' });
-			}
+			cell.createSpan({ cls: 'hoard-custom-list-table__cell-empty', text: '—' });
 		}
 
 		// select cells open the shared dropdown on a single click (the native <select> needed a second);
@@ -1568,23 +1561,6 @@ export class ExportFormatModal extends Modal {
 
 // ImportListModal — paste TSV from a spreadsheet, preview, append rows
 
-/** Result of analysing the pasted TSV against the list's current columns. */
-interface ImportAnalysis {
-	header: string[];
-	dataRows: string[][];
-	rowCount: number;
-	/** Max column count across every pasted line (header + data). */
-	totalCols: number;
-	/** How many existing data columns there are (Name + non-locked). */
-	existingCount: number;
-	/** New text columns auto-created to match wider pasted data. */
-	newColCount: number;
-	/** Per select column: distinct new option values that will be added. */
-	selectAdditions: { label: string; values: string[] }[];
-	/** Labels of number columns receiving non-numeric values (blocking). */
-	numberConflicts: string[];
-}
-
 /** Target of one pasted column: the row name or a list column. */
 type ImportSlot = CustomListColumn | 'name';
 
@@ -1692,46 +1668,7 @@ export class ImportListModal extends Modal {
 	private analyse(): ImportAnalysis | null {
 		const parsed = this.parse();
 		if (!parsed || parsed.dataRows.length === 0) return null;
-
-		const nonLocked = this.nonLockedColumns();
-		const existingCount = 1 + nonLocked.length; // Name + non-locked columns
-		const totalCols = Math.max(
-			parsed.header.length,
-			...parsed.dataRows.map(r => r.length),
-		);
-		const newColCount = Math.max(0, totalCols - existingCount);
-
-		const numberConflicts = new Set<string>();
-		const selectNewValues = new Map<number, { label: string; values: Set<string> }>();
-
-		for (const row of parsed.dataRows) {
-			for (let i = 1; i < row.length && i < existingCount; i++) {
-				const col = nonLocked[i - 1]!; // i === 0 is Name (text, no conflict)
-				const cell = row[i]!;
-				if (cell === '') continue;
-				if (col.type === 'number') {
-					if (!Number.isFinite(Number(cell))) numberConflicts.add(col.label || '(unnamed)');
-				} else if (col.type === 'select') {
-					const known = new Set(col.options ?? []);
-					if (!known.has(cell)) {
-						let entry = selectNewValues.get(i);
-						if (!entry) { entry = { label: col.label || '(unnamed)', values: new Set() }; selectNewValues.set(i, entry); }
-						entry.values.add(cell);
-					}
-				}
-			}
-		}
-
-		return {
-			header: parsed.header,
-			dataRows: parsed.dataRows,
-			rowCount: parsed.dataRows.length,
-			totalCols,
-			existingCount,
-			newColCount,
-			selectAdditions: [...selectNewValues.values()].map(e => ({ label: e.label, values: [...e.values] })),
-			numberConflicts: [...numberConflicts],
-		};
+		return analyseImport(parsed, this.nonLockedColumns());
 	}
 
 	private refreshPreview(): void {

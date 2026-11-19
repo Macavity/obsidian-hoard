@@ -273,6 +273,21 @@ describe('DataManager on vault storage', () => {
 		expect(JSON.stringify(f.plugin.data ?? {})).not.toContain('airtime');
 	});
 
+	it('builds airtime entries of game and manga notes in kind order with the note pointer', async () => {
+		const { dm } = await setupDataManager({
+			'W/Games/Hades.md': '---\nName: Hades\nStatus: Playing\nAirtime Recurrence: weekly\nAirtime Day: 2\nAirtime Episode: 4\n---\n',
+			'W/Manga/Berserk.md': '---\nName: Berserk\nType: manga\nAirtime Recurrence: monthly\nAirtime Day: 9\nAirtime Episode: 6\n---\n',
+			'W/Books/Dune.md': '---\nName: Dune\nType: book\nAirtime Recurrence: monthly\nAirtime Day: 15\nAirtime Episode: 7\n---\n',
+			'W/TV Show/C.md': '---\nName: C\nType: TV Show\nAirtime Recurrence: weekly\nAirtime Day: 3\nAirtime Episode: 2\n---\n',
+		});
+		const entries = dm.getAirtimeEntries();
+		expect(entries.map((e) => e.titleId)).toEqual(['TV Show/C', 'Books/Dune', 'Manga/Berserk', 'Games/Hades']);
+		expect(entries[1]).toMatchObject({ source: 'reading', readingKind: 'book', currentEpisode: 7 });
+		expect(entries[2]).toMatchObject({ source: 'reading', readingKind: 'manga', currentEpisode: 6 });
+		expect(entries[3]).toMatchObject({ source: 'game', currentEpisode: 4, schedule: { recurrence: 'weekly', dayOfWeek: 2 } });
+		expect(entries[3]).not.toHaveProperty('readingKind');
+	});
+
 	it('derives reading and game entries from their release status', async () => {
 		const { dm } = await setupDataManager({
 			'W/Books/Dune.md': '---\nName: Dune\nType: book\nStatus: To be released\nRelease Date: 2099-01-01\n---\n',

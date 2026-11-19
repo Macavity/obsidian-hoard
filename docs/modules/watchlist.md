@@ -15,10 +15,14 @@ source:
   - src/modules/watchlist/ui/ListTab.ts
   - src/modules/watchlist/ui/TitleDetailModal.ts
   - src/modules/watchlist/ui/EditTitleModal.ts
+  - src/modules/watchlist/ui/collectionModel.ts
+  - src/modules/watchlist/ui/CommunityRating.ts
+  - src/shared/domain/filterCriteria.ts
+  - src/design-system/rowWindow.ts
   - src/modules/watchlist/ui/CollectionModal.ts
   - src/app/wiring/watchlist.ts
   - src/shared/storage/titleCodec.ts
-source_commit: cc203bf
+source_commit: a08c524
 ---
 
 # Watchlist
@@ -45,13 +49,13 @@ display) are in `domain/titleHelpers.ts`.
 | Behaviour | Owner |
 |---|---|
 | State, every note write, groups, Maybe, episode toggles, API backfills, history lines | [DataManager.ts](../../src/modules/watchlist/services/DataManager.ts) |
-| Tab: Rows shelves or List table, filters, sort, selection, group display | [ListTab.ts](../../src/modules/watchlist/ui/ListTab.ts); shelf DOM in [RowsView.ts](../../src/design-system/RowsView.ts), shelf ids in `ROWS_SHELVES` (`shared/domain/rows.ts`) |
+| Tab: Rows shelves or List table, filters, sort, selection, group display | [ListTab.ts](../../src/modules/watchlist/ui/ListTab.ts) (filter rules: `passesCommonFilters` in [filterCriteria.ts](../../src/shared/domain/filterCriteria.ts); List-view row offsets and visible range: `rowOffsets`, `visibleRowRange` in [rowWindow.ts](../../src/design-system/rowWindow.ts)); shelf DOM in [RowsView.ts](../../src/design-system/RowsView.ts), shelf ids in `ROWS_SHELVES` (`shared/domain/rows.ts`) |
 | Detail modal: episodes, rating, credits, studio, trailer, collection button; `GroupDetailModal` | [TitleDetailModal.ts](../../src/modules/watchlist/ui/TitleDetailModal.ts) |
 | Edit form: title, type, episodes, link, poster and trailer override, seasons text, group | [EditTitleModal.ts](../../src/modules/watchlist/ui/EditTitleModal.ts); the seasons text format: parse in [seasonText.ts](../../src/modules/watchlist/domain/seasonText.ts), format in `domain/seasonFormat.ts`; the per-episode grid is `EpisodeGrid.ts` (`ui/`) ([episode range](../concepts/episode-range.md)) |
 | Add: choice modal → URL paste ([AddFromUrlModal.ts](../../src/modules/watchlist/ui/AddFromUrlModal.ts)) or search ([AddTitleModal.ts](../../src/modules/watchlist/ui/AddTitleModal.ts)); loose strings from Drafts and Custom Lists via `createAddRoute` in `app/AddRouter.ts` | see [flows/add-title](../flows/add-title.md) |
 | Maybe titles: modal `MaybeAddModal.ts` (in the Upcoming module, `airtime/ui`), listed by the Maybe sub-tab of Upcoming, never by `ListTab` | [maybe title](../concepts/maybe-title.md) |
-| Community rating badge, manual and 30-day background refresh | [CommunityRating.ts](../../src/modules/watchlist/ui/CommunityRating.ts) |
-| TMDB collections: resolve, count missing parts, batch-add | [CollectionModal.ts](../../src/modules/watchlist/ui/CollectionModal.ts) |
+| Community rating badge, manual and 30-day background refresh; `RatingRefreshOutcome` is how a manual refresh ended and `ratingRefreshNotice` maps it to the notice text | [CommunityRating.ts](../../src/modules/watchlist/ui/CommunityRating.ts) |
+| TMDB collections: resolve, count missing parts, batch-add | [CollectionModal.ts](../../src/modules/watchlist/ui/CollectionModal.ts); the pure part (card specs for added / missing parts, default status and priority, id dedupe, result notice) in [collectionModel.ts](../../src/modules/watchlist/ui/collectionModel.ts) |
 | Manual credits, movie "Mark as watched" | `AddCreditModal.ts`, `MarkWatchedButton.ts` |
 | Note ↔ `HoardTitle`, cache split | [titleCodec.ts](../../src/shared/storage/titleCodec.ts) |
 | Defaults of a new title (add, collection, CSV, Maybe); a Completed title has every episode ticked | `newTitle` in [domain/newTitle.ts](../../src/modules/watchlist/domain/newTitle.ts), `completedEpisodes` in [domain/completedEpisodes.ts](../../src/modules/watchlist/domain/completedEpisodes.ts) |

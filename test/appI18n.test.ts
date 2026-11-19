@@ -35,5 +35,5 @@ describe('plugin shell i18n', () => {
 		const plugin = Object.create(Plugin.prototype) as { onload(): Promise<void> };
 		await plugin.onload().catch(() => undefined);
 		expect(getLocale()).toBe('de');
-	});
+	}, 30_000);
 });

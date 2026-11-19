@@ -10,6 +10,7 @@ import type { CardStyleTab, CardTextStyle, DateFormatPref, HoardPluginSettings }
 import type { ImportProgress } from '../../watchlist/exports';
 import type { TagDefinition } from '../../../shared/domain/tags';
 import { needsStudioFetch } from '../domain/settingsHelpers';
+import { parseApiGroup, typeApiRoute, type ApiGroup } from '../domain/apiRouting';
 import { formatDateDisplay } from '../../../shared/domain/date';
 import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../../reading/exports';
 import { LAST_USED_TYPE_SENTINEL } from '../domain/settingsDefaults';
@@ -1707,35 +1708,37 @@ export class HoardSettingsTab extends PluginSettingTab {
 			const row = list.createDiv({ cls: 'hoard-api-provider__type-api-row' });
 			row.createSpan({ cls: 'hoard-api-provider__type-api-name', text: typeLabel(type.name) });
 
-			if (type.name === 'Anime') {
-				row.createSpan({ cls: 'hoard-api-provider__type-api-locked', text: t('settings.api.routing.locked', { apis: 'Jikan / AniList' }) });
-			} else if (type.name === 'Movie' || type.name === 'TV Show' || type.name === 'TvShow') {
-				row.createSpan({ cls: 'hoard-api-provider__type-api-locked', text: t('settings.api.routing.locked', { apis: 'OMDb / TMDB' }) });
+			const route = typeApiRoute(type.name);
+			if (route.kind === 'locked') {
+				row.createSpan({ cls: 'hoard-api-provider__type-api-locked', text: t('settings.api.routing.locked', { apis: route.apis }) });
 			} else {
-				const select = row.createEl('select', { cls: 'hoard-input__select hoard-api-provider__type-api-select' });
-				const current = mapping[type.name] ?? '';
-				const opts: Array<{ value: '' | 'anime' | 'movie'; label: string }> = [
-					{ value: '', label: t('settings.api.routing.notSet') },
-					{ value: 'anime', label: t('settings.api.routing.anime') },
-					{ value: 'movie', label: t('settings.api.routing.movie') },
-				];
-				for (const o of opts) {
-					const optEl = select.createEl('option', { text: o.label, value: o.value });
-					if (current === o.value) optEl.selected = true;
-				}
-				select.addEventListener('change', () => {
-					const v = select.value as '' | 'anime' | 'movie';
-					void this.settings.update((d) => {
-						d.typeApiMapping ??= {};
-						if (v === '') {
-							delete d.typeApiMapping[type.name];
-						} else {
-							d.typeApiMapping[type.name] = v;
-						}
-					});
-				});
+				this.renderApiSelect(row, type.name, mapping[type.name] ?? '');
 			}
 		}
+	}
+
+	private renderApiSelect(row: HTMLElement, typeName: string, current: string): void {
+		const select = row.createEl('select', { cls: 'hoard-input__select hoard-api-provider__type-api-select' });
+		const opts: Array<{ value: ApiGroup; label: string }> = [
+			{ value: '', label: t('settings.api.routing.notSet') },
+			{ value: 'anime', label: t('settings.api.routing.anime') },
+			{ value: 'movie', label: t('settings.api.routing.movie') },
+		];
+		for (const o of opts) {
+			const optEl = select.createEl('option', { text: o.label, value: o.value });
+			if (current === o.value) optEl.selected = true;
+		}
+		select.addEventListener('change', () => {
+			const v = parseApiGroup(select.value);
+			void this.settings.update((d) => {
+				d.typeApiMapping ??= {};
+				if (v === '') {
+					delete d.typeApiMapping[typeName];
+				} else {
+					d.typeApiMapping[typeName] = v;
+				}
+			});
+		});
 	}
 
 	// Customize

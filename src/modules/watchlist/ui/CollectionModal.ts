@@ -7,15 +7,16 @@ import type { ApiService } from '../../../shared/api/ApiService';
 import type { SettingsReader } from '../../settings/exports';
 import { newTitle } from '../domain/newTitle';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
-import type { HoardGroup, HoardTitle, TmdbCollectionDetail, TmdbCollectionPart } from '../domain/model';
+import type { HoardGroup, HoardTitle, MediaSearchResult, TmdbCollectionDetail, TmdbCollectionPart } from '../domain/model';
 import { COLLECTION_NONE, getCollectionId, isCollectionNone } from '../domain/titleHelpers';
-import { getThemedColor } from '../../../shared/domain/tags';
-import { getDisplayPoster } from '../domain/titles';
 import { getApiGroupForType } from '../../../shared/api/apiGroup';
 import { imdbIdFromLink } from '../../../shared/domain/imdb';
 import { buildPosterCard } from '../../../design-system/PosterCard';
 import type { CardMenuContext } from '../../../design-system/PosterCard';
 import { pinModalFooter } from '../../../design-system/StickyModal';
+import {
+	collectionAddNotice, collectionDefaults, existingPartCard, missingPartCard, uniqueId,
+} from './collectionModel';
 
 /** The API methods resolving a title's TMDB collection calls. */
 export type CollectionResolveApi = Pick<
@@ -43,7 +44,6 @@ export interface CollectionOptions {
 export type OpenCollection = (opts: CollectionOptions) => void;
 
 const TMDB_IMG_BASE = 'https://image.tmdb.org/t/p';
-const NOT_ADDED_COLOR = '#4b5563';
 
 function tmdbPoster(path: string | null | undefined, size = 'w342'): string {
 	return path ? `${TMDB_IMG_BASE}/${size}${path}` : '';
@@ -236,66 +236,23 @@ export class CollectionModal extends Modal {
 
 		for (const part of this.parts) {
 			const existing = matchLibraryTitle(part, titles);
-			const name = part.title ?? t('misc.collection.untitled');
 			const year = yearOf(part.release_date);
 			const fallbackPoster = tmdbPoster(part.poster_path);
 
 			if (existing) {
-				const typeDef = settings.types.find((d) => d.name === existing.type);
-				const statusDef = settings.statuses.find((d) => d.name === existing.status);
-				const typeColor = typeDef
-					? getThemedColor(existing.type, typeDef.color, settings.colorTheme)
-					: NOT_ADDED_COLOR;
-				const total = this.titles.getEffectiveTotal(existing);
-				const ratio =
-					existing.status === 'Completed'
-						? 1
-						: total > 0
-							? Math.max(0, Math.min(1, existing.watchedEpisodes.length / total))
-							: undefined;
-
-				buildPosterCard(
-					grid,
-					{
-						dataset: { titleId: existing.id },
-						title: existing.title,
-						posterUrl: getDisplayPoster(existing) || fallbackPoster,
-						placeholderColor: typeColor,
-						statusLabel: existing.status,
-						statusColor: statusDef
-							? getThemedColor(existing.status, statusDef.color, settings.colorTheme)
-							: undefined,
-						typeLabel: existing.type,
-						typeColor,
-						year: year || undefined,
-						progressRatio: ratio,
-						onClick: () => {
-							this.close();
-							this.opts.onOpenTitle(existing);
-						},
+				const spec = existingPartCard(existing, settings, this.titles.getEffectiveTotal(existing), fallbackPoster, year);
+				buildPosterCard(grid, {
+					...spec,
+					onClick: () => {
+						this.close();
+						this.opts.onOpenTitle(existing);
 					},
-					menuCtx,
-				);
+				}, menuCtx);
 				continue;
 			}
 
-			const card = buildPosterCard(
-				grid,
-				{
-					dataset: { partId: String(part.id) },
-					title: name,
-					posterUrl: fallbackPoster,
-					placeholderColor: NOT_ADDED_COLOR,
-					selected: this.selected.has(part.id),
-					statusLabel: t('misc.collection.notAdded'),
-					statusColor: NOT_ADDED_COLOR,
-					typeLabel: this.opts.movieType,
-					typeColor: NOT_ADDED_COLOR,
-					year: year || undefined,
-					onClick: (el) => this.toggleSelection(part.id, el),
-				},
-				menuCtx,
-			);
+			const spec = missingPartCard(part, this.selected.has(part.id), this.opts.movieType, fallbackPoster, year);
+			const card = buildPosterCard(grid, { ...spec, onClick: (el) => this.toggleSelection(part.id, el) }, menuCtx);
 			card.addClass('hoard-card--missing');
 
 			// marker only — whole card toggles
@@ -370,6 +327,62 @@ export class CollectionModal extends Modal {
 	}
 
 	// detail call per pick — collection parts carry no runtime. Sequential to avoid throttling.
+	private async fetchPartTitles(
+		picked: TmdbCollectionPart[],
+		defaults: { status: string; priority: string },
+		onProgress: (current: number, total: number) => void,
+	): Promise<{ entries: HoardTitle[]; failed: number }> {
+		// generateId only sees stored titles — dedupe within the batch too
+		const takenIds = new Set(this.titles.getTitles().map((t) => t.id));
+		const entries: HoardTitle[] = [];
+		let failed = 0;
+
+		for (let i = 0; i < picked.length; i++) {
+			const part = picked[i]!;
+			onProgress(i + 1, picked.length);
+
+			const detail = await this.api.getTmdbMovieDetails(String(part.id));
+			if (!detail) {
+				failed++;
+				continue;
+			}
+
+			const id = uniqueId(this.titles.generateId(detail.title), takenIds);
+			takenIds.add(id);
+			entries.push(this.partEntry(id, part, detail, defaults));
+		}
+		return { entries, failed };
+	}
+
+	private partEntry(
+		id: string,
+		part: TmdbCollectionPart,
+		detail: MediaSearchResult,
+		defaults: { status: string; priority: string },
+	): HoardTitle {
+		return newTitle({
+			id,
+			title: detail.title,
+			type: this.opts.movieType,
+			status: defaults.status,
+			priority: defaults.priority,
+			totalEpisodes: detail.episodes,
+			episodeDuration: detail.episodeDuration,
+			releaseDate: detail.releaseDate || null,
+			externalLink: detail.url,
+			seasons: detail.seasons,
+			favorite: false,
+			posterUrl: '',
+			trailerUrl: detail.trailerUrl ?? '',
+			manualTrailerUrl: '',
+			// both ids known — skips the ladder forever
+			tmdbId: part.id,
+			collectionId: this.opts.collection.id,
+			director: nonEmpty(detail.director),
+			cast: nonEmpty(detail.cast),
+		});
+	}
+
 	private async addSelected(): Promise<void> {
 		const picked = this.parts.filter((p) => this.selected.has(p.id));
 		if (picked.length === 0 || this.isAdding) return;
@@ -379,63 +392,11 @@ export class CollectionModal extends Modal {
 		// renderFooter detached the clicked button — re-query
 		const addBtn = this.footerEl?.querySelector<HTMLElement>('.hoard-collection__add') ?? null;
 
-		const api = this.api;
-		const settings = this.settings.get();
-		// shipped defaults may have been renamed away
-		const status =
-			settings.statuses.find((s) => s.name === 'Plan to watch')?.name ??
-			settings.statuses[0]?.name ??
-			'Plan to watch';
-		const priority =
-			settings.priorities?.find((p) => p.name === 'Medium')?.name ??
-			settings.priorities?.[0]?.name ??
-			'Medium';
-
-		// generateId only sees stored titles — dedupe within the batch too
-		const takenIds = new Set(this.titles.getTitles().map((t) => t.id));
-		const entries: HoardTitle[] = [];
-		let failed = 0;
-
-		for (let i = 0; i < picked.length; i++) {
-			const part = picked[i]!;
-			addBtn?.setText(t('misc.collection.addingProgress', { current: i + 1, total: picked.length }));
-
-			const detail = await api.getTmdbMovieDetails(String(part.id));
-			if (!detail) {
-				failed++;
-				continue;
-			}
-
-			let id = this.titles.generateId(detail.title);
-			if (takenIds.has(id)) {
-				let n = 2;
-				while (takenIds.has(`${id}-${n}`)) n++;
-				id = `${id}-${n}`;
-			}
-			takenIds.add(id);
-
-			entries.push(newTitle({
-				id,
-				title: detail.title,
-				type: this.opts.movieType,
-				status,
-				priority,
-				totalEpisodes: detail.episodes,
-				episodeDuration: detail.episodeDuration,
-				releaseDate: detail.releaseDate || null,
-				externalLink: detail.url,
-				seasons: detail.seasons,
-				favorite: false,
-				posterUrl: '',
-				trailerUrl: detail.trailerUrl ?? '',
-				manualTrailerUrl: '',
-				// both ids known — skips the ladder forever
-				tmdbId: part.id,
-				collectionId: this.opts.collection.id,
-				director: nonEmpty(detail.director),
-				cast: nonEmpty(detail.cast),
-			}));
-		}
+		const { entries, failed } = await this.fetchPartTitles(
+			picked,
+			collectionDefaults(this.settings.get()),
+			(current, total) => addBtn?.setText(t('misc.collection.addingProgress', { current, total })),
+		);
 
 		if (entries.length > 0) {
 			// handles the future-release "To be released" + Upcoming routing
@@ -448,16 +409,7 @@ export class CollectionModal extends Modal {
 
 		this.isAdding = false;
 		this.selected.clear();
-
-		if (failed > 0) {
-			new Notice(
-				entries.length > 0
-					? t('misc.collection.partial', { added: entries.length, failed })
-					: t('misc.collection.fetchFailed'),
-			);
-		} else {
-			new Notice(t('misc.collection.added', { count: entries.length, name: this.opts.collection.name }));
-		}
+		new Notice(collectionAddNotice(entries.length, failed, this.opts.collection.name));
 
 		this.renderGrid();
 		this.renderMeta();

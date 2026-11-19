@@ -9,6 +9,7 @@
  */
 
 import { t } from '../shared/i18n';
+import { excludeAllOptions, includeAllOptions, isSectionAllIncluded, toggleSectionAll } from './filterDraft';
 
 /** A boolean toggle row rendered inside a section, under its ◆ All row. */
 export interface FilterSpecialToggle {
@@ -69,7 +70,6 @@ export interface FilterPanelConfig {
 	registerCleanup?: (fn: () => void) => void;
 }
 
-/** Opens the panel under the anchor, or closes an already-open one (toggle). */
 /**
  * The "◆ All" checkbox row at the top of a filter section. A click anywhere on the row runs
  * `onToggle`; the checkbox's native toggle is cancelled because the caller drives its state.
@@ -87,52 +87,48 @@ export function renderAllToggleRow(content: HTMLElement, onToggle: () => void): 
 	return allCb;
 }
 
-export function toggleFilterPanel(cfg: FilterPanelConfig): void {
-	const existing = activeDocument.querySelector('.hoard-filter-panel');
-	if (existing) { existing.remove(); return; }
+/** Shared state of one open panel, threaded through the render helpers. */
+interface PanelCtx {
+	panel: HTMLElement;
+	cfg: FilterPanelConfig;
+	closePanel: () => void;
+	/** Every option checkbox with the draft entry it mirrors, re-derived after draft operations. */
+	optionRefs: OptionRef[];
+	/** Specials that Select all / Deselect all reset, plus the favorites and standalone rows. */
+	globalResetRefs: ToggleRef[];
+}
 
-	const panel = activeDocument.body.createDiv({ cls: 'hoard-popover hoard-filter-panel hoard-filter-panel--popup' });
-	const rect = cfg.anchor.getBoundingClientRect();
-	panel.setCssProps({ '--hoard-filter-panel-top': `${rect.bottom + 4}px`, '--hoard-filter-panel-left': `${rect.left}px` });
+interface OptionRef { cb: HTMLInputElement; excludeSet: Set<string>; opt: string }
+interface ToggleRef { cb: HTMLInputElement; set: (v: boolean) => void }
 
-	// single teardown for every close path (Apply, outside click, preset save/delete, tab teardown);
-	// `closed` makes it idempotent and guards the deferred listener attach at the end
-	let closed = false;
-	const closePanel = (): void => {
-		if (closed) return;
-		closed = true;
-		panel.remove();
-		activeDocument.removeEventListener('mousedown', closer, false);
-	};
+function syncOptionCheckboxes(refs: readonly OptionRef[]): void {
+	for (const { cb, excludeSet, opt } of refs) cb.checked = !excludeSet.has(opt);
+}
 
-	const allCheckboxRefs: Array<{ cb: HTMLInputElement }> = [];
-	// specials that Select all / Deselect all reset, plus the favorites row
-	const globalResetRefs: Array<{ cb: HTMLInputElement; set: (v: boolean) => void }> = [];
+function uncheckToggles(refs: readonly ToggleRef[]): void {
+	for (const ref of refs) {
+		ref.set(false);
+		ref.cb.checked = false;
+	}
+}
 
-	const resetGlobals = (): void => {
-		for (const ref of globalResetRefs) {
-			ref.set(false);
-			ref.cb.checked = false;
-		}
-	};
-
+function renderGlobalButtons(ctx: PanelCtx): void {
+	const { panel, cfg } = ctx;
 	const globalRow = panel.createDiv({ cls: 'hoard-filter-panel__global-btns' });
 
 	const selectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('list.filter.selectAll') });
 	selectAllBtn.addEventListener('click', (ev) => {
 		ev.stopPropagation();
-		for (const { excludeSet } of cfg.sections) excludeSet.clear();
-		for (const { cb } of allCheckboxRefs) cb.checked = true;
-		resetGlobals();
+		includeAllOptions(cfg.sections);
+		syncOptionCheckboxes(ctx.optionRefs);
+		uncheckToggles(ctx.globalResetRefs);
 	});
 	const deselectAllBtn = globalRow.createEl('button', { cls: 'hoard-btn hoard-btn--sm', text: t('ui.toolbar.deselectAll') });
 	deselectAllBtn.addEventListener('click', (ev) => {
 		ev.stopPropagation();
-		for (const { opts, excludeSet } of cfg.sections) {
-			for (const opt of opts) excludeSet.add(opt);
-		}
-		for (const { cb } of allCheckboxRefs) cb.checked = false;
-		resetGlobals();
+		excludeAllOptions(cfg.sections);
+		syncOptionCheckboxes(ctx.optionRefs);
+		uncheckToggles(ctx.globalResetRefs);
 	});
 
 	// Save / Delete preset button
@@ -148,135 +144,163 @@ export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 			} else {
 				await cfg.onPresetDelete();
 			}
-			closePanel();
+			ctx.closePanel();
 			cfg.onPresetChanged();
 		})();
 	});
+}
 
-	// favorites-only toggle — standalone row above the sections
+/** The ♥ Favorites row and further standalone boolean rows, all reset by Select/Deselect all. */
+function renderStandaloneRows(ctx: PanelCtx): void {
+	const { panel, cfg } = ctx;
+	const rows: Array<{ spanCls?: string; text: string; get: () => boolean; set: (v: boolean) => void }> = [];
 	if (cfg.favorites) {
-		const fav = cfg.favorites;
-		const favRow = panel.createDiv({ cls: 'hoard-filter-panel__checkbox-row hoard-filter-panel__checkbox-row--favorites' });
-		const favCb = favRow.createEl('input', { attr: { type: 'checkbox' } });
-		favCb.checked = fav.get();
-		favRow.createSpan({ cls: 'hoard-filter-panel__favorites-filter', text: `♥ ${t('list.shelves.favorites')}` });
-		favCb.addEventListener('change', () => { fav.set(favCb.checked); });
-		globalResetRefs.push({ cb: favCb, set: fav.set });
+		rows.push({ spanCls: 'hoard-filter-panel__favorites-filter', text: `♥ ${t('list.shelves.favorites')}`, ...cfg.favorites });
 	}
+	rows.push(...(cfg.standaloneRows ?? []));
 
-	for (const row of cfg.standaloneRows ?? []) {
+	for (const row of rows) {
 		const rowEl = panel.createDiv({ cls: 'hoard-filter-panel__checkbox-row hoard-filter-panel__checkbox-row--favorites' });
 		const cb = rowEl.createEl('input', { attr: { type: 'checkbox' } });
 		cb.checked = row.get();
 		rowEl.createSpan(row.spanCls ? { cls: row.spanCls, text: row.text } : { text: row.text });
 		cb.addEventListener('change', () => { row.set(cb.checked); });
-		globalResetRefs.push({ cb, set: row.set });
+		ctx.globalResetRefs.push({ cb, set: row.set });
 	}
+}
+
+/** One boolean special row inside a section's content. */
+function renderSpecial(
+	ctx: PanelCtx,
+	content: HTMLElement,
+	section: FilterSection,
+	special: FilterSpecialToggle,
+	sectionOptionRefs: readonly OptionRef[],
+	exclusiveRefs: ToggleRef[],
+): void {
+	const row = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
+	const cb = row.createEl('input', { attr: { type: 'checkbox' } });
+	cb.checked = special.get();
+	row.createSpan(special.spanCls ? { cls: special.spanCls, text: special.text } : { text: special.text });
+
+	cb.addEventListener('change', () => {
+		special.set(cb.checked);
+		if (special.mode === 'exclusive' && cb.checked) {
+			// exclusive toggles supersede the option list — reset it
+			includeAllOptions([section]);
+			syncOptionCheckboxes(sectionOptionRefs);
+		}
+	});
+
+	if (special.mode === 'exclusive') exclusiveRefs.push({ cb, set: special.set });
+	if (special.resetOnGlobal) ctx.globalResetRefs.push({ cb, set: special.set });
+	if (special.dividerAfter) content.createDiv({ cls: 'hoard-filter-panel__section-divider' });
+}
+
+function renderFilterSection(ctx: PanelCtx, section: FilterSection): void {
+	const { label, opts, excludeSet, formatOpt, specials } = section;
+	const sectionEl = ctx.panel.createDiv({ cls: 'hoard-filter-panel__section' });
+
+	const sectionHeader = sectionEl.createDiv({ cls: 'hoard-filter-panel__section-header' });
+	sectionHeader.createSpan({ cls: 'hoard-filter-panel__label', text: label });
+	const chevron = sectionHeader.createSpan({ cls: 'hoard-filter-panel__chevron', text: '▼' });
 
 	// collapsed by default
-	const sectionCollapsed: Record<string, boolean> = {};
-	for (const { label } of cfg.sections) {
-		sectionCollapsed[label] = true;
-	}
+	const content = sectionEl.createDiv({ cls: 'hoard-filter-panel__section-content hoard-hidden' });
+	let collapsed = true;
+	sectionHeader.addEventListener('click', (ev) => {
+		ev.stopPropagation();
+		collapsed = !collapsed;
+		content.toggleClass('hoard-hidden', collapsed);
+		chevron.textContent = collapsed ? '▼' : '▲';
+	});
 
-	for (const { label, opts, excludeSet, formatOpt, specials } of cfg.sections) {
-		const section = panel.createDiv({ cls: 'hoard-filter-panel__section' });
-
-		const sectionHeader = section.createDiv({ cls: 'hoard-filter-panel__section-header' });
-		sectionHeader.createSpan({ cls: 'hoard-filter-panel__label', text: label });
-		const chevron = sectionHeader.createSpan({ cls: 'hoard-filter-panel__chevron', text: '▼' });
-
-		const content = section.createDiv({ cls: 'hoard-filter-panel__section-content hoard-hidden' });
-
-		sectionHeader.addEventListener('click', (ev) => {
-			ev.stopPropagation();
-			sectionCollapsed[label] = !sectionCollapsed[label];
-			const collapsed = sectionCollapsed[label] ?? true;
-			content.toggleClass('hoard-hidden', collapsed);
-			chevron.textContent = collapsed ? '▼' : '▲';
-		});
-
-		// "All" toggle — first item inside the section
-		const allCb = renderAllToggleRow(content, () => toggleAll());
-
-		const optionCbs: HTMLInputElement[] = [];
-		// exclusive specials in this section — unchecked when an option is touched
-		const exclusiveRefs: Array<{ cb: HTMLInputElement; set: (v: boolean) => void }> = [];
-
-		for (const special of specials ?? []) {
-			const row = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
-			const cb = row.createEl('input', { attr: { type: 'checkbox' } });
-			cb.checked = special.get();
-			row.createSpan(special.spanCls ? { cls: special.spanCls, text: special.text } : { text: special.text });
-
-			cb.addEventListener('change', () => {
-				special.set(cb.checked);
-				if (special.mode === 'exclusive' && cb.checked) {
-					// exclusive toggles supersede the option list — reset it
-					excludeSet.clear();
-					for (const optCb of optionCbs) optCb.checked = true;
-				}
-			});
-
-			if (special.mode === 'exclusive') exclusiveRefs.push({ cb, set: special.set });
-			if (special.resetOnGlobal) globalResetRefs.push({ cb, set: special.set });
-			if (special.dividerAfter) content.createDiv({ cls: 'hoard-filter-panel__section-divider' });
-		}
-
-		for (const opt of opts) {
-			const cbRow = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
-			const cb = cbRow.createEl('input', { attr: { type: 'checkbox' } });
-			cb.checked = !excludeSet.has(opt);
-			cbRow.createSpan({ text: formatOpt ? formatOpt(opt) : opt });
-			optionCbs.push(cb);
-			allCheckboxRefs.push({ cb });
-
-			cb.addEventListener('change', () => {
-				if (cb.checked) excludeSet.delete(opt);
-				else excludeSet.add(opt);
-				// interacting with a specific option deactivates the section's exclusive toggles
-				for (const ref of exclusiveRefs) {
-					ref.set(false);
-					ref.cb.checked = false;
-				}
-			});
-		}
-
-		// reflect the current state in the "All" checkbox
-		const syncAllCb = (): void => {
-			allCb.checked = optionCbs.length > 0 && optionCbs.every((c) => c.checked);
-		};
+	const sectionOptionRefs: OptionRef[] = [];
+	// "All" toggle — first item inside the section; its checkbox reflects the draft
+	const syncAllCb = (): void => { allCb.checked = isSectionAllIncluded(section); };
+	const allCb = renderAllToggleRow(content, () => {
+		toggleSectionAll(section);
+		syncOptionCheckboxes(sectionOptionRefs);
 		syncAllCb();
+	});
 
-		const toggleAll = (): void => {
-			const allChecked = optionCbs.length > 0 && optionCbs.every((c) => c.checked);
-			if (allChecked) {
-				for (const optCb of optionCbs) optCb.checked = false;
-				for (const opt of opts) excludeSet.add(opt);
-			} else {
-				for (const optCb of optionCbs) optCb.checked = true;
-				excludeSet.clear();
-			}
-			syncAllCb();
-		};
+	// exclusive specials in this section — unchecked when an option is touched
+	const exclusiveRefs: ToggleRef[] = [];
+	for (const special of specials ?? []) renderSpecial(ctx, content, section, special, sectionOptionRefs, exclusiveRefs);
+
+	for (const opt of opts) {
+		const cbRow = content.createDiv({ cls: 'hoard-filter-panel__checkbox-row' });
+		const cb = cbRow.createEl('input', { attr: { type: 'checkbox' } });
+		cbRow.createSpan({ text: formatOpt ? formatOpt(opt) : opt });
+		const ref: OptionRef = { cb, excludeSet, opt };
+		sectionOptionRefs.push(ref);
+		ctx.optionRefs.push(ref);
+
+		cb.addEventListener('change', () => {
+			if (cb.checked) excludeSet.delete(opt);
+			else excludeSet.add(opt);
+			// interacting with a specific option deactivates the section's exclusive toggles
+			uncheckToggles(exclusiveRefs);
+		});
 	}
+	syncOptionCheckboxes(sectionOptionRefs);
+	syncAllCb();
+}
+
+/** Closes the panel on a mousedown outside it and its guard; returns the listener's remover. */
+function attachOutsideCloser(ctx: PanelCtx, isClosed: () => boolean): () => void {
+	const { panel, cfg } = ctx;
+	const closer = (ev: MouseEvent): void => {
+		// No `instanceof Node`: in a popout window the target is not an instance of this window's Node
+		const target = ev.target as Node;
+		if (panel.contains(target) || cfg.outsideGuard.contains(target)) return;
+		ctx.closePanel();
+	};
+	// deferred so the click that opened the panel doesn't immediately close it
+	window.setTimeout(() => {
+		if (!isClosed()) activeDocument.addEventListener('mousedown', closer, false);
+	}, 0);
+	return () => { activeDocument.removeEventListener('mousedown', closer, false); };
+}
+
+/** Opens the panel under the anchor, or closes an already-open one (toggle). */
+export function toggleFilterPanel(cfg: FilterPanelConfig): void {
+	const existing = activeDocument.querySelector('.hoard-filter-panel');
+	if (existing) { existing.remove(); return; }
+
+	const panel = activeDocument.body.createDiv({ cls: 'hoard-popover hoard-filter-panel hoard-filter-panel--popup' });
+	const rect = cfg.anchor.getBoundingClientRect();
+	panel.setCssProps({ '--hoard-filter-panel-top': `${rect.bottom + 4}px`, '--hoard-filter-panel-left': `${rect.left}px` });
+
+	// single teardown for every close path (Apply, outside click, preset save/delete, tab teardown);
+	// `closed` makes it idempotent and guards the deferred listener attach
+	let closed = false;
+	let removeCloser = (): void => {};
+	const ctx: PanelCtx = {
+		panel,
+		cfg,
+		optionRefs: [],
+		globalResetRefs: [],
+		closePanel: () => {
+			if (closed) return;
+			closed = true;
+			panel.remove();
+			removeCloser();
+		},
+	};
+
+	renderGlobalButtons(ctx);
+	renderStandaloneRows(ctx);
+	for (const section of cfg.sections) renderFilterSection(ctx, section);
 
 	// Apply — commits the draft, re-renders, closes the panel
 	const applyBtn = panel.createEl('button', { cls: 'hoard-btn hoard-btn--sm hoard-filter-panel__apply-btn', text: t('list.filter.apply') });
 	applyBtn.addEventListener('click', (ev) => {
 		ev.stopPropagation();
 		cfg.onApply();
-		closePanel();
+		ctx.closePanel();
 	});
 
-	const closer = (ev: MouseEvent): void => {
-		const target = ev.target as Node;
-		if (panel.contains(target) || cfg.outsideGuard.contains(target)) return;
-		closePanel();
-	};
-	// deferred so the click that opened the panel doesn't immediately close it
-	window.setTimeout(() => {
-		if (!closed) activeDocument.addEventListener('mousedown', closer, false);
-	}, 0);
-	cfg.registerCleanup?.(closePanel);
+	removeCloser = attachOutsideCloser(ctx, () => closed);
+	cfg.registerCleanup?.(ctx.closePanel);
 }
