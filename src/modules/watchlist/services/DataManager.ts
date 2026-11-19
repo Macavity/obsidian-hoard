@@ -882,46 +882,49 @@ export class DataManager extends ChangeNotifier
 	// "To be released" entry with a release date. One entry per note, with a stable id.
 
 	getAirtimeEntries(): AirtimeEntry[] {
+		const inputs: AnyEntry[] = [
+			...this.index.titles().filter((t) => !t.maybe).map((entry) => ({ kind: 'title' as const, entry })),
+			...this.index.books().map((entry) => ({ kind: 'book' as const, entry })),
+			...this.index.manga().map((entry) => ({ kind: 'manga' as const, entry })),
+			...this.index.games().map((entry) => ({ kind: 'game' as const, entry })),
+		];
 		const out: AirtimeEntry[] = [];
-		for (const t of this.index.titles()) {
-			if (t.maybe) continue;
-			const e = this.airtimeEntryOf({ kind: 'title', entry: t });
+		for (const input of inputs) {
+			const e = this.airtimeEntryOf(input);
 			if (e) out.push(e);
-		}
-		for (const kind of ['book', 'manga', 'game'] as const) {
-			const list = kind === 'book' ? this.index.books() : kind === 'manga' ? this.index.manga() : this.index.games();
-			for (const entry of list) {
-				const e = this.airtimeEntryOf({ kind, entry } as AnyEntry);
-				if (e) out.push(e);
-			}
 		}
 		return out;
 	}
 
 	private airtimeEntryOf(e: AnyEntry): AirtimeEntry | null {
-		const item = e.entry;
-		const base: AirtimeEntry =
-			e.kind === 'title'
-				? { id: this.generateAirtimeId(item.id), titleId: item.id, schedule: { recurrence: 'once' }, dateAdded: item.dateAdded }
-				: e.kind === 'game'
-					? { id: this.generateGameAirtimeId(item.id), titleId: item.id, source: 'game', schedule: { recurrence: 'once' }, dateAdded: item.dateAdded }
-					: { id: this.generateReadingAirtimeId(item.id), titleId: item.id, source: 'reading', readingKind: e.kind, schedule: { recurrence: 'once' }, dateAdded: item.dateAdded };
-		const a = item.airtime;
-		if (a) {
-			base.schedule = scheduleOf(a, item.releaseDate);
-			if (a.season !== undefined) base.currentSeason = a.season;
-			if (a.episode !== undefined) base.currentEpisode = a.episode;
-			if (a.acknowledged) base.lastAcknowledgedDate = a.acknowledged;
-			// the API pointer wins over the note's: a tick only acknowledges it
-			const airing = this.airingOf(e);
-			if (airing?.nextEpisode !== undefined) {
-				base.currentEpisode = airing.nextEpisode;
-				if (airing.nextSeason !== undefined) base.currentSeason = airing.nextSeason;
-			}
-			return base;
+		const base = this.airtimeBase(e);
+		if (e.entry.airtime) return this.applyNoteAirtime(base, e);
+		if (!this.isAwaitingRelease(e) || !e.entry.releaseDate) return null;
+		base.schedule.releaseDate = e.entry.releaseDate;
+		return base;
+	}
+
+	private airtimeBase(e: AnyEntry): AirtimeEntry {
+		const { id, dateAdded } = e.entry;
+		const schedule: AirtimeSchedule = { recurrence: 'once' };
+		if (e.kind === 'title') return { id: this.generateAirtimeId(id), titleId: id, schedule, dateAdded };
+		if (e.kind === 'game') return { id: this.generateGameAirtimeId(id), titleId: id, source: 'game', schedule, dateAdded };
+		return { id: this.generateReadingAirtimeId(id), titleId: id, source: 'reading', readingKind: e.kind, schedule, dateAdded };
+	}
+
+	private applyNoteAirtime(base: AirtimeEntry, e: AnyEntry): AirtimeEntry {
+		const a = e.entry.airtime;
+		if (!a) return base;
+		base.schedule = scheduleOf(a, e.entry.releaseDate);
+		if (a.season !== undefined) base.currentSeason = a.season;
+		if (a.episode !== undefined) base.currentEpisode = a.episode;
+		if (a.acknowledged) base.lastAcknowledgedDate = a.acknowledged;
+		// the API pointer wins over the note's: a tick only acknowledges it
+		const airing = this.airingOf(e);
+		if (airing?.nextEpisode !== undefined) {
+			base.currentEpisode = airing.nextEpisode;
+			if (airing.nextSeason !== undefined) base.currentSeason = airing.nextSeason;
 		}
-		if (!this.isAwaitingRelease(e) || !item.releaseDate) return null;
-		base.schedule.releaseDate = item.releaseDate;
 		return base;
 	}
 

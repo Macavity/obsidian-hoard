@@ -12,6 +12,7 @@ import type { SettingsReader, SettingsWriter } from '../../settings/exports';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { PosterService } from '../../../shared/api/PosterService';
 import type { AirtimeEntry, AirtimeSchedule } from '../domain/model';
+import { readingSchedulePatch, type ReadingTotals } from '../domain/schedulePatch';
 import type { AirtimeReader, AirtimeStore } from '../services/roles';
 import type { Game } from '../../games/exports';
 import type { Book, Manga } from '../../reading/exports';
@@ -88,6 +89,42 @@ const COUNTDOWN_KIND_CLASSES: Record<DetailedCountdown['kind'], string> = {
 	'aired': 'is-aired',
 	'due': 'is-due',
 };
+
+/** Applies the schedule's reading patch to the item in place; true if anything changed. */
+function applyReadingPatch(
+	item: ReadingTotals,
+	schedule: AirtimeSchedule,
+	volumes: number | null,
+	chapters: number | null,
+): boolean {
+	const patch = readingSchedulePatch(item, schedule, { chapters, volumes });
+	if (Object.keys(patch).length === 0) return false;
+	Object.assign(item, patch);
+	return true;
+}
+
+/** Card class: aired/due styling plus the selection highlight. */
+export function airtimeCardClass(countdown: DetailedCountdown, selected: boolean): string {
+	const parts = ['hoard-airtime__card'];
+	if (countdown.kind === 'aired' || countdown.kind === 'due') parts.push('hoard-airtime__card--aired');
+	if (countdown.kind === 'aired') parts.push('is-aired');
+	if (countdown.kind === 'due') parts.push('is-due');
+	if (selected) parts.push('hoard-list__row--selected');
+	return parts.join(' ');
+}
+
+const COUNTDOWN_PILL_CLASSES: Record<DetailedCountdown['kind'], string> = {
+	'today-before': 'hoard-airtime__pill hoard-airtime__pill--today-series',
+	'future': 'hoard-airtime__pill hoard-airtime__pill--days',
+	'aired': 'hoard-airtime__pill hoard-airtime__pill--aired',
+	'due': 'hoard-airtime__pill hoard-airtime__pill--due',
+};
+
+/** Countdown pill class; "Tomorrow" within 'future' gets its own style. */
+export function countdownPillClass(countdown: DetailedCountdown): string {
+	if (countdown.kind === 'future' && countdown.daysUntil === 1) return 'hoard-airtime__pill hoard-airtime__pill--tomorrow';
+	return COUNTDOWN_PILL_CLASSES[countdown.kind];
+}
 
 type TrackerCardData = { entry: AirtimeEntry; r: ResolvedUpcoming; countdown: DetailedCountdown };
 
@@ -933,53 +970,41 @@ export class AirtimeTab implements TabInstance {
 	): Promise<void> {
 		if (kind === 'book') {
 			const b = this.reading.getBook(itemId);
-			if (!b) return;
-			let changed = false;
-			if (totalChapters !== null && totalChapters !== b.totalChapters) { b.totalChapters = totalChapters; changed = true; }
-			// only write a future 'once' date back (it drives the auto "To be released"); a past/due date is
-			// left alone so the just-added entry isn't auto-removed
-			if (schedule.recurrence === 'once' && isReleaseDateFuture(schedule.releaseDate)) {
-				const newDate = schedule.releaseDate ?? null;
-				if (b.releaseDate !== newDate) { b.releaseDate = newDate; changed = true; }
-			}
-			if (changed) await this.reading.updateBook(b);
+			if (b && applyReadingPatch(b, schedule, null, totalChapters)) await this.reading.updateBook(b);
 		} else {
 			const m = this.reading.getManga(itemId);
-			if (!m) return;
-			let changed = false;
-			if (totalChapters !== null && totalChapters !== m.totalChapters) { m.totalChapters = totalChapters; changed = true; }
-			if (totalVolumes !== null && totalVolumes !== m.totalVolumes) { m.totalVolumes = totalVolumes; changed = true; }
-			// only write a future 'once' date back (it drives the auto "To be released"); a past/due date is
-			// left alone so the just-added entry isn't auto-removed
-			if (schedule.recurrence === 'once' && isReleaseDateFuture(schedule.releaseDate)) {
-				const newDate = schedule.releaseDate ?? null;
-				if (m.releaseDate !== newDate) { m.releaseDate = newDate; changed = true; }
-			}
-			if (changed) await this.reading.updateManga(m);
+			if (m && applyReadingPatch(m, schedule, totalVolumes, totalChapters)) await this.reading.updateManga(m);
 		}
 	}
 
 	/** On a single-release tick, revert the item's auto "To be released" back to its plan status. */
 	private async revertToBeReleasedStatus(entry: AirtimeEntry, r: ResolvedUpcoming): Promise<void> {
-		if (r.source === 'reading') {
-			const kind = entry.readingKind ?? 'book';
-			if (kind === 'book') {
-				const b = this.reading.getBook(entry.titleId);
-				if (b && b.status === 'To be released') { b.status = 'Plan to Read'; await this.reading.updateBook(b); }
-			} else {
-				const m = this.reading.getManga(entry.titleId);
-				if (m && m.status === 'To be released') { m.status = 'Plan to Read'; await this.reading.updateManga(m); }
-			}
-		} else if (r.source === 'game') {
-			const g = this.games.getGame(entry.titleId);
-			if (g && g.status === GAME_AUTO_STATUS) {
-				g.status = this.games.getSettings().defaultStatus || 'Not started';
-				await this.games.updateGame(g);
-			}
+		if (r.source === 'reading') await this.revertReadingStatus(entry);
+		else if (r.source === 'game') await this.revertGameStatus(entry);
+		else await this.revertTitleStatus(entry);
+	}
+
+	private async revertReadingStatus(entry: AirtimeEntry): Promise<void> {
+		if ((entry.readingKind ?? 'book') === 'book') {
+			const b = this.reading.getBook(entry.titleId);
+			if (b && b.status === 'To be released') { b.status = 'Plan to Read'; await this.reading.updateBook(b); }
 		} else {
-			const t = this.titles.getTitle(entry.titleId);
-			if (t && t.status === 'To be released') { t.status = 'Plan to watch'; await this.titles.updateTitle(t); }
+			const m = this.reading.getManga(entry.titleId);
+			if (m && m.status === 'To be released') { m.status = 'Plan to Read'; await this.reading.updateManga(m); }
 		}
+	}
+
+	private async revertGameStatus(entry: AirtimeEntry): Promise<void> {
+		const g = this.games.getGame(entry.titleId);
+		if (g && g.status === GAME_AUTO_STATUS) {
+			g.status = this.games.getSettings().defaultStatus || 'Not started';
+			await this.games.updateGame(g);
+		}
+	}
+
+	private async revertTitleStatus(entry: AirtimeEntry): Promise<void> {
+		const t = this.titles.getTitle(entry.titleId);
+		if (t && t.status === 'To be released') { t.status = 'Plan to watch'; await this.titles.updateTitle(t); }
 	}
 
 	/** Pushes the schedule-derived episode total and (single release) release date back onto the Watchlist title. */
@@ -1124,36 +1149,34 @@ export class AirtimeTab implements TabInstance {
 		countdown: DetailedCountdown,
 	): void {
 		const { isMovie, isFinalEpisode, showTick } = cardFlags(entry, r, countdown);
+		const selected = this.selectionMode && this.selectedItems.has(entry.id);
+		const card = parent.createDiv({ cls: airtimeCardClass(countdown, selected) });
+		if (this.selectionMode) this.renderCardSelection(card, entry);
+		this.renderCardLeft(card, entry, r, isMovie, isFinalEpisode);
 
-		let cardCls = 'hoard-airtime__card';
-		if (countdown.kind === 'aired' || countdown.kind === 'due') {
-			cardCls += ' hoard-airtime__card--aired';
-		}
-		if (countdown.kind === 'aired') cardCls += ' is-aired';
-		if (countdown.kind === 'due') cardCls += ' is-due';
-		if (this.selectionMode && this.selectedItems.has(entry.id)) {
-			cardCls += ' hoard-list__row--selected';
-		}
-		const card = parent.createDiv({ cls: cardCls });
+		const right = card.createDiv({ cls: 'hoard-airtime__card-right' });
+		right.createDiv({ cls: countdownPillClass(countdown), text: countdown.label });
+		this.renderCardActions(right, entry, r, showTick, isFinalEpisode);
+	}
 
-		if (this.selectionMode) {
-			const cb = card.createEl('input', { attr: { type: 'checkbox' } });
-			cb.addClass('hoard-airtime__select-checkbox');
-			cb.checked = this.selectedItems.has(entry.id);
-			cb.addEventListener('click', (e) => e.stopPropagation());
-			cb.addEventListener('change', () => {
-				if (cb.checked) { this.selectedItems.add(entry.id); }
-				else { this.selectedItems.delete(entry.id); }
-				this.render();
-			});
-			card.addEventListener('click', () => {
-				if (this.selectedItems.has(entry.id)) { this.selectedItems.delete(entry.id); }
-				else { this.selectedItems.add(entry.id); }
-				this.render();
-			});
-		}
+	private renderCardSelection(card: HTMLElement, entry: AirtimeEntry): void {
+		const cb = card.createEl('input', { attr: { type: 'checkbox' } });
+		cb.addClass('hoard-airtime__select-checkbox');
+		cb.checked = this.selectedItems.has(entry.id);
+		cb.addEventListener('click', (e) => e.stopPropagation());
+		cb.addEventListener('change', () => {
+			if (cb.checked) { this.selectedItems.add(entry.id); }
+			else { this.selectedItems.delete(entry.id); }
+			this.render();
+		});
+		card.addEventListener('click', () => {
+			if (this.selectedItems.has(entry.id)) { this.selectedItems.delete(entry.id); }
+			else { this.selectedItems.add(entry.id); }
+			this.render();
+		});
+	}
 
-		// left
+	private renderCardLeft(card: HTMLElement, entry: AirtimeEntry, r: ResolvedUpcoming, isMovie: boolean, isFinalEpisode: boolean): void {
 		const left = card.createDiv({ cls: 'hoard-airtime__card-left' });
 		left.createDiv({ cls: 'hoard-airtime__card-title', text: r.title });
 
@@ -1173,23 +1196,9 @@ export class AirtimeTab implements TabInstance {
 				: 'hoard-badge__episode';
 			left.createDiv({ cls: badgeCls, text: progressBadgeText(entry, r) });
 		}
+	}
 
-		// right
-		const right = card.createDiv({ cls: 'hoard-airtime__card-right' });
-
-		const pillClsMap: Record<DetailedCountdown['kind'], string> = {
-			'today-before': 'hoard-airtime__pill hoard-airtime__pill--today-series',
-			'future':       'hoard-airtime__pill hoard-airtime__pill--days',
-			'aired':        'hoard-airtime__pill hoard-airtime__pill--aired',
-			'due':          'hoard-airtime__pill hoard-airtime__pill--due',
-		};
-		// "Tomorrow" within 'future' gets its own style
-		const pillCls =
-			countdown.kind === 'future' && countdown.daysUntil === 1
-				? 'hoard-airtime__pill hoard-airtime__pill--tomorrow'
-				: pillClsMap[countdown.kind];
-		right.createDiv({ cls: pillCls, text: countdown.label });
-
+	private renderCardActions(right: HTMLElement, entry: AirtimeEntry, r: ResolvedUpcoming, showTick: boolean, isFinalEpisode: boolean): void {
 		const actions = right.createDiv({ cls: 'hoard-airtime__actions' });
 
 		// green tick, shown once the airtime/release passes
