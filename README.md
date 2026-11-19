@@ -76,15 +76,11 @@ Search, posters and covers work without any key through Cinemeta, Open Library a
 
 Steam needs your profile's **Game details** privacy set to Public. For custom Watchlist types, pick the answering service under **API routing by type**.
 
-## Importing from WatchLog
+## Coming from another tracker
 
-Hoard starts as a fresh install in its own `Hoard/` folder and never changes WatchLog data on its own. When it finds data of WatchLog (its plugin folder: `data.json`, on very old installs also `reading.json` and `history.json`, plus its notes) or WatchLog Sync (notes below the folder of `WatchLog.base`), a wizard offers to import it before Hoard loads:
+There is no in-app bulk import. To move notes from WatchLog, Library, or another media plugin into Hoard, use the **migrate-notes** agent skill in this repository (`.claude/skills/migrate-notes/`): open your vault with an AI coding agent that can load that skill, then ask it to migrate. Existing Hoard values are never overwritten. A user guide with the same mapping tables will live under `guide/` (see the README package).
 
-- **Import** copies the data into Hoard's folder (`Hoard/`, or wherever your `Hoard.base` lives); the source stays untouched. Existing Hoard notes are only filled, never overwritten; the one exception is a property that still holds a value an API delivered earlier, which the imported value replaces. Watchlist types Hoard does not know yet are added. WatchLog Sync notes keep their relative paths; API keys and device settings are taken only where Hoard has none.
-- **Result** lists what was created and filled, and every file to review (target already existed, a Hoard value differed and was kept, errors). The list can be saved as a note.
-- **Clean up** is optional and nothing is preselected: old notes that Hoard holds as an identical copy (for WatchLog's own notes: the same text below the properties; their properties are WatchLog's view of `data.json` and are not compared) and a `WatchLog.base` that Hoard's base was copied from go to the trash (a source whose Hoard copy differs stays), widget code blocks `watchlog` / `wl-*` can be renamed to `hoard` / `hoard-*`. To remove the old plugin data, uninstall the plugin under Community plugins.
-
-"Later" asks again on the next start, "Don't import" stops asking on this device for the sources found then (a source that appears later is offered again). Import and cleanup stay available in Hoard's settings under "Backup & restore". You can keep using WatchLog alongside Hoard; both keep their data apart.
+Hoard still refuses to treat a WatchLog-shaped `data.json` in its own plugin folder as its settings file, and WatchLog backups cannot be restored through Backup & restore.
 
 ## Credits
 

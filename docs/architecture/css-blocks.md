@@ -176,4 +176,3 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
 | `hoard-card-style` | settings-cards | The card style options. |
 | `hoard-csv` | csv-modal | CSV import and export modals and the regenerate progress. |
 | `hoard-steam-sync` | steam-sync | The Steam sync wizard. |
-| `hoard-onboarding` | onboarding | The onboarding wizard. |

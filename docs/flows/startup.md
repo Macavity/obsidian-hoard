@@ -1,7 +1,7 @@
 ---
 type: Flow
 title: Startup
-description: What happens from plugin load to a ready library, including fresh install, second device and the WatchLog import offer.
+description: What happens from plugin load to a ready library, including fresh install and second device.
 source:
   - src/app/main.ts
   - src/shared/storage/LocalStore.ts
@@ -9,7 +9,7 @@ source:
   - src/shared/storage/VaultLayout.ts
   - src/shared/storage/EntryIndex.ts
   - src/modules/settings/services/settingsSplit.ts
-source_commit: dd03b3c
+source_commit: 0bc1a4e
 ---
 
 # Startup
@@ -23,7 +23,6 @@ sequenceDiagram
   participant P as HoardPlugin.onload
   participant L as LocalStore
   participant S as startVaultStorage
-  participant W as WatchLog wizard
   participant Sh as SharedConfigStore
   participant I as EntryIndex
   participant Mg as managers
@@ -36,8 +35,6 @@ sequenceDiagram
     S->>Sh: deferBase(create on first write, adopt when synced in)
   end
   S->>Sh: load(), applySharedSettings()
-  S->>W: only if undecided WatchLog data still has notes Hoard lacks
-  W-->>S: adoptImportedData (root, shared settings)
   S->>Sh: ensureFilter(), start()
   S->>I: build(), sweepCache(), start()
   S->>Mg: history.start(), DataManager/Reading/Game init(), ensureFolders()
@@ -65,21 +62,20 @@ sequenceDiagram
    the first changed shared setting, or adopted when a synced base appears (`adoptSyncedBase`: new layout, reload settings, rebuild
    index). This is what lets a second device start on a half-synced vault without becoming the
    first one.
-6. Shared config loads and `applySharedSettings` re-composes settings. Then, **before the index is
-   built**, `runOnboarding` opens the [WatchLog import](watchlog-import.md) wizard when an undecided WatchLog
-   source would still create a note in Hoard; startup waits until it closes, nothing is indexed meanwhile, and the root and
-   shared settings are re-read afterwards. A missing `file.inFolder` filter in the base yields a
+6. Shared config loads and `applySharedSettings` re-composes settings. A missing `file.inFolder` filter in the base yields a
    Notice.
 7. `EntryIndex.build` scans all notes, `sweepCache` drops cache entries without a note, then the
    index and history start following vault events. Each manager's `init` reads note bodies, hooks
    `index.onChange`, queues missing posters and seasons and notifies once.
+
+Notes from WatchLog or another tracker are **not** imported at startup; use the
+[migrate-notes skill](watchlog-import.md).
 
 ## Failure points
 
 - Any error in `startVaultStorage` is caught once: console error plus Notice "could not load its
   notes"; the UI stays up with whatever was loaded before the failure (an already built index is
   not cleared).
-- A failing wizard is caught inside `runOnboarding` (console error) and startup continues.
 - Type-name changes after start trigger `syncTypeNames` → `index.rebuild()`.
 
 Shutdown (`onunload`) flushes pending debounced note and cache writes synchronously, flushes the

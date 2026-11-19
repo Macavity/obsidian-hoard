@@ -15,14 +15,14 @@ profile:
     - "*.test.ts"
     - scripts/
     - test/
-source_commit: cc203bf
+source_commit: 0bc1a4e
 ---
 
 # Context
 
 Hoard is an Obsidian plugin: a media library for movies, TV, anime, books, manga and games, stored
 as Markdown notes with properties in the user's vault. A sidebar view with eight tabs, code-block
-widgets inside notes, search and autofill that work without API keys (Cinemeta, Open Library, Steam Store) plus optional keyed enrichment, and an optional, user-driven import from its predecessor WatchLog.
+widgets inside notes, search and autofill that work without API keys (Cinemeta, Open Library, Steam Store) plus optional keyed enrichment. Notes from WatchLog or another tracker enter via the migrate-notes agent skill.
 Read [values](values.md) first; every rule below serves one of them.
 
 - **Entry**: one note = one title, book, manga or game; its id is the note path below the root.
@@ -48,8 +48,6 @@ flowchart TD
   Managers --> Storage[EntryIndex, codecs, stores]
   Storage --> Vault[(notes, Hoard.base, History.md)]
   Storage --> Local[(data.json)]
-  main --> Import[import/watchlog + onboarding wizard]
-  Import --> Storage
 ```
 
 # Types
@@ -83,16 +81,16 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Widgets](modules/widgets.md): how the `hoard-*` code blocks render and stay live.
 - [Settings](modules/settings.md): how the settings tab is laid out, what syncs, and how to add a setting.
 - [Backup](modules/backup.md): the backup file format, the two export variants and the restore contract.
-- [Import](modules/import.md): which module owns WatchLog knowledge, the report and importer contracts, the schema-1 converter, and where a new source goes.
+- [Migration](modules/import.md): how notes from WatchLog or another tracker enter Hoard via the migrate-notes skill (no in-plugin wizard).
 
 # Flows
 
-- [Startup](flows/startup.md): from plugin load to a ready library, including fresh install, second device and where the import wizard runs.
+- [Startup](flows/startup.md): from plugin load to a ready library, including fresh install and second device.
 - [Entry write](flows/entry-write.md): from a user edit to the note on disk without a double render.
 - [Add title](flows/add-title.md): from the search box to a new note, with keyless-first API routing and duplicate guard.
 - [Airtime notifications](flows/airtime-notifications.md): how the minute scheduler produces notices, badges and the status bar count.
 - [Backup and restore](flows/backup-restore.md): what a backup holds, which copy loses the keys, and the restore order (WatchLog files are not restorable).
-- [WatchLog import](flows/watchlog-import.md): the import wizard step by step, when it opens at startup, what Later and Don't import mean, and what cleanup may remove.
+- [Migrating from another tracker](flows/watchlog-import.md): the migrate-notes skill path for WatchLog, Library and other sources.
 
 # Concepts
 

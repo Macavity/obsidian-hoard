@@ -77,7 +77,7 @@ Fallow zones: `app`, one per module (`modules/<x>`), `design-system`, `shared`, 
   `DraftStore`, …) in `services/roles.ts`; `Open<X>` factory types sit with the models. A role lives with its consumer's
   module, not with the implementing manager (`AirtimeReader`/`AirtimeStore` in `airtime`, `DraftStore` in `drafts`;
   `DataManager` implements them). Modules with a surface: airtime, backup, drafts, games, reading, settings, watchlist;
-  the others (`custom-lists`, `dashboard`, `import`, `log`, `widgets`) have no `exports.ts` because nobody outside imports them.
+  the others (`custom-lists`, `dashboard`, `log`, `widgets`) have no `exports.ts` because nobody outside imports them.
 - **`shared` may import module exports, types and values** (constants, codec reference data): `shared/storage` codecs
   read `settingsDefaults`, `readingDefaults`, `gameDefaults`, `titles` through them. `shared` holds no module logic itself;
   values only one module needs stay in its `domain/`, values two or more modules need (dates, columns,
@@ -157,7 +157,7 @@ export class AddReadingModal extends Modal {
 - **Settings**: [SettingsService](../../src/modules/settings/services/SettingsService.ts) is the only access. `get()`
   returns a read-only view; `update(fn)` mutates, persists once through the plugin's `persistAll` and emits the change
   signal once; `stage(fn)` does the same debounced for text typed key by key; `flush()` saves a pending stage on
-  unload. The plugin keeps the object as private `state`. Exception: backup restore and the WatchLog import write
+  unload. The plugin keeps the object as private `state`. Exception: backup restore may write
   `local.data.settings` directly and then reload the settings (`loadSettings`).
 - **Obsidian needs the plugin** (`registerEvent`, `register`, settings tab): inject the `Plugin` type or one bound function (`EntryNotes` takes `registerEvent`).
 - **Tests** build classes directly with fakes (`test/fakes`, `test/helpers`), never a faked `HoardPlugin`.
@@ -190,4 +190,4 @@ External changes (sync, hand edits) arrive through `EntryIndex.onChange` (deboun
 - Windows: app-wide state uses the plugin's own window (`window.document`): the change signal and body custom properties such
   as the card size (`applyCardSizeCssVar`), which Obsidian copies from the main body into other windows, never back (host
   behaviour, checked against Obsidian 1.15.0). `activeDocument` is for UI that belongs to the window the user is in.
-- Start-up order and the WatchLog wizard: [flows/startup](../flows/startup.md).
+- Start-up order: [flows/startup](../flows/startup.md). Tracker migration: [flows/watchlog-import](../flows/watchlog-import.md).
