@@ -8,7 +8,7 @@ source:
   - src/shared/storage/noteWrite.ts
   - src/shared/domain/typeName.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Entry id

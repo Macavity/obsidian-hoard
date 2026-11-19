@@ -11,7 +11,7 @@ source:
   - src/shared/domain/columns.ts
   - src/shared/services/addRoute.ts
   - src/shared/storage/VaultLayout.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Custom lists
@@ -24,7 +24,7 @@ instance through the `CreateListManager` factory, also used by the settings tab 
 [CustomListsTab.ts](../../src/modules/custom-lists/ui/CustomListsTab.ts) (the tab, `EditColumnsModal` /
 `DefaultColumnsModal`, both rendering [ColumnsEditor.ts](../../src/design-system/ColumnsEditor.ts), `NotesModal`,
 `ListNameModal`, `ImportListModal` (paste TSV), `ExportFormatModal` and clipboard export (Markdown or TSV)) and
-[customList.ts](../../src/modules/custom-lists/domain/customList.ts) (`CustomList`, types only, module-internal: no `exports/` folder; column and row types are
+[customList.ts](../../src/modules/custom-lists/domain/customList.ts) (`CustomList`, types only, module-internal: no `exports.ts`; column and row types are
 in [columns.ts](../../src/shared/domain/columns.ts)). [wiring/customLists.ts](../../src/app/wiring/customLists.ts)
 is the only place that `new`s the dialogs and the tab; the tab types its data sources against
 `TitleReader` / `TitleStats` / `ReadingReader` / `GameReader` roles.

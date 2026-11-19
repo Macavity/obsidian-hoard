@@ -3,10 +3,12 @@ type: Module
 title: Reading
 description: How books and manga differ in model and progress, the release-status and custom-column rules, and where CSV and quotes live.
 source:
-  - src/modules/reading/exports/index.ts
-  - src/modules/reading/exports/readingDefaults.ts
-  - src/modules/reading/exports/newReading.ts
-  - src/modules/reading/exports/readingColors.ts
+  - src/modules/reading/exports.ts
+  - src/modules/reading/domain/model.ts
+  - src/modules/reading/services/roles.ts
+  - src/modules/reading/domain/readingDefaults.ts
+  - src/modules/reading/domain/newReading.ts
+  - src/modules/reading/domain/readingColors.ts
   - src/modules/reading/services/ReadingDataManager.ts
   - src/modules/reading/domain/readingHelpers.ts
   - src/shared/storage/readingCodec.ts
@@ -18,16 +20,16 @@ source:
   - src/modules/airtime/ui/ReadingScheduleModal.ts
   - src/shared/services/coverRefresh.ts
   - src/design-system/CsvModalBase.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Reading
 
-One note per book (`Books/`) or manga (`Manga/`). [exports/](../../src/modules/reading/exports/index.ts) is the module's
-public surface (what other modules and `shared` may import): the types `Book`, `Manga`, `ReadingSettings`, `ReadingData`, `ReadingKind`, the roles
-`ReadingReader`, `ReadingWriter`, `ReadingSettingsAccess`, `ReadingSnapshot` (backup) and `OpenReadingCsv`, plus the values
+One note per book (`Books/`) or manga (`Manga/`). [exports.ts](../../src/modules/reading/exports.ts) is the module's
+public surface (what other modules and `shared` may import); it only re-exports by name: the types (`domain/model.ts`) `Book`, `Manga`, `ReadingSettings`, `ReadingData`, `ReadingKind`, `OpenReadingCsv`, the roles (`services/roles.ts`)
+`ReadingReader`, `ReadingWriter`, `ReadingSettingsAccess`, `ReadingSnapshot` (backup), plus the values
 `READING_STATUSES`, `SELECTABLE_READING_STATUSES`, `DEFAULT_READING_SETTINGS`, `DEFAULT_READING_STATUS_COLORS`, `bookProgressUnit`,
-`getReadingTypeColor` (`readingDefaults.ts`), `readingStatusColor` (`readingColors.ts`) and `newBook` / `newManga` (`newReading.ts`).
+`getReadingTypeColor` (`domain/readingDefaults.ts`), `readingStatusColor` (`domain/readingColors.ts`) and `newBook` / `newManga` (`domain/newReading.ts`).
 `coverFallbackColor` is module-internal (`domain/coverColor.ts`).
 [ReadingDataManager.ts](../../src/modules/reading/services/ReadingDataManager.ts) `implements` the four roles and
 owns the copies, writes, history and Upcoming sync; the dialogs and the tab are built in
@@ -100,9 +102,9 @@ Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pendin
 | Change | Place |
 |---|---|
 | Property names, defaults when reading a note, validation | `readingCodec.ts` |
-| Defaults of a new book or manga | `newBook`, `newManga` in [newReading.ts](../../src/modules/reading/exports/newReading.ts); the WatchLog import keeps its own |
-| Status list and colours | `READING_STATUSES`, `DEFAULT_READING_STATUS_COLORS` in `exports/readingDefaults.ts`, `readingStatusColor` in `exports/readingColors.ts` |
-| Anything other modules or `shared` import from reading | `exports/`; the changed surface goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed |
+| Defaults of a new book or manga | `newBook`, `newManga` in [newReading.ts](../../src/modules/reading/domain/newReading.ts); the WatchLog import keeps its own |
+| Status list and colours | `READING_STATUSES`, `DEFAULT_READING_STATUS_COLORS` in `domain/readingDefaults.ts`, `readingStatusColor` in `domain/readingColors.ts` |
+| Anything other modules or `shared` import from reading | `exports.ts`; the changed surface goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed |
 | Rows shelf ids | `READING_ROWS_SHELVES` in `domain/readingHelpers.ts` |
 | Release and Upcoming rules | `applyReleaseStatus`, `syncUpcoming` in the manager |
 | Auto-complete | `applyAutoComplete` in `ReadingDetailModal.ts` |

@@ -8,9 +8,9 @@ source:
   - src/app/main.ts
   - src/shared/storage/entryReaders.ts
   - src/shared/storage/featureSettings.ts
-  - src/modules/backup/exports/index.ts
+  - src/modules/backup/domain/model.ts
   - src/app/wiring/settings.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Backup and restore
@@ -18,7 +18,7 @@ source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 Trigger: the Backup section of the settings tab ([SettingsTab.ts](../../src/modules/settings/ui/SettingsTab.ts),
 the `SettingsTabBackup` hooks `build` / `withoutSecrets` / `parse` / `restore`, bound to the backup functions in
 [wiring/settings.ts](../../src/app/wiring/settings.ts)). Logic lives in [backup.ts](../../src/modules/backup/services/backup.ts), the
-file shape `BackupFile` in [backup/exports](../../src/modules/backup/exports/index.ts); `backupManagers()` in
+file shape `BackupFile` in [backup/domain/model.ts](../../src/modules/backup/domain/model.ts); `backupManagers()` in
 [main.ts](../../src/app/main.ts) hands it every manager plus the stores. Entries are read back with
 [entryReaders.ts](../../src/shared/storage/entryReaders.ts), the reading and games settings blocks with
 [featureSettings.ts](../../src/shared/storage/featureSettings.ts).

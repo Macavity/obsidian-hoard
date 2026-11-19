@@ -12,26 +12,28 @@ source:
   - src/app/wiring/watchlist.ts
   - .claude/agents/exports-reviewer.md
   - CLAUDE.md
-  - src/modules/watchlist/exports/index.ts
-  - src/modules/watchlist/exports/titles.ts
-  - src/modules/settings/exports/settingsCodec.ts
+  - src/modules/watchlist/exports.ts
+  - src/modules/settings/exports.ts
+  - src/modules/watchlist/services/roles.ts
+  - src/shared/api/apiGroup.ts
   - src/modules/custom-lists/domain/customList.ts
   - src/modules/settings/services/SettingsService.ts
   - src/shared/services/EntryNotes.ts
   - src/shared/services/changeSignal.ts
   - src/shared/services/changeListeners.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Overview
 
 Hoard is one Obsidian plugin package. `src/` has four code zones: `src/app/` (composition root), `src/modules/<x>/`
-(one folder per feature: `exports/` where others need something, `ui/`, `services/`, `domain/`), `src/design-system/` (the UI kit, see
+(one folder per feature: `ui/`, `services/`, `domain/`, and `exports.ts` where others need something), `src/design-system/` (the UI kit, see
 [ui-kit](ui-kit.md)) and `src/shared/` (`api`, `storage`, `services`, `domain`, `i18n`). The rules below are
-enforced by tools, not by this page: `.fallowrc.json` (`boundaries`) and `eslint.config.mjs` are the authority,
-`test/architecture.test.ts` proves the ESLint rules and the CI job `rules-changed` flags every change to a rule file
-and (step "Flag changes to module exports") to `src/modules/*/exports/*` in a PR. How to build a module: `.claude/skills/project/SKILL.md`.
+enforced by tools, not by this page: `.fallowrc.json` (`boundaries`: which module edges exist) and `eslint.config.mjs`
+(`import-x/no-restricted-paths`: that they go through the barrel) are the authority, `test/architecture.test.ts` proves
+the ESLint rules and the CI job `rules-changed` flags every change to a rule file
+and (step "Flag changes to module exports") to `src/modules/*/exports.ts` or `.fallowrc.json` in a PR. How to build a module: `.claude/skills/project/SKILL.md`.
 
 ```mermaid
 flowchart TD
@@ -41,54 +43,55 @@ flowchart TD
   mod["modules/x: ui, services, domain"] -->|values| ds[design-system]
   mod -->|values| sh["shared: api, storage, services, domain, i18n"]
   ds --> sh
-  mod --> ex["module-exports: modules/*/exports/"]
-  sh --> ex
-  ex --> sh
-  ex --> ex
+  mod -->|"via exports.ts"| mod
+  sh -->|"via exports.ts"| mod
   sh -.-> Vault[(notes, Hoard.base, History.md, data.json)]
 ```
 
 ## Zones and rules
 
-Fallow zones are matched **first match wins**, so `module-exports` (`src/modules/*/exports/**`) precedes the module
-zones and an exports folder is never part of its module's zone.
+Fallow zones: `app`, one per module (`modules/<x>`), `design-system`, `shared`, plus `test`, `tooling`, `styles`,
+`obsidian-mock`. There is no zone for exports: a module's `exports.ts` belongs to the module's zone.
 
 | Zone | Pattern | May import |
 |---|---|---|
-| `app` | `src/app/**` | every module, `module-exports`, `design-system`, `shared` |
-| `modules/<x>` (one per module) | `src/modules/<x>/**` | `design-system`, `module-exports`, `shared` (not itself: a module's own files are the same zone) |
-| `module-exports` | `src/modules/*/exports/**` | `module-exports`, `shared` |
+| `app` | `src/app/**` | every module, `design-system`, `shared` |
+| `modules/<x>` (one per module) | `src/modules/<x>/**` | `design-system`, `shared`, and only the other modules it really uses (list per module in `.fallowrc.json`) |
 | `design-system` | `src/design-system/**` | `shared` |
-| `shared` | `src/shared/**` | `module-exports` |
+| `shared` | `src/shared/**` | `modules/games`, `reading`, `watchlist` (values and types), `airtime`, `drafts`, `settings` (types only) |
 | `test` | `test/**` | everything |
 | `tooling`, `styles`, `obsidian-mock` | `scripts/**`, `*.mjs`, `vitest.config.ts` / `src/styles/**` / `test/__mocks__/obsidian.ts` | tooling: the mock; the other two: nothing |
 
-- **Every module rule is identical** (`design-system`, `module-exports`, `shared`, `obsidian-mock`; no `allowTypeOnly`
-  anywhere). A module reaches another module only through that module's `exports/` (imported as `…/<x>/exports`),
-  never its internals, so there is no module-to-module edge into `ui/`, `services/` or `domain/`. `exports/` cannot
-  import module internals either.
-- **`exports/` is a module's deliberate public surface**: its models (`HoardTitle`, `Book`, `Game`,
-  `HoardPluginSettings`, `BackupFile`, …), the **role interfaces** the managers `implement` (`TitleReader`,
-  `TitleWriter`, `ReadingReader`, `GameWriter`, `SettingsReader`, `AirtimeReader`, `DraftStore`, …), `Open<X>` factory
-  types, and the constants and pure functions others need (`DEFAULT_SETTINGS`, `settingsCodec`, `GAME_AUTO_STATUS`,
-  `READING_STATUSES`, `titles`, `airtime`, `newTitle`/`newGame`/`newReading`). Entry point is `exports/index.ts`; fallow
-  follows re-exports to the defining file, so public code must **physically live in `exports/`**, a re-export of an
-  internal file fails. A role lives with its consumer, not with the implementing manager (`AirtimeReader` and `AirtimeStore` in
-  `airtime/exports`, `DraftStore` in `drafts/exports`; `DataManager` implements them). `custom-lists` has no `exports/` (its `CustomList` type sits in
-  `custom-lists/domain/customList.ts`; nobody outside imports it).
+- **Module edges are listed, not blanket.** Each module rule names exactly the module edges the code has: `allow` for
+  value imports, `allowTypeOnly` for type-only ones (`custom-lists`, `drafts`, `log` and `widgets` have none or only type edges).
+  A new edge is a reviewed change to `.fallowrc.json`. fallow judges an import by the file that *defines* the symbol,
+  so it cannot see the barrel; that is ESLint's job.
+- **The barrel (ESLint `import-x/no-restricted-paths`, `eslint.config.mjs`).** Code outside module `<m>` (other modules,
+  `src/shared`, `src/design-system`) reaches `<m>` only through `src/modules/<m>/exports.ts` (imported as `…/<m>/exports`),
+  never its `ui/`, `services/` or `domain/`. `src/app/**` and `test/**` are exempt.
+- **`exports.ts` is a module's deliberate public surface and only re-exports.** `no-restricted-syntax` allows named
+  re-exports from the module's own files (no definitions, no `export *`, no imports, no `../`). The symbols live where
+  their domain puts them: models in `domain/model.ts`, constants and pure functions in `domain/*.ts` (`DEFAULT_SETTINGS`,
+  `settingsCodec`, `READING_STATUSES`, `titles`, `airtime`, `newTitle`/`newGame`/`newReading`), the **role interfaces** the
+  managers `implement` (`TitleReader`, `TitleWriter`, `ReadingReader`, `GameWriter`, `SettingsReader`, `AirtimeReader`,
+  `DraftStore`, …) in `services/roles.ts`; `Open<X>` factory types sit with the models. A role lives with its consumer's
+  module, not with the implementing manager (`AirtimeReader`/`AirtimeStore` in `airtime`, `DraftStore` in `drafts`;
+  `DataManager` implements them). Modules with a surface: airtime, backup, drafts, games, reading, settings, watchlist;
+  the others (`custom-lists`, `dashboard`, `import`, `log`, `widgets`) have no `exports.ts` because nobody outside imports them.
 - **`shared` may import module exports, types and values** (constants, codec reference data): `shared/storage` codecs
-  read `settingsDefaults`, `readingDefaults`, `gameDefaults`, `titles` from there. `shared` holds no module logic itself;
-  values only one module needs stay in its `exports/` or `domain/`, values two or more modules need (dates, columns,
-  tags, `imdb`, `api/credits`) stay in `src/shared/`. The design system imports no module exports, so it knows no module
-  and no settings.
-- **Exports review**: every change under `src/modules/*/exports/` and every new `shared` → exports import goes through
+  read `settingsDefaults`, `readingDefaults`, `gameDefaults`, `titles` through them. `shared` holds no module logic itself;
+  values only one module needs stay in its `domain/`, values two or more modules need (dates, columns,
+  tags, `imdb`, `api/credits`, `api/apiGroup.ts`) live in `src/shared/`. The design system imports no module, so it knows no module
+  and no settings. Open question (issue #48): where watchlist-only API logic used by several modules belongs (`titleSearch`,
+  `getApiGroupForType`, maybe `PosterService`).
+- **Exports review**: every line change in an `exports.ts`, every new module edge in `.fallowrc.json` and every new `shared` → exports import goes through
   the read-only agent [exports-reviewer](../../.claude/agents/exports-reviewer.md) before the commit (rule in
   [CLAUDE.md](../../CLAUDE.md)). It pushes back per symbol (outside consumer? owner? kind? width? logic leak?).
   Unresolved challenges go to the user.
 - `obsidian-mock` is allowed for modules, the design system and `shared` only as an artifact: fallow resolves
   `obsidian` through the vitest alias to `test/__mocks__/obsidian.ts`.
 - **Inside `shared`** fallow draws no lines (one zone). What is kept out of lower layers is guarded by lint and tests:
-  no i18n import in storage, domain, exports or the data managers ([i18n](i18n.md)); the services lint rules below.
+  no i18n import in storage, domain, `roles.ts`, `exports.ts` or the data managers ([i18n](i18n.md)); the services lint rules below.
 - **One zone per module**, declared explicitly (`modules/<x>`), not via `autoDiscover`: `fallow audit` analyses the base
   branch with the current config, and an `autoDiscover` folder the base lacks makes the whole config invalid.
   `coverage.requireAllFiles` fails a new file that belongs to no zone. A new module therefore needs its zone and a
@@ -106,7 +109,7 @@ zones and an exports folder is never part of its module's zone.
 
 ## Modules talk through exports
 
-A module's `exports/` is its public surface. A consumer in another module names the **role** it needs, never the
+A module's `exports.ts` is its public surface. A consumer in another module names the **role** it needs, never the
 manager class: `DataManager implements TitleReader, TitleStats, TitleWriter, AirtimeStore, DraftStore,
 TitleMaintenance, TitleBackup` (`AirtimeStore`, which extends `AirtimeReader`, and `DraftStore` come from the airtime and drafts exports); the reading and game managers implement their `*Reader/Writer/SettingsAccess/Snapshot`
 roles; `SettingsService implements SettingsReader, SettingsWriter`. Dashboard, airtime, backup and the others import
@@ -126,14 +129,14 @@ export type OpenAddReading = (opts: AddReadingOptions) => void; // exported from
 export class AddReadingModal extends Modal {
   constructor(
     app: App,                                  // only for super()
-    private readonly settings: SettingsReader, // role from settings/exports
+    private readonly settings: SettingsReader, // role from settings/exports.ts
     private readonly reading: ReadingDataManager, // own module: class by import type
     private readonly opts: AddReadingOptions,
   ) { super(app); }
 }
 ```
 
-- **Shape, not origin.** A collaborator is a role from an `exports/`, a `Pick<Manager, …>` or a consumer-owned interface,
+- **Shape, not origin.** A collaborator is a role from an `exports.ts`, a `Pick<Manager, …>` or a consumer-owned interface,
   not `HoardPlugin`.
 - **Children come as factories.** A parent receives `OpenX` function types (exported from the child's file) or, with
   more than three, a methods-only port it owns (`ListTabModals { openDetail(…): void; … }`). It never receives its

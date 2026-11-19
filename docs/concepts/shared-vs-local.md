@@ -6,17 +6,17 @@ source:
   - src/shared/storage/SharedConfigStore.ts
   - src/modules/settings/services/settingsSplit.ts
   - src/modules/settings/services/SettingsService.ts
-  - src/modules/settings/exports/settingsCodec.ts
-  - src/modules/settings/exports/settingsDefaults.ts
+  - src/modules/settings/domain/settingsCodec.ts
+  - src/modules/settings/domain/settingsDefaults.ts
   - src/shared/storage/LocalStore.ts
   - src/shared/storage/storageTypes.ts
   - src/shared/storage/SecretStore.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Shared vs local settings
 
-Settings are one object in memory (`HoardPluginSettings`, [settings/exports](../../src/modules/settings/exports/index.ts); owned by the plugin, read and changed only through [SettingsService](../../src/modules/settings/services/SettingsService.ts): `get`, `update`, `stage`, `flush`) but three places on disk:
+Settings are one object in memory (`HoardPluginSettings`, [settings/domain/model.ts](../../src/modules/settings/domain/model.ts); owned by the plugin, read and changed only through [SettingsService](../../src/modules/settings/services/SettingsService.ts): `get`, `update`, `stage`, `flush`) but three places on disk:
 
 | Where | What | Synced |
 |---|---|---|
@@ -34,10 +34,10 @@ the whole object is replaced, so unlisted nested keys do not survive.
 
 ## Composition and persistence
 
-- `composeSettings(local, shared, secrets)` = `DEFAULT_SETTINGS` ([settingsDefaults.ts](../../src/modules/settings/exports/settingsDefaults.ts)) ← local ← secrets ← shared (shared
+- `composeSettings(local, shared, secrets)` = `DEFAULT_SETTINGS` ([settingsDefaults.ts](../../src/modules/settings/domain/settingsDefaults.ts)) ← local ← secrets ← shared (shared
   wins), except that secret keys found in the base are dropped (`withoutSecrets`)
   ([settingsSplit.ts](../../src/modules/settings/services/settingsSplit.ts)). The merged record is cloned and handed to
-  `normalizeSettings` ([settingsCodec.ts](../../src/modules/settings/exports/settingsCodec.ts)), which runs every known
+  `normalizeSettings` ([settingsCodec.ts](../../src/modules/settings/domain/settingsCodec.ts)), which runs every known
   key through one rule with a fresh copy of its default to fall back on. A key named in `RULES` has
   its own rule (date format, watchlist view, the non-empty lists, the five rating tiers, the statuses
   with their two migrations, the merged list-filter and card-text records, the reading badge

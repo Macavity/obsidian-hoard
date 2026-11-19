@@ -8,7 +8,7 @@ source:
   - scripts/check-css-classes.mjs
   - eslint.config.mjs
   - stylelint.config.mjs
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: cc203bf
 ---
 
 # CSS blocks

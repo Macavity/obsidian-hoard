@@ -13,7 +13,7 @@ source:
   - src/shared/storage/baseline.ts
   - src/shared/storage/noteBody.ts
   - src/shared/storage/LocalStore.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Entry write

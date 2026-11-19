@@ -15,7 +15,7 @@ profile:
     - "*.test.ts"
     - scripts/
     - test/
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Context
@@ -31,7 +31,7 @@ Read [values](values.md) first; every rule below serves one of them.
 - **Base**: `Hoard.base`, whose `hoard:` block carries the shared vocabulary; nothing else syncs settings.
 - **Cache**: `data.json`, device-local; fetched data, UI state. API keys live in Obsidian's secret storage, also per device.
 - **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (the import wizard writes notes once, custom lists write their own notes).
-- **Exports**: a module's `exports/` folder, its deliberate public surface: models, role interfaces (`TitleReader`, `ReadingSnapshot`, …) other modules depend on instead of a manager class, and the constants and pure functions others need. Reviewed by the `exports-reviewer` agent.
+- **Exports**: a module's `exports.ts`, a barrel that only re-exports by name from the module's own files (`domain/model.ts`, `services/roles.ts`, …): its deliberate public surface of models, role interfaces (`TitleReader`, `ReadingSnapshot`, …) other modules depend on instead of a manager class, and the constants and pure functions others need. Reviewed by the `exports-reviewer` agent.
 - **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
 - **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
 - **Maybe**: a note with `Maybe: true`, considered but not in the library.

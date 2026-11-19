@@ -10,7 +10,7 @@ source:
   - src/modules/log/ui/LogTab.ts
   - src/app/wiring/log.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: cc203bf
 ---
 
 # Log

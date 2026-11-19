@@ -13,7 +13,7 @@ source:
   - src/shared/storage/cacheMigration.ts
   - src/modules/import/services/watchlog/detect.ts
   - src/shared/api/lookup.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Entry cache

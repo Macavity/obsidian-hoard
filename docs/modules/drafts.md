@@ -3,14 +3,16 @@ type: Module
 title: Drafts
 description: How tagged lines in vault notes become add candidates, why the pending count is computed twice, and what is persisted.
 source:
-  - src/modules/drafts/exports/index.ts
+  - src/modules/drafts/exports.ts
+  - src/modules/drafts/domain/model.ts
+  - src/modules/drafts/services/roles.ts
   - src/modules/drafts/ui/DraftsTab.ts
   - src/modules/drafts/ui/DraftChoiceModal.ts
   - src/app/AddRouter.ts
   - src/app/wiring/drafts.ts
   - src/app/HoardView.ts
   - src/shared/services/addRoute.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Drafts
@@ -18,7 +20,7 @@ source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 An inbox: the user writes `#hoard Some Title` anywhere in the vault; the Drafts tab
 ([DraftsTab.ts](../../src/modules/drafts/ui/DraftsTab.ts)) lists those titles and routes each into Watchlist, Books,
 Manga or Games. Drafts are not entries and have no note; only triage state is persisted. The tab depends on roles only:
-`DraftStore` (drafts exports) + `TitleReader` (watchlist), `ReadingReader`, `GameReader`, `SettingsReader`, the injected
+`DraftStore` ([roles.ts](../../src/modules/drafts/services/roles.ts), re-exported by `exports.ts` with `DraftPersistState`) + `TitleReader` (watchlist), `ReadingReader`, `GameReader`, `SettingsReader`, the injected
 `OpenAddRoute`. [wiring/drafts.ts](../../src/app/wiring/drafts.ts) builds the tab and the badge count.
 
 ## Scan
@@ -48,8 +50,8 @@ refreshes on `metadata-resolved`, not on `hoard-data-changed`, because it needs 
   card "Added".
 - Dismiss is permanent per key; there is no un-dismiss in the tab.
 - `DraftPersistState` (`dismissed`, `added`, `firstSeen`, `titleDisplay`, all keyed by lowercase
-  title; type in [exports/index.ts](../../src/modules/drafts/exports/index.ts)) lives in `data.json` via the
-  `DraftStore` role (`getDrafts` / `setDrafts`, declared in the drafts exports, implemented by the watchlist's `DataManager`), device-local. The tag
+  title; type in [domain/model.ts](../../src/modules/drafts/domain/model.ts)) lives in `data.json` via the
+  `DraftStore` role (`getDrafts` / `setDrafts`, declared in `services/roles.ts`, implemented by the watchlist's `DataManager`), device-local. The tag
   (`draftsVaultTag`, default `#hoard`) and `draftsAfterAdding` are device-local settings too.
 
 ## Where to change what

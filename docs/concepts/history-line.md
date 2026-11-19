@@ -7,7 +7,7 @@ source:
   - src/shared/storage/HistoryStore.ts
   - src/shared/services/HistoryManager.ts
   - src/shared/domain/history.ts
-source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
+source_commit: cc203bf
 ---
 
 # History line

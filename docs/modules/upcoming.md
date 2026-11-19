@@ -3,8 +3,10 @@ type: Module
 title: Upcoming
 description: What the Upcoming tab (src/modules/airtime) shows, how it decides aired versus due, what a tick and a removal write, and how schedules are added.
 source:
-  - src/modules/airtime/exports/index.ts
-  - src/modules/airtime/exports/airtime.ts
+  - src/modules/airtime/exports.ts
+  - src/modules/airtime/domain/model.ts
+  - src/modules/airtime/services/roles.ts
+  - src/modules/airtime/domain/airtime.ts
   - src/modules/airtime/ui/AirtimeTab.ts
   - src/modules/airtime/ui/AirtimeScheduleModal.ts
   - src/modules/airtime/ui/ScheduleForm.ts
@@ -14,7 +16,7 @@ source:
   - src/modules/airtime/services/airtimeScheduler.ts
   - src/app/wiring/airtime.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Upcoming
@@ -22,9 +24,9 @@ source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
 The module is `src/modules/airtime`; the tab `AirtimeTab` ([AirtimeTab.ts](../../src/modules/airtime/ui/AirtimeTab.ts)) has
 no store: every row is an `AirtimeEntry` computed by `getAirtimeEntries()` (the `AirtimeReader` role, `AirtimeStore` extends it; both implemented by
 the watchlist's `DataManager`) from note properties, see [airtime](../concepts/airtime.md) for manual versus derived
-entries and the writes. [exports/index.ts](../../src/modules/airtime/exports/index.ts) is the public surface: the types `AirtimeEntry`,
-`AirtimeSchedule`, `EntryAirtime`, the roles `AirtimeReader` (`getAirtimeEntries`, `refreshAiring`; used by widgets and the scheduler) and `AirtimeStore`
-(the writes), and the value `toEntryAirtime` (`exports/airtime.ts`). Changes there go through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before they are committed. The tab types against roles (`TitleReader & AirtimeStore`, `ReadingReader & ReadingWriter`,
+entries and the writes. [exports.ts](../../src/modules/airtime/exports.ts) is the public surface (only named re-exports): the types (`domain/model.ts`) `AirtimeEntry`,
+`AirtimeSchedule`, `EntryAirtime`, `AirtimeRecurrence`, the roles (`services/roles.ts`) `AirtimeReader` (`getAirtimeEntries`, `refreshAiring`; used by widgets and the scheduler) and `AirtimeStore`
+(the writes), and the value `toEntryAirtime` (`domain/airtime.ts`). Changes to `exports.ts` go through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before they are committed. The tab types against roles (`TitleReader & AirtimeStore`, `ReadingReader & ReadingWriter`,
 `GameReader & GameWriter`); [wiring/airtime.ts](../../src/app/wiring/airtime.ts) `new`s the tab and the dialogs and exposes
 `countDue` for the tab badge. Notifications and the status bar are in
 [flows/airtime-notifications](../flows/airtime-notifications.md); the scheduler tick is `runAirtimeScheduler` in

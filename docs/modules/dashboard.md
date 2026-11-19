@@ -9,13 +9,13 @@ source:
   - src/app/HoardView.ts
   - src/modules/watchlist/services/DataManager.ts
   - src/styles/dashboard.css
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Dashboard
 
 Read-only overview and the tab the panel opens on. [DashboardTab.ts](../../src/modules/dashboard/ui/DashboardTab.ts)
-persists nothing and has no `exports/` folder of its own: it types against roles, `DashboardTitles` (a `Pick` of
+persists nothing and has no `exports.ts` of its own: it types against roles, `DashboardTitles` (a `Pick` of
 `TitleReader` / `TitleStats`), `ReadingReader`, `GameReader` and `SettingsReader`, built in
 [wiring/dashboard.ts](../../src/app/wiring/dashboard.ts). `render()` precomputes titles by type, planned titles, books, manga, games and
 the reading aggregates once, then draws cards, "More statistics", suggestions and the recent lists.

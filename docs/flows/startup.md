@@ -9,7 +9,7 @@ source:
   - src/shared/storage/VaultLayout.ts
   - src/shared/storage/EntryIndex.ts
   - src/modules/settings/services/settingsSplit.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Startup

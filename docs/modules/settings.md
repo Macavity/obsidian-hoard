@@ -3,30 +3,32 @@ type: Module
 title: Settings
 description: How the settings tab is organised, how the API cards and type validation work, and the checklist for adding a setting.
 source:
-  - src/modules/settings/exports/index.ts
-  - src/modules/settings/exports/settingsDefaults.ts
+  - src/modules/settings/exports.ts
+  - src/modules/settings/domain/model.ts
+  - src/modules/settings/services/roles.ts
+  - src/modules/settings/domain/settingsDefaults.ts
   - src/modules/settings/services/SettingsService.ts
   - src/modules/settings/services/settingsSplit.ts
   - src/modules/settings/ui/SettingsTab.ts
   - src/modules/settings/ui/problemText.ts
   - src/app/wiring/settings.ts
   - src/app/main.ts
-  - src/modules/settings/exports/settingsCodec.ts
+  - src/modules/settings/domain/settingsCodec.ts
   - src/shared/storage/SharedConfigStore.ts
   - src/shared/domain/typeName.ts
   - src/shared/api/apiSources.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Settings
 
-One `HoardPluginSettings` object ([exports/index.ts](../../src/modules/settings/exports/index.ts), with the roles
-`SettingsReader` and `SettingsWriter`; the same folder exports `DEFAULT_SETTINGS`, `normalizeSettings` and `REMOVED_SETTINGS`), owned by the plugin as private `state`; everything else reaches it through
+One `HoardPluginSettings` object (`domain/model.ts`; [exports.ts](../../src/modules/settings/exports.ts) re-exports it with the roles
+`SettingsReader` and `SettingsWriter` from `services/roles.ts`, plus `DEFAULT_SETTINGS`, `normalizeSettings` and `REMOVED_SETTINGS`), owned by the plugin as private `state`; everything else reaches it through
 [SettingsService](../../src/modules/settings/services/SettingsService.ts), which `implements` both roles
 (`get`, `update`, `stage`, `flush`). Other modules type against `SettingsReader` / `SettingsWriter`, never the
 service. The object is composed from defaults, `data.json` and the base and persisted back by the whitelist, both
 in [settingsSplit.ts](../../src/modules/settings/services/settingsSplit.ts) (`composeSettings`, `persistSettings`);
-that split, the rules in `normalizeSettings` ([settingsCodec.ts](../../src/modules/settings/exports/settingsCodec.ts)) and the
+that split, the rules in `normalizeSettings` ([settingsCodec.ts](../../src/modules/settings/domain/settingsCodec.ts)) and the
 diff-only write are in [shared vs local](../concepts/shared-vs-local.md).
 API keys, Steam id, IGDB credentials and `jikanBaseUrl` are not in `data.json` but in Obsidian's secret
 storage: `loadSettings` merges them in, `persistAll` (what `SettingsService.update` runs) writes them through `SecretStore`
@@ -63,7 +65,7 @@ key needed" chip; a keyed choice without its key falls back at runtime through
 ([apiSources.ts](../../src/shared/api/apiSources.ts)), the chip shows "key needed" and `fallbackHint` adds
 "Uses {source} until a key is set." Stored values are never rewritten by the fallback.
 `renderTypeApiMapping` routes custom types to the anime or movie API, with
-Anime, Movie and TV Show locked.
+Anime, Movie and TV Show locked. The bulk studio fetch (`SettingsTab`) still needs `getApiGroupForType`, now imported from `shared/api/apiGroup.ts`, no longer from watchlist; whether this API logic belongs in watchlist, shared or the settings module is open (issue #48).
 
 ## Types as folders
 
@@ -76,13 +78,13 @@ are colour-only.
 
 ## Adding a setting
 
-1. `HoardPluginSettings` in `exports/index.ts` and `DEFAULT_SETTINGS` in [settingsDefaults.ts](../../src/modules/settings/exports/settingsDefaults.ts). The default is
-   not optional: a key without one counts as unknown and passes through unchecked. Both live in the public surface, so the change goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed.
+1. `HoardPluginSettings` in `domain/model.ts` and `DEFAULT_SETTINGS` in [settingsDefaults.ts](../../src/modules/settings/domain/settingsDefaults.ts). The default is
+   not optional: a key without one counts as unknown and passes through unchecked. Both are re-exported by `exports.ts`; a change to its lines goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed.
 2. Nothing for a value whose kind is all that can be wrong: a stored value of another kind than the
    default's falls back to the default. List elements are checked too: invalid ones are dropped, and if
    what is left breaks the setting's own rule (five rating tiers, a non-empty list) the whole value falls
    back to the default. An entry in `RULES`
-   ([settingsCodec.ts](../../src/modules/settings/exports/settingsCodec.ts)) only when what the value says must be
+   ([settingsCodec.ts](../../src/modules/settings/domain/settingsCodec.ts)) only when what the value says must be
    checked or migrated.
 3. A `Setting` or card in the matching `render*` of the tab, reading with `this.settings.get()` and writing with `await this.settings.update((s) => { s.x = … })` (or `stage` for text typed key by key; `flush` runs on unload). `update` persists once (`persistSettings`) and emits the change signal once; never save directly.
 4. Synced across devices? Add the key to `SHARED_SETTING_KEYS` (or `NESTED_SHARED_KEYS` for

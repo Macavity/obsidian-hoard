@@ -8,7 +8,7 @@ source:
   - src/shared/storage/readingCodec.ts
   - src/shared/storage/gameCodec.ts
   - src/shared/services/LibraryIndex.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # External id

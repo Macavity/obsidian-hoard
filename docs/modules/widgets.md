@@ -7,7 +7,7 @@ source:
   - src/modules/widgets/ui/InsertWidgetModal.ts
   - src/app/main.ts
   - src/modules/import/services/watchlog/widgets.ts
-source_commit: 4c5ff3ab895535b09f6d6ba5a885a7bf887ffb16
+source_commit: cc203bf
 ---
 
 # Widgets
@@ -18,8 +18,8 @@ are listed in the README; the mechanism is here.
 ## Registration
 
 `WidgetRenderer` ([WidgetRenderer.ts](../../src/modules/widgets/ui/WidgetRenderer.ts)) is built in `onload` of
-`main.ts` (no wiring file, no `exports/` folder) with `SettingsReader` and `WidgetTitles`, a `Pick` of the watchlist roles
-`TitleReader`, `TitleStats`, `AirtimeReader` (airtime exports) and `TitleWriter`, and calls `registerMarkdownCodeBlockProcessor` once per language: `hoard` (block body `id: <entry id>`),
+`main.ts` (no wiring file, no `exports.ts`) with `SettingsReader` and `WidgetTitles`, a `Pick` of the watchlist roles
+`TitleReader`, `TitleStats`, `AirtimeReader` (`airtime/exports.ts`) and `TitleWriter`, and calls `registerMarkdownCodeBlockProcessor` once per language: `hoard` (block body `id: <entry id>`),
 `hoard-todo` (title name, optional `mini`), `hoard-stat` (`watched`, `completed`, `remaining`,
 `time`, `time completed full`), `hoard-upcoming` (`next`), `hoard-now`, `hoard-now-next`.
 Each handler first marks its container with `data-theme` when a non-default Hoard colour theme
