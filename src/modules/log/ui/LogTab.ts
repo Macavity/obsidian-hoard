@@ -8,6 +8,7 @@ import type { HistoryEntry } from '../../../shared/domain/history';
 import { inferHistoryAction, inferHistorySource } from '../../../shared/services/HistoryManager';
 import type { OpenConfirm } from '../../../design-system/ConfirmModal';
 import { getActiveDateFormat } from '../../../shared/domain/date';
+import { windowDelta } from '../../../design-system/rowWindow';
 
 type SourceFilter = 'all' | 'Watchlist' | 'Reading' | 'Games';
 
@@ -321,34 +322,32 @@ export class LogTab implements TabInstance {
 		this.lastFirst = first;
 		this.lastLast = last;
 
+		const { remove, add } = windowDelta(this.renderedNodes.keys(), first, last);
+
 		// remove rows that left the visible window
-		for (const [idx, el] of this.renderedNodes) {
-			if (idx < first || idx > last) {
-				el.remove();
-				this.renderedNodes.delete(idx);
-			}
+		for (const idx of remove) {
+			this.renderedNodes.get(idx)?.remove();
+			this.renderedNodes.delete(idx);
 		}
 
 		// add rows that newly entered the visible window
-		for (let i = first; i <= last; i++) {
-			if (this.renderedNodes.has(i)) continue;
+		for (const i of add) {
 			const row = this.rows[i];
 			if (!row) continue;
 
-			let el: HTMLElement;
-			if (row.type === 'header') {
-				el = createDiv({ cls: 'hoard-log__day-header', text: formatDayHeader(row.date!) });
-				el.setCssProps({ '--hoard-log-day-header-height': `${HEADER_HEIGHT}px` });
-			} else {
-				el = this.buildEntryRow(row);
-			}
-
-			const offset = this.rowOffsets[i] ?? 0;
-			el.setCssProps({ '--hoard-log-row-top': `${offset}px` });
+			const el = this.buildVisibleRow(row);
+			el.setCssProps({ '--hoard-log-row-top': `${this.rowOffsets[i] ?? 0}px` });
 
 			viewport.appendChild(el);
 			this.renderedNodes.set(i, el);
 		}
+	}
+
+	private buildVisibleRow(row: VirtualRow): HTMLElement {
+		if (row.type !== 'header') return this.buildEntryRow(row);
+		const el = createDiv({ cls: 'hoard-log__day-header', text: formatDayHeader(row.date!) });
+		el.setCssProps({ '--hoard-log-day-header-height': `${HEADER_HEIGHT}px` });
+		return el;
 	}
 
 	private buildEntryRow(row: VirtualRow): HTMLElement {
