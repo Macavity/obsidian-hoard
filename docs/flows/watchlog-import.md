@@ -6,6 +6,7 @@ source:
   - src/modules/import/ui/WatchLogOnboardingModal.ts
   - src/modules/import/services/watchlog/detect.ts
   - src/modules/import/services/watchlog/onboardingState.ts
+  - src/modules/import/services/watchlog/newData.ts
   - src/modules/import/services/watchlog/importer.ts
   - src/modules/import/services/watchlog/importFork.ts
   - src/modules/import/services/watchlog/importOriginal.ts
@@ -15,7 +16,7 @@ source:
   - src/app/main.ts
   - src/modules/import/services/watchlog/schema1.ts
   - src/modules/import/domain/importReport.ts
-source_commit: cc203bf
+source_commit: dd03b3c
 ---
 
 # WatchLog import
@@ -33,7 +34,9 @@ and skipped, a wrong-typed field is dropped, and the import goes on.
 flowchart TD
   D[detectWatchLogSources, read-only] --> P{pendingSources: found and undecided?}
   P -- no --> X[normal start]
-  P -- yes --> F[found]
+  P -- yes --> N{kindsWithNewData: a note Hoard lacks?}
+  N -- no --> X
+  N -- yes --> F[found]
   F -- Later --> X
   F -- Don't import --> Dec[decision declined, per kind]
   F -- Import --> I[import: fork first, then original]
@@ -78,6 +81,14 @@ flowchart TD
 
 Stored per device in `data.json` `ui.watchlogImport[kind]` ([onboardingState.ts](../../src/modules/import/services/watchlog/onboardingState.ts)):
 `imported` or `declined`. A kind is pending while it has no decision.
+
+At startup a pending kind opens the wizard only while its import would still create a note
+(`kindsWithNewData`, [newData.ts](../../src/modules/import/services/watchlog/newData.ts)): a fork file without a copy at
+its `forkTarget`, or an original title (Maybe titles included), book, manga, game or custom list without its Hoard
+note path. The decision is device-local while the notes sync, so a second device whose vault already holds
+the import is not asked again; a device whose Hoard notes have not synced yet still is. Device settings
+(keys live in secret storage, not in `data.json`), the cache and keys missing from existing notes are
+not counted. The settings entry bypasses this check.
 
 - **Later** closes the wizard, writes nothing, so the next start asks again.
 - **Don't import** records `declined` for every found kind: no further asking on this device.

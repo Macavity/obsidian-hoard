@@ -9,7 +9,7 @@ source:
   - src/shared/storage/VaultLayout.ts
   - src/shared/storage/EntryIndex.ts
   - src/modules/settings/services/settingsSplit.ts
-source_commit: cc203bf
+source_commit: dd03b3c
 ---
 
 # Startup
@@ -36,7 +36,7 @@ sequenceDiagram
     S->>Sh: deferBase(create on first write, adopt when synced in)
   end
   S->>Sh: load(), applySharedSettings()
-  S->>W: only if WatchLog data awaits a decision
+  S->>W: only if undecided WatchLog data still has notes Hoard lacks
   W-->>S: adoptImportedData (root, shared settings)
   S->>Sh: ensureFilter(), start()
   S->>I: build(), sweepCache(), start()
@@ -66,8 +66,8 @@ sequenceDiagram
    index). This is what lets a second device start on a half-synced vault without becoming the
    first one.
 6. Shared config loads and `applySharedSettings` re-composes settings. Then, **before the index is
-   built**, `runOnboarding` opens the [WatchLog import](watchlog-import.md) wizard when WatchLog data
-   awaits a decision; startup waits until it closes, nothing is indexed meanwhile, and the root and
+   built**, `runOnboarding` opens the [WatchLog import](watchlog-import.md) wizard when an undecided WatchLog
+   source would still create a note in Hoard; startup waits until it closes, nothing is indexed meanwhile, and the root and
    shared settings are re-read afterwards. A missing `file.inFolder` filter in the base yields a
    Notice.
 7. `EntryIndex.build` scans all notes, `sweepCache` drops cache entries without a note, then the
