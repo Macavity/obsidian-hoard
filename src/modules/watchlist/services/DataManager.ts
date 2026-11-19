@@ -898,7 +898,8 @@ export class DataManager extends ChangeNotifier
 
 	private airtimeEntryOf(e: AnyEntry): AirtimeEntry | null {
 		const base = this.airtimeBase(e);
-		if (e.entry.airtime) return this.applyNoteAirtime(base, e);
+		const noteAirtime = e.entry.airtime;
+		if (noteAirtime) return this.applyNoteAirtime(base, e, noteAirtime);
 		if (!this.isAwaitingRelease(e) || !e.entry.releaseDate) return null;
 		base.schedule.releaseDate = e.entry.releaseDate;
 		return base;
@@ -912,9 +913,7 @@ export class DataManager extends ChangeNotifier
 		return { id: this.generateReadingAirtimeId(id), titleId: id, source: 'reading', readingKind: e.kind, schedule, dateAdded };
 	}
 
-	private applyNoteAirtime(base: AirtimeEntry, e: AnyEntry): AirtimeEntry {
-		const a = e.entry.airtime;
-		if (!a) return base;
+	private applyNoteAirtime(base: AirtimeEntry, e: AnyEntry, a: EntryAirtime): AirtimeEntry {
 		base.schedule = scheduleOf(a, e.entry.releaseDate);
 		if (a.season !== undefined) base.currentSeason = a.season;
 		if (a.episode !== undefined) base.currentEpisode = a.episode;

@@ -211,12 +211,13 @@ async function runRatingRefresh(
 	try {
 		let title = initial;
 		const animeSource = settings.get().animeApiSource ?? 'jikan';
+		const wantsAniList = animeSource === 'anilist';
 		const group = getApiGroupForType(title.type, settings.get().typeApiMapping);
 		if (group === '') return { kind: 'noApi', type: title.type };
 
 		if (group === 'anime') {
-			const ensured = await ensurePreferredAnimeLink(titles, api, title, animeSource === 'anilist');
-			if (ensured === 'noMatch') return { kind: 'noMatch', source: animeSource === 'anilist' ? 'AniList' : 'MAL' };
+			const ensured = await ensurePreferredAnimeLink(titles, api, title, wantsAniList);
+			if (ensured === 'noMatch') return { kind: 'noMatch', source: wantsAniList ? 'AniList' : 'MAL' };
 			if (ensured === 'gone') return { kind: 'gone' };
 			title = ensured;
 		}
@@ -254,9 +255,10 @@ async function ensurePreferredAnimeLink(
 	if (!matched) return 'noMatch';
 	const fresh = titles.getTitle(title.id);
 	if (!fresh) return 'gone';
-	if (wantsAniList) fresh.anilistId = matched.anilistId ?? 0;
-	else fresh.malId = matched.malId;
-	fresh.externalLink = animeLink(wantsAniList, (wantsAniList ? fresh.anilistId : fresh.malId) ?? 0);
+	const matchedId = wantsAniList ? (matched.anilistId ?? 0) : matched.malId;
+	if (wantsAniList) fresh.anilistId = matchedId;
+	else fresh.malId = matchedId;
+	fresh.externalLink = animeLink(wantsAniList, matchedId);
 	await titles.updateTitle(fresh);
 	return fresh;
 }

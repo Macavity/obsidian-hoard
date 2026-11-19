@@ -70,7 +70,6 @@ export interface FilterPanelConfig {
 	registerCleanup?: (fn: () => void) => void;
 }
 
-/** Opens the panel under the anchor, or closes an already-open one (toggle). */
 /**
  * The "◆ All" checkbox row at the top of a filter section. A click anywhere on the row runs
  * `onToggle`; the checkbox's native toggle is cancelled because the caller drives its state.
@@ -264,6 +263,7 @@ function attachOutsideCloser(ctx: PanelCtx, isClosed: () => boolean): () => void
 	return () => { activeDocument.removeEventListener('mousedown', closer, false); };
 }
 
+/** Opens the panel under the anchor, or closes an already-open one (toggle). */
 export function toggleFilterPanel(cfg: FilterPanelConfig): void {
 	const existing = activeDocument.querySelector('.hoard-filter-panel');
 	if (existing) { existing.remove(); return; }

@@ -1,8 +1,6 @@
-import type { Book, Manga } from './model';
+import type { Book, Manga, ReadingItemRef } from './model';
 import { bookProgressUnit } from './readingDefaults';
 import { formatCount } from '../../../shared/domain/format';
-
-export type ReadingItemRef = { kind: 'book'; entry: Book } | { kind: 'manga'; entry: Manga };
 
 export interface ProgressCounts {
 	pagesRead: number;

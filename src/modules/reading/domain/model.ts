@@ -114,6 +114,8 @@ export type ReadingKind = 'book' | 'manga';
 
 export type ReadingItem = Book | Manga;
 
+export type ReadingItemRef = { kind: 'book'; entry: Book } | { kind: 'manga'; entry: Manga };
+
 // Roles other modules see instead of the concrete ReadingDataManager.
 
 

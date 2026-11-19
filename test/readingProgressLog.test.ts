@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { progressLogLines, type ProgressCounts, type ReadingItemRef } from '../src/modules/reading/domain/progressLog';
+import { progressLogLines, type ProgressCounts } from '../src/modules/reading/domain/progressLog';
 import { formatCount } from '../src/shared/domain/format';
-import type { Book, Manga } from '../src/modules/reading/domain/model';
+import type { Book, Manga, ReadingItemRef } from '../src/modules/reading/domain/model';
 
 const counts = (over: Partial<ProgressCounts> = {}): ProgressCounts => ({
 	pagesRead: 0, wordsRead: 0, chaptersRead: 0, volumesRead: 0, ...over,

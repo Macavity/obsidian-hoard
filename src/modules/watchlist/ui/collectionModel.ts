@@ -3,11 +3,12 @@
 import { t } from '../../../shared/i18n';
 import { getThemedColor } from '../../../shared/domain/tags';
 import type { PosterCardSpec } from '../../../design-system/PosterCard';
-import type { SettingsReader } from '../../settings/exports';
+import type { HoardPluginSettings } from '../../settings/exports';
+import type { DeepReadonly } from '../../../shared/domain/deepReadonly';
 import type { HoardTitle, TmdbCollectionPart } from '../domain/model';
 import { getDisplayPoster } from '../domain/titles';
 
-export type HoardSettings = ReturnType<SettingsReader['get']>;
+export type HoardSettings = DeepReadonly<HoardPluginSettings>;
 export type CardSpecBase = Omit<PosterCardSpec, 'onClick'>;
 
 export const NOT_ADDED_COLOR = '#4b5563';

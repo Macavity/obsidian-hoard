@@ -4,8 +4,8 @@
 // materialised rows). The caller owns the scroll listener, geometry reads and the poster observer;
 // this only diffs the visible window and mutates the DOM.
 //
-// Deliberately Obsidian-free (plain DOM) so it can run standalone in the headless-Chromium CLS
-// harness.
+// Plain DOM apart from Obsidian's DOM additions (setCssProps, createFragment, instanceOf), so it
+// needs no Obsidian classes or app instance.
 
 import { computeGridWindow, planWindowChange, type GridWindow, type WindowChange } from './gridWindow';
 
@@ -174,8 +174,7 @@ export class VirtualGrid {
 	}
 
 	/** Apply a planned window change to the DOM. Returns true when the card set changed. */
-	private applyChange(change: WindowChange, win: GridWindow, metrics: GridMetrics): boolean {
-		if (change.kind === 'none') return false;
+	private applyChange(change: Exclude<WindowChange, { kind: 'none' }>, win: GridWindow, metrics: GridMetrics): boolean {
 		if (change.kind === 'replace') {
 			this.removeAllCards();
 			this.grid.appendChild(this.buildRange([win.firstIndex, win.lastIndex], metrics));
