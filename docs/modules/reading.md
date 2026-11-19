@@ -3,34 +3,36 @@ type: Module
 title: Reading
 description: How books and manga differ in model and progress, the release-status and custom-column rules, and where CSV and quotes live.
 source:
+  - src/modules/reading/contract.ts
   - src/modules/reading/services/ReadingDataManager.ts
+  - src/modules/reading/domain/readingHelpers.ts
   - src/shared/storage/readingCodec.ts
-  - src/shared/storage/properties.ts
-  - src/shared/storage/EntryIndex.ts
   - src/modules/reading/ui/ReadingTab.ts
   - src/modules/reading/ui/ReadingDetailModal.ts
   - src/modules/reading/ui/AddReadingModal.ts
   - src/modules/reading/ui/ReadingManageColumnsModal.ts
   - src/modules/reading/ui/ReadingCsvModal.ts
   - src/modules/airtime/ui/ReadingScheduleModal.ts
-  - src/shared/domain/csvCore.ts
-  - src/modules/covers/services/coverRefresh.ts
-  - src/shared/ui/CsvModalBase.ts
-  - src/shared/domain/entryFactories.ts
-source_commit: 554c087c9f4c7b4932c8b73a5b761c39fcc6846d
+  - src/shared/services/coverRefresh.ts
+  - src/design-system/CsvModalBase.ts
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Reading
 
-One note per book (`Books/`) or manga (`Manga/`). [ReadingDataManager.ts](../../src/modules/reading/services/ReadingDataManager.ts)
-owns the copies, writes, history and Upcoming sync; [readingCodec.ts](../../src/shared/storage/readingCodec.ts)
+One note per book (`Books/`) or manga (`Manga/`). [contract.ts](../../src/modules/reading/contract.ts) is the module's
+public face (types only): `Book`, `Manga`, `ReadingSettings`, `ReadingData`, `ReadingKind`, the roles
+`ReadingReader`, `ReadingWriter`, `ReadingSettingsAccess`, `ReadingSnapshot` (backup) and `OpenReadingCsv`.
+[ReadingDataManager.ts](../../src/modules/reading/services/ReadingDataManager.ts) `implements` the four roles and
+owns the copies, writes, history and Upcoming sync; the dialogs and the tab are built in
+[wiring/reading.ts](../../src/app/wiring/reading.ts); [readingCodec.ts](../../src/shared/storage/readingCodec.ts)
 maps properties to `Book` / `Manga`. Writes follow [flows/entry-write](../flows/entry-write.md)
 (`writeItem`, `afterWrite`, [baseline](../concepts/baseline.md)); the UI is
 [ReadingTab.ts](../../src/modules/reading/ui/ReadingTab.ts) (sub-tabs books/manga, shelves, virtual grid),
 [AddReadingModal.ts](../../src/modules/reading/ui/AddReadingModal.ts) (Open Library or Google Books for books via `searchBooks`, MAL via Jikan for manga),
 [ReadingDetailModal.ts](../../src/modules/reading/ui/ReadingDetailModal.ts), [ReadingManageColumnsModal.ts](../../src/modules/reading/ui/ReadingManageColumnsModal.ts)
 and the CSV modals opened from the settings tab. `ReadingCsvModal` and the watchlist's `CsvModal` both extend
-[CsvModalBase.ts](../../src/shared/ui/CsvModalBase.ts), which owns the wizard (export selection, upload, header
+[CsvModalBase.ts](../../src/design-system/CsvModalBase.ts), which owns the wizard (export selection, upload, header
 mapping, value mapping, duplicate preview, batch import); subclasses supply fields, labels and `doImport`.
 
 Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pending edit, so an edit not yet written survives a rename ([entry id](../concepts/entry-id.md)).
@@ -43,7 +45,7 @@ Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pendin
 - Status: `Reading | Completed | Plan to Read | To be released | Dropped`; "To be released" is
   never user-selectable. An unknown stored status decodes to "Plan to Read" and is flagged invalid.
 - **Book** progress unit is `pages` (default) or `words` (`Progress Unit`); both counter pairs are
-  stored, `bookUnitProgress` picks the active one, and word properties are written only when the
+  stored, `bookUnitProgress` (`domain/readingHelpers.ts`) picks the active one, and word properties are written only when the
   unit is words or a word count is non-zero. Also chapters, `Google Books ID` and `openLibraryId`
   (an Open Library work id `OL…W`; no property of its own, only `External ID`).
 - **Manga**: chapters and volumes, `MAL ID` (a number). Card progress uses chapters only.
@@ -69,7 +71,7 @@ Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pendin
   can end up under the old key (`Custom <old>`); nothing is lost.
 - **Quotes** are not indexed: the detail modal parses `## Quotes` for `> [!quote] <reference>`
   callouts; `appendQuote` inserts newest first and creates the section when missing.
-- **Book search** is keyless: `searchBooks` ([coverRefresh.ts](../../src/modules/covers/services/coverRefresh.ts)) uses
+- **Book search** is keyless: `searchBooks` ([coverRefresh.ts](../../src/shared/services/coverRefresh.ts), injected as `searchBooks`) uses
   Google Books when `booksApiSource` is `google` and a key is set, else Open Library
   ([api layer](../architecture/api-layer.md)); there is no "key required" panel. A pick sets
   `googleBooksId` or `openLibraryId`, then a background `enrichBook` fetches the full record: Google
@@ -93,8 +95,9 @@ Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pendin
 |---|---|
 | Property names, defaults when reading a note, validation | `readingCodec.ts` |
 | Defaults of a new book or manga | `newBook`, `newManga` in [entryFactories.ts](../../src/shared/domain/entryFactories.ts); the WatchLog import keeps its own |
-| Status list and colours | `READING_STATUSES`, `DEFAULT_READING_STATUS_COLORS` in `types.ts`, `readingColors.ts` |
+| Status list and colours | `READING_STATUSES`, `DEFAULT_READING_STATUS_COLORS` in `shared/domain/reading.ts`, `readingColors.ts` (`shared/domain`) |
+| Rows shelf ids | `READING_ROWS_SHELVES` in `domain/readingHelpers.ts` |
 | Release and Upcoming rules | `applyReleaseStatus`, `syncUpcoming` in the manager |
 | Auto-complete | `applyAutoComplete` in `ReadingDetailModal.ts` |
-| CSV fields and aliases | `*_EXPORT_COLUMNS`, `*_IMPORT_FIELDS` in `ReadingCsvModal.ts`; wizard steps in `csv/CsvModalBase.ts`; dates in `csvCore.ts` |
+| CSV fields and aliases | `*_EXPORT_COLUMNS`, `*_IMPORT_FIELDS` in `ReadingCsvModal.ts`; wizard steps in `design-system/CsvModalBase.ts`; dates in `csvCore.ts` |
 | Quotes format | `parseQuotesSection` (modal), `appendQuote` (manager) |

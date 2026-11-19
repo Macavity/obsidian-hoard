@@ -5,7 +5,7 @@ description: The fixed Title Case property names of entry notes per medium, the 
 source:
   - src/shared/storage/properties.ts
   - src/modules/import/services/watchlog/propertyNames.ts
-source_commit: bdcc2201df9227e8f0bcbf9685cc0dde9311e628
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Property names
@@ -37,7 +37,7 @@ what Hoard 0.1 / WatchLog Sync wrote; the codecs no longer read it, only
 | URL | externalLink | the entry's page at its source |
 | External ID | externalId | [grammar](external-id.md) |
 | Cover | poster (titles), coverUrl (books, manga, games) | |
-| Airtime Recurrence / Day / Time / Season / Episode / Acknowledged | airtimeRecurrence ... airtimeAcknowledged | titles, books, manga ([airtime](airtime.md)) |
+| Airtime Recurrence / Day / Time / Season / Episode / Acknowledged | airtimeRecurrence ... airtimeAcknowledged | titles, books, manga, games ([airtime](airtime.md)) |
 
 Watchlist titles:
 

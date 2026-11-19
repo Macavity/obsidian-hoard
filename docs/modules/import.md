@@ -1,24 +1,21 @@
 ---
 type: Module
 title: Import
-description: The import module boundary: what src/modules/import/services/watchlog/ owns, the schema-1 converter and shared contracts, and where a new source goes.
+description: The import module boundary: what src/modules/import/ owns, the schema-1 converter and shared contracts, and where a new source goes.
 source:
+  - src/modules/import/domain/importReport.ts
   - src/modules/import/services/watchlog/detect.ts
   - src/modules/import/services/watchlog/importer.ts
-  - src/shared/domain/importReport.ts
   - src/modules/import/services/watchlog/paths.ts
   - src/modules/import/services/watchlog/propertyNames.ts
   - src/modules/import/services/watchlog/importFork.ts
   - src/modules/import/services/watchlog/schema1.ts
-  - src/modules/import/services/watchlog/schema1Notes.ts
   - src/modules/import/services/watchlog/schema1Types.ts
+  - src/modules/import/services/watchlog/schema1Notes.ts
   - src/modules/import/services/watchlog/widgets.ts
   - src/modules/import/ui/WatchLogOnboardingModal.ts
   - src/modules/import/ui/WatchLogReport.ts
-  - src/modules/import/services/watchlog/schema1Read.ts
-  - src/modules/import/services/watchlog/schema1Normalize.ts
-  - src/modules/import/services/watchlog/schema1Records.ts
-source_commit: 24cd6e5
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Import
@@ -32,25 +29,26 @@ WatchLog". Backups of other plugins are not restored (`parseBackup` rejects them
 
 ## What exists
 
-Only this folder, [WatchLogOnboardingModal.ts](../../src/modules/import/ui/WatchLogOnboardingModal.ts) and their tests
+Only this module, [WatchLogOnboardingModal.ts](../../src/modules/import/ui/WatchLogOnboardingModal.ts) and their tests
 may know WatchLog: plugin ids, `WatchLog.base`, the `watchlog:` key, `wl-*` widget names, schema-1
 data (`.claude/skills/project/SKILL.md`). The folder stays free of translated text: the wizard owns all
 copy (`onboarding.*`, [i18n](../architecture/i18n.md)), and the import logic only returns reports.
-Other code touches it at three points: `main.ts` (detection, `createImporter`, decisions),
-`SettingsTab.ts` (`getDecision`, entry buttons) and `backup.ts` (the `ImportContext` type that
-`backupManagers().storage.importContext()` builds for the importer).
+There is no `contract.ts`: the module exposes no roles, and nothing imports it except `app/main.ts`
+(detection, `createImporter`, `importContext()` which builds the `ImportContext` it writes into, decisions); the
+settings tab reaches the wizard only through the host callbacks `openWatchLogImport` and `watchLogImported`.
+The import itself imports the other modules' contracts type-only (`HoardTitle`, `ReadingData`, `GamesData`, …).
 
 ## Contracts
 
 - **Types** ([registerTypes.ts](../../src/modules/import/services/watchlog/registerTypes.ts)): both imports append the
   source's Watchlist types that Hoard's base lacks, by name, without touching Hoard's own.
 
-- **Report** ([report.ts](../../src/shared/domain/importReport.ts)): `created`, `filled`, `review`
+- **Report** ([importReport.ts](../../src/modules/import/domain/importReport.ts), the module's `domain/`): `created`, `filled`, `review`
   (`path`, reason `exists` / `kept-value` / `error`, optional `code` + `params` that the UI translates
   in [WatchLogReport.ts](../../src/modules/import/ui/WatchLogReport.ts)), `errors`, plus a `Progress` callback (`notes`,
   `history`, `base`, `settings`). A run with any `errors` counts as failed; a per-file error is also a
   review item, `generalErrors` returns the rest. The report note is rendered on the UI side and only
-  written here (`writeReportNote`).
+  written by the services (`writeReportNote` in `reportNote.ts`).
 - **Importer** ([importer.ts](../../src/modules/import/services/watchlog/importer.ts)): `createImporter` is the
   seam between wizard and logic (`run`, `plan`, `cleanup`, `writeReport`, `decide`); the modal
   depends only on that interface, so it is tested with a fake.

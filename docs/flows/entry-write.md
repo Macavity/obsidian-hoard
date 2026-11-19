@@ -13,7 +13,7 @@ source:
   - src/shared/storage/baseline.ts
   - src/shared/storage/noteBody.ts
   - src/shared/storage/LocalStore.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Entry write
@@ -60,8 +60,8 @@ sequenceDiagram
    change and a change to Completed ([history line](../concepts/history-line.md)); other status
    changes are not logged here.
 2. **Rename**: if `title` or `type` differ from the [baseline](../concepts/baseline.md), the note
-   moves to `VaultLayout.notePath` (unless the target exists: Notice, old name kept; the target's
-   folder is created when missing) and `moveId` re-keys notes, cache and pending sets and drops the
+   moves to `EntryNotes.pathFor` (`VaultLayout.notePath`; unless the target exists: Notice, old name kept; the target's
+   folder is created when missing) and `moveId` re-keys notes, cache and pending sets (the move itself is `moveNote` in noteWrite.ts) and drops the
    old view slot ([entry id](../concepts/entry-id.md)). Only then does the copy get its new id.
 3. **Diff and write**: both baseline and copy are encoded; only keys whose JSON differs are set
    or deleted in `processFrontMatter`. Unreadable properties survive. A non-empty season list
@@ -77,7 +77,7 @@ sequenceDiagram
 5. **Body**: the `## Notes` text is written through `replaceNotesSection` only when the copy
    changed it, so a copy that left the body alone cannot undo a body edit from another device
    (a competing local edit still wins).
-6. **Notify**: `notifyListeners` runs manager listeners and dispatches `hoard-data-changed`; the
+6. **Notify**: `notifyListeners` runs manager listeners and dispatches `hoard-data-changed` ([changeSignal.ts](../../src/shared/services/changeSignal.ts)); the
    view re-renders the active tab in place, widgets and status bar refresh.
 7. **Echo**: the vault's `changed` event reaches `EntryIndex.upsert`, which decodes the note and
    finds it deep-equal to what `applyLocal` installed. No second notify.

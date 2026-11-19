@@ -3,19 +3,17 @@ type: Module
 title: Watchlist
 description: What the movies/TV/anime domain does, which file owns which behaviour, and the rules that are not obvious from one file.
 source:
+  - src/modules/watchlist/contract.ts
   - src/modules/watchlist/services/DataManager.ts
+  - src/modules/watchlist/domain/titleHelpers.ts
   - src/modules/watchlist/ui/ListTab.ts
   - src/modules/watchlist/ui/TitleDetailModal.ts
   - src/modules/watchlist/ui/EditTitleModal.ts
-  - src/modules/watchlist/ui/AddTitleModal.ts
-  - src/modules/watchlist/ui/AddFromUrlModal.ts
   - src/modules/watchlist/ui/CollectionModal.ts
-  - src/modules/watchlist/ui/CommunityRating.ts
-  - src/modules/airtime/ui/MaybeAddModal.ts
+  - src/app/wiring/watchlist.ts
   - src/shared/storage/titleCodec.ts
   - src/shared/domain/entryFactories.ts
-  - src/shared/api/lookup.ts
-source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Watchlist
@@ -25,16 +23,26 @@ seasons with watched and skipped episodes, groups, favourites, release date, plu
 (poster, trailer, credits, studio, community rating, TMDB collection). One note per title. Not
 here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API clients.
 
+## Public face
+
+[contract.ts](../../src/modules/watchlist/contract.ts) is types only: the models `HoardTitle`, `Season`, `MaybeTitle`,
+`HoardGroup`, the search and TMDB shapes, `OpenCsv`, and the role interfaces `DataManager` `implements`:
+`TitleReader`, `TitleStats`, `TitleWriter`, `AirtimeStore` (the Upcoming schedule of every medium), `DraftStore`,
+`TitleMaintenance` (settings) and `TitleBackup` ([backup](backup.md)). Other modules take these roles or `Pick`s of
+them, never the class; [wiring/watchlist.ts](../../src/app/wiring/watchlist.ts) is the only place that `new`s the
+dialogs and `ListTab`. Pure, module-only helpers (collection verdict, manual credits, community rating and trailer
+display) are in `domain/titleHelpers.ts`.
+
 ## Who owns what
 
 | Behaviour | Owner |
 |---|---|
 | State, every note write, groups, Maybe, episode toggles, API backfills, history lines | [DataManager.ts](../../src/modules/watchlist/services/DataManager.ts) |
-| Tab: Rows shelves or List table, filters, sort, selection, group display | [ListTab.ts](../../src/modules/watchlist/ui/ListTab.ts); shelf DOM in `RowsView.ts`, shelf ids in `ROWS_SHELVES` (`types.ts`) |
+| Tab: Rows shelves or List table, filters, sort, selection, group display | [ListTab.ts](../../src/modules/watchlist/ui/ListTab.ts); shelf DOM in [RowsView.ts](../../src/design-system/RowsView.ts), shelf ids in `ROWS_SHELVES` (`shared/domain/rows.ts`) |
 | Detail modal: episodes, rating, credits, studio, trailer, collection button; `GroupDetailModal` | [TitleDetailModal.ts](../../src/modules/watchlist/ui/TitleDetailModal.ts) |
-| Edit form: title, type, episodes, link, poster and trailer override, seasons text, group | [EditTitleModal.ts](../../src/modules/watchlist/ui/EditTitleModal.ts); the seasons text format in [seasonText.ts](../../src/shared/domain/seasonText.ts) ([episode range](../concepts/episode-range.md)) |
-| Add: choice modal → URL paste ([AddFromUrlModal.ts](../../src/modules/watchlist/ui/AddFromUrlModal.ts)) or search ([AddTitleModal.ts](../../src/modules/watchlist/ui/AddTitleModal.ts)); loose strings from Drafts and Custom Lists via `AddRouter.ts` | see [flows/add-title](../flows/add-title.md) |
-| Maybe titles: modal [MaybeAddModal.ts](../../src/modules/airtime/ui/MaybeAddModal.ts), listed by the Maybe sub-tab of Upcoming, never by `ListTab` | [maybe title](../concepts/maybe-title.md) |
+| Edit form: title, type, episodes, link, poster and trailer override, seasons text, group | [EditTitleModal.ts](../../src/modules/watchlist/ui/EditTitleModal.ts); the seasons text format in [seasonText.ts](../../src/shared/domain/seasonText.ts); the per-episode grid is `EpisodeGrid.ts` (`ui/`) ([episode range](../concepts/episode-range.md)) |
+| Add: choice modal → URL paste ([AddFromUrlModal.ts](../../src/modules/watchlist/ui/AddFromUrlModal.ts)) or search ([AddTitleModal.ts](../../src/modules/watchlist/ui/AddTitleModal.ts)); loose strings from Drafts and Custom Lists via `createAddRoute` in `app/AddRouter.ts` | see [flows/add-title](../flows/add-title.md) |
+| Maybe titles: modal `MaybeAddModal.ts` (in the Upcoming module, `airtime/ui`), listed by the Maybe sub-tab of Upcoming, never by `ListTab` | [maybe title](../concepts/maybe-title.md) |
 | Community rating badge, manual and 30-day background refresh | [CommunityRating.ts](../../src/modules/watchlist/ui/CommunityRating.ts) |
 | TMDB collections: resolve, count missing parts, batch-add | [CollectionModal.ts](../../src/modules/watchlist/ui/CollectionModal.ts) |
 | Manual credits, movie "Mark as watched" | `AddCreditModal.ts`, `MarkWatchedButton.ts` |
@@ -77,6 +85,6 @@ here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API client
 
 ## Where to change what
 
-A title property: `HoardTitle` in `types.ts`, encode/decode in `titleCodec.ts`, `TITLE_CACHE_KEYS`
+A title property: `HoardTitle` in `contract.ts`, encode/decode in `titleCodec.ts`, `TITLE_CACHE_KEYS`
 if it is API data. Write behaviour and history wording: `DataManager`. Everything visible: the
 owner table above.

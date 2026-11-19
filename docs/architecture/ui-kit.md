@@ -1,37 +1,41 @@
 ---
 type: Architecture
-title: UI kit
-description: How HoardView hosts tabs, which shared building blocks tabs and modals compose, the CSS conventions, and the UI boundary towards storage.
+title: Design system
+description: What the design system (src/design-system) contains and may know, how HoardView hosts tabs, which building blocks tabs and modals compose, the CSS conventions, and the UI boundary towards storage.
 source:
   - src/app/HoardView.ts
-  - src/shared/ui/TabInstance.ts
-  - src/shared/ui/TabToolbar.ts
-  - src/shared/ui/TabFilters.ts
-  - src/shared/ui/SearchFormModal.ts
-  - src/shared/ui/SearchPicker.ts
-  - src/shared/ui/DuplicateGuard.ts
-  - src/shared/ui/VirtualGrid.ts
-  - src/shared/ui/VirtualScroller.ts
-  - src/shared/ui/LazyCardObserver.ts
-  - src/shared/ui/PosterCard.ts
+  - src/design-system/TabInstance.ts
+  - src/design-system/TabToolbar.ts
+  - src/design-system/TabFilters.ts
+  - src/design-system/SearchFormModal.ts
+  - src/design-system/SearchPicker.ts
+  - src/design-system/DuplicateGuard.ts
+  - src/design-system/VirtualGrid.ts
+  - src/design-system/VirtualScroller.ts
+  - src/design-system/LazyCardObserver.ts
+  - src/design-system/PosterCard.ts
   - src/shared/domain/SearchQuery.ts
   - src/shared/services/LibraryIndex.ts
-  - src/shared/ui/problemText.ts
-  - src/shared/ui/detailShared.ts
-  - src/shared/ui/detailFrame.ts
-  - src/shared/ui/typeBadge.ts
-  - src/shared/ui/IconButton.ts
+  - src/design-system/detailShared.ts
+  - src/design-system/detailFrame.ts
+  - src/design-system/typeBadge.ts
+  - src/design-system/IconButton.ts
   - src/styles/icon-button.css
   - src/styles/index.css
-source_commit: 3af2a0a93a770228f04078f94f49628f3b36fd71
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
-# UI kit
+# Design system
 
-Tabs and modals are thin; shared behaviour lives in `src/shared/ui/`, feature UI in `src/modules/<x>/ui/`.
-**Boundary** (ESLint, [overview](overview.md)): UI never imports `shared/storage`, `app` or a `services/` file as a
-value (type imports only); it gets managers, API services and settings as `private readonly` constructor parameters (`this.settings.get()` /
-`update()`), so no tab or modal can import a store, codec or index.
+Tabs and modals are thin; shared behaviour lives in `src/design-system/` (the UI kit), feature UI in `src/modules/<x>/ui/`.
+**The design system knows no module and no settings object**: fallow lets it import only `shared` (not even a
+contract, [overview](overview.md)), so what it needs from settings comes as a structural interface (`TypeBadgeStyle` in
+`typeBadge.ts`, `ThemeSource` in `RowsCustomizeModal.ts`) or as plain arguments. UI that only one module uses stays in
+that module (`ScheduleForm`/`scheduleText` in airtime, `ModePill` in games, `EpisodeGrid` in watchlist,
+`gamesKeyChip`/`problemText` in settings). **Boundary** (ESLint, `src/modules/*/ui`): module UI never imports
+`shared/storage`, `app` or a `modules/*/services` file as a value (type imports only); it gets managers, API services and
+settings as `private readonly` constructor parameters (`this.settings.get()` / `update()`), so no tab or modal can
+import a store, codec or index. Services may not import the design system.
 
 ```mermaid
 flowchart TD
@@ -50,7 +54,7 @@ flowchart TD
 
 [HoardView.ts](../../src/app/HoardView.ts) takes `tabs: TabFactory[]` in tab-bar order (built by `hoardTabs` in
 [wiring/tabs.ts](../../src/app/wiring/tabs.ts)); a `TabFactory` has
-`create(container, setBadge)` returning a [TabInstance](../../src/shared/ui/TabInstance.ts) (`render`, optional `destroy`),
+`create(container, setBadge)` returning a [TabInstance](../../src/design-system/TabInstance.ts) (`render`, optional `destroy`),
 an optional content class and an optional badge. `HoardView` calls `destroy` whenever it drops the
 active instance: on a tab switch, on a UI rebuild (`refreshUI` from the settings) and on view close.
 A **tab switch recreates** the instance (state lost); a **data change re-renders the same
@@ -64,7 +68,7 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (the injected `
 
 ## Shared pieces
 
-- **Toolbar** ([TabToolbar.ts](../../src/shared/ui/TabToolbar.ts), [TabFilters.ts](../../src/shared/ui/TabFilters.ts)):
+- **Toolbar** ([TabToolbar.ts](../../src/design-system/TabToolbar.ts), [TabFilters.ts](../../src/design-system/TabFilters.ts)):
   search box (per-keystroke store, debounced commit re-renders), `renderToolbarCore` (saved
   filter, Filters, Sorting, action bar while a selection exists), filter dropdown building a draft
   per click and committing on Apply, sorting popover, view switch, add button. Selection mode works
@@ -84,21 +88,20 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (the injected `
   draws the card; `POSTER_CARD_TEXT_H` must match the CSS. A card built elsewhere reuses its parts:
   `createPosterPlaceholder` (letter tile) and `loadCardPoster` (sets the image, marks the card
   `has-poster` on load, hands a broken image to the caller).
-- **Search language** (`searchItems` in [SearchQuery.ts](../../src/shared/domain/SearchQuery.ts)): Fuse index
+- **Search language** (`searchItems` in [SearchQuery.ts](../../src/shared/domain/SearchQuery.ts), `shared/domain`): Fuse index
   over declared fields; bare tokens fuzzy and ANDed, `"quoted"` exact, `field:value` scoped (an
   unknown prefix stays text, so `Re:Zero` works), `field:>n` and friends numeric, `a | b` ORs,
   `-token` excludes. Empty query returns null, meaning "no search". The query is lexed, then turned
   into tokens; `matches` picks one matcher per token: a comparison only on a named field that has a
   number (`title:2049` and a bare `>2020` are searched as text), a phrase when quoted, else fuzzy.
 - **Text helpers**: all display text goes through `t()` ([i18n](i18n.md)); shared renderers live in
-  `ui/`: `typeBadge`, `choiceGrid` (add choosers), `detailShared` (favourite button, editable title,
+  the design system: `typeBadge`, `choiceGrid` (add choosers), `detailShared` (favourite button, editable title,
   group header, episode-grid text), `detailFrame` (what all three detail modals build alike:
   `markDetailRoot` puts `data-theme`, `hoard-view` and `hoard-detail` on the modal, `createFavoriteButton`
-  the footer heart, `mobileRowClass` a row's `--mobile` modifier), `createSeasonHeader` in `EpisodeGrid`
-  (season wrap, header and palette-coloured badge of the accordion), `scheduleText` and `dateNames` (localized dates), `problemText`.
-- **Form primitives**: rows and cells in `ui/FormCells.ts`, `DatePicker`, `StarRating`,
+  the footer heart, `mobileRowClass` a row's `--mobile` modifier), localized dates come from `shared/i18n/dateNames`.
+- **Form primitives**: rows and cells in `FormCells.ts`, `DatePicker`, `StarRating`,
   `StatusDropdown`, `ConfirmModal`, `StickyModal` (sticky footer in detail modals).
-- **Icon buttons** ([IconButton.ts](../../src/shared/ui/IconButton.ts)): `createIconButton(parent,
+- **Icon buttons** ([IconButton.ts](../../src/design-system/IconButton.ts)): `createIconButton(parent,
   { icon, label, cls?, variant? })` builds a `type="button"` with a Lucide icon, `aria-label` and
   tooltip from the same label, base class `hoard-icon-btn` plus `--framed` (bordered) or `--sm`
   (16px inline). **Every icon-only button goes through it**, no text glyphs (`×`, `+`, `⋮`, `↻`);
@@ -127,6 +130,6 @@ While the [WatchLog wizard](../flows/watchlog-import.md) is open (the injected `
 ## Where to change what
 
 A new tab: a `TabFactory` in `hoardTabs` (`src/app/wiring/tabs.ts`) plus `TabName`. Shared toolbar, filter or sort behaviour:
-`src/shared/ui/`. A new add modal: extend `SearchFormModal`, build a `LibraryIndex` and a
+`src/design-system/` (pure sort/order helpers: `shared/domain/listOrder.ts`; `TabHelpers.ts` keeps only the grid mount). A new add modal: extend `SearchFormModal`, build a `LibraryIndex` and a
 `DuplicateGuard`. Grid geometry: `VirtualGrid.ts` / `VirtualScroller.ts`; card look:
 `PosterCard.ts` and the stylesheets in `src/styles/` (one per UI area, imported in cascade order by `index.css`). Search syntax: `SearchQuery.ts` and `SearchHelpModal.ts`.

@@ -15,7 +15,7 @@ profile:
     - "*.test.ts"
     - scripts/
     - test/
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Context
@@ -31,6 +31,7 @@ Read [values](values.md) first; every rule below serves one of them.
 - **Base**: `Hoard.base`, whose `hoard:` block carries the shared vocabulary; nothing else syncs settings.
 - **Cache**: `data.json`, device-local; fetched data, UI state. API keys live in Obsidian's secret storage, also per device.
 - **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (the import wizard writes notes once, custom lists write their own notes).
+- **Contract**: a module's `contract.ts`, types only: its models and the role interfaces (`TitleReader`, `ReadingSnapshot`, …) other modules depend on instead of a manager class.
 - **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
 - **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
 - **Maybe**: a note with `Maybe: true`, considered but not in the library.
@@ -39,6 +40,7 @@ Read [values](values.md) first; every rule below serves one of them.
 ```mermaid
 flowchart TD
   main[app/main.ts wires all] --> View[HoardView: 8 tabs]
+  View --> DS[design-system]
   main --> Widgets[WidgetRenderer]
   View --> Managers[Data / Reading / Game managers]
   Widgets --> Managers
@@ -61,11 +63,11 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 
 # Architecture
 
-- [Overview](architecture/overview.md): which zones and module edges exist, how dependencies are injected (constructor parameters, factories and ports, wiring, SettingsService), who may import whom, and which change channel drives the view versus the widgets.
+- [Overview](architecture/overview.md): which zones exist (app, modules, contracts, design system, shared), who may import whom, how modules talk through contracts and roles, how dependencies are injected, and which change channel drives the view versus the widgets.
 - [Storage](architecture/storage.md): where each piece of state lives (notes, base, History.md, data.json) and how reads and writes propagate.
 - [API layer](architecture/api-layer.md): which services exist (keyless defaults and keyed upgrades), how the effective source is resolved, how errors and rate limits are handled, and how fetched data reaches cache and notes.
 - [Internationalisation](architecture/i18n.md): how to add a string, why stored values and storage messages are codes not text, and which tests enforce it.
-- [UI kit](architecture/ui-kit.md): how `HoardView` hosts tabs, which shared building blocks (icon buttons included) tabs and modals compose, and the CSS naming rules.
+- [Design system](architecture/ui-kit.md): how `HoardView` hosts tabs, which `src/design-system` components (icon buttons included) tabs and modals compose, what the design system may know, and the CSS naming rules.
 - [CSS blocks](architecture/css-blocks.md): which BEM block a Hoard class belongs to, which stylesheets hold it, and the naming rules the class check enforces.
 
 # Modules

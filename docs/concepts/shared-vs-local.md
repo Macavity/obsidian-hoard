@@ -4,17 +4,18 @@ title: Shared vs local settings
 description: Which settings sync through Hoard.base, which stay in data.json, which live in secret storage, and why an API key never reaches the base.
 source:
   - src/shared/storage/SharedConfigStore.ts
-  - src/shared/services/settingsSplit.ts
-  - src/shared/domain/settingsNormalize.ts
+  - src/modules/settings/services/settingsSplit.ts
+  - src/modules/settings/services/SettingsService.ts
+  - src/shared/storage/settingsCodec.ts
   - src/shared/storage/LocalStore.ts
   - src/shared/storage/storageTypes.ts
   - src/shared/storage/SecretStore.ts
-source_commit: cda80ae35181b2c9dfc2b412818e2a0ca596a18f
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Shared vs local settings
 
-Settings are one object in memory (owned by the plugin, read and changed only through [SettingsService](../../src/shared/services/SettingsService.ts): `get`, `update`, `stage`, `flush`) but three places on disk:
+Settings are one object in memory (`HoardPluginSettings`, [settings/contract.ts](../../src/modules/settings/contract.ts); owned by the plugin, read and changed only through [SettingsService](../../src/modules/settings/services/SettingsService.ts): `get`, `update`, `stage`, `flush`) but three places on disk:
 
 | Where | What | Synced |
 |---|---|---|
@@ -32,10 +33,10 @@ the whole object is replaced, so unlisted nested keys do not survive.
 
 ## Composition and persistence
 
-- `composeSettings(local, shared, secrets)` = `DEFAULT_SETTINGS` ← local ← secrets ← shared (shared
+- `composeSettings(local, shared, secrets)` = `DEFAULT_SETTINGS` ([settingsDefaults.ts](../../src/shared/domain/settingsDefaults.ts)) ← local ← secrets ← shared (shared
   wins), except that secret keys found in the base are dropped (`withoutSecrets`)
-  ([settingsSplit.ts](../../src/shared/services/settingsSplit.ts)). The merged record is cloned and handed to
-  `normalizeSettings` ([settingsNormalize.ts](../../src/shared/domain/settingsNormalize.ts)), which runs every known
+  ([settingsSplit.ts](../../src/modules/settings/services/settingsSplit.ts)). The merged record is cloned and handed to
+  `normalizeSettings` ([settingsCodec.ts](../../src/shared/storage/settingsCodec.ts)), which runs every known
   key through one rule with a fresh copy of its default to fall back on. A key named in `RULES` has
   its own rule (date format, watchlist view, the non-empty lists, the five rating tiers, the statuses
   with their two migrations, the merged list-filter and card-text records, the reading badge

@@ -6,7 +6,8 @@ source:
   - src/shared/storage/historyLine.ts
   - src/shared/storage/HistoryStore.ts
   - src/shared/services/HistoryManager.ts
-source_commit: f332097642ac929ff59c2f9fda5174ffe46dc184
+  - src/shared/domain/history.ts
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # History line
@@ -35,7 +36,7 @@ target is a name. Whitespace in names is collapsed so one entry is always one li
   lines beyond 1000 and leaves the rest.
 - Own writes are remembered by content; the `modify` watcher ignores them and reloads on any other
   change (`start(onExternal)`).
-- Ids are `<timestamp>#<line index>`, assigned on load; `HistoryManager.log` assigns an optimistic id
+- The in-memory model is `HistoryEntry` ([history.ts](../../src/shared/domain/history.ts)). Ids are `<timestamp>#<line index>`, assigned on load; `HistoryManager.log` assigns an optimistic id
   until the next load. The manager caps at 1000 entries and treats write errors as non-fatal.
 - `HistoryManager.inferHistoryAction` / `inferHistorySource` parse older entries that predate the
   structured fields; `resolveRecentlyWatched` resolves entries back to titles by id, shortened link

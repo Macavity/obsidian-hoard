@@ -7,18 +7,20 @@ source:
   - src/shared/api/apiError.ts
   - src/shared/api/PosterService.ts
   - src/shared/api/apiSources.ts
-  - src/modules/watchlist/ui/titleSearch.ts
-  - src/modules/covers/services/coverRefresh.ts
+  - src/shared/services/titleSearch.ts
+  - src/shared/services/coverRefresh.ts
   - src/shared/api/cinemetaApi.ts
   - src/shared/api/openLibraryApi.ts
   - src/shared/api/steamStoreApi.ts
   - src/shared/api/apiCheckQueue.ts
   - src/shared/api/lookup.ts
   - src/shared/domain/read.ts
-source_commit: 297e1a7
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # API layer
+
+The API code, `titleSearch` and `coverRefresh` all live in `shared` (`api/`, `services/`): modules and the design system call them, and they see module models only as contract types ([overview](overview.md)).
 
 Search, autofill, posters and covers work without a key: Cinemeta (movies/TV), Open Library
 (books) and the Steam Store (games) are keyless defaults. Community ratings, airing, season refill,
@@ -109,11 +111,11 @@ backup or a WatchLog import takes effect without a restart; the Settings tab als
 (Cinemeta, Open Library, Steam). Nothing is migrated: an old `activeApi: 'OMDb'` without a key just
 resolves to Cinemeta. Every reader goes through it, never through the raw setting.
 
-- [titleSearch.ts](../../src/modules/watchlist/ui/titleSearch.ts): `getApiGroupForType(type, typeApiMapping)` → anime
+- [titleSearch.ts](../../src/shared/services/titleSearch.ts): `getApiGroupForType(type, typeApiMapping)` (from `shared/domain/titles.ts`) → anime
   (Jikan or AniList by `animeApiSource`) or movie/series by the effective media source (Cinemeta,
   OMDb, TMDB; `fetchMediaDetails` follows the same). `resultIdKeys` takes that source, because
   `imdbId` on a row is a TMDB id under TMDB.
-- [coverRefresh.ts](../../src/modules/covers/services/coverRefresh.ts): `searchBooks` (Google Books or Open Library) and
+- [coverRefresh.ts](../../src/shared/services/coverRefresh.ts): `searchBooks` (Google Books or Open Library) and
   `resolveGameCover` (stored id → that source, else title search in the effective game source);
   reading covers by Open Library, Google Books or MAL id. Bulk refresh needs an id (Google-only
   books also need a key).
@@ -172,4 +174,4 @@ built. `no-unsafe-type-assertion` is on for the API modules, so they stay that w
   `apiError.ts`) + `apiSourceFromUrl`, a value in the `apiSources.ts` union and resolver, an
   [external id](../concepts/external-id.md) source and a `LibraryIndex` key.
 - A new failure reason: `ApiErrorReason` and its row in `REASONS`; the compiler asks for the row.
-- New per-type routing: `typeApiMapping` and `getApiGroupForType` in `types.ts`.
+- New per-type routing: `typeApiMapping` (`modules/settings/contract.ts`) and `getApiGroupForType` in `shared/domain/titles.ts`.

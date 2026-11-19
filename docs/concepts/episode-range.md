@@ -6,8 +6,9 @@ source:
   - src/shared/storage/episodeRange.ts
   - src/shared/storage/titleCodec.ts
   - src/shared/domain/seasonText.ts
-  - src/shared/domain/types.ts
-source_commit: ad697fc09c2a2f8cff4b23d6c8bfdc29197a24d4
+  - src/shared/storage/storageTypes.ts
+  - src/modules/watchlist/contract.ts
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Episode range
@@ -18,7 +19,7 @@ all seasons**; the two forms are converted by [episodeRange.ts](../../src/shared
 
 - Token grammar: `S<n>E<m>`, same-season range `S01E01-E12`, cross-season range `S01E11-S02E02`
   (needs known seasons). Case-insensitive, comma-separated, `MAX_EPISODE = 10000` guards expansion.
-- `parseEpisodeRange(text, seasons)` → `EpisodeRef[]` (sorted, deduped) or null on garbage.
+- `parseEpisodeRange(text, seasons)` → `EpisodeRef[]` ([storageTypes.ts](../../src/shared/storage/storageTypes.ts); `Season` lives in [watchlist/contract](../../src/modules/watchlist/contract.ts)) (sorted, deduped) or null on garbage.
 - `formatEpisodeRange(refs)` writes the canonical form: consecutive runs per season collapsed.
 - `toAbsolute` / `fromAbsolute` map between refs and absolute numbers using the season lengths;
   `outsideSeasons` returns refs the known seasons cannot place.

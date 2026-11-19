@@ -4,11 +4,13 @@ title: Log
 description: What the activity log records, how the Log tab and the Recently Watched shelf read it, and where to change the wording.
 source:
   - src/shared/services/HistoryManager.ts
+  - src/shared/domain/history.ts
   - src/shared/storage/HistoryStore.ts
   - src/shared/storage/historyLine.ts
   - src/modules/log/ui/LogTab.ts
+  - src/app/wiring/log.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Log
@@ -21,10 +23,11 @@ synced like any note.
 
 | Piece | File | Role |
 |---|---|---|
+| `HistoryEntry`, `HistoryAction`, `HistorySource` | [history.ts](../../src/shared/domain/history.ts) | the entry shape and its structured fields |
 | `HistoryManager` | [HistoryManager.ts](../../src/shared/services/HistoryManager.ts) | in-memory entries (max 1000), `log()`, `deleteEntry`, `restore`, change listeners |
 | `HistoryStore` | [HistoryStore.ts](../../src/shared/storage/HistoryStore.ts) | file I/O: parse, append, replace, cap; ignores own writes |
-| `LogTab` | [LogTab.ts](../../src/modules/log/ui/LogTab.ts) | virtualised timeline grouped by day, source filter, per-entry delete |
-| callers | `DataManager`, `ReadingDataManager`, `GameDataManager` | `logChanges`, `logCompleted`, `logEpisodeWatched` and the add/delete/group paths |
+| `LogTab` | [LogTab.ts](../../src/modules/log/ui/LogTab.ts) | virtualised timeline grouped by day, source filter, per-entry delete; takes `LogTabHistory`, a `Pick` of `HistoryManager`, built in [wiring/log.ts](../../src/app/wiring/log.ts) |
+| callers | `DataManager`, `ReadingDataManager`, `GameDataManager` | in `DataManager`: `logChanges`, `logCompleted`, `logEpisodeWatched` and the add/delete/group paths |
 
 ## How it works
 
@@ -45,6 +48,6 @@ synced like any note.
 ## Where to change what
 
 - Wording of an event: the manager that logs it; the tab's `actionLabel` regexes must still match.
-- A new action: `HistoryAction` in `HistoryManager.ts`, `ACTIONS` in `historyLine.ts`,
+- A new action: `HistoryAction` in `shared/domain/history.ts`, `ACTIONS` in `historyLine.ts`,
   `ACTION_COLORS` and `actionLabel` in `LogTab.ts`.
 - Cap or format: `MAX_HISTORY_ENTRIES` in the store, `MAX_ENTRIES` in the manager, `historyLine.ts`.

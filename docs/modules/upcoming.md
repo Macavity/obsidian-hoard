@@ -1,25 +1,32 @@
 ---
 type: Module
 title: Upcoming
-description: What the Upcoming tab shows, how it decides aired versus due, what a tick and a removal write, and how schedules are added.
+description: What the Upcoming tab (src/modules/airtime) shows, how it decides aired versus due, what a tick and a removal write, and how schedules are added.
 source:
+  - src/modules/airtime/contract.ts
   - src/modules/airtime/ui/AirtimeTab.ts
   - src/modules/airtime/ui/AirtimeScheduleModal.ts
-  - src/modules/watchlist/services/DataManager.ts
-  - src/shared/ui/ScheduleForm.ts
+  - src/modules/airtime/ui/ScheduleForm.ts
   - src/modules/airtime/ui/ReadingScheduleModal.ts
   - src/modules/airtime/ui/GameScheduleModal.ts
   - src/modules/airtime/ui/UpcomingFinderModal.ts
-  - src/shared/domain/types.ts
-source_commit: 3c1f192ae716ae7a4a74f82a223fdbad8c129116
+  - src/modules/airtime/services/airtimeScheduler.ts
+  - src/app/wiring/airtime.ts
+  - src/modules/watchlist/services/DataManager.ts
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Upcoming
 
-The tab `AirtimeTab` ([AirtimeTab.ts](../../src/modules/airtime/ui/AirtimeTab.ts)) has no store: every row is an
-`AirtimeEntry` computed by `DataManager.getAirtimeEntries()` from note properties, see
-[airtime](../concepts/airtime.md) for manual versus derived entries and the writes. Notifications
-and the status bar are in [flows/airtime-notifications](../flows/airtime-notifications.md).
+The module is `src/modules/airtime`; the tab `AirtimeTab` ([AirtimeTab.ts](../../src/modules/airtime/ui/AirtimeTab.ts)) has
+no store: every row is an `AirtimeEntry` computed by `getAirtimeEntries()` (the `AirtimeStore` role, implemented by
+the watchlist's `DataManager`) from note properties, see [airtime](../concepts/airtime.md) for manual versus derived
+entries and the writes. [contract.ts](../../src/modules/airtime/contract.ts) holds the types only: `AirtimeEntry`,
+`AirtimeSchedule`, `EntryAirtime`. The tab types against roles (`TitleReader & AirtimeStore`, `ReadingReader & ReadingWriter`,
+`GameReader & GameWriter`); [wiring/airtime.ts](../../src/app/wiring/airtime.ts) `new`s the tab and the dialogs and exposes
+`countDue` for the tab badge. Notifications and the status bar are in
+[flows/airtime-notifications](../flows/airtime-notifications.md); the scheduler tick is `runAirtimeScheduler` in
+[airtimeScheduler.ts](../../src/modules/airtime/services/airtimeScheduler.ts).
 
 ## Inner tabs
 
@@ -45,7 +52,7 @@ entries the cached API pointer (`airing.nextSeason/nextEpisode`) overrides the n
 - `confirmTick`: a single release removes the entry and reverts the status to the plan status;
   the final unit (`currentEpisode >= totalUnits`) removes the entry and leaves the status; otherwise
   `tickAirtimeEntry` writes `airtimeAcknowledged` and, without an API pointer, increments the
-  episode. It also calls the injected `markAirtimeHandled` so the scheduler does not notify again.
+  episode. It also calls the host's `markAirtimeHandled` so the scheduler does not notify again.
 - Removal rules (`removeAirtimeEntriesBatch`): a manual schedule drops only its `airtime*`
   keys, a derived card clears the release date through the owning manager, which then applies
   its release-status rule.
@@ -57,14 +64,14 @@ tracked), then the schedule modal by source: [AirtimeScheduleModal.ts](../../src
 single or recurring, optional time), [ReadingScheduleModal.ts](../../src/modules/airtime/ui/ReadingScheduleModal.ts)
 (no time, volume and chapter counters), [GameScheduleModal.ts](../../src/modules/airtime/ui/GameScheduleModal.ts)
 (date only, also sets the game's `releaseDate`, future dates only). Shared form state and
-recurrence options live in [ScheduleForm.ts](../../src/shared/ui/ScheduleForm.ts).
+recurrence options live in [ScheduleForm.ts](../../src/modules/airtime/ui/ScheduleForm.ts); the schedule line text is `scheduleText.ts` in the same folder.
 
 ## Where to change what
 
 | Change | Place |
 |---|---|
 | Countdown, aired and due rules | `getDetailedCountdown`, `isAirtimePassedNow` in `AirtimeTab.ts` |
-| What becomes an entry | `airtimeEntryOf`, `isAwaitingRelease` in `DataManager.ts` |
+| What becomes an entry | `airtimeEntryOf`, `isAwaitingRelease` in the watchlist `DataManager.ts` |
 | Tick and remove | `confirmTick`; `tickAirtimeEntry`, `removeAirtimeEntriesBatch` |
 | Schedule form fields | `ScheduleForm.ts` and the three schedule modals |
 | Card and list rendering | `renderCard`, `buildTrackerCard`, `renderTrackerCardsGrid` |

@@ -5,7 +5,7 @@ description: How a UI copy remembers the stored state it came from, so a write o
 source:
   - src/shared/storage/baseline.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Baseline

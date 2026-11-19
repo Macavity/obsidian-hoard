@@ -7,7 +7,10 @@ source:
   - src/app/main.ts
   - src/modules/watchlist/services/DataManager.ts
   - src/app/HoardView.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+  - src/app/wiring/airtime.ts
+  - src/app/wiring/tabs.ts
+  - src/shared/services/changeSignal.ts
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Airtime notifications
@@ -31,7 +34,7 @@ flowchart TD
 
 1. `runAirtimeScheduler(dataManager, readingDataManager, gameDataManager, notify, notified, now)` in
    [airtimeScheduler.ts](../../src/modules/airtime/services/airtimeScheduler.ts) walks every `AirtimeEntry`
-   ([airtime](../concepts/airtime.md)).
+   ([airtime](../concepts/airtime.md)); the entries come from `AirtimeStore.getAirtimeEntries` (DataManager).
 2. **Due** = today's `HH:MM` has passed at most 12 hours ago (`AIRTIME_CATCH_UP_MINUTES`, catches a
    sleeping machine without a burst after a long sleep) and the recurrence matches today
    (`daily`, `weekly` by `dayOfWeek`, `monthly` by `dayOfMonth`, `once` by date).
@@ -42,10 +45,12 @@ flowchart TD
    the only API traffic the scheduler causes and it never writes a note.
 5. The subject name is resolved per source (title, book or manga, game) and shown as a Notice
    for 8 s.
-6. `updateStatusBar` recounts `AirtimeTab.getAiredDueCount + getMaybeDueCount` on every tick and
-   on `hoard-data-changed`; desktop only, hidden when the setting is off or the count is 0.
+6. `updateStatusBar` recounts via `airtime.countDue()` (`AirtimeTab.getAiredDueCount + getMaybeDueCount`,
+   [wiring/airtime.ts](../../src/app/wiring/airtime.ts)) on every tick and
+   on `hoard-data-changed` ([changeSignal.ts](../../src/shared/services/changeSignal.ts)); desktop only, hidden when the setting is off or the count is 0.
    Clicking opens the Upcoming tab.
-7. The Upcoming tab badge uses the same counts via the `TabFactory` badge (`refreshOn: 'data-change'`).
+7. The Upcoming tab badge uses the same `countDue` via its `TabFactory` badge
+   ([wiring/tabs.ts](../../src/app/wiring/tabs.ts), `refreshOn: 'data-change'`; `HoardView.updateBadges`).
 
 Failure points: a `releaseTime` not shaped `H:MM` / `HH:MM` never fires (digits are not
 range-checked); an entry whose subject no longer

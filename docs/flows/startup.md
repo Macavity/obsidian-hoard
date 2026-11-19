@@ -8,8 +8,8 @@ source:
   - src/shared/storage/SharedConfigStore.ts
   - src/shared/storage/VaultLayout.ts
   - src/shared/storage/EntryIndex.ts
-  - src/shared/services/settingsSplit.ts
-source_commit: c835bfb530da4775fa4668bc69029e9896b570e8
+  - src/modules/settings/services/settingsSplit.ts
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Startup
@@ -50,13 +50,14 @@ sequenceDiagram
    for the session (such a file is never overwritten; for WatchLog Hoard starts empty); both show a
    sticky Notice, since device settings typed in that session are not saved.
 2. **`loadSettings`** composes defaults + local + secret storage (+ shared, empty for now) and mirrors the date
-   format into `types.ts`; the card-size CSS variable is set before any grid renders. Then
+   format into [date.ts](../../src/shared/domain/date.ts) (`setActiveDateFormat`); the card-size CSS variable is set before any grid renders. Then
    `maybeShowSecretsNotice` shows a sticky one-time Notice (flag `hoard-secrets-notice` in
    `app.saveLocalStorage`) when `data.json` carries the `secretsInStorage` marker but this device's
    secret storage is empty: keys do not sync.
 3. Services and UI are registered: `ApiService` with the keys, managers get the `HistoryManager`,
-   `History.md` is loaded, the 60 s airtime scheduler starts, view, commands, `WidgetRenderer`,
-   settings tab and status bar are registered.
+   `History.md` is loaded, the per-module UI factories of `src/app/wiring/` (`watchlistUi`, `airtimeUi`, ...,
+   the only place that `new`s their dialogs and tabs) are built, the 60 s airtime scheduler starts, view
+   (tabs from `hoardTabs`), commands, `WidgetRenderer`, settings tab and status bar are registered.
 4. **`startVaultStorage`**: `detectRoot` (the folder of the first base with `hoard:`, else `Hoard`)
    builds the `VaultLayout`.
 5. **Fresh install** (no base): `deferBase` registers a creator; the base is

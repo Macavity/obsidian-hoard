@@ -7,15 +7,21 @@ source:
   - src/modules/settings/ui/SettingsTab.ts
   - src/app/main.ts
   - src/shared/storage/entryReaders.ts
-  - src/shared/domain/featureSettings.ts
-source_commit: 5ac1323c9eec908b3ce2098f3bb6dceb43656b07
+  - src/shared/storage/featureSettings.ts
+  - src/modules/backup/contract.ts
+  - src/app/wiring/settings.ts
+source_commit: 1831cb60809d4ba37ab1c93d1039bcc90d2dd53c
 ---
 
 # Backup and restore
 
 Trigger: the Backup section of the settings tab ([SettingsTab.ts](../../src/modules/settings/ui/SettingsTab.ts),
-around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../../src/modules/backup/services/backup.ts);
-`backupManagers()` in [main.ts](../../src/app/main.ts) hand it every manager plus the stores.
+the `SettingsTabBackup` hooks `build` / `withoutSecrets` / `parse` / `restore`, bound to the backup functions in
+[wiring/settings.ts](../../src/app/wiring/settings.ts)). Logic lives in [backup.ts](../../src/modules/backup/services/backup.ts), the
+file shape `BackupFile` in [backup/contract.ts](../../src/modules/backup/contract.ts); `backupManagers()` in
+[main.ts](../../src/app/main.ts) hands it every manager plus the stores. Entries are read back with
+[entryReaders.ts](../../src/shared/storage/entryReaders.ts), the reading and games settings blocks with
+[featureSettings.ts](../../src/shared/storage/featureSettings.ts).
 
 ## Export
 
@@ -40,7 +46,8 @@ around `buildBackup` / `parseBackup` call sites). Logic lives in [backup.ts](../
    yields an error code, shown by the settings tab as translated text ([i18n](../architecture/i18n.md)).
 2. `restoreBackup` writes in this order: shared settings into the base (`restoreSharedSettings`),
    local settings into `data.json` (shared keys and prototype-polluting keys skipped, so the
-   local section can never push a key into the base; keys of an old backup are moved by `LocalStore`
+   local section can never push a key into the base; a known setting of the wrong type is replaced by its
+   valid form (`normalizeSettings`); keys of an old backup are moved by `LocalStore`
    into secret storage, fill-only, never kept in `data.json`), titles and Maybe titles that do not exist yet
    (`addTitleSilent` / `addMaybeTitle`, one notify), then reading, games and history through their
    managers' `restore`.
