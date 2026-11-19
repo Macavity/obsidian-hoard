@@ -1,23 +1,14 @@
-import type { TitleWriter } from '../../watchlist/contract';
+import type { TitleWriter } from '../../watchlist/exports';
 import { App, Notice } from 'obsidian';
-import type { SettingsReader } from '../../settings/contract';
+import type { SettingsReader } from '../../settings/exports';
 import { t } from '../../../shared/i18n';
-import type { MaybeTitle } from '../../watchlist/contract';
+import type { MaybeTitle } from '../../watchlist/exports';
 import { formatDateDisplay } from '../../../shared/domain/date';
 import {
 	renderMediaFields,
 	resetForm,
 } from '../../../design-system/FormCells';
-import {
-	episodesLabel,
-	fillMediaFields,
-	resolvePick,
-	searchTitles,
-	titlePickerBase,
-	type MediaFields,
-	type TitleSearchApi,
-	type TitleSearchResult,
-} from '../../../shared/services/titleSearch';
+import { episodesLabel, fillMediaFields, resolvePick, searchTitles, titlePickerBase, type TitleSearchApi, type TitleSearchResult, type MediaFields } from '../../../shared/services/titleSearch';
 import { SearchFormModal, type SearchPickerOptions } from '../../../design-system/SearchFormModal';
 
 export type MaybeAddStore = Pick<TitleWriter, 'generateMaybeId' | 'addMaybeTitle'>;

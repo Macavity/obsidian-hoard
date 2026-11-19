@@ -6,7 +6,7 @@ const Notice = RealNotice as unknown as { shown: string[] };
 const gamesKeyChip = (source: 'rawg' | 'igdb', s: Record<string, string>) => realChip(source, s as never);
 import { newSettingsTab } from './helpers/newSettingsTab';
 import { gamesKeyChip as realChip } from '../src/modules/settings/ui/gamesKeyChip';
-import type { HoardTitle } from '../src/modules/watchlist/contract';
+import type { HoardTitle } from '../src/modules/watchlist/exports';
 import type { TagDefinition } from '../src/shared/domain/tags';
 import { fakeSettings } from './helpers/fakeSettings';
 

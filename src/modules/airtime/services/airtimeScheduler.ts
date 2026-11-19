@@ -1,7 +1,8 @@
-import type { AirtimeStore, TitleReader } from '../../watchlist/contract';
-import type { ReadingReader } from '../../reading/contract';
-import type { GameReader } from '../../games/contract';
-import type { AirtimeEntry, AirtimeSchedule } from '../contract';
+import type { TitleReader } from '../../watchlist/exports';
+import type { AirtimeReader } from '../exports';
+import type { ReadingReader } from '../../reading/exports';
+import type { GameReader } from '../../games/exports';
+import type { AirtimeEntry, AirtimeSchedule } from '../exports';
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 
@@ -17,7 +18,7 @@ const AIRTIME_CATCH_UP_MINUTES = 12 * 60;
  * API airing pointer refreshed (forced on the notifying tick, otherwise throttled by refreshAiring).
  */
 export function runAirtimeScheduler(
-	dataManager: Pick<AirtimeStore, 'getAirtimeEntries' | 'refreshAiring'> & Pick<TitleReader, 'getTitle'>,
+	dataManager: AirtimeReader & Pick<TitleReader, 'getTitle'>,
 	readingDataManager: Pick<ReadingReader, 'getBook' | 'getManga'>,
 	gameDataManager: Pick<GameReader, 'getGame'>,
 	notify: (name: string) => void,

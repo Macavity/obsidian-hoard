@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parse } from 'yaml';
 import { titleFromProperties, titleToProperties } from '../src/shared/storage/titleCodec';
 import { getCommunityRating, getDisplayTrailer } from '../src/modules/watchlist/domain/titleHelpers';
-import { getTitleCredits } from '../src/shared/domain/titles';
+import { getTitleCredits } from '../src/modules/watchlist/exports/titles';
 import { setupDataManager, makeTitle } from './helpers/setupDataManager';
 
 const fmOf = (src: string | undefined): Record<string, unknown> =>

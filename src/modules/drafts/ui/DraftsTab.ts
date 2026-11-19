@@ -1,12 +1,12 @@
-import type { DraftStore, TitleReader } from '../../watchlist/contract';
-import type { ReadingReader } from '../../reading/contract';
-import type { GameReader } from '../../games/contract';
+import type { TitleReader } from '../../watchlist/exports';
+import type { ReadingReader } from '../../reading/exports';
+import type { GameReader } from '../../games/exports';
 import type { TabInstance } from '../../../design-system/TabInstance';
 import Fuse from 'fuse.js';
 import type { EventRef, MetadataCache, Vault, Workspace } from 'obsidian';
 import { createIconButton } from '../../../design-system/IconButton';
-import type { SettingsReader } from '../../settings/contract';
-import type { DraftPersistState } from '../contract';
+import type { SettingsReader } from '../../settings/exports';
+import type { DraftPersistState, DraftStore } from '../exports';
 import type { OpenAddRoute } from '../../../shared/services/addRoute';
 import { t } from '../../../shared/i18n';
 

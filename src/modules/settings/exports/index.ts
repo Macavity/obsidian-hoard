@@ -1,7 +1,10 @@
-import type { DeepReadonly } from '../../shared/domain/deepReadonly';
-import type { CustomListColumn } from '../../shared/domain/columns';
-import type { RatingTier, TagDefinition } from '../../shared/domain/tags';
-import type { RowsShelfLayoutEntry } from '../../shared/domain/rows';
+import type { DeepReadonly } from '../../../shared/domain/deepReadonly';
+import type { CustomListColumn } from '../../../shared/domain/columns';
+import type { RatingTier, TagDefinition } from '../../../shared/domain/tags';
+import type { RowsShelfLayoutEntry } from '../../../shared/domain/rows';
+
+export { REMOVED_SETTINGS, normalizeSettings } from './settingsCodec';
+export { DEFAULT_SETTINGS } from './settingsDefaults';
 
 /** Card text placement: below the poster or overlaid at its bottom. */
 export type CardTextStyle = 'under' | 'inside';
@@ -132,8 +135,6 @@ export interface HoardPluginSettings {
 	/** Rows-view shelf order + visibility (see ROWS_SHELVES). */
 	rowsLayout: RowsShelfLayoutEntry[];
 }
-
-// Reading types
 
 /** the three orderings offered in Settings; storage is ISO regardless */
 export type DateFormatPref = 'european' | 'american' | 'iso';

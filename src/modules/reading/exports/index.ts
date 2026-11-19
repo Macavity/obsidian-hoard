@@ -1,5 +1,9 @@
-import type { EntryAirtime } from '../airtime/contract';
-import type { RowsShelfLayoutEntry } from '../../shared/domain/rows';
+import type { EntryAirtime } from '../../airtime/exports';
+import type { RowsShelfLayoutEntry } from '../../../shared/domain/rows';
+
+export { newBook, newManga } from './newReading';
+export { readingStatusColor } from './readingColors';
+export { DEFAULT_READING_SETTINGS, DEFAULT_READING_STATUS_COLORS, READING_STATUSES, SELECTABLE_READING_STATUSES, bookProgressUnit, getReadingTypeColor } from './readingDefaults';
 
 export type ReadingStatus = 'Reading' | 'Completed' | 'Plan to Read' | 'To be released' | 'Dropped';
 

@@ -1,4 +1,4 @@
-import type { ReadingCsvKind } from '../contract';
+import type { ReadingCsvKind } from '../exports';
 import { App, Modal } from 'obsidian';
 import { t } from '../../../shared/i18n';
 

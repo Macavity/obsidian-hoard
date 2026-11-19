@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddTitleModal } from '../src/modules/watchlist/ui/AddTitleModal';
 import { fakeSettings } from './helpers/fakeSettings';
-import type { HoardTitle, Season } from '../src/modules/watchlist/contract';
+import type { HoardTitle, Season } from '../src/modules/watchlist/exports';
 import type { LookupResult } from '../src/shared/api/lookup';
 
 // noon UTC: the local calendar day is 2026-03-04 in every timezone the suite runs in

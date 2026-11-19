@@ -1,10 +1,10 @@
 import { App, Modal, Notice } from 'obsidian';
 import { t } from '../../../shared/i18n';
 import { createIconButton } from '../../../design-system/IconButton';
-import type { SettingsReader } from '../../settings/contract';
+import type { SettingsReader } from '../../settings/exports';
 import type { ReadingDataManager } from '../services/ReadingDataManager';
-import type { ReadingKind } from '../contract';
-import type { ReadingCustomColumn } from '../contract';
+import type { ReadingKind } from '../exports';
+import type { ReadingCustomColumn } from '../exports';
 import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/tags';
 import type { OpenConfirm } from '../../../design-system/ConfirmModal';
 import { openColorPicker } from '../../../design-system/ColorPicker';

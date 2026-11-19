@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ListTab } from '../../src/modules/watchlist/ui/ListTab';
-import type { HoardTitle } from '../../src/modules/watchlist/contract';
+import type { HoardTitle } from '../../src/modules/watchlist/exports';
 
 type Compare = (key: string, a: HoardTitle, b: HoardTitle) => number;
 

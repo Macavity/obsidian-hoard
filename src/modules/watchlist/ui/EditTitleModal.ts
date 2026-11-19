@@ -13,10 +13,11 @@ import {
 	type GroupPickerState,
 } from '../../../design-system/FormCells';
 import type { DataManager } from '../services/DataManager';
-import type { SettingsReader } from '../../settings/contract';
-import type { HoardGroup, HoardTitle, Season } from '../contract';
-import { completedEpisodes } from '../../../shared/domain/entryFactories';
-import { formatSeasonLine, parseSeasonLine, seasonsOf } from '../../../shared/domain/seasonText';
+import type { SettingsReader } from '../../settings/exports';
+import type { HoardGroup, HoardTitle, Season } from '../exports';
+import { completedEpisodes } from '../domain/completedEpisodes';
+import { formatSeasonLine } from '../domain/seasonFormat';
+import { parseSeasonLine, seasonsOf } from '../exports/seasonText';
 
 /** Seasons from the seasons box, one "Name: N" or "Name: N (skip list)" per line. No bounds are applied here. */
 function parseSeasonsText(text: string): Season[] {

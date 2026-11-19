@@ -1,8 +1,8 @@
-import type { SettingsReader } from '../../modules/settings/contract';
+import type { SettingsReader } from '../../modules/settings/exports';
 import { t } from '../i18n';
 import { typeLabel } from '../i18n/labels';
-import type { AnimeSearchResult, MediaSearchResult, Season } from '../../modules/watchlist/contract';
-import { getApiGroupForType } from '../domain/titles';
+import type { AnimeSearchResult, MediaSearchResult, Season } from '../../modules/watchlist/exports';
+import { getApiGroupForType } from '../../modules/watchlist/exports';
 import { animeResultIdKeys, mediaResultIdKeys } from './LibraryIndex';
 import { effectiveMediaSource, type MediaSource } from '../api/apiSources';
 import { SEARCH_PAGE_SIZE, SEARCH_RESULT_LIMIT, type ApiService } from '../api/ApiService';

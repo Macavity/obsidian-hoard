@@ -1,9 +1,9 @@
 import { App, Modal, Notice, Platform, setIcon } from 'obsidian';
-import type { SettingsReader } from '../../settings/contract';
+import type { SettingsReader } from '../../settings/exports';
 import type { GameDataManager } from '../services/GameDataManager';
-import type { Game, GameGroup } from '../contract';
+import type { Game, GameGroup } from '../exports';
 import { formatTime, parsePlaytimeInput } from '../../../shared/domain/format';
-import { GAME_AUTO_STATUS } from '../../../shared/domain/gameDefaults';
+import { GAME_AUTO_STATUS } from '../exports/gameDefaults';
 import { buildPosterCard } from '../../../design-system/PosterCard';
 import { rawgResizedCover, steamAppIdFromUrl, type ApiService } from '../../../shared/api/ApiService';
 import { renderStarRating } from '../../../design-system/StarRating';

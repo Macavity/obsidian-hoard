@@ -3,7 +3,7 @@ import { createStores, newDataManager } from './common';
 import type { PosterQueue, ReleaseDateTargets } from '../../src/modules/watchlist/services/DataManager';
 import { NOT_FOUND } from '../../src/shared/api/lookup';
 import type { ApiService } from '../../src/shared/api/ApiService';
-import type { HoardTitle } from '../../src/modules/watchlist/contract';
+import type { HoardTitle } from '../../src/modules/watchlist/exports';
 
 // browser globals the manager touches
 export async function setupDataManager(files: Record<string, string>, extra: Record<string, unknown> = {}) {

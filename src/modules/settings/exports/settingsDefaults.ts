@@ -1,5 +1,5 @@
-import type { HoardPluginSettings } from '../../modules/settings/contract';
-import { ROWS_SHELVES } from './rows';
+import type { HoardPluginSettings } from '.';
+import { ROWS_SHELVES } from '../../../shared/domain/rows';
 
 /**
  * Sentinel for `defaultAddType` meaning "use the last type added". No real type slug

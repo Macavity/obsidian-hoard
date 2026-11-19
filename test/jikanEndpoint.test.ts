@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService, apiSourceFromUrl } from '../src/shared/api/ApiService';
 import { TENRAI_BASE, resolveJikanEndpoint } from '../src/shared/api/jikanBase';
 import { PosterService } from '../src/shared/api/PosterService';
-import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
 import type { DataManager } from '../src/modules/watchlist/services/DataManager';
 
 /** ApiService with its private request helper exposed for spying. */

@@ -1,5 +1,5 @@
 import { App, FuzzySuggestModal } from 'obsidian';
-import type { HoardTitle } from '../../watchlist/contract';
+import type { HoardTitle } from '../../watchlist/exports';
 import { t } from '../../../shared/i18n';
 import { typeLabel } from '../../../shared/i18n/labels';
 

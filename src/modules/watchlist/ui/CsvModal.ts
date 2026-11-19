@@ -1,15 +1,16 @@
-import type { CsvOptions } from '../contract';
+import type { CsvOptions } from '../exports';
 import type { App } from 'obsidian';
 import { CsvModalBase, rowsToCsv, type CsvExportRow, type CsvFieldDef, type CsvSelectOption } from '../../../design-system/CsvModalBase';
 import { safeTypeName } from '../../../shared/domain/typeName';
 import { t } from '../../../shared/i18n';
 import { statusLabel, typeLabel } from '../../../shared/i18n/labels';
 import type { DataManager } from '../services/DataManager';
-import type { SettingsReader, SettingsWriter } from '../../settings/contract';
-import type { HoardTitle, ImportProgress } from '../contract';
+import type { SettingsReader, SettingsWriter } from '../../settings/exports';
+import type { HoardTitle, ImportProgress } from '../exports';
 import { normalizeManualCredits } from '../domain/titleHelpers';
-import { getTitleCredits } from '../../../shared/domain/titles';
-import { completedEpisodes, newTitle } from '../../../shared/domain/entryFactories';
+import { getTitleCredits } from '../exports/titles';
+import { completedEpisodes } from '../domain/completedEpisodes';
+import { newTitle } from '../exports/newTitle';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 
 /** studio list ⇄ one CSV cell; semicolons, since studio names contain commas */

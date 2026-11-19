@@ -7,7 +7,7 @@ import { LocalStore } from '../src/shared/storage/LocalStore';
 import { SharedConfigStore } from '../src/shared/storage/SharedConfigStore';
 import { VaultLayout } from '../src/shared/storage/VaultLayout';
 import { composeSettings, persistSettings } from '../src/modules/settings/services/settingsSplit';
-import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
 
 /** A base whose hoard block holds no setting yet. */
 const BARE_BASE = 'hoard:\n  version: 1\n';

@@ -7,7 +7,7 @@ import { SecretStore } from '../../src/shared/storage/SecretStore';
 import { SharedConfigStore } from '../../src/shared/storage/SharedConfigStore';
 import { EntryIndex } from '../../src/shared/storage/EntryIndex';
 import { EntryNotes } from '../../src/shared/services/EntryNotes';
-import { DEFAULT_SETTINGS } from '../../src/shared/domain/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../../src/modules/settings/exports/settingsDefaults';
 import type { ManagerNotice } from '../../src/shared/storage/storageTypes';
 import { DataManager } from '../../src/modules/watchlist/services/DataManager';
 import type { PosterQueue, ReleaseDateTargets } from '../../src/modules/watchlist/services/DataManager';

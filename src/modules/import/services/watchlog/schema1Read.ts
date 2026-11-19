@@ -1,5 +1,5 @@
-import type { AirtimeEntry, AirtimeRecurrence } from '../../../airtime/contract';
-import type { HoardGroup } from '../../../watchlist/contract';
+import type { AirtimeEntry, AirtimeRecurrence } from '../../../airtime/exports';
+import type { HoardGroup } from '../../../watchlist/exports';
 import type { HistoryAction, HistoryEntry, HistorySource } from '../../../../shared/domain/history';
 import { readMaybe } from '../../../../shared/storage/entryReaders';
 import {

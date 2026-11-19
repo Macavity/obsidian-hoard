@@ -1,4 +1,4 @@
-import type { HoardTitle, Season } from '../contract';
+import type { HoardTitle, Season } from '../exports';
 
 interface SeasonFillButtonOptions {
 	/** Live title; read on every refresh and click because the object can be replaced. */

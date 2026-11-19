@@ -1,7 +1,7 @@
 // FakeApp + storage stores + GameDataManager wired like main.ts (root 'W'); DataManager stubbed to the airtime bridge.
 import { createStores, newGameManager } from './common';
-import { newGame } from '../../src/shared/domain/entryFactories';
-import type { Game } from '../../src/modules/games/contract';
+import { newGame } from '../../src/modules/games/exports/newGame';
+import type { Game } from '../../src/modules/games/exports';
 
 export async function setupGames(files: Record<string, string>) {
 	const airtime = { added: [] as string[], removed: [] as string[] };

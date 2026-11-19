@@ -1,7 +1,7 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../../../shared/i18n';
-import type { AirtimeSchedule } from '../contract';
-import type { Game } from '../../games/contract';
+import type { AirtimeSchedule } from '../exports';
+import type { Game } from '../../games/exports';
 import {
 	type ScheduleFormState,
 	buildScheduleFromState,

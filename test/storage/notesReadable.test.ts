@@ -10,8 +10,8 @@ import { titleFromProperties } from '../../src/shared/storage/titleCodec';
 import { decodeBook, decodeManga } from '../../src/shared/storage/readingCodec';
 import { decodeGame } from '../../src/shared/storage/gameCodec';
 import { getDisplayTrailer } from '../../src/modules/watchlist/domain/titleHelpers';
-import { getDisplayPoster, getTitleCredits } from '../../src/shared/domain/titles';
-import type { HoardTitle } from '../../src/modules/watchlist/contract';
+import { getDisplayPoster, getTitleCredits } from '../../src/modules/watchlist/exports/titles';
+import type { HoardTitle } from '../../src/modules/watchlist/exports';
 import type { Decoded, EntryCache } from '../../src/shared/storage/storageTypes';
 
 /**

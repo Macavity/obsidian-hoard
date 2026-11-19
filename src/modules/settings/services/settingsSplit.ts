@@ -1,6 +1,6 @@
-import { normalizeSettings } from '../../../shared/storage/settingsCodec';
+import { normalizeSettings } from '../exports/settingsCodec';
 import { toRecord } from '../../../shared/domain/sharedHelpers';
-import type { HoardPluginSettings } from '../contract';
+import type { HoardPluginSettings } from '../exports';
 import { SHARED_SETTING_KEYS } from '../../../shared/storage/SharedConfigStore';
 import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
 import type { LocalStore } from '../../../shared/storage/LocalStore';

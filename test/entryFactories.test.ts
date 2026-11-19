@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { completedEpisodes, newBook, newGame, newManga, newTitle } from '../src/shared/domain/entryFactories';
+import { newGame } from '../src/modules/games/exports/newGame';
+import { newBook, newManga } from '../src/modules/reading/exports/newReading';
+import { completedEpisodes } from '../src/modules/watchlist/domain/completedEpisodes';
+import { newTitle } from '../src/modules/watchlist/exports/newTitle';
 
 const NOW = '2026-03-04T05:06:07.000Z';
 

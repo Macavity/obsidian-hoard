@@ -1,10 +1,10 @@
-import { DEFAULT_READING_SETTINGS, DEFAULT_READING_STATUS_COLORS, READING_STATUSES } from '../domain/reading';
+import { DEFAULT_READING_SETTINGS, DEFAULT_READING_STATUS_COLORS, READING_STATUSES } from '../../modules/reading/exports';
 import { COLUMN_TYPES } from '../domain/columns';
-import type { GamesSavedFilterPreset, GamesSettings } from '../../modules/games/contract';
-import type { ReadingCustomColumn, ReadingSavedFilterPreset, ReadingSettings } from '../../modules/reading/contract';
+import type { GamesSavedFilterPreset, GamesSettings } from '../../modules/games/exports';
+import type { ReadingCustomColumn, ReadingSavedFilterPreset, ReadingSettings } from '../../modules/reading/exports';
 import type { RowsShelfLayoutEntry } from '../domain/rows';
 import type { TagDefinition } from '../domain/tags';
-import { readTag } from './settingsCodec';
+import { readTag } from '../domain/tags';
 import { at, readList, readOneOf, readRecord, readString, readStringList } from '../domain/read';
 import { defined, isRecord } from '../domain/sharedHelpers';
 

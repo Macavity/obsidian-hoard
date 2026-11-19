@@ -6,11 +6,12 @@ import { TENRAI_BASE, type JikanEndpoint } from './jikanBase';
 import {
 	ApiError, apiLabel, httpError, lookupOfError, rethrowAuth, type ApiErrorReason, type ApiSource,
 } from './apiError';
-import type { AnimeSearchResult, HoardTitle, MediaSearchResult, Season, TmdbCollectionDetail, TmdbCollectionRef } from '../../modules/watchlist/contract';
+import type { AnimeSearchResult, HoardTitle, MediaSearchResult, Season, TmdbCollectionDetail, TmdbCollectionRef } from '../../modules/watchlist/exports';
 import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, explicitMediaKind, mapCinemetaSearch, type CinemetaKind } from './cinemetaApi';
 import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLibraryWorkUrl } from './openLibraryApi';
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
-import { imdbIdFromLink, normalizeCreditsForStore } from '../domain/titles';
+import { imdbIdFromLink } from '../domain/imdb';
+import { normalizeCreditsForStore } from './credits';
 import type { EntryCache } from '../storage/storageTypes';
 import { at, readBoolean, readList, readNumber, readOptionalNumber, readOptionalString, readRecord, readString, readStringList } from '../domain/read';
 import { isRecord } from '../domain/sharedHelpers';

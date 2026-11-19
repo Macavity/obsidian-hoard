@@ -1,5 +1,5 @@
-import type { Book } from '../../reading/contract';
-import { bookProgressUnit } from '../../../shared/domain/reading';
+import type { Book } from '../../reading/exports';
+import { bookProgressUnit } from '../../reading/exports';
 
 /**
  * Words per page, used *only* to fold words-mode books into a pages aggregate (the

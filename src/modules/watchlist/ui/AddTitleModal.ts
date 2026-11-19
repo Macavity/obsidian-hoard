@@ -1,11 +1,12 @@
 import { App, Notice } from 'obsidian';
 import type { DataManager } from '../services/DataManager';
 import type { ApiService } from '../../../shared/api/ApiService';
-import type { SettingsReader, SettingsWriter } from '../../settings/contract';
-import type { HoardGroup, HoardTitle, Season } from '../contract';
+import type { SettingsReader, SettingsWriter } from '../../settings/exports';
+import type { HoardGroup, HoardTitle, Season } from '../exports';
 import { todayIso } from '../../../shared/domain/date';
-import { getApiGroupForType } from '../../../shared/domain/titles';
-import { completedEpisodes, newTitle } from '../../../shared/domain/entryFactories';
+import { getApiGroupForType } from '../exports/titles';
+import { completedEpisodes } from '../domain/completedEpisodes';
+import { newTitle } from '../exports/newTitle';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 import { t } from '../../../shared/i18n';
 import { found, type LookupResult } from '../../../shared/api/lookup';
@@ -18,10 +19,10 @@ import {
 	resultIdKeys,
 	searchTitles,
 	titlePickerBase,
-	type MediaFields,
 	type TitlePick,
 	type TitleSearchApi,
 	type TitleSearchResult,
+	type MediaFields,
 } from '../../../shared/services/titleSearch';
 import { SearchFormModal, type SearchPickerOptions } from '../../../design-system/SearchFormModal';
 import { LibraryIndex } from '../../../shared/services/LibraryIndex';

@@ -1,5 +1,5 @@
 import type { DeepReadonly } from '../../../shared/domain/deepReadonly';
-import type { HoardPluginSettings, SettingsReader, SettingsWriter } from '../contract';
+import type { HoardPluginSettings, SettingsReader, SettingsWriter } from '../exports';
 
 const STAGE_DELAY_MS = 500;
 

@@ -1,5 +1,5 @@
-import type { HoardTitle } from '../../watchlist/contract';
-import { isCreditsUnfetched } from '../../../shared/domain/titles';
+import type { HoardTitle } from '../../watchlist/exports';
+import { isCreditsUnfetched } from '../../watchlist/exports';
 
 /** studio still needs its one-time fetch (separate — anime has studios but no credits) */
 export function needsStudioFetch(title: HoardTitle): boolean {

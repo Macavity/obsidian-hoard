@@ -1,10 +1,10 @@
 import type { ApiService, BookSearchResult, GameSearchResult } from '../api/ApiService';
 import type { ApiCheckQueue } from '../api/apiCheckQueue';
 import type { PosterService } from '../api/PosterService';
-import type { Game } from '../../modules/games/contract';
-import type { Book, Manga } from '../../modules/reading/contract';
-import type { HoardPluginSettings } from '../../modules/settings/contract';
-import type { HoardTitle } from '../../modules/watchlist/contract';
+import type { Game } from '../../modules/games/exports';
+import type { Book, Manga } from '../../modules/reading/exports';
+import type { HoardPluginSettings } from '../../modules/settings/exports';
+import type { HoardTitle } from '../../modules/watchlist/exports';
 import { effectiveBookSource, effectiveGameSource } from '../api/apiSources';
 import { steamLibraryCover } from '../api/steamStoreApi';
 

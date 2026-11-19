@@ -1,10 +1,10 @@
 import { parsePlaytimeInput } from '../../../../shared/domain/format';
-import { GAME_TBA_STATUS, defaultGamesSettings } from '../../../../shared/domain/gameDefaults';
+import { GAME_TBA_STATUS, defaultGamesSettings } from '../../../games/exports';
 import { COLUMN_TYPES } from '../../../../shared/domain/columns';
-import { getTitleCredits } from '../../../../shared/domain/titles';
-import type { Game, GamesData, GamesSettings } from '../../../games/contract';
-import type { ReadingCustomColumn, ReadingData } from '../../../reading/contract';
-import type { HoardTitle } from '../../../watchlist/contract';
+import { getTitleCredits } from '../../../watchlist/exports';
+import type { Game, GamesData, GamesSettings } from '../../../games/exports';
+import type { ReadingCustomColumn, ReadingData } from '../../../reading/exports';
+import type { HoardTitle } from '../../../watchlist/exports';
 import type { TagDefinition } from '../../../../shared/domain/tags';
 import { readBook, readGame, readGameGroup, readManga } from '../../../../shared/storage/entryReaders';
 import { readGamesSettings, readReadingSettings } from '../../../../shared/storage/featureSettings';

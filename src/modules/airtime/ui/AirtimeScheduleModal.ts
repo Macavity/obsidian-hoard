@@ -1,7 +1,7 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../../../shared/i18n';
-import type { AirtimeSchedule } from '../contract';
-import type { HoardTitle } from '../../watchlist/contract';
+import type { AirtimeSchedule } from '../exports';
+import type { HoardTitle } from '../../watchlist/exports';
 import {
 	type ScheduleFormState,
 	RECURRENCE_OPTIONS,

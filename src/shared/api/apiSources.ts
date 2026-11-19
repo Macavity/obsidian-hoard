@@ -1,5 +1,5 @@
 import type { ApiService } from './ApiService';
-import type { HoardPluginSettings } from '../../modules/settings/contract';
+import type { HoardPluginSettings } from '../../modules/settings/exports';
 
 export type MediaSource = 'cinemeta' | 'omdb' | 'tmdb';
 export type BookSource = 'openlibrary' | 'google';

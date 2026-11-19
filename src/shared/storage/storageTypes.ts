@@ -1,5 +1,5 @@
-import type { DraftPersistState } from '../../modules/drafts/contract';
-import type { SavedFilterPreset, Season } from '../../modules/watchlist/contract';
+import type { DraftPersistState } from '../../modules/drafts/exports';
+import type { SavedFilterPreset, Season } from '../../modules/watchlist/exports';
 import type { RecommendedDaily } from '../domain/rows';
 
 /** The four kinds of library entry, each backed by one note. */

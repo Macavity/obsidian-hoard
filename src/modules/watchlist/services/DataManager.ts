@@ -2,24 +2,25 @@ import { TFile, stringifyYaml } from 'obsidian';
 import type { TAbstractFile } from 'obsidian';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
-import type { SettingsReader } from '../../settings/contract';
-import { toEntryAirtime } from '../../../shared/domain/airtime';
-import type { AirtimeEntry, AirtimeSchedule, EntryAirtime } from '../../airtime/contract';
-import type { DraftPersistState } from '../../drafts/contract';
-import type { Game } from '../../games/contract';
-import type { Book, Manga } from '../../reading/contract';
+import type { SettingsReader } from '../../settings/exports';
+import { toEntryAirtime } from '../../airtime/exports';
+import type { AirtimeEntry, AirtimeSchedule, EntryAirtime } from '../../airtime/exports';
+import type { DraftPersistState, DraftStore } from '../../drafts/exports';
+import type { AirtimeStore } from '../../airtime/exports';
+import type { Game } from '../../games/exports';
+import type { Book, Manga } from '../../reading/exports';
 import type {
-	AirtimeStore, DraftStore, HoardGroup, HoardTitle, MaybeTitle, SavedFilterPreset, Season,
+	HoardGroup, HoardTitle, MaybeTitle, SavedFilterPreset, Season,
 	TitleBackup, TitleMaintenance, TitleReader, TitleStats, TitleWriter,
-} from '../contract';
+} from '../exports';
 import type { RecommendedDaily } from '../../../shared/domain/rows';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import { formatHistoryDate } from '../../../shared/services/HistoryManager';
 import { normalizeManualCredits, pruneManualCredits } from '../domain/titleHelpers';
 import { isReleaseDateFuture, todayIso } from '../../../shared/domain/date';
-import { GAME_AUTO_STATUS } from '../../../shared/domain/gameDefaults';
-import type { CreditsField } from '../contract';
-import { newTitle } from '../../../shared/domain/entryFactories';
+import { GAME_AUTO_STATUS } from '../../games/exports';
+import type { CreditsField } from '../exports';
+import { newTitle } from '../exports/newTitle';
 import type { AnyEntry, EntryIndex } from '../../../shared/storage/EntryIndex';
 import { getBaseline, sameStoredState, setBaseline, getNotesBaseline, setNotesBaseline } from '../../../shared/storage/baseline';
 import { ApiCheckQueue } from '../../../shared/api/apiCheckQueue';

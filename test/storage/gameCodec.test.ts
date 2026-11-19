@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { decodeGame, encodeGame, parsePlaytime } from '../../src/shared/storage/gameCodec';
 import { formatTime } from '../../src/shared/domain/format';
-import type { Game } from '../../src/modules/games/contract';
+import type { Game } from '../../src/modules/games/exports';
 import { ALL_PROPERTY_NAMES } from '../../src/shared/storage/properties';
 
 const fullGame = (): Game => ({

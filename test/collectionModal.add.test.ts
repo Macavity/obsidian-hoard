@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CollectionModal } from '../src/modules/watchlist/ui/CollectionModal';
 import { fakeSettings } from './helpers/fakeSettings';
-import type { HoardGroup, HoardTitle, MediaSearchResult, TmdbCollectionDetail } from '../src/modules/watchlist/contract';
+import type { HoardGroup, HoardTitle, MediaSearchResult, TmdbCollectionDetail } from '../src/modules/watchlist/exports';
 
 const NOW = '2026-03-04T05:06:07.000Z';
 

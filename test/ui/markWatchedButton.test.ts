@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { appendMarkWatchedButton } from '../../src/modules/watchlist/ui/MarkWatchedButton';
 import { makeTitle } from '../helpers/setupDataManager';
-import type { HoardTitle } from '../../src/modules/watchlist/contract';
+import type { HoardTitle } from '../../src/modules/watchlist/exports';
 
 function press(title: HoardTitle | undefined) {
 	const titles = {

@@ -1,9 +1,9 @@
 import type { MediaSource } from '../api/apiSources';
-import type { Game } from '../../modules/games/contract';
-import type { Book, Manga } from '../../modules/reading/contract';
-import type { AnimeSearchResult, HoardTitle, MediaSearchResult } from '../../modules/watchlist/contract';
+import type { Game } from '../../modules/games/exports';
+import type { Book, Manga } from '../../modules/reading/exports';
+import type { AnimeSearchResult, HoardTitle, MediaSearchResult } from '../../modules/watchlist/exports';
 import type { GameSearchResult, BookSearchResult, MangaSearchResult } from '../api/ApiService';
-import { imdbIdFromLink } from '../domain/titles';
+import { imdbIdFromLink } from '../domain/imdb';
 
 export type LibraryScope = 'watchlist' | 'books' | 'manga' | 'games';
 /** Where each scope reads its entries from; a caller supplies only the scopes it builds. */

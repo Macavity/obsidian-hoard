@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { setupListTab } from './helpers/setupListTab';
-import type { SavedFilterPreset } from '../src/modules/watchlist/contract';
+import type { SavedFilterPreset } from '../src/modules/watchlist/exports';
 
 const preset = (over: Partial<SavedFilterPreset> = {}): SavedFilterPreset => ({
 	typeExclude: ['Movie'], statusExclude: [], groupExclude: [], ratingExclude: [], priorityExclude: [], ...over,

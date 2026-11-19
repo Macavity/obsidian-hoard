@@ -1,10 +1,10 @@
 import type { FileManager, Vault } from 'obsidian';
-import type { AirtimeEntry } from '../../../airtime/contract';
-import type { DraftPersistState } from '../../../drafts/contract';
-import type { GamesData } from '../../../games/contract';
-import type { ReadingData } from '../../../reading/contract';
-import type { HoardPluginSettings } from '../../../settings/contract';
-import type { HoardGroup, HoardTitle, MaybeTitle, SavedFilterPreset } from '../../../watchlist/contract';
+import type { AirtimeEntry } from '../../../airtime/exports';
+import type { DraftPersistState } from '../../../drafts/exports';
+import type { GamesData } from '../../../games/exports';
+import type { ReadingData } from '../../../reading/exports';
+import type { HoardPluginSettings } from '../../../settings/exports';
+import type { HoardGroup, HoardTitle, MaybeTitle, SavedFilterPreset } from '../../../watchlist/exports';
 import type { RecommendedDaily } from '../../../../shared/domain/rows';
 import type { HistoryEntry } from '../../../../shared/domain/history';
 import type { LocalStore } from '../../../../shared/storage/LocalStore';
@@ -69,5 +69,5 @@ export interface IdMaps {
 }
 
 export const WISHLIST = 'Wishlist';
-export { REMOVED_SETTINGS } from '../../../../shared/storage/settingsCodec';
+export { REMOVED_SETTINGS } from '../../../settings/exports';
 export { isRecord } from '../../../../shared/domain/sharedHelpers';

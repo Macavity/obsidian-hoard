@@ -1,4 +1,8 @@
-import type { DateFormatPref } from '../../modules/settings/contract';
+import type { DateFormatPref } from '../../modules/settings/exports';
+
+// Date display / parsing. Storage is always ISO — date-only fields are `YYYY-MM-DD`,
+// dateAdded/dateModified are ISO timestamps. Only rendering and typed input follow
+// the `dateFormat` setting; every parse funnels back to `YYYY-MM-DD`.
 
 /** readable mask per format — placeholders and error hints */
 const DATE_MASKS: Record<DateFormatPref, string> = {

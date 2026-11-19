@@ -3,7 +3,7 @@ import { createFakeApp } from '../fakes/fakeApp';
 import { VaultLayout } from '../../src/shared/storage/VaultLayout';
 import { LocalStore } from '../../src/shared/storage/LocalStore';
 import { EntryIndex } from '../../src/shared/storage/EntryIndex';
-import type { HoardTitle } from '../../src/modules/watchlist/contract';
+import type { HoardTitle } from '../../src/modules/watchlist/exports';
 import { until } from '../helpers/common';
 const note = (fm: string) => `---\n${fm}\n---\n\n## Notes\n`;
 async function setup(files: Record<string, string>) {

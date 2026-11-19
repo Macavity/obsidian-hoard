@@ -1,11 +1,11 @@
 import { App, Modal } from 'obsidian';
 import type { DataManager } from '../services/DataManager';
-import type { SettingsReader } from '../../settings/contract';
+import type { SettingsReader } from '../../settings/exports';
 import { t } from '../../../shared/i18n';
 import { createIconButton } from '../../../design-system/IconButton';
 import { markViewRoot } from '../../../design-system/detailFrame';
-import type { CreditsField, HoardTitle } from '../contract';
-import { getDisplayCredits, getManualCredits, getTitleCredits } from '../../../shared/domain/titles';
+import type { CreditsField, HoardTitle } from '../exports';
+import { getDisplayCredits, getManualCredits, getTitleCredits } from '../exports/titles';
 
 /** A name offered by the search pane, with how often it appears in each field library-wide. */
 interface CreditSuggestion {

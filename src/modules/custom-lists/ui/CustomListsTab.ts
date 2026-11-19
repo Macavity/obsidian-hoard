@@ -1,11 +1,11 @@
-import type { TitleReader, TitleStats } from '../../watchlist/contract';
-import type { ReadingReader } from '../../reading/contract';
-import type { GameReader } from '../../games/contract';
+import type { TitleReader, TitleStats } from '../../watchlist/exports';
+import type { ReadingReader } from '../../reading/exports';
+import type { GameReader } from '../../games/exports';
 import type { TabInstance } from '../../../design-system/TabInstance';
 import { App, Component, Modal, Notice, Platform, normalizePath, Setting, type EventRef, type TAbstractFile, type Vault } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../settings/contract';
+import type { SettingsReader, SettingsWriter } from '../../settings/exports';
 import type { CustomListManager } from '../services/CustomListManager';
-import type { CustomList } from '../contract';
+import type { CustomList } from '../domain/customList';
 import type { CustomListColumn, CustomListRow } from '../../../shared/domain/columns';
 import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/tags';
 import type { OpenConfirm } from '../../../design-system/ConfirmModal';

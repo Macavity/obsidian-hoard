@@ -1,19 +1,4 @@
-import type { CreditsField, HoardTitle } from '../../modules/watchlist/contract';
-import { readStringList } from './read';
-
-/** `tt…` out of a stored `URL` property; both OMDb and TMDB adds write an imdb.com URL */
-export function imdbIdFromLink(link: string | undefined): string {
-	if (!link) return '';
-	return link.match(/\/(tt\d+)/)?.[1] ?? '';
-}
-
-// Credits (director / cast)
-
-/**
- * Cap on names stored from an API response. OMDb returns 4 actors; TMDB returns
- * the full cast (100+ on a big film). Fetched data only — user-added is uncapped.
- */
-const MAX_FETCHED_CREDITS = 10;
+import type { CreditsField, HoardTitle } from '.';
 
 /** never fetched (absent or empty) */
 export function isCreditsUnfetched(names: string[] | undefined): boolean {
@@ -56,12 +41,6 @@ export function getTitleCredits(title: HoardTitle, field: CreditsField): string[
 		merged.push(name);
 	}
 	return merged;
-}
-
-/** normalize a fetched list for storage: non-strings dropped, trimmed, capped; empty stays empty */
-export function normalizeCreditsForStore(names: unknown): string[] {
-	const cleaned = readStringList(names).map((n) => n.trim()).filter((n) => n !== '' && n !== 'N/A');
-	return cleaned.slice(0, MAX_FETCHED_CREDITS);
 }
 
 /**

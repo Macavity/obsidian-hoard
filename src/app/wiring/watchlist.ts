@@ -1,5 +1,5 @@
 import type { App } from 'obsidian';
-import type { SettingsReader, SettingsWriter } from '../../modules/settings/contract';
+import type { SettingsReader, SettingsWriter } from '../../modules/settings/exports';
 import type { HistoryManager } from '../../shared/services/HistoryManager';
 import type { PosterService } from '../../shared/api/PosterService';
 import type { DataManager } from '../../modules/watchlist/services/DataManager';

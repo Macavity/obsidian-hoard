@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { newGamesTab } from './helpers/newGamesTab';
 import { fakeSettings } from './helpers/fakeSettings';
-import type { GamesSavedFilterPreset } from '../src/modules/games/contract';
-import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
+import type { GamesSavedFilterPreset } from '../src/modules/games/exports';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
 
 const preset = (over: Partial<GamesSavedFilterPreset> = {}): GamesSavedFilterPreset => ({
 	genreExclude: ['RPG'], statusExclude: [], ratingExclude: [], priorityExclude: [], platformExclude: [], groupExclude: [], ...over,

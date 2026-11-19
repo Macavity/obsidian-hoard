@@ -5,8 +5,8 @@ import { ListTab, type ListTabHost, type ListTabModals } from '../../src/modules
 import { confirmWith } from '../../src/design-system/ConfirmModal';
 import { RowsCustomizeModal } from '../../src/design-system/RowsCustomizeModal';
 import { fakeSettings } from './fakeSettings';
-import type { HoardPluginSettings } from '../../src/modules/settings/contract';
-import type { HoardTitle } from '../../src/modules/watchlist/contract';
+import type { HoardPluginSettings } from '../../src/modules/settings/exports';
+import type { HoardTitle } from '../../src/modules/watchlist/exports';
 
 // Obsidian's activeDocument (popout-aware document); common.ts stubs it with a bare object
 (globalThis as { activeDocument?: Document }).activeDocument = document;

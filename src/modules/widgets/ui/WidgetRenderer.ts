@@ -1,7 +1,8 @@
-import type { AirtimeStore, TitleReader, TitleStats, TitleWriter } from '../../watchlist/contract';
+import type { TitleReader, TitleStats, TitleWriter } from '../../watchlist/exports';
+import type { AirtimeReader } from '../../airtime/exports';
 import { MarkdownPostProcessorContext } from 'obsidian';
-import type { SettingsReader } from '../../settings/contract';
-import type { HoardGroup, HoardTitle } from '../../watchlist/contract';
+import type { SettingsReader } from '../../settings/exports';
+import type { HoardGroup, HoardTitle } from '../../watchlist/exports';
 import type { TagDefinition } from '../../../shared/domain/tags';
 import { formatDateDisplay, formatShortDateDisplay } from '../../../shared/domain/date';
 import { formatTime } from '../../../shared/domain/format';
@@ -21,7 +22,7 @@ export function groupProgress(members: HoardTitle[], effectiveTotal: (t: HoardTi
 
 /** The one-off airtime entry with the soonest release at or after `now`, or null. */
 export function findNextRelease(
-	entries: ReturnType<AirtimeStore['getAirtimeEntries']>,
+	entries: ReturnType<AirtimeReader['getAirtimeEntries']>,
 	titles: HoardTitle[],
 	now: number,
 ): NextRelease | null {
@@ -55,7 +56,7 @@ export type WidgetTitles = Pick<TitleReader, 'getTitle' | 'getTitles'>
 	& Pick<TitleStats,
 		'getProgress' | 'getNextUnwatchedEpisode' | 'getEffectiveTotal' | 'getTotalTimeWatched'
 		| 'getTotalTimeRemaining' | 'getCompletedCount' | 'getPinnedGroupId' | 'getGroups'>
-	& Pick<AirtimeStore, 'getAirtimeEntries'> & Pick<TitleWriter, 'markEpisodeWatched'>;
+	& Pick<AirtimeReader, 'getAirtimeEntries'> & Pick<TitleWriter, 'markEpisodeWatched'>;
 
 /**
  * Renders the `hoard-*` code-block widgets inside notes and keeps them in step with the data.

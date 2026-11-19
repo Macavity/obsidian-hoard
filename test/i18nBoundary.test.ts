@@ -16,19 +16,20 @@ const importFiles = readdirSync(join(root, 'src/modules/import/services/watchlog
 	.filter((f) => f.endsWith('.ts'))
 	.map((f) => `src/modules/import/services/watchlog/${f}`);
 
-// the domain model: shared helpers and the module contracts
+// the domain model: shared helpers and the module exports
 const domainFiles = readdirSync(join(root, 'src/shared/domain'))
 	.filter((f) => f.endsWith('.ts'))
 	.map((f) => `src/shared/domain/${f}`);
-const contractFiles = readdirSync(join(root, 'src/modules'))
-	.map((m) => `src/modules/${m}/contract.ts`)
-	.filter((f) => existsSync(join(root, f)));
+const exportFiles = readdirSync(join(root, 'src/modules'))
+	.map((m) => `src/modules/${m}/exports`)
+	.filter((d) => existsSync(join(root, d)))
+	.flatMap((d) => readdirSync(join(root, d)).filter((f) => f.endsWith('.ts')).map((f) => `${d}/${f}`));
 
 const files = [
 	...storageFiles,
 	...importFiles,
 	...domainFiles,
-	...contractFiles,
+	...exportFiles,
 	'src/modules/watchlist/services/DataManager.ts',
 	'src/modules/reading/services/ReadingDataManager.ts',
 	'src/modules/games/services/GameDataManager.ts',

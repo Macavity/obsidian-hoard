@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { runAirtimeScheduler } from '../src/modules/airtime/services/airtimeScheduler';
-import type { AirtimeEntry, AirtimeSchedule } from '../src/modules/airtime/contract';
+import type { AirtimeEntry, AirtimeSchedule } from '../src/modules/airtime/exports';
 
 function setup(schedule: AirtimeSchedule) {
 	const entry = { id: 'e1', titleId: 'TV Show/C', schedule } as AirtimeEntry;

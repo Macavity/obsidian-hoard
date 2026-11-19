@@ -1,12 +1,12 @@
 import { App, Notice, setIcon } from 'obsidian';
-import type { SettingsReader } from '../../settings/contract';
+import type { SettingsReader } from '../../settings/exports';
 import type { GameDataManager } from '../services/GameDataManager';
 import { rawgResizedCover, steamAppIdFromUrl, type ApiService, type GameDetailsResult, type GameSearchResult } from '../../../shared/api/ApiService';
 import type { GameCoverApi } from '../../../shared/services/coverRefresh';
 import { effectiveGameSource } from '../../../shared/api/apiSources';
-import { newGame } from '../../../shared/domain/entryFactories';
-import type { GameGroup } from '../contract';
-import { GAME_AUTO_STATUS } from '../../../shared/domain/gameDefaults';
+import { newGame } from '../exports/newGame';
+import type { GameGroup } from '../exports';
+import { GAME_AUTO_STATUS } from '../exports/gameDefaults';
 import { renderSearchResultRow } from '../../../design-system/SearchThumbnail';
 import { t } from '../../../shared/i18n';
 import { gameStatusLabel, priorityLabel } from '../../../shared/i18n/labels';

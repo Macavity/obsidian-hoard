@@ -1,7 +1,7 @@
 import { App, Modal } from 'obsidian';
 import { t } from '../../../shared/i18n';
-import type { AirtimeSchedule } from '../contract';
-import type { Book, Manga } from '../../reading/contract';
+import type { AirtimeSchedule } from '../exports';
+import type { Book, Manga } from '../../reading/exports';
 import {
 	type ScheduleFormState,
 	RECURRENCE_OPTIONS,

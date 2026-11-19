@@ -1,6 +1,4 @@
-import type { CustomListColumn, CustomListRow } from '../../shared/domain/columns';
-
-// Maybe types
+import type { CustomListColumn, CustomListRow } from '../../../shared/domain/columns';
 
 export interface CustomList {
 	name: string;
@@ -11,5 +9,3 @@ export interface CustomList {
 	/** width in px for the built-in Name column; absent = default flex width */
 	nameWidth?: number;
 }
-
-// Drafts types

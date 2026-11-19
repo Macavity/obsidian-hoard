@@ -1,11 +1,11 @@
-import { normalizeRowsLayout } from '../domain/rows';
-import { DEFAULT_SETTINGS } from '../domain/settingsDefaults';
-import { COLUMN_TYPES } from '../domain/columns';
-import type { CustomListColumn } from '../domain/columns';
-import type { HoardPluginSettings } from '../../modules/settings/contract';
-import type { RatingTier, TagDefinition } from '../domain/tags';
-import { isRecord } from '../domain/sharedHelpers';
-import { at, readList, readOneOf, readRecord } from '../domain/read';
+import type { CustomListColumn } from '../../../shared/domain/columns';
+import type { HoardPluginSettings } from '.';
+import { COLUMN_TYPES } from '../../../shared/domain/columns';
+import { DEFAULT_SETTINGS } from './settingsDefaults';
+import { isRecord } from '../../../shared/domain/sharedHelpers';
+import { normalizeRowsLayout } from '../../../shared/domain/rows';
+import { readTag, type RatingTier, type TagDefinition } from '../../../shared/domain/tags';
+import { at, readList, readOneOf, readRecord } from '../../../shared/domain/read';
 
 /** Settings that no longer exist; dropped from stored data. */
 export const REMOVED_SETTINGS = ['rootFolder', 'customListsFolder'];
@@ -44,13 +44,6 @@ const nonEmptyListOf = <T>(readItem: (item: unknown) => T | undefined): Normaliz
 /** A list of what `readItem` accepts, possibly empty; a stored value that is no list gives the default. */
 const listOf = <T>(readItem: (item: unknown) => T | undefined): Normalize<T[]> => (stored, fallback) =>
 	Array.isArray(stored) ? readList(stored, readItem) : fallback;
-
-/** A name with a colour; any other key of the entry stays. */
-export function readTag(item: unknown): TagDefinition | undefined {
-	const name = at(item, 'name');
-	const color = at(item, 'color');
-	return typeof name === 'string' && typeof color === 'string' ? { ...readRecord(item), name, color } : undefined;
-}
 
 function readTier(item: unknown): RatingTier | undefined {
 	const label = at(item, 'label');

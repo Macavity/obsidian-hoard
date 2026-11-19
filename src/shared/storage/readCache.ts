@@ -1,4 +1,4 @@
-import type { Season } from '../../modules/watchlist/contract';
+import type { Season } from '../../modules/watchlist/exports';
 import type { RecommendedDaily } from '../domain/rows';
 import type { ApiCheckKind, ApiCheckResult, EntryCache, LocalData } from './storageTypes';
 import { defined, isRecord } from '../domain/sharedHelpers';

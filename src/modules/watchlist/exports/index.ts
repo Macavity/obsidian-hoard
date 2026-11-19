@@ -1,7 +1,10 @@
-import type { AirtimeEntry, EntryAirtime } from '../airtime/contract';
-import type { DraftPersistState } from '../drafts/contract';
-import type { LookupResult } from '../../shared/api/lookup';
-import type { LookupKind } from '../../shared/storage/storageTypes';
+import type { EntryAirtime } from '../../airtime/exports';
+import type { LookupResult } from '../../../shared/api/lookup';
+import type { LookupKind } from '../../../shared/storage/storageTypes';
+
+export { newTitle } from './newTitle';
+export { parseSeasonLine, seasonsOf } from './seasonText';
+export { getApiGroupForType, getDisplayPoster, getTitleCredits, isCreditsUnfetched } from './titles';
 
 export interface Season {
 	name: string;
@@ -230,30 +233,6 @@ export interface TitleWriter {
 	addMaybeTitle(title: MaybeTitle): Promise<void>;
 	removeMaybeTitle(id: string): Promise<void>;
 	generateMaybeId(titleName: string): string;
-	notifyChange(): void;
-}
-
-/** The upcoming schedule; the watchlist stores the entries of every medium. */
-export interface AirtimeStore {
-	getAirtimeEntries(): AirtimeEntry[];
-	addAirtimeEntry(entry: AirtimeEntry): Promise<void>;
-	updateAirtimeEntry(updated: AirtimeEntry): Promise<void>;
-	removeAirtimeEntry(id: string): Promise<void>;
-	removeAirtimeEntriesBatch(ids: string[]): Promise<void>;
-	tickAirtimeEntry(entry: AirtimeEntry, date: string): Promise<void>;
-	generateAirtimeId(titleId: string): string;
-	generateGameAirtimeId(gameId: string): string;
-	generateReadingAirtimeId(itemId: string): string;
-	isAiringTracked(entry: AirtimeEntry): boolean;
-	refreshAiring(id: string, force?: boolean): Promise<void>;
-	removeClearsReleaseDate(entry: AirtimeEntry): boolean;
-	lookupDue(id: string, kind: LookupKind): boolean;
-}
-
-/** The drafts tab's persisted state. */
-export interface DraftStore {
-	getDrafts(): Partial<DraftPersistState> | undefined;
-	setDrafts(state: DraftPersistState): void;
 }
 
 /** Bulk note maintenance, run from the settings. */

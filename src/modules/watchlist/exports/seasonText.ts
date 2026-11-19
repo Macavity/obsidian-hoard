@@ -1,10 +1,4 @@
-import type { Season } from '../../modules/watchlist/contract';
-
-/**
- * The text form of a season: "Name: N", optionally followed by the episodes to skip, " (5,8,33-37)".
- * The Seasons property of a title note and the seasons box of the edit form both use it. Reading is
- * kept apart from judging: a line is read as written here, and each caller decides which bounds apply.
- */
+import type { Season } from '.';
 
 /** One entry of a skip list as written. A single episode has `from === to`; an unreadable number is NaN. */
 export interface SkipRange {
@@ -51,22 +45,4 @@ export function seasonsOf(lines: SeasonLine[]): Season[] {
 		offset += line.episodes;
 	}
 	return seasons;
-}
-
-/** [5, 8, 33, 34, 35] -> "5,8,33-35". */
-export function formatSkipSpec(episodes: number[]): string {
-	const runs: [first: number, last: number][] = [];
-	for (const n of [...new Set(episodes)].sort((a, b) => a - b)) {
-		const run = runs[runs.length - 1];
-		if (run && run[1] + 1 === n) run[1] = n;
-		else runs.push([n, n]);
-	}
-	return runs.map(([first, last]) => (first === last ? String(first) : `${first}-${last}`)).join(',');
-}
-
-/** The inverse of parseSeasonLine: "Name: N", with " (skip list)" when episodes are skipped. */
-export function formatSeasonLine(season: Season): string {
-	const skipped = season.skippedEpisodes ?? [];
-	const head = `${season.name}: ${season.episodes}`;
-	return skipped.length > 0 ? `${head} (${formatSkipSpec(skipped)})` : head;
 }

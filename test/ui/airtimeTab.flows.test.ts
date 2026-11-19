@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from '../__mocks__/obsidian';
 import { t } from '../../src/shared/i18n';
-import type { Game } from '../../src/modules/games/contract';
-import type { Book, Manga } from '../../src/modules/reading/contract';
+import type { Game } from '../../src/modules/games/exports';
+import type { Book, Manga } from '../../src/modules/reading/exports';
 import { qsa } from '../helpers/dom';
 import type { Captures } from './airtimeTab.harness';
 import { entry, isoOffset, makeTab, newWorld, title, useCaptures } from './airtimeTab.harness';

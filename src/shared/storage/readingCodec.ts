@@ -1,6 +1,6 @@
-import { READING_STATUSES } from '../domain/reading';
-import type { AirtimeRecurrence, EntryAirtime } from '../../modules/airtime/contract';
-import type { Book, Manga, ReadingCustomColumn, ReadingStatus } from '../../modules/reading/contract';
+import { READING_STATUSES } from '../../modules/reading/exports';
+import type { AirtimeRecurrence, EntryAirtime } from '../../modules/airtime/exports';
+import type { Book, Manga, ReadingCustomColumn, ReadingStatus } from '../../modules/reading/exports';
 import type { Decoded, Fm } from './storageTypes';
 import { parseExternalId, formatExternalId } from './externalId';
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, READING_PROPS as R, customFieldKey } from './properties';

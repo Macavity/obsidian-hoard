@@ -5,7 +5,7 @@ import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteW
 import { ChangeNotifier } from '../../../shared/services/changeListeners';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { SettingsReader } from '../../settings/contract';
+import type { SettingsReader } from '../../settings/exports';
 import type { EntryIndex } from '../../../shared/storage/EntryIndex';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
 import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
@@ -19,9 +19,9 @@ import type { Fm } from '../../../shared/storage/storageTypes';
 import type {
 	Book, Manga, ReadingCustomColumn, ReadingData, ReadingItem, ReadingKind, ReadingReader, ReadingSettings,
 	ReadingSettingsAccess, ReadingSnapshot, ReadingWriter,
-} from '../contract';
+} from '../exports';
 import { isReleaseDateFuture, todayIso } from '../../../shared/domain/date';
-import { DEFAULT_READING_SETTINGS } from '../../../shared/domain/reading';
+import { DEFAULT_READING_SETTINGS } from '../exports/readingDefaults';
 import { omit, slugify } from '../../../shared/domain/sharedHelpers';
 import { readRecord } from '../../../shared/domain/read';
 import { readColumns, readReadingSettings } from '../../../shared/storage/featureSettings';

@@ -1,4 +1,4 @@
-import type { HoardTitle } from '../../src/modules/watchlist/contract';
+import type { HoardTitle } from '../../src/modules/watchlist/exports';
 import type { EntryCache } from '../../src/shared/storage/storageTypes';
 
 /** A series with every optional field set. */

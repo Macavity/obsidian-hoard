@@ -1,6 +1,6 @@
 import { normalizePath, type DataAdapter } from 'obsidian';
-import type { EntryAirtime } from '../../../airtime/contract';
-import type { Book, Manga, ReadingCustomColumn } from '../../../reading/contract';
+import type { EntryAirtime } from '../../../airtime/exports';
+import type { Book, Manga, ReadingCustomColumn } from '../../../reading/exports';
 import { SHARED_SETTING_KEYS } from '../../../../shared/storage/SharedConfigStore';
 import type { EntryCache, EntryKind, Fm } from '../../../../shared/storage/storageTypes';
 import { titleToProperties, titleToCache, pinSeasonsWithoutIdentity } from '../../../../shared/storage/titleCodec';

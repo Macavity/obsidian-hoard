@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CsvModal } from '../src/modules/watchlist/ui/CsvModal';
-import type { HoardTitle } from '../src/modules/watchlist/contract';
+import type { HoardTitle } from '../src/modules/watchlist/exports';
 import { fakeSettings } from './helpers/fakeSettings';
 import { clickByText, clickNext, shownNotices, previewTitles, uploadCsv, valueSelect } from './helpers/csvWizard';
 

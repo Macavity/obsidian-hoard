@@ -210,6 +210,7 @@ export default defineConfig([
       "src/shared/api/steamStoreApi.ts",
       "src/shared/api/lookup.ts",
       "src/modules/settings/services/settingsSplit.ts",
+      "src/modules/settings/exports/settingsCodec.ts",
       "src/modules/backup/services/backup.ts",
     ],
     rules: {

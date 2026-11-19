@@ -1,18 +1,18 @@
-import type { BackupFile, BackupParseResult } from '../contract';
-import type { TitleBackup, TitleReader } from '../../watchlist/contract';
-import type { ReadingSnapshot } from '../../reading/contract';
-import type { GameSnapshot } from '../../games/contract';
+import type { BackupFile, BackupParseResult } from '../exports';
+import type { TitleBackup, TitleReader } from '../../watchlist/exports';
+import type { ReadingSnapshot } from '../../reading/exports';
+import type { GameSnapshot } from '../../games/exports';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
 import type { HistoryEntry } from '../../../shared/domain/history';
-import { defaultGamesSettings } from '../../../shared/domain/gameDefaults';
-import { DEFAULT_SETTINGS } from '../../../shared/domain/settingsDefaults';
+import { defaultGamesSettings } from '../../games/exports';
+import { DEFAULT_SETTINGS } from '../../settings/exports';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
 import { SHARED_SETTING_KEYS, type SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
 import { withoutCredentials } from '../../../shared/api/jikanBase';
 import { SECRET_KEYS } from '../../../shared/storage/SecretStore';
 import { isRecord, toRecord } from '../../../shared/domain/sharedHelpers';
 import { at, readList, readRecord, readString } from '../../../shared/domain/read';
-import { normalizeSettings } from '../../../shared/storage/settingsCodec';
+import { normalizeSettings } from '../../settings/exports';
 import { readColumns, readGamesSettings, readReadingSettings } from '../../../shared/storage/featureSettings';
 import { readBook, readGame, readGameGroup, readManga, readMaybe, readTitle } from '../../../shared/storage/entryReaders';
 

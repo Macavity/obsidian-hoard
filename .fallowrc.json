@@ -101,10 +101,9 @@
         ]
       },
       {
-        "name": "module-contracts",
+        "name": "module-exports",
         "patterns": [
-          "src/modules/*/contract.ts",
-          "src/modules/*/contract/**"
+          "src/modules/*/exports/**"
         ]
       },
       {
@@ -200,7 +199,7 @@
           "tooling",
           "styles",
           "app",
-          "module-contracts",
+          "module-exports",
           "modules/airtime",
           "modules/backup",
           "modules/custom-lists",
@@ -242,7 +241,7 @@
           "modules/settings",
           "modules/watchlist",
           "modules/widgets",
-          "module-contracts",
+          "module-exports",
           "design-system",
           "shared",
           "obsidian-mock"
@@ -253,143 +252,119 @@
         "allow": []
       },
       {
-        "from": "module-contracts",
-        "allow": [],
-        "allowTypeOnly": [
+        "from": "module-exports",
+        "allow": [
+          "module-exports",
           "shared",
-          "module-contracts"
+          "obsidian-mock"
         ]
       },
       {
         "from": "modules/airtime",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/backup",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/custom-lists",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/dashboard",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/drafts",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/games",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/import",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/log",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/reading",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/settings",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/watchlist",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
         "from": "modules/widgets",
         "allow": [
           "design-system",
+          "module-exports",
           "shared",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       },
       {
@@ -402,10 +377,8 @@
       {
         "from": "shared",
         "allow": [
+          "module-exports",
           "obsidian-mock"
-        ],
-        "allowTypeOnly": [
-          "module-contracts"
         ]
       }
     ],

@@ -1,7 +1,7 @@
-import type { HoardTitle, MaybeTitle } from '../watchlist/contract';
-import type { ReadingData } from '../reading/contract';
-import type { GamesData } from '../games/contract';
-import type { HistoryEntry } from '../../shared/domain/history';
+import type { HoardTitle, MaybeTitle } from '../../watchlist/exports';
+import type { ReadingData } from '../../reading/exports';
+import type { GamesData } from '../../games/exports';
+import type { HistoryEntry } from '../../../shared/domain/history';
 
 /** JSON backup. `shared` is the base config, `local` the device-local settings without secrets (API keys live in Obsidian's secret storage). */
 export interface BackupFile {

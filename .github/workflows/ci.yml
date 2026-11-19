@@ -84,3 +84,22 @@ jobs:
             echo "::warning file=${f}::Architecture rules changed"
             echo "- \`${f}\`" >> "$GITHUB_STEP_SUMMARY"
           done <<< "$changed"
+      - name: Flag changes to module exports
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          changed="$(git diff --name-only "origin/${BASE_REF}...HEAD" -- 'src/modules/*/exports/*')"
+          if [ -z "$changed" ]; then
+            echo "No module exports changed."
+            exit 0
+          fi
+          {
+            echo "### Module exports changed"
+            echo
+            echo "Each change widens or narrows what other modules and shared may use; it needs the exports review (.claude/agents/exports-reviewer.md)."
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          while IFS= read -r f; do
+            echo "::warning file=${f}::Module exports changed"
+            echo "- \`${f}\`" >> "$GITHUB_STEP_SUMMARY"
+          done <<< "$changed"

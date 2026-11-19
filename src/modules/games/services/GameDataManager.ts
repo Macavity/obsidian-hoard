@@ -5,7 +5,7 @@ import type { EntryWriteHooks, HeldEntries } from '../../../shared/storage/noteW
 import { ChangeNotifier } from '../../../shared/services/changeListeners';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
 import type { HistoryManager } from '../../../shared/services/HistoryManager';
-import type { SettingsReader } from '../../settings/contract';
+import type { SettingsReader } from '../../settings/exports';
 import { followIndex } from '../../../shared/services/followIndex';
 import type { EntryIndex } from '../../../shared/storage/EntryIndex';
 import type { LocalStore } from '../../../shared/storage/LocalStore';
@@ -16,12 +16,13 @@ import { splitNested } from '../../../shared/storage/SharedConfigStore';
 import { decodeGame, encodeGame } from '../../../shared/storage/gameCodec';
 import { COMMON_PROPS } from '../../../shared/storage/properties';
 import { extractNotes, replaceNotesSection } from '../../../shared/storage/noteBody';
+import type { SteamSyncUpdate } from '../domain/steamSync';
 import type {
 	Game, GameGroup, GameReader, GamesData, GamesSavedFilterPreset, GameSettingsAccess, GamesSettings, GameSnapshot,
-	GameWriter, SteamSyncUpdate,
-} from '../contract';
+	GameWriter,
+} from '../exports';
 import { isReleaseDateFuture, todayIso } from '../../../shared/domain/date';
-import { GAME_AUTO_STATUS, GAME_FINISHED_STATUS, defaultGamesSettings } from '../../../shared/domain/gameDefaults';
+import { GAME_AUTO_STATUS, GAME_FINISHED_STATUS, defaultGamesSettings } from '../exports/gameDefaults';
 import type { RecommendedDaily } from '../../../shared/domain/rows';
 import { omit, sameJson, slugify, toRecord } from '../../../shared/domain/sharedHelpers';
 import { readRecord } from '../../../shared/domain/read';

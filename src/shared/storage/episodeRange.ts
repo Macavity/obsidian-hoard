@@ -1,4 +1,4 @@
-import type { Season } from '../../modules/watchlist/contract';
+import type { Season } from '../../modules/watchlist/exports';
 import type { EpisodeRef } from './storageTypes';
 
 // S01E01, s1e1, S01E01-E12 (same season), S01E11-S02E02 (cross-season, needs seasons)

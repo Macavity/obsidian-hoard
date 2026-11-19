@@ -1,5 +1,5 @@
-import type { Book } from '../contract';
-import { bookProgressUnit } from '../../../shared/domain/reading';
+import type { Book } from '../exports';
+import { bookProgressUnit } from '../exports/readingDefaults';
 
 /**
  * Reading Rows sections. No groups and no type registry, so "By status" is the only

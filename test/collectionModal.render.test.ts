@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CollectionModal } from '../src/modules/watchlist/ui/CollectionModal';
-import type { HoardTitle, TmdbCollectionDetail } from '../src/modules/watchlist/contract';
-import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
+import type { HoardTitle, TmdbCollectionDetail } from '../src/modules/watchlist/exports';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 

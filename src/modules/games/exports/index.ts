@@ -1,6 +1,9 @@
-import type { EntryAirtime } from '../airtime/contract';
-import type { RecommendedDaily, RowsShelfLayoutEntry } from '../../shared/domain/rows';
-import type { TagDefinition } from '../../shared/domain/tags';
+import type { EntryAirtime } from '../../airtime/exports';
+import type { RecommendedDaily, RowsShelfLayoutEntry } from '../../../shared/domain/rows';
+import type { TagDefinition } from '../../../shared/domain/tags';
+
+export { GAME_AUTO_STATUS, GAME_FINISHED_STATUS, GAME_TBA_STATUS, defaultGamesSettings } from './gameDefaults';
+export { newGame } from './newGame';
 
 export interface Game {
 	id: string;
@@ -105,19 +108,6 @@ export interface GamesSavedFilterPreset {
 	favoritesOnly?: boolean;
 	wishlistOnly?: boolean;
 	groupsOnly?: boolean;
-}
-
-/**
- * One game's Steam sync results, for GameDataManager.applySteamSync. `achievements`
- * is null when the game has none or syncing was off — either way the stored counts
- * are left untouched rather than zeroed.
- */
-export interface SteamSyncUpdate {
-	gameId: string;
-	steamAppId: string;
-	playtimeMinutes: number;
-	lastPlayed: string | null;
-	achievements: { earned: number; total: number } | null;
 }
 
 /** A named bundle of related games (the HoardGroup pattern). */

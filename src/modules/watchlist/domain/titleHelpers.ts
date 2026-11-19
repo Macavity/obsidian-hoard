@@ -1,5 +1,5 @@
-import type { HoardTitle } from '../contract';
-import { getDisplayCredits } from '../../../shared/domain/titles';
+import type { HoardTitle } from '../exports';
+import { getDisplayCredits } from '../exports/titles';
 
 export const COLLECTION_NONE = 0;
 

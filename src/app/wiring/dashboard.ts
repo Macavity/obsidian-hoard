@@ -1,4 +1,4 @@
-import type { SettingsReader } from '../../modules/settings/contract';
+import type { SettingsReader } from '../../modules/settings/exports';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';
 import { DashboardTab, type DashboardTitles } from '../../modules/dashboard/ui/DashboardTab';

@@ -6,7 +6,7 @@ import { isRecord } from '../../../../shared/domain/sharedHelpers';
 import { at, readRecord } from '../../../../shared/domain/read';
 import { readCache, readUi } from '../../../../shared/storage/readCache';
 import { migrateNoneMarkers } from '../../../../shared/storage/cacheMigration';
-import { DEFAULT_SETTINGS } from '../../../../shared/domain/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../../../settings/exports';
 import type { WatchLogData } from './schema1Types';
 import { prepareData } from './schema1Read';
 import { isListNote, originalFolders } from './originalPaths';

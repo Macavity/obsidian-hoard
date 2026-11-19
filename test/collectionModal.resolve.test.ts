@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { resolveCollection } from '../src/modules/watchlist/ui/CollectionModal';
-import type { HoardTitle, TmdbCollectionDetail } from '../src/modules/watchlist/contract';
+import type { HoardTitle, TmdbCollectionDetail } from '../src/modules/watchlist/exports';
 import { COLLECTION_NONE } from '../src/modules/watchlist/domain/titleHelpers';
-import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
 import { fakeSettings } from './helpers/fakeSettings';
 import { FAILED, NO_KEY, NOT_FOUND, found, type LookupResult } from '../src/shared/api/lookup';
 

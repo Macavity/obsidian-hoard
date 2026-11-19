@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice, Platform } from 'obsidian';
 import { fakeSettings } from './helpers/fakeSettings';
 import { newTitleDetail } from './helpers/newTitleDetail';
-import type { HoardTitle } from '../src/modules/watchlist/contract';
-import { DEFAULT_SETTINGS } from '../src/shared/domain/settingsDefaults';
+import type { HoardTitle } from '../src/modules/watchlist/exports';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/exports/settingsDefaults';
 import { t } from '../src/shared/i18n';
 import type { LookupResult } from '../src/shared/api/lookup';
 

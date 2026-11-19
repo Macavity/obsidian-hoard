@@ -1,4 +1,4 @@
-import type { AirtimeEntry, EntryAirtime } from '../../modules/airtime/contract';
+import type { AirtimeEntry, EntryAirtime } from '.';
 
 /** The note-side schedule of an Upcoming entry; the 'once' date lives in the note's releaseDate. */
 export function toEntryAirtime(e: AirtimeEntry): EntryAirtime {

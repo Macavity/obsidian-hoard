@@ -1,5 +1,5 @@
 import type { DataManager } from '../services/DataManager';
-import type { HoardTitle } from '../contract';
+import type { HoardTitle } from '../exports';
 import { todayIso } from '../../../shared/domain/date';
 import { t } from '../../../shared/i18n';
 

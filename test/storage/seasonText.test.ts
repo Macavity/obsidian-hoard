@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { formatSeasonLine, formatSkipSpec, parseSeasonLine, seasonsOf, skippedEpisodes } from '../../src/shared/domain/seasonText';
+import { formatSeasonLine, formatSkipSpec } from '../../src/modules/watchlist/domain/seasonFormat';
+import { parseSeasonLine, seasonsOf, skippedEpisodes } from '../../src/modules/watchlist/exports/seasonText';
 
 describe('parseSeasonLine', () => {
 	it('reads the name and the episode count', () => {

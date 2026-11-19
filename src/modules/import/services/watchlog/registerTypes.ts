@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS } from '../../../../shared/domain/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../../../settings/exports';
 import type { TagDefinition } from '../../../../shared/domain/tags';
 import { at, readList, readOptionalString, readRecord, readString } from '../../../../shared/domain/read';
 import type { ImportContext } from './schema1Types';

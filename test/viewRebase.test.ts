@@ -4,7 +4,7 @@ import { tick } from './helpers/common';
 import { setupGames } from './helpers/setupGameDataManager';
 import { setupReadingDataManager } from './helpers/setupReadingDataManager';
 import type { LookupResult } from '../src/shared/api/lookup';
-import type { Season } from '../src/modules/watchlist/contract';
+import type { Season } from '../src/modules/watchlist/exports';
 
 const DARK = '---\nName: Dark\nType: TV Show\nSeasons: ["Season 1: 10"]\nWatched Episodes: S01E01-E04\n---\n';
 

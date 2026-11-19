@@ -1,6 +1,6 @@
-import type { AirtimeStore, TitleReader, TitleWriter } from '../../watchlist/contract';
-import type { ReadingReader, ReadingWriter } from '../../reading/contract';
-import type { GameReader, GameSettingsAccess, GameWriter } from '../../games/contract';
+import type { TitleReader, TitleWriter } from '../../watchlist/exports';
+import type { ReadingReader, ReadingWriter } from '../../reading/exports';
+import type { GameReader, GameSettingsAccess, GameWriter } from '../../games/exports';
 import type { TabInstance } from '../../../design-system/TabInstance';
 import { Notice } from 'obsidian';
 import { t } from '../../../shared/i18n';
@@ -8,18 +8,18 @@ import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from '../
 import { monthName } from '../../../shared/i18n/dateNames';
 import { scheduleText } from './scheduleText';
 import { createIconButton } from '../../../design-system/IconButton';
-import type { SettingsReader, SettingsWriter } from '../../settings/contract';
+import type { SettingsReader, SettingsWriter } from '../../settings/exports';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { PosterService } from '../../../shared/api/PosterService';
-import type { AirtimeEntry, AirtimeSchedule } from '../contract';
-import type { Game } from '../../games/contract';
-import type { Book, Manga } from '../../reading/contract';
-import type { HoardTitle, MaybeTitle } from '../../watchlist/contract';
+import type { AirtimeEntry, AirtimeReader, AirtimeSchedule, AirtimeStore } from '../exports';
+import type { Game } from '../../games/exports';
+import type { Book, Manga } from '../../reading/exports';
+import type { HoardTitle, MaybeTitle } from '../../watchlist/exports';
 import { formatDateDisplay, isReleaseDateFuture, toIsoDate, todayIso } from '../../../shared/domain/date';
-import { GAME_AUTO_STATUS } from '../../../shared/domain/gameDefaults';
-import { getReadingTypeColor } from '../../../shared/domain/reading';
+import { GAME_AUTO_STATUS } from '../../games/exports';
+import { getReadingTypeColor } from '../../reading/exports';
 import { getThemedColor } from '../../../shared/domain/tags';
-import { getDisplayPoster } from '../../../shared/domain/titles';
+import { getDisplayPoster } from '../../watchlist/exports';
 import { rawgResizedCover } from '../../../shared/api/ApiService';
 import { VirtualGrid, computeGridMetrics, type GridMetrics } from '../../../design-system/VirtualGrid';
 import { VirtualScroller } from '../../../design-system/VirtualScroller';
@@ -450,7 +450,7 @@ export class AirtimeTab implements TabInstance {
 
 	/** Count of Aired/Due entries — usable without rendering the tab. */
 	static getAiredDueCount(
-		dataManager: Pick<AirtimeStore, 'getAirtimeEntries'> & Pick<TitleReader, 'getTitles'>,
+		dataManager: Pick<AirtimeReader, 'getAirtimeEntries'> & Pick<TitleReader, 'getTitles'>,
 		readingDataManager?: Pick<ReadingReader, 'getBook' | 'getManga'>,
 		gameDataManager?: Pick<GameReader, 'getGame'>,
 	): number {

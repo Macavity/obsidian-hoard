@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Notice } from '../__mocks__/obsidian';
 import { t } from '../../src/shared/i18n';
-import type { MaybeTitle } from '../../src/modules/watchlist/contract';
+import type { MaybeTitle } from '../../src/modules/watchlist/exports';
 import { captures, isoOffset, makeTab, newWorld } from './airtimeTab.harness';
 
 const confirms = captures.confirms;

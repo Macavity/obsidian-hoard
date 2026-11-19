@@ -1,3 +1,5 @@
+import { at, readRecord } from './read';
+
 export interface TagDefinition {
 	name: string;
 	color: string;
@@ -75,4 +77,11 @@ export function priorityExcludeMatches(
 	priorities: readonly TagDefinition[],
 ): boolean {
 	return setsMatch(live, Array.from(migratePriorityExclude(preset.priorityExclude, preset.priorityEmptyOnly, priorities)));
+}
+
+/** A name with a colour; any other key of the entry stays. */
+export function readTag(item: unknown): TagDefinition | undefined {
+	const name = at(item, 'name');
+	const color = at(item, 'color');
+	return typeof name === 'string' && typeof color === 'string' ? { ...readRecord(item), name, color } : undefined;
 }
