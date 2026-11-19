@@ -10,7 +10,6 @@ const COUNTS = `JSON.stringify((() => {
 	const prefix = root ? root + '/CustomLists/' : 'CustomLists/';
 	return {
 		id: p.manifest.id,
-		importRunning: p.importRunning,
 		watch: p.dataManager.getTitles().length,
 		books: p.readingDataManager.getBooks().length,
 		manga: p.readingDataManager.getMangaList().length,
@@ -26,10 +25,6 @@ async function run(ctx) {
 	await waitFor(() => evalJs(READY) === "true", 30000, 500);
 	const c = JSON.parse(evalJs(COUNTS));
 	assert(c.id === "hoard", "plugin manifest id");
-	if (c.importRunning) {
-		ctx.fail("WatchLog onboarding wizard is open — seed not applied?");
-		return;
-	}
 	for (const [key, expected] of Object.entries(EXPECTED)) {
 		if (c[key] !== expected) ctx.fail(`${key} expected ${expected}, got ${c[key]}`);
 	}

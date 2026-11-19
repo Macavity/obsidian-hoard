@@ -243,7 +243,6 @@ export default defineConfig([
     // Outside data is read from `unknown`, never asserted (docs/architecture/storage.md): the data layer stays assertion-free.
     files: [
       "src/shared/storage/**/*.ts",
-      "src/modules/import/services/**/*.ts",
       "src/shared/api/ApiService.ts",
       "src/shared/api/PosterService.ts",
       "src/shared/api/cinemetaApi.ts",

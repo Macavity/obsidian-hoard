@@ -617,7 +617,7 @@ export default class HoardPlugin extends Plugin {
 		// mirror into types.ts so the pure formatters render in the chosen order without a settings ref
 		setActiveDateFormat(this.state.dateFormat);
 		this.syncTypeNames();
-		// a restored backup or a WatchLog import can bring other keys and endpoints
+		// a restored backup can bring other keys and endpoints
 		this.applyApiKeys();
 		return Promise.resolve();
 	}

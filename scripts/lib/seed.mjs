@@ -1,4 +1,4 @@
-// Versioned plugin data for the test vault: both WatchLog import sources are "declined", so the onboarding wizard never opens.
+// Versioned plugin data for the test vault.
 import { copyFileSync, mkdirSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

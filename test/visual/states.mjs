@@ -6,7 +6,7 @@
 // Selectors inside the setup functions may use `hoard-*` classes: they are updated together with the rename.
 import { setTimeout as sleep } from "node:timers/promises";
 import { evalJs, waitFor } from "../../scripts/lib/cli.mjs";
-import { closeModals, waitForSelector } from "../e2e/ui.mjs";
+import { waitForSelector } from "../e2e/ui.mjs";
 import { SORT_INDEX_JS } from "./capture.mjs";
 
 const VIEW = '.workspace-leaf-content[data-type="hoard-view"]';
@@ -254,22 +254,6 @@ function restoreCollection() {
 })()`);
 }
 
-/** Opens the WatchLog wizard on a made-up WatchLog source; nothing is read from or written to the vault. */
-const openWizard = () =>
-	evalJs(`(() => {
-	void ${PLUGIN}.openWizard({
-		original: { kind: 'original', dir: 'visual', data: {}, counts: { titles: 12, books: 3, manga: 2, games: 4, lists: 1, notes: 5 }, pluginEnabled: false },
-		fork: null,
-		hoardHasData: false,
-	});
-	return 'ok';
-})()`);
-
-const closeWizard = async () => {
-	await closeModals();
-	await waitFor(() => evalJs(`String(${PLUGIN}.importRunning)`) === "false", 10000, 200);
-};
-
 const FINDER_PICK = (name) => `(() => {
 	const item = [...document.querySelectorAll('.suggestion-item')].find((e) => e.textContent.trim().startsWith(${q(name)}));
 	if (!item) return 'missing';
@@ -496,15 +480,6 @@ export const STATES = [
 			await closeSettings();
 			unstubSteam();
 		},
-	},
-	{
-		id: "modal-watchlog-onboarding",
-		root: ".modal",
-		setup: async () => {
-			openWizard();
-			await waitForSelector(".modal", 10000);
-		},
-		teardown: closeWizard,
 	},
 	{
 		id: "modal-custom-list-columns",
