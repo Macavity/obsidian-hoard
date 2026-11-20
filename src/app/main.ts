@@ -231,6 +231,7 @@ export default class HoardPlugin extends Plugin {
 			searchBooks,
 			covers: { searchBooks, fetchReadingCoverById, firstBookCover },
 			host,
+			openAddWizard,
 		});
 		this.games = gamesUi({
 			app: this.app,
@@ -251,11 +252,10 @@ export default class HoardPlugin extends Plugin {
 			host: { ...host, markAirtimeHandled: (key) => this.markAirtimeHandled(key) },
 			openAddWizard,
 		});
-		addProviders.push(this.watchlist.addProvider);
+		addProviders.push(this.watchlist.addProvider, this.reading.addProvider);
 		const openAdd = addRouteUi({
 			app: this.app,
 			openAddWizard,
-			openAddReading: this.reading.openAddReading,
 			openAddGame: this.games.openAddGame,
 		});
 		this.customLists = customListsUi({

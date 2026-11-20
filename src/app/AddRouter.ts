@@ -1,5 +1,4 @@
 import type { OpenAddWizard } from '../modules/add/exports';
-import type { OpenAddReading } from '../modules/reading/ui/AddReadingModal';
 import type { OpenAddGame } from '../modules/games/ui/AddGameModal';
 import type { OpenDraftChoice } from '../modules/drafts/ui/DraftChoiceModal';
 import type { OpenAddRoute } from '../shared/services/addRoute';
@@ -12,7 +11,6 @@ import type { OpenAddRoute } from '../shared/services/addRoute';
 export function createAddRoute(
 	openDraftChoice: OpenDraftChoice,
 	openAddWizard: OpenAddWizard,
-	openAddReading: OpenAddReading,
 	openAddGame: OpenAddGame,
 ): OpenAddRoute {
 	return (opts) => {
@@ -28,7 +26,7 @@ export function createAddRoute(
 				} else if (choice === 'game') {
 					openAddGame({ onAdded: done, prefill: { searchQuery: title, title } });
 				} else {
-					openAddReading({ mode: choice, onSaved: done, prefillSearch: title });
+					openAddWizard({ query: title, preferredKinds: [choice], onAdded: done });
 				}
 			},
 		});

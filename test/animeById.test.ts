@@ -51,3 +51,18 @@ describe('getAniListAnimeById', () => {
 		expect(await new ApiService('').getAniListAnimeById(1)).toBeNull();
 	});
 });
+
+describe('getAniListMangaMalId', () => {
+	it('reads the MAL id of an AniList manga', async () => {
+		route([['graphql.anilist.co', { data: { Media: { idMal: 2 } } }]]);
+		expect(await new ApiService('').getAniListMangaMalId(30002)).toBe(2);
+		expect(JSON.stringify(sent.mock.calls[0]![0])).toContain('MANGA');
+	});
+
+	it('yields null when AniList has no MAL id or no media', async () => {
+		route([['graphql.anilist.co', { data: { Media: { idMal: null } } }]]);
+		expect(await new ApiService('').getAniListMangaMalId(1)).toBeNull();
+		route([['graphql.anilist.co', { data: { Media: null } }]]);
+		expect(await new ApiService('').getAniListMangaMalId(2)).toBeNull();
+	});
+});

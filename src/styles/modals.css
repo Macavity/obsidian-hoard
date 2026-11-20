@@ -93,12 +93,6 @@
   font-style: italic;
 }
 
-.hoard-modal__error {
-  font-size: 11px;
-  color: var(--text-error);
-  font-style: italic;
-}
-
 /* doubled class outranks Obsidian's input[type=…] rules */
 .hoard-input--error.hoard-input--error,
 .hoard-input--error.hoard-input--error:focus {

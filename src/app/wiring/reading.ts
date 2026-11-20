@@ -6,7 +6,10 @@ import type { searchBooks } from '../../shared/services/coverRefresh';
 import { confirmWith } from '../../design-system/ConfirmModal';
 import { searchHelpWith } from '../../design-system/SearchHelpModal';
 import { RowsCustomizeModal } from '../../design-system/RowsCustomizeModal';
-import { AddReadingModal, VaultFilePicker, type AddReadingApi, type OpenAddReading } from '../../modules/reading/ui/AddReadingModal';
+import type { AddProvider, OpenAddWizard } from '../../modules/add/exports';
+import type { AddReadingApi } from '../../modules/reading/ui/ReadingAddForm';
+import { createReadingAddProvider } from '../../modules/reading/ui/readingAddProvider';
+import { VaultFilePicker } from '../../modules/reading/ui/VaultFilePicker';
 import {
 	ReadingDetailModal,
 	type OpenReadingDetail,
@@ -30,22 +33,22 @@ export interface ReadingCore {
 	searchBooks: typeof searchBooks;
 	covers: ReadingCovers;
 	host: ReadingTabHost;
+	/** Opens the central add wizard; the tab's add button calls it. */
+	openAddWizard: OpenAddWizard;
 }
 
-/** What the rest of the app opens: the Add dialog and the Reading tab. */
+/** What the rest of the app opens: the Reading add provider and the Reading tab. */
 export interface ReadingUi {
-	openAddReading: OpenAddReading;
+	addProvider: AddProvider;
 	createReadingTab: (container: HTMLElement) => ReadingTab;
 }
 
 /** Builds the Reading dialog factories and tab factory; the only place that `new`s them. */
 export function readingUi(core: ReadingCore): ReadingUi {
-	const { app, settings, reading, api, history, host, covers } = core;
+	const { app, settings, reading, api, history, host, covers, openAddWizard } = core;
 	const confirm = confirmWith(app);
 	const files = { vault: app.vault, workspace: app.workspace };
 
-	const openAddReading: OpenAddReading = (opts) =>
-		new AddReadingModal(app, settings, reading, app.vault, app.workspace, core.searchBooks, api, opts).open();
 	const openManageColumns: OpenManageColumns = (opts) =>
 		new ReadingManageColumnsModal(app, settings, reading, confirm, opts).open();
 	const openDetail: OpenReadingDetail = (opts) =>
@@ -56,9 +59,9 @@ export function readingUi(core: ReadingCore): ReadingUi {
 		}, opts).open();
 
 	return {
-		openAddReading,
+		addProvider: createReadingAddProvider({ settings, reading, api, searchBooks: core.searchBooks }),
 		createReadingTab: (container) => new ReadingTab(container, settings, reading, api, covers, host, {
-			openAddReading,
+			openAddWizard,
 			openManageColumns,
 			openDetail,
 			openRowsCustomize: (config) => new RowsCustomizeModal(app, settings, config).open(),

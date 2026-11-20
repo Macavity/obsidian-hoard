@@ -8,7 +8,6 @@ describe('createAddRoute', () => {
 	const open = createAddRoute(
 		(opts) => { choice = opts; },
 		(opts) => { calls.push({ kind: 'wizard', opts: opts as never }); },
-		(opts) => { calls.push({ kind: 'reading', opts: opts as never }); },
 		(opts) => { calls.push({ kind: 'game', opts: opts as never }); },
 	);
 
@@ -20,8 +19,7 @@ describe('createAddRoute', () => {
 		choice!.onChoice(pick);
 		expect(calls).toHaveLength(1);
 		const call = calls[0]!;
-		const done = (call.kind === 'reading' ? call.opts.onSaved : call.opts.onAdded) as () => void;
-		done();
+		(call.opts.onAdded as () => void)();
 		expect(onAdded).toHaveBeenCalledOnce();
 		return call;
 	}
@@ -34,7 +32,7 @@ describe('createAddRoute', () => {
 		expect(route('game').opts).toMatchObject({ prefill: { searchQuery: 'Dune', title: 'Dune' } });
 	});
 
-	it.each(['book', 'manga'] as const)('opens the Reading modal in %s mode with the title', (kind) => {
-		expect(route(kind).opts).toMatchObject({ mode: kind, prefillSearch: 'Dune' });
+	it.each(['book', 'manga'] as const)('opens the add wizard on the %s kind with the title as query', (kind) => {
+		expect(route(kind).opts).toMatchObject({ query: 'Dune', preferredKinds: [kind] });
 	});
 });

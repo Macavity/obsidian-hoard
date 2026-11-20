@@ -864,6 +864,15 @@ export class ApiService {
 		return media ? this.mapAniListMedia(media) : null;
 	}
 
+	/** The MyAnimeList id of an AniList manga; null when AniList has no such manga or none linked. Failures throw. */
+	async getAniListMangaMalId(id: number): Promise<number | null> {
+		const gql = 'query ($id: Int) { Media(id: $id, type: MANGA) { idMal } }';
+		const res = await this.throttleAniList(() =>
+			this.postJsonWithTimeout(ANILIST_ENDPOINT, { query: gql, variables: { id } }),
+		);
+		return readOptionalNumber(at(res, 'data', 'Media', 'idMal')) ?? null;
+	}
+
 	// Jikan / MAL
 
 	/**

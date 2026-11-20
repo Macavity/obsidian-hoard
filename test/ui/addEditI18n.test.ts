@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setLocale } from '../../src/shared/i18n';
 import de from '../../src/shared/i18n/de';
-import { AddReadingModal } from '../../src/modules/reading/ui/AddReadingModal';
 import { EditTitleModal } from '../../src/modules/watchlist/ui/EditTitleModal';
 import { fakeSettings } from '../helpers/fakeSettings';
 
@@ -31,13 +30,5 @@ describe('add and edit modals i18n', () => {
 		const texts = allText(modal.contentEl);
 		expect(texts).toContain(de.edit.saveChanges);
 		expect(texts).toContain(de.common.cancel);
-	});
-
-	it('localizes the reading modal header title', () => {
-		setLocale('de');
-		const modal = new AddReadingModal({} as never, fakeSettings({}) as never, {} as never, {} as never, {} as never, (() => Promise.resolve([])), {} as never, {
-			mode: 'book', onSaved: () => {}, initial: { state: {} as never, id: 'b1' },
-		});
-		expect((modal as unknown as { headerTitle: () => string }).headerTitle()).toBe(de.add.reading.editBook);
 	});
 });
