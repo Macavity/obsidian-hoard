@@ -146,7 +146,7 @@ describe('AddWizardModal', () => {
 		const a = fakeProvider(['game', 'anime']);
 		const w = open([a.provider], { preferredKinds: ['game'] });
 		w.enter('abc');
-		expect(w.manual().map((b) => b.textContent)).toStrictEqual(['Add manually as Games', 'Add manually as Anime']);
+		expect(w.manual().map((b) => b.textContent)).toStrictEqual(['Add manually as Game', 'Add manually as Anime']);
 		w.manual()[0]?.click();
 		expect(a.forms[0]?.ctx).toMatchObject({ kind: 'game', hit: null, query: 'abc', target: 'library' });
 	});

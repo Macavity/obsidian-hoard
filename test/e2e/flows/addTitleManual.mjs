@@ -1,27 +1,27 @@
-// Flow: add a title by hand (no API) through the add-title modal; the note on disk must hold what was entered.
+// Flow: add a title by hand (no API) through the add wizard (manual row); the note on disk must hold what was entered.
 import { assert, evalJs, VAULT_PATH, waitFor } from "../../../scripts/lib/cli.mjs";
 import { click, type, waitForSelector } from "../ui.mjs";
 import { EXPECTED } from "../expected.mjs";
 import { readNote } from "../note.mjs";
-import { chooseOption, runCommand } from "./common.mjs";
+import { chooseOption, clickManualAdd, openAddWizard, waitForSearchSettled } from "./common.mjs";
 
 const TITLE = "Smoke Manual Title";
-const SOURCE_TYPE_SELECT = ".hoard-add-modal > .hoard-modal__row:first-child select";
-const TYPE_SELECT = ".hoard-modal__form > .hoard-modal__row:not(.hoard-modal__row--pair) select";
-const STATUS_SELECT = ".hoard-modal__form .hoard-modal__pair-cell:first-child select";
-const TITLE_INPUT = ".hoard-modal__form input[type=text]";
-const SAVE = ".hoard-modal__form .hoard-modal__btn-row .hoard-btn--primary";
+const TYPE_SELECT = ".hoard-add-wizard__form .hoard-modal__form > .hoard-modal__row:not(.hoard-modal__row--pair) select";
+const STATUS_SELECT = ".hoard-add-wizard__form .hoard-modal__form .hoard-modal__pair-cell:first-child select";
+const TITLE_INPUT = ".hoard-add-wizard__form .hoard-modal__form input[type=text]";
+const SAVE = ".hoard-add-wizard__form .hoard-modal__form .hoard-modal__btn-row .hoard-btn--primary";
 const COUNT = "String(app.plugins.plugins['hoard'].dataManager.getTitles().length)";
 
 export async function addTitleManual() {
-	runCommand("hoard:add-title");
+	await openAddWizard();
+	await click(".hoard-add-wizard__query");
+	await type(TITLE);
+	await waitForSearchSettled();
+	await clickManualAdd("movie");
 	await waitForSelector(TITLE_INPUT);
-	await chooseOption(SOURCE_TYPE_SELECT, "Movie");
 	await chooseOption(TYPE_SELECT, "Movie");
 	await chooseOption(STATUS_SELECT, "Watching");
-	await click(TITLE_INPUT);
-	await type(TITLE);
-	assert(evalJs(`document.querySelector(${JSON.stringify(TITLE_INPUT)}).value`) === TITLE, "title input value missing");
+	assert(evalJs(`document.querySelector(${JSON.stringify(TITLE_INPUT)}).value`) === TITLE, "title not carried into the manual form");
 	await click(SAVE);
 
 	await waitFor(() => evalJs(COUNT) === String(EXPECTED.watch + 1), 10000);

@@ -10,6 +10,7 @@ import { orderKinds } from '../domain/sectionOrder';
 
 const DEBOUNCE_MS = 600;
 
+const kindLabelOne = (kind: AddKind): string => t(`add.wizard.kindOne.${kind}` satisfies TranslationKey);
 const kindLabel = (kind: AddKind): string => t(`add.wizard.kind.${kind}` satisfies TranslationKey);
 
 /**
@@ -104,7 +105,7 @@ export class AddWizardModal extends Modal {
 	private mountManualRow(parent: HTMLElement): void {
 		const row = parent.createDiv({ cls: 'hoard-add-wizard__manual' });
 		for (const kind of this.kinds) {
-			const btn = row.createEl('button', { cls: 'hoard-btn', text: t('add.wizard.manualAs', { kind: kindLabel(kind) }) });
+			const btn = row.createEl('button', { cls: 'hoard-btn', text: t('add.wizard.manualAs', { kind: kindLabelOne(kind) }) });
 			btn.addEventListener('click', () => { this.openForm(kind, null); });
 		}
 	}

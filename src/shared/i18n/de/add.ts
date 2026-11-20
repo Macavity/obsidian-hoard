@@ -20,6 +20,14 @@ const add = {
 		placeholder: 'Nach Titel suchen oder Link einfügen...',
 		manualAs: 'Manuell als {kind} hinzufügen',
 		back: 'Zurück',
+		kindOne: {
+			anime: 'Anime',
+			series: 'Serie',
+			movie: 'Film',
+			manga: 'Manga',
+			book: 'Buch',
+			game: 'Spiel',
+		},
 		kind: {
 			anime: 'Anime',
 			series: 'Serien',

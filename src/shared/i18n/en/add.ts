@@ -18,6 +18,14 @@ const add = {
 		placeholder: 'Search by title or paste a link...',
 		manualAs: 'Add manually as {kind}',
 		back: 'Back',
+		kindOne: {
+			anime: 'Anime',
+			series: 'Series',
+			movie: 'Movie',
+			manga: 'Manga',
+			book: 'Book',
+			game: 'Game',
+		},
 		kind: {
 			anime: 'Anime',
 			series: 'Series',
