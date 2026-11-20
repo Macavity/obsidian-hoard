@@ -50,8 +50,6 @@ export const STORED: HoardPluginSettings = {
 		{ label: 'Five', color: '#050505' },
 	],
 	episodeNumbering: 'per-season',
-	defaultAddType: 'Docu',
-	lastAddedType: 'Docu',
 	dashboardTopCredits: 0,
 	readingTypeColors: { manga: '#111111', book: '#222222' },
 	defaultCustomColumns: [{ id: 'c1', label: 'Note', type: 'text' }],

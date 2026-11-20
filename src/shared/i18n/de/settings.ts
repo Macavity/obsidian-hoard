@@ -196,11 +196,6 @@ const settings = {
 			absolute: 'Absolut',
 			perSeason: 'Pro Staffel',
 		},
-		defaultType: {
-			name: 'Standardtyp für neue Titel',
-			desc: 'Typ, der beim Hinzufügen eines Titels vorausgewählt ist. "Zuletzt verwendeter Typ" folgt dem, was du zuletzt hinzugefügt hast.',
-			last: '* Zuletzt verwendeter Typ',
-		},
 		topCredits: {
 			name: 'Anzahl Top-Regisseure / -Schauspieler',
 			desc: 'Wie viele Einträge das Dashboard in den Listen der Top-Regisseure und Top-Schauspieler zeigt.',

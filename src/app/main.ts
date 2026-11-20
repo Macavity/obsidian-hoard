@@ -34,7 +34,6 @@ import { logUi, type LogUi } from './wiring/log';
 import { dashboardUi, type DashboardUi } from './wiring/dashboard';
 import { settingsUi } from './wiring/settings';
 import { hoardTabs } from './wiring/tabs';
-import { addRouteUi } from './wiring/addRoute';
 import { addUi } from './wiring/add';
 import type { AddDone, AddProvider } from '../modules/add/exports';
 import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
@@ -254,10 +253,6 @@ export default class HoardPlugin extends Plugin {
 			openAddWizard,
 		});
 		addProviders.push(this.watchlist.addProvider, this.reading.addProvider, this.games.addProvider);
-		const openAdd = addRouteUi({
-			app: this.app,
-			openAddWizard,
-		});
 		this.customLists = customListsUi({
 			app: this.app,
 			settings: this.settingsService,
@@ -265,7 +260,7 @@ export default class HoardPlugin extends Plugin {
 			titles: this.dataManager,
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
-			openAdd,
+			openAddWizard,
 		});
 		this.log = logUi({ app: this.app, history: this.historyManager });
 		this.dashboard = dashboardUi({
@@ -280,7 +275,7 @@ export default class HoardPlugin extends Plugin {
 			titles: this.dataManager,
 			reading: this.readingDataManager,
 			games: this.gameDataManager,
-			openAdd,
+			openAddWizard,
 		});
 
 		this.startAirtimeScheduler();

@@ -13,13 +13,6 @@ const misc = {
 	upcomingFinder: {
 		placeholder: 'Titel suchen, um ihn zu "Demnächst" hinzuzufügen...',
 	},
-	draftChoice: {
-		heading: 'Entwurf hinzufügen',
-		addWatchlist: 'Zur Watchlist hinzufügen',
-		addBook: 'Buch hinzufügen',
-		addManga: 'Manga hinzufügen',
-		addGame: 'Zu Spielen hinzufügen',
-	},
 	collection: {
 		libraryCount: '{owned} von {total} in deiner Bibliothek',
 		untitled: 'Ohne Titel',

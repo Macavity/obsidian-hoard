@@ -193,11 +193,6 @@ const settings = {
 			absolute: 'Absolute',
 			perSeason: 'Per season',
 		},
-		defaultType: {
-			name: 'Default type for new titles',
-			desc: 'Type preselected when adding a title. "Last type used" follows whatever you added last.',
-			last: '* Last type used',
-		},
 		topCredits: {
 			name: 'Top directors / actors count',
 			desc: 'How many entries the dashboard shows in its top directors and top actors lists.',

@@ -8,7 +8,7 @@ import { createIconButton } from '../../../design-system/IconButton';
 import type { SettingsReader } from '../../settings/exports';
 import type { DraftPersistState } from '../domain/model';
 import type { DraftStore } from '../services/roles';
-import type { OpenAddRoute } from '../../../shared/services/addRoute';
+import type { OpenAddWizard } from '../../add/exports';
 import { t } from '../../../shared/i18n';
 import { draftTitlesInLine } from '../domain/draftScan';
 
@@ -86,7 +86,7 @@ export class DraftsTab implements TabInstance {
 		private readonly reading: DraftReading,
 		private readonly games: DraftGames,
 		private readonly notes: DraftsNotes,
-		private readonly openAdd: OpenAddRoute,
+		private readonly openAddWizard: OpenAddWizard,
 		onCountChange: (count: number) => void,
 	) {
 		this.containerEl = containerEl;
@@ -440,8 +440,8 @@ export class DraftsTab implements TabInstance {
 	}
 
 	private openAddModal(entry: LiveDraftEntry): void {
-		this.openAdd({
-			title: entry.titleDisplay,
+		this.openAddWizard({
+			query: entry.titleDisplay,
 			onAdded: () => this.afterAdded(entry.titleKey),
 		});
 	}

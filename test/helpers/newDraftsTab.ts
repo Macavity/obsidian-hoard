@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import type { OpenAddWizard } from '../../src/modules/add/exports';
 import { DraftsTab } from '../../src/modules/drafts/ui/DraftsTab';
 
 /** The collaborators a test hands to the tab; anything unused stays an empty fake. */
@@ -8,7 +9,7 @@ export interface DraftsParts {
 	reading: unknown;
 	games: unknown;
 	notes?: unknown;
-	openAdd?: (opts: { title: string; onAdded?: () => void }) => void;
+	openAddWizard?: OpenAddWizard;
 }
 
 export function newDraftsTab(container: unknown, parts: DraftsParts, onCountChange: (count: number) => void = () => {}): DraftsTab {
@@ -19,7 +20,7 @@ export function newDraftsTab(container: unknown, parts: DraftsParts, onCountChan
 		parts.reading as never,
 		parts.games as never,
 		(parts.notes ?? {}) as never,
-		parts.openAdd ?? vi.fn(),
+		parts.openAddWizard ?? vi.fn(),
 		onCountChange,
 	);
 }

@@ -6,7 +6,7 @@ import { SHARED_SETTING_KEYS, SharedConfigStore } from '../src/shared/storage/Sh
 import { SECRET_KEYS } from '../src/shared/storage/SecretStore';
 import { VaultLayout } from '../src/shared/storage/VaultLayout';
 import { composeSettings, persistSettings } from '../src/modules/settings/services/settingsSplit';
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/modules/settings/domain/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 import { STORED } from './settingsCompose.fixture';
 
 type Loose = Record<string, unknown>;
@@ -238,16 +238,23 @@ describe('composeSettings: status migrations', () => {
 	});
 });
 
+describe('composeSettings: removed settings', () => {
+	it('drops the add-type memory of earlier versions without failing', () => {
+		const s = compose({ defaultAddType: 'Docu', lastAddedType: 'Docu' }, { defaultAddType: 'Docu' });
+		expect(s).not.toHaveProperty('defaultAddType');
+		expect(s).not.toHaveProperty('lastAddedType');
+		expect(DEFAULT_SETTINGS).not.toHaveProperty('defaultAddType');
+	});
+});
+
 describe('composeSettings: stored values of the wrong kind', () => {
 	it('gives the default for a value stored as undefined, whatever the key', () => {
 		const s = compose({
 			animeApiSource: undefined, showUpcomingStatusBar: undefined,
-			defaultAddType: undefined, lastAddedType: undefined, colorTheme: undefined, cardSize: undefined,
+			colorTheme: undefined, cardSize: undefined,
 		});
 		expect(s.animeApiSource).toBe('jikan');
 		expect(s.showUpcomingStatusBar).toBe(true);
-		expect(s.defaultAddType).toBe(LAST_USED_TYPE_SENTINEL);
-		expect(s.lastAddedType).toBe('');
 		expect(s.colorTheme).toBe('default');
 		expect(s.cardSize).toBe(0);
 	});
@@ -255,12 +262,10 @@ describe('composeSettings: stored values of the wrong kind', () => {
 	it('gives the default for null, as an empty key in the base reads', () => {
 		const s = compose({
 			animeApiSource: null, showUpcomingStatusBar: null,
-			defaultAddType: null, lastAddedType: null, listFilters: null, gamesFilters: null, autoCreateFolders: null,
+			listFilters: null, gamesFilters: null, autoCreateFolders: null,
 		});
 		expect(s.animeApiSource).toBe('jikan');
 		expect(s.showUpcomingStatusBar).toBe(true);
-		expect(s.defaultAddType).toBe(LAST_USED_TYPE_SENTINEL);
-		expect(s.lastAddedType).toBe('');
 		expect(s.listFilters).toEqual(DEFAULT_LIST_FILTERS);
 		expect(s.gamesFilters).toEqual(DEFAULT_SETTINGS.gamesFilters);
 		expect(s.autoCreateFolders).toBe(true);

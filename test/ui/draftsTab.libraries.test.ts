@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { newDraftsTab } from '../helpers/newDraftsTab';
 import { qsa } from '../helpers/dom';
 import { fakeSettings } from '../helpers/fakeSettings';
@@ -15,7 +15,7 @@ const draft = (name: string, added = false): Entry => ({
 	titleKey: name.toLowerCase(), titleDisplay: name, sources: ['Note'], firstSeen: '2026-01-01', added,
 });
 
-function render(entries: Entry[]): { root: HTMLElement; counts: number[] } {
+function render(entries: Entry[], openAddWizard = vi.fn()): { root: HTMLElement; counts: number[] } {
 	const counts: number[] = [];
 	const parts = {
 		settings: fakeSettings({ showHintBanners: false, draftsVaultTag: '#hoard' }),
@@ -25,6 +25,7 @@ function render(entries: Entry[]): { root: HTMLElement; counts: number[] } {
 			getMangaList: () => [{ title: 'Berserk' }],
 		},
 		games: { getGames: () => [{ title: 'Hades' }] },
+		openAddWizard,
 	};
 	const root = document.createElement('div');
 	const tab = newDraftsTab(root, parts, (n) => counts.push(n));
@@ -52,5 +53,17 @@ describe('DraftsTab duplicate labels', () => {
 		// already-present drafts sort last
 		const titles = qsa(root, '.hoard-drafts__card-title').map((e) => e.textContent);
 		expect(titles[titles.length - 1]).toBe('Hades');
+	});
+});
+
+describe('DraftsTab add button', () => {
+	it('drafts card opens the wizard with its text as query', () => {
+		const openAddWizard = vi.fn();
+		const { root } = render([draft('Totally New')], openAddWizard);
+		(root.querySelector('button.hoard-btn--primary') as HTMLElement).click();
+		expect(openAddWizard).toHaveBeenCalledOnce();
+		const opts = openAddWizard.mock.calls[0]![0] as { query: string; onAdded: () => void };
+		expect(opts.query).toBe('Totally New');
+		expect(typeof opts.onAdded).toBe('function');
 	});
 });

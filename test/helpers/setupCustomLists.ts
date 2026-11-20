@@ -45,7 +45,7 @@ export async function setupCustomLists(lists: CustomList[], titles: Partial<Hoar
 		calcTimeRemainingForModal: vi.fn(() => 42),
 	};
 	const settingsService = fakeSettings({ ...DEFAULT_SETTINGS });
-	const openAdd = vi.fn();
+	const openAddWizard = vi.fn();
 	/** What the tab was built from; `reading` and `games` stay mutable so a test can fill them. */
 	const env = {
 		app: f.app,
@@ -63,7 +63,7 @@ export async function setupCustomLists(lists: CustomList[], titles: Partial<Hoar
 		titles: dataManager as never,
 		reading: env.reading as never,
 		games: env.games as never,
-		openAdd,
+		openAddWizard,
 	});
 	const newTab = (el: HTMLElement) => ui.createCustomListsTab(el);
 	const container = document.createElement('div');
@@ -75,5 +75,5 @@ export async function setupCustomLists(lists: CustomList[], titles: Partial<Hoar
 		const json = /```json\n([\s\S]*?)\n```/.exec(content)![1]!;
 		return { ...makeList(), ...(JSON.parse(json) as Partial<CustomList>), name };
 	};
-	return { f, env, settingsService, openAdd, dataManager, container, tab, newTab, stored };
+	return { f, env, settingsService, openAddWizard, dataManager, container, tab, newTab, stored };
 }

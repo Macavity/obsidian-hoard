@@ -13,7 +13,7 @@ import { DEFAULT_FIELD_COLOR } from '../../../shared/domain/tags';
 import type { OpenConfirm } from '../../../design-system/ConfirmModal';
 import { openColorPicker, deriveFillColor, deriveBorderColor } from '../../../design-system/ColorPicker';
 import { openStatusDropdown } from '../../../design-system/StatusDropdown';
-import type { OpenAddRoute } from '../../../shared/services/addRoute';
+import type { OpenAddWizard } from '../../add/exports';
 import { cloneColumns, renderCancelSave, renderColumnsEditor } from '../../../design-system/ColumnsEditor';
 import { t } from '../../../shared/i18n';
 import { createIconButton } from '../../../design-system/IconButton';
@@ -418,7 +418,7 @@ export interface CustomListsTabModals {
 	openExportFormat: OpenExportFormat;
 	openImportList: OpenImportList;
 	/** Opens the Add chooser for a loose title. */
-	openAdd: OpenAddRoute;
+	openAddWizard: OpenAddWizard;
 	confirm: OpenConfirm;
 }
 
@@ -943,10 +943,7 @@ export class CustomListsTab implements TabInstance {
 			const target = list.rows.find((r) => r.id === rowId);
 			const name = target ? rowName(target) : '';
 			if (!name) return;
-			this.modals.openAdd({
-				title: name,
-				heading: t('lists.addTitle'),
-			});
+			this.modals.openAddWizard({ query: name });
 		});
 
 		visibleRows.forEach((row, displayIdx) => {

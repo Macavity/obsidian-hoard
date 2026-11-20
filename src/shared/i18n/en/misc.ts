@@ -10,13 +10,6 @@ const misc = {
 	upcomingFinder: {
 		placeholder: 'Search a title to add to Upcoming...',
 	},
-	draftChoice: {
-		heading: 'Add draft',
-		addWatchlist: 'Add in Watchlist',
-		addBook: 'Add book',
-		addManga: 'Add manga',
-		addGame: 'Add to Games',
-	},
 	collection: {
 		libraryCount: '{owned} of {total} in your library',
 		untitled: 'Untitled',

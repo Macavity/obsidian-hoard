@@ -288,6 +288,7 @@
           "obsidian-mock"
         ],
         "allowTypeOnly": [
+          "modules/add",
           "modules/games",
           "modules/reading",
           "modules/settings",
@@ -316,6 +317,7 @@
           "obsidian-mock"
         ],
         "allowTypeOnly": [
+          "modules/add",
           "modules/games",
           "modules/reading",
           "modules/settings",

@@ -37,10 +37,10 @@ describe('Custom lists settings access', () => {
 		expect(settingsService.get().customListTabOrder).toEqual(['Beta', 'Alpha']);
 	});
 
-	it('hands a row to the injected Add router with the list heading', async () => {
-		const { container, openAdd } = await setupCustomLists([makeList()]);
+	it('custom list row opens the wizard with the row name', async () => {
+		const { container, openAddWizard } = await setupCustomLists([makeList()]);
 		(container.querySelector('.hoard-custom-list-table__row-action--add') as HTMLElement).click();
-		expect(openAdd).toHaveBeenCalledWith({ title: 'Alpha', heading: 'Add title' });
+		expect(openAddWizard).toHaveBeenCalledWith({ query: 'Alpha' });
 	});
 
 	it('stores the default columns through the settings service, once', async () => {

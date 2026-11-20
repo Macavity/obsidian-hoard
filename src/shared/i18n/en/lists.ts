@@ -26,7 +26,6 @@ const lists = {
 	export: 'Export',
 	import: 'Import',
 	searchPlaceholder: 'Search...',
-	addTitle: 'Add title',
 	draftBanner: 'This is a draft list. Titles here are not included in any stats or counts.',
 	sortBy: 'Sort by',
 	name: 'Name',
