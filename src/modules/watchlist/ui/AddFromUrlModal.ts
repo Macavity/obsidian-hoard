@@ -145,12 +145,14 @@ export class AddFromUrlModal extends Modal {
 
 			this.close();
 
-			const type = result.mediaType === 'movie' ? 'Movie' : 'TV Show';
+			const isMovie = result.mediaType === 'movie';
+			const type = isMovie ? 'Movie' : 'TV Show';
 			this.openAddTitle({
 				onAdded: this.opts.onAdded,
 				prefill: {
 					title: result.title,
 					type,
+					sourceType: isMovie ? 'Movie' : 'Series',
 					episodes: result.episodes,
 					duration: result.episodeDuration,
 					releaseDate: result.releaseDate,

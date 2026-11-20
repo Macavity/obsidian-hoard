@@ -8,7 +8,6 @@ const misc = {
 	maybeAdd: {
 		title: 'Zu "Vielleicht" hinzufügen',
 		submit: 'Zu "Vielleicht" hinzufügen',
-		noApi: 'Keine API für Typ "{type}" konfiguriert. Richte sie unter Einstellungen → API ein.',
 		titleRequired: 'Bitte einen Titelnamen eingeben.',
 		added: '"{title}" zu "Vielleicht" hinzugefügt.',
 	},

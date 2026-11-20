@@ -37,7 +37,7 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 		{
 			onAdded: () => {},
 			prefill: {
-				title: ' Dark ', type: 'TV Show', episodes: prefill.episodes ?? 3, duration: 50, releaseDate: '2017-12-01',
+				title: ' Dark ', type: 'TV Show', sourceType: 'Series', episodes: prefill.episodes ?? 3, duration: 50, releaseDate: '2017-12-01',
 				link: 'https://example.test/dark', seasons: SEASONS,
 				trailerUrl: prefill.trailerUrl, director: prefill.director, cast: prefill.cast,
 			},
@@ -47,7 +47,7 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 }
 
 const BASE = {
-	id: 't-Dark', title: 'Dark', type: 'TV Show', status: 'Plan to watch', priority: 'Medium', review: '', rating: 0, notes: '',
+	id: 't-Dark', title: 'Dark', type: 'TV Show', sourceType: 'Series', status: 'Plan to watch', priority: 'Medium', review: '', rating: 0, notes: '',
 	dateStarted: null, dateFinished: null, dateAdded: NOW, dateModified: NOW, totalEpisodes: 3, episodeDuration: 50,
 	releaseDate: '2017-12-01', externalLink: 'https://example.test/dark', seasons: SEASONS, watchedEpisodes: [],
 	favorite: false, posterUrl: '', trailerUrl: '', manualTrailerUrl: '',
@@ -64,6 +64,23 @@ describe('AddTitleModal add', () => {
 		const { form, added } = setup();
 		await form.addTitle();
 		expect(added).toStrictEqual([BASE]);
+	});
+
+	it('starts the search at Anime while the label keeps the remembered type', async () => {
+		const added: HoardTitle[] = [];
+		const api = { fetchCommunityRating: () => Promise.resolve(null), searchAnime: vi.fn().mockResolvedValue([]) };
+		const dm = {
+			getTitles: () => [], getGroups: () => [], generateId: (n: string) => `t-${n}`,
+			addTitle: (e: HoardTitle) => { added.push(structuredClone(e)); return Promise.resolve(); }, recordLookup: vi.fn(),
+		};
+		const settings = fakeSettings({ lastAddedType: 'Movie', types: [{ name: 'Movie' }] });
+		const modal = new AddTitleModal({} as never, settings as never, dm as never, api as never, () => 'Movie', { onAdded: () => {} });
+		const m = modal as unknown as { search: (q: string, y: string) => Promise<unknown>; media: { title: string }; addTitle: () => Promise<void> };
+		await m.search('x', '');
+		expect(api.searchAnime).toHaveBeenCalled();
+		m.media.title = 'Naruto';
+		await m.addTitle();
+		expect(added[0]).toMatchObject({ type: 'Movie', sourceType: 'Anime' });
 	});
 
 	it('remembers the added type through the settings service', async () => {

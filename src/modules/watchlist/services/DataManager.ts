@@ -1094,6 +1094,7 @@ export class DataManager extends ChangeNotifier
 			id: title.id,
 			title: title.title,
 			type: title.type,
+			sourceType: title.sourceType,
 			totalEpisodes: title.totalEpisodes,
 			episodeDuration: title.episodeDuration,
 			releaseDate: title.releaseDate,

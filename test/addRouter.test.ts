@@ -27,7 +27,7 @@ describe('createAddRoute', () => {
 	}
 
 	it('opens the Watchlist modal prefilled with the title', () => {
-		expect(route('watchlist').opts).toMatchObject({ prefill: { searchQuery: 'Dune', title: 'Dune' } });
+		expect(route('watchlist').opts).toMatchObject({ prefill: { searchQuery: 'Dune', title: 'Dune', sourceType: 'Anime' } });
 	});
 
 	it('opens the Game modal prefilled with the title', () => {
