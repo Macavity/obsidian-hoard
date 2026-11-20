@@ -16,7 +16,7 @@ source:
   - src/shared/api/lookup.ts
   - src/shared/domain/read.ts
   - src/shared/domain/sourceType.ts
-source_commit: 07539c0
+source_commit: 5f7a103
 ---
 
 # API layer
@@ -32,7 +32,7 @@ user-chosen values.
 
 ```mermaid
 flowchart LR
-  Modals[add modals, detail modals] --> TS[titleSearch / coverRefresh]
+  Modals[add wizard providers, detail modals] --> TS[titleSearch / coverRefresh]
   TS --> API[ApiService]
   DM[DataManager] --> Q[ApiCheckQueue]
   Q --> API
@@ -101,8 +101,8 @@ backup or a WatchLog import takes effect without a restart; the Settings tab als
 - The Jikan endpoint is configurable ([jikanBase.ts](../../src/shared/api/jikanBase.ts)): https only, optional
   Basic auth from the URL, Tenrai as default, credentials never sent to Tenrai.
 - URLs from responses pass `httpsOrEmpty` before they are stored.
-- Search limits: 9 results per page, 3 pages (`SEARCH_RESULT_LIMIT`); year filters accept only a
-  plain 4-digit year.
+- Search limit: `SEARCH_RESULT_LIMIT` (27: 9 × 3 upstream pages) rows per query. The add wizard shows them
+  all, with no paging; `searchTitles` still takes a year filter (plain 4-digit year) but the wizard passes none.
 
 ## Routing
 
@@ -120,9 +120,12 @@ resolves to Cinemeta. Every reader goes through it, never through the raw settin
   `resolveGameCover` (stored id → that source, else title search in the effective game source);
   reading covers by Open Library, Google Books or MAL id. Bulk refresh needs an id (Google-only
   books also need a key).
-- Add modals call the resolver directly for book and game search; `AddFromUrlModal` resolves an
-  IMDb link through the effective source (Cinemeta: series first, then movie — the movie endpoint
-  returns an unrelated film for many series ids, the series endpoint returns `{}` for movie ids).
+- The add providers ([add module](../modules/add.md)) call the resolver directly for book and game search;
+  a pasted IMDb link (`lookupTitleLink` in `watchlist/ui/titleUrl.ts`) resolves through the effective source
+  (Cinemeta: series first, then movie — the movie endpoint returns an unrelated film for many series ids,
+  the series endpoint returns `{}` for movie ids). Link lookups by id are `getAnimeByMalId`,
+  `getAniListAnimeById`, `getMangaByMalId` and `getAniListMangaMalId` (AniList manga resolve through their MAL id);
+  they return null when nothing is found, and Jikan ones also when unreachable, while AniList lookups throw.
 
 ## Background work
 

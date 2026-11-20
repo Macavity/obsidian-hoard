@@ -11,9 +11,8 @@ source:
   - src/app/wiring/customLists.ts
   - src/design-system/ColumnsEditor.ts
   - src/shared/domain/columns.ts
-  - src/shared/services/addRoute.ts
   - src/shared/storage/VaultLayout.ts
-source_commit: a08c524
+source_commit: 5f7a103
 ---
 
 # Custom lists
@@ -93,8 +92,8 @@ The same idea as the entries' [baseline](../concepts/baseline.md), per list obje
 ## Behaviour
 
 - Cells edit in place; every commit rewrites the `## Data` block through `saveList`. The name editor
-  autocompletes from all libraries, and a row can open the add flow via the injected `openAdd`
-  (`OpenAddRoute`, built from `createAddRoute` in `app/AddRouter.ts`), shared with [drafts](drafts.md).
+  autocompletes from all libraries, and a row can open the add wizard via the injected `openAddWizard`
+  (`OpenAddWizard`, `query` = the row name; see [add](add.md)), shared with [drafts](drafts.md).
 - **Auto time column**: a number column with `autoTime` is filled by `autoPopulateTimeColumn`:
   exact match of the row name against watchlist titles, then `TitleStats.calcTimeRemainingForModal` (the watchlist manager);
   no match writes the string `Not found`; rows with an empty name are skipped and keep their value. Runs after saving columns and on the header refresh

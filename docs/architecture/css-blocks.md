@@ -8,7 +8,7 @@ source:
   - scripts/check-css-classes.mjs
   - eslint.config.mjs
   - stylelint.config.mjs
-source_commit: cc203bf
+source_commit: 5f7a103
 ---
 
 # CSS blocks
@@ -117,15 +117,14 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
 | `hoard-reading-custom-fields` | reading-fields | Custom fields in the reading detail. |
 | `hoard-reading-quotes` | reading-fields, drafts | Quotes in the reading detail. |
 | `hoard-game-detail` | games, steam-sync, controls, mobile-detail | The game detail modal. |
-| `hoard-modal` | modals, controls, airtime, drafts, edit-columns, utilities | Shared modal frame, add modal, duplicate warning and URL rows. |
-| `hoard-search-picker` | modals, credits, mobile-detail | Search form and result grid of the add modals. |
-| `hoard-result-sections` | result-sections | Collapsible result groups of the add wizard (SectionedResults); items reuse the search-picker grid. |
+| `hoard-modal` | modals, controls, airtime, drafts, edit-columns, utilities | Shared modal frame, add forms, duplicate warning. |
+| `hoard-search-picker` | controls, credits, modals | Result rows and thumbnails of the add wizard and the credit search. |
+| `hoard-result-sections` | result-sections | Collapsible result groups of the add wizard (SectionedResults); items are search-picker rows. |
 | `hoard-add-wizard` | add-wizard | The central add wizard: query input, status line, manual entry row and the back button above a provider form. |
-| `hoard-add-modal` | modals, reading-modals | Class on the content of add and schedule modals; layout shared by their forms. |
+| `hoard-add-modal` | modals, reading-modals | Class on the content of the schedule and edit-title modals; layout shared by their forms. |
 | `hoard-reading-modal` | reading-modals, reading | Shared frame of the reading modals: header, footer, section labels. |
-| `hoard-reading-form` | reading-modals | The add and edit form for books and manga. |
 | `hoard-import` | modals, csv-modal | Import dialogs and their header mapping. |
-| `hoard-draft-choice` | manage-columns | The dialog that decides what to do with a draft. |
+| `hoard-draft-choice` | manage-columns | The reading CSV choice dialog (name kept from the retired draft chooser). |
 | `hoard-schedule` | airtime | The schedule modal and its clock. |
 
 ## Tabs

@@ -8,12 +8,10 @@ source:
   - src/modules/drafts/services/roles.ts
   - src/modules/drafts/domain/draftScan.ts
   - src/modules/drafts/ui/DraftsTab.ts
-  - src/modules/drafts/ui/DraftChoiceModal.ts
-  - src/app/AddRouter.ts
   - src/app/wiring/drafts.ts
   - src/app/HoardView.ts
-  - src/shared/services/addRoute.ts
-source_commit: a08c524
+  - src/modules/add/exports.ts
+source_commit: 5f7a103
 ---
 
 # Drafts
@@ -22,7 +20,7 @@ An inbox: the user writes `#hoard Some Title` anywhere in the vault; the Drafts 
 ([DraftsTab.ts](../../src/modules/drafts/ui/DraftsTab.ts)) lists those titles and routes each into Watchlist, Books,
 Manga or Games. Drafts are not entries and have no note; only triage state is persisted. The tab depends on roles only:
 `DraftStore` ([roles.ts](../../src/modules/drafts/services/roles.ts), re-exported by `exports.ts` with `DraftPersistState`) + `TitleReader` (watchlist), `ReadingReader`, `GameReader`, `SettingsReader`, the injected
-`OpenAddRoute`. [wiring/drafts.ts](../../src/app/wiring/drafts.ts) builds the tab and the badge count.
+`OpenAddWizard` ([add](add.md)). [wiring/drafts.ts](../../src/app/wiring/drafts.ts) builds the tab and the badge count.
 
 ## Scan
 
@@ -44,10 +42,9 @@ refreshes on `metadata-resolved`, not on `hoard-data-changed`, because it needs 
 
 ## Actions and persistence
 
-- Add: the injected `openAdd` (`OpenAddRoute` in [addRoute.ts](../../src/shared/services/addRoute.ts), built by
-  `createAddRoute` in [AddRouter.ts](../../src/app/AddRouter.ts), shared with custom lists) opens
-  `DraftChoiceModal` (watchlist, book, manga, game) and the matching add modal prefilled with the
-  title. After adding, `draftsAfterAdding` decides: `remove` dismisses, `keep` (default) marks the
+- Add: the injected `openAddWizard` (`OpenAddWizard` from the [add](add.md) exports, shared with custom lists)
+  opens the add wizard with the draft's text as the query; the user picks the kind there (no draft-specific
+  chooser any more). After adding, `draftsAfterAdding` decides: `remove` dismisses, `keep` (default) marks the
   card "Added".
 - Dismiss is permanent per key; there is no un-dismiss in the tab.
 - `DraftPersistState` (`dismissed`, `added`, `firstSeen`, `titleDisplay`, all keyed by lowercase
@@ -63,4 +60,4 @@ refreshes on `metadata-resolved`, not on `hoard-data-changed`, because it needs 
 | Match strictness | `buildFuse`, `findLibraryMatch` |
 | Pending rule | both `renderUI` and `computePendingCount` |
 | Badge timing | `badge.refreshOn` in `HoardView.ts` |
-| Routing and prefill | `DraftChoiceModal.ts`, `createAddRoute` in `AddRouter.ts` |
+| Prefill | the `query` passed to `openAddWizard` in `DraftsTab.ts` |
