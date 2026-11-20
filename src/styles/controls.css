@@ -124,7 +124,7 @@ input.hoard-settings__count-input {
   text-align: center;
 }
 
-/* AddTitleModal: "no API configured" message */
+/* Add dialogs: "no API configured" message */
 .hoard-search-picker__missing-api {
   display: flex;
   align-items: center;

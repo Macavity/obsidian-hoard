@@ -21,9 +21,7 @@ import { renderSearchHelpButton, type OpenSearchHelp } from '../../../design-sys
 import { createDatePicker } from '../../../design-system/DatePicker';
 import { renderCommunityRating, maybeAutoRefreshCommunityRating, refreshCommunityRating, type CommunityRatingApi } from './CommunityRating';
 import { resolveRecentlyWatched } from '../../../shared/services/HistoryManager';
-import type { AddTitleOptions } from './AddTitleModal';
-import type { AddFromUrlOptions } from './AddFromUrlModal';
-import type { AddTitleChoiceOptions } from './AddTitleChoiceModal';
+import type { OpenAddWizard } from '../../add/exports';
 import { renderSearchBox, syncSelectionClasses, toggleCardSelected, buildShelfSelect, refreshShelfSelects, renderToolbarCore, renderSortingDropdown, renderViewDropdown, type SortFields, type OpenRenameGroup } from '../../../design-system/TabToolbar';
 import { renderTypeBadge } from '../../../design-system/typeBadge';
 import { createSeasonHeader, renderEpisodeGrid } from './EpisodeGrid';
@@ -69,9 +67,7 @@ export interface ListTabHost {
 
 /** The dialogs the Watchlist tab opens; the wiring layer builds them, so the tab needs none of their collaborators. */
 export interface ListTabModals {
-	openAddTitleChoice(opts: AddTitleChoiceOptions): void;
-	openAddTitle(opts: AddTitleOptions): void;
-	openAddFromUrl(opts: AddFromUrlOptions): void;
+	openAddWizard: OpenAddWizard;
 	openTitleDetail(opts: TitleDetailOptions): void;
 	openGroupDetail(opts: GroupDetailOptions): void;
 	openEditTitle(opts: EditTitleOptions): void;
@@ -968,8 +964,8 @@ export class ListTab implements TabInstance {
 				this.toolbarActionsEl = wrap;
 				this.renderToolbarActions(wrap);
 			},
-			// add button, far right — opens the chooser modal
-			onAdd: () => this.openAddTitleChooser(),
+			// add button, far right: opens the add wizard
+			onAdd: () => this.openAddWizard(),
 			expanded: this.toolbarExpanded,
 			onToggleChange: (expanded) => { this.toolbarExpanded = expanded; },
 		});
@@ -1094,16 +1090,8 @@ export class ListTab implements TabInstance {
 		this.renderViewDropdown(rightGroup);
 	}
 
-	private openAddTitleChooser(): void {
-		this.modals.openAddTitleChoice({
-			onChoice: (choice) => {
-				if (choice === 'url') {
-					this.modals.openAddFromUrl({ onAdded: () => this.render() });
-				} else {
-					this.openAddTitleModal();
-				}
-			},
-		});
+	private openAddWizard(): void {
+		this.modals.openAddWizard({ preferredKinds: ['anime', 'series', 'movie'], onAdded: () => this.render() });
 	}
 
 	private renderFiltersDropdown(parent: HTMLElement): void {
@@ -1303,10 +1291,6 @@ export class ListTab implements TabInstance {
 	}
 
 	// Modal helpers
-
-	private openAddTitleModal(): void {
-		this.modals.openAddTitle({ onAdded: () => this.render() });
-	}
 
 	// Search & controls
 

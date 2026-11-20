@@ -1,0 +1,38 @@
+/* Sectioned search results: one collapsible group per kind. */
+.hoard-result-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.hoard-result-sections__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  cursor: pointer;
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.hoard-result-sections__chevron {
+  display: inline-block;
+  width: 1em;
+  transition: transform 0.15s ease;
+}
+
+.hoard-result-sections__section.is-collapsed .hoard-result-sections__chevron {
+  transform: rotate(-90deg);
+}
+
+/* sections grow with their hits; only the dialog scrolls, so no nested scrollbars */
+.hoard-result-sections__items.hoard-modal__results {
+  max-height: none;
+  overflow: visible;
+}
+
+.hoard-result-sections__section.is-collapsed .hoard-result-sections__items {
+  display: none;
+}

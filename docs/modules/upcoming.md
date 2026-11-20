@@ -17,7 +17,7 @@ source:
   - src/modules/airtime/services/airtimeScheduler.ts
   - src/app/wiring/airtime.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: a08c524
+source_commit: 5f7a103
 ---
 
 # Upcoming
@@ -39,8 +39,8 @@ entries and the writes. [exports.ts](../../src/modules/airtime/exports.ts) is th
   `settings.upcomingTrackerView`.
 - **history**: titles whose `releaseDate` lies in the last six months, read from `getTitles()`,
   no airtime entries involved.
-- **maybe**: `getMaybeTitles()` sorted by release date; add via `MaybeAddModal`
-  ([maybe title](../concepts/maybe-title.md)).
+- **maybe**: `getMaybeTitles()` sorted by release date; the add button opens the [add wizard](add.md) with `target: 'maybe'`
+  (anime, series and movie only; [maybe title](../concepts/maybe-title.md)).
 
 ## Aired versus due
 

@@ -2,6 +2,17 @@ import type { MediaFields } from '../shared/services/titleSearch';
 import { createDatePicker } from './DatePicker';
 import { t } from '../shared/i18n';
 import { typeLabel } from '../shared/i18n/labels';
+import { renderStarRating, type StarRatingOptions } from './StarRating';
+
+/** Disables `button` while `task` runs, so a second click cannot start a second save. */
+export async function runWhileBusy(button: HTMLButtonElement, task: () => Promise<void>): Promise<void> {
+	button.disabled = true;
+	try {
+		await task();
+	} finally {
+		button.disabled = false;
+	}
+}
 
 /** A labelled form row: [label][fields...]. */
 export function makeRow(parent: HTMLElement, label: string): HTMLElement {
@@ -203,8 +214,20 @@ function renderMediaFields(form: HTMLElement, f: MediaFields, paired: boolean): 
 	linkField(form, f.link, 'https://example.com', (v) => { f.link = v; });
 }
 
-/** Empties the form host and returns it; null before it is mounted. */
-export function resetForm(host: HTMLElement | null): HTMLElement | null {
-	host?.empty();
-	return host;
+/** "Rating" row with star rating that repaints itself on every change. */
+export function renderRatingRow(
+	parent: HTMLElement,
+	value: number,
+	config: Pick<StarRatingOptions, 'allowHalf' | 'tiers'>,
+	onChange: (value: number) => void,
+): void {
+	const starsWrap = makeRow(parent, t('add.rating')).createDiv({ cls: 'hoard-star-rating--row' });
+	const paint = (current: number): void => {
+		renderStarRating(starsWrap, current, {
+			...config,
+			showLabel: true,
+			onChange: (next) => { onChange(next); paint(next); },
+		});
+	};
+	paint(value);
 }

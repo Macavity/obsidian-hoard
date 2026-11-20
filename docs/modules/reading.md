@@ -15,13 +15,14 @@ source:
   - src/shared/storage/readingCodec.ts
   - src/modules/reading/ui/ReadingTab.ts
   - src/modules/reading/ui/ReadingDetailModal.ts
-  - src/modules/reading/ui/AddReadingModal.ts
+  - src/modules/reading/ui/ReadingAddForm.ts
+  - src/modules/reading/ui/readingAddProvider.ts
   - src/modules/reading/ui/ReadingManageColumnsModal.ts
   - src/modules/reading/ui/ReadingCsvModal.ts
   - src/modules/airtime/ui/ReadingScheduleModal.ts
   - src/shared/services/coverRefresh.ts
   - src/design-system/CsvModalBase.ts
-source_commit: a08c524
+source_commit: 5f7a103
 ---
 
 # Reading
@@ -38,7 +39,7 @@ owns the copies, writes, history and Upcoming sync; the dialogs and the tab are 
 maps properties to `Book` / `Manga`. Writes follow [flows/entry-write](../flows/entry-write.md)
 (`writeItem`, `afterWrite`, [baseline](../concepts/baseline.md)); the UI is
 [ReadingTab.ts](../../src/modules/reading/ui/ReadingTab.ts) (sub-tabs books/manga, shelves, virtual grid),
-[AddReadingModal.ts](../../src/modules/reading/ui/AddReadingModal.ts) (Open Library or Google Books for books via `searchBooks`, MAL via Jikan for manga),
+[readingAddProvider.ts](../../src/modules/reading/ui/readingAddProvider.ts) and [ReadingAddForm.ts](../../src/modules/reading/ui/ReadingAddForm.ts) (the book and manga side of the [add wizard](add.md): Open Library or Google Books for books via `searchBooks`, MAL via Jikan for manga; a pasted MyAnimeList or AniList manga link resolves directly),
 [ReadingDetailModal.ts](../../src/modules/reading/ui/ReadingDetailModal.ts), [ReadingManageColumnsModal.ts](../../src/modules/reading/ui/ReadingManageColumnsModal.ts)
 and the CSV modals opened from the settings tab. `ReadingCsvModal` and the watchlist's `CsvModal` both extend
 [CsvModalBase.ts](../../src/design-system/CsvModalBase.ts), which owns the wizard (export selection, upload, header

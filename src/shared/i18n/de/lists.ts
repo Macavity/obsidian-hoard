@@ -29,7 +29,6 @@ const lists = {
 	export: 'Exportieren',
 	import: 'Importieren',
 	searchPlaceholder: 'Suchen...',
-	addTitle: 'Titel hinzufügen',
 	draftBanner: 'Das ist eine Entwurfsliste. Titel hier zählen nicht in Statistiken oder Zählern.',
 	sortBy: 'Sortieren nach',
 	name: 'Name',

@@ -1,5 +1,5 @@
 // Shared star-rating control — one renderer for every star input (TitleDetailModal, EditTitleModal,
-// ReadingDetailModal, AddReadingModal, ListTab, GameDetailModal). Draws 5 stars, shows `.5` values
+// ReadingDetailModal, ListTab, GameDetailModal). Draws 5 stars, shows `.5` values
 // as half-filled, previews the hovered value, and emits via onChange. Clicking the selected value
 // clears the rating (emits 0).
 //

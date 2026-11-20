@@ -117,6 +117,20 @@ describe('maybe list ordering', () => {
 	});
 });
 
+describe('maybe add button', () => {
+	it('opens the add wizard for a Maybe note and re-renders when one was added', () => {
+		const { tab, container, modals } = makeTab(newWorld());
+		(tab as unknown as Priv).renderMaybe();
+		container.querySelector<HTMLElement>('.hoard-toolbar__add-btn')!.click();
+		expect(modals.openAddWizard).toHaveBeenCalledOnce();
+		const opts = modals.openAddWizard.mock.calls[0]![0];
+		expect(opts.target).toBe('maybe');
+		const render = vi.spyOn(tab as unknown as { render: () => void }, 'render').mockImplementation(() => {});
+		opts.onAdded!({ kind: 'anime', id: 'm1' });
+		expect(render).toHaveBeenCalledOnce();
+	});
+});
+
 describe('handleTrackerCardsVisible', () => {
 	const cell = (titleId?: string): HTMLElement => {
 		const c = document.createElement('div');

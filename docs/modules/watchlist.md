@@ -21,9 +21,12 @@ source:
   - src/design-system/rowWindow.ts
   - src/modules/watchlist/ui/CollectionModal.ts
   - src/app/wiring/watchlist.ts
+  - src/modules/watchlist/ui/watchlistAddProvider.ts
+  - src/modules/watchlist/ui/TitleAddForm.ts
+  - src/modules/watchlist/ui/titleUrl.ts
   - src/shared/storage/titleCodec.ts
   - src/shared/domain/sourceType.ts
-source_commit: 07539c0
+source_commit: 5f7a103
 ---
 
 # Watchlist
@@ -53,8 +56,8 @@ display) are in `domain/titleHelpers.ts`.
 | Tab: Rows shelves or List table, filters, sort, selection, group display | [ListTab.ts](../../src/modules/watchlist/ui/ListTab.ts) (filter rules: `passesCommonFilters` in [filterCriteria.ts](../../src/shared/domain/filterCriteria.ts); List-view row offsets and visible range: `rowOffsets`, `visibleRowRange` in [rowWindow.ts](../../src/design-system/rowWindow.ts)); shelf DOM in [RowsView.ts](../../src/design-system/RowsView.ts), shelf ids in `ROWS_SHELVES` (`shared/domain/rows.ts`) |
 | Detail modal: episodes, rating, credits, studio, trailer, collection button; `GroupDetailModal` | [TitleDetailModal.ts](../../src/modules/watchlist/ui/TitleDetailModal.ts) |
 | Edit form: title, type, episodes, link, poster and trailer override, seasons text, group | [EditTitleModal.ts](../../src/modules/watchlist/ui/EditTitleModal.ts); the seasons text format: parse in [seasonText.ts](../../src/modules/watchlist/domain/seasonText.ts), format in `domain/seasonFormat.ts`; the per-episode grid is `EpisodeGrid.ts` (`ui/`) ([episode range](../concepts/episode-range.md)) |
-| Add: choice modal → URL paste ([AddFromUrlModal.ts](../../src/modules/watchlist/ui/AddFromUrlModal.ts)) or search ([AddTitleModal.ts](../../src/modules/watchlist/ui/AddTitleModal.ts)); loose strings from Drafts and Custom Lists via `createAddRoute` in `app/AddRouter.ts` | see [flows/add-title](../flows/add-title.md) |
-| Maybe titles: modal `MaybeAddModal.ts` (in the Upcoming module, `airtime/ui`), listed by the Maybe sub-tab of Upcoming, never by `ListTab` | [maybe title](../concepts/maybe-title.md) |
+| Add: the watchlist's `AddProvider` ([watchlistAddProvider.ts](../../src/modules/watchlist/ui/watchlistAddProvider.ts): search, pasted-link resolution in `titleUrl.ts`) and its form ([TitleAddForm.ts](../../src/modules/watchlist/ui/TitleAddForm.ts)); the dialog is the [add wizard](add.md), which Drafts and Custom Lists open with a query | see [flows/add-title](../flows/add-title.md) |
+| Maybe titles: added through the same wizard (`target: 'maybe'`, opened from the Upcoming tab; `TitleAddForm` writes the Maybe note), listed by the Maybe sub-tab of Upcoming, never by `ListTab` | [maybe title](../concepts/maybe-title.md) |
 | Community rating badge, manual and 30-day background refresh; `RatingRefreshOutcome` is how a manual refresh ended and `ratingRefreshNotice` maps it to the notice text | [CommunityRating.ts](../../src/modules/watchlist/ui/CommunityRating.ts) |
 | TMDB collections: resolve, count missing parts, batch-add | [CollectionModal.ts](../../src/modules/watchlist/ui/CollectionModal.ts); the pure part (card specs for added / missing parts, default status and priority, id dedupe, result notice) in [collectionModel.ts](../../src/modules/watchlist/ui/collectionModel.ts) |
 | Manual credits, movie "Mark as watched" | `AddCreditModal.ts`, `MarkWatchedButton.ts` |

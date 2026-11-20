@@ -11,8 +11,8 @@ Media library (movies, TV, anime, books, manga, games) stored as vault notes. Ty
 
 `src/` has four zones; the rules are tool-enforced (`.fallowrc.json` `boundaries`, `eslint.config.mjs`, proven by `test/architecture.test.ts`; wiki: `docs/architecture/overview.md`).
 
-1. `src/app/` — composition root: `main.ts` (builds stores, managers, services; loads data, registers view, commands, widgets, status bar, scheduler), `HoardView.ts` (ItemView with the `TABS` registry), `AddRouter.ts`. The only place that may `new` a `*Manager` / `*Service`, and the only zone that imports module internals.
-2. `src/modules/<x>/` — one folder per feature: watchlist, reading, games, airtime, dashboard, log, drafts, custom-lists, widgets, settings, backup, import. `services/` holds managers and logic, `ui/` tabs and modals, `domain/` the module's model (`domain/model.ts`: `HoardTitle`, `Book`/`Manga`, `Game`, `HoardPluginSettings`, …), defaults and pure helpers, `services/roles.ts` its role interfaces (`TitleReader`, `AirtimeStore`, `ReadingSnapshot`, `SettingsReader`, …), implemented by its managers. `exports.ts` is the module's deliberate public surface, imported as `…/<x>/exports`: only named re-exports (`export { a } from './domain/x'`, `export type { T } from './services/roles'`) of what others need — models, role interfaces, `Open<X>` factory types, constants and pure functions such as `READING_STATUSES` or `DEFAULT_SETTINGS`. Files live where their domain puts them; never move a file to export it, add a line to `exports.ts` instead.
+1. `src/app/` — composition root: `main.ts` (builds stores, managers, services; loads data, registers view, commands, widgets, status bar, scheduler), `HoardView.ts` (ItemView with the `TABS` registry), `wiring/add.ts` (builds `openAddWizard`). The only place that may `new` a `*Manager` / `*Service`, and the only zone that imports module internals.
+2. `src/modules/<x>/` — one folder per feature: add (the central add wizard), watchlist, reading, games, airtime, dashboard, log, drafts, custom-lists, widgets, settings, backup, import. `services/` holds managers and logic, `ui/` tabs and modals, `domain/` the module's model (`domain/model.ts`: `HoardTitle`, `Book`/`Manga`, `Game`, `HoardPluginSettings`, …), defaults and pure helpers, `services/roles.ts` its role interfaces (`TitleReader`, `AirtimeStore`, `ReadingSnapshot`, `SettingsReader`, …), implemented by its managers. `exports.ts` is the module's deliberate public surface, imported as `…/<x>/exports`: only named re-exports (`export { a } from './domain/x'`, `export type { T } from './services/roles'`) of what others need — models, role interfaces, `Open<X>` factory types, constants and pure functions such as `READING_STATUSES` or `DEFAULT_SETTINGS`. Files live where their domain puts them; never move a file to export it, add a line to `exports.ts` instead.
 3. `src/design-system/` — the UI kit: reusable components only (`IconButton`, `ConfirmModal`, `VirtualGrid`, `PosterCard`, …). It knows no module and no settings: it takes values or declares its own structural interface (`TypeBadgeStyle`, `ThemeSource`).
 4. `src/shared/` — what at least two modules use: `storage` (codecs and stores, incl. the settings codec; knows only `hoard:` and `Hoard.base`, free of i18n), `services` (`HistoryManager`, `LibraryIndex`, `coverRefresh`, `titleSearch`, `changeSignal`), `api` (`ApiService`, `PosterService`, source adapters), `domain` (pure helpers and cross-cutting types: dates, tags, rows, columns, history), `i18n`.
 
@@ -32,17 +32,21 @@ Reference: `src/modules/watchlist/` (`ListTab` + `DataManager`). Conventions:
 - **K1 Constructor parameters, shape not origin.** Every dependency is a `private readonly` constructor parameter: `app` first (only for `super(app)`), then collaborators, then one `opts` object with runtime data. No `*Deps` type, nothing named `deps`, no rest-parameter tuple (lint-enforced). Children come as factories (`OpenX` types exported from the child's file) or a methods-only port the parent owns (`ListTabModals`); a parent never gets its children's dependencies. Never a `HoardPlugin` parameter, never a bag. Shared collaborators are real classes (`EntryNotes`), not tuples.
 
   ```ts
-  export type OpenAddReading = (opts: AddReadingOptions) => void;
-  export class AddReadingModal extends Modal {
+  // modules/add/domain/provider.ts: the factory type and the role a feature module implements
+  export type OpenAddWizard = (opts: AddWizardOptions) => void;
+  export interface AddProvider { kinds; search(kind, query); renderForm(host, ctx); resolveUrl?(text) }
+  export class AddWizardModal extends Modal {
     constructor(
       app: App,                                // only for super()
-      private readonly settings: SettingsReader,
-      private readonly reading: Pick<ReadingDataManager, 'addBook'>,
-      private readonly opts: AddReadingOptions,
+      private readonly providers: readonly AddProvider[],
+      private readonly opts: AddWizardOptions,
+      private readonly colorTheme?: string,
     ) { super(app); }
   }
-  // src/app/wiring/reading.ts, the only place that `new`s UI
-  const openAddReading: OpenAddReading = (opts) => new AddReadingModal(app, settings, reading, opts).open();
+  // src/app/wiring/add.ts, the only place that `new`s the dialog
+  const openAddWizard: OpenAddWizard = (opts) => new AddWizardModal(app, providers(), opts, colorTheme()).open();
+  // each feature module offers search and a form: src/modules/reading/ui/readingAddProvider.ts
+  const provider: AddProvider = createReadingAddProvider({ settings, reading, api, searchBooks });
   ```
 - **K2 Port belongs to the consumer.** If A needs B and B needs A, the consumer declares its own interface (or `OpenX` factory type) in its file; `src/app/wiring` implements it. No import edge, no module cycle. Entry types and roles come from the owning module's `exports`, never from a manager file.
 - **K3 Settings** only through `SettingsService`: read `this.settings.get()` (read-only view), change `await this.settings.update((s) => { s.x = … })` (`stage` for text typed key by key, `flush` on unload). Never save directly.

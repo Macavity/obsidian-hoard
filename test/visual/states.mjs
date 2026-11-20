@@ -59,6 +59,16 @@ async function markRoot(selector, text) {
 	);
 }
 
+/** In the open add wizard: clicks the manual-entry button of a kind (buttons follow the section order) and waits for the step-2 form. */
+async function openManualForm(kind) {
+	await waitForSelector(".modal .hoard-add-wizard__manual button", 10000);
+	const index = Number(run(`String([...document.querySelectorAll('.modal .hoard-result-sections__section')].findIndex((s) => s.dataset.section === ${q(kind)}))`, "wizard sections"));
+	if (index < 0) throw new Error(`no ${kind} section in the wizard`);
+	await clickEl(`.modal .hoard-add-wizard__manual button:nth-child(${index + 1})`);
+	await waitForSelector(".modal .hoard-add-wizard__form .hoard-modal__form", 10000);
+	await sleep(500); // the window shot is taken right after setup; let the step-2 form reach the screen
+}
+
 const unmarkRoot = async () => {
 	evalJs("document.querySelectorAll('[data-visual-root]').forEach((e) => e.removeAttribute('data-visual-root')); 'ok'");
 };
@@ -371,51 +381,42 @@ export const STATES = [
 		},
 	},
 
-	// add modals
+	// add wizard
 	{
-		id: "modal-add-title-choice",
-		root: ".modal",
-		setup: async () => {
-			await openTab("watchlist");
-			await clickEl(".hoard-view__tab-content .hoard-toolbar__add-btn");
-			await waitForSelector(".modal .hoard-draft-choice__btn", 10000);
-		},
-	},
-	{
-		id: "modal-add-title",
+		id: "modal-add-wizard",
 		root: ".modal",
 		setup: async () => {
 			evalJs("app.commands.executeCommandById('hoard:add-title')");
-			await waitForSelector(".modal .hoard-search-picker__query, .modal input", 10000);
+			await waitForSelector(".modal .hoard-add-wizard__query", 10000);
 		},
 		phone: true,
 	},
 	{
-		id: "modal-add-from-url",
+		id: "modal-add-wizard-form",
 		root: ".modal",
 		setup: async () => {
-			await openTab("watchlist");
-			await clickEl(".hoard-view__tab-content .hoard-toolbar__add-btn");
-			await clickEl(".modal .hoard-draft-choice__btn", "Aus URL hinzufügen");
-			await waitForSelector(".modal input", 10000);
+			evalJs("app.commands.executeCommandById('hoard:add-title')");
+			await openManualForm("movie");
 		},
 	},
 	{
-		id: "modal-add-reading",
+		id: "modal-add-wizard-reading",
 		root: ".modal",
 		setup: async () => {
 			await openTab("reading");
 			await clickEl(".hoard-reading-modal__add-btn");
-			await waitForSelector(".modal input", 10000);
+			await waitForSelector(".modal .hoard-add-wizard__query", 10000);
+			await openManualForm("book");
 		},
 	},
 	{
-		id: "modal-add-game",
+		id: "modal-add-wizard-game",
 		root: ".modal",
 		setup: async () => {
 			await openTab("games");
 			await clickEl(".hoard-view__tab-content .hoard-toolbar__add-btn");
-			await waitForSelector(".modal input", 10000);
+			await waitForSelector(".modal .hoard-add-wizard__query", 10000);
+			await openManualForm("game");
 		},
 	},
 	{

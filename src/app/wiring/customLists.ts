@@ -3,7 +3,7 @@ import type { SettingsReader, SettingsWriter } from '../../modules/settings/serv
 import type { DataManager } from '../../modules/watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';
-import type { OpenAddRoute } from '../../shared/services/addRoute';
+import type { OpenAddWizard } from '../../modules/add/exports';
 import { confirmWith } from '../../design-system/ConfirmModal';
 import {
 	CustomListsTab,
@@ -25,7 +25,7 @@ export interface CustomListsCore {
 	titles: DataManager;
 	reading: ReadingDataManager;
 	games: GameDataManager;
-	openAdd: OpenAddRoute;
+	openAddWizard: OpenAddWizard;
 }
 
 /** What the rest of the app opens: the default-columns dialog of the settings and the Custom Lists tab. */
@@ -36,7 +36,7 @@ export interface CustomListsUi {
 
 /** Builds the Custom Lists dialog factories and tab factory; the only place that `new`s them. */
 export function customListsUi(core: CustomListsCore): CustomListsUi {
-	const { app, settings, createListManager, titles, reading, games, openAdd } = core;
+	const { app, settings, createListManager, titles, reading, games, openAddWizard } = core;
 	const confirm = confirmWith(app);
 	// the dialogs only generate ids, which touches no vault state, so a manager without a conflict hook does
 	const idSource = createListManager();
@@ -53,7 +53,7 @@ export function customListsUi(core: CustomListsCore): CustomListsUi {
 			).open(),
 			openExportFormat: (opts) => new ExportFormatModal(app, opts).open(),
 			openImportList: (opts) => new ImportListModal(app, idSource, opts).open(),
-			openAdd,
+			openAddWizard,
 			confirm,
 		}),
 	};

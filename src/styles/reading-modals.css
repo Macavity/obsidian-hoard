@@ -51,99 +51,21 @@ button.hoard-reading-card__menu-btn:focus-visible {
   padding: 0 2px 4px;
 }
 
-.hoard-reading-modal__header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.hoard-reading-modal__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.hoard-reading-modal__header-actions .hoard-btn.is-hidden {
-  display: none;
-}
-
 .hoard-reading-modal__header-icon {
   font-size: 1.2rem;
   line-height: 1;
 }
 
-.hoard-reading-form__lookup {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.hoard-reading-form__lookup-input {
-  flex: 1;
-  min-width: 0;
-}
-
-.hoard-reading-form__lookup-btn {
-  flex-shrink: 0;
-}
-
 /* the add modals are capped flex columns (on phones too); a scroll container's auto min-height is 0,
    so the results panel got squashed instead of keeping its 400px. Don't shrink: let the modal scroll */
-.hoard-add-modal > .hoard-modal__results,
-.hoard-reading-modal > .hoard-modal__results {
+.hoard-add-modal > .hoard-modal__results {
   flex-shrink: 0;
-}
-
-.hoard-reading-form__status-rating-row {
-  display: flex;
-  flex-flow: row wrap;
-  align-items: center;
-  gap: 16px;
-}
-
-.hoard-reading-form__inline-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.hoard-reading-form__status-select {
-  width: auto;
-  min-width: 0;
-  flex: 0 0 auto;
-  padding-right: 24px;
-}
-
-.hoard-reading-form__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
-.hoard-reading-form__grid-column {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.hoard-reading-form__grid-column .hoard-reading-modal__section-label {
-  margin-top: 0;
 }
 
 .hoard-reading-modal__divider {
   height: 1px;
   background: var(--background-modifier-border);
   margin: 4px 0;
-}
-
-.hoard-reading-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .hoard-reading-modal__section-label {
@@ -166,45 +88,11 @@ button.hoard-reading-card__menu-btn:focus-visible {
   min-height: 24px;
 }
 
-.hoard-reading-form__row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hoard-reading-form__row--split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.hoard-reading-form__column {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.hoard-reading-form__label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.hoard-reading-form__stars {
-  display: flex;
-  gap: 2px;
-}
-
 .hoard-reading-modal__footer {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   padding-top: 8px;
   border-top: 0.5px solid var(--background-modifier-border);
-}
-
-.hoard-reading-modal__save {
-  /* uses .hoard-reading-modal__add-btn — color via .hoard-btn--success */
 }
 

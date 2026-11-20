@@ -10,6 +10,8 @@ source:
   - src/app/main.ts
   - src/app/HoardView.ts
   - src/app/wiring/watchlist.ts
+  - src/app/wiring/add.ts
+  - src/modules/add/exports.ts
   - .claude/agents/exports-reviewer.md
   - CLAUDE.md
   - src/modules/watchlist/exports.ts
@@ -22,7 +24,7 @@ source:
   - src/shared/services/changeListeners.ts
   - src/modules/watchlist/services/DataManager.ts
   - src/shared/domain/sourceType.ts
-source_commit: 07539c0
+source_commit: 5f7a103
 ---
 
 # Overview
@@ -74,9 +76,9 @@ Fallow zones: `app`, one per module (`modules/<x>`), `design-system`, `shared`, 
   their domain puts them: models in `domain/model.ts`, constants and pure functions in `domain/*.ts` (`DEFAULT_SETTINGS`,
   `settingsCodec`, `READING_STATUSES`, `titles`, `airtime`, `newTitle`/`newGame`/`newReading`), the **role interfaces** the
   managers `implement` (`TitleReader`, `TitleWriter`, `ReadingReader`, `GameWriter`, `SettingsReader`, `AirtimeReader`,
-  `DraftStore`, …) in `services/roles.ts`; `Open<X>` factory types sit with the models. A role lives with its consumer's
+  `DraftStore`, …) in `services/roles.ts` (the `add` module keeps its role types `AddProvider`, `OpenAddWizard` in `domain/provider.ts`); `Open<X>` factory types sit with the models. A role lives with its consumer's
   module, not with the implementing manager (`AirtimeReader`/`AirtimeStore` in `airtime`, `DraftStore` in `drafts`;
-  `DataManager` implements them). Modules with a surface: airtime, backup, drafts, games, reading, settings, watchlist;
+  `DataManager` implements them). Modules with a surface: add, airtime, backup, drafts, games, reading, settings, watchlist;
   the others (`custom-lists`, `dashboard`, `log`, `widgets`) have no `exports.ts` because nobody outside imports them.
 - **`shared` may import module exports, types and values** (constants, codec reference data): `shared/storage` codecs
   read `settingsDefaults`, `readingDefaults`, `gameDefaults`, `titles` through them. `shared` holds no module logic itself;
@@ -124,14 +126,13 @@ called `deps`. Order: `app` (only for Obsidian base classes, passed to `super(ap
 one `opts` object with runtime data (data, never services).
 
 ```ts
-export type OpenAddReading = (opts: AddReadingOptions) => void; // exported from the child's file
+export type OpenAddWizard = (opts: AddWizardOptions) => void; // exported from the child's file
 
-export class AddReadingModal extends Modal {
+export class AddWizardModal extends Modal {
   constructor(
-    app: App,                                  // only for super()
-    private readonly settings: SettingsReader, // role from settings/exports.ts
-    private readonly reading: ReadingDataManager, // own module: class by import type
-    private readonly opts: AddReadingOptions,
+    app: App,                                         // only for super()
+    private readonly providers: readonly AddProvider[], // role from add/exports.ts
+    private readonly opts: AddWizardOptions,
   ) { super(app); }
 }
 ```
@@ -141,7 +142,7 @@ export class AddReadingModal extends Modal {
 - **Children come as factories.** A parent receives `OpenX` function types (exported from the child's file) or, with
   more than three, a methods-only port it owns (`ListTabModals { openDetail(…): void; … }`). It never receives its
   children's dependencies. Recursion (a detail modal opening another) goes through a closure in the wiring.
-- **Wiring** lives in `src/app/wiring/<module>.ts` (`watchlistUi(core) → { openAddTitle, openTitleDetail, createListTab }`)
+- **Wiring** lives in `src/app/wiring/<module>.ts` (`watchlistUi(core) → { addProvider, openTitleDetail, createListTab }`)
   and is the only place that `new`s UI; `main.ts` builds the core objects and calls the wiring, `hoardTabs`
   (`wiring/tabs.ts`) collects the tabs for `HoardView`.
 - **`App` only for `super(app)`** (and inside `src/app`). Everything else gets `Vault`, `Workspace`, `MetadataCache` or a

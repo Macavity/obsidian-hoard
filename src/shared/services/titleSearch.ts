@@ -1,11 +1,10 @@
 import type { SettingsReader } from '../../modules/settings/exports';
 import { t } from '../i18n';
-import { sourceTypeLabel } from '../i18n/labels';
-import { SOURCE_TYPES, parseSourceType, type SourceType } from '../domain/sourceType';
+import type { SourceType } from '../domain/sourceType';
 import type { AnimeSearchResult, MediaSearchResult, Season } from '../../modules/watchlist/exports';
 import { animeResultIdKeys, mediaResultIdKeys } from './LibraryIndex';
 import { effectiveMediaSource, type MediaSource } from '../api/apiSources';
-import { SEARCH_PAGE_SIZE, SEARCH_RESULT_LIMIT, type ApiService } from '../api/ApiService';
+import { SEARCH_RESULT_LIMIT, type ApiService } from '../api/ApiService';
 import { found, NOT_FOUND, type LookupResult } from '../api/lookup';
 
 /** The API methods searching and resolving a title pick calls. */
@@ -22,6 +21,7 @@ export type TitleSearchApi = Pick<
 	ApiService,
 	| 'hasOmdbKey' | 'hasTmdbKey' | 'searchAniList' | 'searchAnime' | 'searchTmdb' | 'searchOmdb' | 'searchCinemeta'
 	| 'getCinemetaDetails' | 'getTmdbMovieDetails' | 'getTmdbTvDetails' | 'getOmdbMovieDetails' | 'getOmdbTvDetails'
+	| 'getAnimeByMalId' | 'getAniListAnimeById'
 >;
 
 export type TitleSearchResult = AnimeSearchResult | MediaSearchResult;
@@ -184,23 +184,4 @@ export function fillMediaFields(media: MediaFields, pick: TitlePick): void {
 	media.duration = pick.duration;
 	media.releaseDate = pick.releaseDate;
 	media.link = pick.link;
-}
-
-/** Picker settings shared by the add-title and add-maybe modals. */
-export function titlePickerBase(
-	selectedSourceType: SourceType,
-	onSourceTypeChange: (sourceType: SourceType) => void,
-) {
-	return {
-		placeholder: t('misc.titleSearch.placeholder'),
-		withYear: true,
-		pageSize: SEARCH_PAGE_SIZE,
-		typeSelect: {
-			label: t('ui.picker.sourceType'),
-			names: [...SOURCE_TYPES],
-			selected: selectedSourceType,
-			onChange: (v: string) => { const s = parseSourceType(v); if (s) onSourceTypeChange(s); },
-			format: (v: string) => { const s = parseSourceType(v); return s ? sourceTypeLabel(s) : v; },
-		},
-	};
 }

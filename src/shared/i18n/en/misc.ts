@@ -3,20 +3,12 @@ const misc = {
 		confirm: 'Confirm',
 	},
 	maybeAdd: {
-		title: 'Add to maybe',
 		submit: 'Add to maybe',
 		titleRequired: 'Please enter a title name.',
 		added: '"{title}" added to Maybe.',
 	},
 	upcomingFinder: {
 		placeholder: 'Search a title to add to Upcoming...',
-	},
-	draftChoice: {
-		heading: 'Add draft',
-		addWatchlist: 'Add in Watchlist',
-		addBook: 'Add book',
-		addManga: 'Add manga',
-		addGame: 'Add to Games',
 	},
 	collection: {
 		libraryCount: '{owned} of {total} in your library',
@@ -104,7 +96,6 @@ const misc = {
 		alreadyIn: 'Already in {library}',
 	},
 	titleSearch: {
-		placeholder: 'Search for a title...',
 		episodes: '{count} eps',
 	},
 	noteLink: {

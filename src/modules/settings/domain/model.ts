@@ -71,13 +71,6 @@ export interface HoardPluginSettings {
 	 */
 	ratingSystem: RatingTier[];
 	episodeNumbering: 'absolute' | 'per-season';
-	/**
-	 * Type preselected in the Add modal: a real `types[].name`, or LAST_USED_TYPE_SENTINEL
-	 * to follow the last added type.
-	 */
-	defaultAddType: string;
-	/** Type slug of the most recently added title. Updated silently on every add. */
-	lastAddedType: string;
 	/** How many entries the Dashboard "Top Directors" / "Top Actors" lists show. */
 	dashboardTopCredits: number;
 	/** Colors for the Reading type badges (Manga / Book). */

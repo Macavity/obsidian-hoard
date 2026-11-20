@@ -6,20 +6,12 @@ const misc = {
 		confirm: 'Bestätigen',
 	},
 	maybeAdd: {
-		title: 'Zu "Vielleicht" hinzufügen',
 		submit: 'Zu "Vielleicht" hinzufügen',
 		titleRequired: 'Bitte einen Titelnamen eingeben.',
 		added: '"{title}" zu "Vielleicht" hinzugefügt.',
 	},
 	upcomingFinder: {
 		placeholder: 'Titel suchen, um ihn zu "Demnächst" hinzuzufügen...',
-	},
-	draftChoice: {
-		heading: 'Entwurf hinzufügen',
-		addWatchlist: 'Zur Watchlist hinzufügen',
-		addBook: 'Buch hinzufügen',
-		addManga: 'Manga hinzufügen',
-		addGame: 'Zu Spielen hinzufügen',
 	},
 	collection: {
 		libraryCount: '{owned} von {total} in deiner Bibliothek',
@@ -107,7 +99,6 @@ const misc = {
 		alreadyIn: 'Bereits in {library}',
 	},
 	titleSearch: {
-		placeholder: 'Titel suchen...',
 		episodes: '{count} Folgen',
 	},
 	noteLink: {

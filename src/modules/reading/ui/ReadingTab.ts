@@ -16,7 +16,7 @@ import { searchItems, yearOf, type SearchFieldSpec } from '../../../shared/domai
 import { renderSearchHelpButton, type OpenSearchHelp } from '../../../design-system/SearchHelpModal';
 import { renderShelf, renderShelfTitle, type ShelfSelect } from '../../../design-system/RowsView';
 import type { OpenRowsCustomize } from '../../../design-system/RowsCustomizeModal';
-import type { OpenAddReading } from './AddReadingModal';
+import type { OpenAddWizard } from '../../add/exports';
 import type { searchBooks } from '../../../shared/services/coverRefresh';
 import type { OpenReadingDetail } from './ReadingDetailModal';
 import { coverFallbackColor } from '../domain/coverColor';
@@ -140,7 +140,7 @@ export interface ReadingTabHost {
 
 /** The dialogs the Reading tab opens; the wiring layer builds them, so the tab needs none of their collaborators. */
 export interface ReadingTabModals {
-	openAddReading: OpenAddReading;
+	openAddWizard: OpenAddWizard;
 	openManageColumns: OpenManageColumns;
 	openDetail: OpenReadingDetail;
 	openRowsCustomize: OpenRowsCustomize;
@@ -1595,9 +1595,9 @@ export class ReadingTab implements TabInstance {
 	}
 
 	private openAddModal(): void {
-		this.modals.openAddReading({
-			mode: this.activeSubTab === 'books' ? 'book' : 'manga',
-			onSaved: () => this.renderContent(),
+		this.modals.openAddWizard({
+			preferredKinds: [this.activeSubTab === 'books' ? 'book' : 'manga'],
+			onAdded: () => this.renderContent(),
 		});
 	}
 

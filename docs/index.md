@@ -15,7 +15,7 @@ profile:
     - "*.test.ts"
     - scripts/
     - test/
-source_commit: 07539c0
+source_commit: 5f7a103
 ---
 
 # Context
@@ -71,6 +71,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 
 # Modules
 
+- [Add](modules/add.md): what the one add wizard and the provider role own, what each feature module supplies, and why add imports no feature module.
 - [Watchlist](modules/watchlist.md): what the movies/TV/anime domain does, who owns what, and where to change a title behaviour.
 - [Reading](modules/reading.md): how books and manga are modelled, searched (Open Library or Google Books), written, imported and exported.
 - [Games](modules/games.md): how games are modelled and searched (Steam Store by default), how Steam sync and cover resolution work.
@@ -88,7 +89,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 
 - [Startup](flows/startup.md): from plugin load to a ready library, including fresh install and second device.
 - [Entry write](flows/entry-write.md): from a user edit to the note on disk without a double render.
-- [Add title](flows/add-title.md): from the search box to a new note, with keyless-first API routing and duplicate guard.
+- [Add title](flows/add-title.md): from the wizard's query field (text or pasted link, all kinds at once) to a new note, with keyless-first API routing, in-library marker and duplicate guard.
 - [Airtime notifications](flows/airtime-notifications.md): how the minute scheduler produces notices, badges and the status bar count.
 - [Backup and restore](flows/backup-restore.md): what a backup holds, which copy loses the keys, and the restore order (WatchLog files are not restorable).
 - [Migrating from another tracker](flows/migrate-notes.md): the guide/migrate-notes path for WatchLog, Library and other sources.

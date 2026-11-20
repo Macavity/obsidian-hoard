@@ -1,0 +1,35 @@
+/* The central add wizard: search step with manual entry row, then the provider's form. */
+.hoard-add-wizard__query {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.hoard-add-wizard__manual {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--background-modifier-border);
+}
+
+.hoard-add-wizard__back {
+  margin-bottom: 8px;
+}
+
+.hoard-add-wizard__status {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.hoard-add-wizard__status.is-hidden {
+  display: none;
+}
+
+/* markViewRoot scopes the theme variables; undo the view's fixed-height flex layout so the dialog scrolls as a normal modal. */
+.hoard-add-wizard.hoard-view {
+  display: block;
+  height: auto;
+  overflow: visible;
+}

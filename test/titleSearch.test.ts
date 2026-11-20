@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import {
 	episodesLabel,
 	fillMediaFields,
-	titlePickerBase,
 	fetchMediaDetails,
 	isAnimeResult,
 	resolvePick,
@@ -218,14 +217,6 @@ describe('fillMediaFields', () => {
 		const target = { title: '', episodes: 0, duration: 0, releaseDate: '', link: '' };
 		fillMediaFields(target, { ...pickOf(), title: 'T', episodes: 3, duration: 20, releaseDate: 'd', link: 'l' });
 		expect(target).toEqual({ title: 'T', episodes: 3, duration: 20, releaseDate: 'd', link: 'l' });
-	});
-});
-
-describe('titlePickerBase', () => {
-	it('lists the Source Types', () => {
-		const base = titlePickerBase('Movie', () => {});
-		expect(base.typeSelect).toMatchObject({ names: ['Anime', 'Movie', 'Series'], selected: 'Movie' });
-		expect(base.withYear).toBe(true);
 	});
 });
 

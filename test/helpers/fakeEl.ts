@@ -5,6 +5,7 @@
 export interface FakeEvent {
 	key: string;
 	stopPropagation: () => void;
+	preventDefault: () => void;
 }
 
 export interface FakeDom {
@@ -88,7 +89,7 @@ export class El implements FakeDom {
 		this.listeners.set(type, [...(this.listeners.get(type) ?? []), fn]);
 	}
 	fire(type: string, init: Partial<FakeEvent> = {}): void {
-		const e: FakeEvent = { key: '', stopPropagation: () => {}, ...init };
+		const e: FakeEvent = { key: '', stopPropagation: () => {}, preventDefault: () => {}, ...init };
 		for (const fn of this.listeners.get(type) ?? []) fn(e);
 	}
 	hide(): void { this.hidden = true; }

@@ -7,8 +7,8 @@ source:
   - src/design-system/TabInstance.ts
   - src/design-system/TabToolbar.ts
   - src/design-system/TabFilters.ts
-  - src/design-system/SearchFormModal.ts
-  - src/design-system/SearchPicker.ts
+  - src/design-system/SectionedResults.ts
+  - src/design-system/SearchThumbnail.ts
   - src/design-system/DuplicateGuard.ts
   - src/design-system/VirtualGrid.ts
   - src/design-system/gridWindow.ts
@@ -26,7 +26,7 @@ source:
   - src/design-system/IconButton.ts
   - src/styles/icon-button.css
   - src/styles/index.css
-source_commit: a08c524
+source_commit: 5f7a103
 ---
 
 # Design system
@@ -49,7 +49,7 @@ flowchart TD
   Tab --> VS[VirtualScroller] --> VG[VirtualGrid] --> PC[PosterCard / GroupCard]
   VG -. removeItem .-> LC[LazyCardObserver]
   Tab --> M[managers]
-  Add[Add modals] --> SFM[SearchFormModal] --> SP[SearchPicker]
+  Add[add wizard + provider forms] --> SR[SectionedResults]
   Add --> DG[DuplicateGuard]
   Add --> LI[LibraryIndex] --> M
 ```
@@ -80,11 +80,12 @@ inside the tab has focus the height is pinned to the smallest value seen and rel
   checkbox options on a caller-owned draft, committed on Apply. The draft operations (select / deselect all, a section's All
   toggle) are pure in [filterDraft.ts](../../src/design-system/filterDraft.ts); the shared filter rules the tabs apply after
   Apply are `passesCommonFilters` in `src/shared/domain/filterCriteria.ts`.
-- **Add-modal skeleton**: `SearchFormModal<R>` mounts a `SearchPicker` (debounced search, a
-  generation counter drops stale responses, API errors and "no API" render in the results panel)
-  above a form; `DuplicateGuard` shows Continue/Cancel and lets one retry pass; `LibraryIndex`
-  is built once per modal and matches by [external id](../concepts/external-id.md) first,
-  normalised title second, never fuzzy. Sequence: [flows/add-title](../flows/add-title.md).
+- **Add parts**: `SectionedResults` ([SectionedResults.ts](../../src/design-system/SectionedResults.ts)) is the
+  result list of the add wizard: collapsible sections that load and fail independently, an empty one hidden; it
+  knows nothing about what a section means. `renderSearchResultRow` (`SearchThumbnail.ts`) draws one row.
+  `DuplicateGuard` shows Continue/Cancel and lets one retry pass; `LibraryIndex` is built per search by the
+  provider and matches by [external id](../concepts/external-id.md) first, normalised title second, never fuzzy.
+  The dialog itself lives in the [add module](../modules/add.md); sequence: [flows/add-title](../flows/add-title.md).
 - **Virtualised grids**: `VirtualScroller` owns the scroll listener, resize observer, section
   offsets and scroll restore for one or more `VirtualGrid`s; each grid diffs the visible row
   window plus two overscan rows through `buildItem` / `removeItem` and offsets with `padding-top`
@@ -104,7 +105,7 @@ inside the tab has focus the height is pinned to the smallest value seen and rel
   into tokens; `matches` picks one matcher per token: a comparison only on a named field that has a
   number (`title:2049` and a bare `>2020` are searched as text), a phrase when quoted, else fuzzy.
 - **Text helpers**: all display text goes through `t()` ([i18n](i18n.md)); shared renderers live in
-  the design system: `typeBadge`, `choiceGrid` (add choosers), `detailShared` (favourite button, editable title,
+  the design system: `typeBadge`, `detailShared` (favourite button, editable title,
   group header, episode-grid text), `detailFrame` (what all three detail modals build alike:
   `markDetailRoot` puts `data-theme`, `hoard-view` and `hoard-detail` on the modal, `createFavoriteButton`
   the footer heart, `mobileRowClass` a row's `--mobile` modifier), localized dates come from `shared/i18n/dateNames`.
@@ -139,6 +140,6 @@ inside the tab has focus the height is pinned to the smallest value seen and rel
 ## Where to change what
 
 A new tab: a `TabFactory` in `hoardTabs` (`src/app/wiring/tabs.ts`) plus `TabName`. Shared toolbar, filter or sort behaviour:
-`src/design-system/` (pure sort/order helpers: `shared/domain/listOrder.ts`; `TabHelpers.ts` keeps only the grid mount). A new add modal: extend `SearchFormModal`, build a `LibraryIndex` and a
+`src/design-system/` (pure sort/order helpers: `shared/domain/listOrder.ts`; `TabHelpers.ts` keeps only the grid mount). A new add kind: an `AddProvider` in its module ([add module](../modules/add.md)); a form builds a
 `DuplicateGuard`. Grid geometry: `VirtualGrid.ts` / `VirtualScroller.ts` (window maths in `gridWindow.ts`); card look:
 `PosterCard.ts` and the stylesheets in `src/styles/` (one per UI area, imported in cascade order by `index.css`). Search syntax: `SearchQuery.ts` and `SearchHelpModal.ts`.

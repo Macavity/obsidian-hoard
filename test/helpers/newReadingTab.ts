@@ -3,7 +3,7 @@ import { ReadingTab, type ReadingTabModals } from '../../src/modules/reading/ui/
 
 /** Spy dialogs; `confirm` accepts at once, like a user clicking through. */
 const spyReadingModals = (over: Partial<ReadingTabModals> = {}): ReadingTabModals => ({
-	openAddReading: vi.fn(),
+	openAddWizard: vi.fn(),
 	openManageColumns: vi.fn(),
 	openDetail: vi.fn(),
 	openRowsCustomize: vi.fn(),

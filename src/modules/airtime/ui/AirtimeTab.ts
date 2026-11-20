@@ -29,7 +29,7 @@ import { VirtualScroller } from '../../../design-system/VirtualScroller';
 import { LazyCardObserver } from '../../../design-system/LazyCardObserver';
 import { openCardMenu } from '../../../design-system/PosterCard';
 import type { OpenConfirm } from '../../../design-system/ConfirmModal';
-import type { OpenMaybeAdd } from './MaybeAddModal';
+import type { OpenAddWizard } from '../../add/exports';
 import type { OpenReadingSchedule } from './ReadingScheduleModal';
 import type { OpenGameSchedule } from './GameScheduleModal';
 import type { OpenAirtimeSchedule } from './AirtimeScheduleModal';
@@ -327,7 +327,7 @@ export interface AirtimeTabHost {
 
 /** The dialogs the Upcoming tab opens; the wiring layer builds them, so the tab needs none of their collaborators. */
 export interface AirtimeTabModals {
-	openMaybeAdd: OpenMaybeAdd;
+	openAddWizard: OpenAddWizard;
 	openUpcomingFinder: OpenUpcomingFinder;
 	openGameSchedule: OpenGameSchedule;
 	openReadingSchedule: OpenReadingSchedule;
@@ -646,7 +646,7 @@ export class AirtimeTab implements TabInstance {
 		const controls = headerEl.createDiv({ cls: 'hoard-toolbar__controls' });
 		const rightGroup = controls.createDiv({ cls: 'hoard-toolbar__controls-right' });
 		renderAddButton(rightGroup, () => {
-			this.modals.openMaybeAdd({ onAdded: () => this.render() });
+			this.modals.openAddWizard({ target: 'maybe', onAdded: () => this.render() });
 		});
 
 		if (maybeTitles.length === 0) {

@@ -1,12 +1,6 @@
 import type { HoardPluginSettings } from './model';
 import { ROWS_SHELVES } from '../../../shared/domain/rows';
 
-/**
- * Sentinel for `defaultAddType` meaning "use the last type added". No real type slug
- * can collide with it.
- */
-export const LAST_USED_TYPE_SENTINEL = '__wl_last_used__';
-
 export const DEFAULT_SETTINGS: HoardPluginSettings = {
 	colorTheme: 'default',
 	// 'european' keeps the DD/MM/YYYY rendering every existing install already sees.
@@ -67,8 +61,6 @@ export const DEFAULT_SETTINGS: HoardPluginSettings = {
 		{ label: 'Masterpiece', color: '#7F77DD' },
 	],
 	episodeNumbering: 'absolute',
-	defaultAddType: LAST_USED_TYPE_SENTINEL,
-	lastAddedType: '',
 	dashboardTopCredits: 5,
 	readingTypeColors: { manga: '#D4537E', book: '#D85A30' },
 	defaultCustomColumns: [],

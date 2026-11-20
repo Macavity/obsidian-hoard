@@ -101,6 +101,12 @@
         ]
       },
       {
+        "name": "modules/add",
+        "patterns": [
+          "src/modules/add/**"
+        ]
+      },
+      {
         "name": "modules/airtime",
         "patterns": [
           "src/modules/airtime/**"
@@ -187,6 +193,7 @@
           "tooling",
           "styles",
           "app",
+          "modules/add",
           "modules/airtime",
           "modules/backup",
           "modules/custom-lists",
@@ -215,6 +222,7 @@
       {
         "from": "app",
         "allow": [
+          "modules/add",
           "modules/airtime",
           "modules/backup",
           "modules/custom-lists",
@@ -236,6 +244,14 @@
         "allow": []
       },
       {
+        "from": "modules/add",
+        "allow": [
+          "design-system",
+          "shared",
+          "obsidian-mock"
+        ]
+      },
+      {
         "from": "modules/airtime",
         "allow": [
           "design-system",
@@ -246,6 +262,7 @@
           "modules/watchlist"
         ],
         "allowTypeOnly": [
+          "modules/add",
           "modules/settings"
         ]
       },
@@ -271,6 +288,7 @@
           "obsidian-mock"
         ],
         "allowTypeOnly": [
+          "modules/add",
           "modules/games",
           "modules/reading",
           "modules/settings",
@@ -299,6 +317,7 @@
           "obsidian-mock"
         ],
         "allowTypeOnly": [
+          "modules/add",
           "modules/games",
           "modules/reading",
           "modules/settings",
@@ -313,6 +332,7 @@
           "obsidian-mock"
         ],
         "allowTypeOnly": [
+          "modules/add",
           "modules/airtime",
           "modules/settings"
         ]
@@ -334,6 +354,7 @@
           "modules/settings"
         ],
         "allowTypeOnly": [
+          "modules/add",
           "modules/airtime"
         ]
       },
@@ -361,6 +382,7 @@
           "modules/games"
         ],
         "allowTypeOnly": [
+          "modules/add",
           "modules/drafts",
           "modules/reading",
           "modules/settings"

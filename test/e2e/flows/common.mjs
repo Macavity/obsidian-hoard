@@ -5,7 +5,7 @@ import { click, press, waitForSelector } from "../ui.mjs";
 const cdp = (method, params) => obs("dev:cdp", { method, params: JSON.stringify(params) });
 
 /** Runs an Obsidian command by id (the programmatic equivalent of the command palette entry). */
-export function runCommand(id) {
+function runCommand(id) {
 	evalJs(`app.commands.executeCommandById(${JSON.stringify(id)})`);
 }
 
@@ -71,4 +71,30 @@ export async function chooseOption(selector, value) {
 	}
 	if (current() !== value) await press("Enter");
 	assert(current() === value, `${selector}: expected ${value}, got ${current()}`);
+}
+
+/** Opens the central add wizard through its command and waits for the query input. */
+export async function openAddWizard() {
+	// right after a reload the command can exist before the add providers do: the wizard would open without sections
+	await waitFor(() => evalJs("String(app.plugins.plugins['hoard']?.indexReady === true)") === "true", 40000, 300);
+	runCommand("hoard:add-title");
+	await waitForSelector(".hoard-add-wizard__query");
+}
+
+/**
+ * After typing, the debounced search inserts "searching" sections above the manual row and removes them again when the
+ * answers are empty; a click on the row while that happens lands on a shifted layout. Waits past the debounce until the
+ * sections stopped loading and the row stopped moving.
+ */
+export async function waitForSearchSettled() {
+	await new Promise((r) => setTimeout(r, 900));
+	await waitFor(() => evalJs(`String(!document.querySelector(".hoard-add-wizard .hoard-modal__loading"))`) === "true", 30000, 300);
+	await waitStable(".hoard-add-wizard__manual");
+}
+
+/** Clicks the manual-entry button of a kind. The buttons follow the section order, so the section's position names it. */
+export async function clickManualAdd(kind) {
+	const index = Number(evalJs(`String([...document.querySelectorAll(".hoard-result-sections__section")].findIndex((s) => s.dataset.section === ${JSON.stringify(kind)}))`));
+	assert(index >= 0, `no ${kind} section in the wizard`);
+	await click(`.hoard-add-wizard__manual button:nth-child(${index + 1})`);
 }

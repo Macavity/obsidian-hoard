@@ -8,7 +8,7 @@ import { readTag, type RatingTier, type TagDefinition } from '../../../shared/do
 import { at, readList, readOneOf, readRecord } from '../../../shared/domain/read';
 
 /** Settings that no longer exist; dropped from stored data. */
-export const REMOVED_SETTINGS = ['rootFolder', 'customListsFolder'];
+export const REMOVED_SETTINGS = ['rootFolder', 'customListsFolder', 'defaultAddType', 'lastAddedType'];
 
 /** Turns one stored value into a valid one. `fallback` is a fresh copy of the key's default. */
 type Normalize<T> = (stored: unknown, fallback: T) => T;

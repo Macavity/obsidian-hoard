@@ -12,7 +12,6 @@ import type { TagDefinition } from '../../../shared/domain/tags';
 import { needsStudioFetch } from '../domain/settingsHelpers';
 import { formatDateDisplay } from '../../../shared/domain/date';
 import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../../reading/exports';
-import { LAST_USED_TYPE_SENTINEL } from '../domain/settingsDefaults';
 import { apiGroupOf } from '../../../shared/domain/sourceType';
 import { readingStatusColor } from '../../reading/exports';
 import { gamesKeyChip } from './gamesKeyChip';
@@ -2333,21 +2332,6 @@ export class HoardSettingsTab extends PluginSettingTab {
 						await this.settings.update((s) => { s.episodeNumbering = v as 'absolute' | 'per-season'; });
 					}),
 			);
-
-		new Setting(el)
-			.setName(t('settings.watchlist.defaultType.name'))
-			.setDesc(t('settings.watchlist.defaultType.desc'))
-			.addDropdown((d) => {
-				d.addOption(LAST_USED_TYPE_SENTINEL, t('settings.watchlist.defaultType.last'));
-				for (const type of this.settings.get().types) {
-					d.addOption(type.name, typeLabel(type.name));
-				}
-				d.setValue(this.settings.get().defaultAddType ?? LAST_USED_TYPE_SENTINEL).onChange(
-					async (v) => {
-						await this.settings.update((s) => { s.defaultAddType = v; });
-					},
-				);
-			});
 
 		new Setting(el)
 			.setName(t('settings.watchlist.topCredits.name'))

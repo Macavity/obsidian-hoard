@@ -13,13 +13,14 @@ source:
   - src/shared/domain/filterCriteria.ts
   - src/modules/games/ui/GamesTab.ts
   - src/modules/games/ui/GameDetailModal.ts
-  - src/modules/games/ui/AddGameModal.ts
+  - src/modules/games/ui/GameAddForm.ts
+  - src/modules/games/ui/gamesAddProvider.ts
   - src/modules/games/ui/SteamSyncModal.ts
   - src/modules/airtime/ui/GameScheduleModal.ts
   - src/shared/services/coverRefresh.ts
   - src/modules/games/domain/gameDefaults.ts
   - src/modules/games/domain/newGame.ts
-source_commit: a08c524
+source_commit: 5f7a103
 ---
 
 # Games
@@ -34,11 +35,11 @@ and `shared` may import); it only re-exports by name: the types (`domain/model.t
 the roles. [gameCodec.ts](../../src/shared/storage/gameCodec.ts) maps properties to `Game`. Writes follow [flows/entry-write](../flows/entry-write.md); one
 difference to reading: `flushViews` also diffs handed-out copies against their baseline, so an
 in-place mutation without a `*Silent` call is still written. UI, built in [wiring/games.ts](../../src/app/wiring/games.ts): [GamesTab.ts](../../src/modules/games/ui/GamesTab.ts),
-[AddGameModal.ts](../../src/modules/games/ui/AddGameModal.ts) (Steam Store by default, RAWG or IGDB once keyed, per `effectiveGameSource`; never a "no API" panel),
+[gamesAddProvider.ts](../../src/modules/games/ui/gamesAddProvider.ts) and [GameAddForm.ts](../../src/modules/games/ui/GameAddForm.ts) (the game side of the [add wizard](add.md): search, then the form; Steam Store by default, RAWG or IGDB once keyed, per `effectiveGameSource`; never a "no API" panel),
 [GameDetailModal.ts](../../src/modules/games/ui/GameDetailModal.ts) (draft object, persisted on Save),
 [GameScheduleModal.ts](../../src/modules/airtime/ui/GameScheduleModal.ts) (single date, also sets `releaseDate`),
 [SteamSyncModal.ts](../../src/modules/games/ui/SteamSyncModal.ts) (from the Steam settings card via `OpenSteamSync`);
-`ModePill.ts` (Solo / Co-op / Multi pill) is shared by the add and detail modals; the Rows shelf ids are `GAMES_ROWS_SHELVES` in `domain/gameShelves.ts`.
+`ModePill.ts` (Solo / Co-op / Multi pill) is shared by the add form and detail modal; the Rows shelf ids are `GAMES_ROWS_SHELVES` in `domain/gameShelves.ts`.
 
 Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pending edit, so an edit not yet written survives a rename ([entry id](../concepts/entry-id.md)).
 
@@ -77,7 +78,7 @@ Vault renames: `moveId` calls `dropOldId`, which re-keys the view and the pendin
 
 ## Search and add
 
-`AddGameModal.search` follows `effectiveGameSource` ([apiSources.ts](../../src/shared/api/apiSources.ts)): the
+`gamesAddProvider`'s search follows `effectiveGameSource` ([apiSources.ts](../../src/shared/api/apiSources.ts)): the
 chosen source if keyed, else the keyless **Steam Store** search (`searchSteamStore`, apps only, rows
 with the portrait capsule). A pick fetches details by the row's own source (Steam: `appdetails`
 mapped through `getSteamStoreDetails`; missing details fall back to the search row) and stores `apiSource` + `apiId`; a Steam pick also sets

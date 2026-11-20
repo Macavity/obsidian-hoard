@@ -2,14 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Modal, Notice } from './__mocks__/obsidian';
 import HoardPlugin from '../src/app/main';
 import { HoardView } from '../src/app/HoardView';
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../src/modules/settings/domain/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
 
 const plugin = (props: Record<string, unknown>): HoardPlugin =>
 	Object.assign(Object.create(HoardPlugin.prototype) as HoardPlugin, props);
 const priv = (p: HoardPlugin) => p as unknown as {
-	resolveDefaultAddType(): string;
 	applyCardSizeCssVar(): void;
 	activateView(tab?: string): Promise<void>;
+	revealAdded(done: { kind: string; id: string }): Promise<void>;
 	openWidgetPalette(editor: { replaceSelection(s: string): void }): void;
 };
 
@@ -24,22 +24,6 @@ describe('settings before they are loaded', () => {
 		expect(fresh.state).toEqual(DEFAULT_SETTINGS);
 		expect(fresh.state).not.toBe(DEFAULT_SETTINGS);
 		expect(fresh.state.types).not.toBe(DEFAULT_SETTINGS.types);
-	});
-});
-
-describe('resolveDefaultAddType', () => {
-	const types = [{ name: 'Movie' }, { name: 'Anime' }];
-	const resolve = (s: Record<string, unknown>) => priv(plugin({ state: { types, ...s } })).resolveDefaultAddType();
-
-	it('follows the last added type for the sentinel and falls back to the first', () => {
-		expect(resolve({ defaultAddType: LAST_USED_TYPE_SENTINEL, lastAddedType: 'Anime' })).toBe('Anime');
-		expect(resolve({ lastAddedType: 'Gone' })).toBe('Movie');
-	});
-
-	it('keeps an existing chosen type and falls back when it is gone', () => {
-		expect(resolve({ defaultAddType: 'Anime' })).toBe('Anime');
-		expect(resolve({ defaultAddType: 'Gone' })).toBe('Movie');
-		expect(priv(plugin({ state: { types: [] } })).resolveDefaultAddType()).toBe('');
 	});
 });
 
@@ -76,6 +60,47 @@ describe('activateView', () => {
 		expect(workspace.getLeaf).toHaveBeenCalledWith('tab');
 		expect(leaf.setViewState).toHaveBeenCalledTimes(1);
 		expect(workspace.revealLeaf).toHaveBeenCalledWith(leaf);
+	});
+});
+
+describe('revealAdded', () => {
+	const entry = { id: 't-Dark', title: 'Dark' };
+	function setup(openAfter: boolean | undefined, known: unknown = entry) {
+		const openTitleDetail = vi.fn();
+		const p = plugin({
+			state: { openWatchlistAfterAdd: openAfter },
+			dataManager: { getTitle: () => known ?? undefined },
+			watchlist: { openTitleDetail },
+		});
+		const activate = vi.spyOn(priv(p), 'activateView').mockResolvedValue();
+		return { p: priv(p), activate, openTitleDetail };
+	}
+
+	it('opens the new title in the Watchlist by default', async () => {
+		const { p, activate, openTitleDetail } = setup(undefined);
+		await p.revealAdded({ kind: 'series', id: 't-Dark' });
+		expect(activate).toHaveBeenCalledWith('watchlist');
+		expect(openTitleDetail).toHaveBeenCalledWith({ title: entry });
+	});
+
+	it('only reveals the panel when the setting is off', async () => {
+		const { p, activate, openTitleDetail } = setup(false);
+		await p.revealAdded({ kind: 'movie', id: 't-Dark' });
+		expect(activate).toHaveBeenCalledWith();
+		expect(openTitleDetail).not.toHaveBeenCalled();
+	});
+
+	it('only reveals the panel for a kind that is not on the Watchlist', async () => {
+		const { p, activate, openTitleDetail } = setup(true);
+		await p.revealAdded({ kind: 'book', id: 'b1' });
+		expect(activate).toHaveBeenCalledWith();
+		expect(openTitleDetail).not.toHaveBeenCalled();
+	});
+
+	it('opens no detail for an entry that is gone', async () => {
+		const { p, openTitleDetail } = setup(true, null);
+		await p.revealAdded({ kind: 'anime', id: 'gone' });
+		expect(openTitleDetail).not.toHaveBeenCalled();
 	});
 });
 

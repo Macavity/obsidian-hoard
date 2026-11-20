@@ -32,7 +32,7 @@ import type { OpenConfirm } from '../../../design-system/ConfirmModal';
 import type { NoteFiles } from '../../../design-system/NoteLinkButton';
 import type { GameDataManager } from '../services/GameDataManager';
 import { gameGroupProgress, type OpenGameDetail, type OpenGameGroupDetail } from './GameDetailModal';
-import type { OpenAddGame } from './AddGameModal';
+import type { OpenAddWizard } from '../../add/exports';
 
 /** One entry in the merged grid: an ungrouped game, or a group card with its resolved members. */
 type GameDisplayItem =
@@ -51,7 +51,7 @@ export interface GamesTabHost {
 
 /** The dialogs the Games tab opens; the wiring layer builds them, so the tab needs none of their collaborators. */
 export interface GamesTabModals {
-	openAddGame: OpenAddGame;
+	openAddWizard: OpenAddWizard;
 	openGameDetail: OpenGameDetail;
 	openGroupDetail: OpenGameGroupDetail;
 	openRowsCustomize: OpenRowsCustomize;
@@ -65,7 +65,7 @@ export interface GamesTabModals {
  * on the shared FilterPanel + SortPopover + mobile-toggle modules) over the customizable Rows
  * layout (GAMES_ROWS_SHELVES + RowsCustomizeModal) — shelves, the exclusive By genre / By status
  * grids, and the flat "All games" fallback, all on the shared card infrastructure. + Add opens
- * AddGameModal; a card click opens GameDetailModal, or toggles selection in Select mode.
+ * the add wizard; a card click opens GameDetailModal, or toggles selection in Select mode.
  */
 type GamesFilterState = NonNullable<ReturnType<SettingsReader['get']>['gamesFilters']>;
 
@@ -1350,6 +1350,6 @@ export class GamesTab implements TabInstance {
 
 	/** Opens the API-assisted Add modal (the tab re-renders via its data listener). */
 	private openAddPrompt(): void {
-		this.modals.openAddGame({ onAdded: () => {} });
+		this.modals.openAddWizard({ preferredKinds: ['game'], onAdded: () => {} });
 	}
 }
