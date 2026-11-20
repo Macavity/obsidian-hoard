@@ -69,7 +69,7 @@ sequenceDiagram
    `index.onChange`, queues missing posters and seasons and notifies once.
 
 Notes from WatchLog or another tracker are **not** imported at startup; use the
-[migrate-notes guide](watchlog-import.md).
+[migrate-notes guide](migrate-notes.md).
 
 ## Failure points
 

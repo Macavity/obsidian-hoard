@@ -190,4 +190,4 @@ External changes (sync, hand edits) arrive through `EntryIndex.onChange` (deboun
 - Windows: app-wide state uses the plugin's own window (`window.document`): the change signal and body custom properties such
   as the card size (`applyCardSizeCssVar`), which Obsidian copies from the main body into other windows, never back (host
   behaviour, checked against Obsidian 1.15.0). `activeDocument` is for UI that belongs to the window the user is in.
-- Start-up order: [flows/startup](../flows/startup.md). Tracker migration: [flows/watchlog-import](../flows/watchlog-import.md).
+- Start-up order: [flows/startup](../flows/startup.md). Tracker migration: [flows/migrate-notes](../flows/migrate-notes.md).

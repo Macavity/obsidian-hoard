@@ -13,7 +13,7 @@ source:
   - src/shared/storage/SecretStore.ts
   - src/shared/domain/read.ts
   - src/modules/settings/domain/settingsCodec.ts
-source_commit: cc203bf
+source_commit: 9563400
 ---
 
 # Backup
@@ -34,7 +34,7 @@ history: all entries
   [games](games.md) exports; imported type-only). `backupManagers()` in
   [main.ts](../../src/app/main.ts) assembles them and hands them to the settings wiring
   ([wiring/settings.ts](../../src/app/wiring/settings.ts)), which passes `build` / `parse` / `restore` /
-  `withoutSecrets` to the settings tab. Tracker migration is [guide/migrate-notes/](import.md), not
+  `withoutSecrets` to the settings tab. Tracker migration is [migration](migration.md), not
   backup restore.
 - `buildBackup` drops the nine `SECRET_KEYS` from `local` (`withoutSecretSettings`), so neither export
   variant carries keys. `withoutSecrets` stays as a guard for the vault copy: it strips key-like local
@@ -53,7 +53,7 @@ history: all entries
 
 The UI (export buttons, file picker, confirmation) lives in the settings tab
 ([settings](settings.md)); the sequence is in [flows/backup-restore](../flows/backup-restore.md).
-WatchLog data is imported through the wizard, not through restore ([import](import.md)).
+WatchLog data is migrated via [guide/migrate-notes/](../../guide/migrate-notes/README.md), not through restore.
 
 ## Where to change what
 

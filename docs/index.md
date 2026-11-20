@@ -81,7 +81,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Widgets](modules/widgets.md): how the `hoard-*` code blocks render and stay live.
 - [Settings](modules/settings.md): how the settings tab is laid out, what syncs, and how to add a setting.
 - [Backup](modules/backup.md): the backup file format, the two export variants and the restore contract.
-- [Migration](modules/import.md): how notes from WatchLog or another tracker enter Hoard via guide/migrate-notes (no in-plugin wizard).
+- [Migration](modules/migration.md): how notes from WatchLog or another tracker enter Hoard via guide/migrate-notes (no in-plugin wizard).
 
 # Flows
 
@@ -90,7 +90,7 @@ The shipped vocabulary only (`Values`, `Domain`, `Architecture`, `Module`, `Flow
 - [Add title](flows/add-title.md): from the search box to a new note, with keyless-first API routing and duplicate guard.
 - [Airtime notifications](flows/airtime-notifications.md): how the minute scheduler produces notices, badges and the status bar count.
 - [Backup and restore](flows/backup-restore.md): what a backup holds, which copy loses the keys, and the restore order (WatchLog files are not restorable).
-- [Migrating from another tracker](flows/watchlog-import.md): the guide/migrate-notes path for WatchLog, Library and other sources.
+- [Migrating from another tracker](flows/migrate-notes.md): the guide/migrate-notes path for WatchLog, Library and other sources.
 
 # Concepts
 

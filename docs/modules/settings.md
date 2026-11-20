@@ -49,7 +49,7 @@ Customize, Watchlist, Drafts, Custom lists, Reading, Widgets, Quick Info; icon-o
 Two helpers build every card: `settingsGroup` (accent header with a live status chip, variant
 classes spelled out in `SETTINGS_GROUP_CLASSES` for the dead-CSS lint) and `sgCard` (sub-card with
 optional help). Text inputs save debounced (500 ms); toggles and selects save at once. General
-holds Backup & Restore ([backup](backup.md)); Watchlist holds CSV import/export and type folders. Tracker migration is [guide/migrate-notes/](../flows/watchlog-import.md), not a settings row.
+holds Backup & Restore ([backup](backup.md)); Watchlist holds CSV import/export and type folders. Tracker migration is [guide/migrate-notes/](../flows/migrate-notes.md), not a settings row.
 
 ## API cards
 

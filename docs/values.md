@@ -27,7 +27,7 @@ Where it bites: `EntryIndex` never writes and treats a note from sync like its o
 ([architecture/storage](architecture/storage.md)); writes diff against a [baseline](concepts/baseline.md)
 and touch only changed properties ([flows/entry-write](flows/entry-write.md)); `noteBody` replaces
 only `## Notes`; `HistoryStore` preserves lines it cannot parse ([history line](concepts/history-line.md));
-`baseFile` leaves everything but the `hoard:` block byte-identical; [migration](modules/import.md)
+`baseFile` leaves everything but the `hoard:` block byte-identical; [migration](modules/migration.md)
 fills missing values and never overwrites; a second device adopts a synced base instead of creating
 one ([flows/startup](flows/startup.md)).
 

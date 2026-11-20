@@ -24,7 +24,7 @@ source:
   - src/modules/settings/domain/settingsDefaults.ts
   - src/shared/storage/featureSettings.ts
   - src/modules/settings/services/settingsSplit.ts
-source_commit: cc203bf
+source_commit: 9563400
 ---
 
 # Storage
@@ -117,7 +117,7 @@ where the write pipeline emits them. `main.ts` renders the code in the active la
   usual) or from a newer plugin version; both show a sticky Notice. A schema-2 file is read field by
   field ([readCache.ts](../../src/shared/storage/readCache.ts)) and its legacy `'none'` markers become
   `notfound` checks ([entry cache](../concepts/entry-cache.md#reading-datajson)). An obsolete
-  `ui.watchlogImport` key from older installs is still parsed and ignored.
+  `ui.watchlogImport` key from older installs is kept as an unknown key, unread.
 - `SecretStore` ([SecretStore.ts](../../src/shared/storage/SecretStore.ts)) wraps `getSecret`/`setSecret`; `write`
   verifies by read-back and returns the keys it could not store, `absorb` migrates keys out of a settings
   record. `LocalStore` takes it as an optional dependency and absorbs on load and before every save

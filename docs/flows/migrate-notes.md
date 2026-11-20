@@ -6,13 +6,13 @@ source:
   - guide/migrate-notes/README.md
   - guide/migrate-notes/watchlog.md
   - guide/migrate-notes/library.md
-source_commit: dd764b7
+source_commit: 9563400
 ---
 
 # Migrating from another tracker
 
 Hoard does not offer an import wizard at startup or in settings. Migration is
-[guide/migrate-notes/](../../guide/migrate-notes/README.md) ([modules/import](../modules/import.md)).
+[guide/migrate-notes/](../../guide/migrate-notes/README.md) ([modules/migration](../modules/migration.md)).
 
 ```mermaid
 flowchart TD

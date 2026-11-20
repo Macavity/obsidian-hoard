@@ -45,7 +45,7 @@ insert the fence at the cursor with `editor.replaceSelection`.
 ## WatchLog fences
 
 WatchLog's `watchlog` and `wl-*` fences are never rendered. Renaming them to `hoard` / `hoard-*` is
-an optional step of [guide/migrate-notes/](../flows/watchlog-import.md) (see its WatchLog
+an optional step of [guide/migrate-notes/](../flows/migrate-notes.md) (see its WatchLog
 reference for the fence map).
 
 ## Where to change what
