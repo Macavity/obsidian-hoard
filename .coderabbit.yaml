@@ -26,8 +26,9 @@ reviews:
       instructions: |
         Tool-agnostic migration guide for WatchLog / Library / other trackers. Source data must
         stay untouched until the user opts into cleanup. WatchLog names (watchlog: key,
-        WatchLog.base, wl-* code blocks, schema-1 data.json) belong here and in LocalStore /
-        backup refusal paths only. Report any WatchLog knowledge that leaks into src/modules.
+        WatchLog.base, wl-* code blocks, schema-1 data.json) belong here, in the LocalStore /
+        backup refusal paths and their i18n notices only. Report any WatchLog knowledge that
+        leaks elsewhere into src/.
     - path: "scripts/**"
       instructions: |
         Local dev tooling, run only by the maintainer on own machine.

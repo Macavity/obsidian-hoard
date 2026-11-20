@@ -13,7 +13,7 @@ Point any AI coding agent (or follow the steps yourself) at this folder. Existin
 
 1. Confirm the Hoard root (folder that holds `Hoard.base`, usually `Hoard/`). Create `Hoard.base` with a `hoard:` block only if the vault has none — prefer adopting an existing root.
 2. Authority for property names: [`src/shared/storage/properties.ts`](../../src/shared/storage/properties.ts) and [`docs/concepts/properties.md`](../../docs/concepts/properties.md). Never invent keys. Title Case with spaces; acronyms upper case (`URL`, `ID`, `MAL`).
-3. One note = one entry. Place files under `<root>/<Type>/`, `Books/`, `Manga/`, or `Games/`. The path under the root is the entry id.
+3. One note = one entry. Place files under `<root>/<Type>/`, `Books/`, `Manga/`, or `Games/`. The path under the root is the entry id. Custom lists are not entries: one note per list under `<root>/CustomLists/` (see [docs/modules/custom-lists.md](../../docs/modules/custom-lists.md)).
 4. Existing Hoard values win: when a note already exists, fill only missing properties; leave differing values alone. Never overwrite user data with source data.
 5. Secrets (API keys, Steam id) stay on the device — never copy them into notes, `Hoard.base`, or backups.
 

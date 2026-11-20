@@ -26,7 +26,7 @@ Root is `Hoard/` (holds `Hoard.base`).
 ## Reading
 
 - `Hoard/Books/Dune.md`: Book, Reading, 120 of 600 pages
-- `Hoard/Books/The Hobbit.md`: migrated from Library sample (Reading, 120 of 310 pages)
+- `Hoard/Books/The Fellowship of the Ring.md`: migrated from Library sample (Reading, 120 of 423 pages)
 - `Hoard/Manga/Berserk.md`: Manga, Plan to Read, 41 volumes
 
 ## Games

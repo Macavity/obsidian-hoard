@@ -171,7 +171,7 @@ describe('LocalStore', () => {
 		const p = plugin({ schemaVersion: 2, settings: {}, cache: {}, ui, reading: 'x', games: { a: 1 }, secretsInStorage: 'yes' });
 		const s = new LocalStore(p); await s.load();
 		expect(s.data.ui).toEqual({
-			collapsedSeasons: { 'TV/A': [1, 2] }, recommendedDaily: { date: '2026-01-01', ids: ['a'] }, watchlogImport: { original: 'imported' }, other: 1,
+			collapsedSeasons: { 'TV/A': [1, 2] }, recommendedDaily: { date: '2026-01-01', ids: ['a'] }, watchlogImport: { original: 'imported', fork: 'maybe' }, other: 1,
 		});
 		expect(s.data.ui.pinnedGroup).toBeUndefined();
 		expect(s.data.reading).toBeUndefined();

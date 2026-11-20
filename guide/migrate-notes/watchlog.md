@@ -28,13 +28,15 @@ For each title in `titles` (and each entry in `maybe` with `Maybe: true`):
 | `trailer` / `manualTrailerUrl` | `Trailer` | |
 | `pinned` | `Pinned` | |
 | `seasons` | `Seasons` | lines `Name: N` |
-| `watchedEpisodes` (number[]) | `Watched Episodes` | episode-range text (`S01E01-E12`); movies with status Completed need no watched text |
-| `skippedEpisodes` / per-season skips | `Skipped Episodes` | same grammar |
+| `watchedEpisodes` (number[]) | `Watched Episodes` | **absolute**, 1-based numbers across all seasons. Convert to per-season episode-range text (`S01E01-E12, S02E01-E03`) by walking `seasons` in order: episode `n` lies in the first season whose cumulative `episodes` count reaches `n`, at position `n` minus the episodes of all earlier seasons. Without `seasons`, use one season of `totalEpisodes`. Numbers beyond all seasons: keep out, report them. Movies with status Completed need no watched text |
+| `seasons[].skippedEpisodes` | `Skipped Episodes` | numbers **relative to their season** (`S<season index>E<n>`), same grammar; not absolute |
 | `tmdbId` + `tmdbMediaType` | `External ID` | `tmdb:movie:…` / `tmdb:tv:…` |
 | `notes` (string) | body under `## Notes` | |
 | maybe entries | `Maybe: true` | same type folder |
 
 `Progress` on titles is a **number** (percent), not WatchLog's episode list.
+
+Episode mapping is authoritative in [`src/shared/storage/episodeRange.ts`](../../src/shared/storage/episodeRange.ts) (`fromAbsolute`, `formatEpisodeRange`) and [docs/concepts/episode-range.md](../../docs/concepts/episode-range.md). Example: seasons `S1: 10`, `S2: 8`, watched `[1..10, 11, 12]` → `S01E01-E10, S02E01-E02`. A wrong conversion silently corrupts progress — when in doubt, skip the field and report the title.
 
 Duplicate `Name`+`Type` in one run: append ` 2`, ` 3`, … (case-insensitive on macOS/Windows).
 

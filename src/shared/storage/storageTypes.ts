@@ -94,8 +94,6 @@ export interface LocalData {
 		recommendedDaily?: RecommendedDaily;
 		/** the same for the Games Rows shelf */
 		gamesRecommendedDaily?: RecommendedDaily;
-		/** Per-device outcome of the WatchLog import offer, by source kind. */
-		watchlogImport?: Partial<Record<'original' | 'fork', 'imported' | 'declined'>>;
 	};
 }
 
