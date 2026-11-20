@@ -33,8 +33,6 @@ const add = {
 		seasonEpisodes: { one: '{name} ({count} ep)', other: '{name} ({count} eps)' },
 	},
 	game: {
-		heading: 'Add game',
-		searchPlaceholder: 'Search for a game...',
 		unknownPlatforms: 'Unknown platforms',
 		titlePlaceholder: 'Game title',
 		developer: 'Developer',

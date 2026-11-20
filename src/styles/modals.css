@@ -65,23 +65,6 @@
   flex: unset;
 }
 
-/* add-flow search: query, year and button share a wrapper so mobile can stack them */
-.hoard-search-picker__fields {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-/* add-flow search: optional YYYY filter beside the query */
-.hoard-search-picker__year {
-  flex: 0 0 auto;
-  width: 60px;
-  min-width: 0;
-  text-align: center;
-}
-
 .hoard-modal__input:focus {
   outline: none;
   border-color: var(--interactive-accent);
@@ -153,30 +136,6 @@
 .hoard-search-picker__results-grid > .hoard-modal__loading,
 .hoard-search-picker__results-grid > .hoard-search-picker__missing-api {
   grid-column: 1 / -1;
-}
-
-/* 9 results per page; empty when there is only one page */
-.hoard-search-picker__result-pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.hoard-search-picker__result-pager-info {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.hoard-search-picker__result-pager-btn {
-  padding: 2px 10px;
-  line-height: 1.2;
-}
-
-.hoard-search-picker__result-pager-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 /* text-only rows: maybe-add modal + autofill dropdown */

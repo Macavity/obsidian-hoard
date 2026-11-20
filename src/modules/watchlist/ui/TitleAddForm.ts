@@ -21,7 +21,6 @@ import {
 	type TitleSearchResult,
 } from '../../../shared/services/titleSearch';
 import { createDatePicker } from '../../../design-system/DatePicker';
-import { renderStarRating } from '../../../design-system/StarRating';
 import { blockDuplicate, createDuplicateGuard } from '../../../design-system/DuplicateGuard';
 import {
 	makeCell,
@@ -29,6 +28,7 @@ import {
 	renderMediaAndTypeFields,
 	nameSelect,
 	renderGroupPicker,
+	renderRatingRow,
 	type GroupPickerState,
 } from '../../../design-system/FormCells';
 
@@ -148,16 +148,12 @@ class TitleAddForm implements AddFormHandle {
 		nameSelect(makeCell(statusPriRow, t('add.priority'), true), this.settings.get().priorities.map((p) => p.name),
 			this.priority, (v) => { this.priority = v; }, false, priorityLabel);
 
-		const starsWrap = makeRow(form, t('add.rating')).createDiv({ cls: 'hoard-star-rating--row' });
-		const paintStars = (): void => {
-			renderStarRating(starsWrap, this.rating, {
-				allowHalf: this.settings.get().halfStarRatings ?? false,
-				tiers: this.settings.get().ratingSystem,
-				showLabel: true,
-				onChange: (value) => { this.rating = value; paintStars(); },
-			});
-		};
-		paintStars();
+		renderRatingRow(
+			form,
+			this.rating,
+			{ allowHalf: this.settings.get().halfStarRatings ?? false, tiers: this.settings.get().ratingSystem },
+			(value) => { this.rating = value; },
+		);
 
 		createDatePicker({
 			parent: makeRow(form, t('add.dateStarted')),

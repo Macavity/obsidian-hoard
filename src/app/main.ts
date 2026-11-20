@@ -240,6 +240,7 @@ export default class HoardPlugin extends Plugin {
 			api: this.apiService,
 			resolveGameCover,
 			host,
+			openAddWizard,
 		});
 		this.airtime = airtimeUi({
 			app: this.app,
@@ -252,11 +253,10 @@ export default class HoardPlugin extends Plugin {
 			host: { ...host, markAirtimeHandled: (key) => this.markAirtimeHandled(key) },
 			openAddWizard,
 		});
-		addProviders.push(this.watchlist.addProvider, this.reading.addProvider);
+		addProviders.push(this.watchlist.addProvider, this.reading.addProvider, this.games.addProvider);
 		const openAdd = addRouteUi({
 			app: this.app,
 			openAddWizard,
-			openAddGame: this.games.openAddGame,
 		});
 		this.customLists = customListsUi({
 			app: this.app,

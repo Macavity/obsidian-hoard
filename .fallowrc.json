@@ -330,6 +330,7 @@
           "obsidian-mock"
         ],
         "allowTypeOnly": [
+          "modules/add",
           "modules/airtime",
           "modules/settings"
         ]

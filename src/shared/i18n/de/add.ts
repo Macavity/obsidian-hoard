@@ -35,8 +35,6 @@ const add = {
 		seasonEpisodes: { one: '{name} ({count} F.)', other: '{name} ({count} F.)' },
 	},
 	game: {
-		heading: 'Spiel hinzufügen',
-		searchPlaceholder: 'Nach einem Spiel suchen...',
 		unknownPlatforms: 'Unbekannte Plattformen',
 		titlePlaceholder: 'Spieltitel',
 		developer: 'Entwickler',

@@ -8,7 +8,6 @@ describe('createAddRoute', () => {
 	const open = createAddRoute(
 		(opts) => { choice = opts; },
 		(opts) => { calls.push({ kind: 'wizard', opts: opts as never }); },
-		(opts) => { calls.push({ kind: 'game', opts: opts as never }); },
 	);
 
 	function route(pick: 'watchlist' | 'book' | 'manga' | 'game'): { kind: string; opts: Record<string, unknown> } {
@@ -28,11 +27,7 @@ describe('createAddRoute', () => {
 		expect(route('watchlist').opts).toMatchObject({ query: 'Dune', preferredKinds: ['anime', 'series', 'movie'] });
 	});
 
-	it('opens the Game modal prefilled with the title', () => {
-		expect(route('game').opts).toMatchObject({ prefill: { searchQuery: 'Dune', title: 'Dune' } });
-	});
-
-	it.each(['book', 'manga'] as const)('opens the add wizard on the %s kind with the title as query', (kind) => {
+	it.each(['book', 'manga', 'game'] as const)('opens the add wizard on the %s kind with the title as query', (kind) => {
 		expect(route(kind).opts).toMatchObject({ query: 'Dune', preferredKinds: [kind] });
 	});
 });

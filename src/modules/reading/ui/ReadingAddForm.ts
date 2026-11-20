@@ -11,8 +11,7 @@ import { readingStatusLabel } from '../../../shared/i18n/labels';
 import type { SettingsReader } from '../../settings/exports';
 import { createDatePicker } from '../../../design-system/DatePicker';
 import { blockDuplicate, createDuplicateGuard } from '../../../design-system/DuplicateGuard';
-import { makeCell, makeRow, nameSelect, numberInput, releaseDateField, textInput, titleField } from '../../../design-system/FormCells';
-import { renderStarRating } from '../../../design-system/StarRating';
+import { makeCell, makeRow, nameSelect, numberInput, releaseDateField, renderRatingRow, textInput, titleField } from '../../../design-system/FormCells';
 import { renderSegmentedToggle } from '../../../design-system/StatusDropdown';
 
 export type BookSearcher = typeof searchBooks;
@@ -170,16 +169,12 @@ class ReadingAddForm implements AddFormHandle {
 	}
 
 	private renderRating(form: HTMLElement): void {
-		const starsWrap = makeRow(form, t('add.rating')).createDiv({ cls: 'hoard-star-rating--row' });
-		const paint = (): void => {
-			renderStarRating(starsWrap, this.rating, {
-				allowHalf: this.settings.get().halfStarRatings ?? false,
-				tiers: this.settings.get().ratingSystem,
-				showLabel: true,
-				onChange: (value) => { this.rating = value; paint(); },
-			});
-		};
-		paint();
+		renderRatingRow(
+			form,
+			this.rating,
+			{ allowHalf: this.settings.get().halfStarRatings ?? false, tiers: this.settings.get().ratingSystem },
+			(value) => { this.rating = value; },
+		);
 	}
 
 	private renderProgress(form: HTMLElement): void {

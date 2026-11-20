@@ -313,27 +313,6 @@ button.hoard-trailer-btn--labeled:hover {
   font-size: 11px;
 }
 
-/* search row, phone: query on its own line, year + Search under it */
-.is-mobile .hoard-search-picker__fields {
-  flex-wrap: wrap;
-}
-
-.is-mobile .hoard-modal__input.hoard-search-picker__query {
-  box-sizing: border-box;
-  flex: 1 0 100%;
-}
-
-.is-mobile .hoard-modal__input.hoard-search-picker__year {
-  box-sizing: border-box;
-  flex: 0 0 auto;
-  width: 90px;
-}
-
-/* Search button to the right edge; a no-op on desktop, where the flex-grow query takes all free space */
-.hoard-search-picker__fields .hoard-btn {
-  margin-left: auto;
-}
-
 /* needs 3 classes: Obsidian's `.is-mobile input[type=text] { width: 100% }` outweighs 2.
    These date inputs only live in the details section. */
 .is-mobile .hoard-date-picker__input.hoard-reading-detail__date-input {

@@ -3,7 +3,7 @@ import { GamesTab, type GamesTabModals } from '../../src/modules/games/ui/GamesT
 
 /** Spy dialogs; `confirm` accepts at once, like a user clicking through. */
 const spyGamesModals = (over: Partial<GamesTabModals> = {}): GamesTabModals => ({
-	openAddGame: vi.fn(),
+	openAddWizard: vi.fn(),
 	openGameDetail: vi.fn(),
 	openGroupDetail: vi.fn(),
 	openRowsCustomize: vi.fn(),

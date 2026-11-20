@@ -1897,7 +1897,7 @@ export class ApiService {
 
 	// Games — Steam (Web API + Storefront). Not a search source: the Storefront API has no
 	// search endpoint and the only name index (ISteamApps/GetAppList) is a ~200k-entry,
-	// multi-MB download. So it never backs AddGameModal — it fills in playtime and
+	// multi-MB download. So it never backs the add wizard — it fills in playtime and
 	// achievements from the user's own account, which no other API can.
 
 	setSteamCredentials(apiKey: string, steamId: string): void {
