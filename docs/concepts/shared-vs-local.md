@@ -11,7 +11,7 @@ source:
   - src/shared/storage/LocalStore.ts
   - src/shared/storage/storageTypes.ts
   - src/shared/storage/SecretStore.ts
-source_commit: cc203bf
+source_commit: 07539c0
 ---
 
 # Shared vs local settings
@@ -20,7 +20,7 @@ Settings are one object in memory (`HoardPluginSettings`, [settings/domain/model
 
 | Where | What | Synced |
 |---|---|---|
-| `hoard:` block in `<root>/Hoard.base` | the vocabulary every device needs to read and write the same notes: `types`, `statuses`, `reviews`, `priorities`, `halfStarRatings`, `typeApiMapping`, `episodeNumbering`, `defaultCustomColumns`, `autoCompleteOnLastEpisode`, `setFinishDateAutomatically`, plus inside `reading`: `defaultStatus`, `bookColumns`, `mangaColumns`; inside `games`: `defaultStatus`, `statuses`, `types`, `platforms` | yes |
+| `hoard:` block in `<root>/Hoard.base` | the vocabulary every device needs to read and write the same notes: `types`, `statuses`, `reviews`, `priorities`, `halfStarRatings`, `episodeNumbering`, `defaultCustomColumns`, `autoCompleteOnLastEpisode`, `setFinishDateAutomatically`, plus inside `reading`: `defaultStatus`, `bookColumns`, `mangaColumns`; inside `games`: `defaultStatus`, `statuses`, `types`, `platforms` | yes |
 | `data.json` of the plugin ([LocalStore](../../src/shared/storage/LocalStore.ts)) | everything else: colours, palettes, layouts, saved filters, UI state, the [entry cache](entry-cache.md) | no |
 | Obsidian secret storage (`app.secretStorage`, [SecretStore](../../src/shared/storage/SecretStore.ts)) | the nine `SECRET_SETTINGS`: OMDb, TMDB, Google Books, RAWG, Steam API keys, IGDB client id and secret, Steam id, `jikanBaseUrl` (may carry a login), under fixed ids `hoard-*` | no, per device |
 

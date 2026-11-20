@@ -9,7 +9,6 @@ source:
   - src/modules/settings/domain/settingsDefaults.ts
   - src/modules/settings/services/SettingsService.ts
   - src/modules/settings/services/settingsSplit.ts
-  - src/modules/settings/domain/apiRouting.ts
   - src/modules/settings/ui/SettingsTab.ts
   - src/modules/settings/ui/problemText.ts
   - src/app/wiring/settings.ts
@@ -18,7 +17,8 @@ source:
   - src/shared/storage/SharedConfigStore.ts
   - src/shared/domain/typeName.ts
   - src/shared/api/apiSources.ts
-source_commit: a08c524
+  - src/shared/domain/sourceType.ts
+source_commit: 07539c0
 ---
 
 # Settings
@@ -65,8 +65,7 @@ key needed" chip; a keyed choice without its key falls back at runtime through
 `effectiveMediaSource` / `effectiveBookSource` / `effectiveGameSource`
 ([apiSources.ts](../../src/shared/api/apiSources.ts)), the chip shows "key needed" and `fallbackHint` adds
 "Uses {source} until a key is set." Stored values are never rewritten by the fallback.
-`renderTypeApiMapping` routes custom types to the anime or movie API, with
-Anime, Movie and TV Show locked; which types are locked (and to which providers) and the select value parsing are the pure `typeApiRoute` / `parseApiGroup` in [apiRouting.ts](../../src/modules/settings/domain/apiRouting.ts). The bulk studio fetch (`SettingsTab`) still needs `getApiGroupForType`, now imported from `shared/api/apiGroup.ts`, no longer from watchlist; whether this API logic belongs in watchlist, shared or the settings module is open (issue #48).
+There is no per-type API routing any more: a title's `Source Type` note property picks its API family ([api layer](../architecture/api-layer.md)); the old `typeApiMapping` key in `Hoard.base` is retired and dropped on the next write. The bulk studio fetch (`SettingsTab`) reads `apiGroupOf(title)`.
 
 ## Types as folders
 
@@ -74,8 +73,8 @@ A type name is a folder under the root, so the tag editor validates with `typeNa
 ([typeName.ts](../../src/shared/domain/typeName.ts)): a `{ reason: 'reserved' | 'unsafe' }` code (text from
 `typeNameProblemText` in `ui/problemText.ts`) when `safeTypeName` would change
 the input (unsafe characters, leading dots, Windows device names, or a reserved folder such as
-Books, Manga, Games, CustomLists). Built-in types (`LOCKED_TYPES`) cannot be removed; statuses
-are colour-only.
+Books, Manga, Games, CustomLists). Every type, built-in names included, can be renamed or deleted; statuses
+are colour-only (picker, no delete).
 
 ## Adding a setting
 

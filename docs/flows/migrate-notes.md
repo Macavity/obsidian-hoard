@@ -6,7 +6,7 @@ source:
   - guide/migrate-notes/README.md
   - guide/migrate-notes/watchlog.md
   - guide/migrate-notes/library.md
-source_commit: 9563400
+source_commit: 07539c0
 ---
 
 # Migrating from another tracker
@@ -43,5 +43,6 @@ forms that differ (rating scale, progress `a/b`, linked genres) must be transfor
 ## Invariants
 
 - Existing Hoard values win (fill missing only).
+- Every watchlist note gets `Source Type` (`Anime` | `Movie` | `Series`, exact) next to `Type`; without it Hoard does no API lookups ([properties](../concepts/properties.md)).
 - Secrets never enter notes or `Hoard.base`.
 - Test-vault fixtures omit `External ID` and use `Cover: none` when a real cover would hit the network.

@@ -15,14 +15,14 @@ source:
   - src/modules/watchlist/exports.ts
   - src/modules/settings/exports.ts
   - src/modules/watchlist/services/roles.ts
-  - src/shared/api/apiGroup.ts
   - src/modules/custom-lists/domain/customList.ts
   - src/modules/settings/services/SettingsService.ts
   - src/shared/services/EntryNotes.ts
   - src/shared/services/changeSignal.ts
   - src/shared/services/changeListeners.ts
   - src/modules/watchlist/services/DataManager.ts
-source_commit: cc203bf
+  - src/shared/domain/sourceType.ts
+source_commit: 07539c0
 ---
 
 # Overview
@@ -81,9 +81,9 @@ Fallow zones: `app`, one per module (`modules/<x>`), `design-system`, `shared`, 
 - **`shared` may import module exports, types and values** (constants, codec reference data): `shared/storage` codecs
   read `settingsDefaults`, `readingDefaults`, `gameDefaults`, `titles` through them. `shared` holds no module logic itself;
   values only one module needs stay in its `domain/`, values two or more modules need (dates, columns,
-  tags, `imdb`, `api/credits`, `api/apiGroup.ts`) live in `src/shared/`. The design system imports no module, so it knows no module
+  tags, `imdb`, `api/credits`, `domain/sourceType.ts`) live in `src/shared/`. The design system imports no module, so it knows no module
   and no settings. Open question (issue #48): where watchlist-only API logic used by several modules belongs (`titleSearch`,
-  `getApiGroupForType`, maybe `PosterService`).
+  maybe `PosterService`).
 - **Exports review**: every line change in an `exports.ts`, every new module edge in `.fallowrc.json` and every new `shared` → exports import goes through
   the read-only agent [exports-reviewer](../../.claude/agents/exports-reviewer.md) before the commit (rule in
   [CLAUDE.md](../../CLAUDE.md)). It pushes back per symbol (outside consumer? owner? kind? width? logic leak?).

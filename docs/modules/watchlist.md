@@ -22,12 +22,13 @@ source:
   - src/modules/watchlist/ui/CollectionModal.ts
   - src/app/wiring/watchlist.ts
   - src/shared/storage/titleCodec.ts
-source_commit: a08c524
+  - src/shared/domain/sourceType.ts
+source_commit: 07539c0
 ---
 
 # Watchlist
 
-Titles of user-defined types (Movie, TV Show, Anime, …): status, priority, rating, review, notes,
+Titles carrying a user-defined `Type` label (also their folder) and a `Source Type` (`Anime` | `Movie` | `Series`, `shared/domain/sourceType.ts`) that is their kind: status, priority, rating, review, notes,
 seasons with watched and skipped episodes, groups, favourites, release date, plus cached API data
 (poster, trailer, credits, studio, community rating, TMDB collection). One note per title. Not
 here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API clients.
@@ -38,7 +39,7 @@ here: the Upcoming UI ([upcoming](upcoming.md)), books and games, the API client
 `HoardGroup`, the search and TMDB shapes, `OpenCsv`, the role interfaces (`services/roles.ts`) of this module `DataManager` `implements`:
 `TitleReader`, `TitleStats`, `TitleWriter`, `TitleMaintenance` (settings) and `TitleBackup` ([backup](backup.md)), and pure values: `newTitle`
 (`domain/newTitle.ts`), `parseSeasonLine` / `seasonsOf` (`domain/seasonText.ts`), `getTitleCredits`, `getDisplayPoster`,
-`isCreditsUnfetched` (`domain/titles.ts`). `getApiGroupForType` is no longer here: it lives in `shared/api/apiGroup.ts` (where API logic used by several modules belongs is open, issue #48). `DataManager` also implements `AirtimeStore` ([airtime `exports.ts`](upcoming.md), the Upcoming schedule of every medium) and
+`isCreditsUnfetched` (`domain/titles.ts`). Kind decisions (API routing, movie behaviour, anime handling, identity order in `titleCodec`) read `sourceType` via `shared/domain/sourceType.ts`; a title without one gets no API lookups, behaves like a series and does not fall back to `Type`. CSV import maps an optional Source Type column (invalid values stay absent); collection parts are written with `Source Type: Movie`. `DataManager` also implements `AirtimeStore` ([airtime `exports.ts`](upcoming.md), the Upcoming schedule of every medium) and
 `DraftStore` ([drafts `exports.ts`](drafts.md)); `AirtimeReader` is its read half. Changes to `exports.ts` go through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before they are committed. Other modules take these roles or `Pick`s of
 them, never the class; [wiring/watchlist.ts](../../src/app/wiring/watchlist.ts) is the only place that `new`s the
 dialogs and `ListTab`. Pure, module-only helpers (collection verdict, manual credits, community rating and trailer

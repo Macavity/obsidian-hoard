@@ -15,7 +15,7 @@ profile:
     - "*.test.ts"
     - scripts/
     - test/
-source_commit: dd764b7
+source_commit: 07539c0
 ---
 
 # Context
@@ -33,7 +33,8 @@ Read [values](values.md) first; every rule below serves one of them.
 - **Manager**: `DataManager` (watchlist), `ReadingDataManager`, `GameDataManager`; the writers of entry notes in normal operation (migration writes notes via guide/migrate-notes; custom lists write their own notes).
 - **Exports**: a module's `exports.ts`, a barrel that only re-exports by name from the module's own files (`domain/model.ts`, `services/roles.ts`, …): its deliberate public surface of models, role interfaces (`TitleReader`, `ReadingSnapshot`, …) other modules depend on instead of a manager class, and the constants and pure functions others need. Reviewed by the `exports-reviewer` agent.
 - **Index**: `EntryIndex`, read-only map from id to decoded entry, fed by vault events.
-- **Type**: a user-defined watch kind (Anime, Movie, …) that is also a folder and an API route.
+- **Type**: a user-defined label (any name) that is also a folder; it decides nothing else.
+- **Source Type**: `Anime` | `Movie` | `Series`, a watchlist title's kind; it alone routes API lookups.
 - **Maybe**: a note with `Maybe: true`, considered but not in the library.
 - **Airtime**: a schedule on a note (`Airtime …` properties) or a derived "to be released" card.
 

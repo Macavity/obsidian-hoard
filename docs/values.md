@@ -23,14 +23,6 @@ This rules out: entry data in `data.json`; a second source of truth that must be
 with the notes; overwriting a value the user set by hand; losing foreign sections or lines in a
 file the plugin shares with the user; a device that counts as primary.
 
-Where it bites: `EntryIndex` never writes and treats a note from sync like its own
-([architecture/storage](architecture/storage.md)); writes diff against a [baseline](concepts/baseline.md)
-and touch only changed properties ([flows/entry-write](flows/entry-write.md)); `noteBody` replaces
-only `## Notes`; `HistoryStore` preserves lines it cannot parse ([history line](concepts/history-line.md));
-`baseFile` leaves everything but the `hoard:` block byte-identical; [migration](modules/migration.md)
-fills missing values and never overwrites; a second device adopts a synced base instead of creating
-one ([flows/startup](flows/startup.md)).
-
 ## Secrets stay on the device
 
 API keys, Steam id and logins live in Obsidian's secret storage on this device, never in
@@ -40,13 +32,6 @@ This rules out: a shared-settings key that is not on the whitelist; a key writte
 by any path (settings, restore, import); a backup that still holds a key; an endpoint URL with
 credentials leaving the device.
 
-Where it bites: `SHARED_SETTING_KEYS` is a whitelist applied on every read and write
-([shared vs local](concepts/shared-vs-local.md)); `SecretStore.absorb` runs before every write of
-`data.json` and moves any key into secret storage, losing none when the storage refuses it;
-`buildBackup` leaves keys out, and `withoutSecrets` and `withoutCredentials` still strip the vault
-copy of a backup ([flows/backup-restore](flows/backup-restore.md)); `restoreBackup` refuses shared
-keys coming from the local section.
-
 ## Everything works without a key
 
 APIs enrich; they never carry. Fetched data is a regenerable cache, not note content, and a value
@@ -55,21 +40,13 @@ the user wrote wins over anything fetched.
 This rules out: a feature that breaks without a key; API data written into the note as if the user
 had entered it; a fetch overwriting a user override; a failed fetch cached as a final answer.
 
-Where it bites: the [entry cache](concepts/entry-cache.md) holds API data (E9) while the note holds
-overrides and the poster (E12); `PosterService` never caches a failure as "none"
-([architecture/api-layer](architecture/api-layer.md)); every add modal has a manual path and a
-"no API configured" panel ([flows/add-title](flows/add-title.md)).
-
 ## The vocabulary belongs to the user
 
-Types, statuses, priorities, reviews, reading columns, game platforms and the API used per type are
-user-defined and unbounded. The shipped set is a starting point. Because they shape the notes, they
-are the settings that sync.
+Types, statuses, priorities, reviews, reading columns and game platforms are user-defined and
+unbounded. The shipped set is a starting point. Because they shape the notes, they are the settings
+that sync. What the plugin needs to know about an entry lives in the entry's own properties, not in
+the meaning of a label.
 
-This rules out: a fixed list where a user could want more; a type name the plugin refuses without
-a reason it can state; a vocabulary that differs between two devices of the same vault.
-
-Where it bites: the shared whitelist is exactly the vocabulary ([shared vs local](concepts/shared-vs-local.md));
-a type is a folder, so `safeTypeName` / `typeNameError` explain any rejection
-([entry id](concepts/entry-id.md)); `typeApiMapping` routes each type to its API
-([modules/settings](modules/settings.md)).
+This rules out: a fixed list where a user could want more; a name the plugin refuses without a
+reason it can state; a label whose name changes behaviour; a vocabulary that differs between two
+devices of the same vault.
