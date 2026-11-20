@@ -1,6 +1,7 @@
 ---
 Name: Inception
 Type: Movie
+Source Type: Movie
 Status: Completed
 Rating: 5
 Runtime: 148

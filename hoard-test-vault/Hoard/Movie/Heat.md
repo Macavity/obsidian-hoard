@@ -1,6 +1,7 @@
 ---
 Name: Heat
 Type: Movie
+Source Type: Movie
 Status: Completed
 Priority: High
 Rating: 5

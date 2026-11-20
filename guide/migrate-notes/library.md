@@ -13,6 +13,16 @@ Target: [obsidian-library-plugin](https://github.com/venvk/obsidian-library-plug
 | `Manga` | manga → `Manga/` |
 | `Game` | game → `Games/` |
 
+`Source Type` is written next to `Type` for every watchlist entry; it decides API lookups, `Type` is only the label.
+
+| Library `Type` | Hoard `Source Type` |
+|---|---|
+| `Movie` | `Movie` |
+| `Series` | `Series` |
+| `Anime` | `Anime` |
+
+If the Library note has its own kind field, use it for `Source Type` (a film is `Movie`, an anime is `Anime`, anything else `Series`).
+
 Register any watchlist type Hoard lacks before writing notes.
 
 ## Property map

@@ -1,6 +1,7 @@
 ---
 Name: Reply 1988
 Type: Korean TV Show
+Source Type: Series
 Status: Plan to watch
 Maybe: true
 Total Episodes: 20

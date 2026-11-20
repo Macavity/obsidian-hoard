@@ -1,6 +1,7 @@
 ---
 Name: Frieren Season 3
 Type: Anime
+Source Type: Anime
 Status: To be released
 Priority: High
 Cover: none
