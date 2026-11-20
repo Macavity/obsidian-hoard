@@ -4,6 +4,30 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 The release workflow takes the section of the released version from this file as the GitHub release notes. Without a section the release only carries the compare link.
 
+## [0.4.0] - 2026-11-20
+
+### Added
+
+- One add dialog for everything. The **Add title** command and the add buttons in Watchlist, Reading, Games and Upcoming search anime, series, movies, manga, books and games at once and group the hits by kind. A pasted IMDb, TMDB, MyAnimeList or AniList link opens that title directly. Drafts and Custom lists open the same dialog with the row's text.
+- Watchlist notes have a new property `Source Type` (`Anime`, `Movie` or `Series`). It decides which service looks a title up and whether it counts as a movie. The add dialog and the CSV import set it.
+
+### Changed
+
+- `Type` is now only a label and the note's folder; it no longer decides API lookups. A Watchlist note without `Source Type`, including every title added before 0.4.0, gets no posters, ratings, credits or trailers from an API and counts as a series. Add the property to those notes by hand.
+
+### Removed
+
+- The WatchLog import wizard, its offer at startup and the import and cleanup rows in the settings. Notes from WatchLog, Library or another tracker move over with the guide in `guide/migrate-notes/`, by hand or with an AI agent.
+- The settings "API routing by type in Watchlist" and the fixed types Anime, Movie and TV Show; `Source Type` replaces them. A stored routing in `Hoard.base` is dropped on the next settings save.
+- The setting "Default type for new titles"; the add dialog picks the kind from the search.
+
+### Fixed
+
+- A poster, trailer, credit or studio lookup that fails (no connection, server error) is tried again later instead of being recorded as missing for good. The detail view tells a failed trailer lookup from a title without a trailer.
+- The favourite heart in a detail view follows every click, ignores clicks while it saves and reports a save that failed.
+- An edit made right before its entry is renamed is no longer lost.
+- A settings change made right before Hoard is disabled or Obsidian closes is saved.
+
 ## [0.3.1] - 2026-11-13
 
 ### Fixed

@@ -13,6 +13,8 @@ Hoard adds a sidebar panel with eight tabs:
 - **Drafts** — scans your vault for a tag (default `#hoard`) and turns those lines into entries.
 - **Log** — a unified activity timeline of everything you add, finish, rate or delete.
 
+One dialog adds everything: the **Add title** command or a tab's add button searches anime, series, movies, manga, books and games at once. Paste an IMDb, TMDB, MyAnimeList or AniList link to jump straight to that title.
+
 Desktop and mobile. The interface follows Obsidian's language setting and is available in English and German; other languages fall back to English.
 
 ## Widgets
@@ -46,7 +48,7 @@ Everything you track is a Markdown note with properties (YAML frontmatter) under
 |---|---|---|
 | Entries (titles, books, manga, games), progress, ratings, groups | notes in the root folder | yes |
 | Activity log | `History.md` | yes |
-| Shared settings: types, statuses, priorities, custom columns, API mapping | `Hoard.base` (`hoard:` key) | yes |
+| Shared settings: types, statuses, priorities, custom columns | `Hoard.base` (`hoard:` key) | yes |
 | API keys, Steam id, IGDB client id, Jikan endpoint | Obsidian's keychain (secret storage); never in backups | no, per device |
 | Cached API data, colors, layout, saved filters | `data.json` of the plugin | no, per device |
 
