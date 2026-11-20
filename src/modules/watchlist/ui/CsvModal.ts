@@ -1,6 +1,7 @@
 import type { CsvOptions } from '../domain/model';
 import type { App } from 'obsidian';
 import { CsvModalBase, rowsToCsv, type CsvExportRow, type CsvFieldDef, type CsvSelectOption } from '../../../design-system/CsvModalBase';
+import { parseSourceType } from '../../../shared/domain/sourceType';
 import { safeTypeName } from '../../../shared/domain/typeName';
 import { t } from '../../../shared/i18n';
 import { statusLabel, typeLabel } from '../../../shared/i18n/labels';
@@ -56,6 +57,7 @@ const IMPORT_FIELDS: CsvFieldDef[] = [
 	{ key: 'releaseDate',    labelKey: 'csv.fields.releaseDate',  coercion: 'date', autoDetect: ['releasedate', 'release date', 'release_date', 'air date', 'airdate'] },
 	{ key: 'externalLink',   labelKey: 'csv.fields.link',          coercion: 'string', autoDetect: ['link', 'externallink', 'external link', 'external_link', 'url'] },
 	{ key: 'notes',          labelKey: 'csv.fields.notes',         coercion: 'string', autoDetect: ['notes', 'note', 'comment', 'comments'] },
+	{ key: 'sourceType',     labelKey: 'csv.fields.sourceType',   coercion: 'none', autoDetect: ['source type', 'sourcetype', 'source_type'] },
 	{ key: 'studio',         labelKey: 'csv.fields.studio',        coercion: 'none', autoDetect: ['studio', 'studios', 'network', 'production', 'production company'] },
 ];
 
@@ -88,6 +90,7 @@ export function buildImportedTitle(entry: Partial<HoardTitle>, id: string, defau
 		id,
 		title: entry.title!.trim(),
 		type: entry.type?.trim() || defaultType || 'Anime',
+		sourceType: parseSourceType(entry.sourceType),
 		status,
 		priority: entry.priority || 'Medium',
 		rating: entry.rating,
@@ -201,6 +204,9 @@ export class CsvModal extends CsvModalBase<Partial<HoardTitle>> {
 		// imported studios are user data — the manual slot, so a later fetch still runs
 		const studioVal = studioFromCsv(get('studio'));
 		if (studioVal.length > 0) entry.manualStudio = studioVal;
+		// an invalid or empty Source Type stays absent
+		const sourceType = parseSourceType(get('sourceType').trim());
+		if (sourceType) entry.sourceType = sourceType;
 
 		// skip rows where all mapped fields resolved to empty
 		const isEmpty = !entry.title?.trim() && !entry.manualStudio && NON_EMPTY_KEYS.every((k) => !entry[k]);

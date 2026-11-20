@@ -14,7 +14,8 @@ describe('animeLink', () => {
 
 describe('ratingRefreshNotice', () => {
 	it('words every outcome like the refresh did before', () => {
-		expect(ratingRefreshNotice({ kind: 'noApi', type: 'Book' })).toBe(t('detail.community.noApi', { type: 'Book' }));
+		expect(ratingRefreshNotice({ kind: 'noApi' })).toBe(t('detail.community.noApi'));
+		expect(ratingRefreshNotice({ kind: 'noApi' })).toContain('Source Type');
 		expect(ratingRefreshNotice({ kind: 'noMatch', source: 'MAL' })).toBe(t('detail.community.noMatch', { source: 'MAL' }));
 		expect(ratingRefreshNotice({ kind: 'fetchFailed' })).toBe(t('detail.community.fetchFailed'));
 	});

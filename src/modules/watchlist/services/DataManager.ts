@@ -1080,6 +1080,7 @@ export class DataManager extends ChangeNotifier
 				id: t.id,
 				title: t.title,
 				type: t.type,
+				...(t.sourceType && { sourceType: t.sourceType }),
 				releaseDate: t.releaseDate,
 				externalLink: t.externalLink,
 				totalEpisodes: t.totalEpisodes,

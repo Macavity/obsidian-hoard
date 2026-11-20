@@ -1,5 +1,5 @@
 import type { AirtimeRecurrence, EntryAirtime } from '../../modules/airtime/exports';
-import { isAnime } from '../domain/sourceType';
+import { isAnime, parseSourceType, type SourceType } from '../domain/sourceType';
 import type { HoardTitle, Season, TitleOverrides } from '../../modules/watchlist/exports';
 import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId, Fm } from './storageTypes';
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
@@ -7,8 +7,6 @@ import { externalIdFromLink, formatExternalId, parseExternalId } from './externa
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, TITLE_PROPS as T } from './properties';
 import { parseSeasonLine, seasonsOf } from '../../modules/watchlist/exports';
 import { defined, nonEmpty, optional } from '../domain/sharedHelpers';
-import type { SourceType } from '../domain/sourceType';
-import { parseSourceType } from '../domain/sourceType';
 
 const RECURRENCES: readonly AirtimeRecurrence[] = ['once', 'daily', 'weekly', 'monthly'];
 

@@ -179,7 +179,7 @@ export async function refreshCommunityRating(
 
 /** How a manual rating refresh ended; the notice wording follows from it. */
 export type RatingRefreshOutcome =
-	| { kind: 'updated'; source: string } | { kind: 'noApi'; type: string }
+	| { kind: 'updated'; source: string } | { kind: 'noApi' }
 	| { kind: 'noMatch'; source: 'AniList' | 'MAL' } | { kind: 'fetchFailed' }
 	| { kind: 'error'; err: unknown } | { kind: 'gone' };
 
@@ -187,7 +187,7 @@ export type RatingRefreshOutcome =
 export function ratingRefreshNotice(o: RatingRefreshOutcome): string | null {
 	switch (o.kind) {
 		case 'updated': return t('detail.community.updated', { source: SOURCE_LABELS[o.source] ?? o.source });
-		case 'noApi': return t('detail.community.noApi', { type: o.type });
+		case 'noApi': return t('detail.community.noApi');
 		case 'noMatch': return t('detail.community.noMatch', { source: o.source });
 		case 'fetchFailed': return t('detail.community.fetchFailed');
 		case 'error': return apiErrorMessage(o.err);
@@ -212,7 +212,7 @@ async function runRatingRefresh(
 		const animeSource = settings.get().animeApiSource ?? 'jikan';
 		const wantsAniList = animeSource === 'anilist';
 		const group = apiGroupOf(title);
-		if (group === '') return { kind: 'noApi', type: title.type };
+		if (group === '') return { kind: 'noApi' };
 
 		if (group === 'anime') {
 			const ensured = await ensurePreferredAnimeLink(titles, api, title, wantsAniList);

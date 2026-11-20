@@ -5,7 +5,8 @@ import { click, type, waitForSelector } from "../ui.mjs";
 import { findNoteByExternalId } from "../note.mjs";
 import { chooseOption, runCommand } from "./common.mjs";
 
-const TYPE_SELECT = ".hoard-add-modal > .hoard-modal__row:first-child select";
+const SOURCE_TYPE_SELECT = ".hoard-add-modal > .hoard-modal__row:first-child select";
+const TYPE_SELECT = ".hoard-modal__form > .hoard-modal__row:not(.hoard-modal__row--pair) select";
 const PICK_ATTR = "data-smoke-pick";
 const PICKED = `[${PICK_ATTR}]`;
 const DUPLICATE_CONTINUE = ".hoard-modal__duplicate-warning .hoard-btn--primary";
@@ -49,17 +50,19 @@ function assertNote(dir, externalId) {
 	}, 15000);
 }
 
-async function addTitle({ kind, query, title, metaIncludes, externalId }) {
+async function addTitle({ sourceType, type: typeName, query, title, metaIncludes, externalId }) {
 	runCommand("hoard:add-title");
 	await waitForSelector(".hoard-add-modal .hoard-search-picker__query");
-	await chooseOption(TYPE_SELECT, kind);
+	await chooseOption(SOURCE_TYPE_SELECT, sourceType);
 	await click(".hoard-add-modal .hoard-search-picker__query");
 	await type(query);
 	await pickResult({ title, metaIncludes });
 	await waitForFilledTitle(".hoard-modal__form", title);
-	const found = () => findNoteByExternalId(VAULT_PATH, `Hoard/${kind}`, externalId) !== null;
+	// the pick re-renders the form, so the label comes after it
+	await chooseOption(TYPE_SELECT, typeName);
+	const found = () => findNoteByExternalId(VAULT_PATH, `Hoard/${typeName}`, externalId) !== null;
 	await submit(".hoard-modal__form .hoard-modal__btn-row .hoard-btn--primary", found);
-	return assertNote(`Hoard/${kind}`, externalId);
+	return assertNote(`Hoard/${typeName}`, externalId);
 }
 
 async function openTabAdd(tabIndex, addSelector) {
@@ -95,8 +98,8 @@ async function addGame({ query, title, externalId }) {
 }
 
 export const KEYLESS_CASES = [
-	["movie", () => addTitle({ kind: "Movie", query: "The Matrix", title: "The Matrix", externalId: "imdb:tt0133093" })],
-	["show", () => addTitle({ kind: "TV Show", query: "Breaking Bad", title: "Breaking Bad", externalId: "imdb:tt0903747" })],
+	["movie", () => addTitle({ sourceType: "Movie", type: "Movie", query: "The Matrix", title: "The Matrix", externalId: "imdb:tt0133093" })],
+	["show", () => addTitle({ sourceType: "Series", type: "TV Show", query: "Breaking Bad", title: "Breaking Bad", externalId: "imdb:tt0903747" })],
 	["book", () => addBook({ query: "The Hobbit", title: "The Hobbit", metaIncludes: "Tolkien", externalId: /^openlibrary:OL\d+W$/ })],
 	["game", () => addGame({ query: "Hades", title: "Hades", externalId: "steam:1145360" })],
 ];

@@ -364,6 +364,7 @@ export class CollectionModal extends Modal {
 			id,
 			title: detail.title,
 			type: this.opts.movieType,
+			sourceType: 'Movie',
 			status: defaults.status,
 			priority: defaults.priority,
 			totalEpisodes: detail.episodes,

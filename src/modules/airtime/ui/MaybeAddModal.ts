@@ -4,12 +4,9 @@ import type { SettingsReader } from '../../settings/exports';
 import { t } from '../../../shared/i18n';
 import type { MaybeTitle } from '../../watchlist/exports';
 import type { SourceType } from '../../../shared/domain/sourceType';
-import { typeLabel } from '../../../shared/i18n/labels';
 import { formatDateDisplay } from '../../../shared/domain/date';
 import {
-	makeRow,
-	nameSelect,
-	renderMediaFields,
+	renderMediaAndTypeFields,
 	resetForm,
 } from '../../../design-system/FormCells';
 import { episodesLabel, fillMediaFields, resolvePick, searchTitles, titlePickerBase, type TitleSearchApi, type TitleSearchResult, type MediaFields } from '../../../shared/services/titleSearch';
@@ -67,9 +64,11 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 	protected renderForm(): void {
 		const form = resetForm(this.formEl);
 		if (!form) return;
-		renderMediaFields(form, this.media, false);
-		nameSelect(makeRow(form, t('add.type')), this.settings.get().types.map((ty) => ty.name), this.selectedType,
-			(v) => { this.selectedType = v; }, false, typeLabel);
+		renderMediaAndTypeFields(form, this.media, false, {
+			names: this.settings.get().types.map((ty) => ty.name),
+			selected: this.selectedType,
+			onChange: (v) => { this.selectedType = v; },
+		});
 
 		const btnRow = form.createDiv({ cls: 'hoard-modal__btn-row' });
 		const addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('misc.maybeAdd.submit') });

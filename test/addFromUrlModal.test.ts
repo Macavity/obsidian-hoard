@@ -52,8 +52,9 @@ describe('AddFromUrlModal', () => {
 		await vi.waitFor(() => expect(openAddTitle).toHaveBeenCalledOnce());
 		expect(openAddTitle.mock.calls[0]![0].onAdded).toBe(onAdded);
 		expect(api.getTmdbByImdbId).toHaveBeenCalledWith('tt1375666');
+		expect(openAddTitle.mock.calls[0]![0].prefill).not.toHaveProperty('type');
 		expect(openAddTitle.mock.calls[0]![0].prefill).toMatchObject({
-			title: 'Inception', type: 'Movie', sourceType: 'Movie', episodes: 1, duration: 148, releaseDate: '2010-07-16',
+			title: 'Inception', sourceType: 'Movie', episodes: 1, duration: 148, releaseDate: '2010-07-16',
 			link: 'https://imdb.test/tt1', trailerUrl: '',
 		});
 	});
@@ -64,7 +65,7 @@ describe('AddFromUrlModal', () => {
 		imdbBtn.click();
 		await vi.waitFor(() => expect(openAddTitle).toHaveBeenCalledOnce());
 		expect(api.getOmdbByImdbId).toHaveBeenCalledWith('tt0944947');
-		expect(openAddTitle.mock.calls[0]![0].prefill).toMatchObject({ type: 'TV Show', sourceType: 'Series' });
+		expect(openAddTitle.mock.calls[0]![0].prefill).toMatchObject({ sourceType: 'Series' });
 	});
 
 	it('falls back to Cinemeta without a key, trying series then movie', async () => {
@@ -74,7 +75,7 @@ describe('AddFromUrlModal', () => {
 		await vi.waitFor(() => expect(openAddTitle).toHaveBeenCalledOnce());
 		expect(api.getCinemetaDetails).toHaveBeenNthCalledWith(1, 'tt0944947', 'tv');
 		expect(api.getOmdbByImdbId).not.toHaveBeenCalled();
-		expect(openAddTitle.mock.calls[0]![0].prefill).toMatchObject({ type: 'TV Show', sourceType: 'Series' });
+		expect(openAddTitle.mock.calls[0]![0].prefill).toMatchObject({ sourceType: 'Series' });
 	});
 
 	it('prefers the series record over a foreign movie record for the same id', async () => {
@@ -137,13 +138,13 @@ describe('AddFromUrlModal', () => {
 		tmdbBtn.click();
 		await vi.waitFor(() => expect(openAddTitle).toHaveBeenCalledOnce());
 		expect(api.getTmdbMovieDetails).toHaveBeenCalledWith('27205');
-		expect(openAddTitle.mock.calls[0]![0].prefill).toMatchObject({ type: 'Movie', sourceType: 'Movie', trailerUrl: 'yt' });
+		expect(openAddTitle.mock.calls[0]![0].prefill).toMatchObject({ sourceType: 'Movie', trailerUrl: 'yt' });
 
 		const second = setup();
 		second.tmdb.value = 'https://www.themoviedb.org/TV/1396';
 		second.tmdbBtn.click();
 		await vi.waitFor(() => expect(second.openAddTitle).toHaveBeenCalledOnce());
 		expect(second.api.getTmdbTvDetails).toHaveBeenCalledWith('1396');
-		expect(second.openAddTitle.mock.calls[0]![0].prefill).toMatchObject({ type: 'TV Show', sourceType: 'Series' });
+		expect(second.openAddTitle.mock.calls[0]![0].prefill).toMatchObject({ sourceType: 'Series' });
 	});
 });

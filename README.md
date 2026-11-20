@@ -74,7 +74,7 @@ Search, posters and covers work without any key through Cinemeta, Open Library a
 | [IGDB](https://dev.twitch.tv/console/apps) | Game alternative to RAWG | Twitch client ID + secret |
 | [Steam](https://steamcommunity.com/dev/apikey) | Import owned games and playtime | Web API key + Steam ID |
 
-Steam needs your profile's **Game details** privacy set to Public. For custom Watchlist types, pick the answering service under **API routing by type**.
+Steam needs your profile's **Game details** privacy set to Public. A Watchlist note's `Source Type` property (Anime, Movie or Series) decides which service looks it up.
 
 ## Coming from another tracker
 

@@ -140,6 +140,17 @@ describe('DataManager on vault storage', () => {
 		expect(content).toContain('Status: Plan to watch');
 	});
 
+	it('keeps an unrecognised Source Type line unchanged through a full rewrite', async () => {
+		const { dm, f } = await setupDataManager({ 'W/Movie/X.md': '---\nName: X\nType: Movie\nSource Type: film\n---\n' });
+		const t = dm.getTitle('Movie/X')!;
+		expect(t.sourceType).toBeUndefined();
+		t.rating = 4;
+		expect(await dm.rewriteFrontmatterIfExists(t)).toBe(true);
+		const content = f.files.get('W/Movie/X.md')!;
+		expect(content).toContain('Source Type: film');
+		expect(content).toContain('Rating: 4');
+	});
+
 	it('derives maybe, groups and airtime', async () => {
 		const { dm } = await setupDataManager({
 			'W/Movie/A.md': '---\nName: A\nType: Movie\nGroups: [Marvel]\n---\n',

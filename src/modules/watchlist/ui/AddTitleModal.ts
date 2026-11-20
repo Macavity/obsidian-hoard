@@ -10,7 +10,7 @@ import { newTitle } from '../domain/newTitle';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 import { t } from '../../../shared/i18n';
 import { found, type LookupResult } from '../../../shared/api/lookup';
-import { priorityLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
+import { priorityLabel, statusLabel } from '../../../shared/i18n/labels';
 import { renderSearchResultRow } from '../../../design-system/SearchThumbnail';
 import {
 	episodesLabel,
@@ -33,9 +33,9 @@ import { blockDuplicate, createDuplicateGuard } from '../../../design-system/Dup
 import {
 	makeCell,
 	makeRow as makeFormRow,
+	renderMediaAndTypeFields,
 	nameSelect,
 	renderGroupPicker,
-	renderMediaFields,
 	resetForm,
 	type GroupPickerState,
 } from '../../../design-system/FormCells';
@@ -50,7 +50,7 @@ export type AddTitleApi = TitleSearchApi & Pick<ApiService, 'fetchCommunityRatin
 export interface AddTitlePrefill {
 	title?: string;
 	searchQuery?: string;
-	type: string;
+	type?: string;
 	sourceType: SourceType;
 	episodes: number;
 	duration: number;
@@ -105,25 +105,25 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		private readonly opts: AddTitleOptions,
 	) {
 		super(app, t('add.title.heading'), ['hoard-add-modal']);
-		const prefill = opts.prefill;
-		// preselect the resolved default type; a prefill type (e.g. from URL detection) overrides it below
-		this.selectedType = resolveDefaultAddType() || this.selectedType;
-		if (prefill) {
-			this.selectedType = prefill.type;
-			this.selectedSourceType = prefill.sourceType;
-			if (prefill.title) {
-				this.media.title = prefill.title;
-			}
-			if (prefill.searchQuery) this.initialQuery = prefill.searchQuery;
-			this.media.episodes = prefill.episodes;
-			this.media.duration = prefill.duration;
-			this.media.releaseDate = prefill.releaseDate;
-			this.media.link = prefill.link;
-			this.fieldSeasons = prefill.seasons;
-			if (prefill.trailerUrl) this.fieldTrailer = found(prefill.trailerUrl);
-			if (prefill.director !== undefined) this.fieldDirector = prefill.director;
-			if (prefill.cast !== undefined) this.fieldCast = prefill.cast;
-		}
+		// preselect the resolved default type; a prefill type overrides it, and a type no longer in settings falls back to the first
+		this.selectedType = opts.prefill?.type || resolveDefaultAddType() || this.selectedType;
+		const names = settings.get().types.map((ty) => ty.name);
+		if (names.length > 0 && !names.includes(this.selectedType)) this.selectedType = names[0]!;
+		if (opts.prefill) this.applyPrefill(opts.prefill);
+	}
+
+	private applyPrefill(prefill: AddTitlePrefill): void {
+		this.selectedSourceType = prefill.sourceType;
+		if (prefill.title) this.media.title = prefill.title;
+		if (prefill.searchQuery) this.initialQuery = prefill.searchQuery;
+		this.media.episodes = prefill.episodes;
+		this.media.duration = prefill.duration;
+		this.media.releaseDate = prefill.releaseDate;
+		this.media.link = prefill.link;
+		this.fieldSeasons = prefill.seasons;
+		if (prefill.trailerUrl) this.fieldTrailer = found(prefill.trailerUrl);
+		if (prefill.director !== undefined) this.fieldDirector = prefill.director;
+		if (prefill.cast !== undefined) this.fieldCast = prefill.cast;
 	}
 
 	protected pickerOptions(): SearchPickerOptions<TitleSearchResult> {
@@ -178,10 +178,11 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		if (!form) return;
 		const makeRow = (label: string): HTMLElement => makeFormRow(form, label);
 
-		renderMediaFields(form, this.media, true);
-
-		nameSelect(makeRow(t('add.type')), this.settings.get().types.map((ty) => ty.name), this.selectedType,
-			(v) => { this.selectedType = v; }, false, typeLabel);
+		renderMediaAndTypeFields(form, this.media, true, {
+			names: this.settings.get().types.map((ty) => ty.name),
+			selected: this.selectedType,
+			onChange: (v) => { this.selectedType = v; },
+		});
 
 		// status + priority paired 50/50 (status excludes "To be released" — it follows releaseDate)
 		const statusPriRow = form.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });

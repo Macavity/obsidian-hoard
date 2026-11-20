@@ -42,7 +42,7 @@ const detail = {
 	community: {
 		empty: 'No community rating',
 		refresh: 'Refresh community rating',
-		noApi: 'No API configured for type "{type}". Configure it in Settings → API.',
+		noApi: 'This note has no Source Type property. Set it to Anime, Movie or Series.',
 		noMatch: 'Could not find matching title on {source}.',
 		fetchFailed: 'Could not fetch community rating.',
 		updated: 'Rating updated from {source}.',

@@ -6,7 +6,8 @@ import { readNote } from "../note.mjs";
 import { chooseOption, runCommand } from "./common.mjs";
 
 const TITLE = "Smoke Manual Title";
-const TYPE_SELECT = ".hoard-add-modal > .hoard-modal__row:first-child select";
+const SOURCE_TYPE_SELECT = ".hoard-add-modal > .hoard-modal__row:first-child select";
+const TYPE_SELECT = ".hoard-modal__form > .hoard-modal__row:not(.hoard-modal__row--pair) select";
 const STATUS_SELECT = ".hoard-modal__form .hoard-modal__pair-cell:first-child select";
 const TITLE_INPUT = ".hoard-modal__form input[type=text]";
 const SAVE = ".hoard-modal__form .hoard-modal__btn-row .hoard-btn--primary";
@@ -15,7 +16,7 @@ const COUNT = "String(app.plugins.plugins['hoard'].dataManager.getTitles().lengt
 export async function addTitleManual() {
 	runCommand("hoard:add-title");
 	await waitForSelector(TITLE_INPUT);
-	// the type select re-renders the form, so it comes before the title
+	await chooseOption(SOURCE_TYPE_SELECT, "Movie");
 	await chooseOption(TYPE_SELECT, "Movie");
 	await chooseOption(STATUS_SELECT, "Watching");
 	await click(TITLE_INPUT);
@@ -31,5 +32,6 @@ export async function addTitleManual() {
 	const { props } = readNote(VAULT_PATH, path);
 	assert(props.Name === TITLE, `title: ${props.Name}`);
 	assert(props.Type === "Movie", `type: ${props.Type}`);
+	assert(props["Source Type"] === "Movie", `source type: ${props["Source Type"]}`);
 	assert(props.Status === "Watching", `status: ${props.Status}`);
 }

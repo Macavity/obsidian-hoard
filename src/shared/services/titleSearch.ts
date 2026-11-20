@@ -1,7 +1,7 @@
 import type { SettingsReader } from '../../modules/settings/exports';
 import { t } from '../i18n';
 import { sourceTypeLabel } from '../i18n/labels';
-import { SOURCE_TYPES, type SourceType } from '../domain/sourceType';
+import { SOURCE_TYPES, parseSourceType, type SourceType } from '../domain/sourceType';
 import type { AnimeSearchResult, MediaSearchResult, Season } from '../../modules/watchlist/exports';
 import { animeResultIdKeys, mediaResultIdKeys } from './LibraryIndex';
 import { effectiveMediaSource, type MediaSource } from '../api/apiSources';
@@ -196,10 +196,11 @@ export function titlePickerBase(
 		withYear: true,
 		pageSize: SEARCH_PAGE_SIZE,
 		typeSelect: {
+			label: t('ui.picker.sourceType'),
 			names: [...SOURCE_TYPES],
 			selected: selectedSourceType,
-			onChange: (v: string) => { const s = SOURCE_TYPES.find((x) => x === v); if (s) onSourceTypeChange(s); },
-			format: (v: string) => { const s = SOURCE_TYPES.find((x) => x === v); return s ? sourceTypeLabel(s) : v; },
+			onChange: (v: string) => { const s = parseSourceType(v); if (s) onSourceTypeChange(s); },
+			format: (v: string) => { const s = parseSourceType(v); return s ? sourceTypeLabel(s) : v; },
 		},
 	};
 }
