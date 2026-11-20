@@ -1,8 +1,8 @@
-// Mobile smoke for the add title modal: switches the running Obsidian to tablet emulation (`dev:mobile on`, which reloads
-// the app), stubs the anime search with 9 fixed results, opens "Add title" and searches. Then narrows the viewport to a
-// phone (Obsidian: below 600px) and checks the results panel keeps its height instead of being squashed by the capped modal
-// column. Saves screenshots and switches emulation off again. Obsidian must be running with the test vault open and the
-// current build deployed (`pnpm vault:link-test`, `pnpm reload`).
+// Mobile smoke for the add wizard: switches the running Obsidian to tablet emulation (`dev:mobile on`, which reloads the
+// app), stubs every search (9 fixed anime results, nothing for the other kinds), opens the wizard and searches. Then
+// narrows the viewport to a phone (Obsidian: below 600px) and checks the anime section shows all its cards at full height:
+// only the dialog scrolls, a section never does. Saves screenshots and switches emulation off again. Obsidian must be
+// running with the test vault open and the current build deployed (`pnpm vault:link-test`, `pnpm reload`).
 // Output dir: $MOBILE_SMOKE_OUT or <tmp>/hoard-view--mobile.
 import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,56 +21,74 @@ ensureVault();
 warnIfHidden();
 mkdirSync(OUT, { recursive: true });
 
-/** `dev:mobile` reloads the app; until it is back, every CLI command answers "Command … not found". */
+/**
+ * `dev:mobile` reloads the app; until it is back, every CLI command answers "Command … not found". The add command can
+ * exist before the add providers do, so wait for the index: the wizard would open without sections.
+ */
 function untilReady() {
 	return waitFor(() => {
 		try {
-			return evalJs("app.plugins.plugins['hoard'] ? 'ok' : 'no'") === "ok";
+			return evalJs("app.plugins.plugins['hoard']?.indexReady === true ? 'ok' : 'no'") === "ok";
 		} catch {
 			return false;
 		}
-	}, 30000, 500);
+	}, 40000, 500);
 }
 
-/** Replaces the anime APIs with fixed results in the AnimeSearchResult shape; the next app reload restores them. */
+/**
+ * The wizard searches every kind at once: empties every search of the API service and gives the anime ones fixed results
+ * in the AnimeSearchResult shape. The next app reload restores them.
+ */
 const STUB = `(() => {
 	const api = app.plugins.plugins['hoard'].apiService;
 	const results = Array.from({ length: ${RESULTS} }, (_, i) => ({
 		malId: 900000 + i, title: 'Smoke result ' + (i + 1), episodes: 12, duration: 24, releaseDate: '2024-01-01',
 		url: '', seasons: [], posterUrl: '',
 	}));
+	for (const name of Object.getOwnPropertyNames(Object.getPrototypeOf(api))) {
+		if (name.startsWith('search')) api[name] = async () => [];
+	}
 	api.searchAnime = api.searchAniList = async () => results;
 	return 'ok';
 })()`;
-/** Forces the type select to Anime (the stubbed API group) and starts a search through the UI. */
+const QUERY = ".hoard-add-wizard__query";
+const PANEL_SELECTOR = '.hoard-add-wizard .hoard-result-sections__section[data-section="anime"] .hoard-result-sections__items';
+/** Types the query and presses Enter, which skips the search debounce. */
 const SEARCH = `(() => {
-	const modal = document.querySelector('.hoard-add-modal');
-	const type = modal.querySelector('select');
-	if (type && type.value !== 'Anime') { type.value = 'Anime'; type.dispatchEvent(new Event('change')); }
-	const query = modal.querySelector('.hoard-search-picker__query');
+	const query = document.querySelector(${JSON.stringify(QUERY)});
 	query.value = 'smoke';
 	query.dispatchEvent(new Event('input'));
-	modal.querySelector('.hoard-search-picker__fields .hoard-btn').click();
+	query.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 	return 'ok';
 })()`;
-const CARDS = `String(document.querySelectorAll('.hoard-add-modal > .hoard-modal__results .hoard-search-picker__result-card').length)`;
+/** Card count of the anime section once no section is loading any more; -1 until then. */
+const CARDS = `(() => {
+	if (document.querySelector('.hoard-add-wizard .hoard-modal__loading')) return '-1';
+	return String(document.querySelectorAll(${JSON.stringify(`${PANEL_SELECTOR} .hoard-search-picker__result-card`)}).length);
+})()`;
 const IS_PHONE = `String(document.body.classList.contains('is-phone'))`;
 const PANEL = `(() => {
-	const panel = document.querySelector('.hoard-add-modal > .hoard-modal__results');
+	const panel = document.querySelector(${JSON.stringify(PANEL_SELECTOR)});
 	const card = panel?.querySelector('.hoard-search-picker__result-card');
 	if (!panel || !card) return null;
 	const p = panel.getBoundingClientRect(), c = card.getBoundingClientRect();
-	return { height: p.height, cardVisible: c.top >= p.top && c.top + 40 <= p.bottom, cards: panel.querySelectorAll('.hoard-search-picker__result-card').length };
+	return {
+		height: p.height,
+		clipped: panel.scrollHeight - panel.clientHeight,
+		cardVisible: c.top >= 0 && c.top + 40 <= window.innerHeight,
+		cards: panel.querySelectorAll('.hoard-search-picker__result-card').length,
+	};
 })()`;
 
 const failures = [];
 
-/** Records a failure for each way the phone results panel can fall short. */
+/** Records a failure for each way the phone results section can fall short. */
 function checkPanel(m) {
-	if (!m) return failures.push("phone: results panel or card not found");
+	if (!m) return failures.push("phone: anime section or card not found");
 	if (m.cards !== RESULTS) failures.push(`phone: ${m.cards} result cards, expected ${RESULTS}`);
-	if (m.height < MIN_PANEL_HEIGHT) failures.push(`phone: results panel ${Math.round(m.height)}px tall, expected >= ${MIN_PANEL_HEIGHT}`);
-	if (!m.cardVisible) failures.push("phone: first result card not visible inside the panel");
+	if (m.height < MIN_PANEL_HEIGHT) failures.push(`phone: anime section ${Math.round(m.height)}px tall, expected >= ${MIN_PANEL_HEIGHT}`);
+	if (m.clipped > 1) failures.push(`phone: anime section scrolls on its own (${m.clipped}px hidden), only the dialog may`);
+	if (!m.cardVisible) failures.push("phone: first result card not visible on screen");
 }
 
 try {
@@ -79,25 +97,25 @@ try {
 	await untilReady();
 	assert(evalJs(STUB) === "ok", "search stub not installed");
 	evalJs("app.commands.executeCommandById('hoard:add-title')");
-	await waitFor(() => evalJs("document.querySelector('.hoard-add-modal .hoard-search-picker__query') ? 'yes' : 'no'") === "yes", 10000);
+	await waitFor(() => evalJs(`document.querySelector(${JSON.stringify(QUERY)}) ? 'yes' : 'no'`) === "yes", 10000);
 	evalJs(SEARCH);
 	await waitFor(() => evalJs(CARDS) === String(RESULTS), 10000);
 	await sleep(300);
-	screenshot(join(OUT, "tablet-add-title.png"));
+	screenshot(join(OUT, "tablet-add-wizard.png"));
 
 	// Phone: the viewport override survives reloads, so the finally block clears it.
 	cdp("Emulation.setDeviceMetricsOverride", { width: PHONE_WIDTH, height: 800, deviceScaleFactor: 2, mobile: true });
 	await waitFor(() => evalJs(IS_PHONE) === "true", 5000);
 	await sleep(500);
 	checkPanel(json(PANEL));
-	screenshot(join(OUT, "phone-add-title.png"));
+	screenshot(join(OUT, "phone-add-wizard.png"));
 } catch (e) {
 	failures.push(`smoke aborted: ${e.message}`);
 } finally {
 	// Leave Obsidian as found even after a failure: modal closed, desktop mode. Problems here join `failures` instead of
 	// throwing, so they never replace the failure that got us here.
 	try {
-		evalJs("document.querySelector('.hoard-add-modal')?.closest('.modal')?.querySelector('.modal-close-button')?.click()");
+		evalJs("document.querySelector('.hoard-add-wizard')?.closest('.modal')?.querySelector('.modal-close-button')?.click()");
 	} catch {
 		// the app may still be reloading; the reload closes the modal anyway
 	}
