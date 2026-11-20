@@ -43,6 +43,15 @@ describe('CsvModal import wizard', () => {
 		expect(modal.contentEl.querySelector('.hoard-csv__count')!.textContent).toBe('2 of 2 selected');
 	});
 
+	it('imports a mapped Source Type column and leaves an invalid value absent', async () => {
+		const { modal, added } = setup();
+		await uploadCsv(modal, 'Title,Type,Status,Source Type\nDune,Movie,Plan to watch,Movie\nHeat,Movie,Plan to watch,film');
+		clickNext(modal);
+		clickByText(modal.contentEl, 'button', 'Import selected');
+		await vi.waitFor(() => expect(added).toHaveLength(1));
+		expect(added[0]!.map((e) => [e.title, e.sourceType])).toEqual([['Dune', 'Movie'], ['Heat', undefined]]);
+	});
+
 	it('maps unknown statuses, types and ratings, then imports with created types', async () => {
 		const { modal, added, settings, settingsService, setImportProgress } = setup(['Dune']);
 		await uploadCsv(modal, [

@@ -9,7 +9,7 @@ import { newTitle } from '../domain/newTitle';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
 import type { HoardGroup, HoardTitle, MediaSearchResult, TmdbCollectionDetail, TmdbCollectionPart } from '../domain/model';
 import { COLLECTION_NONE, getCollectionId, isCollectionNone } from '../domain/titleHelpers';
-import { getApiGroupForType } from '../../../shared/api/apiGroup';
+import { apiGroupOf } from '../../../shared/domain/sourceType';
 import { imdbIdFromLink } from '../../../shared/domain/imdb';
 import { buildPosterCard } from '../../../design-system/PosterCard';
 import type { CardMenuContext } from '../../../design-system/PosterCard';
@@ -107,7 +107,7 @@ export async function resolveCollection(
 	title: HoardTitle,
 ): Promise<TmdbCollectionDetail | null> {
 	if (!api.hasTmdbKey()) return null;
-	if (getApiGroupForType(title.type, settings.get().typeApiMapping) !== 'movie') return null;
+	if (apiGroupOf(title) !== 'movie') return null;
 	if (isCollectionNone(title)) return null;
 
 	const known = getCollectionId(title);
@@ -364,6 +364,7 @@ export class CollectionModal extends Modal {
 			id,
 			title: detail.title,
 			type: this.opts.movieType,
+			sourceType: 'Movie',
 			status: defaults.status,
 			priority: defaults.priority,
 			totalEpisodes: detail.episodes,

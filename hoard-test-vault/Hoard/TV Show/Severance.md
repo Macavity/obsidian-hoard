@@ -1,6 +1,7 @@
 ---
 Name: Severance
 Type: TV Show
+Source Type: Series
 Status: Watching
 Priority: High
 Cover: none

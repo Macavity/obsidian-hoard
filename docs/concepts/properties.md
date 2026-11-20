@@ -5,7 +5,8 @@ description: The fixed Title Case property names of entry notes per medium, the 
 source:
   - src/shared/storage/properties.ts
   - guide/migrate-notes/watchlog.md
-source_commit: dd764b7
+  - src/shared/domain/sourceType.ts
+source_commit: 07539c0
 ---
 
 # Property names
@@ -45,6 +46,7 @@ Watchlist titles:
 | Name | Older name | Note |
 |---|---|---|
 | Priority, Review, Total Episodes, Pinned, Maybe | same, camelCase | |
+| Source Type | none (new) | `Anime`, `Movie` or `Series`, exact match; the title's kind and API route. `Type` is only a label/folder. Anything else is unreadable; absent = no API lookups, treated as a series |
 | Progress | progress | now a number (percent), was text `"50%"` |
 | Runtime | episodeDuration | minutes per episode |
 | MAL ID, AniList ID | malId, anilistId | numbers |

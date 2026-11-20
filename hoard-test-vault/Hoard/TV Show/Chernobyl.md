@@ -1,6 +1,7 @@
 ---
 Name: Chernobyl
 Type: TV Show
+Source Type: Series
 Status: Completed
 Review: Marvelous
 Rating: 5

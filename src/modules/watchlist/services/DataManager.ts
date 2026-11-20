@@ -1,4 +1,5 @@
 import { TFile, stringifyYaml } from 'obsidian';
+import { isMovie } from '../../../shared/domain/sourceType';
 import type { TAbstractFile } from 'obsidian';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
@@ -29,7 +30,7 @@ import type { ApiCheckKind, ApiCheckResult, EntryCache, LookupKind, Notify } fro
 import { checkResultOf, FAILED } from '../../../shared/api/lookup';
 import type { LookupResult } from '../../../shared/api/lookup';
 import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
-import { TITLE_CACHE_KEYS, titleFromProperties, titleToProperties, isMovie, seasonsPending, titleToCache, hasApiIdentity, pinSeasonsWithoutIdentity } from '../../../shared/storage/titleCodec';
+import { TITLE_CACHE_KEYS, titleFromProperties, titleToProperties, isSingleMovie, seasonsPending, titleToCache, hasApiIdentity, pinSeasonsWithoutIdentity } from '../../../shared/storage/titleCodec';
 import { decodeBook, decodeManga, encodeAirtime } from '../../../shared/storage/readingCodec';
 import { decodeGame } from '../../../shared/storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from '../../../shared/storage/properties';
@@ -1079,6 +1080,7 @@ export class DataManager extends ChangeNotifier
 				id: t.id,
 				title: t.title,
 				type: t.type,
+				...(t.sourceType && { sourceType: t.sourceType }),
 				releaseDate: t.releaseDate,
 				externalLink: t.externalLink,
 				totalEpisodes: t.totalEpisodes,
@@ -1093,6 +1095,7 @@ export class DataManager extends ChangeNotifier
 			id: title.id,
 			title: title.title,
 			type: title.type,
+			sourceType: title.sourceType,
 			totalEpisodes: title.totalEpisodes,
 			episodeDuration: title.episodeDuration,
 			releaseDate: title.releaseDate,
@@ -1126,7 +1129,7 @@ export class DataManager extends ChangeNotifier
 		if (title.episodeDuration <= 0) return 0;
 		// "To be released" titles haven't been watched yet
 		if (title.status === 'To be released') return 0;
-		if (title.type === 'Movie') {
+		if (isMovie(title)) {
 			return title.watchedEpisodes.includes(1) ? title.episodeDuration : 0;
 		}
 		if (title.status === 'Completed') {
@@ -1149,7 +1152,7 @@ export class DataManager extends ChangeNotifier
 		if (title.episodeDuration <= 0) return 0;
 		// "To be released" is not yet available
 		if (title.status === 'To be released') return 0;
-		if (title.type === 'Movie') {
+		if (isMovie(title)) {
 			return title.watchedEpisodes.includes(1) ? 0 : title.episodeDuration;
 		}
 		if (!counted.includes(title.status)) return 0;
@@ -1384,7 +1387,7 @@ export class DataManager extends ChangeNotifier
 			keep.add(TITLE_PROPS.watchedEpisodes);
 			keep.add(TITLE_PROPS.skippedEpisodes);
 			// derived from the unreadable watched text: 0% would be wrong
-			if (!isMovie(title.seasons, title.totalEpisodes)) keep.add(TITLE_PROPS.progress);
+			if (!isSingleMovie(title.seasons, title.totalEpisodes)) keep.add(TITLE_PROPS.progress);
 		}
 		return this.processFrontMatter(file, title, (raw) => rewriteOwnedKeys(raw, TITLE_KEYS, out, keep));
 	}

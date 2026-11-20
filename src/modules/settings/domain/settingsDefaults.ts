@@ -27,7 +27,6 @@ export const DEFAULT_SETTINGS: HoardPluginSettings = {
 	igdbClientSecret: '',
 	steamApiKey: '',
 	steamId: '',
-	typeApiMapping: {},
 	types: [
 		{ name: 'Anime', color: '#1D9E75' },
 		{ name: 'Movie', color: '#378ADD' },

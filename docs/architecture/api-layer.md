@@ -9,14 +9,14 @@ source:
   - src/shared/api/apiSources.ts
   - src/shared/services/titleSearch.ts
   - src/shared/services/coverRefresh.ts
-  - src/shared/api/apiGroup.ts
   - src/shared/api/cinemetaApi.ts
   - src/shared/api/openLibraryApi.ts
   - src/shared/api/steamStoreApi.ts
   - src/shared/api/apiCheckQueue.ts
   - src/shared/api/lookup.ts
   - src/shared/domain/read.ts
-source_commit: cc203bf
+  - src/shared/domain/sourceType.ts
+source_commit: 07539c0
 ---
 
 # API layer
@@ -112,7 +112,7 @@ backup or a WatchLog import takes effect without a restart; the Settings tab als
 (Cinemeta, Open Library, Steam). Nothing is migrated: an old `activeApi: 'OMDb'` without a key just
 resolves to Cinemeta. Every reader goes through it, never through the raw setting.
 
-- [titleSearch.ts](../../src/shared/services/titleSearch.ts): `getApiGroupForType(type, typeApiMapping)` (from `shared/api/apiGroup.ts`) → anime
+- [titleSearch.ts](../../src/shared/services/titleSearch.ts): the title's `Source Type` (`apiGroupOf` in `shared/domain/sourceType.ts`) → anime
   (Jikan or AniList by `animeApiSource`) or movie/series by the effective media source (Cinemeta,
   OMDb, TMDB; `fetchMediaDetails` follows the same). `resultIdKeys` takes that source, because
   `imdbId` on a row is a TMDB id under TMDB.
@@ -175,4 +175,4 @@ built. `no-unsafe-type-assertion` is on for the API modules, so they stay that w
   `apiError.ts`) + `apiSourceFromUrl`, a value in the `apiSources.ts` union and resolver, an
   [external id](../concepts/external-id.md) source and a `LibraryIndex` key.
 - A new failure reason: `ApiErrorReason` and its row in `REASONS`; the compiler asks for the row.
-- New per-type routing: `typeApiMapping` (`modules/settings/domain/model.ts`) and `getApiGroupForType` in `src/shared/api/apiGroup.ts`.
+- New kind of title: a `SourceType` member in `src/shared/domain/sourceType.ts` (`apiGroupOf`, `mediaKindOf`). Every lookup (poster, credits, rating, trailer, studio, collection) reads it; a title without one gets no API lookup and no fallback to `Type`.

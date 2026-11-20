@@ -1,4 +1,5 @@
 import type { DataManager } from '../services/DataManager';
+import { isMovie } from '../../../shared/domain/sourceType';
 import type { HoardTitle } from '../domain/model';
 import { todayIso } from '../../../shared/domain/date';
 import { t } from '../../../shared/i18n';
@@ -10,13 +11,13 @@ export type MarkWatchedStore = Pick<DataManager, 'getTitle' | 'updateTitle' | 'm
  * True for titles with exactly one thing to tick, where the episode grid would render a lone "1"
  * box — those get the Mark-as-Watched button instead.
  *
- * Movies qualify by type (their episode count is often left at 0); everything else qualifies on
+ * Movies qualify by Source Type (their episode count is often left at 0); everything else qualifies on
  * content: one episode and no season structure. Titles with seasons stay on the grid even at one
  * episode, so the season header and its skip info stay visible — which is also why the raw
  * `totalEpisodes` is used rather than the skip-adjusted total.
  */
 export function isSingleEpisodeTitle(title: HoardTitle): boolean {
-	return title.type === 'Movie' || (title.seasons.length === 0 && title.totalEpisodes === 1);
+	return isMovie(title) || (title.seasons.length === 0 && title.totalEpisodes === 1);
 }
 
 /**

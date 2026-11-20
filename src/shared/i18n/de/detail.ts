@@ -45,7 +45,7 @@ const detail = {
 	community: {
 		empty: 'Keine Community-Bewertung',
 		refresh: 'Community-Bewertung aktualisieren',
-		noApi: 'Keine API für Typ "{type}" konfiguriert. Richte sie unter Einstellungen → API ein.',
+		noApi: 'Diese Notiz hat keine Eigenschaft Source Type. Setze sie auf Anime, Movie oder Series.',
 		noMatch: 'Auf {source} wurde kein passender Titel gefunden.',
 		fetchFailed: 'Community-Bewertung konnte nicht geladen werden.',
 		updated: 'Bewertung von {source} aktualisiert.',

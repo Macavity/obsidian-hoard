@@ -115,17 +115,14 @@ describe('settings split', () => {
 		expect(composeSettings(local.data.settings, shared.get().settings).statuses[0]?.name).toBe('Ext');
 	});
 
-	it('writes a type and a mapping added in place when the base holds neither yet', async () => {
+	it('writes a type added in place when the base holds neither yet', async () => {
 		const { f, local, shared } = await setup({ 'W/Hoard.base': BARE_BASE });
 		const settings = composeSettings(local.data.settings, shared.get().settings);
 		settings.types.push({ name: 'Probe', color: '#000000' });
-		settings.typeApiMapping.Probe = 'anime';
 		await persistSettings(settings, local, shared);
-		const base = parse(f.files.get('W/Hoard.base')!) as { hoard: { types?: { name: string }[]; typeApiMapping?: Record<string, string> } };
+		const base = parse(f.files.get('W/Hoard.base')!) as { hoard: { types?: { name: string }[] } };
 		expect(base.hoard.types?.map((t) => t.name)).toContain('Probe');
-		expect(base.hoard.typeApiMapping).toEqual({ Probe: 'anime' });
 		expect(DEFAULT_SETTINGS.types.map((t) => t.name)).not.toContain('Probe');
-		expect(DEFAULT_SETTINGS.typeApiMapping).toEqual({});
 	});
 
 	it('writes a type added in place when the base already holds types', async () => {

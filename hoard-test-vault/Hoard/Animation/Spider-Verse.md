@@ -1,6 +1,7 @@
 ---
 Name: Spider-Verse
 Type: Animation
+Source Type: Movie
 Status: Completed
 Rating: 5
 Total Episodes: 1

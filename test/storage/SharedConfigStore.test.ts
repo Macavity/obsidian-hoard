@@ -38,6 +38,13 @@ describe('SharedConfigStore', () => {
 		expect(out).not.toContain('seasonPalette');
 		expect(out).toContain('futureKey: 1');
 	});
+	it('ignores a legacy typeApiMapping on read and drops it on the next write', async () => {
+		const { f, s } = mk({ 'W/Hoard.base': 'hoard:\n  version: 1\n  typeApiMapping:\n    Doku: movie\n' });
+		await s.load();
+		expect(s.get().settings).not.toHaveProperty('typeApiMapping');
+		await s.update({ halfStarRatings: true });
+		expect(f.files.get('W/Hoard.base')).not.toContain('typeApiMapping');
+	});
 	it('fixes a stale inFolder line', async () => {
 		const { f, s } = mk({ 'W/Hoard.base': 'filters:\n  and:\n    - file.inFolder("Old")\n' });
 		expect(await s.ensureFilter()).toBe('fixed');

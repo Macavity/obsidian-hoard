@@ -2,6 +2,7 @@ import type enAdd from '../en/add';
 import type { DeepPartial } from '../index';
 
 const add = {
+	type: 'Typ',
 	status: 'Status',
 	priority: 'Priorität',
 	rating: 'Bewertung',
@@ -25,7 +26,6 @@ const add = {
 		heading: 'Titel hinzufügen',
 		submit: 'Zu Hoard hinzufügen',
 		emptyName: 'Bitte einen Titelnamen eingeben.',
-		noApi: 'Keine API für Typ "{type}" konfiguriert. Richte sie unter Einstellungen → API ein.',
 		seasonEpisodes: { one: '{name} ({count} F.)', other: '{name} ({count} F.)' },
 	},
 	game: {

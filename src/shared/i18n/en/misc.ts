@@ -5,7 +5,6 @@ const misc = {
 	maybeAdd: {
 		title: 'Add to maybe',
 		submit: 'Add to maybe',
-		noApi: 'No API configured for type "{type}". Configure it in Settings → API.',
 		titleRequired: 'Please enter a title name.',
 		added: '"{title}" added to Maybe.',
 	},

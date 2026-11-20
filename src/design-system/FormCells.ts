@@ -1,6 +1,7 @@
 import type { MediaFields } from '../shared/services/titleSearch';
 import { createDatePicker } from './DatePicker';
 import { t } from '../shared/i18n';
+import { typeLabel } from '../shared/i18n/labels';
 
 /** A labelled form row: [label][fields...]. */
 export function makeRow(parent: HTMLElement, label: string): HTMLElement {
@@ -54,6 +55,17 @@ export function textInput(cell: HTMLElement, opts: TextInputOptions): HTMLInputE
 	input.value = opts.value;
 	input.addEventListener('input', () => opts.onInput(input.value));
 	return input;
+}
+
+/** The media fields of an add form followed by its "Type" select over the configured type names. */
+export function renderMediaAndTypeFields(
+	form: HTMLElement,
+	media: MediaFields,
+	paired: boolean,
+	type: { names: string[]; selected: string; onChange: (v: string) => void },
+): void {
+	renderMediaFields(form, media, paired);
+	nameSelect(makeRow(form, t('add.type')), type.names, type.selected, type.onChange, false, typeLabel);
 }
 
 /** Select over plain names; `empty` prepends a "none" option with value ''. */
@@ -171,7 +183,7 @@ export function releaseDateField(form: HTMLElement, value: string, onChange: (is
  * Title, episodes, ep. duration, release date and link rows. paired puts episodes and duration
  * 50/50 on one row; otherwise they get a row each with a narrow input.
  */
-export function renderMediaFields(form: HTMLElement, f: MediaFields, paired: boolean): void {
+function renderMediaFields(form: HTMLElement, f: MediaFields, paired: boolean): void {
 	titleField(form, f.title, t('ui.form.titlePlaceholder'), (v) => { f.title = v; });
 
 	const episodes = { value: f.episodes, min: 0, placeholder: '0', onInput: (v: number) => { f.episodes = v; } };

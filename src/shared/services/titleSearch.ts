@@ -1,8 +1,8 @@
 import type { SettingsReader } from '../../modules/settings/exports';
 import { t } from '../i18n';
-import { typeLabel } from '../i18n/labels';
+import { sourceTypeLabel } from '../i18n/labels';
+import { SOURCE_TYPES, parseSourceType, type SourceType } from '../domain/sourceType';
 import type { AnimeSearchResult, MediaSearchResult, Season } from '../../modules/watchlist/exports';
-import { getApiGroupForType } from '../api/apiGroup';
 import { animeResultIdKeys, mediaResultIdKeys } from './LibraryIndex';
 import { effectiveMediaSource, type MediaSource } from '../api/apiSources';
 import { SEARCH_PAGE_SIZE, SEARCH_RESULT_LIMIT, type ApiService } from '../api/ApiService';
@@ -30,23 +30,21 @@ export function isAnimeResult(r: TitleSearchResult): r is AnimeSearchResult {
 	return 'malId' in r;
 }
 
-/** Searches the API configured for the type; null when the type has none. */
+/** Searches the API family of the Source Type. */
 export async function searchTitles(
 	settings: SettingsReader,
 	api: TitleSearchApi,
-	type: string,
+	sourceType: SourceType,
 	query: string,
 	year: string,
-): Promise<TitleSearchResult[] | null> {
-	const apiGroup = getApiGroupForType(type, settings.get().typeApiMapping);
-	if (apiGroup === '') return null;
-	if (apiGroup === 'anime') {
+): Promise<TitleSearchResult[]> {
+	if (sourceType === 'Anime') {
 		const animeSource = settings.get().animeApiSource ?? 'jikan';
 		return animeSource === 'anilist'
 			? await api.searchAniList(query, year)
 			: await api.searchAnime(query, year, SEARCH_RESULT_LIMIT);
 	}
-	const kind = type === 'Movie' ? 'movie' : 'series';
+	const kind = sourceType === 'Movie' ? 'movie' : 'series';
 	const source = effectiveMediaSource(settings.get(), api);
 	if (source === 'tmdb') return await api.searchTmdb(query, kind, year);
 	if (source === 'omdb') return await api.searchOmdb(query, kind, year);
@@ -190,19 +188,19 @@ export function fillMediaFields(media: MediaFields, pick: TitlePick): void {
 
 /** Picker settings shared by the add-title and add-maybe modals. */
 export function titlePickerBase(
-	settings: SettingsReader,
-	selectedType: string,
-	onTypeChange: (type: string) => void,
+	selectedSourceType: SourceType,
+	onSourceTypeChange: (sourceType: SourceType) => void,
 ) {
 	return {
 		placeholder: t('misc.titleSearch.placeholder'),
 		withYear: true,
 		pageSize: SEARCH_PAGE_SIZE,
 		typeSelect: {
-			names: settings.get().types.map((t) => t.name),
-			selected: selectedType,
-			onChange: onTypeChange,
-			format: typeLabel,
+			label: t('ui.picker.sourceType'),
+			names: [...SOURCE_TYPES],
+			selected: selectedSourceType,
+			onChange: (v: string) => { const s = parseSourceType(v); if (s) onSourceTypeChange(s); },
+			format: (v: string) => { const s = parseSourceType(v); return s ? sourceTypeLabel(s) : v; },
 		},
 	};
 }

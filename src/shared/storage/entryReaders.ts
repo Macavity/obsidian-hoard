@@ -9,6 +9,7 @@ import { newTitle } from '../../modules/watchlist/exports';
 import { readSeason } from './readCache';
 import { at, readList, readOptionalNumber, readOptionalString, readString, readStringList } from '../domain/read';
 import { defined, isRecord } from '../domain/sharedHelpers';
+import { parseSourceType } from '../domain/sourceType';
 
 /**
  * The entries of a backup, read field by field. An entry needs a text `id` and `title`; everything
@@ -104,7 +105,7 @@ export function readTitle(v: unknown): HoardTitle | undefined {
 			posterUrl: optText(v, 'posterUrl'), trailerUrl: optText(v, 'trailerUrl'), manualTrailerUrl: optText(v, 'manualTrailerUrl'),
 			director: list(v, 'director'), cast: list(v, 'cast'), studio: list(v, 'studio'),
 			manualDirector: list(v, 'manualDirector'), manualCast: list(v, 'manualCast'), manualStudio: list(v, 'manualStudio'),
-			maybe: flag(v, 'maybe'), seasonsOverride: flag(v, 'seasonsOverride'), groups: list(v, 'groups'),
+			maybe: flag(v, 'maybe'), sourceType: parseSourceType(at(v, 'sourceType')), seasonsOverride: flag(v, 'seasonsOverride'), groups: list(v, 'groups'),
 			unmappedWatched: unmappedWatched.length > 0 ? unmappedWatched : undefined,
 			unmappedSkipped: unmappedSkipped.length > 0 ? unmappedSkipped : undefined,
 			airtime: readAirtime(at(v, 'airtime')), overrides: readOverrides(at(v, 'overrides')),
@@ -123,6 +124,7 @@ export function readMaybe(v: unknown): MaybeTitle | undefined {
 		totalEpisodes: num(v, 'totalEpisodes') ?? 0,
 		episodeDuration: num(v, 'episodeDuration') ?? 0,
 		dateAdded: text(v, 'dateAdded') ?? '',
+		...defined({ sourceType: parseSourceType(at(v, 'sourceType')) }),
 	};
 }
 

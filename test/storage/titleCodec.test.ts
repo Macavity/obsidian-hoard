@@ -136,8 +136,28 @@ describe('titleCodec', () => {
   });
 });
 
+describe('identityFor', () => {
+  const ids = { malId: 7, tmdbId: 9, tmdbMediaType: 'tv' as const };
+  const ext = (o: object) => titleToProperties({ ...fullTitle(), ...ids, ...o }, 0)['External ID'];
+  it('prefers MAL for Source Type Anime, TMDB without it', () => {
+    expect(JSON.stringify(ext({ sourceType: 'Anime' }))).toContain('mal');
+    expect(JSON.stringify(ext({ type: 'Anime', sourceType: undefined }))).toContain('tmdb');
+  });
+});
+
 describe('titleToCache', () => {
   it('never emits the poster into the cache', () => {
     expect(titleToCache({ ...fullTitle(), posterUrl: 'https://img/p.jpg' })).not.toHaveProperty('posterUrl');
+  });
+  it('reads and writes Source Type', () => {
+    const base = { Name: 'X', 'Date Added': '2026-01-01T00:00:00Z', 'Date Modified': '2026-01-01T00:00:00Z' };
+    const ok = titleFromProperties('TV Show/X', { ...base, 'Source Type': 'Movie' }, undefined);
+    expect(ok.entry.sourceType).toBe('Movie');
+    expect(ok.invalidFields).toEqual([]);
+    const bad = titleFromProperties('TV Show/X', { ...base, 'Source Type': 'film' }, undefined);
+    expect(bad.entry.sourceType).toBeUndefined();
+    expect(bad.invalidFields).toContain('Source Type');
+    expect(titleToProperties(bad.entry, 0)).not.toHaveProperty('Source Type');
+    expect(titleToProperties({ ...ok.entry, sourceType: 'Anime' }, 0)['Source Type']).toBe('Anime');
   });
 });

@@ -29,7 +29,7 @@ export function createAddRoute(
 						prefill: {
 							searchQuery: title,
 							title,
-							type: 'Anime',
+							sourceType: 'Anime',
 							episodes: 0,
 							duration: 0,
 							releaseDate: '',

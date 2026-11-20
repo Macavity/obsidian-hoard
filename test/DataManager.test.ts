@@ -140,6 +140,17 @@ describe('DataManager on vault storage', () => {
 		expect(content).toContain('Status: Plan to watch');
 	});
 
+	it('keeps an unrecognised Source Type line unchanged through a full rewrite', async () => {
+		const { dm, f } = await setupDataManager({ 'W/Movie/X.md': '---\nName: X\nType: Movie\nSource Type: film\n---\n' });
+		const t = dm.getTitle('Movie/X')!;
+		expect(t.sourceType).toBeUndefined();
+		t.rating = 4;
+		expect(await dm.rewriteFrontmatterIfExists(t)).toBe(true);
+		const content = f.files.get('W/Movie/X.md')!;
+		expect(content).toContain('Source Type: film');
+		expect(content).toContain('Rating: 4');
+	});
+
 	it('derives maybe, groups and airtime', async () => {
 		const { dm } = await setupDataManager({
 			'W/Movie/A.md': '---\nName: A\nType: Movie\nGroups: [Marvel]\n---\n',
@@ -419,6 +430,13 @@ describe('DataManager on vault storage', () => {
 		const show = (status: string, over: Partial<HoardTitle> = {}) =>
 			makeTitle({ type: 'TV Show', status, episodeDuration: 40, totalEpisodes: 10, watchedEpisodes: [1, 2, 3], ...over });
 
+		it('routes a movie by Source Type, not by Type', async () => {
+			const { dm } = await setupDataManager({});
+			const base = { status: 'Watching', episodeDuration: 90, totalEpisodes: 0, watchedEpisodes: [] };
+			expect(dm.calcTimeRemaining(makeTitle({ ...base, sourceType: 'Movie' }))).toBe(90);
+			expect(dm.calcTimeRemaining(makeTitle({ ...base, type: 'Movie' }))).toBe(0);
+		});
+
 		it('counts unwatched episodes for Plan to watch and Watching, nothing otherwise', async () => {
 			const { dm } = await setupDataManager({});
 			expect(dm.calcTimeRemaining(show('Watching'))).toBe(7 * 40);
@@ -431,7 +449,7 @@ describe('DataManager on vault storage', () => {
 
 		it('treats a movie as remaining until watched', async () => {
 			const { dm } = await setupDataManager({});
-			const movie = (watched: number[]) => makeTitle({ type: 'Movie', status: 'Watching', episodeDuration: 100, watchedEpisodes: watched });
+			const movie = (watched: number[]) => makeTitle({ type: 'Movie', sourceType: 'Movie', status: 'Watching', episodeDuration: 100, watchedEpisodes: watched });
 			expect(dm.calcTimeRemaining(movie([]))).toBe(100);
 			expect(dm.calcTimeRemaining(movie([1]))).toBe(0);
 			expect(dm.calcTimeRemainingForModal(movie([]))).toBe(100);

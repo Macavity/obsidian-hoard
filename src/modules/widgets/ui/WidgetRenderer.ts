@@ -1,4 +1,5 @@
 import type { TitleReader, TitleStats, TitleWriter } from '../../watchlist/exports';
+import { isMovie } from '../../../shared/domain/sourceType';
 import type { AirtimeReader } from '../../airtime/exports';
 import { MarkdownPostProcessorContext } from 'obsidian';
 import type { SettingsReader } from '../../settings/exports';
@@ -235,8 +236,8 @@ export class WidgetRenderer {
 		mainRow.createSpan({ cls: 'hoard-widget__date', text: dateLabel });
 
 		// checkbox 2: "Next up" — writes to Hoard data
-		const isMovie = title.type === 'Movie';
-		if (!isMovie) {
+		const movie = isMovie(title);
+		if (!movie) {
 			const nextEp = this.titles.getNextUnwatchedEpisode(title);
 			const nextRow = el.createDiv({ cls: 'hoard-widget__next-row' });
 
@@ -300,8 +301,8 @@ export class WidgetRenderer {
 		this.sep(row);
 
 		// right checkbox: "Mark as watched" / next episode
-		const isMovie = title.type === 'Movie';
-		if (isMovie) {
+		const movie = isMovie(title);
+		if (movie) {
 			const watched = title.watchedEpisodes.includes(1);
 			this.renderEpisodeCheckbox(row, title, {
 				episode: 1, checked: watched, tooltip: t('widget.markMovie'), follow: true,
@@ -650,7 +651,7 @@ export class WidgetRenderer {
 
 		this.renderBadge(card, pinned.type, this.settings.get().types, typeLabel(pinned.type));
 
-		if (pinned.type !== 'Movie') {
+		if (!isMovie(pinned)) {
 			const nextEp = this.titles.getNextUnwatchedEpisode(pinned);
 			card.createSpan({ cls: 'hoard-widget-now__episode', text: nextEp !== null ? t('widget.episodeShort', { episode: nextEp }) : `✓ ${t('widget.completed')}` });
 		}

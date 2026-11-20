@@ -1,10 +1,11 @@
 import type { TitleReader, TitleStats } from '../../watchlist/exports';
+import { isMovie, SOURCE_TYPES, type SourceType } from '../../../shared/domain/sourceType';
 import type { ReadingReader } from '../../reading/exports';
 import type { GameReader } from '../../games/exports';
 import type { TabInstance } from '../../../design-system/TabInstance';
 import type { SettingsReader } from '../../settings/exports';
 import { t, type TranslationKey } from '../../../shared/i18n';
-import { gameStatusLabel, readingStatusLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
+import { gameStatusLabel, readingStatusLabel, sourceTypeLabel, statusLabel, typeLabel } from '../../../shared/i18n/labels';
 import en from '../../../shared/i18n/en';
 import type { Game } from '../../games/exports';
 import type { Book, Manga } from '../../reading/exports';
@@ -661,13 +662,13 @@ export class DashboardTab implements TabInstance {
 
 		const grid = section.createDiv({ cls: 'hoard-suggestions__grid' });
 
-		const shortestByType = (typeName: string): string | null => {
+		const shortestBySource = (source: SourceType): string | null => {
 			const candidates = planTitles
-				.filter((t) => t.type === typeName)
+				.filter((t) => t.sourceType === source)
 				.filter((t) => t.totalEpisodes > 0 || t.episodeDuration > 0);
 			if (candidates.length === 0) {
-				// fallback: any plan-to-watch of this type, no length filter
-				const fallback = planTitles.filter((t) => t.type === typeName);
+				// fallback: any plan-to-watch of this Source Type, no length filter
+				const fallback = planTitles.filter((t) => t.sourceType === source);
 				return fallback[0]?.title ?? null;
 			}
 			candidates.sort((a, b) => {
@@ -678,12 +679,11 @@ export class DashboardTab implements TabInstance {
 			return candidates[0]?.title ?? null;
 		};
 
-		// fixed 2×2 grid: Anime, Movie, TV Show, Random
-		const fixedTypes = ['Anime', 'Movie', 'TV Show'];
-		for (const typeName of fixedTypes) {
-			const pick = shortestByType(typeName);
+		// fixed 2×2 grid: one card per Source Type, then Random
+		for (const source of SOURCE_TYPES) {
+			const pick = shortestBySource(source);
 			const card = grid.createDiv({ cls: 'hoard-suggestions__card' });
-			card.createDiv({ cls: 'hoard-suggestions__label', text: t('dashboard.suggestions.shortest', { type: typeLabel(typeName) }) });
+			card.createDiv({ cls: 'hoard-suggestions__label', text: t('dashboard.suggestions.shortest', { type: sourceTypeLabel(source) }) });
 			card.createDiv({
 				cls: `hoard-suggestions__title${pick ? '' : ' hoard-suggestions__title--empty'}`,
 				text: pick ?? t('dashboard.suggestions.nothingPlanned'),
@@ -744,13 +744,13 @@ export class DashboardTab implements TabInstance {
 
 	/** Next unwatched episode, "✓" when all are watched, empty for movies. */
 	private recentEpisodeText(title: HoardTitle): string {
-		if (title.type === 'Movie') return '';
+		if (isMovie(title)) return '';
 		const nextEp = this.titles.getNextUnwatchedEpisode(title);
 		return nextEp !== null ? t('dashboard.recent.episode', { n: nextEp }) : '✓';
 	}
 
 	private recentProgressText(title: HoardTitle): string {
-		if (title.type === 'Movie') return title.watchedEpisodes.includes(1) ? '100%' : '0%';
+		if (isMovie(title)) return title.watchedEpisodes.includes(1) ? '100%' : '0%';
 		return `${this.titles.getProgress(title)}%`;
 	}
 }

@@ -406,8 +406,8 @@ describe('community rating', () => {
 	const OMDB = ['omdbapi.com/?i=tt0137523', { Response: 'True', imdbRating: '8.8', imdbVotes: '1,234,567' }] as [string, unknown];
 	const OMDB_EMPTY = ['omdbapi.com/?i=tt0137523', { Response: 'True', imdbRating: 'N/A', imdbVotes: 'N/A' }] as [string, unknown];
 	const FIND = ['/find/tt0137523', { movie_results: [{ vote_average: 7.9, vote_count: 321 }] }] as [string, unknown];
-	const anime = makeTitle({ type: 'Anime', malId: 5, anilistId: 9 });
-	const movie = makeTitle({ type: 'Movie', externalLink: IMDB_LINK });
+	const anime = makeTitle({ type: 'Anime', sourceType: 'Anime', malId: 5, anilistId: 9 });
+	const movie = makeTitle({ type: 'Movie', sourceType: 'Movie', externalLink: IMDB_LINK });
 
 	it('asks the preferred anime source first and the other one when it has nothing', async () => {
 		route([MAL, ANILIST]);
@@ -421,8 +421,8 @@ describe('community rating', () => {
 
 	it('follows the id an anime has, whatever the preference', async () => {
 		route([MAL, ANILIST]);
-		expect(await keyless().fetchCommunityRating(makeTitle({ type: 'Anime', malId: 5 }), 'anilist')).toMatchObject({ source: 'mal' });
-		expect(await keyless().fetchCommunityRating(makeTitle({ type: 'Anime', anilistId: 9 }), 'jikan')).toMatchObject({ source: 'anilist' });
+		expect(await keyless().fetchCommunityRating(makeTitle({ type: 'Anime', sourceType: 'Anime', malId: 5 }), 'anilist')).toMatchObject({ source: 'mal' });
+		expect(await keyless().fetchCommunityRating(makeTitle({ type: 'Anime', sourceType: 'Anime', anilistId: 9 }), 'jikan')).toMatchObject({ source: 'anilist' });
 	});
 
 	it('uses IMDb through OMDb, then TMDB, for a movie', async () => {
@@ -437,7 +437,7 @@ describe('community rating', () => {
 
 	it('falls through to IMDb for an anime without an anime id', async () => {
 		route([OMDB]);
-		expect(await omdb().fetchCommunityRating(makeTitle({ type: 'Anime', externalLink: IMDB_LINK })))
+		expect(await omdb().fetchCommunityRating(makeTitle({ type: 'Anime', sourceType: 'Anime', externalLink: IMDB_LINK })))
 			.toEqual({ rating: 8.8, votes: 1234567, source: 'imdb' });
 	});
 
@@ -445,13 +445,13 @@ describe('community rating', () => {
 		route([MAL, OMDB]);
 		expect(await omdb().fetchCommunityRating(makeTitle({ type: 'Documentary', malId: 5, externalLink: IMDB_LINK }), 'jikan', 'anime'))
 			.toMatchObject({ source: 'mal' });
-		expect(await omdb().fetchCommunityRating(makeTitle({ type: 'Anime', malId: 5, externalLink: IMDB_LINK }), 'jikan', 'movie'))
+		expect(await omdb().fetchCommunityRating(makeTitle({ type: 'Anime', sourceType: 'Anime', malId: 5, externalLink: IMDB_LINK }), 'jikan', 'movie'))
 			.toMatchObject({ source: 'imdb' });
 	});
 
 	it('answers null when nothing fits or nothing is known', async () => {
 		expect(await both().fetchCommunityRating(makeTitle({ type: 'Documentary', externalLink: IMDB_LINK }))).toBeNull();
-		expect(await both().fetchCommunityRating(makeTitle({ type: 'Movie' }))).toBeNull();
+		expect(await both().fetchCommunityRating(makeTitle({ type: 'Movie', sourceType: 'Movie' }))).toBeNull();
 		expect(await keyless().fetchCommunityRating(movie)).toBeNull();
 		expect(sent).not.toHaveBeenCalled();
 		answerAll(500);
@@ -465,7 +465,7 @@ describe('community rating', () => {
 describe('trailer', () => {
 	const JIKAN = ['/anime/5', { data: { trailer: { embed_url: 'https://www.youtube.com/embed/jikan123?enablejsapi=1' } } }] as [string, unknown];
 	const ANILIST = ['graphql.anilist.co', { data: { Media: { id: 9, trailer: { site: 'youtube', id: 'anilist1' } } } }] as [string, unknown];
-	const anime = makeTitle({ type: 'Anime', malId: 5, anilistId: 9 });
+	const anime = makeTitle({ type: 'Anime', sourceType: 'Anime', malId: 5, anilistId: 9 });
 
 	it('asks the preferred anime source first and the other one when it has none', async () => {
 		route([JIKAN, ANILIST]);
@@ -480,7 +480,7 @@ describe('trailer', () => {
 	it('reads the video id from whatever shape Jikan sends', async () => {
 		const from = async (trailer: unknown): Promise<LookupResult<string>> => {
 			route([['/anime/5', { data: { trailer } }]]);
-			return keyless().fetchTrailer(makeTitle({ type: 'Anime', malId: 5 }));
+			return keyless().fetchTrailer(makeTitle({ type: 'Anime', sourceType: 'Anime', malId: 5 }));
 		};
 		expect(await from({ youtube_id: 'idfield1' })).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=idfield1' });
 		expect(await from({ url: 'https://www.youtube.com/watch?v=watch123' })).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=watch123' });
@@ -490,20 +490,20 @@ describe('trailer', () => {
 
 	it('uses TMDB by IMDb id for a movie', async () => {
 		route([['/find/tt0137523', { movie_results: [{ id: 550 }] }], ...TMDB_MOVIE_ROUTES]);
-		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie', externalLink: IMDB_LINK }))).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=official1' });
+		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie', sourceType: 'Movie', externalLink: IMDB_LINK }))).toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=official1' });
 		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Documentary', externalLink: IMDB_LINK }), 'jikan', 'movie'))
 			.toEqual({ status: 'found', value: 'https://www.youtube.com/watch?v=official1' });
 	});
 
 	it('answers nokey or notfound without a source, failed when it cannot be reached', async () => {
-		expect(await omdb().fetchTrailer(makeTitle({ type: 'Movie', externalLink: IMDB_LINK }))).toEqual({ status: 'nokey' });
-		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie' }))).toEqual({ status: 'notfound' });
+		expect(await omdb().fetchTrailer(makeTitle({ type: 'Movie', sourceType: 'Movie', externalLink: IMDB_LINK }))).toEqual({ status: 'nokey' });
+		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie', sourceType: 'Movie' }))).toEqual({ status: 'notfound' });
 		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Documentary', externalLink: IMDB_LINK }))).toEqual({ status: 'notfound' });
-		expect(await keyless().fetchTrailer(makeTitle({ type: 'Anime' }))).toEqual({ status: 'notfound' });
+		expect(await keyless().fetchTrailer(makeTitle({ type: 'Anime', sourceType: 'Anime' }))).toEqual({ status: 'notfound' });
 		expect(sent).not.toHaveBeenCalled();
 		answerAll(500);
 		expect(await keyless().fetchTrailer(anime)).toEqual({ status: 'failed' });
-		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie', externalLink: IMDB_LINK }))).toEqual({ status: 'failed' });
+		expect(await tmdb().fetchTrailer(makeTitle({ type: 'Movie', sourceType: 'Movie', externalLink: IMDB_LINK }))).toEqual({ status: 'failed' });
 	});
 });
 
@@ -563,7 +563,7 @@ describe('studio', () => {
 });
 
 describe('credits', () => {
-	const movie = makeTitle({ type: 'Movie', externalLink: IMDB_LINK });
+	const movie = makeTitle({ type: 'Movie', sourceType: 'Movie', externalLink: IMDB_LINK });
 
 	it('reads a movie from TMDB through its credits endpoint', async () => {
 		route([
@@ -596,7 +596,7 @@ describe('credits', () => {
 		expect(await both().fetchCredits(movie, 'tmdb')).toEqual({ status: 'found', value: { director: ['From TMDB'], cast: [] } });
 		route([['omdbapi.com/?i=tt0137523', { Response: 'False' }], ...TMDB_ROUTES]);
 		expect(await both().fetchCredits(movie, 'omdb')).toEqual({ status: 'found', value: { director: ['From TMDB'], cast: [] } });
-		expect(await both().fetchCredits(makeTitle({ type: 'Movie' }), 'omdb')).toEqual({ status: 'notfound' });
+		expect(await both().fetchCredits(makeTitle({ type: 'Movie', sourceType: 'Movie' }), 'omdb')).toEqual({ status: 'notfound' });
 	});
 });
 

@@ -163,7 +163,7 @@ describe('tag lists', () => {
 	const pills = (el: HTMLElement): string[] =>
 		qa(el, '.hoard-tag-editor__pill').map((p) => (q(p, '.hoard-tag-editor__name-input') as HTMLInputElement | null)?.value ?? q(p, '.hoard-tag-editor__name').textContent ?? '');
 
-	it('renders locked built-in types read-only and custom types editable', () => {
+	it('renders every type editable and deletable', () => {
 		const { priv, settings } = makeTab();
 		settings.types = [{ name: 'Movie', color: '#111111' }, { name: 'Docs', color: '#222222' }];
 		const el = document.createElement('div');
@@ -171,9 +171,8 @@ describe('tag lists', () => {
 		priv.renderTagSection(el, 'Types', 'types', onChanged);
 		const rendered = qa(el, '.hoard-tag-editor__pill');
 		expect(rendered).toHaveLength(2);
-		expect(q(rendered[0]!, '.hoard-tag-editor__name').textContent).toBe('Movie');
-		expect(rendered[0]!.querySelector('.hoard-tag-editor__delete')).toBeNull();
-		expect(q(rendered[1]!, '.hoard-tag-editor__name').textContent).toBe('Docs');
+		expect(pills(el)).toEqual(['Movie', 'Docs']);
+		expect(rendered[0]!.querySelector('.hoard-tag-editor__delete')).not.toBeNull();
 		expect(rendered[1]!.querySelector('.hoard-tag-editor__delete')).not.toBeNull();
 		expect(onChanged).toHaveBeenCalledTimes(1);
 	});

@@ -1,6 +1,7 @@
 ---
 Name: Squid Game
 Type: Korean TV Show
+Source Type: Series
 Status: Dropped
 Priority: Low
 Review: Nah

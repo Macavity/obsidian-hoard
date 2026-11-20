@@ -25,6 +25,11 @@ describe('buildImportedTitle', () => {
 		expect(none.watchedEpisodes).toEqual([]);
 	});
 
+	it('writes a valid Source Type and drops an invalid one', () => {
+		expect(buildImportedTitle({ title: 'A', sourceType: 'Movie' }, 'i', undefined).sourceType).toBe('Movie');
+		expect(buildImportedTitle({ title: 'A', sourceType: 'film' as never }, 'i', undefined).sourceType).toBeUndefined();
+	});
+
 	it('keeps imported studios in the manual slot', () => {
 		expect(buildImportedTitle({ title: 'A', manualStudio: ['X'] }, 'i', undefined).manualStudio).toEqual(['X']);
 	});

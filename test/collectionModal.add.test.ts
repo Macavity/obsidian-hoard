@@ -82,14 +82,14 @@ describe('CollectionModal add selected', () => {
 		await add([1, 2]);
 		expect(batches).toStrictEqual([[
 			{
-				id: 'Movie/Dune', title: 'Dune', type: 'Movie', status: 'Plan to watch', priority: 'Medium', review: '', rating: 0, notes: '',
+				id: 'Movie/Dune', title: 'Dune', type: 'Movie', sourceType: 'Movie', status: 'Plan to watch', priority: 'Medium', review: '', rating: 0, notes: '',
 				dateStarted: null, dateFinished: null, dateAdded: NOW, dateModified: NOW, totalEpisodes: 1, episodeDuration: 155,
 				releaseDate: '2021-10-22', externalLink: 'https://tmdb.test/movie/1', seasons: [], watchedEpisodes: [],
 				favorite: false, posterUrl: '', trailerUrl: 'https://yt.test/dune', manualTrailerUrl: '',
 				tmdbId: 1, collectionId: 99, director: ['Denis Villeneuve'], cast: ['Timothée Chalamet'],
 			},
 			{
-				id: 'Movie/Dune: Part Two', title: 'Dune: Part Two', type: 'Movie', status: 'Plan to watch', priority: 'Medium', review: '',
+				id: 'Movie/Dune: Part Two', title: 'Dune: Part Two', type: 'Movie', sourceType: 'Movie', status: 'Plan to watch', priority: 'Medium', review: '',
 				rating: 0, notes: '', dateStarted: null, dateFinished: null, dateAdded: NOW, dateModified: NOW, totalEpisodes: 1,
 				episodeDuration: 166, releaseDate: null, externalLink: 'https://tmdb.test/movie/2', seasons: [], watchedEpisodes: [],
 				favorite: false, posterUrl: '', trailerUrl: '', manualTrailerUrl: '', tmdbId: 2, collectionId: 99,

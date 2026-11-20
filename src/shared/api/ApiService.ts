@@ -1,4 +1,5 @@
 import { requestUrl } from 'obsidian';
+import { apiGroupOf, mediaKindOf } from '../domain/sourceType';
 import type { RequestUrlParam } from 'obsidian';
 import { httpsOrEmpty } from './httpsUrl';
 import type { MediaSource } from './apiSources';
@@ -7,7 +8,7 @@ import {
 	ApiError, apiLabel, httpError, lookupOfError, rethrowAuth, type ApiErrorReason, type ApiSource,
 } from './apiError';
 import type { AnimeSearchResult, HoardTitle, MediaSearchResult, Season, TmdbCollectionDetail, TmdbCollectionRef } from '../../modules/watchlist/exports';
-import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, explicitMediaKind, mapCinemetaSearch, type CinemetaKind } from './cinemetaApi';
+import { cinemetaMetaUrl, cinemetaSearchUrl, mapCinemetaMeta, mapCinemetaSearch, type CinemetaKind } from './cinemetaApi';
 import { mapOpenLibrarySearch, mapOpenLibraryWork, openLibrarySearchUrl, openLibraryWorkUrl } from './openLibraryApi';
 import { mapSteamStoreSearch, steamDetailsToGameDetails, steamLibraryCover, steamStoreSearchUrl } from './steamStoreApi';
 import { imdbIdFromLink } from '../domain/imdb';
@@ -277,11 +278,9 @@ async function quietly<T>(load: () => Promise<T | null>): Promise<T | null> {
 	}
 }
 
-/** anime or movie group of a title: the caller's pick, else from the stored type; '' when neither says. */
-function mediaGroupOf(title: Pick<HoardTitle, 'type'>, apiGroup: 'anime' | 'movie' | ''): 'anime' | 'movie' | '' {
-	if (apiGroup) return apiGroup;
-	if (title.type === 'Anime') return 'anime';
-	return ['Movie', 'TV Show', 'TvShow'].includes(title.type) ? 'movie' : '';
+/** anime or movie group of a title: the caller's pick, else from the Source Type; '' when neither says. */
+function mediaGroupOf(title: Pick<HoardTitle, 'sourceType'>, apiGroup: 'anime' | 'movie' | ''): 'anime' | 'movie' | '' {
+	return apiGroup || apiGroupOf(title);
 }
 
 /** TMDB company/network names, normalized for storage. */
@@ -1481,11 +1480,13 @@ export class ApiService {
 	 */
 	fetchCredits(title: HoardTitle, source: MediaSource = 'omdb'): Promise<LookupResult<CreditsLookup>> {
 		const imdbId = this.extractImdbId(title.externalLink ?? '');
-		if (!imdbId) return Promise.resolve(NOT_FOUND);
+		const kind = mediaKindOf(title);
+		// no Source Type (or anime): no movie/series API knows this title
+		if (!imdbId || !kind) return Promise.resolve(NOT_FOUND);
 		const sources: Record<MediaSource, LookupSource<CreditsLookup>> = {
 			omdb: () => this.omdbCredits(imdbId),
 			tmdb: () => this.tmdbCredits(imdbId),
-			cinemeta: () => this.cinemetaCredits(imdbId, title),
+			cinemeta: () => this.cinemetaCredits(imdbId, kind),
 		};
 		const order: MediaSource[] =
 			source === 'cinemeta' ? ['cinemeta', 'omdb', 'tmdb']
@@ -1530,23 +1531,15 @@ export class ApiService {
 		}, lookupOfError);
 	}
 
-	/** Keyless credits: the series record first for an unknown kind (the movie endpoint answers series ids with a foreign film). */
-	private cinemetaCredits(imdbId: string, title: HoardTitle): Promise<LookupResult<CreditsLookup>> {
+	/** Keyless credits from the Cinemeta record of the title's kind. */
+	private cinemetaCredits(imdbId: string, kind: 'movie' | 'tv'): Promise<LookupResult<CreditsLookup>> {
 		return attempt(async () => {
-			const kind = explicitMediaKind(title);
-			for (const k of kind ? [kind] : (['tv', 'movie'] as const)) {
-				let meta: MediaSearchResult | null;
-				try {
-					meta = await this.getCinemetaDetails(imdbId, k);
-				} catch (e) {
-					// no such record of this kind: try the other one
-					if (lookupOfError(e).status === 'notfound') continue;
-					throw e;
-				}
-				if (!meta) continue;
-				return creditsOf({ director: normalizeCreditsForStore(meta.director), cast: normalizeCreditsForStore(meta.cast) });
-			}
-			return null;
+			const meta = await this.getCinemetaDetails(imdbId, kind).catch((e: unknown) => {
+				if (lookupOfError(e).status === 'notfound') return null;
+				throw e;
+			});
+			if (!meta) return null;
+			return creditsOf({ director: normalizeCreditsForStore(meta.director), cast: normalizeCreditsForStore(meta.cast) });
 		}, lookupOfError);
 	}
 

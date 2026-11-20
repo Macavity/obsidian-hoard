@@ -15,7 +15,7 @@ type Form = {
 	fieldMalId: number | null; fieldAnilistId: number | null; fieldStudio: string[]; fieldPosterUrl: string;
 };
 
-interface Prefill { director?: string[]; cast?: string[]; trailerUrl?: string; episodes?: number }
+interface Prefill { type?: string | null; types?: string[]; director?: string[]; cast?: string[]; trailerUrl?: string; episodes?: number }
 
 function setup(prefill: Prefill = {}, autoFinish = true) {
 	const added: HoardTitle[] = [];
@@ -27,7 +27,7 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 		addTitle: (entry: HoardTitle) => { added.push(structuredClone(entry)); return Promise.resolve(); },
 		recordLookup: vi.fn(),
 	};
-	const settings = fakeSettings({ setFinishDateAutomatically: autoFinish, lastAddedType: '', typeApiMapping: {}, types: [] });
+	const settings = fakeSettings({ setFinishDateAutomatically: autoFinish, lastAddedType: '', types: (prefill.types ?? []).map((name) => ({ name, color: '#000' })) });
 	const modal = new AddTitleModal(
 		{} as never,
 		settings as never,
@@ -37,7 +37,7 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 		{
 			onAdded: () => {},
 			prefill: {
-				title: ' Dark ', type: 'TV Show', episodes: prefill.episodes ?? 3, duration: 50, releaseDate: '2017-12-01',
+				title: ' Dark ', ...(prefill.type === null ? {} : { type: prefill.type ?? 'TV Show' }), sourceType: 'Series', episodes: prefill.episodes ?? 3, duration: 50, releaseDate: '2017-12-01',
 				link: 'https://example.test/dark', seasons: SEASONS,
 				trailerUrl: prefill.trailerUrl, director: prefill.director, cast: prefill.cast,
 			},
@@ -47,7 +47,7 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 }
 
 const BASE = {
-	id: 't-Dark', title: 'Dark', type: 'TV Show', status: 'Plan to watch', priority: 'Medium', review: '', rating: 0, notes: '',
+	id: 't-Dark', title: 'Dark', type: 'TV Show', sourceType: 'Series', status: 'Plan to watch', priority: 'Medium', review: '', rating: 0, notes: '',
 	dateStarted: null, dateFinished: null, dateAdded: NOW, dateModified: NOW, totalEpisodes: 3, episodeDuration: 50,
 	releaseDate: '2017-12-01', externalLink: 'https://example.test/dark', seasons: SEASONS, watchedEpisodes: [],
 	favorite: false, posterUrl: '', trailerUrl: '', manualTrailerUrl: '',
@@ -64,6 +64,35 @@ describe('AddTitleModal add', () => {
 		const { form, added } = setup();
 		await form.addTitle();
 		expect(added).toStrictEqual([BASE]);
+	});
+
+	it('falls back to the first existing type when the preselected one was deleted', async () => {
+		const { form, added } = setup({ type: null, types: ['Film', 'Doku'] });
+		await form.addTitle();
+		expect(added[0]!.type).toBe('Film');
+	});
+
+	it('keeps a preselected type that exists', async () => {
+		const { form, added } = setup({ type: 'Doku', types: ['Film', 'Doku'] });
+		await form.addTitle();
+		expect(added[0]!.type).toBe('Doku');
+	});
+
+	it('starts the search at Anime while the label keeps the remembered type', async () => {
+		const added: HoardTitle[] = [];
+		const api = { fetchCommunityRating: () => Promise.resolve(null), searchAnime: vi.fn().mockResolvedValue([]) };
+		const dm = {
+			getTitles: () => [], getGroups: () => [], generateId: (n: string) => `t-${n}`,
+			addTitle: (e: HoardTitle) => { added.push(structuredClone(e)); return Promise.resolve(); }, recordLookup: vi.fn(),
+		};
+		const settings = fakeSettings({ lastAddedType: 'Movie', types: [{ name: 'Movie' }] });
+		const modal = new AddTitleModal({} as never, settings as never, dm as never, api as never, () => 'Movie', { onAdded: () => {} });
+		const m = modal as unknown as { search: (q: string, y: string) => Promise<unknown>; media: { title: string }; addTitle: () => Promise<void> };
+		await m.search('x', '');
+		expect(api.searchAnime).toHaveBeenCalled();
+		m.media.title = 'Naruto';
+		await m.addTitle();
+		expect(added[0]).toMatchObject({ type: 'Movie', sourceType: 'Anime' });
 	});
 
 	it('remembers the added type through the settings service', async () => {

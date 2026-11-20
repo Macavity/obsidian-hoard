@@ -345,14 +345,6 @@ const settings = {
 			clientSecret: 'Client secret',
 			clientSecretPlaceholder: 'Paste your Twitch client secret here',
 		},
-		routing: {
-			title: 'API routing by type in Watchlist',
-			desc: 'Choose which API group to use for each title type. Anime, Movie, and TV Show are locked to their default APIs.',
-			locked: '{apis} (locked)',
-			notSet: '— not set —',
-			anime: 'Anime API (Jikan / AniList)',
-			movie: 'Movie / TV API (OMDb / TMDB)',
-		},
 	},
 	backup: {
 		title: 'Backup & restore',

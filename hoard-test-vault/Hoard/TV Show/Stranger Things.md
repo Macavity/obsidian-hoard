@@ -1,6 +1,7 @@
 ---
 Name: Stranger Things
 Type: TV Show
+Source Type: Series
 Status: Watching
 Rating: 4
 Cover: none

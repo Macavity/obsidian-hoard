@@ -43,7 +43,6 @@ hoard:
     - name: High
       color: "#E24B4A"
   halfStarRatings: false
-  typeApiMapping: {}
   episodeNumbering: absolute
   defaultCustomColumns: []
   autoCompleteOnLastEpisode: true

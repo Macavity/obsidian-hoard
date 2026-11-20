@@ -13,6 +13,7 @@ Point any AI coding agent (or follow the steps yourself) at this folder. Existin
 
 1. Confirm the Hoard root (folder that holds `Hoard.base`, usually `Hoard/`). Create `Hoard.base` with a `hoard:` block only if the vault has none — prefer adopting an existing root.
 2. Authority for property names: [`src/shared/storage/properties.ts`](../../src/shared/storage/properties.ts) and [`docs/concepts/properties.md`](../../docs/concepts/properties.md). Never invent keys. Title Case with spaces; acronyms upper case (`URL`, `ID`, `MAL`).
+   Every watchlist note also needs `Source Type` (`Anime`, `Movie` or `Series`, exactly). It decides API lookups and movie behaviour; `Type` is only the label and folder. A note without `Source Type` gets no lookups and acts like a series.
 3. One note = one entry. Place files under `<root>/<Type>/`, `Books/`, `Manga/`, or `Games/`. The path under the root is the entry id. Custom lists are not entries: one note per list under `<root>/CustomLists/` (see [docs/modules/custom-lists.md](../../docs/modules/custom-lists.md)).
 4. Existing Hoard values win: when a note already exists, fill only missing properties; leave differing values alone. Never overwrite user data with source data.
 5. Secrets (API keys, Steam id) stay on the device — never copy them into notes, `Hoard.base`, or backups.
@@ -29,7 +30,7 @@ Point any AI coding agent (or follow the steps yourself) at this folder. Existin
    - Library → [library.md](library.md)
    - Otherwise: map field-by-field using [docs/concepts/properties.md](../../docs/concepts/properties.md) and [docs/concepts/external-id.md](../../docs/concepts/external-id.md).
 3. **Register types** — append any watchlist type names the source uses that Hoard's `hoard:` block lacks (by name only; keep existing colours).
-4. **Write notes** under the Hoard root with current property names. Preserve useful body text under `## Notes` when the source had notes. Skip broken entries; report them.
+4. **Write notes** under the Hoard root with current property names, including `Source Type` on every watchlist note (mapping in the source reference). Preserve useful body text under `## Notes` when the source had notes. Skip broken entries; report them.
 5. **Optional cleanup** (ask first; nothing preselected): trash source notes that Hoard now holds as an identical copy; rename widget fences `watchlog` / `wl-*` → `hoard` / `hoard-*` (see WatchLog reference). Do not delete a source whose Hoard copy differs.
 6. **Report** what was created, filled, skipped, and kept (conflicts).
 

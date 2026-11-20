@@ -62,6 +62,7 @@ const csv = {
 		releaseDate: 'Erscheinungsdatum',
 		link: 'Link',
 		notes: 'Notizen',
+		sourceType: 'Art (Source Type)',
 		studio: 'Studio',
 		progressUnit: 'Fortschrittseinheit',
 		pagesRead: 'Gelesene Seiten',

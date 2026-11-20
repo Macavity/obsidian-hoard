@@ -44,14 +44,9 @@ const media = (mediaType: 'movie' | 'tv'): MediaSearchResult => ({
 });
 
 describe('searchTitles', () => {
-	it('returns null for a type without an API', async () => {
-		const { deps } = makeDeps({ typeApiMapping: {} });
-		expect(await searchTitles(deps.settings, deps.api, 'Books', 'q', '')).toBeNull();
-	});
-
-	it('uses the mapping for custom types', async () => {
-		const { deps, api } = makeDeps({ typeApiMapping: { Docs: 'movie' } });
-		expect(await searchTitles(deps.settings, deps.api, 'Docs', 'q', '1999')).toEqual(['omdb']);
+	it('searches the series kind for Series', async () => {
+		const { deps, api } = makeDeps({});
+		expect(await searchTitles(deps.settings, deps.api, 'Series', 'q', '1999')).toEqual(['omdb']);
 		expect(api.searchOmdb).toHaveBeenCalledWith('q', 'series', '1999');
 	});
 
@@ -75,6 +70,12 @@ describe('searchTitles', () => {
 });
 
 describe('keyless routing', () => {
+	it('searches Series keyless on cinemeta', async () => {
+		const { deps, api } = makeDeps({ activeApi: 'OMDb' }, { omdb: false });
+		expect(await searchTitles(deps.settings, deps.api, 'Series', 'x', '')).toEqual(['cinemeta']);
+		expect(api.searchCinemeta).toHaveBeenCalledWith('x', 'series', '');
+	});
+
 	it('falls back to cinemeta when OMDb has no key', async () => {
 		const { deps, api } = makeDeps({ activeApi: 'OMDb' }, { omdb: false });
 		expect(await searchTitles(deps.settings, deps.api, 'Movie', 'q', '')).toEqual(['cinemeta']);
@@ -90,7 +91,7 @@ describe('keyless routing', () => {
 
 	it('searches cinemeta by default and fetches its details', async () => {
 		const { deps, api } = makeDeps({ activeApi: 'Cinemeta' });
-		expect(await searchTitles(deps.settings, deps.api, 'TV Show', 'q', '')).toEqual(['cinemeta']);
+		expect(await searchTitles(deps.settings, deps.api, 'Series', 'q', '')).toEqual(['cinemeta']);
 		expect(api.searchCinemeta).toHaveBeenCalledWith('q', 'series', '');
 		expect(await fetchMediaDetails(deps.settings, deps.api, media('tv'))).toBe('cinemeta-detail');
 		expect(api.getCinemetaDetails).toHaveBeenCalledWith('tt1', 'tv');
@@ -221,10 +222,9 @@ describe('fillMediaFields', () => {
 });
 
 describe('titlePickerBase', () => {
-	it('lists the configured types', () => {
-		const { deps } = makeDeps({ types: [{ name: 'Anime' }, { name: 'Movie' }] });
-		const base = titlePickerBase(deps.settings, 'Movie', () => {});
-		expect(base.typeSelect).toMatchObject({ names: ['Anime', 'Movie'], selected: 'Movie' });
+	it('lists the Source Types', () => {
+		const base = titlePickerBase('Movie', () => {});
+		expect(base.typeSelect).toMatchObject({ names: ['Anime', 'Movie', 'Series'], selected: 'Movie' });
 		expect(base.withYear).toBe(true);
 	});
 });

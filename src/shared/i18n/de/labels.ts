@@ -16,6 +16,11 @@ export default {
 		'Korean TV Show': 'Koreanische Serie',
 		Animation: 'Animation',
 	},
+	sourceType: {
+		Anime: 'Anime',
+		Movie: 'Film',
+		Series: 'Serie',
+	},
 	readingStatus: {
 		Reading: 'Am Lesen',
 		Completed: 'Abgeschlossen',

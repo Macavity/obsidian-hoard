@@ -3,7 +3,7 @@ import type { DataManager } from '../services/DataManager';
 import type { SettingsReader } from '../../settings/exports';
 import type { AnimeSearchResult, HoardTitle } from '../domain/model';
 import { formatVoteCount, getCommunityRating } from '../domain/titleHelpers';
-import { getApiGroupForType } from '../../../shared/api/apiGroup';
+import { apiGroupOf } from '../../../shared/domain/sourceType';
 import { apiErrorMessage, type ApiService } from '../../../shared/api/ApiService';
 import { t } from '../../../shared/i18n';
 import { createIconButton } from '../../../design-system/IconButton';
@@ -108,7 +108,7 @@ export function maybeAutoRefreshCommunityRating(
 		const ts = Date.parse(last);
 		if (!isNaN(ts) && Date.now() - ts < THIRTY_DAYS_MS) return;
 	}
-	if (!hasFetchableSource(title, settings.get().animeApiSource ?? 'jikan', settings.get().typeApiMapping)) return;
+	if (!hasFetchableSource(title, settings.get().animeApiSource ?? 'jikan')) return;
 	if (pendingRatingRefreshes.has(titleId)) return;
 	pendingRatingRefreshes.add(titleId);
 	void (async () => {
@@ -124,9 +124,8 @@ export function maybeAutoRefreshCommunityRating(
 function hasFetchableSource(
 	title: HoardTitle,
 	animeApiSource: 'jikan' | 'anilist',
-	mapping: Record<string, 'anime' | 'movie' | ''> | undefined,
 ): boolean {
-	const group = getApiGroupForType(title.type, mapping);
+	const group = apiGroupOf(title);
 	if (group === '') return false;
 	if (group === 'anime') {
 		if (animeApiSource === 'anilist') return (title.anilistId ?? 0) > 0;
@@ -144,7 +143,7 @@ async function backgroundRefresh(
 	const title = titles.getTitle(titleId);
 	if (!title) return false;
 	const animeSource = settings.get().animeApiSource ?? 'jikan';
-	const group = getApiGroupForType(title.type, settings.get().typeApiMapping);
+	const group = apiGroupOf(title);
 	const result = await api.fetchCommunityRating(title, animeSource, group);
 	if (!result) return false;
 	titles.updateCommunityRating(titleId, result.rating, result.votes, result.source);
@@ -180,7 +179,7 @@ export async function refreshCommunityRating(
 
 /** How a manual rating refresh ended; the notice wording follows from it. */
 export type RatingRefreshOutcome =
-	| { kind: 'updated'; source: string } | { kind: 'noApi'; type: string }
+	| { kind: 'updated'; source: string } | { kind: 'noApi' }
 	| { kind: 'noMatch'; source: 'AniList' | 'MAL' } | { kind: 'fetchFailed' }
 	| { kind: 'error'; err: unknown } | { kind: 'gone' };
 
@@ -188,7 +187,7 @@ export type RatingRefreshOutcome =
 export function ratingRefreshNotice(o: RatingRefreshOutcome): string | null {
 	switch (o.kind) {
 		case 'updated': return t('detail.community.updated', { source: SOURCE_LABELS[o.source] ?? o.source });
-		case 'noApi': return t('detail.community.noApi', { type: o.type });
+		case 'noApi': return t('detail.community.noApi');
 		case 'noMatch': return t('detail.community.noMatch', { source: o.source });
 		case 'fetchFailed': return t('detail.community.fetchFailed');
 		case 'error': return apiErrorMessage(o.err);
@@ -212,8 +211,8 @@ async function runRatingRefresh(
 		let title = initial;
 		const animeSource = settings.get().animeApiSource ?? 'jikan';
 		const wantsAniList = animeSource === 'anilist';
-		const group = getApiGroupForType(title.type, settings.get().typeApiMapping);
-		if (group === '') return { kind: 'noApi', type: title.type };
+		const group = apiGroupOf(title);
+		if (group === '') return { kind: 'noApi' };
 
 		if (group === 'anime') {
 			const ensured = await ensurePreferredAnimeLink(titles, api, title, wantsAniList);

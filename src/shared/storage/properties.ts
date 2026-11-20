@@ -50,6 +50,7 @@ export const TITLE_PROPS = {
 	trailer: 'Trailer',
 	pinned: 'Pinned',
 	maybe: 'Maybe',
+	sourceType: 'Source Type',
 	watchedEpisodes: 'Watched Episodes',
 	skippedEpisodes: 'Skipped Episodes',
 	seasons: 'Seasons',

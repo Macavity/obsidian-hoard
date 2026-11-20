@@ -14,7 +14,8 @@ source:
   - src/modules/watchlist/services/DataManager.ts
   - src/modules/watchlist/domain/newTitle.ts
   - src/modules/watchlist/domain/completedEpisodes.ts
-source_commit: cc203bf
+  - src/shared/domain/sourceType.ts
+source_commit: 07539c0
 ---
 
 # Add title
@@ -47,12 +48,15 @@ sequenceDiagram
 1. **Skeleton**: `SearchFormModal` ([SearchFormModal.ts](../../src/design-system/SearchFormModal.ts))
    mounts a `SearchPicker` above a form and asks the subclass for picker options, `search`,
    `noApiMessage`, `renderResult`, `selectResult`, `renderForm`. A prefilled query searches at once.
-2. **Routing**: `searchTitles` ([titleSearch.ts](../../src/shared/services/titleSearch.ts)) maps the selected type
-   through `typeApiMapping` to anime (Jikan or AniList) or movie/series, where
+2. **Routing**: the picker's "Source Type" select (`Anime` | `Movie` | `Series`, [sourceType.ts](../../src/shared/domain/sourceType.ts),
+   default Anime) decides the search; `Type` is not involved. `searchTitles` ([titleSearch.ts](../../src/shared/services/titleSearch.ts))
+   goes to anime (Jikan or AniList) for Anime, else to the movie/series source, where
    `effectiveMediaSource` ([apiSources.ts](../../src/shared/api/apiSources.ts)) picks Cinemeta, OMDb or TMDB:
-   the chosen one if keyed, else keyless Cinemeta, so Movie and TV Show always search. The "No API
-   configured" panel (`noApiMessage`) now only shows for a custom type with no entry in
-   `typeApiMapping`. The default type comes from `resolveDefaultAddType`.
+   the chosen one if keyed, else keyless Cinemeta, so every Source Type always searches (the
+   "No API configured" panel is gone for titles). `Type` is a plain select in the form (a label and the
+   folder); its default comes from `resolveDefaultAddType`, a prefill type wins, and a type no longer in
+   settings falls back to the first. The chosen Source Type is written to the note and is what later
+   lookups read.
 3. **In-library marker**: on the first search the modal builds a `LibraryIndex` over the watchlist;
    each result row asks `lookup(resultIdKeys(result), title)`. Matching is exact by
    [external id](../concepts/external-id.md) first, normalised title second, deliberately not fuzzy.
@@ -74,7 +78,7 @@ sequenceDiagram
    (`completedEpisodes`) and may set the finish date.
 6. **Write**: `DataManager.addTitle` creates the note (or takes over a
    [Maybe note](../concepts/maybe-title.md)), the id becomes the note path, history logs "added",
-   and the view re-renders ([entry write](entry-write.md)). The type used is remembered as
+   and the view re-renders ([entry write](entry-write.md)). The `Type` used is remembered as
    `lastAddedType`, a community rating is fetched in the background, and a chosen or new group is
    applied.
 7. `onAdded(entry)` lets the caller open the detail modal (`openWatchlistAfterAdd`) or refresh a

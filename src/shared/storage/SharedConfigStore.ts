@@ -13,7 +13,7 @@ import { isRecord } from '../domain/sharedHelpers';
  */
 export const SHARED_SETTING_KEYS: readonly string[] = [
 	'types', 'statuses', 'reviews', 'priorities', 'halfStarRatings',
-	'typeApiMapping', 'episodeNumbering',
+	'episodeNumbering',
 	'defaultCustomColumns', 'autoCompleteOnLastEpisode', 'setFinishDateAutomatically',
 	'reading', 'games',
 ];
@@ -25,7 +25,7 @@ const NESTED_SHARED_KEYS: Readonly<Record<'reading' | 'games', readonly string[]
 };
 
 /** Keys once synced, now local; dropped from the block on the next write. */
-const RETIRED_KEYS = ['ratingSystem', 'seasonPalette', 'readingTypeColors'];
+const RETIRED_KEYS = ['ratingSystem', 'seasonPalette', 'readingTypeColors', 'typeApiMapping'];
 const VERSION = 1;
 
 /** Splits a `reading`/`games` object into its synced and its device-local part. */

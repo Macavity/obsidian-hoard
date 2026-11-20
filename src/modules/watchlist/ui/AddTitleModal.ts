@@ -4,7 +4,7 @@ import type { ApiService } from '../../../shared/api/ApiService';
 import type { SettingsReader, SettingsWriter } from '../../settings/exports';
 import type { HoardGroup, HoardTitle, Season } from '../domain/model';
 import { todayIso } from '../../../shared/domain/date';
-import { getApiGroupForType } from '../../../shared/api/apiGroup';
+import { apiGroupOf, type SourceType } from '../../../shared/domain/sourceType';
 import { completedEpisodes } from '../domain/completedEpisodes';
 import { newTitle } from '../domain/newTitle';
 import { nonEmpty } from '../../../shared/domain/sharedHelpers';
@@ -33,9 +33,9 @@ import { blockDuplicate, createDuplicateGuard } from '../../../design-system/Dup
 import {
 	makeCell,
 	makeRow as makeFormRow,
+	renderMediaAndTypeFields,
 	nameSelect,
 	renderGroupPicker,
-	renderMediaFields,
 	resetForm,
 	type GroupPickerState,
 } from '../../../design-system/FormCells';
@@ -50,7 +50,8 @@ export type AddTitleApi = TitleSearchApi & Pick<ApiService, 'fetchCommunityRatin
 export interface AddTitlePrefill {
 	title?: string;
 	searchQuery?: string;
-	type: string;
+	type?: string;
+	sourceType: SourceType;
 	episodes: number;
 	duration: number;
 	releaseDate: string;
@@ -70,6 +71,7 @@ export interface AddTitleOptions {
 export type OpenAddTitle = (opts: AddTitleOptions) => void;
 
 export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
+	private selectedSourceType: SourceType = 'Anime';
 	private selectedType = 'Anime';
 	private initialQuery = '';
 
@@ -103,44 +105,41 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		private readonly opts: AddTitleOptions,
 	) {
 		super(app, t('add.title.heading'), ['hoard-add-modal']);
-		const prefill = opts.prefill;
-		// preselect the resolved default type; a prefill type (e.g. from URL detection) overrides it below
-		this.selectedType = resolveDefaultAddType() || this.selectedType;
-		if (prefill) {
-			this.selectedType = prefill.type;
-			if (prefill.title) {
-				this.media.title = prefill.title;
-			}
-			if (prefill.searchQuery) this.initialQuery = prefill.searchQuery;
-			this.media.episodes = prefill.episodes;
-			this.media.duration = prefill.duration;
-			this.media.releaseDate = prefill.releaseDate;
-			this.media.link = prefill.link;
-			this.fieldSeasons = prefill.seasons;
-			if (prefill.trailerUrl) this.fieldTrailer = found(prefill.trailerUrl);
-			if (prefill.director !== undefined) this.fieldDirector = prefill.director;
-			if (prefill.cast !== undefined) this.fieldCast = prefill.cast;
-		}
+		// preselect the resolved default type; a prefill type overrides it, and a type no longer in settings falls back to the first
+		this.selectedType = opts.prefill?.type || resolveDefaultAddType() || this.selectedType;
+		const names = settings.get().types.map((ty) => ty.name);
+		if (names.length > 0 && !names.includes(this.selectedType)) this.selectedType = names[0]!;
+		if (opts.prefill) this.applyPrefill(opts.prefill);
+	}
+
+	private applyPrefill(prefill: AddTitlePrefill): void {
+		this.selectedSourceType = prefill.sourceType;
+		if (prefill.title) this.media.title = prefill.title;
+		if (prefill.searchQuery) this.initialQuery = prefill.searchQuery;
+		this.media.episodes = prefill.episodes;
+		this.media.duration = prefill.duration;
+		this.media.releaseDate = prefill.releaseDate;
+		this.media.link = prefill.link;
+		this.fieldSeasons = prefill.seasons;
+		if (prefill.trailerUrl) this.fieldTrailer = found(prefill.trailerUrl);
+		if (prefill.director !== undefined) this.fieldDirector = prefill.director;
+		if (prefill.cast !== undefined) this.fieldCast = prefill.cast;
 	}
 
 	protected pickerOptions(): SearchPickerOptions<TitleSearchResult> {
 		return {
-			...titlePickerBase(this.settings, this.selectedType, (v) => {
-				this.selectedType = v;
-				this.renderForm();
-			}),
+			...titlePickerBase(this.selectedSourceType, (v) => { this.selectedSourceType = v; }),
 			grid: true,
 			initialQuery: this.initialQuery,
 		};
 	}
 
 	protected async search(query: string, year: string): Promise<TitleSearchResult[]> {
-		return (await searchTitles(this.settings, this.api, this.selectedType, query, year)) ?? [];
+		return await searchTitles(this.settings, this.api, this.selectedSourceType, query, year);
 	}
 
 	protected noApiMessage(): string | null {
-		if (getApiGroupForType(this.selectedType, this.settings.get().typeApiMapping) !== '') return null;
-		return t('add.title.noApi', { type: this.selectedType });
+		return null;
 	}
 
 	protected renderResult(host: HTMLElement, result: TitleSearchResult, select: (itemEl: HTMLElement) => void): HTMLElement {
@@ -179,7 +178,11 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		if (!form) return;
 		const makeRow = (label: string): HTMLElement => makeFormRow(form, label);
 
-		renderMediaFields(form, this.media, true);
+		renderMediaAndTypeFields(form, this.media, true, {
+			names: this.settings.get().types.map((ty) => ty.name),
+			selected: this.selectedType,
+			onChange: (v) => { this.selectedType = v; },
+		});
 
 		// status + priority paired 50/50 (status excludes "To be released" — it follows releaseDate)
 		const statusPriRow = form.createDiv({ cls: 'hoard-modal__row hoard-modal__row--pair' });
@@ -250,6 +253,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 			id: this.titles.generateId(titleName),
 			title: titleName,
 			type: this.selectedType,
+			sourceType: this.selectedSourceType,
 			status: this.fieldStatus,
 			priority: this.fieldPriority,
 			rating: this.fieldRating,
@@ -282,7 +286,7 @@ export class AddTitleModal extends SearchFormModal<TitleSearchResult> {
 		// fire-and-forget community rating fetch (non-blocking)
 		void (async () => {
 			const animeSource = this.settings.get().animeApiSource ?? 'jikan';
-			const group = getApiGroupForType(entry.type, this.settings.get().typeApiMapping);
+			const group = apiGroupOf(entry);
 			if (group === '') return;
 			const result = await this.api.fetchCommunityRating(entry, animeSource, group);
 			if (result) {

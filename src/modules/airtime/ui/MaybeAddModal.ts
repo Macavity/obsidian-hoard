@@ -3,9 +3,10 @@ import { App, Notice } from 'obsidian';
 import type { SettingsReader } from '../../settings/exports';
 import { t } from '../../../shared/i18n';
 import type { MaybeTitle } from '../../watchlist/exports';
+import type { SourceType } from '../../../shared/domain/sourceType';
 import { formatDateDisplay } from '../../../shared/domain/date';
 import {
-	renderMediaFields,
+	renderMediaAndTypeFields,
 	resetForm,
 } from '../../../design-system/FormCells';
 import { episodesLabel, fillMediaFields, resolvePick, searchTitles, titlePickerBase, type TitleSearchApi, type TitleSearchResult, type MediaFields } from '../../../shared/services/titleSearch';
@@ -20,7 +21,8 @@ export interface MaybeAddOptions {
 export type OpenMaybeAdd = (opts: MaybeAddOptions) => void;
 
 export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
-	private selectedType = 'Anime';
+	private selectedSourceType: SourceType = 'Anime';
+	private selectedType: string;
 
 	private media: MediaFields = { title: '', episodes: 0, duration: 0, releaseDate: '', link: '' };
 
@@ -32,13 +34,11 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 		private readonly opts: MaybeAddOptions,
 	) {
 		super(app, t('misc.maybeAdd.title'), ['hoard-add-modal']);
+		this.selectedType = settings.get().types[0]?.name ?? '';
 	}
 
 	protected pickerOptions(): SearchPickerOptions<TitleSearchResult> {
-		return titlePickerBase(this.settings, this.selectedType, (v) => {
-			this.selectedType = v;
-			this.renderForm();
-		});
+		return titlePickerBase(this.selectedSourceType, (v) => { this.selectedSourceType = v; });
 	}
 
 	protected noApiMessage(): string | null {
@@ -46,10 +46,7 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 	}
 
 	protected async search(query: string, year: string): Promise<TitleSearchResult[]> {
-		const found = await searchTitles(this.settings, this.api, this.selectedType, query, year);
-		if (found) return found;
-		new Notice(t('misc.maybeAdd.noApi', { type: this.selectedType }));
-		return [];
+		return await searchTitles(this.settings, this.api, this.selectedSourceType, query, year);
 	}
 
 	protected renderResult(host: HTMLElement, result: TitleSearchResult, select: (itemEl: HTMLElement) => void): HTMLElement {
@@ -67,7 +64,11 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 	protected renderForm(): void {
 		const form = resetForm(this.formEl);
 		if (!form) return;
-		renderMediaFields(form, this.media, false);
+		renderMediaAndTypeFields(form, this.media, false, {
+			names: this.settings.get().types.map((ty) => ty.name),
+			selected: this.selectedType,
+			onChange: (v) => { this.selectedType = v; },
+		});
 
 		const btnRow = form.createDiv({ cls: 'hoard-modal__btn-row' });
 		const addBtn = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('misc.maybeAdd.submit') });
@@ -82,6 +83,7 @@ export class MaybeAddModal extends SearchFormModal<TitleSearchResult> {
 			id: this.titles.generateMaybeId(titleName),
 			title: titleName,
 			type: this.selectedType,
+			sourceType: this.selectedSourceType,
 			releaseDate: this.media.releaseDate || null,
 			externalLink: this.media.link,
 			totalEpisodes: this.media.episodes,

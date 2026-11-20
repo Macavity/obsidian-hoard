@@ -1,5 +1,6 @@
 const add = {
 	// shared across the add modals
+	type: 'Type',
 	status: 'Status',
 	priority: 'Priority',
 	rating: 'Rating',
@@ -23,7 +24,6 @@ const add = {
 		heading: 'Add title',
 		submit: 'Add to hoard',
 		emptyName: 'Please enter a title name.',
-		noApi: 'No API configured for type "{type}". Go to Settings → API to set one up.',
 		seasonEpisodes: { one: '{name} ({count} ep)', other: '{name} ({count} eps)' },
 	},
 	game: {

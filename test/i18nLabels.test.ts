@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { setLocale } from '../src/shared/i18n';
 import en from '../src/shared/i18n/en';
 import de from '../src/shared/i18n/de';
-import { statusLabel, typeLabel, readingStatusLabel, gameStatusLabel, priorityLabel } from '../src/shared/i18n/labels';
+import { statusLabel, typeLabel, readingStatusLabel, gameStatusLabel, priorityLabel, sourceTypeLabel } from '../src/shared/i18n/labels';
 import { defaultGamesSettings } from '../src/modules/games/domain/gameDefaults';
 import { READING_STATUSES } from '../src/modules/reading/domain/readingDefaults';
 import { DEFAULT_SETTINGS } from '../src/modules/settings/domain/settingsDefaults';
@@ -16,6 +16,13 @@ describe('display labels', () => {
 		expect(typeLabel('TV Show')).toBe(de.labels.type['TV Show']);
 		expect(readingStatusLabel('Plan to Read')).toBe(de.labels.readingStatus['Plan to Read']);
 		expect(statusLabel('Watching')).not.toBe('Watching');
+	});
+
+	it('labels the source types', () => {
+		setLocale('de');
+		expect(['Anime', 'Movie', 'Series'].map((v) => sourceTypeLabel(v as 'Anime'))).toEqual(['Anime', 'Film', 'Serie']);
+		setLocale('en');
+		expect(sourceTypeLabel('Series')).toBe('Series');
 	});
 
 	it('returns unknown values unchanged', () => {

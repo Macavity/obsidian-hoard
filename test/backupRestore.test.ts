@@ -150,7 +150,7 @@ describe('history actions', () => {
 			version: 2, exportedAt: '', shared: {}, history: [],
 			entries: {
 				titles: [{ id: 'Movie/Min', title: 'Min' }, { id: 'Movie/Odd', title: 'Odd', seasons: 'x', watchedEpisodes: [1, 'a'], rating: 'high', groups: 5 }],
-				maybe: [{ id: 'Movie/Maybe', title: 'Maybe' }],
+				maybe: [{ id: 'Movie/Maybe', title: 'Maybe', sourceType: 'Movie' }],
 				reading: { books: [{ id: 'B', title: 'Bk', customFields: { a: 'x', b: 2, c: {}, d: null } }, { id: 'B2', title: 'Bk2', customFields: 'x' }], manga: [{ id: 'M', title: 'Mg', status: 'Gone', totalVolumes: '3' }] },
 				games: { games: [{ id: 'G', title: 'Gm', platforms: 'PC' }], settings: {} },
 			},
@@ -163,10 +163,25 @@ describe('history actions', () => {
 		expect(titleOf('Min')).toMatchObject({ title: 'Min', seasons: [], watchedEpisodes: [] });
 		expect(titleOf('Odd')).toMatchObject({ seasons: [], watchedEpisodes: [1], rating: 0 });
 		expect(b.dataManager.getMaybeTitles().map((m) => m.title)).toEqual(['Maybe']);
+		expect(b.dataManager.getMaybeTitles()[0]!.sourceType).toBe('Movie');
 		expect(b.readingDataManager.getBooks().map((x) => x.title).sort()).toEqual(['Bk', 'Bk2']);
 		expect(b.readingDataManager.getBooks().find((x) => x.title === 'Bk2')?.customFields).toEqual({});
 		expect(b.readingDataManager.getMangaList()[0]).toMatchObject({ title: 'Mg', status: 'Plan to Read', totalVolumes: 0 });
 		expect(b.gameDataManager.getGames()[0]).toMatchObject({ title: 'Gm', platforms: [] });
+	});
+
+	it('restores the Source Type of a backup title', async () => {
+		const src = JSON.stringify({
+			version: 2, exportedAt: '', shared: {}, local: {}, history: [],
+			entries: { maybe: [], reading: { books: [], manga: [] }, games: { games: [], settings: {} }, titles: [{ id: 'TV Show/S', title: 'S', sourceType: 'Series' }, { id: 'TV Show/T', title: 'T', sourceType: 'nope' }] },
+		});
+		const parsed = parseBackup(src);
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const b = await setupBackup({});
+		await restoreBackup(b, parsed.backup);
+		const titles = b.dataManager.getTitles();
+		expect(titles.find((t) => t.title === 'S')?.sourceType).toBe('Series');
+		expect(titles.find((t) => t.title === 'T')?.sourceType).toBeUndefined();
 	});
 
 	it('ignores a backup settings key that is only on the prototype chain', async () => {

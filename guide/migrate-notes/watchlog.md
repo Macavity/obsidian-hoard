@@ -16,6 +16,7 @@ For each title in `titles` (and each entry in `maybe` with `Maybe: true`):
 |---|---|---|
 | `title` | `Name` | required |
 | `type` | `Type` | folder = type name under root |
+| `type` | `Source Type` | `Anime` → `Anime`, `Movie` → `Movie`, anything else → `Series`; use `Movie` or `Anime` instead when the source marks the title as a film or anime. Decides API lookups; `Type` is only the label |
 | `status`, `priority`, `review`, `rating`, `favorite`, `groups` | same Title Case names | |
 | `dateStarted` / `dateFinished` / `dateAdded` / `dateModified` / `dateFavorited` / `releaseDate` | `Date …` / `Release Date` | ISO |
 | `externalLink` | `URL` | |
@@ -69,6 +70,7 @@ Notes are already vault-shaped but use **Hoard 0.1 camelCase** keys. Copy manage
 |---|---|
 | `title` | `Name` |
 | `type` | `Type` |
+| `type` | `Source Type` (as for the original: `Anime` → `Anime`, `Movie` → `Movie`, else `Series`; keep an existing `Source Type`) |
 | `status` | `Status` |
 | `rating` | `Rating` |
 | `favorite` | `Favorite` |

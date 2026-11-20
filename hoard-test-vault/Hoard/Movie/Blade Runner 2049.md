@@ -1,6 +1,7 @@
 ---
 Name: Blade Runner 2049
 Type: Movie
+Source Type: Movie
 Status: Completed
 Priority: High
 Review: Awesome

@@ -61,8 +61,8 @@ describe('steam cover check', () => {
 });
 
 describe('cinemeta credits', () => {
-	const bb = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'TV Show', totalEpisodes: 0 } as never;
-	const unknownKind = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'Doc', totalEpisodes: 0 } as never;
+	const bb = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'TV Show', sourceType: 'Series', totalEpisodes: 0 } as never;
+	const unknownKind = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'Doc', sourceType: undefined, totalEpisodes: 0 } as never;
 
 	it('fills credits from the series meta when the source is cinemeta', async () => {
 		respond(cinemetaMeta);
@@ -71,21 +71,10 @@ describe('cinemeta credits', () => {
 		expect(credits).toEqual({ status: 'found', value: { director: [], cast: ['Bryan Cranston', 'Aaron Paul', 'Anna Gunn'] } });
 	});
 
-	it('tries series before movie for a custom type with one episode', async () => {
-		const oneEpisode = { externalLink: 'https://www.imdb.com/title/tt0903747/', type: 'Doc', totalEpisodes: 1 } as never;
-		sent.mockResolvedValueOnce({ status: 200, text: '{}', json: {} } as never);
-		sent.mockResolvedValueOnce({ status: 200, text: JSON.stringify(cinemetaMeta), json: cinemetaMeta } as never);
-		await api().fetchCredits(oneEpisode, 'cinemeta');
-		expect(urlOf(0)).toContain('/meta/series/');
-		expect(urlOf(1)).toContain('/meta/movie/');
-	});
-
-	it('tries series before movie for an unknown kind', async () => {
-		sent.mockResolvedValueOnce({ status: 200, text: '{}', json: {} } as never);
-		sent.mockResolvedValueOnce({ status: 200, text: JSON.stringify(cinemetaMeta), json: cinemetaMeta } as never);
-		await api().fetchCredits(unknownKind, 'cinemeta');
-		expect(urlOf(0)).toContain('/meta/series/');
-		expect(urlOf(1)).toContain('/meta/movie/');
+	it('sends no request for a title without a Source Type, even with an IMDb link', async () => {
+		sent.mockClear();
+		expect(await api().fetchCredits(unknownKind, 'cinemeta')).toEqual({ status: 'notfound' });
+		expect(sent).not.toHaveBeenCalled();
 	});
 
 	it('reports a failed request as failed, so nothing is stored', async () => {
@@ -93,9 +82,9 @@ describe('cinemeta credits', () => {
 		expect(await api().fetchCredits(bb, 'cinemeta')).toEqual({ status: 'failed' });
 	});
 
-	it('is notfound when cinemeta knows neither kind', async () => {
+	it('is notfound when cinemeta has no record of the kind', async () => {
 		respond({});
-		expect(await api().fetchCredits(unknownKind, 'cinemeta')).toEqual({ status: 'notfound' });
+		expect(await api().fetchCredits(bb, 'cinemeta')).toEqual({ status: 'notfound' });
 	});
 });
 

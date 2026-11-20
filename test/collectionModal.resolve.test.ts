@@ -9,7 +9,7 @@ import { FAILED, NO_KEY, NOT_FOUND, found, type LookupResult } from '../src/shar
 const detail: TmdbCollectionDetail = { id: 99, name: 'Dune Collection', parts: [] };
 
 const title = (over: Partial<HoardTitle> = {}): HoardTitle => ({
-	id: 'Movie/Dune', title: 'Dune', type: 'Movie', status: '', priority: '', review: '', rating: 0, notes: '',
+	id: 'Movie/Dune', title: 'Dune', type: 'Movie', sourceType: 'Movie', status: '', priority: '', review: '', rating: 0, notes: '',
 	dateStarted: null, dateFinished: null, dateAdded: '', dateModified: '', totalEpisodes: 1, episodeDuration: 155,
 	releaseDate: '2021-10-22', externalLink: 'https://www.imdb.com/title/tt1160419/', seasons: [], watchedEpisodes: [], ...over,
 });
@@ -43,7 +43,7 @@ describe('resolveCollection', () => {
 
 	it('skips titles that are not movies', async () => {
 		const { resolve, api } = setup();
-		expect(await resolve(title({ type: 'Anime' }))).toBeNull();
+		expect(await resolve(title({ type: 'Anime', sourceType: 'Anime' }))).toBeNull();
 		expect(api.findTmdbMovieIdByImdbId).not.toHaveBeenCalled();
 	});
 
