@@ -1,4 +1,5 @@
 import type { AirtimeRecurrence, EntryAirtime } from '../../modules/airtime/exports';
+import { isAnime } from '../domain/sourceType';
 import type { HoardTitle, Season, TitleOverrides } from '../../modules/watchlist/exports';
 import type { ApiCheckResult, Decoded, EntryCache, EpisodeRef, ExternalId, Fm } from './storageTypes';
 import { MAX_EPISODE, formatEpisodeRange, fromAbsolute, outsideSeasons, parseEpisodeRange, toAbsolute } from './episodeRange';
@@ -306,7 +307,7 @@ function identityFor(t: HoardTitle): ExternalId | null {
 		t.tmdbId !== undefined && t.tmdbMediaType ? { source: 'tmdb', kind: t.tmdbMediaType, id: String(t.tmdbId) } : null;
 	const mal = (): ExternalId | null => (t.malId !== undefined ? { source: 'mal', kind: 'anime', id: String(t.malId) } : null);
 	const anilist = (): ExternalId | null => (t.anilistId !== undefined ? { source: 'anilist', kind: 'anime', id: String(t.anilistId) } : null);
-	const order = t.type === 'Anime' ? [mal, anilist, tmdb] : [tmdb, mal, anilist];
+	const order = isAnime(t) ? [mal, anilist, tmdb] : [tmdb, mal, anilist];
 	for (const fn of order) {
 		const id = fn();
 		if (id) return id;

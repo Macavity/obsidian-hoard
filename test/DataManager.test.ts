@@ -419,6 +419,13 @@ describe('DataManager on vault storage', () => {
 		const show = (status: string, over: Partial<HoardTitle> = {}) =>
 			makeTitle({ type: 'TV Show', status, episodeDuration: 40, totalEpisodes: 10, watchedEpisodes: [1, 2, 3], ...over });
 
+		it('routes a movie by Source Type, not by Type', async () => {
+			const { dm } = await setupDataManager({});
+			const base = { status: 'Watching', episodeDuration: 90, totalEpisodes: 0, watchedEpisodes: [] };
+			expect(dm.calcTimeRemaining(makeTitle({ ...base, sourceType: 'Movie' }))).toBe(90);
+			expect(dm.calcTimeRemaining(makeTitle({ ...base, type: 'Movie' }))).toBe(0);
+		});
+
 		it('counts unwatched episodes for Plan to watch and Watching, nothing otherwise', async () => {
 			const { dm } = await setupDataManager({});
 			expect(dm.calcTimeRemaining(show('Watching'))).toBe(7 * 40);
@@ -431,7 +438,7 @@ describe('DataManager on vault storage', () => {
 
 		it('treats a movie as remaining until watched', async () => {
 			const { dm } = await setupDataManager({});
-			const movie = (watched: number[]) => makeTitle({ type: 'Movie', status: 'Watching', episodeDuration: 100, watchedEpisodes: watched });
+			const movie = (watched: number[]) => makeTitle({ type: 'Movie', sourceType: 'Movie', status: 'Watching', episodeDuration: 100, watchedEpisodes: watched });
 			expect(dm.calcTimeRemaining(movie([]))).toBe(100);
 			expect(dm.calcTimeRemaining(movie([1]))).toBe(0);
 			expect(dm.calcTimeRemainingForModal(movie([]))).toBe(100);

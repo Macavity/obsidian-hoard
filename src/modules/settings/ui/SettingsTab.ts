@@ -14,7 +14,7 @@ import { parseApiGroup, typeApiRoute, type ApiGroup } from '../domain/apiRouting
 import { formatDateDisplay } from '../../../shared/domain/date';
 import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../../reading/exports';
 import { LAST_USED_TYPE_SENTINEL } from '../domain/settingsDefaults';
-import { getApiGroupForType } from '../../../shared/api/apiGroup';
+import { apiGroupOf } from '../../../shared/domain/sourceType';
 import { readingStatusColor } from '../../reading/exports';
 import { gamesKeyChip } from './gamesKeyChip';
 import { effectiveMediaSource, effectiveBookSource, effectiveGameSource } from '../../../shared/api/apiSources';
@@ -860,13 +860,12 @@ export class HoardSettingsTab extends PluginSettingTab {
 	private async fetchAllStudios(): Promise<void> {
 		const dm = this.titles;
 		const api = this.api;
-		const mapping = this.settings.get().typeApiMapping;
 		// movie studios need TMDB: without a key a miss is not an answer, so leave the field unfetched;
 		// a title whose last lookup is still fresh is not asked again
 		const pending = dm.getTitles().filter((title) =>
 			needsStudioFetch(title)
 			&& dm.lookupDue(title.id, 'studio')
-			&& (getApiGroupForType(title.type, mapping) !== 'movie' || api.hasTmdbKey()));
+			&& (apiGroupOf(title) !== 'movie' || api.hasTmdbKey()));
 		const total = pending.length;
 		if (total === 0) {
 			new Notice(t('settings.general.studios.allHave'));
@@ -886,7 +885,7 @@ export class HoardSettingsTab extends PluginSettingTab {
 				if (isCancelled()) break;
 				const title = pending[i]!;
 				try {
-					const group = getApiGroupForType(title.type, mapping);
+					const group = apiGroupOf(title);
 					const result = await api.fetchStudio(title, animeSource, group);
 					if (result.status === 'found') {
 						const { studio, tmdbId, tmdbMediaType } = result.value;

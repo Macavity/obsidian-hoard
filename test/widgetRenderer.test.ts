@@ -4,7 +4,7 @@ import type { HoardTitle } from '../src/modules/watchlist/domain/model';
 import { fakeSettings } from './helpers/fakeSettings';
 
 const t = (id: string, watched: number[], over: Partial<HoardTitle> = {}): HoardTitle =>
-	({ id, title: `T${id}`, type: 'Series', watchedEpisodes: watched, ...over }) as HoardTitle;
+	({ id, title: `T${id}`, type: 'Series', sourceType: 'Series', watchedEpisodes: watched, ...over }) as HoardTitle;
 
 describe('groupProgress', () => {
 	it('is 0 without episodes', () => {
@@ -103,7 +103,7 @@ function mountRenderer(fx: Fixture = {}) {
 const series = (over: Partial<HoardTitle> = {}): HoardTitle =>
 	t('s', [1, 2], { title: 'Show', type: 'Series', status: 'Watching', dateAdded: '2030-01-01', ...over });
 const movie = (watched: number[] = []): HoardTitle =>
-	t('m', watched, { title: 'Film', type: 'Movie', status: 'Watching', dateAdded: '2030-01-01', dateStarted: '2030-01-02' });
+	t('m', watched, { title: 'Film', type: 'Movie', sourceType: 'Movie', status: 'Watching', dateAdded: '2030-01-01', dateStarted: '2030-01-02' });
 
 describe('WidgetRenderer', () => {
 	afterEach(() => {

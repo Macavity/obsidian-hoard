@@ -10,7 +10,7 @@ import { todayIso } from '../../../shared/domain/date';
 import { formatTime } from '../../../shared/domain/format';
 import { getThemedColor } from '../../../shared/domain/tags';
 import { getDisplayPoster, getManualCredits, getTitleCredits, isCreditsUnfetched } from '../domain/titles';
-import { getApiGroupForType } from '../../../shared/api/apiGroup';
+import { apiGroupOf } from '../../../shared/domain/sourceType';
 import { createDatePicker } from '../../../design-system/DatePicker';
 import type { DatePickerHandle } from '../../../design-system/DatePicker';
 import type { AddCreditOptions } from './AddCreditModal';
@@ -418,7 +418,7 @@ export class TitleDetailModal extends Modal {
 		try {
 			const settings = this.settings.get();
 			const result = await this.api.fetchTrailer(
-				t, settings.animeApiSource ?? 'jikan', getApiGroupForType(t.type, settings.typeApiMapping),
+				t, settings.animeApiSource ?? 'jikan', apiGroupOf(t),
 			);
 			if (result.status === 'found') this.titles.updateTrailerUrl(t.id, result.value);
 			else this.titles.recordLookup(t.id, 'trailer', result);
@@ -477,7 +477,7 @@ export class TitleDetailModal extends Modal {
 	private maybeBackfillStudio(): void {
 		const t = this.titles.getTitle(this.title.id);
 		if (!t || !this.titles.lookupDue(t.id, 'studio') || studioBackfillInFlight.has(t.id)) return;
-		const group = getApiGroupForType(t.type, this.settings.get().typeApiMapping);
+		const group = apiGroupOf(t);
 		studioBackfillInFlight.add(t.id);
 		void (async () => {
 			try {
@@ -793,7 +793,7 @@ export class TitleDetailModal extends Modal {
 		btn.addClass('is-loading');
 		try {
 			const animeSource = this.settings.get().animeApiSource ?? 'jikan';
-			const group = getApiGroupForType(title.type, this.settings.get().typeApiMapping);
+			const group = apiGroupOf(title);
 			const result = await this.api.fetchTrailer(title, animeSource, group);
 			if (result.status === 'found') {
 				this.titles.updateTrailerUrl(title.id, result.value);

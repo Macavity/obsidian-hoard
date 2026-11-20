@@ -10,7 +10,7 @@ import { t } from '../../src/shared/i18n';
 
 const title = (over: Partial<HoardTitle>): HoardTitle =>
 	({
-		id: 'x', title: 'T', type: 'Anime', status: 'Completed', watchedEpisodes: [], totalEpisodes: 12,
+		id: 'x', title: 'T', type: 'Anime', sourceType: 'Anime', status: 'Completed', watchedEpisodes: [], totalEpisodes: 12,
 		episodeDuration: 24, dateAdded: '2024-01-01', releaseDate: '2019-05-05', dateFinished: '2024-02-02', ...over,
 	}) as unknown as HoardTitle;
 
@@ -65,7 +65,7 @@ afterEach(() => {
 describe('DashboardTab cards', () => {
 	const titles = [
 		title({ id: '1', status: 'Completed' }),
-		title({ id: '2', status: 'Watching', type: 'Movie', watchedEpisodes: [1] }),
+		title({ id: '2', status: 'Watching', type: 'Movie', sourceType: 'Movie', watchedEpisodes: [1] }),
 		title({ id: '3', status: 'Dropped' }),
 	];
 	const books = [{ id: 'b', status: 'Reading', title: 'B', pagesRead: 50, totalPages: 100, dateAdded: '2023-01-01' }] as unknown as Book[];
@@ -119,8 +119,8 @@ describe('DashboardTab suggestions and stats', () => {
 			titles: [
 				title({ id: 'a', title: 'Long', status: 'Plan to watch', totalEpisodes: 100 }),
 				title({ id: 'b', title: 'Short', status: 'Plan to watch', totalEpisodes: 2 }),
-				title({ id: 'c', title: 'Unknown', status: 'Plan to watch', type: 'Movie', totalEpisodes: 0, episodeDuration: 0 }),
-				title({ id: 'd', title: 'Runtime', status: 'Plan to watch', type: 'Movie', totalEpisodes: 0, episodeDuration: 90 }),
+				title({ id: 'c', title: 'Unknown', status: 'Plan to watch', type: 'Movie', sourceType: 'Movie', totalEpisodes: 0, episodeDuration: 0 }),
+				title({ id: 'd', title: 'Runtime', status: 'Plan to watch', type: 'Movie', sourceType: 'Movie', totalEpisodes: 0, episodeDuration: 90 }),
 			],
 		});
 		const picks = texts(c, '.hoard-suggestions__title');

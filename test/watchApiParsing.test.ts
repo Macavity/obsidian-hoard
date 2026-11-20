@@ -33,7 +33,7 @@ function route(routes: Array<[string, unknown]>) {
 const respond = (json: unknown) => sent.mockResolvedValue(ok(json));
 
 const title = (over: Partial<HoardTitle>): HoardTitle => ({
-	id: 't1', title: 'X', type: 'Movie', status: '', priority: '', review: '', rating: 0, notes: '',
+	id: 't1', title: 'X', type: 'Movie', sourceType: 'Movie', status: '', priority: '', review: '', rating: 0, notes: '',
 	dateStarted: null, dateFinished: null, dateAdded: '', dateModified: '', totalEpisodes: 1, episodeDuration: 100,
 	releaseDate: null, externalLink: '', seasons: [], watchedEpisodes: [], ...over,
 });
@@ -553,7 +553,7 @@ describe('fetchSeasons', () => {
 });
 
 describe('community rating', () => {
-	const mal = (over: Partial<HoardTitle> = {}) => title({ type: 'Anime', malId: 1, ...over });
+	const mal = (over: Partial<HoardTitle> = {}) => title({ type: 'Anime', sourceType: 'Anime', malId: 1, ...over });
 
 	it('reads the MAL score and member count', async () => {
 		respond(jikanAnime);
@@ -575,7 +575,7 @@ describe('community rating', () => {
 	it('skips an anime API whose id is missing or not positive', async () => {
 		respond(jikanAnime);
 		expect(await anime().fetchCommunityRating(mal({ malId: 0 }))).toBeNull();
-		expect(await anime().fetchCommunityRating(title({ type: 'Anime' }))).toBeNull();
+		expect(await anime().fetchCommunityRating(title({ type: 'Anime', sourceType: 'Anime' }))).toBeNull();
 		expect(sent).not.toHaveBeenCalled();
 	});
 
@@ -583,9 +583,9 @@ describe('community rating', () => {
 		const movie = title({ externalLink: 'https://www.imdb.com/title/tt1375666/' });
 		respond(omdbMovie);
 		expect(await omdb().fetchCommunityRating(movie)).toEqual({ rating: 8.8, votes: 2700000, source: 'imdb' });
-		expect(await omdb().fetchCommunityRating({ ...movie, type: 'TV Show' })).toMatchObject({ source: 'imdb' });
-		expect(await omdb().fetchCommunityRating({ ...movie, type: 'Documentary' })).toBeNull();
-		expect(await omdb().fetchCommunityRating({ ...movie, type: 'Documentary' }, 'jikan', 'movie')).toMatchObject({ source: 'imdb' });
+		expect(await omdb().fetchCommunityRating({ ...movie, type: 'TV Show', sourceType: 'Series' })).toMatchObject({ source: 'imdb' });
+		expect(await omdb().fetchCommunityRating({ ...movie, type: 'Documentary', sourceType: undefined })).toBeNull();
+		expect(await omdb().fetchCommunityRating({ ...movie, type: 'Documentary', sourceType: undefined }, 'jikan', 'movie')).toMatchObject({ source: 'imdb' });
 	});
 
 	it('falls back to TMDB when OMDb has no rating or no key', async () => {

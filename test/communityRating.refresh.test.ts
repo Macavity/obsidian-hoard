@@ -49,7 +49,7 @@ describe('refreshCommunityRating', () => {
 	});
 
 	it('fetches and stores a movie rating, toggling the loading class', async () => {
-		const s = setup(makeTitle({ id: 'a', type: 'Movie' }));
+		const s = setup(makeTitle({ id: 'a', type: 'Movie', sourceType: 'Movie' }));
 		const btn = document.createElement('button');
 		const p = run(s, true, btn);
 		expect(btn.classList.contains('is-loading')).toBe(true);
@@ -60,13 +60,13 @@ describe('refreshCommunityRating', () => {
 	});
 
 	it('does not notice a successful fetch when silent', async () => {
-		const s = setup(makeTitle({ id: 'a', type: 'Movie' }));
+		const s = setup(makeTitle({ id: 'a', type: 'Movie', sourceType: 'Movie' }));
 		expect(await run(s, false)).toBe(true);
 		expect(Notice.shown).toHaveLength(0);
 	});
 
 	it('reports a failed fetch', async () => {
-		const s = setup(makeTitle({ id: 'a', type: 'Movie' }));
+		const s = setup(makeTitle({ id: 'a', type: 'Movie', sourceType: 'Movie' }));
 		s.api.fetchCommunityRating.mockResolvedValue(null as never);
 		expect(await run(s)).toBe(false);
 		expect(s.titles.updateCommunityRating).not.toHaveBeenCalled();
@@ -74,21 +74,21 @@ describe('refreshCommunityRating', () => {
 	});
 
 	it('fails silently on a failed fetch without showNotice', async () => {
-		const s = setup(makeTitle({ id: 'a', type: 'Movie' }));
+		const s = setup(makeTitle({ id: 'a', type: 'Movie', sourceType: 'Movie' }));
 		s.api.fetchCommunityRating.mockResolvedValue(null as never);
 		expect(await run(s, false)).toBe(false);
 		expect(Notice.shown).toHaveLength(0);
 	});
 
 	it('turns a thrown error into a notice', async () => {
-		const s = setup(makeTitle({ id: 'a', type: 'Movie' }));
+		const s = setup(makeTitle({ id: 'a', type: 'Movie', sourceType: 'Movie' }));
 		s.api.fetchCommunityRating.mockRejectedValue(new Error('boom'));
 		expect(await run(s)).toBe(false);
 		expect(Notice.shown).toHaveLength(1);
 	});
 
 	it('swallows a thrown error without showNotice', async () => {
-		const s = setup(makeTitle({ id: 'a', type: 'Movie' }));
+		const s = setup(makeTitle({ id: 'a', type: 'Movie', sourceType: 'Movie' }));
 		s.api.fetchCommunityRating.mockRejectedValue(new Error('boom'));
 		expect(await run(s, false)).toBe(false);
 		expect(Notice.shown).toHaveLength(0);
@@ -96,7 +96,7 @@ describe('refreshCommunityRating', () => {
 
 	describe('anime without the preferred id', () => {
 		it('searches MAL by name, stores the id and link, then fetches', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', title: 'Naruto' }), { animeApiSource: 'jikan' });
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', title: 'Naruto' }), { animeApiSource: 'jikan' });
 			s.api.searchAnime.mockResolvedValue([hit('Naruto')]);
 			expect(await run(s)).toBe(true);
 			expect(s.api.searchAniList).not.toHaveBeenCalled();
@@ -106,7 +106,7 @@ describe('refreshCommunityRating', () => {
 		});
 
 		it('searches AniList when preferred', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', title: 'Naruto' }), { animeApiSource: 'anilist' });
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', title: 'Naruto' }), { animeApiSource: 'anilist' });
 			s.api.searchAniList.mockResolvedValue([hit('Naruto')]);
 			expect(await run(s)).toBe(true);
 			const saved = s.titles.updateTitle.mock.calls[0]![0];
@@ -115,7 +115,7 @@ describe('refreshCommunityRating', () => {
 		});
 
 		it('notices when nothing matches', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', title: 'Naruto' }), { animeApiSource: 'anilist' });
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', title: 'Naruto' }), { animeApiSource: 'anilist' });
 			s.api.searchAniList.mockResolvedValue([hit('Completely different')]);
 			expect(await run(s)).toBe(false);
 			expect(Notice.shown).toHaveLength(1);
@@ -123,13 +123,13 @@ describe('refreshCommunityRating', () => {
 		});
 
 		it('is silent when nothing matches without showNotice', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', title: 'Naruto' }));
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', title: 'Naruto' }));
 			expect(await run(s, false)).toBe(false);
 			expect(Notice.shown).toHaveLength(0);
 		});
 
 		it('returns false when the title vanished after the search', async () => {
-			const title = makeTitle({ id: 'a', type: 'Anime', title: 'Naruto' });
+			const title = makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', title: 'Naruto' });
 			const s = setup(title);
 			s.api.searchAnime.mockResolvedValue([hit('Naruto')]);
 			s.titles.getTitle.mockReturnValueOnce(title).mockReturnValueOnce(undefined);
@@ -137,26 +137,26 @@ describe('refreshCommunityRating', () => {
 		});
 
 		it('picks a later result when the first is unrelated', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', title: 'Naruto Shippuden' }));
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', title: 'Naruto Shippuden' }));
 			s.api.searchAnime.mockResolvedValue([hit('Bleach', { malId: 1 }), hit('Naruto Shippuden', { malId: 2 })]);
 			expect(await run(s)).toBe(true);
 			expect((s.titles.updateTitle.mock.calls[0]![0]).malId).toBe(2);
 		});
 
 		it('matches by shared words', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', title: 'Attack on Titan Season' }));
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', title: 'Attack on Titan Season' }));
 			s.api.searchAnime.mockResolvedValue([hit('Titan Attack Final')]);
 			expect(await run(s)).toBe(true);
 		});
 
 		it('rejects matches without usable words', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', title: '!!' }));
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', title: '!!' }));
 			s.api.searchAnime.mockResolvedValue([hit('??')]);
 			expect(await run(s)).toBe(false);
 		});
 
 		it('rejects short-word-only names', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', title: 'Ab Cd' }));
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', title: 'Ab Cd' }));
 			s.api.searchAnime.mockResolvedValue([hit('Ef Gh')]);
 			expect(await run(s)).toBe(false);
 		});
@@ -164,20 +164,20 @@ describe('refreshCommunityRating', () => {
 
 	describe('anime with the preferred id', () => {
 		it('corrects a mismatching externalLink', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', malId: 5, externalLink: 'x' }));
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', malId: 5, externalLink: 'x' }));
 			expect(await run(s)).toBe(true);
 			expect(s.titles.updateTitle).toHaveBeenCalledTimes(1);
 			expect((s.titles.updateTitle.mock.calls[0]![0]).externalLink).toBe('https://myanimelist.net/anime/5');
 		});
 
 		it('uses the AniList link when preferred', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', anilistId: 7, externalLink: '' }), { animeApiSource: 'anilist' });
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', anilistId: 7, externalLink: '' }), { animeApiSource: 'anilist' });
 			expect(await run(s)).toBe(true);
 			expect((s.titles.updateTitle.mock.calls[0]![0]).externalLink).toBe('https://anilist.co/anime/7');
 		});
 
 		it('leaves a matching externalLink alone', async () => {
-			const s = setup(makeTitle({ id: 'a', type: 'Anime', malId: 5, externalLink: 'https://myanimelist.net/anime/5' }));
+			const s = setup(makeTitle({ id: 'a', type: 'Anime', sourceType: 'Anime', malId: 5, externalLink: 'https://myanimelist.net/anime/5' }));
 			expect(await run(s)).toBe(true);
 			expect(s.titles.updateTitle).not.toHaveBeenCalled();
 		});
@@ -186,7 +186,7 @@ describe('refreshCommunityRating', () => {
 
 describe('renderCommunityRating refresh button', () => {
 	it('refreshes on click and calls onUpdated', async () => {
-		const s = setup(makeTitle({ id: 'a', type: 'Movie' }));
+		const s = setup(makeTitle({ id: 'a', type: 'Movie', sourceType: 'Movie' }));
 		const parent = document.createElement('div');
 		const onUpdated = vi.fn();
 		renderCommunityRating(parent, s.titles, s.settings as never, s.api, 'a', onUpdated);
@@ -196,7 +196,7 @@ describe('renderCommunityRating refresh button', () => {
 	});
 
 	it('refreshes on click without onUpdated', async () => {
-		const s = setup(makeTitle({ id: 'a', type: 'Movie' }));
+		const s = setup(makeTitle({ id: 'a', type: 'Movie', sourceType: 'Movie' }));
 		const parent = document.createElement('div');
 		renderCommunityRating(parent, s.titles, s.settings as never, s.api, 'a');
 		parent.querySelector('button')!.click();

@@ -118,10 +118,20 @@ describe('adding a watchlist title', () => {
 	};
 
 	it('prefills the Jikan airing slot for anime and says so', async () => {
-		const w = newWorld({ titles: [title({ malId: 5 })], anime: { dayOfWeek: 3, time: '18:30' } });
+		const w = newWorld({ titles: [title({ sourceType: 'Anime', malId: 5 })], anime: { dayOfWeek: 3, time: '18:30' } });
 		await start(w).run();
 		expect(Notice.shown).toEqual([t('airtime.notices.autoFilled')]);
 		expect(lastForm().form).toMatchObject({ mode: 'recurring', recurrence: 'weekly', dayOfWeek: 3, releaseTime: '18:30' });
+	});
+
+	it('asks Jikan for Source Type Anime with a malId, not for Type Anime alone', async () => {
+		const sched = { anime: { dayOfWeek: 3, time: '18:30' } };
+		const typeOnly = newWorld({ titles: [title({ type: 'Anime', sourceType: undefined, malId: 5, releaseDate: '2027-02-03', totalEpisodes: 1 })], ...sched });
+		await start(typeOnly).run();
+		expect(Notice.shown).toEqual([]);
+		const bySource = newWorld({ titles: [title({ type: 'Movie', sourceType: 'Anime', malId: 5 })], ...sched });
+		await start(bySource).run();
+		expect(Notice.shown).toEqual([t('airtime.notices.autoFilled')]);
 	});
 
 	it('falls back to the release date when Jikan has nothing or fails', async () => {

@@ -1,4 +1,5 @@
 import type { TitleReader, TitleWriter } from '../../watchlist/exports';
+import { isAnime } from '../../../shared/domain/sourceType';
 import type { ReadingReader, ReadingWriter } from '../../reading/exports';
 import type { GameReader, GameSettingsAccess, GameWriter } from '../../games/exports';
 import type { TabInstance } from '../../../design-system/TabInstance';
@@ -1030,7 +1031,7 @@ export class AirtimeTab implements TabInstance {
 		let prefilled: AirtimeSchedule | null = null;
 
 		// try Jikan auto-fill for Anime with a known malId
-		if (title.type === 'Anime' && title.malId) {
+		if (isAnime(title) && title.malId) {
 			try {
 				const sched = await this.api.getAnimeScheduleByMalId(title.malId);
 				if (sched) {

@@ -24,7 +24,7 @@ const answer = (params: unknown) => {
 const urls = () => sent.mock.calls.map((c) => (c[0] as { url: string }).url);
 
 const ID = 'TV Show/Breaking Bad';
-const NOTE = '---\nName: Breaking Bad\nType: TV Show\n---\n';
+const NOTE = '---\nName: Breaking Bad\nType: TV Show\nSource Type: Series\n---\n';
 const none = { searchCinemeta: vi.fn().mockResolvedValue([]) } as unknown as ApiService;
 
 async function setup(keys: { tmdbApiKey?: string; omdbApiKey?: string } = {}, api: ApiService | null = none) {
@@ -90,10 +90,20 @@ describe('PosterService outcomes', () => {
 		expect(check()).toBe('nokey');
 	});
 
+	it('routes by Source Type: Anime sourceType searches the anime source, Type alone does not', async () => {
+		route({ jikan: { status: 500 }, tenrai: { status: 500 } });
+		const { svc, title } = await setup();
+		expect(await svc.enqueue(title({ type: 'Movie', sourceType: 'Anime' }))).toBeNull();
+		expect(urls().length).toBeGreaterThan(0);
+		sent.mockClear();
+		expect(await svc.enqueue(title({ type: 'Anime', sourceType: undefined }), true)).toBeNull();
+		expect(sent).not.toHaveBeenCalled();
+	});
+
 	it('records a failed anime lookup as transient', async () => {
 		route({ jikan: { status: 500 }, tenrai: { status: 500 } });
 		const { svc, title, check } = await setup();
-		expect(await svc.enqueue(title({ type: 'Anime', malId: 5 }))).toBeNull();
+		expect(await svc.enqueue(title({ sourceType: 'Anime', malId: 5 }))).toBeNull();
 		expect(urls().length).toBeGreaterThan(0);
 		expect(check()).toBe('transient');
 	});
@@ -147,7 +157,7 @@ describe('PosterService TMDB parsing', () => {
 
 	it('uses release_date for movies', async () => {
 		const items = [{ poster_path: '/a.jpg', release_date: '2001-01-01' }, { poster_path: '/b.jpg', release_date: '2008-01-20' }];
-		expect(await run(items, { type: 'Movie', releaseDate: '2008' })).toBe(img('/b.jpg'));
+		expect(await run(items, { type: 'Movie', sourceType: 'Movie', releaseDate: '2008' })).toBe(img('/b.jpg'));
 	});
 
 	it('falls back to the first result with a poster when the year matches none', async () => {
@@ -185,15 +195,6 @@ describe('PosterService TMDB parsing', () => {
 		expect(await svc.enqueue(title({ externalLink: 'tt0903747' }))).toBe(img('/s.jpg'));
 	});
 
-	it('uses the multi-search without a type signal', async () => {
-		route({ 'search/multi': { status: 200, json: { results: [{ poster_path: 3 }] } } });
-		const { svc, title } = await setup({ tmdbApiKey: 't' });
-		const untyped = { type: 'Doc', totalEpisodes: 0 };
-		expect(await svc.enqueue(title(untyped))).toBeNull();
-		expect(urls()[0]).toContain('search/multi');
-		route({ 'search/multi': { status: 200, json: { results: [{ poster_path: '/m.jpg' }] } } });
-		expect(await svc.enqueue(title(untyped), true)).toBe(img('/m.jpg'));
-	});
 });
 
 describe('PosterService OMDb parsing', () => {
@@ -224,17 +225,13 @@ describe('PosterService OMDb parsing', () => {
 		expect(await svc.enqueue(title({ externalLink: 'https://www.imdb.com/title/tt0903747/' }))).toBe('https://img/t.jpg');
 	});
 
-	it('uses the untyped lookup without a type signal', async () => {
-		await run({ omdbapi: { status: 200, json: { Poster: 'https://img/u.jpg' } } }, { type: 'Doc', totalEpisodes: 0 });
-		expect(urls()[0]).not.toContain('type=');
-	});
 });
 
 describe('PosterService anime parsing', () => {
 	const anime = async (json: unknown, extra: Partial<HoardTitle>) => {
 		route({ '': { status: 200, json } });
 		const { svc, title } = await setup();
-		return svc.enqueue(title({ type: 'Anime', ...extra }));
+		return svc.enqueue(title({ sourceType: 'Anime', ...extra }));
 	};
 	const media = (coverImage: unknown) => ({ data: { Media: { coverImage } } });
 

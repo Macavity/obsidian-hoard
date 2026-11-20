@@ -1,4 +1,5 @@
 import { TFile, stringifyYaml } from 'obsidian';
+import { isMovie } from '../../../shared/domain/sourceType';
 import type { TAbstractFile } from 'obsidian';
 import type { ApiService } from '../../../shared/api/ApiService';
 import type { EntryNotes } from '../../../shared/services/EntryNotes';
@@ -1126,7 +1127,7 @@ export class DataManager extends ChangeNotifier
 		if (title.episodeDuration <= 0) return 0;
 		// "To be released" titles haven't been watched yet
 		if (title.status === 'To be released') return 0;
-		if (title.type === 'Movie') {
+		if (isMovie(title)) {
 			return title.watchedEpisodes.includes(1) ? title.episodeDuration : 0;
 		}
 		if (title.status === 'Completed') {
@@ -1149,7 +1150,7 @@ export class DataManager extends ChangeNotifier
 		if (title.episodeDuration <= 0) return 0;
 		// "To be released" is not yet available
 		if (title.status === 'To be released') return 0;
-		if (title.type === 'Movie') {
+		if (isMovie(title)) {
 			return title.watchedEpisodes.includes(1) ? 0 : title.episodeDuration;
 		}
 		if (!counted.includes(title.status)) return 0;

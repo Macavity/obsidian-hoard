@@ -8,7 +8,7 @@ type Processor = (source: string, el: HTMLElement) => void;
 
 const title = (over: Partial<HoardTitle>): HoardTitle =>
 	({
-		id: 't1', title: 'Show', type: 'Anime', status: 'Watching', watchedEpisodes: [1], totalEpisodes: 3,
+		id: 't1', title: 'Show', type: 'Anime', sourceType: 'Anime', status: 'Watching', watchedEpisodes: [1], totalEpisodes: 3,
 		dateAdded: '2024-03-01', pinned: false, ...over,
 	}) as unknown as HoardTitle;
 
@@ -119,7 +119,7 @@ describe('hoard-todo widget', () => {
 	});
 
 	it('full widget: a movie toggles watched state', () => {
-		const { map, marked } = setup({ titles: [title({ type: 'Movie', watchedEpisodes: [1] })] });
+		const { map, marked } = setup({ titles: [title({ type: 'Movie', sourceType: 'Movie', watchedEpisodes: [1] })] });
 		const el = run(map.get('hoard-todo')!, 'Show');
 		const cb = el.querySelector<HTMLInputElement>('.hoard-widget__next-checkbox')!;
 		expect(cb.checked).toBe(true);
@@ -127,7 +127,7 @@ describe('hoard-todo widget', () => {
 		cb.checked = false;
 		cb.dispatchEvent(new Event('change'));
 		expect(marked).toEqual([['t1', 1, false]]);
-		const unwatched = setup({ titles: [title({ type: 'Movie', watchedEpisodes: [] })] });
+		const unwatched = setup({ titles: [title({ type: 'Movie', sourceType: 'Movie', watchedEpisodes: [] })] });
 		const el2 = run(unwatched.map.get('hoard-todo')!, 'Show');
 		expect(text(el2, '.hoard-widget__next-label')).toEqual(['Mark as watched']);
 	});

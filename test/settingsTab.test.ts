@@ -291,7 +291,7 @@ describe('HoardSettingsTab rewriteAllFrontmatter', () => {
 });
 
 describe('HoardSettingsTab fetchAllStudios', () => {
-	const anime = (title: string) => ({ id: title, title, type: 'Anime' });
+	const anime = (title: string) => ({ id: title, title, type: 'Anime', sourceType: 'Anime' as const });
 	it('says so when every title has a studio', async () => {
 		await makeTab().tab.fetchAllStudios();
 		expect(Notice.shown).toContain('Every title already has a studio.');
@@ -306,7 +306,7 @@ describe('HoardSettingsTab fetchAllStudios', () => {
 		expect(Notice.shown).toContain('Done: 1 title filled, 2 with no studio available.');
 	});
 	it('leaves movies unfetched without a TMDB key and fetches them with one', async () => {
-		const movie = { id: 'm', title: 'hit', type: 'Movie' };
+		const movie = { id: 'm', title: 'hit', type: 'Movie', sourceType: 'Movie' as const };
 		const without = makeTab({ titles: [movie, anime('hit')] });
 		await without.tab.fetchAllStudios();
 		expect(without.api.fetchStudio).toHaveBeenCalledTimes(1);

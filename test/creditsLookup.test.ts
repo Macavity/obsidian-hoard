@@ -23,7 +23,7 @@ function route(routes: Array<[string, unknown]>) {
 }
 
 const title = (over: Partial<HoardTitle>): HoardTitle => ({
-	id: 't1', title: 'X', type: 'Movie', status: '', priority: '', review: '', rating: 0, notes: '',
+	id: 't1', title: 'X', type: 'Movie', sourceType: 'Movie', status: '', priority: '', review: '', rating: 0, notes: '',
 	dateStarted: null, dateFinished: null, dateAdded: '', dateModified: '', totalEpisodes: 1, episodeDuration: 100,
 	releaseDate: null, externalLink: 'https://www.imdb.com/title/tt0078748/', seasons: [], watchedEpisodes: [], ...over,
 });
@@ -128,7 +128,7 @@ describe('fetchCredits', () => {
 });
 
 describe('fetchStudio: anime', () => {
-	const anime = (over: Partial<HoardTitle> = {}) => title({ type: 'Anime', externalLink: '', ...over });
+	const anime = (over: Partial<HoardTitle> = {}) => title({ type: 'Anime', sourceType: 'Anime', externalLink: '', ...over });
 	const jikanStudios = (studios: unknown) => ({ data: { mal_id: 5, studios } });
 	const aniList = (edges: unknown) => ({ data: { Media: { id: 7, studios: { edges } } } });
 
@@ -197,7 +197,7 @@ describe('fetchStudio: movies and shows', () => {
 			['/find/', { movie_results: [], tv_results: [{ id: 1396 }] }],
 			['/tv/1396', { networks: [{ name: 'AMC' }], production_companies: [{ name: 'Sony' }] }],
 		]);
-		expect(await new ApiService('', 'k').fetchStudio(title({ type: 'TV Show' }), 'jikan', 'movie')).toEqual({
+		expect(await new ApiService('', 'k').fetchStudio(title({ type: 'TV Show', sourceType: 'Series' }), 'jikan', 'movie')).toEqual({
 			status: 'found', value: { studio: ['AMC', 'Sony'], tmdbId: 1396, tmdbMediaType: 'tv' },
 		});
 	});
@@ -235,7 +235,7 @@ describe('fetchStudio: movies and shows', () => {
 });
 
 describe('detail modal backfills', () => {
-	const NOTE = '---\nName: Alien\nType: Movie\nURL: https://www.imdb.com/title/tt0078748/\nCover: https://p/x.jpg\n---\n';
+	const NOTE = '---\nName: Alien\nType: Movie\nSource Type: Movie\nURL: https://www.imdb.com/title/tt0078748/\nCover: https://p/x.jpg\n---\n';
 	const open = async (api: ApiService) => {
 		const { dm, local } = await setupDataManager({ 'W/Movie/Alien.md': NOTE });
 		const modal = newTitleDetail({ settings: fakeSettings({ ...DEFAULT_SETTINGS }), titles: dm, api }, { title: dm.getTitle('Movie/Alien')! }) as unknown as {

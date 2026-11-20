@@ -136,6 +136,15 @@ describe('titleCodec', () => {
   });
 });
 
+describe('identityFor', () => {
+  const ids = { malId: 7, tmdbId: 9, tmdbMediaType: 'tv' as const };
+  const ext = (o: object) => titleToProperties({ ...fullTitle(), ...ids, ...o }, 0)['External ID'];
+  it('prefers MAL for Source Type Anime, TMDB without it', () => {
+    expect(JSON.stringify(ext({ sourceType: 'Anime' }))).toContain('mal');
+    expect(JSON.stringify(ext({ type: 'Anime', sourceType: undefined }))).toContain('tmdb');
+  });
+});
+
 describe('titleToCache', () => {
   it('never emits the poster into the cache', () => {
     expect(titleToCache({ ...fullTitle(), posterUrl: 'https://img/p.jpg' })).not.toHaveProperty('posterUrl');
