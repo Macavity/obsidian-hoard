@@ -32,25 +32,6 @@ export function hasHoardKey(src: string): boolean {
 	return hasTopLevelKey(src, KEY);
 }
 
-/**
- * Removes every top-level `<from>:` block. Without a `<to>:` block the first one becomes it (key
- * renamed, content kept); the rest stays byte-identical. Returns `src` when there is none.
- */
-export function renameTopLevelBlock(src: string, from: string, to: string): string {
-	let ls = lines(src);
-	let hasTarget = blockRange(ls, to) !== null;
-	for (let r = blockRange(ls, from); r; r = blockRange(ls, from)) {
-		const [start, end] = r;
-		if (hasTarget) {
-			ls = [...ls.slice(0, start), ...ls.slice(end)];
-		} else {
-			ls[start] = to + (ls[start] ?? '').slice(from.length);
-			hasTarget = true;
-		}
-	}
-	return ls.join('\n');
-}
-
 export function readHoardBlock(src: string, yaml: YamlIO): Record<string, unknown> | null {
 	const ls = lines(src);
 	const range = blockRange(ls, KEY);

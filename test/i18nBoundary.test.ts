@@ -11,11 +11,6 @@ const storageFiles = readdirSync(join(root, 'src/shared/storage'))
 	.filter((f) => f.endsWith('.ts'))
 	.map((f) => `src/shared/storage/${f}`);
 
-// the WatchLog import writes notes; its UI texts live in the onboarding modal only
-const importFiles = readdirSync(join(root, 'src/modules/import/services/watchlog'))
-	.filter((f) => f.endsWith('.ts'))
-	.map((f) => `src/modules/import/services/watchlog/${f}`);
-
 // the domain model: shared helpers, each module's domain files, roles and public surface
 const domainFiles = readdirSync(join(root, 'src/shared/domain'))
 	.filter((f) => f.endsWith('.ts'))
@@ -31,7 +26,6 @@ const moduleFiles = readdirSync(join(root, 'src/modules')).flatMap((m) => {
 
 const files = [
 	...storageFiles,
-	...importFiles,
 	...domainFiles,
 	...moduleFiles,
 	'src/modules/watchlist/services/DataManager.ts',

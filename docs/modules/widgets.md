@@ -6,8 +6,8 @@ source:
   - src/modules/widgets/ui/WidgetRenderer.ts
   - src/modules/widgets/ui/InsertWidgetModal.ts
   - src/app/main.ts
-  - src/modules/import/services/watchlog/widgets.ts
-source_commit: a08c524
+  - guide/migrate-notes/watchlog.md
+source_commit: dd764b7
 ---
 
 # Widgets
@@ -44,14 +44,13 @@ insert the fence at the cursor with `editor.replaceSelection`.
 
 ## WatchLog fences
 
-WatchLog's `watchlog` and `wl-*` fences are never rendered. They are renamed only when the user picks the
-widget step of the import cleanup ([flows/watchlog-import](../flows/watchlog-import.md)):
-`rewriteWidgetFences` in [widgets.ts](../../src/modules/import/services/watchlog/widgets.ts) renames the opening
-fence (also indented or quoted), attributes after the language stay.
+WatchLog's `watchlog` and `wl-*` fences are never rendered. Renaming them to `hoard` / `hoard-*` is
+an optional step of [guide/migrate-notes/](../flows/migrate-notes.md) (see its WatchLog
+reference for the fence map).
 
 ## Where to change what
 
 - A new widget: handler in the `handlers` map, a `renderWl*` method that registers a re-render
-  closure, a palette entry in `openWidgetPalette`, README table, and the fence rename map if it
+  closure, a palette entry in `openWidgetPalette`, README table, and the guide's fence rename map if it
   replaces an old name.
 - Badge colours and tag lookups: `renderBadge`, `getTagDef` use the settings' tag definitions.

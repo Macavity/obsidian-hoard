@@ -20,7 +20,6 @@ function makeTab(over: Record<string, unknown> = {}, section = 'general') {
 		app: {},
 		settings: fakeSettings({ ...DEFAULT_SETTINGS }),
 		layout: () => ({ root: 'W' }),
-		watchLogImported: () => false,
 		...over,
 	};
 	const tab = newSettingsTab(fakes);
@@ -55,20 +54,5 @@ describe('settings tab i18n', () => {
 		steamTest.click();
 		await tick(20);
 		expect(allText(root)).toContain(de.settings.steam.badKey);
-	});
-});
-
-describe('settings tab WatchLog import rows', () => {
-	const rows = (ui: Record<string, unknown>): string[] => {
-		setLocale('en');
-		const { render, root } = makeTab({ watchLogImported: () => Object.keys(ui).length > 0 });
-		render();
-		return allText(root);
-	};
-
-	it('always offers the import and the cleanup only after an import', () => {
-		expect(rows({})).toContain('Import from WatchLog…');
-		expect(rows({})).not.toContain('Clean up WatchLog leftovers…');
-		expect(rows({ watchlogImport: { fork: 'imported' } })).toContain('Clean up WatchLog leftovers…');
 	});
 });

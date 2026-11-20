@@ -20,9 +20,8 @@ import steam from './steam';
 import add from './add';
 import edit from './edit';
 import misc from './misc';
-import onboarding from './onboarding';
 
 export default {
 	common, labels, notices, app, ui, settings, list, airtime, dashboard, reading, games,
-	lists, drafts, widget, detail, csv, steam, add, edit, misc, onboarding,
+	lists, drafts, widget, detail, csv, steam, add, edit, misc,
 } satisfies DeepPartial<typeof en>;

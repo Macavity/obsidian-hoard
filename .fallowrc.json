@@ -137,12 +137,6 @@
         ]
       },
       {
-        "name": "modules/import",
-        "patterns": [
-          "src/modules/import/**"
-        ]
-      },
-      {
         "name": "modules/log",
         "patterns": [
           "src/modules/log/**"
@@ -199,7 +193,6 @@
           "modules/dashboard",
           "modules/drafts",
           "modules/games",
-          "modules/import",
           "modules/log",
           "modules/reading",
           "modules/settings",
@@ -228,7 +221,6 @@
           "modules/dashboard",
           "modules/drafts",
           "modules/games",
-          "modules/import",
           "modules/log",
           "modules/reading",
           "modules/settings",
@@ -323,22 +315,6 @@
         "allowTypeOnly": [
           "modules/airtime",
           "modules/settings"
-        ]
-      },
-      {
-        "from": "modules/import",
-        "allow": [
-          "design-system",
-          "shared",
-          "obsidian-mock",
-          "modules/airtime",
-          "modules/games",
-          "modules/settings",
-          "modules/watchlist"
-        ],
-        "allowTypeOnly": [
-          "modules/drafts",
-          "modules/reading"
         ]
       },
       {

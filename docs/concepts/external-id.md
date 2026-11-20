@@ -39,7 +39,7 @@ since only titles call it and books and games carry their id in their own fields
   still written to `Google Books ID`, so both survive a rewrite.
 - **Manga**: `mal:manga:<id>`, mirrored into `MAL ID`.
 - **Games**: `rawg:<id>` / `igdb:<id>` / `steam:<appid>`, decoded into `apiSource` + `apiId` model fields (the older note properties of that name are read
-  only by the WatchLog import, [properties](properties.md)). A Steam search pick also sets
+  only when migrating older notes, [properties](properties.md)). A Steam search pick also sets
   `Steam App ID`; that property stays separate and is what Steam sync matches on; on decode a `steam:` External ID
   fills `steamAppId` when the property is absent.
 

@@ -27,11 +27,11 @@ Windows: the `obsidian` command exists once the command line interface is enable
 
 CLI calls time out after 30 s; keep the hoard-test-vault window visible while running `pnpm smoke`, otherwise Chromium throttling causes timeouts. If Obsidian hangs, run `obsidian vault="hoard-test-vault" reload` and `pnpm vault:reset`.
 
-`pnpm vault:reset` disables `hoard` and removes any modal left open. It then restores `hoard-test-vault/` to `HEAD`, removes untracked files and, from a worktree, mirrors the result into the registered vault (the plugin symlink, themes, `workspace*.json`, cache and `.trash` stay). It writes the seed `scripts/fixtures/hoard-data.json` as `data.json` into the folder the plugin symlink points to (possibly another worktree's `dist/`), waits until Obsidian's index matches the disk and enables `hoard` again. The seed declines both WatchLog imports, so the onboarding wizard stays closed. To try the wizard by hand, remove `ui.watchlogImport` from that `data.json` and run `pnpm reload`.
+`pnpm vault:reset` disables `hoard` and removes any modal left open. It then restores `hoard-test-vault/` to `HEAD`, removes untracked files and, from a worktree, mirrors the result into the registered vault (the plugin symlink, themes, `workspace*.json`, cache and `.trash` stay). It writes the seed `scripts/fixtures/hoard-data.json` as `data.json` into the folder the plugin symlink points to (possibly another worktree's `dist/`), waits until Obsidian's index matches the disk and enables `hoard` again.
 
 ### Fixtures
 
-The notes in `hoard-test-vault/` are hand-written and cover every domain plus edge cases (broken properties, a minimal note, `Maybe`, a 2099 airtime, foreign History lines, drafts). `Welcome.md` catalogues each one and what it covers. No fixture has an external id, and the anime fixture and the click-flow edit target (Severance) have `Cover: none`, so the background cover fill leaves them alone. `test/e2e/expected.mjs` holds the counts the smoke expects; change a fixture and its count in the same commit (`test/fixtures.test.ts` checks them against the codecs).
+The notes in `hoard-test-vault/` are hand-written and cover every domain plus edge cases (broken properties, a minimal note, `Maybe`, a 2099 airtime, foreign History lines, drafts, notes migrated via guide/migrate-notes). `Welcome.md` catalogues each one and what it covers. No fixture has an external id, and fixtures that must stay offline (anime, Severance, guide-migrated samples) have `Cover: none`, so the background cover fill leaves them alone. `test/e2e/expected.mjs` holds the counts the smoke expects; change a fixture and its count in the same commit (`test/fixtures.test.ts` checks them against the codecs).
 
 ### Smoke
 
@@ -39,14 +39,11 @@ The notes in `hoard-test-vault/` are hand-written and cover every domain plus ed
 
 | Step | Checks |
 |---|---|
-| `data` | the managers load exactly the counts in `expected.mjs`; no wizard open |
+| `data` | the managers load exactly the counts in `expected.mjs` |
 | `flows` | real clicks (`test/e2e/ui.mjs`, CDP with hit-testing) add a title, tick an episode and change a status, edit the detail modal; the note on disk may change only in the expected properties |
-| `scenarios` | the WatchLog wizard imports `test/e2e/scenarios/watchlog-{original,fork}` into an empty vault; your own WatchLog data in the vault is restored afterwards |
 | `keyless` | needs the network: without API keys the add modals find, fill and add The Matrix, Breaking Bad (Cinemeta), The Hobbit (Open Library) and Hades (Steam); each note on disk has the expected `External ID` and a `Cover`. Runs last, since it adds notes |
 
-Failures collect per step; a screenshot of each failed flow or scenario goes to `$SMOKE_OUT` (default `<os tmpdir>/hoard-smoke`).
-
-A new scenario is a folder `test/e2e/scenarios/<name>/` with a complete `vault/`, an optional `data.json` (Hoard's local data; without it no import decision is stored) and a flow; register it in `test/e2e/steps/scenarios.mjs`.
+Failures collect per step; a screenshot of each failed flow goes to `$SMOKE_OUT` (default `<os tmpdir>/hoard-smoke`).
 
 ### Visual regression
 

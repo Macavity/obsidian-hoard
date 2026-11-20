@@ -2,7 +2,7 @@
 // registered vault (the main checkout's hoard-test-vault). Obsidian's local state (plugins/, themes/, workspace*.json, cache, .trash)
 // stays. A running Obsidian picks up the restored appearance.json itself and switches back to the default theme.
 // Also writes the versioned plugin seed (scripts/fixtures/hoard-data.json) into the folder the vault's plugin link points to
-// (falling back to this checkout's dist/); the seed declines both WatchLog imports so the onboarding wizard stays closed.
+// (falling back to this checkout's dist/).
 // All of it runs with the plugin disabled, so it neither reacts to the changed files nor flushes over the seed, and the plugin
 // only comes back once Obsidian's index matches the disk.
 import { execFileSync } from "node:child_process";

@@ -51,8 +51,6 @@ export class HoardView extends ItemView {
 		private readonly metadataCache: Pick<MetadataCache, 'on'>,
 		/** Tabs in tab-bar order. */
 		private readonly tabs: readonly TabFactory[],
-		/** True while the WatchLog import wizard replaces the tabs with a placeholder. */
-		private readonly importRunning: () => boolean,
 	) {
 		super(leaf);
 		// the panel always opens on the Dashboard tab
@@ -353,10 +351,6 @@ export class HoardView extends ItemView {
 		this.destroyActiveTab();
 		this.tabContentEl.empty();
 		this.stripTabClasses();
-		if (this.importRunning()) {
-			this.tabContentEl.createDiv({ text: t('onboarding.running') });
-			return;
-		}
 
 		const def = this.tabs.find((d) => d.name === this.activeTab) ?? this.tabs[0];
 		if (!def) return;
@@ -384,10 +378,9 @@ export class HoardView extends ItemView {
 	private refreshActiveTab(): void {
 		this.applyColorTheme(this.contentEl);
 		this.stripTabClasses();
-		if (!this.activeInstance || this.importRunning()) {
+		if (!this.activeInstance) {
 			this.renderTabContent();
-			// after the import placeholder the counts may have changed (imported notes)
-			if (!this.importRunning()) this.updateBadges('data-change');
+			this.updateBadges('data-change');
 			return;
 		}
 		void this.activeInstance.render();

@@ -1,0 +1,41 @@
+{
+	"settings": {
+		"types": [
+			{ "name": "Movie", "color": "#378ADD" },
+			{ "name": "TV Show", "color": "#1D9E75" }
+		],
+		"statuses": [
+			{ "name": "Watching", "color": "#1D9E75" },
+			{ "name": "Completed", "color": "#7F77DD" },
+			{ "name": "Plan to watch", "color": "#00A9A5" }
+		]
+	},
+	"titles": [
+		{
+			"id": "heat",
+			"title": "Heat",
+			"type": "Movie",
+			"status": "Completed",
+			"priority": "High",
+			"review": "",
+			"rating": 5,
+			"notes": "Migrated from WatchLog sample.",
+			"dateStarted": "2026-01-10",
+			"dateFinished": "2026-01-10",
+			"dateAdded": "2026-01-01T09:00:00.000Z",
+			"dateModified": "2026-01-10T21:00:00.000Z",
+			"totalEpisodes": 1,
+			"episodeDuration": 170,
+			"releaseDate": "1995-12-15",
+			"externalLink": "",
+			"seasons": [],
+			"watchedEpisodes": [1],
+			"posterUrl": ""
+		}
+	],
+	"groups": [],
+	"maybe": [],
+	"reading": { "books": [], "manga": [], "customColumns": { "book": [], "manga": [] } },
+	"games": { "games": [], "platforms": [], "statuses": [] },
+	"history": []
+}

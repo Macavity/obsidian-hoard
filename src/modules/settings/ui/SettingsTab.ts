@@ -189,9 +189,6 @@ type SettingsSection = 'general' | 'api' | 'customize' | 'watchlist' | 'drafts' 
 export interface SettingsTabHost {
 	/** Publishes the running import so the Watchlist header can show and cancel it. */
 	setImportProgress(progress: ImportProgress | null): void;
-	/** A WatchLog source was imported earlier (the cleanup row is only offered then). */
-	watchLogImported(): boolean;
-	openWatchLogImport(startAt: 'found' | 'cleanup'): Promise<void>;
 	/** Re-composes the settings after a backup restore replaced the stored ones. */
 	reloadSettings(): Promise<void>;
 	/** Publishes the card size as a CSS variable on the main window. */
@@ -639,8 +636,6 @@ export class HoardSettingsTab extends PluginSettingTab {
 				b.setButtonText(t('settings.backup.restore.button')).onClick(() => this.openRestoreDialog()),
 			);
 
-		this.addWatchLogImportRows(bk);
-
 		const regenHolder = {
 			wrap: null as HTMLElement | null,
 			fill: null as HTMLElement | null,
@@ -667,18 +662,6 @@ export class HoardSettingsTab extends PluginSettingTab {
 		regenHolder.wrap = regenProgressWrap;
 		regenHolder.fill = regenProgressFill;
 		regenHolder.text = regenProgressText;
-	}
-
-	private addWatchLogImportRows(el: HTMLElement): void {
-		new Setting(el)
-			.setName(t('onboarding.settings.importButton'))
-			.setDesc(t('onboarding.settings.importDesc'))
-			.addButton((b) => b.setButtonText(t('onboarding.settings.importButton')).onClick(() => void this.host.openWatchLogImport('found')));
-		if (!this.host.watchLogImported()) return;
-		new Setting(el)
-			.setName(t('onboarding.settings.cleanupButton'))
-			.setDesc(t('onboarding.settings.cleanupDesc'))
-			.addButton((b) => b.setButtonText(t('onboarding.settings.cleanupButton')).onClick(() => void this.host.openWatchLogImport('cleanup')));
 	}
 
 	private async exportBackup(): Promise<void> {

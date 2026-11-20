@@ -12,9 +12,12 @@ Root is `Hoard/` (holds `Hoard.base`).
 - `Hoard/Movie/Arrival.md`: Movie, Plan to watch, only `Runtime`
 - `Hoard/Movie/Blade Runner 2049.md`: Movie, Completed, review and rating
 - `Hoard/Movie/Broken Properties.md`: invalid YAML, skipped by the index
+- `Hoard/Movie/Inception.md`: migrated from Library sample (Completed, `Cover: none`)
+- `Hoard/Movie/Heat.md`: migrated from WatchLog sample (Completed, `Cover: none`)
 - `Hoard/TV Show/Severance.md`: TV Show, Watching, two seasons, episodes watched; edit target of click flows
 - `Hoard/TV Show/Chernobyl.md`: TV Show, Completed, all episodes watched
 - `Hoard/TV Show/Minimal Entry.md`: only `Name`, everything else defaulted
+- `Hoard/TV Show/Stranger Things.md`: migrated from Library sample (Watching, 25 of 34 episodes)
 - `Hoard/Korean TV Show/Squid Game.md`: Korean TV Show, Dropped, partly watched
 - `Hoard/Korean TV Show/Reply 1988.md`: `Maybe: true`, not in the library
 - `Hoard/Anime/Frieren Season 3.md`: Anime, To be released, manual `once` airtime dated 2099; `Cover: none` stops the keyless Jikan poster search, so no smoke run touches the network
@@ -23,6 +26,7 @@ Root is `Hoard/` (holds `Hoard.base`).
 ## Reading
 
 - `Hoard/Books/Dune.md`: Book, Reading, 120 of 600 pages
+- `Hoard/Books/The Fellowship of the Ring.md`: migrated from Library sample (Reading, 120 of 423 pages)
 - `Hoard/Manga/Berserk.md`: Manga, Plan to Read, 41 volumes
 
 ## Games

@@ -4,9 +4,9 @@
 // counted nowhere.
 export const EXPECTED = {
 	// dataManager.getTitles().length: library titles; `Maybe: true` notes are NOT included.
-	watch: 8,
+	watch: 11,
 	// readingDataManager.getBooks().length
-	books: 1,
+	books: 2,
 	// readingDataManager.getMangaList().length
 	manga: 1,
 	// gameDataManager.getGames().length

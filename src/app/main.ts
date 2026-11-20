@@ -39,13 +39,6 @@ import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
 import { WidgetRenderer } from '../modules/widgets/ui/WidgetRenderer';
 import { runAirtimeScheduler } from '../modules/airtime/services/airtimeScheduler';
 import type { BackupManagers } from '../modules/backup/services/backup';
-import { WatchLogOnboardingModal } from '../modules/import/ui/WatchLogOnboardingModal';
-import { detectWatchLogSources } from '../modules/import/services/watchlog/detect';
-import type { WatchLogSourceKind, WatchLogSources } from '../modules/import/services/watchlog/detect';
-import { createImporter } from '../modules/import/services/watchlog/importer';
-import { getDecision, pendingSources } from '../modules/import/services/watchlog/onboardingState';
-import { kindsWithNewData } from '../modules/import/services/watchlog/newData';
-import type { ImportContext } from '../modules/import/services/watchlog/schema1Types';
 import { composeSettings, persistSettings } from '../modules/settings/services/settingsSplit';
 import { toRecord } from '../shared/domain/sharedHelpers';
 import { resolveJikanEndpoint } from '../shared/api/jikanBase';
@@ -66,7 +59,6 @@ export default class HoardPlugin extends Plugin {
 		emitDataChanged,
 	);
 	private indexReady = false;
-	private wizardOpen = false;
 	private typeNamesKey: string | null = null;
 	private layout = new VaultLayout(DEFAULT_ROOT, () => this.state.types.map((t) => t.name));
 	private secretStore = new SecretStore(this.app.secretStorage);
@@ -304,7 +296,6 @@ export default class HoardPlugin extends Plugin {
 			this.dataManager,
 			this.app.metadataCache,
 			tabs,
-			() => this.importRunning,
 		));
 
 		this.widgetRenderer = new WidgetRenderer(
@@ -383,8 +374,6 @@ export default class HoardPlugin extends Plugin {
 			openDefaultColumns: this.customLists.openDefaultColumns,
 			host: {
 				setImportProgress: (progress) => { this.importProgress = progress; },
-				watchLogImported: () => (['original', 'fork'] as const).some((k) => getDecision(this.local, k) === 'imported'),
-				openWatchLogImport: (startAt) => this.openWatchLogImport(startAt),
 				reloadSettings: () => this.loadSettings(),
 				applyCardSizeCssVar: () => this.applyCardSizeCssVar(),
 				updateStatusBar: () => this.updateStatusBar(),
@@ -456,10 +445,6 @@ export default class HoardPlugin extends Plugin {
 			}
 			await this.shared.load();
 			await this.applySharedSettings();
-			// the WatchLog import may create the base: take over its root before indexing
-			await this.runOnboarding({ force: false });
-			// also after a failed run: an import may have written the base before it broke
-			root = (await detectRoot(this.app.vault)) ?? root;
 			this.shared.onChange(() => void this.applySharedSettings());
 			if (root !== null && (await this.shared.ensureFilter()) === 'missing') {
 				const name = this.shared.baseFile()?.name ?? 'Hoard.base';
@@ -478,87 +463,6 @@ export default class HoardPlugin extends Plugin {
 		} catch (e) {
 			console.error('[Hoard] vault storage failed to start', e);
 			new Notice(t('app.notices.loadFailed'));
-		}
-	}
-
-	/** True while the WatchLog onboarding wizard is open (the view shows a placeholder). */
-	private get importRunning(): boolean {
-		return this.wizardOpen;
-	}
-
-	/**
-	 * Opens the onboarding wizard when undecided WatchLog data still holds notes Hoard lacks (or always with `force`).
-	 * Returns whether it ran; a failure never blocks Hoard's start.
-	 */
-	private async runOnboarding(opts: { force: boolean; startAt?: 'found' | 'cleanup' }): Promise<boolean> {
-		try {
-			const sources = await detectWatchLogSources(this.app.vault, (id) => this.isPluginEnabled(id));
-			// undecided here, yet maybe imported on another device: ask only while a note is still missing
-			if (!opts.force && (await kindsWithNewData(this.app.vault, sources, this.layout, pendingSources(this.local, sources))).length === 0) return false;
-			await this.openWizard(sources, opts.startAt);
-			return true;
-		} catch (e) {
-			console.error('[Hoard] WatchLog onboarding failed', e);
-			return false;
-		}
-	}
-
-	private async openWizard(sources: WatchLogSources, startAt?: 'found' | 'cleanup'): Promise<void> {
-		const kinds: WatchLogSourceKind[] = ['original', 'fork'];
-		const imported = startAt === 'cleanup' ? kinds.filter((k) => getDecision(this.local, k) === 'imported') : undefined;
-		const importer = createImporter(
-			this.app.vault,
-			this.app.fileManager,
-			this.local,
-			() => this.importContext(),
-			() => this.layout,
-			(path) => {
-				const file = this.app.vault.getFileByPath(path);
-				if (file) void this.app.workspace.getLeaf('tab').openFile(file);
-			},
-			sources,
-		);
-		this.wizardOpen = true;
-		try {
-			const modal = new WatchLogOnboardingModal(this.app, importer, { startAt, imported });
-			modal.open();
-			// views listen on the data manager: show the "import running" placeholder
-			this.dataManager.notifyChange();
-			await modal.finished;
-			// before the views render again, so they see the imported settings
-			await this.adoptImportedData().catch((e: unknown) => {
-				console.error('[Hoard] could not apply the imported data', e);
-				new Notice(t('onboarding.adoptFailed'));
-			});
-		} finally {
-			this.wizardOpen = false;
-			this.dataManager.notifyChange();
-		}
-	}
-
-	/** The import may have written the base and device settings: re-detect the root, reload, refresh views. */
-	private async adoptImportedData(): Promise<void> {
-		const root = await detectRoot(this.app.vault);
-		if (root !== null) this.layout = new VaultLayout(root, () => this.state.types.map((t) => t.name));
-		await this.shared.load();
-		await this.applySharedSettings();
-	}
-
-	/** Settings entry: re-runs the wizard (ignoring earlier decisions) on the found sources or the cleanup step. */
-	private async openWatchLogImport(startAt: 'found' | 'cleanup' = 'found'): Promise<void> {
-		if (this.wizardOpen) return;
-		const sources = await detectWatchLogSources(this.app.vault, (id) => this.isPluginEnabled(id));
-		if (!sources.original && !sources.fork) {
-			new Notice(t('onboarding.none'));
-			return;
-		}
-		this.index.stop();
-		try {
-			await this.openWizard(sources, startAt);
-		} finally {
-			await this.index.rebuild();
-			this.index.start();
-			emitDataChanged();
 		}
 	}
 
@@ -599,24 +503,6 @@ export default class HoardPlugin extends Plugin {
 				local: this.local,
 				shared: this.shared,
 			},
-		};
-	}
-
-	/** Obsidian's plugin registry is private; typed locally. */
-	private isPluginEnabled(id: string): boolean {
-		return (this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } }).plugins?.enabledPlugins?.has(id) ?? false;
-	}
-
-	/** What the WatchLog import writes into. */
-	private importContext(): ImportContext {
-		return {
-			vault: this.app.vault,
-			fileManager: this.app.fileManager,
-			local: this.local,
-			shared: this.shared,
-			history: new HistoryStore(this.app.vault, () => this.layout),
-			yaml: this.yaml,
-			layout: this.layout,
 		};
 	}
 
@@ -731,7 +617,7 @@ export default class HoardPlugin extends Plugin {
 		// mirror into types.ts so the pure formatters render in the chosen order without a settings ref
 		setActiveDateFormat(this.state.dateFormat);
 		this.syncTypeNames();
-		// a restored backup or a WatchLog import can bring other keys and endpoints
+		// a restored backup can bring other keys and endpoints
 		this.applyApiKeys();
 		return Promise.resolve();
 	}

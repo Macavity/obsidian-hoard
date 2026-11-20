@@ -92,15 +92,6 @@ function readCollapsed(v: unknown): Record<string, number[]> | undefined {
 	return Object.fromEntries(Object.entries(v).map(([id, seasons]) => [id, readList(seasons, readOptionalNumber)]));
 }
 
-function readImported(v: unknown): LocalData['ui']['watchlogImport'] {
-	const out: NonNullable<LocalData['ui']['watchlogImport']> = {};
-	for (const kind of ['original', 'fork'] as const) {
-		const outcome = at(v, kind);
-		if (outcome === 'imported' || outcome === 'declined') out[kind] = outcome;
-	}
-	return out;
-}
-
 /** The ui state of data.json: the fields this version knows are read, any other key is kept as stored. */
 export function readUi(v: unknown): LocalData['ui'] {
 	const pinned = at(v, 'pinnedGroup');
@@ -111,6 +102,5 @@ export function readUi(v: unknown): LocalData['ui'] {
 		pinnedGroup: typeof pinned === 'string' || pinned === null ? pinned : undefined,
 		recommendedDaily: readDaily(at(v, 'recommendedDaily')),
 		gamesRecommendedDaily: readDaily(at(v, 'gamesRecommendedDaily')),
-		watchlogImport: at(v, 'watchlogImport') === undefined ? undefined : readImported(at(v, 'watchlogImport')),
 	};
 }

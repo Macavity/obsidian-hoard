@@ -103,7 +103,7 @@ to a smaller size for display.
 | Which games pass the filters (wishlist, platform on top of the common favourite / recently-arrived / type / status / rating / priority rules shared with the Watchlist) | `gamePassesFilters` in [gameFilters.ts](../../src/modules/games/domain/gameFilters.ts), `passesCommonFilters` in [filterCriteria.ts](../../src/shared/domain/filterCriteria.ts); `GamesTab` only builds the criteria |
 | Default statuses, genres, platforms | `defaultGamesSettings()` in `domain/gameDefaults.ts` |
 | Release status and Upcoming | `applyReleaseStatus`, `syncUpcoming` in the manager |
-| Defaults of a new game | `newGame` in [domain/newGame.ts](../../src/modules/games/domain/newGame.ts); the WatchLog import keeps its own |
+| Defaults of a new game | `newGame` in [domain/newGame.ts](../../src/modules/games/domain/newGame.ts) |
 | Anything other modules or `shared` import from games | `exports.ts`; the changed surface goes through the `exports-reviewer` agent (`.claude/agents/exports-reviewer.md`) before it is committed |
 | Steam matching, and what an imported game takes from library and storefront | `matchAgainstLibrary`, `buildGame`, `storefrontFields` in `SteamSyncModal.ts` |
 | Steam, RAWG, IGDB requests | `ApiService.ts`; Steam Store mapping and `steamLibraryCover` in `steamStoreApi.ts` |

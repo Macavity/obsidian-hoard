@@ -24,7 +24,7 @@ source:
   - src/modules/settings/domain/settingsDefaults.ts
   - src/shared/storage/featureSettings.ts
   - src/modules/settings/services/settingsSplit.ts
-source_commit: cc203bf
+source_commit: 9563400
 ---
 
 # Storage
@@ -75,12 +75,11 @@ Storage imports module models and reference data (defaults, status lists) from `
 
 ## Reading outside data
 
-Everything that enters from outside (notes, `data.json`, `Hoard.base`, API responses, backups, the
-WatchLog import) is read from `unknown`, field by field, never asserted
+Everything that enters from outside (notes, `data.json`, `Hoard.base`, API responses, backups) is read from `unknown`, field by field, never asserted
 ([read.ts](../../src/shared/domain/read.ts)): `readString`, `readNumber`, `readBoolean`, `readStringList`,
 `readList(v, readItem)` (drops items the reader rejects), `readOneOf`, `readRecord`, `readOptional*` and
 `at(v, ...path)`. They are pure and never throw; a wrong or missing field becomes its empty value, so one
-bad field never breaks the entry. `no-unsafe-type-assertion` is on for `src/shared/storage/`, `src/modules/import/`, the
+bad field never breaks the entry. `no-unsafe-type-assertion` is on for `src/shared/storage/`, the
 API modules, `lookup.ts`, `settingsSplit` and `backup.ts` (`eslint.config.mjs`). The settings readers: `settingsCodec.ts` (`normalizeSettings`, key by key) lives in `src/modules/settings/domain/` (explicitly listed in the lint rule), `featureSettings.ts` (`readGamesSettings`, `readReadingSettings`) in `src/shared/storage/`.
 Entries are built as one expression with `defined()` / conditional spreads and `omit()`
 ([sharedHelpers.ts](../../src/shared/domain/sharedHelpers.ts)); no key is `delete`d from an entry afterwards, so
@@ -117,8 +116,8 @@ where the write pipeline emits them. `main.ts` renders the code in the active la
   WatchLog schema-1 file (device settings and cache then start empty; notes in the vault are indexed as
   usual) or from a newer plugin version; both show a sticky Notice. A schema-2 file is read field by
   field ([readCache.ts](../../src/shared/storage/readCache.ts)) and its legacy `'none'` markers become
-  `notfound` checks ([entry cache](../concepts/entry-cache.md#reading-datajson)). The per-device WatchLog
-  import decision lives in `ui.watchlogImport` ([flows/watchlog-import](../flows/watchlog-import.md)).
+  `notfound` checks ([entry cache](../concepts/entry-cache.md#reading-datajson)). An obsolete
+  `ui.watchlogImport` key from older installs is kept as an unknown key, unread.
 - `SecretStore` ([SecretStore.ts](../../src/shared/storage/SecretStore.ts)) wraps `getSecret`/`setSecret`; `write`
   verifies by read-back and returns the keys it could not store, `absorb` migrates keys out of a settings
   record. `LocalStore` takes it as an optional dependency and absorbs on load and before every save

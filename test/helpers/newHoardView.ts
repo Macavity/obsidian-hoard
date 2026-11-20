@@ -36,7 +36,6 @@ function stubTabs(opts: StubTabOptions = {}): TabFactory[] {
 export interface HoardViewOptions extends StubTabOptions {
 	/** Receives the metadata-cache `resolved` listener. */
 	onResolved?: (cb: () => void) => void;
-	importRunning?: () => boolean;
 }
 
 /** The view over fake collaborators and stub tabs. */
@@ -48,6 +47,5 @@ export function newHoardView(opts: HoardViewOptions = {}): HoardView {
 		{ onChange: () => {}, offChange: () => {} },
 		{ on: (_name: string, cb: () => void) => { onResolved(cb); return {}; } } as never,
 		stubTabs(opts),
-		opts.importRunning ?? (() => false),
 	);
 }

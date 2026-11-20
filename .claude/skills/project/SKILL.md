@@ -1,6 +1,6 @@
 ---
 name: project
-description: Hoard architecture, naming rules, test setup and known debt. Load when working across layers, adding a tab or storage format, or touching the WatchLog migration.
+description: Hoard architecture, naming rules, test setup and known debt. Load when working across layers, adding a tab or storage format, or migrating notes from another tracker.
 ---
 
 # Hoard project context
@@ -11,7 +11,7 @@ Media library (movies, TV, anime, books, manga, games) stored as vault notes. Ty
 
 `src/` has four zones; the rules are tool-enforced (`.fallowrc.json` `boundaries`, `eslint.config.mjs`, proven by `test/architecture.test.ts`; wiki: `docs/architecture/overview.md`).
 
-1. `src/app/` — composition root: `main.ts` (builds stores, managers, services; loads data, runs the WatchLog import offer, registers view, commands, widgets, status bar, scheduler), `HoardView.ts` (ItemView with the `TABS` registry), `AddRouter.ts`. The only place that may `new` a `*Manager` / `*Service`, and the only zone that imports module internals.
+1. `src/app/` — composition root: `main.ts` (builds stores, managers, services; loads data, registers view, commands, widgets, status bar, scheduler), `HoardView.ts` (ItemView with the `TABS` registry), `AddRouter.ts`. The only place that may `new` a `*Manager` / `*Service`, and the only zone that imports module internals.
 2. `src/modules/<x>/` — one folder per feature: watchlist, reading, games, airtime, dashboard, log, drafts, custom-lists, widgets, settings, backup, import. `services/` holds managers and logic, `ui/` tabs and modals, `domain/` the module's model (`domain/model.ts`: `HoardTitle`, `Book`/`Manga`, `Game`, `HoardPluginSettings`, …), defaults and pure helpers, `services/roles.ts` its role interfaces (`TitleReader`, `AirtimeStore`, `ReadingSnapshot`, `SettingsReader`, …), implemented by its managers. `exports.ts` is the module's deliberate public surface, imported as `…/<x>/exports`: only named re-exports (`export { a } from './domain/x'`, `export type { T } from './services/roles'`) of what others need — models, role interfaces, `Open<X>` factory types, constants and pure functions such as `READING_STATUSES` or `DEFAULT_SETTINGS`. Files live where their domain puts them; never move a file to export it, add a line to `exports.ts` instead.
 3. `src/design-system/` — the UI kit: reusable components only (`IconButton`, `ConfirmModal`, `VirtualGrid`, `PosterCard`, …). It knows no module and no settings: it takes values or declares its own structural interface (`TypeBadgeStyle`, `ThemeSource`).
 4. `src/shared/` — what at least two modules use: `storage` (codecs and stores, incl. the settings codec; knows only `hoard:` and `Hoard.base`, free of i18n), `services` (`HistoryManager`, `LibraryIndex`, `coverRefresh`, `titleSearch`, `changeSignal`), `api` (`ApiService`, `PosterService`, source adapters), `domain` (pure helpers and cross-cutting types: dates, tags, rows, columns, history), `i18n`.
@@ -62,15 +62,15 @@ Entries, groups, progress, ratings live in note properties (frontmatter). `<root
 ## Naming rules
 
 - CSS prefix `hoard-`; view type `HOARD_VIEW_TYPE = 'hoard-view'`; event `hoard-data-changed`; base key `hoard:`; widget blocks `hoard`, `hoard-todo`, `hoard-stat`, `hoard-upcoming`, `hoard-now`, `hoard-now-next`.
-- Only `src/modules/import/` (and `test/import/`) may know WatchLog: plugin ids, `WatchLog.base`, the `watchlog:` key, `watchlog`/`wl-*` widget names, schema-1 data. Elsewhere only imports from that module and the `priorityEmptyOnly` field docs. The word "legacy" is not used in `src/` or `test/`.
+- WatchLog knowledge for migration lives in `guide/migrate-notes/` (and remaining refusal paths: LocalStore schema-1 detection, backup restore). The word "legacy" is not used in `src/` or `test/`.
 - Obsidian UI text: sentence case, "properties" for YAML metadata.
 
 ## Tests
 
 - vitest + happy-dom (real DOM). `obsidian` is aliased to `test/__mocks__/obsidian.ts`; add mock exports there, minimal.
-- `test/fakes/fakeApp.ts`: in-memory App/vault. Manager and storage tests build on `test/helpers/setup*.ts` (`setupDataManager`, `setupReadingDataManager`, `setupGameDataManager`, `setupBackup`, `common`); WatchLog schema-1 tests use `test/import/watchlog/setupSchema1.ts`.
+- `test/fakes/fakeApp.ts`: in-memory App/vault. Manager and storage tests build on `test/helpers/setup*.ts` (`setupDataManager`, `setupReadingDataManager`, `setupGameDataManager`, `setupBackup`, `common`).
 - UI tests in `test/ui/` use the `test/helpers/fakeEl.ts` DOM double.
-- `test/fixtures/data-v1.json` is verbatim WatchLog schema-1 data; do not edit.
+- `test/fixtures/data-v1.json` is verbatim WatchLog schema-1 data used to prove LocalStore refuses it; do not edit.
 - `pnpm test` also writes Istanbul coverage (read by fallow CRAP scores).
 
 ## Checks

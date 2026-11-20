@@ -30,7 +30,7 @@ export interface SettingsCore {
 	games: GameDataManager;
 	api: ApiService;
 	layout: () => { readonly root: string };
-	/** Everything backup export and restore (and the WatchLog decisions) read. */
+	/** Everything backup export and restore read. */
 	backupManagers: () => BackupManagers;
 	coverRefresher: Pick<CoverRefresher, 'refreshAll'>;
 	createListManager: CreateListManager;

@@ -68,8 +68,6 @@ computed without the tab open and refresh on `data-change` (Upcoming) or `metada
 re-applies the colour theme and rebuilds. On mobile a `ResizeObserver` pins an explicit height on
 the tab content because the WebView freezes flex heights when the keyboard opens; while an editor
 inside the tab has focus the height is pinned to the smallest value seen and released on focusout.
-While the [WatchLog wizard](../flows/watchlog-import.md) is open (the injected `importRunning()`) `renderTabContent` renders only an "import running" line instead of the tab, and data changes re-render that placeholder rather than a tab instance.
-
 ## Shared pieces
 
 - **Toolbar** ([TabToolbar.ts](../../src/design-system/TabToolbar.ts), [TabFilters.ts](../../src/design-system/TabFilters.ts)):

@@ -11,9 +11,8 @@ source:
   - src/shared/domain/read.ts
   - src/shared/storage/readCache.ts
   - src/shared/storage/cacheMigration.ts
-  - src/modules/import/services/watchlog/detect.ts
   - src/shared/api/lookup.ts
-source_commit: cc203bf
+source_commit: 0bc1a4e
 ---
 
 # Entry cache
@@ -77,9 +76,9 @@ for director, cast or studio in the cache. On load
 are re-checked a week after the upgrade, not all at once. An existing check is kept, and a note value
 is never touched (it wins over the cache anyway). `posterUrl` is no cache field any more and goes
 either way. The result is saved right after the load. A read-only store (WatchLog schema-1 or newer file)
-loads no cache at all (`emptyData`), so there is nothing to migrate there. The fork import runs the
-same migration on the fork's cache before merging it
-([detect.ts](../../src/modules/import/services/watchlog/detect.ts), `readForkData`).
+loads no cache at all (`emptyData`), so there is nothing to migrate there. When migrating a WatchLog Sync
+fork, [guide/migrate-notes/](../../guide/migrate-notes/README.md) should apply the same `'none'` → `notfound` rules before merging any
+device cache into Hoard's `data.json`.
 
 ## Lifecycle
 
