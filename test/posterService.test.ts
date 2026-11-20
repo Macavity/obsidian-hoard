@@ -31,7 +31,7 @@ async function setup(keys: { tmdbApiKey?: string; omdbApiKey?: string } = {}, ap
 	const env = await setupDataManager({ 'W/TV Show/Breaking Bad.md': NOTE });
 	const svc = new PosterService(
 		env.dm,
-		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', ...keys, typeApiMapping: { Doc: 'movie' } }),
+		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', ...keys }),
 		api ? () => api : undefined,
 	);
 	const title = (extra: Partial<HoardTitle> = {}): HoardTitle => ({ ...env.dm.getTitle(ID)!, ...extra });

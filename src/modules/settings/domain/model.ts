@@ -41,7 +41,6 @@ export interface HoardPluginSettings {
 	 */
 	steamApiKey: string;
 	steamId: string;
-	typeApiMapping: Record<string, 'anime' | 'movie' | ''>;
 	types: TagDefinition[];
 	statuses: TagDefinition[];
 	reviews: TagDefinition[];

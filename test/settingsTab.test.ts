@@ -65,7 +65,6 @@ function makeTab(over: { titles?: Partial<HoardTitle>[]; books?: unknown[]; mang
 		rawgApiKey: '',
 		igdbClientId: '',
 		igdbClientSecret: '',
-		typeApiMapping: {},
 		gamesFilters: { genreExclude: ['RPG'], platformExclude: [] as string[] },
 		types: [{ name: 'Movie', color: '#111111' }, { name: 'Docu', color: '#222222' }] as TagDefinition[],
 		statuses: [{ name: 'Watching', color: '#333333' }] as TagDefinition[],
@@ -129,7 +128,7 @@ describe('HoardSettingsTab tag colour pickers', () => {
 });
 
 describe('HoardSettingsTab tag sections', () => {
-	it('locks built-in types and statuses; colour changes persist', async () => {
+	it('locks statuses; colour changes persist', async () => {
 		const { tab, settings, settingsService } = makeTab();
 		const el = document.createElement('div');
 		tab.renderTagSection(el, 'Statuses', 'statuses');
@@ -140,6 +139,14 @@ describe('HoardSettingsTab tag sections', () => {
 		picker.dispatchEvent(new Event('change'));
 		await until(() => settingsService.update.mock.calls.length > 0);
 		expect(settings.statuses[0]!.color).toBe('#abcdef');
+		const types = document.createElement('div');
+		tab.renderTagSection(types, 'Types', 'types');
+		expect(types.querySelectorAll('.hoard-tag-editor__delete')).toHaveLength(2);
+	});
+
+	it('renders a delete control for the shipped Anime type', () => {
+		const { tab, settings } = makeTab();
+		settings.types = [{ name: 'Anime', color: '#111111' }];
 		const types = document.createElement('div');
 		tab.renderTagSection(types, 'Types', 'types');
 		expect(types.querySelectorAll('.hoard-tag-editor__delete')).toHaveLength(1);
@@ -166,8 +173,8 @@ describe('HoardSettingsTab tag sections', () => {
 		expect(settings.types).toHaveLength(3);
 		expect(name.value).toBe('');
 		el.querySelector<HTMLElement>('.hoard-tag-editor__delete')!.click();
-		await until(() => Notice.shown.includes('Removed "Docu".'));
-		expect(settings.types.map((t) => t.name)).toEqual(['Movie', 'Anime Film']);
+		await until(() => Notice.shown.includes('Removed "Movie".'));
+		expect(settings.types.map((t) => t.name)).toEqual(['Docu', 'Anime Film']);
 		expect(onChanged).toHaveBeenCalled();
 		const dot = el.querySelector<HTMLElement>('.hoard-tag-editor__dot')!;
 		const click = vi.spyOn(el.querySelector<HTMLInputElement>('.hoard-tag-editor__color-picker')!, 'click');
@@ -415,50 +422,5 @@ describe('HoardSettingsTab keyless source selectors', () => {
 		const { seg, settingsService } = render();
 		seg('RAWG').click();
 		expect(settingsService.update).toHaveBeenCalledTimes(1);
-	});
-});
-
-describe('HoardSettingsTab type API routing', () => {
-	const select = (el: HTMLElement) => el.querySelector<HTMLSelectElement>('select.hoard-api-provider__type-api-select')!;
-
-	it('writes the chosen route and removes it again through update', () => {
-		const { tab, settings, settingsService } = makeTab();
-		settings.types = [{ name: 'Docu', color: '#222222' }];
-		const el = document.createElement('div');
-		(tab as unknown as { renderTypeApiMapping(p: HTMLElement): void }).renderTypeApiMapping(el);
-		select(el).value = 'anime';
-		select(el).dispatchEvent(new Event('change'));
-		expect(settings.typeApiMapping).toEqual({ Docu: 'anime' });
-		select(el).value = '';
-		select(el).dispatchEvent(new Event('change'));
-		expect(settings.typeApiMapping).toEqual({});
-		expect(settingsService.update).toHaveBeenCalledTimes(2);
-	});
-
-	it('prunes routes of types that no longer exist, saving once', () => {
-		const { tab, settings, settingsService } = makeTab();
-		(settings as { typeApiMapping: Record<string, string> }).typeApiMapping = { Gone: 'anime', Docu: 'movie' };
-		(tab as unknown as { renderTypeApiMapping(p: HTMLElement): void }).renderTypeApiMapping(document.createElement('div'));
-		expect(settings.typeApiMapping).toEqual({ Docu: 'movie' });
-		expect(settingsService.update).toHaveBeenCalledTimes(1);
-	});
-
-	it('saves nothing when no route is stale', () => {
-		const { tab, settings, settingsService } = makeTab();
-		settings.types = [{ name: 'Docu', color: '#222222' }];
-		(settings as { typeApiMapping: Record<string, string> }).typeApiMapping = { Docu: 'movie' };
-		(tab as unknown as { renderTypeApiMapping(p: HTMLElement): void }).renderTypeApiMapping(document.createElement('div'));
-		expect(settingsService.update).not.toHaveBeenCalled();
-	});
-
-	it('logs a failing prune save instead of leaving the rejection unhandled', async () => {
-		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-		const { tab, settings, settingsService } = makeTab();
-		(settings as { typeApiMapping: Record<string, string> }).typeApiMapping = { Gone: 'anime' };
-		settingsService.update.mockRejectedValueOnce(new Error('disk'));
-		(tab as unknown as { renderTypeApiMapping(p: HTMLElement): void }).renderTypeApiMapping(document.createElement('div'));
-		await Promise.resolve();
-		expect(err).toHaveBeenCalled();
-		err.mockRestore();
 	});
 });

@@ -10,7 +10,7 @@ function setup(api: Partial<ApiService>, keys: { tmdbApiKey?: string; omdbApiKey
 	const recordLookup = vi.fn();
 	const svc = new PosterService(
 		{ updatePosterUrl, recordLookup, lookupDue: () => true },
-		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', ...keys, typeApiMapping: { Doc: 'movie' } }),
+		() => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', ...keys }),
 		() => api as ApiService,
 	);
 	return { svc, updatePosterUrl, recordLookup };
@@ -86,7 +86,7 @@ describe('PosterService not-due titles', () => {
     const recordLookup = vi.fn();
     const svc = new PosterService(
       { updatePosterUrl: vi.fn(), recordLookup, lookupDue: () => false },
-      () => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '', typeApiMapping: {} }),
+      () => ({ ...DEFAULT_SETTINGS, tmdbApiKey: '', omdbApiKey: '' }),
       () => ({ searchCinemeta }) as unknown as ApiService,
     );
     expect(await svc.enqueue(title({}))).toBeNull();

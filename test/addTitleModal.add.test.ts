@@ -27,7 +27,7 @@ function setup(prefill: Prefill = {}, autoFinish = true) {
 		addTitle: (entry: HoardTitle) => { added.push(structuredClone(entry)); return Promise.resolve(); },
 		recordLookup: vi.fn(),
 	};
-	const settings = fakeSettings({ setFinishDateAutomatically: autoFinish, lastAddedType: '', typeApiMapping: {}, types: [] });
+	const settings = fakeSettings({ setFinishDateAutomatically: autoFinish, lastAddedType: '', types: [] });
 	const modal = new AddTitleModal(
 		{} as never,
 		settings as never,

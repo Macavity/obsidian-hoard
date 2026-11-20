@@ -105,14 +105,13 @@ describe('composeSettings: precedence', () => {
 describe('composeSettings: independence from the stores', () => {
 	it('hands out copies of the stored lists and records', () => {
 		const local = { seasonPalette: ['#111111'], listFilters: { sort: 'title', typeExclude: ['A'] }, gamesFilters: { sort: 'title' } };
-		const shared = { types: [{ name: 'T', color: '#111111' }], typeApiMapping: { T: 'anime' } };
+		const shared = { types: [{ name: 'T', color: '#111111' }] };
 		const s = compose(local, shared);
 		expect(s.seasonPalette).not.toBe(local.seasonPalette);
 		expect(s.gamesFilters).not.toBe(local.gamesFilters);
 		expect((s.listFilters as typeof local.listFilters).typeExclude).not.toBe(local.listFilters.typeExclude);
 		expect(s.types).not.toBe(shared.types);
 		expect((s.types as typeof shared.types)[0]).not.toBe(shared.types[0]);
-		expect(s.typeApiMapping).not.toBe(shared.typeApiMapping);
 	});
 });
 
@@ -242,11 +241,10 @@ describe('composeSettings: status migrations', () => {
 describe('composeSettings: stored values of the wrong kind', () => {
 	it('gives the default for a value stored as undefined, whatever the key', () => {
 		const s = compose({
-			animeApiSource: undefined, typeApiMapping: undefined, showUpcomingStatusBar: undefined,
+			animeApiSource: undefined, showUpcomingStatusBar: undefined,
 			defaultAddType: undefined, lastAddedType: undefined, colorTheme: undefined, cardSize: undefined,
 		});
 		expect(s.animeApiSource).toBe('jikan');
-		expect(s.typeApiMapping).toEqual({});
 		expect(s.showUpcomingStatusBar).toBe(true);
 		expect(s.defaultAddType).toBe(LAST_USED_TYPE_SENTINEL);
 		expect(s.lastAddedType).toBe('');
@@ -256,11 +254,10 @@ describe('composeSettings: stored values of the wrong kind', () => {
 
 	it('gives the default for null, as an empty key in the base reads', () => {
 		const s = compose({
-			animeApiSource: null, typeApiMapping: null, showUpcomingStatusBar: null,
+			animeApiSource: null, showUpcomingStatusBar: null,
 			defaultAddType: null, lastAddedType: null, listFilters: null, gamesFilters: null, autoCreateFolders: null,
 		});
 		expect(s.animeApiSource).toBe('jikan');
-		expect(s.typeApiMapping).toEqual({});
 		expect(s.showUpcomingStatusBar).toBe(true);
 		expect(s.defaultAddType).toBe(LAST_USED_TYPE_SENTINEL);
 		expect(s.lastAddedType).toBe('');
@@ -299,14 +296,13 @@ describe('composeSettings: stored values of the wrong kind', () => {
 	it('gives the default for a value of another kind', () => {
 		const s = compose({
 			cardSize: '2', showHintBanners: 'yes', gamesFilters: [], customListTabOrder: {}, draftsVaultTag: 5,
-			typeApiMapping: ['x'], defaultCustomColumns: 'abc', listFilters: 'abc', cardTextStyles: ['inside'],
+			defaultCustomColumns: 'abc', listFilters: 'abc', cardTextStyles: ['inside'],
 		});
 		expect(s.cardSize).toBe(0);
 		expect(s.showHintBanners).toBe(true);
 		expect(s.gamesFilters).toEqual(DEFAULT_SETTINGS.gamesFilters);
 		expect(s.customListTabOrder).toEqual([]);
 		expect(s.draftsVaultTag).toBe('#hoard');
-		expect(s.typeApiMapping).toEqual({});
 		expect(s.defaultCustomColumns).toEqual([]);
 		expect(s.listFilters).toEqual(DEFAULT_LIST_FILTERS);
 		expect(s.cardTextStyles).toEqual(DEFAULT_CARD_TEXT);
@@ -327,8 +323,8 @@ describe('composeSettings: stored values of the wrong kind', () => {
 	});
 
 	it('hands out a copy of the default it falls back to', () => {
-		const s = compose({ typeApiMapping: null, gamesFilters: 'abc', customListTabOrder: 5 });
-		for (const key of ['typeApiMapping', 'gamesFilters', 'customListTabOrder'] as const) {
+		const s = compose({ gamesFilters: 'abc', customListTabOrder: 5 });
+		for (const key of ['gamesFilters', 'customListTabOrder'] as const) {
 			expect(s[key]).toEqual(DEFAULT_SETTINGS[key]);
 			expect(s[key]).not.toBe(DEFAULT_SETTINGS[key]);
 		}
@@ -356,7 +352,7 @@ describe('composeSettings: independence from the defaults', () => {
 		.filter((key) => typeof DEFAULT_SETTINGS[key] === 'object');
 
 	it('covers every list and record among the settings', () => {
-		expect(objectKeys).toHaveLength(14);
+		expect(objectKeys).toHaveLength(13);
 	});
 
 	it.each(objectKeys)('hands out its own copy of %s', (key) => {
@@ -389,11 +385,9 @@ describe('composeSettings: independence from the defaults', () => {
 	it('keeps two composes apart', () => {
 		const first = composeSettings({}, {});
 		first.types.push({ name: 'Probe', color: '#000000' });
-		first.typeApiMapping.Probe = 'anime';
 		first.statuses[0]!.color = '#ABCDEF';
 		const second = composeSettings({}, {});
 		expect(second.types).toEqual(DEFAULT_TYPES);
-		expect(second.typeApiMapping).toEqual({});
 		expect(second.statuses).toEqual(DEFAULT_STATUSES);
 	});
 });

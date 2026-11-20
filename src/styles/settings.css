@@ -624,10 +624,6 @@ button.hoard-api-provider__action-btn {
   cursor: pointer;
 }
 
-.hoard-settings-group__page .hoard-settings__card {
-  margin-top: 0;
-}
-
 /* Tag sections */
 .hoard-tag-editor__tags-list {
   display: flex;

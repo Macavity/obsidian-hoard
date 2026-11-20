@@ -10,7 +10,6 @@ import type { CardStyleTab, CardTextStyle, DateFormatPref, HoardPluginSettings }
 import type { ImportProgress } from '../../watchlist/exports';
 import type { TagDefinition } from '../../../shared/domain/tags';
 import { needsStudioFetch } from '../domain/settingsHelpers';
-import { parseApiGroup, typeApiRoute, type ApiGroup } from '../domain/apiRouting';
 import { formatDateDisplay } from '../../../shared/domain/date';
 import { READING_STATUSES, SELECTABLE_READING_STATUSES } from '../../reading/exports';
 import { LAST_USED_TYPE_SENTINEL } from '../domain/settingsDefaults';
@@ -1655,72 +1654,6 @@ export class HoardSettingsTab extends PluginSettingTab {
 			},
 		});
 		steam.setActive(null);
-
-		// API routing (always last)
-		this.renderTypeApiMapping(page);
-	}
-
-	/** Drops routes of types that no longer exist (and of the locked built-ins, which never route here). */
-	private pruneStaleRouting(allTypes: readonly TagDefinition[], mapping: Readonly<Record<string, unknown>>): void {
-		const validNames = new Set(allTypes.map((type) => type.name));
-		const stale = Object.keys(mapping).filter(
-			(key) => !validNames.has(key) || key === 'Anime' || key === 'Movie' || key === 'TV Show' || key === 'TvShow',
-		);
-		if (stale.length === 0) return;
-		this.settings.update((d) => {
-			for (const key of stale) delete d.typeApiMapping[key];
-		}).catch((e: unknown) => console.error('[Hoard] could not prune stale API routes', e));
-	}
-
-	private renderTypeApiMapping(parent: HTMLElement): void {
-		const card = parent.createDiv({ cls: 'hoard-settings__card' });
-		card.createDiv({ cls: 'hoard-settings__card-title', text: t('settings.api.routing.title') });
-		card.createDiv({
-			cls: 'hoard-settings__card-description',
-			text: t('settings.api.routing.desc'),
-		});
-
-		const list = card.createDiv({ cls: 'hoard-api-provider__type-api-list' });
-		const allTypes = this.settings.get().types ?? [];
-		const mapping = this.settings.get().typeApiMapping ?? {};
-
-		this.pruneStaleRouting(allTypes, mapping);
-
-		for (const type of allTypes) {
-			const row = list.createDiv({ cls: 'hoard-api-provider__type-api-row' });
-			row.createSpan({ cls: 'hoard-api-provider__type-api-name', text: typeLabel(type.name) });
-
-			const route = typeApiRoute(type.name);
-			if (route.kind === 'locked') {
-				row.createSpan({ cls: 'hoard-api-provider__type-api-locked', text: t('settings.api.routing.locked', { apis: route.apis }) });
-			} else {
-				this.renderApiSelect(row, type.name, mapping[type.name] ?? '');
-			}
-		}
-	}
-
-	private renderApiSelect(row: HTMLElement, typeName: string, current: string): void {
-		const select = row.createEl('select', { cls: 'hoard-input__select hoard-api-provider__type-api-select' });
-		const opts: Array<{ value: ApiGroup; label: string }> = [
-			{ value: '', label: t('settings.api.routing.notSet') },
-			{ value: 'anime', label: t('settings.api.routing.anime') },
-			{ value: 'movie', label: t('settings.api.routing.movie') },
-		];
-		for (const o of opts) {
-			const optEl = select.createEl('option', { text: o.label, value: o.value });
-			if (current === o.value) optEl.selected = true;
-		}
-		select.addEventListener('change', () => {
-			const v = parseApiGroup(select.value);
-			void this.settings.update((d) => {
-				d.typeApiMapping ??= {};
-				if (v === '') {
-					delete d.typeApiMapping[typeName];
-				} else {
-					d.typeApiMapping[typeName] = v;
-				}
-			});
-		});
 	}
 
 	// Customize
@@ -2198,8 +2131,6 @@ export class HoardSettingsTab extends PluginSettingTab {
 		});
 	}
 
-	private static readonly LOCKED_TYPES = ['Anime', 'Movie', 'TV Show'];
-
 	/**
 	 * One colour-picker-per-entry list section. Config-driven, so the same renderer serves
 	 * lists in different stores: plugin settings, `data.games.settings`, and a plain colour
@@ -2360,9 +2291,8 @@ export class HoardSettingsTab extends PluginSettingTab {
 					if (tag) tag.color = color;
 				});
 			},
-			// statuses are colour-only; locked built-in types keep their picker but lose delete
-			isLocked: (name) =>
-				isStatuses || (isTypes && HoardSettingsTab.LOCKED_TYPES.includes(name)),
+			// statuses are colour-only: picker, no delete
+			isLocked: () => isStatuses,
 			...(isTypes ? { validateName: typeNameProblemText } : {}),
 			...(isStatuses ? {} : {
 				add: async (name, color) => {

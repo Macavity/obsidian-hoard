@@ -24,7 +24,6 @@ export const STORED: HoardPluginSettings = {
 	igdbClientSecret: 'IGDB-SECRET',
 	steamApiKey: 'STEAM',
 	steamId: '76561190000000000',
-	typeApiMapping: { Docu: 'movie' },
 	types: [{ name: 'Docu', color: '#111111' }],
 	statuses: [
 		{ name: 'Watching', color: '#101010' },
