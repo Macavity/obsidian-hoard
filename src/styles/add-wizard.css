@@ -16,3 +16,20 @@
 .hoard-add-wizard__back {
   margin-bottom: 8px;
 }
+
+.hoard-add-wizard__status {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.hoard-add-wizard__status.is-hidden {
+  display: none;
+}
+
+/* markViewRoot scopes the theme variables; undo the view's fixed-height flex layout so the dialog scrolls as a normal modal. */
+.hoard-add-wizard.hoard-view {
+  display: block;
+  height: auto;
+  overflow: visible;
+}

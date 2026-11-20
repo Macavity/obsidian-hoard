@@ -11,7 +11,7 @@ import { readingStatusLabel } from '../../../shared/i18n/labels';
 import type { SettingsReader } from '../../settings/exports';
 import { createDatePicker } from '../../../design-system/DatePicker';
 import { blockDuplicate, createDuplicateGuard } from '../../../design-system/DuplicateGuard';
-import { makeCell, makeRow, nameSelect, numberInput, releaseDateField, renderRatingRow, textInput, titleField } from '../../../design-system/FormCells';
+import { makeCell, makeRow, nameSelect, numberInput, releaseDateField, renderRatingRow, runWhileBusy, textInput, titleField } from '../../../design-system/FormCells';
 import { renderSegmentedToggle } from '../../../design-system/StatusDropdown';
 
 export type BookSearcher = typeof searchBooks;
@@ -70,8 +70,11 @@ class ReadingAddForm implements AddFormHandle {
 	}
 
 	start(): void {
-		if (!this.row) this.title = this.ctx.query;
-		else if (this.row.kind === 'book') this.applyBook(this.row.result);
+		if (!this.row) {
+			// a hit whose search row is gone arrives here too: seed what the hit still carries
+			this.title = this.ctx.hit?.title ?? this.ctx.query;
+			this.coverUrl = this.ctx.hit?.thumbUrl ?? '';
+		} else if (this.row.kind === 'book') this.applyBook(this.row.result);
 		else this.applyManga(this.row.result);
 		this.render();
 		if (this.row?.kind === 'book') void this.enrichBook(this.row.result);
@@ -165,7 +168,7 @@ class ReadingAddForm implements AddFormHandle {
 			cls: 'hoard-btn hoard-btn--primary',
 			text: t(this.isBook ? 'add.reading.addBook' : 'add.reading.addManga'),
 		});
-		submit.addEventListener('click', () => void this.save());
+		submit.addEventListener('click', () => void runWhileBusy(submit, () => this.save()));
 	}
 
 	private renderRating(form: HTMLElement): void {

@@ -1,8 +1,10 @@
+import { Notice } from 'obsidian';
 import type { AddHit, AddKind, AddProvider } from '../../add/exports';
 import { rawgResizedCover, type GameSearchResult } from '../../../shared/api/ApiService';
 import { effectiveGameSource } from '../../../shared/api/apiSources';
 import { t } from '../../../shared/i18n';
 import { LibraryIndex, gameResultIdKeys } from '../../../shared/services/LibraryIndex';
+import { RecentRows } from '../../../shared/services/recentRows';
 import type { SettingsReader } from '../../settings/exports';
 import { mountGameAddForm, type AddGameApi, type AddGameStore } from './GameAddForm';
 
@@ -24,7 +26,7 @@ export function createGamesAddProvider({ settings, games, api }: {
 	api: AddGameApi;
 }): AddProvider {
 	// search rows by hit id, so a picked hit still carries its source record into the form
-	const rows = new Map<string, GameSearchResult>();
+	const rows = new RecentRows<GameSearchResult>(REMEMBERED_RESULTS);
 
 	const searchSource = (query: string): Promise<GameSearchResult[]> => {
 		const source = effectiveGameSource(settings.get(), api);
@@ -40,13 +42,9 @@ export function createGamesAddProvider({ settings, games, api }: {
 			const results = await searchSource(query);
 			// built per call because the library changes between searches
 			const library = LibraryIndex.build({ games: () => games.getGames() }, ['games']);
-			return results.map((result): AddHit => {
+			const hits = results.map((result): AddHit => {
 				const id = `${result.source}:${result.id}`;
 				rows.set(id, result);
-				for (const oldest of rows.keys()) {
-					if (rows.size <= REMEMBERED_RESULTS) break;
-					rows.delete(oldest);
-				}
 				return {
 					kind: 'game',
 					id,
@@ -58,10 +56,13 @@ export function createGamesAddProvider({ settings, games, api }: {
 					inLibrary: library.lookup(gameResultIdKeys(result), result.title),
 				};
 			});
+			rows.trim();
+			return hits;
 		},
 
 		renderForm(host, ctx) {
 			const row = ctx.hit ? rows.get(ctx.hit.id) ?? null : null;
+			if (ctx.hit && !row) new Notice(t('add.url.lookupExpired'));
 			return mountGameAddForm(host, settings, games, api, ctx, row);
 		},
 	};

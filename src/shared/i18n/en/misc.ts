@@ -96,7 +96,6 @@ const misc = {
 		alreadyIn: 'Already in {library}',
 	},
 	titleSearch: {
-		placeholder: 'Search for a title...',
 		episodes: '{count} eps',
 	},
 	noteLink: {

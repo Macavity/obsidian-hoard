@@ -80,10 +80,7 @@ const ui = {
 		},
 	},
 	picker: {
-		year: 'Jahr',
-		type: 'Typ',
 		searching: 'Suche läuft...',
-		page: 'Seite {page} von {total}',
 	},
 	filters: {
 		button: 'Filter ▼',

@@ -21,6 +21,7 @@ import {
 	nameSelect,
 	releaseDateField,
 	renderGroupPicker,
+	runWhileBusy,
 	textInput,
 	titleField,
 	type GroupPickerState,
@@ -73,7 +74,9 @@ class GameAddForm implements AddFormHandle {
 
 	start(): void {
 		if (!this.row) {
-			this.title = this.ctx.query;
+			// a hit whose search row is gone arrives here too: seed what the hit still carries
+			this.title = this.ctx.hit?.title ?? this.ctx.query;
+			this.coverUrl = this.ctx.hit?.thumbUrl ?? '';
 			this.render();
 			return;
 		}
@@ -210,7 +213,7 @@ class GameAddForm implements AddFormHandle {
 
 		const btnRow = form.createDiv({ cls: 'hoard-modal__btn-row' });
 		const submit = btnRow.createEl('button', { cls: 'hoard-btn hoard-btn--primary', text: t('add.game.submit') });
-		submit.addEventListener('click', () => void this.save());
+		submit.addEventListener('click', () => void runWhileBusy(submit, () => this.save()));
 	}
 
 	private renderStoreLink(form: HTMLElement): void {

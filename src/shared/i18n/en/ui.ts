@@ -77,10 +77,7 @@ const ui = {
 		},
 	},
 	picker: {
-		year: 'Year',
-		type: 'Type',
 		searching: 'Searching...',
-		page: 'Page {page} of {total}',
 	},
 	filters: {
 		button: 'Filters ▼',

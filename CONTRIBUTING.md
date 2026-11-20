@@ -41,7 +41,7 @@ The notes in `hoard-test-vault/` are hand-written and cover every domain plus ed
 |---|---|
 | `data` | the managers load exactly the counts in `expected.mjs` |
 | `flows` | real clicks (`test/e2e/ui.mjs`, CDP with hit-testing) add a title, tick an episode and change a status, edit the detail modal; the note on disk may change only in the expected properties |
-| `keyless` | needs the network: without API keys the add modals find, fill and add The Matrix, Breaking Bad (Cinemeta), The Hobbit (Open Library) and Hades (Steam); each note on disk has the expected `External ID` and a `Cover`. Runs last, since it adds notes |
+| `keyless` | needs the network: without API keys the add wizard finds, fills and adds The Matrix, Breaking Bad (Cinemeta), The Hobbit (Open Library) and Hades (Steam); each note on disk has the expected `External ID` and a `Cover`. Runs last, since it adds notes |
 
 Failures collect per step; a screenshot of each failed flow goes to `$SMOKE_OUT` (default `<os tmpdir>/hoard-smoke`).
 

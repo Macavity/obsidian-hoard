@@ -210,7 +210,7 @@ export default class HoardPlugin extends Plugin {
 		};
 		// the wizard reads its providers when it opens, so the tabs below can hold `openAddWizard` before they exist
 		const addProviders: AddProvider[] = [];
-		const { openAddWizard } = addUi({ app: this.app, providers: () => addProviders });
+		const { openAddWizard } = addUi({ app: this.app, providers: () => addProviders, colorTheme: () => this.settingsService.get().colorTheme });
 		this.watchlist = watchlistUi({
 			app: this.app,
 			settings: this.settingsService,

@@ -42,13 +42,23 @@ export function createSectionedResults<T>(config: SectionedResultsConfig<T>): Se
 			cls: 'hoard-result-sections__section',
 			attr: { 'data-section': spec.key },
 		});
-		const header = el.createDiv({ cls: 'hoard-result-sections__header' });
+		const header = el.createDiv({
+			cls: 'hoard-result-sections__header',
+			attr: { role: 'button', tabindex: '0', 'aria-expanded': 'true' },
+		});
 		header.createSpan({ cls: 'hoard-result-sections__chevron', text: '▾' });
 		header.createSpan({ cls: 'hoard-result-sections__label', text: spec.label });
 		let collapsed = false;
-		header.addEventListener('click', () => {
+		const toggle = (): void => {
 			collapsed = !collapsed;
 			el.toggleClass('is-collapsed', collapsed);
+			header.setAttribute('aria-expanded', String(!collapsed));
+		};
+		header.addEventListener('click', toggle);
+		header.addEventListener('keydown', (e) => {
+			if (e.key !== 'Enter' && e.key !== ' ') return;
+			e.preventDefault();
+			toggle();
 		});
 		const items = el.createDiv({ cls: 'hoard-result-sections__items hoard-modal__results hoard-search-picker__results-grid' });
 		el.hide();

@@ -66,6 +66,21 @@ describe('SectionedResults', () => {
 		expect(section('anime').has('is-collapsed')).toBe(false);
 	});
 
+	it('header is a keyboard-operable button that reports aria-expanded', () => {
+		const { view, section } = setup();
+		view.setResults('anime', ['a']);
+		const header = section('anime').find('hoard-result-sections__header')!;
+		expect(header.attr).toMatchObject({ role: 'button', tabindex: '0', 'aria-expanded': 'true' });
+		header.fire('keydown', { key: 'Enter' });
+		expect(section('anime').has('is-collapsed')).toBe(true);
+		expect(header.attr['aria-expanded']).toBe('false');
+		header.fire('keydown', { key: ' ' });
+		expect(section('anime').has('is-collapsed')).toBe(false);
+		expect(header.attr['aria-expanded']).toBe('true');
+		header.fire('keydown', { key: 'a' });
+		expect(header.attr['aria-expanded']).toBe('true');
+	});
+
 	it('select marks one item across sections and calls onSelect(key, item)', () => {
 		const { view, root, section, onSelect } = setup();
 		view.setResults('anime', ['a']);

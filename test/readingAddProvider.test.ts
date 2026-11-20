@@ -3,7 +3,9 @@ import { createReadingAddProvider } from '../src/modules/reading/ui/readingAddPr
 import { searchBooks } from '../src/shared/services/coverRefresh';
 import { fakeSettings } from './helpers/fakeSettings';
 import { shownNotices } from './helpers/csvWizard';
-import type { AddFormContext, AddKind } from '../src/modules/add/exports';
+import { apiErrorMessage } from '../src/shared/api/ApiService';
+import { t } from '../src/shared/i18n';
+import type { AddFormContext, AddHit, AddKind } from '../src/modules/add/exports';
 
 const NOW = '2026-03-04T05:06:07.000Z';
 
@@ -68,6 +70,17 @@ function setup(over: Over = {}) {
 	return { provider, api, reading, saved, done, mount };
 }
 
+type Provider = ReturnType<typeof createReadingAddProvider>;
+/** What a link resolves to; a "mine, but failed" answer reads as null here, see `linkMessage`. */
+async function link(provider: Provider, text: string): Promise<AddHit | null> {
+	const answer = await provider.resolveUrl!(text);
+	return answer && 'message' in answer ? null : answer;
+}
+async function linkMessage(provider: Provider, text: string): Promise<string | null> {
+	const answer = await provider.resolveUrl!(text);
+	return answer && 'message' in answer ? answer.message : null;
+}
+
 beforeEach(() => {
 	vi.setSystemTime(NOW);
 	shownNotices.length = 0;
@@ -99,13 +112,11 @@ describe('reading add provider search', () => {
 		expect(hits[0]).toMatchObject({ kind: 'manga', title: 'Berserk', meta: 'Miura · 1989' });
 	});
 
-	it('all-digit manga query looks up by MAL id', async () => {
+	it('an all-digit manga query is searched by title like any other text', async () => {
 		const { provider, api } = setup();
-		const hits = await provider.search('manga', '2');
-		expect(api.getMangaByMalId).toHaveBeenCalledWith(2);
-		expect(api.searchManga).not.toHaveBeenCalled();
-		expect(hits).toHaveLength(1);
-		expect(await setup({ single: null }).provider.search('manga', '99')).toEqual([]);
+		await provider.search('manga', '20');
+		expect(api.searchManga).toHaveBeenCalledWith('20');
+		expect(api.getMangaByMalId).not.toHaveBeenCalled();
 	});
 
 	it('in-library marker uses the kind\'s own library', async () => {
@@ -141,44 +152,73 @@ describe('reading add provider search', () => {
 describe('reading add provider links', () => {
 	it('returns null at once for text that is no manga link, without any request', async () => {
 		const { provider, api } = setup();
-		expect(await provider.resolveUrl!('Berserk')).toBeNull();
-		expect(await provider.resolveUrl!('https://example.com/manga/2')).toBeNull();
-		expect(await provider.resolveUrl!('https://myanimelist.net/anime/52991')).toBeNull();
-		expect(await provider.resolveUrl!('https://anilist.co/anime/154587')).toBeNull();
+		expect(await link(provider, 'Berserk')).toBeNull();
+		expect(await link(provider, 'https://example.com/manga/2')).toBeNull();
+		expect(await link(provider, 'https://myanimelist.net/anime/52991')).toBeNull();
+		expect(await link(provider, 'https://anilist.co/anime/154587')).toBeNull();
 		for (const fn of Object.values(api)) expect(fn).not.toHaveBeenCalled();
 	});
 
 	it('MyAnimeList manga link resolves via getMangaByMalId', async () => {
 		const { provider, api } = setup();
-		const hit = await provider.resolveUrl!('https://myanimelist.net/manga/2/Berserk');
+		const hit = await link(provider, 'https://myanimelist.net/manga/2/Berserk');
 		expect(api.getMangaByMalId).toHaveBeenCalledWith(2);
 		expect(hit).toMatchObject({ kind: 'manga', title: 'Berserk' });
-		expect(await setup({ single: null }).provider.resolveUrl!('https://myanimelist.net/manga/9')).toBeNull();
+		expect(await linkMessage(setup({ single: null }).provider, 'https://myanimelist.net/manga/9')).toBe(t('add.url.notFound'));
 	});
 
 	it('AniList manga link resolves via its MAL id', async () => {
 		const { provider, api } = setup();
-		const hit = await provider.resolveUrl!('https://anilist.co/manga/30002/Berserk/');
+		const hit = await link(provider, 'https://anilist.co/manga/30002/Berserk/');
 		expect(api.getAniListMangaMalId).toHaveBeenCalledWith(30002);
 		expect(api.getMangaByMalId).toHaveBeenCalledWith(2);
 		expect(hit).toMatchObject({ kind: 'manga', title: 'Berserk' });
 	});
 
-	it('AniList manga without a MAL id yields no hit', async () => {
+	it('AniList manga without a MAL id answers a not-found message', async () => {
 		const { provider, api } = setup({ anilistMal: null });
-		expect(await provider.resolveUrl!('https://anilist.co/manga/1')).toBeNull();
+		expect(await linkMessage(provider, 'https://anilist.co/manga/1')).toBe(t('add.url.notFound'));
 		expect(api.getMangaByMalId).not.toHaveBeenCalled();
 	});
 
-	it('lets a failing AniList lookup reject so the wizard can skip it', async () => {
+	it('a failing lookup answers the error text, not "not found"', async () => {
 		const { provider, api } = setup();
 		api.getAniListMangaMalId.mockRejectedValueOnce(new Error('boom'));
-		await expect(provider.resolveUrl!('https://anilist.co/manga/1')).rejects.toThrow('boom');
+		const message = await linkMessage(provider, 'https://anilist.co/manga/1');
+		expect(message).toBe(apiErrorMessage(new Error('boom')));
+		expect(message).not.toBe(t('add.url.notFound'));
+	});
+
+	it('a hit found again after more rows than the cap still opens with its data', async () => {
+		const { provider, api } = setup();
+		const [first] = await provider.search('manga', 'berserk');
+		const many = Array.from({ length: 600 }, (_, i) => ({ ...MANGA, malId: 1000 + i, title: `Filler ${i}` }));
+		api.searchManga.mockResolvedValueOnce(many);
+		await provider.search('manga', 'filler');
+		api.searchManga.mockResolvedValueOnce([MANGA]);
+		await provider.search('manga', 'berserk');
+		api.searchManga.mockResolvedValueOnce(many.slice(0, 450));
+		await provider.search('manga', 'filler');
+		const host = document.createElement('div');
+		provider.renderForm(host, { kind: 'manga', hit: first!, query: 'b', target: 'library', back: () => {}, done: () => {} });
+		expect(host.querySelector<HTMLInputElement>('input[type=text]')!.value).toBe('Berserk');
+		expect(shownNotices).toHaveLength(0);
+	});
+
+	it('a hit whose row is gone opens a form seeded from the hit and says so', () => {
+		const { provider } = setup();
+		const host = document.createElement('div');
+		const hit: AddHit = { kind: 'book', id: 'gone', title: 'Gone Book', meta: '', thumbUrl: 'http://c/g.jpg', fallbackIcon: 'x', inLibrary: null };
+		provider.renderForm(host, { kind: 'book', hit, query: 'g', target: 'library', back: () => {}, done: () => {} });
+		const values = Array.from(host.querySelectorAll<HTMLInputElement>('input')).map((i) => i.value);
+		expect(values).toContain('Gone Book');
+		expect(values).toContain('http://c/g.jpg');
+		expect(shownNotices).toContain(t('add.url.lookupExpired'));
 	});
 
 	it('a resolved link opens its form with the manga\'s values', async () => {
 		const { provider } = setup();
-		const hit = (await provider.resolveUrl!('https://myanimelist.net/manga/2'))!;
+		const hit = (await link(provider, 'https://myanimelist.net/manga/2'))!;
 		const host = document.createElement('div');
 		provider.renderForm(host, { kind: 'manga', hit, query: 'x', target: 'library', back: () => {}, done: () => {} });
 		expect(host.querySelector<HTMLInputElement>('input[type=text]')!.value).toBe('Berserk');

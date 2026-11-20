@@ -48,10 +48,12 @@ export interface AddProvider {
 	/** `ctx.hit` is null for a manual entry. */
 	renderForm(host: HTMLElement, ctx: AddFormContext): AddFormHandle;
 	/**
-	 * Null means the text is not this provider's URL. Runs on every query, so it must return null
-	 * quickly and without network access for text that is not a URL it owns.
+	 * Null means the text is not this provider's URL. A link it owns that cannot be resolved (not
+	 * found, no API key, lookup error) answers `{ message }`, which the wizard shows instead of searching
+	 * the link text. Runs on every query, so it must return null quickly and without network access for
+	 * text that is not a URL it owns.
 	 */
-	resolveUrl?(text: string): Promise<AddHit | null>;
+	resolveUrl?(text: string): Promise<AddHit | { message: string } | null>;
 }
 
 export interface AddWizardOptions {

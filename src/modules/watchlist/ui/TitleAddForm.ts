@@ -29,6 +29,7 @@ import {
 	nameSelect,
 	renderGroupPicker,
 	renderRatingRow,
+	runWhileBusy,
 	type GroupPickerState,
 } from '../../../design-system/FormCells';
 
@@ -89,7 +90,9 @@ class TitleAddForm implements AddFormHandle {
 
 	start(): void {
 		if (!this.result) {
-			this.media.title = this.ctx.query;
+			// a hit whose search row is gone arrives here too: seed what the hit still carries
+			this.media.title = this.ctx.hit?.title ?? this.ctx.query;
+			this.posterUrl = this.ctx.hit?.thumbUrl ?? '';
 			this.render();
 			return;
 		}
@@ -136,7 +139,7 @@ class TitleAddForm implements AddFormHandle {
 			cls: 'hoard-btn hoard-btn--primary',
 			text: maybe ? t('misc.maybeAdd.submit') : t('add.title.submit'),
 		});
-		submit.addEventListener('click', () => void (maybe ? this.addMaybe() : this.addTitle()));
+		submit.addEventListener('click', () => void runWhileBusy(submit, () => (maybe ? this.addMaybe() : this.addTitle())));
 	}
 
 	private renderLibraryFields(form: HTMLElement): void {

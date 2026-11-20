@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddWizardModal } from '../src/modules/add/ui/AddWizardModal';
+import { apiErrorMessage } from '../src/shared/api/ApiService';
+import { t } from '../src/shared/i18n';
 import type {
 	AddDone, AddFormContext, AddHit, AddKind, AddProvider, AddWizardOptions,
 } from '../src/modules/add/domain/provider';
@@ -37,8 +39,8 @@ function fakeProvider(kinds: AddKind[], extra: Partial<AddProvider> = {}) {
 	return { provider, search, pending, forms, answer };
 }
 
-function open(providers: AddProvider[], opts: AddWizardOptions = {}) {
-	const modal = new AddWizardModal({} as never, providers, opts);
+function open(providers: AddProvider[], opts: AddWizardOptions = {}, colorTheme?: string) {
+	const modal = new AddWizardModal({} as never, providers, opts, colorTheme);
 	modal.open();
 	const root = modal.contentEl;
 	const input = root.querySelector('input')!;
@@ -53,8 +55,9 @@ function open(providers: AddProvider[], opts: AddWizardOptions = {}) {
 		input.value = text;
 		input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
 	};
+	const status = (): HTMLElement => root.querySelector<HTMLElement>('.hoard-add-wizard__status')!;
 	const manual = (): HTMLButtonElement[] => Array.from(root.querySelectorAll('.hoard-add-wizard__manual button'));
-	return { modal, root, input, section, titles, type, enter, manual };
+	return { modal, root, input, section, titles, type, enter, manual, status };
 }
 
 beforeEach(() => { vi.useFakeTimers(); });
@@ -226,5 +229,89 @@ describe('AddWizardModal', () => {
 		expect(outside).not.toHaveBeenCalled();
 		expect(wrongKind.forms).toHaveLength(0);
 		expect(wrongKind.search).toHaveBeenCalledExactlyOnceWith('movie', 'https://x.test');
+	});
+
+	it('a link the provider owns but cannot resolve shows its message and is never searched', async () => {
+		const a = fakeProvider(['movie'], { resolveUrl: vi.fn(() => Promise.resolve({ message: 'no such title' })) });
+		const w = open([a.provider]);
+		w.enter('https://www.imdb.com/title/tt9/');
+		await flush();
+		expect(a.search).not.toHaveBeenCalled();
+		expect(a.forms).toHaveLength(0);
+		expect(w.status().textContent).toBe('no such title');
+		expect(w.status().classList.contains('is-hidden')).toBe(false);
+		expect(w.root.querySelector('.hoard-modal__loading')).toBeNull();
+	});
+
+	it('a failing link lookup shows the error, not a not-found message, and is never searched', async () => {
+		const a = fakeProvider(['movie'], { resolveUrl: vi.fn(() => Promise.reject(new Error('boom'))) });
+		const w = open([a.provider]);
+		w.enter('https://www.imdb.com/title/tt9/');
+		await flush();
+		expect(a.search).not.toHaveBeenCalled();
+		expect(w.status().textContent).toBe(apiErrorMessage(new Error('boom')));
+		expect(w.status().textContent).not.toBe(t('add.url.notFound'));
+	});
+
+	it('a link answer clears with the next query', async () => {
+		const a = fakeProvider(['movie'], { resolveUrl: vi.fn((text: string) => Promise.resolve(text.startsWith('http') ? { message: 'x' } : null)) });
+		const w = open([a.provider]);
+		w.enter('https://a.test');
+		await flush();
+		w.enter('matrix');
+		await flush();
+		expect(w.status().classList.contains('is-hidden')).toBe(true);
+	});
+
+	it('a lookup that resolves after a manual form was opened leaves the form and sections alone', async () => {
+		let resolve!: (h: AddHit) => void;
+		const a = fakeProvider(['movie'], { resolveUrl: vi.fn(() => new Promise<AddHit>((r) => { resolve = r; })) });
+		const w = open([a.provider]);
+		w.enter('https://x.test/m');
+		w.manual()[0]?.click();
+		expect(a.forms).toHaveLength(1);
+		resolve(hit('movie', 'Late'));
+		await flush();
+		expect(a.forms).toHaveLength(1);
+		expect(a.search).not.toHaveBeenCalled();
+		w.root.querySelector<HTMLElement>('.hoard-add-wizard__back')!.click();
+		expect(w.root.querySelector('.hoard-modal__loading')).toBeNull();
+	});
+
+	it('shows no matches when every section comes back empty, and not when one has hits or failed', async () => {
+		const a = fakeProvider(['anime', 'movie']);
+		const w = open([a.provider]);
+		w.enter('zzz');
+		a.answer('anime', 'zzz', []);
+		await flush();
+		expect(w.status().classList.contains('is-hidden')).toBe(true);
+		a.answer('movie', 'zzz', []);
+		await flush();
+		expect(w.status().textContent).toBe(t('add.noMatches'));
+		w.enter('abc');
+		a.answer('anime', 'abc', [hit('anime', 'A')]);
+		a.answer('movie', 'abc', []);
+		await flush();
+		expect(w.status().classList.contains('is-hidden')).toBe(true);
+		w.enter('err');
+		a.pending.find((p) => p.kind === 'anime' && p.query === 'err')?.reject(new Error('x'));
+		a.answer('movie', 'err', []);
+		await flush();
+		expect(w.status().classList.contains('is-hidden')).toBe(true);
+	});
+
+	it('titles the maybe target as a Maybe add', () => {
+		const a = fakeProvider(['movie'], { maybeKinds: ['movie'] });
+		const w = open([a.provider], { target: 'maybe' });
+		expect(w.modal.titleEl.textContent).toBe(t('add.wizard.titleMaybe'));
+		expect(open([a.provider]).modal.titleEl.textContent).toBe(t('add.wizard.title'));
+	});
+
+	it('scopes the plugin theme to the dialog', () => {
+		const a = fakeProvider(['movie']);
+		const w = open([a.provider], {}, 'nightfall');
+		expect(w.root.classList.contains('hoard-view')).toBe(true);
+		expect(w.root.getAttribute('data-theme')).toBe('nightfall');
+		expect(w.modal.modalEl.getAttribute('data-theme')).toBe('nightfall');
 	});
 });

@@ -1,7 +1,9 @@
+import { Notice } from 'obsidian';
 import type { AddHit, AddKind, AddProvider } from '../../add/exports';
-import type { BookSearchResult, MangaSearchResult } from '../../../shared/api/ApiService';
+import { apiErrorMessage, type BookSearchResult, type MangaSearchResult } from '../../../shared/api/ApiService';
 import { t } from '../../../shared/i18n';
 import { LibraryIndex, bookResultIdKeys, mangaResultIdKeys } from '../../../shared/services/LibraryIndex';
+import { RecentRows } from '../../../shared/services/recentRows';
 import type { SettingsReader } from '../../settings/exports';
 import {
 	mountReadingAddForm,
@@ -35,14 +37,10 @@ export function createReadingAddProvider({ settings, reading, api, searchBooks }
 	searchBooks: BookSearcher;
 }): AddProvider {
 	// search rows by `${kind}:${hit.id}`, so a picked hit still carries its source record into the form
-	const rows = new Map<string, ReadingRow>();
+	const rows = new RecentRows<ReadingRow>(REMEMBERED_RESULTS);
 
 	const remember = (hit: AddHit, row: ReadingRow): AddHit => {
 		rows.set(`${hit.kind}:${hit.id}`, row);
-		for (const oldest of rows.keys()) {
-			if (rows.size <= REMEMBERED_RESULTS) break;
-			rows.delete(oldest);
-		}
 		return hit;
 	};
 
@@ -71,26 +69,26 @@ export function createReadingAddProvider({ settings, reading, api, searchBooks }
 	const bookLibrary = (): LibraryIndex => LibraryIndex.build({ books: () => reading.getBooks() }, ['books']);
 	const mangaLibrary = (): LibraryIndex => LibraryIndex.build({ manga: () => reading.getMangaList() }, ['manga']);
 
-	const searchManga = async (query: string): Promise<MangaSearchResult[]> => {
-		if (!/^\d+$/.test(query)) return await api.searchManga(query);
-		const single = await api.getMangaByMalId(parseInt(query, 10));
-		return single ? [single] : [];
-	};
-
 	return {
 		kinds: KINDS,
 
 		async search(kind, query) {
+			// a number is a title like any other text; a MAL id is looked up through its link
 			if (kind === 'book') {
 				const library = bookLibrary();
-				return (await searchBooks(api, settings.get(), query)).map((book) => bookHit(book, library));
+				const hits = (await searchBooks(api, settings.get(), query)).map((book) => bookHit(book, library));
+				rows.trim();
+				return hits;
 			}
 			const library = mangaLibrary();
-			return (await searchManga(query)).map((manga) => mangaHit(manga, library));
+			const hits = (await api.searchManga(query)).map((manga) => mangaHit(manga, library));
+			rows.trim();
+			return hits;
 		},
 
 		renderForm(host, ctx) {
 			const row = ctx.hit ? rows.get(`${ctx.kind}:${ctx.hit.id}`) ?? null : null;
+			if (ctx.hit && !row) new Notice(t('add.url.lookupExpired'));
 			return mountReadingAddForm(host, settings, reading, api, ctx, row);
 		},
 
@@ -99,11 +97,17 @@ export function createReadingAddProvider({ settings, reading, api, searchBooks }
 			const mal = input.match(MAL_MANGA_LINK_RE);
 			const anilist = mal ? null : input.match(ANILIST_MANGA_LINK_RE);
 			if (!mal && !anilist) return null;
-			// an AniList manga is looked up through its MyAnimeList id
-			const malId = mal ? parseInt(mal[1]!, 10) : await api.getAniListMangaMalId(parseInt(anilist![1]!, 10));
-			if (!malId) return null;
-			const manga = await api.getMangaByMalId(malId);
-			return manga ? mangaHit(manga, mangaLibrary()) : null;
+			try {
+				// an AniList manga is looked up through its MyAnimeList id
+				const malId = mal ? parseInt(mal[1]!, 10) : await api.getAniListMangaMalId(parseInt(anilist![1]!, 10));
+				const manga = malId ? await api.getMangaByMalId(malId) : null;
+				if (!manga) return { message: t('add.url.notFound') };
+				const hit = mangaHit(manga, mangaLibrary());
+				rows.trim();
+				return hit;
+			} catch (err) {
+				return { message: apiErrorMessage(err) };
+			}
 		},
 	};
 }

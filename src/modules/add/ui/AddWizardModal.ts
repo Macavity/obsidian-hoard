@@ -1,4 +1,5 @@
 import { Modal, type App } from 'obsidian';
+import { markViewRoot } from '../../../design-system/detailFrame';
 import { createSectionedResults, type SectionedResults } from '../../../design-system/SectionedResults';
 import { renderSearchResultRow } from '../../../design-system/SearchThumbnail';
 import { apiErrorMessage } from '../../../shared/api/ApiService';
@@ -9,6 +10,9 @@ import type {
 import { orderKinds } from '../domain/sectionOrder';
 
 const DEBOUNCE_MS = 600;
+
+/** What a provider made of the query: its hit, or why a link it owns could not be resolved. */
+type Resolution = { provider: AddProvider; hit: AddHit } | { message: string };
 
 const kindLabelOne = (kind: AddKind): string => t(`add.wizard.kindOne.${kind}` satisfies TranslationKey);
 const kindLabel = (kind: AddKind): string => t(`add.wizard.kind.${kind}` satisfies TranslationKey);
@@ -25,13 +29,16 @@ export class AddWizardModal extends Modal {
 	private searchEl: HTMLElement | null = null;
 	private inputEl: HTMLInputElement | null = null;
 	private stepEl: HTMLElement | null = null;
+	private statusEl: HTMLElement | null = null;
+	/** True from a query that may be a link until its lookup answers; no search has started in that window. */
+	private resolving = false;
 	private form: AddFormHandle | null = null;
 	private query = '';
 	/** Bumped by every query and by close; a response only counts while its number is current. */
 	private generation = 0;
 	private debounce: number | null = null;
 
-	constructor(app: App, private readonly providers: readonly AddProvider[], private readonly opts: AddWizardOptions) {
+	constructor(app: App, private readonly providers: readonly AddProvider[], private readonly opts: AddWizardOptions, private readonly colorTheme?: string) {
 		super(app);
 		this.target = opts.target ?? 'library';
 		for (const provider of providers) {
@@ -43,7 +50,8 @@ export class AddWizardModal extends Modal {
 	}
 
 	onOpen(): void {
-		this.setTitle(t('add.wizard.title'));
+		this.setTitle(t(this.target === 'maybe' ? 'add.wizard.titleMaybe' : 'add.wizard.title'));
+		markViewRoot(this.modalEl, this.contentEl, this.colorTheme);
 		this.contentEl.addClass('hoard-add-wizard');
 		const search = this.contentEl.createDiv({ cls: 'hoard-add-wizard__search' });
 		this.searchEl = search;
@@ -62,6 +70,8 @@ export class AddWizardModal extends Modal {
 		results.mount(search);
 		this.results = results;
 		this.resetSections();
+		this.statusEl = search.createDiv({ cls: 'hoard-add-wizard__status' });
+		this.setStatus(null);
 		this.mountManualRow(search);
 		if (this.opts.query) this.runQuery(this.opts.query);
 	}
@@ -76,6 +86,7 @@ export class AddWizardModal extends Modal {
 		this.searchEl = null;
 		this.inputEl = null;
 		this.stepEl = null;
+		this.statusEl = null;
 		this.contentEl.empty();
 	}
 
@@ -110,6 +121,13 @@ export class AddWizardModal extends Modal {
 		}
 	}
 
+	/** A line under the results: why there is nothing to pick. Null hides it. */
+	private setStatus(text: string | null): void {
+		if (!this.statusEl) return;
+		this.statusEl.setText(text ?? '');
+		this.statusEl.toggleClass('is-hidden', text === null);
+	}
+
 	private resetSections(): void {
 		this.results?.setSections(this.kinds.map((key) => ({ key, label: kindLabel(key) })));
 	}
@@ -124,6 +142,8 @@ export class AddWizardModal extends Modal {
 		if (!results) return;
 		this.query = raw.trim();
 		const gen = ++this.generation;
+		this.resolving = false;
+		this.setStatus(null);
 		if (!this.query) {
 			this.resetSections();
 			return;
@@ -134,38 +154,68 @@ export class AddWizardModal extends Modal {
 			return;
 		}
 		for (const kind of this.kinds) results.setLoading(kind);
+		this.resolving = true;
 		void this.resolveThenSearch(gen, this.query, resolvers);
 	}
 
 	private async resolveThenSearch(gen: number, query: string, resolvers: readonly AddProvider[]): Promise<void> {
-		const found = await Promise.all(resolvers.map(async (provider) => {
+		const found = await Promise.all(resolvers.map(async (provider): Promise<Resolution | null> => {
 			try {
-				const hit = await provider.resolveUrl?.(query);
-				return hit ? { provider, hit } : null;
-			} catch {
-				return null;
+				const answer = await provider.resolveUrl?.(query);
+				if (!answer) return null;
+				return 'message' in answer ? { message: answer.message } : { provider, hit: answer };
+			} catch (err) {
+				// a lookup that fails is not "not found": say what went wrong
+				return { message: apiErrorMessage(err) };
 			}
 		}));
 		if (gen !== this.generation) return;
-		const match = found.find((f) => f !== null && this.kinds.includes(f.hit.kind));
+		this.resolving = false;
+		const match = found.find((f): f is { provider: AddProvider; hit: AddHit } => f !== null && 'hit' in f && this.kinds.includes(f.hit.kind));
 		if (match) {
+			// the user may have opened a form while the link was being looked up; leave it alone
+			if (this.form) return;
 			// the sections still show "searching"; reset them so Back lands on a clean step 1
 			this.resetSections();
 			this.openFormWith(match.provider, match.hit.kind, match.hit);
+			return;
+		}
+		// a link a provider owns is never searched as text
+		const failure = found.find((f): f is { message: string } => f !== null && 'message' in f);
+		if (failure) {
+			this.resetSections();
+			this.setStatus(failure.message);
 			return;
 		}
 		this.search(gen, query);
 	}
 
 	private search(gen: number, query: string): void {
+		let outstanding = 0;
+		let anyHit = false;
+		let anyError = false;
+		// the wizard tells the user when every section came back empty
+		const settle = (): void => {
+			outstanding--;
+			if (outstanding === 0 && gen === this.generation && !anyHit && !anyError) this.setStatus(t('add.noMatches'));
+		};
 		for (const kind of this.kinds) {
 			const provider = this.owners.get(kind);
 			if (!provider) continue;
+			outstanding++;
 			this.results?.setLoading(kind);
 			// an async wrapper turns a synchronous throw into a rejection of this kind only
 			void (async () => provider.search(kind, query))().then(
-				(hits) => { if (gen === this.generation) this.results?.setResults(kind, hits); },
-				(err: unknown) => { if (gen === this.generation) this.results?.setError(kind, apiErrorMessage(err)); },
+				(hits) => {
+					if (gen === this.generation) this.results?.setResults(kind, hits);
+					if (hits.length > 0) anyHit = true;
+					settle();
+				},
+				(err: unknown) => {
+					if (gen === this.generation) this.results?.setError(kind, apiErrorMessage(err));
+					anyError = true;
+					settle();
+				},
 			);
 		}
 	}
@@ -178,6 +228,12 @@ export class AddWizardModal extends Modal {
 	private openFormWith(provider: AddProvider, kind: AddKind, hit: AddHit | null): void {
 		if (this.form || !this.searchEl) return;
 		this.clearDebounce();
+		if (this.resolving) {
+			// the user picked a manual entry while a link was still being looked up: drop that lookup
+			this.generation++;
+			this.resolving = false;
+			this.resetSections();
+		}
 		this.searchEl.hide();
 		const step = this.contentEl.createDiv({ cls: 'hoard-add-wizard__step' });
 		this.stepEl = step;

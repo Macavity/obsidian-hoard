@@ -3,6 +3,8 @@ import { createWatchlistAddProvider } from '../src/modules/watchlist/ui/watchlis
 import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 import { shownNotices } from './helpers/csvWizard';
+import type { AddHit } from '../src/modules/add/exports';
+import { apiErrorMessage } from '../src/shared/api/ApiService';
 import type { AnimeSearchResult, HoardTitle, MediaSearchResult } from '../src/modules/watchlist/domain/model';
 
 const media = (over: Partial<MediaSearchResult> = {}): MediaSearchResult => ({
@@ -38,6 +40,17 @@ function setup(activeApi: 'TMDB' | 'OMDb' | 'Cinemeta' = 'Cinemeta', hasKey = fa
 	const titles = { getTitles: () => stored as HoardTitle[], getGroups: () => [] };
 	const provider = createWatchlistAddProvider({ settings: settings as never, titles: titles as never, api });
 	return { provider, api };
+}
+
+type Provider = ReturnType<typeof createWatchlistAddProvider>;
+/** What a link resolves to; a "mine, but failed" answer reads as null here, see `linkMessage`. */
+async function link(provider: Provider, text: string): Promise<AddHit | null> {
+	const answer = await provider.resolveUrl!(text);
+	return answer && 'message' in answer ? null : answer;
+}
+async function linkMessage(provider: Provider, text: string): Promise<string | null> {
+	const answer = await provider.resolveUrl!(text);
+	return answer && 'message' in answer ? answer.message : null;
 }
 
 beforeEach(() => { shownNotices.length = 0; });
@@ -86,9 +99,9 @@ describe('watchlist add provider', () => {
 
 	it('returns null at once for text that is no link, without any request', async () => {
 		const { provider, api } = setup();
-		expect(await provider.resolveUrl!('Inception')).toBeNull();
-		expect(await provider.resolveUrl!('https://example.com/tt123')).toBeNull();
-		expect(await provider.resolveUrl!('https://www.themoviedb.org/person/1')).toBeNull();
+		expect(await link(provider, 'Inception')).toBeNull();
+		expect(await link(provider, 'https://example.com/tt123')).toBeNull();
+		expect(await link(provider, 'https://www.themoviedb.org/person/1')).toBeNull();
 		for (const fn of Object.values(api)) {
 			if (typeof fn === 'function' && 'mock' in fn) expect(fn).not.toHaveBeenCalled();
 		}
@@ -96,74 +109,103 @@ describe('watchlist add provider', () => {
 
 	it('IMDb link resolves to a hit', async () => {
 		const { provider, api } = setup('TMDB', true);
-		const hit = await provider.resolveUrl!('https://www.imdb.com/title/tt1375666/');
+		const hit = await link(provider, 'https://www.imdb.com/title/tt1375666/');
 		expect(api.getTmdbByImdbId).toHaveBeenCalledWith('tt1375666');
 		expect(hit).toMatchObject({ kind: 'movie', title: 'Inception' });
 	});
 
 	it('IMDb link uses OMDb when that is the keyed source and maps a series', async () => {
 		const { provider, api } = setup('OMDb', true);
-		const hit = await provider.resolveUrl!('https://www.imdb.com/title/tt0944947/');
+		const hit = await link(provider, 'https://www.imdb.com/title/tt0944947/');
 		expect(api.getOmdbByImdbId).toHaveBeenCalledWith('tt0944947');
 		expect(hit!.kind).toBe('series');
 	});
 
 	it('IMDb link on Cinemeta tries series first, then movie', async () => {
 		const { provider, api } = setup('Cinemeta', false);
-		const hit = await provider.resolveUrl!('https://www.imdb.com/title/tt0944947/');
+		const hit = await link(provider, 'https://www.imdb.com/title/tt0944947/');
 		expect(api.getCinemetaDetails).toHaveBeenNthCalledWith(1, 'tt0944947', 'tv');
 		expect(hit!.kind).toBe('series');
 		api.getCinemetaDetails.mockImplementation((_id: string, kind: string) =>
 			Promise.resolve(kind === 'movie' ? media({ title: 'Foreign Film' }) : null));
-		expect((await provider.resolveUrl!('https://www.imdb.com/title/tt1/'))!.title).toBe('Foreign Film');
+		expect((await link(provider, 'https://www.imdb.com/title/tt1/'))!.title).toBe('Foreign Film');
 	});
 
-	it('IMDb link not found yields no hit', async () => {
+	it('IMDb link not found answers a not-found message', async () => {
 		const { provider, api } = setup('TMDB', true);
 		api.getTmdbByImdbId.mockResolvedValueOnce(null);
-		expect(await provider.resolveUrl!('https://www.imdb.com/title/tt9/')).toBeNull();
+		expect(await linkMessage(provider, 'https://www.imdb.com/title/tt9/')).toBe(t('add.url.notFound'));
 	});
 
 	it('TMDB movie and tv links resolve by id and media type', async () => {
 		const { provider, api } = setup('TMDB', true);
-		const movie = await provider.resolveUrl!('https://www.themoviedb.org/movie/27205-inception?language=en');
+		const movie = await link(provider, 'https://www.themoviedb.org/movie/27205-inception?language=en');
 		expect(api.getTmdbMovieDetails).toHaveBeenCalledWith('27205');
 		expect(movie!.kind).toBe('movie');
-		const tv = await provider.resolveUrl!('https://www.themoviedb.org/TV/1396');
+		const tv = await link(provider, 'https://www.themoviedb.org/TV/1396');
 		expect(api.getTmdbTvDetails).toHaveBeenCalledWith('1396');
 		expect(tv!.kind).toBe('series');
 	});
 
-	it('TMDB link without key yields no hit', async () => {
+	it('TMDB link without key answers the no-key message, not a notice', async () => {
 		const { provider, api } = setup('TMDB', false);
-		expect(await provider.resolveUrl!('https://www.themoviedb.org/movie/27205')).toBeNull();
+		expect(await linkMessage(provider, 'https://www.themoviedb.org/movie/27205')).toBe(t('add.url.noTmdbKey'));
 		expect(api.getTmdbMovieDetails).not.toHaveBeenCalled();
-		expect(shownNotices).toContain(t('add.url.noTmdbKey'));
+		expect(shownNotices).toHaveLength(0);
 	});
 
-	it('lets a failing lookup reject so the wizard can skip it', async () => {
+	it('a failing lookup answers the error text, not "not found"', async () => {
 		const { provider, api } = setup('TMDB', true);
 		api.getTmdbByImdbId.mockRejectedValueOnce(new Error('boom'));
-		await expect(provider.resolveUrl!('https://www.imdb.com/title/tt1/')).rejects.toThrow('boom');
+		const message = await linkMessage(provider, 'https://www.imdb.com/title/tt1/');
+		expect(message).toBe(apiErrorMessage(new Error('boom')));
+		expect(message).not.toBe(t('add.url.notFound'));
+	});
+
+	it('a hit found again after more rows than the cap still opens with its data', async () => {
+		const { provider, api } = setup();
+		const [first] = await provider.search('movie', 'Inception');
+		const many = Array.from({ length: 600 }, (_, i) => media({ imdbId: `tt9${i}`, title: `Filler ${i}` }));
+		api.searchCinemeta.mockResolvedValueOnce(many);
+		await provider.search('movie', 'filler');
+		// the first hit is shown again in a later result list
+		api.searchCinemeta.mockResolvedValueOnce([media()]);
+		await provider.search('movie', 'Inception');
+		api.searchCinemeta.mockResolvedValueOnce(many.slice(0, 450));
+		await provider.search('movie', 'filler');
+		const host = document.createElement('div');
+		provider.renderForm(host, { kind: 'movie', hit: first!, query: 'Inc', target: 'library', back: () => {}, done: () => {} });
+		await vi.waitFor(() => expect(host.querySelector('.hoard-modal__btn-row')).not.toBeNull());
+		expect(host.querySelector<HTMLInputElement>('input[type=text]')!.value).toBe('Inception');
+		expect(shownNotices).toHaveLength(0);
+	});
+
+	it('a hit whose row is gone opens a form seeded from the hit and says so', () => {
+		const { provider } = setup();
+		const host = document.createElement('div');
+		const hit: AddHit = { kind: 'movie', id: 'gone', title: 'Gone Film', meta: '', thumbUrl: 'https://img.test/g.jpg', fallbackIcon: 'x', inLibrary: null };
+		provider.renderForm(host, { kind: 'movie', hit, query: 'g', target: 'library', back: () => {}, done: () => {} });
+		expect(host.querySelector<HTMLInputElement>('input[type=text]')!.value).toBe('Gone Film');
+		expect(shownNotices).toContain(t('add.url.lookupExpired'));
 	});
 
 	it('MyAnimeList anime link resolves via getAnimeByMalId', async () => {
 		const { provider, api } = setup();
-		const hit = await provider.resolveUrl!('https://myanimelist.net/anime/52991/Sousou_no_Frieren');
+		const hit = await link(provider, 'https://myanimelist.net/anime/52991/Sousou_no_Frieren');
 		expect(api.getAnimeByMalId).toHaveBeenCalledWith(52991);
 		expect(hit).toMatchObject({ kind: 'anime', title: 'Frieren' });
 	});
 
 	it('AniList anime link resolves via getAniListAnimeById', async () => {
 		const { provider, api } = setup();
-		const hit = await provider.resolveUrl!('https://anilist.co/anime/154587/Sousou-no-Frieren/');
+		const hit = await link(provider, 'https://anilist.co/anime/154587/Sousou-no-Frieren/');
 		expect(api.getAniListAnimeById).toHaveBeenCalledWith(154587);
 		expect(hit).toMatchObject({ kind: 'anime', title: 'Frieren' });
 	});
 
 	it('manga links are not the watchlist link kind', async () => {
 		const { provider, api } = setup();
-		expect(await provider.resolveUrl!('https://myanimelist.net/manga/2/Berserk')).toBeNull();
+		expect(await link(provider, 'https://myanimelist.net/manga/2/Berserk')).toBeNull();
 		expect(api.getAnimeByMalId).not.toHaveBeenCalled();
 	});
 

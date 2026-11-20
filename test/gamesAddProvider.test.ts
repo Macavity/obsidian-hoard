@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGamesAddProvider } from '../src/modules/games/ui/gamesAddProvider';
 import type { Game } from '../src/modules/games/domain/model';
 import type { GameDetailsResult, GameSearchResult } from '../src/shared/api/ApiService';
-import type { AddFormContext } from '../src/modules/add/exports';
+import type { AddFormContext, AddHit } from '../src/modules/add/exports';
+import { t } from '../src/shared/i18n';
 import { fakeSettings } from './helpers/fakeSettings';
 import { shownNotices } from './helpers/csvWizard';
 
@@ -71,7 +72,7 @@ function setup(over: Over = {}) {
 		await settle();
 		return { host, handle, input, type, submit };
 	};
-	return { provider, api, added, newGroups, done, mount };
+	return { provider, api, games, added, newGroups, done, mount };
 }
 
 beforeEach(() => {
@@ -202,5 +203,51 @@ describe('games add provider', () => {
 		form.submit();
 		await settle();
 		expect(newGroups[0]).toMatchObject({ id: 'grp-Roguelikes', name: 'Roguelikes', gameIds: ['g-Hades'] });
+	});
+
+	it('disables the submit button while the game is being saved', async () => {
+		const { games, mount, done } = setup();
+		let finish!: () => void;
+		games.addGame.mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));
+		const form = await mount('Hades', false);
+		const button = form.host.querySelector<HTMLButtonElement>('.hoard-modal__btn-row .hoard-btn--primary')!;
+		form.submit();
+		await settle();
+		expect(button.disabled).toBe(true);
+		button.click();
+		await settle();
+		expect(games.addGame).toHaveBeenCalledTimes(1);
+		finish();
+		await settle();
+		expect(done).toHaveBeenCalledTimes(1);
+	});
+
+	it('a hit found again after more rows than the cap still opens with its data', async () => {
+		const { provider, api } = setup();
+		const [first] = await provider.search('game', 'hades');
+		const many = Array.from({ length: 600 }, (_, i) => ({ ...STEAM_ROW, id: 5000 + i, title: `Filler ${i}` }));
+		api.searchSteamStore.mockResolvedValueOnce(many);
+		await provider.search('game', 'filler');
+		api.searchSteamStore.mockResolvedValueOnce([STEAM_ROW]);
+		await provider.search('game', 'hades');
+		api.searchSteamStore.mockResolvedValueOnce(many.slice(0, 450));
+		await provider.search('game', 'filler');
+		expect(first).toBeDefined();
+		const host = document.createElement('div');
+		provider.renderForm(host, { kind: 'game', hit: first!, query: 'h', target: 'library', back: () => {}, done: () => {} });
+		await settle();
+		expect(api.getSteamStoreDetails).toHaveBeenCalled();
+		expect(shownNotices).toHaveLength(0);
+	});
+
+	it('a hit whose row is gone opens a form seeded from the hit and says so', () => {
+		const { provider } = setup();
+		const host = document.createElement('div');
+		const hit: AddHit = { kind: 'game', id: 'steam:0', title: 'Gone Game', meta: '', thumbUrl: 'https://img.test/g.jpg', fallbackIcon: 'x', inLibrary: null };
+		provider.renderForm(host, { kind: 'game', hit, query: 'g', target: 'library', back: () => {}, done: () => {} });
+		const values = Array.from(host.querySelectorAll<HTMLInputElement>('input')).map((el) => el.value);
+		expect(values).toContain('Gone Game');
+		expect(values).toContain('https://img.test/g.jpg');
+		expect(shownNotices).toContain(t('add.url.lookupExpired'));
 	});
 });

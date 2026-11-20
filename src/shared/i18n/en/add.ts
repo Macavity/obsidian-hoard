@@ -11,10 +11,13 @@ const add = {
 	saveChanges: 'Save changes',
 	added: '"{name}" added to Hoard.',
 	url: {
+		notFound: 'Nothing found for this link.',
+		lookupExpired: 'Details of this result are gone; the form starts with its title and cover only.',
 		noTmdbKey: 'Add a TMDB API key in Settings → API to use TMDB links.',
 	},
 	wizard: {
 		title: 'Add',
+		titleMaybe: 'Add to maybe',
 		placeholder: 'Search by title or paste a link...',
 		manualAs: 'Add manually as {kind}',
 		back: 'Back',

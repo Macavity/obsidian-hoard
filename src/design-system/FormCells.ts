@@ -4,6 +4,16 @@ import { t } from '../shared/i18n';
 import { typeLabel } from '../shared/i18n/labels';
 import { renderStarRating, type StarRatingOptions } from './StarRating';
 
+/** Disables `button` while `task` runs, so a second click cannot start a second save. */
+export async function runWhileBusy(button: HTMLButtonElement, task: () => Promise<void>): Promise<void> {
+	button.disabled = true;
+	try {
+		await task();
+	} finally {
+		button.disabled = false;
+	}
+}
+
 /** A labelled form row: [label][fields...]. */
 export function makeRow(parent: HTMLElement, label: string): HTMLElement {
 	const row = parent.createDiv({ cls: 'hoard-modal__row' });

@@ -13,10 +13,13 @@ const add = {
 	saveChanges: 'Änderungen speichern',
 	added: '"{name}" zu Hoard hinzugefügt.',
 	url: {
+		notFound: 'Zu diesem Link wurde nichts gefunden.',
+		lookupExpired: 'Die Details dieses Treffers sind nicht mehr verfügbar; das Formular enthält nur Titel und Cover.',
 		noTmdbKey: 'Hinterlege unter Einstellungen → API einen TMDB-API-Schlüssel, um TMDB-Links zu nutzen.',
 	},
 	wizard: {
 		title: 'Hinzufügen',
+		titleMaybe: 'Zu "Vielleicht" hinzufügen',
 		placeholder: 'Nach Titel suchen oder Link einfügen...',
 		manualAs: 'Manuell als {kind} hinzufügen',
 		back: 'Zurück',

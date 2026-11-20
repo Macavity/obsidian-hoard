@@ -99,7 +99,6 @@ const misc = {
 		alreadyIn: 'Bereits in {library}',
 	},
 	titleSearch: {
-		placeholder: 'Titel suchen...',
 		episodes: '{count} Folgen',
 	},
 	noteLink: {
