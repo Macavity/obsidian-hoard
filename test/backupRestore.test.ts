@@ -169,6 +169,20 @@ describe('history actions', () => {
 		expect(b.gameDataManager.getGames()[0]).toMatchObject({ title: 'Gm', platforms: [] });
 	});
 
+	it('restores the Source Type of a backup title', async () => {
+		const src = JSON.stringify({
+			version: 2, exportedAt: '', shared: {}, local: {}, history: [],
+			entries: { maybe: [], reading: { books: [], manga: [] }, games: { games: [], settings: {} }, titles: [{ id: 'TV Show/S', title: 'S', sourceType: 'Series' }, { id: 'TV Show/T', title: 'T', sourceType: 'nope' }] },
+		});
+		const parsed = parseBackup(src);
+		if (!('backup' in parsed)) throw new Error('expected backup');
+		const b = await setupBackup({});
+		await restoreBackup(b, parsed.backup);
+		const titles = b.dataManager.getTitles();
+		expect(titles.find((t) => t.title === 'S')?.sourceType).toBe('Series');
+		expect(titles.find((t) => t.title === 'T')?.sourceType).toBeUndefined();
+	});
+
 	it('ignores a backup settings key that is only on the prototype chain', async () => {
 		const src = await setupBackup({});
 		const parsed = parseBackup(JSON.stringify({ ...buildBackup(src), local: { toString: 'x', dateFormat: 'iso' } }));

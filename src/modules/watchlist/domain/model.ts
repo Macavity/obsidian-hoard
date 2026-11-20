@@ -1,4 +1,5 @@
 import type { EntryAirtime } from '../../airtime/exports';
+import type { SourceType } from '../../../shared/domain/sourceType';
 
 export interface Season {
 	name: string;
@@ -65,6 +66,8 @@ export interface HoardTitle {
 	manualStudio?: string[];
 	/** considered, not yet in the library (frontmatter `maybe`) */
 	maybe?: boolean;
+	/** note property `Source Type`; absent = unknown (the user's `type` is only a label) */
+	sourceType?: SourceType;
 	/** seasons were set by hand; frontmatter `seasons` wins over the API cache */
 	seasonsOverride?: boolean;
 	/** `watched`/`skipped` refs in seasons the season list does not know yet; written back unchanged */
@@ -109,6 +112,7 @@ export interface MaybeTitle {
 	totalEpisodes: number;
 	episodeDuration: number;
 	dateAdded: string;
+	sourceType?: SourceType;
 }
 
 /** A running bulk import (runtime only, never persisted); `cancel` stops it. */

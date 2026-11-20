@@ -14,6 +14,11 @@ const labels = {
 		'Korean TV Show': 'Korean TV Show',
 		Animation: 'Animation',
 	},
+	sourceType: {
+		Anime: 'Anime',
+		Movie: 'Movie',
+		Series: 'Series',
+	},
 	readingStatus: {
 		Reading: 'Reading',
 		Completed: 'Completed',

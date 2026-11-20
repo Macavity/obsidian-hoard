@@ -29,7 +29,7 @@ import type { ApiCheckKind, ApiCheckResult, EntryCache, LookupKind, Notify } fro
 import { checkResultOf, FAILED } from '../../../shared/api/lookup';
 import type { LookupResult } from '../../../shared/api/lookup';
 import type { SharedConfigStore } from '../../../shared/storage/SharedConfigStore';
-import { TITLE_CACHE_KEYS, titleFromProperties, titleToProperties, isMovie, seasonsPending, titleToCache, hasApiIdentity, pinSeasonsWithoutIdentity } from '../../../shared/storage/titleCodec';
+import { TITLE_CACHE_KEYS, titleFromProperties, titleToProperties, isSingleMovie, seasonsPending, titleToCache, hasApiIdentity, pinSeasonsWithoutIdentity } from '../../../shared/storage/titleCodec';
 import { decodeBook, decodeManga, encodeAirtime } from '../../../shared/storage/readingCodec';
 import { decodeGame } from '../../../shared/storage/gameCodec';
 import { AIRTIME_PROPS, COMMON_PROPS, TITLE_PROPS } from '../../../shared/storage/properties';
@@ -1384,7 +1384,7 @@ export class DataManager extends ChangeNotifier
 			keep.add(TITLE_PROPS.watchedEpisodes);
 			keep.add(TITLE_PROPS.skippedEpisodes);
 			// derived from the unreadable watched text: 0% would be wrong
-			if (!isMovie(title.seasons, title.totalEpisodes)) keep.add(TITLE_PROPS.progress);
+			if (!isSingleMovie(title.seasons, title.totalEpisodes)) keep.add(TITLE_PROPS.progress);
 		}
 		return this.processFrontMatter(file, title, (raw) => rewriteOwnedKeys(raw, TITLE_KEYS, out, keep));
 	}

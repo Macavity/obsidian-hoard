@@ -6,11 +6,13 @@ import { externalIdFromLink, formatExternalId, parseExternalId } from './externa
 import { AIRTIME_PROPS as A, COMMON_PROPS as C, TITLE_PROPS as T } from './properties';
 import { parseSeasonLine, seasonsOf } from '../../modules/watchlist/exports';
 import { defined, nonEmpty, optional } from '../domain/sharedHelpers';
+import type { SourceType } from '../domain/sourceType';
+import { parseSourceType } from '../domain/sourceType';
 
 const RECURRENCES: readonly AirtimeRecurrence[] = ['once', 'daily', 'weekly', 'monthly'];
 
 /** Movie = a single "Movie" season, or no seasons and exactly one episode. */
-export function isMovie(seasons: Season[], totalEpisodes: number): boolean {
+export function isSingleMovie(seasons: Season[], totalEpisodes: number): boolean {
 	if (seasons.length === 1) return seasons[0]?.name === 'Movie';
 	return seasons.length === 0 && totalEpisodes === 1;
 }
@@ -31,7 +33,7 @@ export function pinSeasonsWithoutIdentity(t: HoardTitle): void {
  */
 export function seasonsPending(t: HoardTitle, seasonsCheck: ApiCheckResult | undefined): boolean {
 	if (t.seasonsOverride || t.seasons.length > 0 || t.tmdbMediaType === 'movie') return false;
-	if (isMovie(t.seasons, t.totalEpisodes)) return false;
+	if (isSingleMovie(t.seasons, t.totalEpisodes)) return false;
 	if (seasonsCheck === 'notfound' || seasonsCheck === 'nokey') return false;
 	return hasApiIdentity(t);
 }
@@ -77,6 +79,13 @@ class Reader {
 		const v = this.fm[key];
 		if (v === undefined || v === null) return undefined;
 		return isNum(v) ? v : this.bad(key);
+	}
+
+	/** a `Source Type` value; anything outside the three known ones is unreadable */
+	sourceType(key: string): SourceType | undefined {
+		const s = this.str(key);
+		if (s === undefined) return undefined;
+		return parseSourceType(s) ?? this.bad(key);
 	}
 
 	bool(key: string): boolean | undefined {
@@ -224,7 +233,7 @@ function skippedFields(r: Reader, seasons: Season[], mapping: Season[]): Skipped
 
 /** Progress: movies are carried by status; a series maps its episode ranges onto the seasons. */
 function progressFields(r: Reader, t: HoardTitle, seasonsCheck: ApiCheckResult | undefined): WatchedFields & SkippedFields {
-	if (isMovie(t.seasons, t.totalEpisodes)) return { watchedEpisodes: t.status === 'Completed' ? [1] : [], seasons: t.seasons };
+	if (isSingleMovie(t.seasons, t.totalEpisodes)) return { watchedEpisodes: t.status === 'Completed' ? [1] : [], seasons: t.seasons };
 	// a pending refill maps nothing: every ref stays unmapped and the note's text untouched.
 	// without seasons an implicit S01 is used, unless a refill is pending
 	const mapping = seasonsPending(t, seasonsCheck) ? t.seasons : mappingSeasons(t);
@@ -251,6 +260,7 @@ function userFields(r: Reader): Partial<HoardTitle> {
 		favorite: r.bool(C.favorite),
 		dateFavorited: r.str(C.dateFavorited) || undefined,
 		maybe: r.bool(T.maybe) || undefined,
+		sourceType: r.sourceType(T.sourceType),
 		groups: nonEmpty(r.list(C.groups)),
 		posterUrl: r.str(C.cover) || undefined,
 		manualTrailerUrl: r.str(T.trailer) || undefined,
@@ -349,6 +359,7 @@ function linkAndFlagProps(t: HoardTitle): Fm {
 		...optional(C.externalId, identity && formatExternalId(identity)),
 		...optional(C.groups, nonEmpty(t.groups)),
 		...optional(T.maybe, t.maybe),
+		...optional(T.sourceType, t.sourceType),
 	};
 }
 
@@ -367,7 +378,7 @@ function episodeProps(t: HoardTitle, mapping: Season[]): Fm {
 /** Progress: movies are carried by status; while a season refill is pending the note's text is left alone. */
 function progressProps(t: HoardTitle, refillPending: boolean): Fm {
 	const mapping = mappingSeasons(t);
-	const mapped = !isMovie(t.seasons, t.totalEpisodes) && !refillPending && mapping.length > 0;
+	const mapped = !isSingleMovie(t.seasons, t.totalEpisodes) && !refillPending && mapping.length > 0;
 	return {
 		...(mapped ? episodeProps(t, mapping) : {}),
 		...optional(T.seasons, t.seasonsOverride && t.seasons.map((s) => `${s.name}: ${s.episodes}`)),
