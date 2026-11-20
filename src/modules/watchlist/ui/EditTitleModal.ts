@@ -53,7 +53,7 @@ export class EditTitleModal extends Modal {
 	private fieldReview: string;
 	private fieldPosterUrl: string;
 	private fieldTrailerUrl: string;
-	// group assignment (mirrors AddTitleModal). `originalGroupId` records the group on open, so save
+	// group assignment (mirrors the add form). `originalGroupId` records the group on open, so save
 	// moves/detaches only when it changed.
 	private originalGroupId = '';
 	private group: GroupPickerState = { selectedGroupId: '', newGroupName: '' };

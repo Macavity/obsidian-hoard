@@ -22,11 +22,6 @@
   flex-shrink: 0;
 }
 
-/* Add-from-URL: source name only, so the 110px form label is far too wide */
-.hoard-modal__url-row-label {
-  width: 40px;
-}
-
 /* two fields per row, fixed-width inputs in two columns */
 .hoard-modal__pair-cell {
   display: flex;

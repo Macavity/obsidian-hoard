@@ -6,7 +6,7 @@ import { statusLabel, typeLabel } from '../shared/i18n/labels';
 import type { ManagerNotice } from '../shared/storage/storageTypes';
 import type { HoardPluginSettings } from '../modules/settings/domain/model';
 import { setActiveDateFormat } from '../shared/domain/date';
-import { DEFAULT_SETTINGS, LAST_USED_TYPE_SENTINEL } from '../modules/settings/domain/settingsDefaults';
+import { DEFAULT_SETTINGS } from '../modules/settings/domain/settingsDefaults';
 import { cardSizeToMinWidth } from '../design-system/VirtualGrid';
 import type { CustomList } from '../modules/custom-lists/domain/customList';
 import type { CardStyleTab } from '../modules/settings/domain/model';
@@ -35,6 +35,8 @@ import { dashboardUi, type DashboardUi } from './wiring/dashboard';
 import { settingsUi } from './wiring/settings';
 import { hoardTabs } from './wiring/tabs';
 import { addRouteUi } from './wiring/addRoute';
+import { addUi } from './wiring/add';
+import type { AddDone, AddProvider } from '../modules/add/exports';
 import { InsertWidgetModal } from '../modules/widgets/ui/InsertWidgetModal';
 import { WidgetRenderer } from '../modules/widgets/ui/WidgetRenderer';
 import { runAirtimeScheduler } from '../modules/airtime/services/airtimeScheduler';
@@ -207,6 +209,9 @@ export default class HoardPlugin extends Plugin {
 			isCardTextUnder: (tab: CardStyleTab) => this.isCardTextUnder(tab),
 			importProgress: () => this.importProgress,
 		};
+		// the wizard reads its providers when it opens, so the tabs below can hold `openAddWizard` before they exist
+		const addProviders: AddProvider[] = [];
+		const { openAddWizard } = addUi({ app: this.app, providers: () => addProviders });
 		this.watchlist = watchlistUi({
 			app: this.app,
 			settings: this.settingsService,
@@ -215,7 +220,7 @@ export default class HoardPlugin extends Plugin {
 			posters: this.posterService,
 			history: this.historyManager,
 			host,
-			resolveDefaultAddType: () => this.resolveDefaultAddType(),
+			openAddWizard,
 		});
 		this.reading = readingUi({
 			app: this.app,
@@ -244,10 +249,12 @@ export default class HoardPlugin extends Plugin {
 			api: this.apiService,
 			posters: this.posterService,
 			host: { ...host, markAirtimeHandled: (key) => this.markAirtimeHandled(key) },
+			openAddWizard,
 		});
+		addProviders.push(this.watchlist.addProvider);
 		const openAdd = addRouteUi({
 			app: this.app,
-			openAddTitle: this.watchlist.openAddTitle,
+			openAddWizard,
 			openAddReading: this.reading.openAddReading,
 			openAddGame: this.games.openAddGame,
 		});
@@ -319,20 +326,7 @@ export default class HoardPlugin extends Plugin {
 			id: 'add-title',
 			name: t('app.commands.addTitle'),
 			callback: () => {
-				this.watchlist.openAddTitle({
-					onAdded: (entry) => {
-						// setting off = just reveal whatever tab was open, no modal
-						if (!(this.state.openWatchlistAfterAdd ?? true)) {
-							void this.activateView();
-							return;
-						}
-						void this.activateView('watchlist').then(() => {
-							// re-read: addTitle may have forced "To be released"
-							const fresh = this.dataManager.getTitle(entry.id) ?? entry;
-							this.watchlist.openTitleDetail({ title: fresh });
-						});
-					},
-				});
+				openAddWizard({ onAdded: (done) => { void this.revealAdded(done); } });
 			},
 		});
 
@@ -646,20 +640,17 @@ export default class HoardPlugin extends Plugin {
 		await persistSettings(this.state, this.local, this.shared, this.secretStore);
 	}
 
-	/**
-	 * Type slug the Add modal preselects. The sentinel → the last added type if it still exists, else
-	 * the first available; a real, still-existing type → itself; otherwise the first available. Never
-	 * returns a non-existent type while at least one exists.
-	 */
-	private resolveDefaultAddType(): string {
-		const types = this.state.types ?? [];
-		const firstAvailable = types[0]?.name ?? '';
-		const exists = (name: string): boolean => !!name && types.some((t) => t.name === name);
-		const choice = this.state.defaultAddType ?? LAST_USED_TYPE_SENTINEL;
-		if (choice === LAST_USED_TYPE_SENTINEL) {
-			return exists(this.state.lastAddedType) ? this.state.lastAddedType : firstAvailable;
+	/** After the add command: a new Watchlist entry opens its detail (unless the setting is off), anything else just reveals the panel. */
+	private async revealAdded({ kind, id }: AddDone): Promise<void> {
+		const watchlistKind = kind === 'anime' || kind === 'series' || kind === 'movie';
+		if (!watchlistKind || !(this.state.openWatchlistAfterAdd ?? true)) {
+			await this.activateView();
+			return;
 		}
-		return exists(choice) ? choice : firstAvailable;
+		await this.activateView('watchlist');
+		// read once the tab is open: addTitle may have forced "To be released"
+		const title = this.dataManager.getTitle(id);
+		if (title) this.watchlist.openTitleDetail({ title });
 	}
 
 	private openWidgetPalette(editor: Editor): void {

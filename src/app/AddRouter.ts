@@ -1,4 +1,4 @@
-import type { OpenAddTitle } from '../modules/watchlist/ui/AddTitleModal';
+import type { OpenAddWizard } from '../modules/add/exports';
 import type { OpenAddReading } from '../modules/reading/ui/AddReadingModal';
 import type { OpenAddGame } from '../modules/games/ui/AddGameModal';
 import type { OpenDraftChoice } from '../modules/drafts/ui/DraftChoiceModal';
@@ -11,7 +11,7 @@ import type { OpenAddRoute } from '../shared/services/addRoute';
  */
 export function createAddRoute(
 	openDraftChoice: OpenDraftChoice,
-	openAddTitle: OpenAddTitle,
+	openAddWizard: OpenAddWizard,
 	openAddReading: OpenAddReading,
 	openAddGame: OpenAddGame,
 ): OpenAddRoute {
@@ -24,19 +24,7 @@ export function createAddRoute(
 			heading,
 			onChoice: (choice) => {
 				if (choice === 'watchlist') {
-					openAddTitle({
-						onAdded: done,
-						prefill: {
-							searchQuery: title,
-							title,
-							sourceType: 'Anime',
-							episodes: 0,
-							duration: 0,
-							releaseDate: '',
-							link: '',
-							seasons: [],
-						},
-					});
+					openAddWizard({ query: title, preferredKinds: ['anime', 'series', 'movie'], onAdded: done });
 				} else if (choice === 'game') {
 					openAddGame({ onAdded: done, prefill: { searchQuery: title, title } });
 				} else {

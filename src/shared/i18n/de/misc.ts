@@ -6,7 +6,6 @@ const misc = {
 		confirm: 'Bestätigen',
 	},
 	maybeAdd: {
-		title: 'Zu "Vielleicht" hinzufügen',
 		submit: 'Zu "Vielleicht" hinzufügen',
 		titleRequired: 'Bitte einen Titelnamen eingeben.',
 		added: '"{title}" zu "Vielleicht" hinzugefügt.',

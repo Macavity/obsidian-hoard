@@ -119,6 +119,8 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
 | `hoard-game-detail` | games, steam-sync, controls, mobile-detail | The game detail modal. |
 | `hoard-modal` | modals, controls, airtime, drafts, edit-columns, utilities | Shared modal frame, add modal, duplicate warning and URL rows. |
 | `hoard-search-picker` | modals, credits, mobile-detail | Search form and result grid of the add modals. |
+| `hoard-result-sections` | result-sections | Collapsible result groups of the add wizard (SectionedResults); items reuse the search-picker grid. |
+| `hoard-add-wizard` | add-wizard | The central add wizard: query input, manual entry row and the back button above a provider form. |
 | `hoard-add-modal` | modals, reading-modals | Class on the content of add and schedule modals; layout shared by their forms. |
 | `hoard-reading-modal` | reading-modals, reading | Shared frame of the reading modals: header, footer, section labels. |
 | `hoard-reading-form` | reading-modals | The add and edit form for books and manga. |

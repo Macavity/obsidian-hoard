@@ -5,12 +5,11 @@ import type { PosterService } from '../../shared/api/PosterService';
 import type { DataManager } from '../../modules/watchlist/services/DataManager';
 import type { ReadingDataManager } from '../../modules/reading/services/ReadingDataManager';
 import type { GameDataManager } from '../../modules/games/services/GameDataManager';
-import type { TitleSearchApi } from '../../shared/services/titleSearch';
+import type { OpenAddWizard } from '../../modules/add/exports';
 import { confirmWith } from '../../design-system/ConfirmModal';
 import { AirtimeScheduleModal } from '../../modules/airtime/ui/AirtimeScheduleModal';
 import { AirtimeTab, type AirtimeTabHost } from '../../modules/airtime/ui/AirtimeTab';
 import { GameScheduleModal } from '../../modules/airtime/ui/GameScheduleModal';
-import { MaybeAddModal } from '../../modules/airtime/ui/MaybeAddModal';
 import { ReadingScheduleModal } from '../../modules/airtime/ui/ReadingScheduleModal';
 import { UpcomingFinderModal } from '../../modules/airtime/ui/UpcomingFinderModal';
 
@@ -21,9 +20,11 @@ export interface AirtimeCore {
 	titles: DataManager;
 	reading: ReadingDataManager;
 	games: GameDataManager;
-	api: TitleSearchApi & Pick<ApiService, 'getAnimeScheduleByMalId'>;
+	api: Pick<ApiService, 'getAnimeScheduleByMalId'>;
 	posters: Pick<PosterService, 'clearQueue' | 'enqueue'>;
 	host: AirtimeTabHost;
+	/** Opens the central add wizard; the tab's add button saves a Maybe note through it. */
+	openAddWizard: OpenAddWizard;
 }
 
 /** What the rest of the app uses: the Upcoming tab, which reports its count to the tab button, and the due count without it. */
@@ -35,14 +36,14 @@ export interface AirtimeUi {
 
 /** Builds the Upcoming dialog factories and tab factory; the only place that `new`s them. */
 export function airtimeUi(core: AirtimeCore): AirtimeUi {
-	const { app, settings, titles, reading, games, api, posters, host } = core;
+	const { app, settings, titles, reading, games, api, posters, host, openAddWizard } = core;
 
 	return {
 		countDue: () => AirtimeTab.getAiredDueCount(titles, reading, games) + AirtimeTab.getMaybeDueCount(titles),
 		createAirtimeTab: (container, setBadge) => new AirtimeTab(
 			container, settings, titles, reading, games, api, posters, host,
 			{
-				openMaybeAdd: (opts) => new MaybeAddModal(app, settings, api, titles, opts).open(),
+				openAddWizard,
 				openUpcomingFinder: (opts) => new UpcomingFinderModal(app, opts).open(),
 				openGameSchedule: (opts) => new GameScheduleModal(app, opts).open(),
 				openReadingSchedule: (opts) => new ReadingScheduleModal(app, opts).open(),

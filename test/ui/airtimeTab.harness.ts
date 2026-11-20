@@ -1,4 +1,5 @@
 
+import type { OpenAddWizard } from '../../src/modules/add/exports';
 import { vi } from 'vitest';
 import { AirtimeTab } from '../../src/modules/airtime/ui/AirtimeTab';
 import { AirtimeScheduleModal } from '../../src/modules/airtime/ui/AirtimeScheduleModal';
@@ -109,7 +110,7 @@ export function makeTab(w: World) {
 	const posters = { clearQueue: () => {}, enqueue: () => Promise.resolve('') };
 	const host = { markAirtimeHandled: rec('markAirtimeHandled'), getCardMinWidth: () => 150, isCardTextUnder: () => true };
 	const modals = {
-		openMaybeAdd: vi.fn(),
+		openAddWizard: vi.fn<OpenAddWizard>(),
 		openUpcomingFinder: (opts: { items: Captures['finders'][number]['items']; onSelect: (i: unknown) => void }) => {
 			captures.finders.push({ items: opts.items, onPick: opts.onSelect });
 		},
@@ -128,5 +129,5 @@ export function makeTab(w: World) {
 	document.body.appendChild(container);
 	const tab = new AirtimeTab(container, settingsService, dm as never, rdm, gdm as never, api, posters, host, modals, () => {});
 	const priv = tab as unknown as Record<'resolveEntry' | 'openAddFlow' | 'startAddWithTitle' | 'openEditWatchSchedule', (...a: unknown[]) => unknown>;
-	return { tab, priv, container, calls, dm, posters, settingsService, rdm, gdm };
+	return { tab, priv, container, calls, dm, posters, settingsService, rdm, gdm, modals };
 }

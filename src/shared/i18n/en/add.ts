@@ -10,18 +10,24 @@ const add = {
 	noMatches: 'No matches.',
 	saveChanges: 'Save changes',
 	added: '"{name}" added to Hoard.',
-	choice: {
-		title: 'Add title',
-		fromUrl: 'Add from URL',
-		manual: 'Add manually / via API',
-	},
 	url: {
-		info: 'Please enter an IMDb or TMDB URL (e.g. https://www.imdb.com/title/tt1375666/ or https://www.themoviedb.org/movie/27205)',
 		noTmdbKey: 'Add a TMDB API key in Settings → API to use TMDB links.',
-		notFound: 'Title not found. Please check the URL and try again.',
+	},
+	wizard: {
+		title: 'Add',
+		placeholder: 'Search by title or paste a link...',
+		manualAs: 'Add manually as {kind}',
+		back: 'Back',
+		kind: {
+			anime: 'Anime',
+			series: 'Series',
+			movie: 'Movies',
+			manga: 'Manga',
+			book: 'Books',
+			game: 'Games',
+		},
 	},
 	title: {
-		heading: 'Add title',
 		submit: 'Add to hoard',
 		emptyName: 'Please enter a title name.',
 		seasonEpisodes: { one: '{name} ({count} ep)', other: '{name} ({count} eps)' },

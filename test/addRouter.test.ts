@@ -7,7 +7,7 @@ describe('createAddRoute', () => {
 	let choice: DraftChoiceOptions | null = null;
 	const open = createAddRoute(
 		(opts) => { choice = opts; },
-		(opts) => { calls.push({ kind: 'title', opts: opts as never }); },
+		(opts) => { calls.push({ kind: 'wizard', opts: opts as never }); },
 		(opts) => { calls.push({ kind: 'reading', opts: opts as never }); },
 		(opts) => { calls.push({ kind: 'game', opts: opts as never }); },
 	);
@@ -26,8 +26,8 @@ describe('createAddRoute', () => {
 		return call;
 	}
 
-	it('opens the Watchlist modal prefilled with the title', () => {
-		expect(route('watchlist').opts).toMatchObject({ prefill: { searchQuery: 'Dune', title: 'Dune', sourceType: 'Anime' } });
+	it('opens the add wizard on the watchlist kinds with the title as query', () => {
+		expect(route('watchlist').opts).toMatchObject({ query: 'Dune', preferredKinds: ['anime', 'series', 'movie'] });
 	});
 
 	it('opens the Game modal prefilled with the title', () => {

@@ -8,13 +8,14 @@ import { searchHelpWith } from '../../design-system/SearchHelpModal';
 import { renameGroupWith } from '../../design-system/TabToolbar';
 import { RowsCustomizeModal } from '../../design-system/RowsCustomizeModal';
 import { AddCreditModal, type OpenAddCredit } from '../../modules/watchlist/ui/AddCreditModal';
-import { AddFromUrlModal, type AddFromUrlApi, type OpenAddFromUrl } from '../../modules/watchlist/ui/AddFromUrlModal';
-import { AddTitleChoiceModal, type OpenAddTitleChoice } from '../../modules/watchlist/ui/AddTitleChoiceModal';
-import { AddTitleModal, type AddTitleApi, type OpenAddTitle } from '../../modules/watchlist/ui/AddTitleModal';
 import { CollectionModal, type OpenCollection } from '../../modules/watchlist/ui/CollectionModal';
 import type { CommunityRatingApi } from '../../modules/watchlist/ui/CommunityRating';
 import { EditTitleModal, type OpenEditTitle } from '../../modules/watchlist/ui/EditTitleModal';
+import type { AddProvider, OpenAddWizard } from '../../modules/add/exports';
 import { ListTab, type ListTabHost } from '../../modules/watchlist/ui/ListTab';
+import type { AddTitleApi } from '../../modules/watchlist/ui/TitleAddForm';
+import type { TitleUrlApi } from '../../modules/watchlist/ui/titleUrl';
+import { createWatchlistAddProvider } from '../../modules/watchlist/ui/watchlistAddProvider';
 import {
 	GroupDetailModal,
 	TitleDetailModal,
@@ -29,35 +30,31 @@ export interface WatchlistCore {
 	app: App;
 	settings: SettingsReader & SettingsWriter;
 	titles: DataManager;
-	api: AddTitleApi & AddFromUrlApi & TitleDetailApi & CommunityRatingApi & RefreshCreditsApi;
+	api: AddTitleApi & TitleUrlApi & TitleDetailApi & CommunityRatingApi & RefreshCreditsApi;
 	posters: Pick<PosterService, 'enqueue' | 'clearQueue'>;
 	history: Pick<HistoryManager, 'getEntries'>;
 	/** Card sizing and the running import, read by the tab. */
 	host: ListTabHost;
-	resolveDefaultAddType: () => string;
+	/** Opens the central add wizard; the tab's add button calls it. */
+	openAddWizard: OpenAddWizard;
 }
 
-/** What the rest of the app opens: the Add dialog, a title's detail and the Watchlist tab. */
+/** What the rest of the app opens: the Watchlist's add provider, a title's detail and the Watchlist tab. */
 export interface WatchlistUi {
-	openAddTitle: OpenAddTitle;
+	addProvider: AddProvider;
 	openTitleDetail: OpenTitleDetail;
 	createListTab: (container: HTMLElement) => ListTab;
 }
 
 /** Builds the Watchlist's dialog factories and tab factory; the only place that `new`s them. */
 export function watchlistUi(core: WatchlistCore): WatchlistUi {
-	const { app, settings, titles, api, posters, history, host } = core;
+	const { app, settings, titles, api, posters, history, host, openAddWizard } = core;
 	const confirm = confirmWith(app);
 	const notes = { vault: app.vault, workspace: app.workspace };
 
 	const openEditTitle: OpenEditTitle = (opts) => new EditTitleModal(app, settings, titles, opts).open();
 	const openAddCredit: OpenAddCredit = (opts) => new AddCreditModal(app, settings, titles, opts).open();
 	const openCollection: OpenCollection = (opts) => new CollectionModal(app, settings, titles, api, opts).open();
-	const openAddTitle: OpenAddTitle = (opts) =>
-		new AddTitleModal(app, settings, titles, api, core.resolveDefaultAddType, opts).open();
-	const openAddFromUrl: OpenAddFromUrl = (opts) =>
-		new AddFromUrlModal(app, settings, api, openAddTitle, opts).open();
-	const openAddTitleChoice: OpenAddTitleChoice = (opts) => new AddTitleChoiceModal(app, opts).open();
 
 	// a collection member opens another detail modal, so the factory refers to itself
 	const openTitleDetail: OpenTitleDetail = (opts) =>
@@ -72,12 +69,10 @@ export function watchlistUi(core: WatchlistCore): WatchlistUi {
 		new GroupDetailModal(app, settings, titles, posters, openTitleDetail, openEditTitle, opts).open();
 
 	return {
-		openAddTitle,
+		addProvider: createWatchlistAddProvider({ settings, titles, api }),
 		openTitleDetail,
 		createListTab: (container) => new ListTab(container, settings, titles, api, posters, history, host, {
-			openAddTitleChoice,
-			openAddTitle,
-			openAddFromUrl,
+			openAddWizard,
 			openTitleDetail,
 			openGroupDetail,
 			openEditTitle,

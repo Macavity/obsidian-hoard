@@ -41,7 +41,7 @@ const API_TIMEOUT_MS = 8000;
 const GOOGLE_COVER_SIZES = ['extraLarge', 'large', 'medium', 'small', 'thumbnail', 'smallThumbnail'];
 
 /** Add-flow search: 9 results per modal page, 3 pages. */
-export const SEARCH_PAGE_SIZE = 9;
+const SEARCH_PAGE_SIZE = 9;
 const SEARCH_MAX_PAGES = 3;
 export const SEARCH_RESULT_LIMIT = SEARCH_PAGE_SIZE * SEARCH_MAX_PAGES;
 /** Fixed upstream page sizes; the fetch loops page until they reach the cap. */
@@ -835,9 +835,12 @@ export class ApiService {
 					episodes
 					duration
 					status
+					startDate { year month day }
 					averageScore
 					popularity
 					coverImage { large }
+					description
+					genres
 					studios { edges { isMain node { name } } }
 					trailer { id site }
 					nextAiringEpisode {
@@ -853,6 +856,12 @@ export class ApiService {
 		);
 		const media = at(res, 'data', 'Media');
 		return isRecord(media) ? media : null;
+	}
+
+	/** One anime by AniList id, mapped like a search row; null when AniList has none. Failures throw. */
+	async getAniListAnimeById(id: number): Promise<AnimeSearchResult | null> {
+		const media = await this.queryAniListById(id);
+		return media ? this.mapAniListMedia(media) : null;
 	}
 
 	// Jikan / MAL
@@ -875,6 +884,23 @@ export class ApiService {
 			if (items.length >= limit || !readBoolean(at(data, 'pagination', 'has_next_page'))) break;
 		}
 		return items.slice(0, limit).map((a) => this.mapJikanAnime(a));
+	}
+
+	/** One anime by MAL id, mapped like a search row; null when Jikan has none or cannot be reached. */
+	async getAnimeByMalId(malId: number): Promise<AnimeSearchResult | null> {
+		const item = await this.jikanRecordAt(`/anime/${malId}`);
+		return item ? this.mapJikanAnime(item) : null;
+	}
+
+	/** The `data` record of one Jikan detail endpoint; null when it has none or cannot be reached. */
+	private async jikanRecordAt(path: string): Promise<Record<string, unknown> | null> {
+		const url = `${this.jikan.base}${path}`;
+		try {
+			const item = at(await this.throttleJikan(() => this.fetchWithTimeout(url)), 'data');
+			return isRecord(item) ? item : null;
+		} catch {
+			return null;
+		}
 	}
 
 	private mapJikanAnime(anime: unknown): AnimeSearchResult {
@@ -1651,13 +1677,8 @@ export class ApiService {
 	 * the Jikan throttle.
 	 */
 	async getMangaByMalId(malId: number): Promise<MangaSearchResult | null> {
-		const url = `${this.jikan.base}/manga/${malId}`;
-		try {
-			const item = at(await this.throttleJikan(() => this.fetchWithTimeout(url)), 'data');
-			return isRecord(item) ? this.mapJikanManga(item) : null;
-		} catch {
-			return null;
-		}
+		const item = await this.jikanRecordAt(`/manga/${malId}`);
+		return item ? this.mapJikanManga(item) : null;
 	}
 
 	/**

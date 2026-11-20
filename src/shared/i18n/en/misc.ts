@@ -3,7 +3,6 @@ const misc = {
 		confirm: 'Confirm',
 	},
 	maybeAdd: {
-		title: 'Add to maybe',
 		submit: 'Add to maybe',
 		titleRequired: 'Please enter a title name.',
 		added: '"{title}" added to Maybe.',

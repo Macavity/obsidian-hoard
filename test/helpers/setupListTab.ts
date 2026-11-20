@@ -1,4 +1,5 @@
 // Real DataManager on a fake vault + a ListTab mounted in happy-dom.
+import type { OpenAddWizard } from '../../src/modules/add/exports';
 import { vi } from 'vitest';
 import { setupDataManager } from './setupDataManager';
 import { ListTab, type ListTabHost, type ListTabModals } from '../../src/modules/watchlist/ui/ListTab';
@@ -30,9 +31,7 @@ export async function setupListTab(
 	const settingsService = fakeSettings(env.settings);
 	const posters = { enqueue: vi.fn(enqueue), clearQueue: vi.fn() };
 	const modals = {
-		openAddTitleChoice: vi.fn(),
-		openAddTitle: vi.fn(),
-		openAddFromUrl: vi.fn(),
+		openAddWizard: vi.fn<OpenAddWizard>(),
 		openTitleDetail: vi.fn(),
 		openGroupDetail: vi.fn(),
 		openEditTitle: vi.fn(),
