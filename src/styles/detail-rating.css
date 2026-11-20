@@ -67,6 +67,35 @@ button.hoard-card__menu-btn:focus-visible {
   opacity: 1;
 }
 
+/* the ⋮ menu (openCardMenu) is a child of its card, and poster cards clip: it stays inside the card's box
+   and scrolls when a small card cannot hold every item */
+.hoard-card-menu {
+  position: absolute;
+  top: 32px;
+  right: 4px;
+  z-index: 20;
+  max-width: calc(100% - 8px);
+  max-height: calc(100% - 36px);
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-secondary);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 35%);
+}
+
+.hoard-card-menu__item {
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.hoard-card-menu__item:hover {
+  background: var(--background-modifier-hover);
+}
+
 /* Community rating */
 .hoard-star-rating__divider {
   display: inline-block;

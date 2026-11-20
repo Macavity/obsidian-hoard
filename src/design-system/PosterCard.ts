@@ -16,7 +16,7 @@ export interface CardMenuItem {
 }
 
 export interface CardMenuContext {
-	/** Scopes "close any open menu" and the right-edge alignment box. */
+	/** Scopes "close any open menu". */
 	container: HTMLElement;
 	/** Render-scoped cleanup registry — the document-level dismiss listener is
 	 *  pushed here so a re-render can't leave it dangling. */
@@ -34,25 +34,21 @@ export function pinCardHeight(cell: HTMLElement | null, card: HTMLElement, heigh
 }
 
 /**
- * Open a card's ⋮ menu: closes any other open menu, right-aligns near the container's right edge,
- * and dismisses on any outside click (registered on the card's own document, so popouts work).
+ * Open a card's ⋮ menu inside the card: closes any other open menu and dismisses on any outside
+ * click (registered on the card's own document, so popouts work).
  */
 export function openCardMenu(
 	card: HTMLElement,
 	anchorBtn: HTMLElement,
 	items: CardMenuItem[],
 	ctx: CardMenuContext,
-	clsPrefix = 'hoard-card',
 ): void {
-	ctx.container.querySelectorAll(`.${clsPrefix}-context-menu`).forEach((el) => el.remove());
+	// literal class names: the dead-CSS check only sees classes spelled out in a string
+	ctx.container.querySelectorAll('.hoard-card-menu').forEach((el) => el.remove());
 
-	const menu = card.createDiv({ cls: `${clsPrefix}-context-menu` });
-	const cardRect = card.getBoundingClientRect();
-	const containerRect = ctx.container.getBoundingClientRect();
-	if (cardRect.right > containerRect.right - 180) {
-		menu.classList.add('is-right-aligned');
-	}
-
+	const menu = card.createDiv({ cls: 'hoard-card-menu' });
+	// the menu sits inside the clickable card: a click on its padding or scrollbar must not open the card
+	menu.addEventListener('click', (e) => e.stopPropagation());
 	// capture the owning document once so add/remove can't desync across popout windows
 	const doc = card.ownerDocument;
 	const closeMenu = (): void => {
@@ -69,7 +65,7 @@ export function openCardMenu(
 	ctx.cleanups.push(() => doc.removeEventListener('click', onDocClick, true));
 
 	for (const item of items) {
-		const itemEl = menu.createDiv({ cls: `${clsPrefix}-context-item`, text: item.label });
+		const itemEl = menu.createDiv({ cls: 'hoard-card-menu__item', text: item.label });
 		itemEl.addEventListener('click', (e) => {
 			e.stopPropagation();
 			closeMenu();

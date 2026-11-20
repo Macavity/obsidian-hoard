@@ -4,6 +4,12 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 The release workflow takes the section of the released version from this file as the GitHub release notes. Without a section the release only carries the compare link.
 
+## [Unreleased]
+
+### Fixed
+
+- The ⋮ button on a card now opens its menu. Until now the menu was created but stayed invisible behind the poster, in Watchlist, Reading, Games and Upcoming, group cards included.
+
 ## [0.4.0] - 2026-11-20
 
 ### Added

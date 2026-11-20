@@ -1511,7 +1511,6 @@ export class ReadingTab implements TabInstance {
 			anchorBtn,
 			[{ label: t('reading.card.refreshCover'), onClick: () => this.refreshCover(item) }],
 			{ container: this.container, cleanups: this.activeCleanups },
-			'hoard-reading-card',
 		);
 	}
 

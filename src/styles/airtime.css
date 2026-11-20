@@ -353,6 +353,13 @@ button.hoard-tracker__tick-btn:hover {
   right: 4px;
 }
 
+/* opens upward, clear of the stacked ⋮ / globe buttons */
+.hoard-tracker__card .hoard-card-menu {
+  top: auto;
+  bottom: 60px;
+  max-height: calc(100% - 64px);
+}
+
 /* height = TRACKER_CARD_TEXT_H in AirtimeTab.ts — keep in sync */
 .hoard-tracker__card-info {
   flex: 1 1 auto;
