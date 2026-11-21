@@ -23,12 +23,14 @@ Use this when preparing a release or when asked "is the plugin ready for release
 ### Manifest
 
 - [ ] Passes the checklist in [manifest.md](../../obsidian-ref/references/manifest.md)
-- [ ] `version` in `manifest.json` and `package.json` match; `versions.json` only gains a key when `minAppVersion` changes, so its newest key may be older
+- [ ] `package.json` equals `manifest.json`, or is a beta above it; `versions.json` lists every stable version with its `minAppVersion` and no beta (checked by `test/releaseVersions.test.ts`)
+- [ ] No Obsidian API newer than `minAppVersion` is used (checked by `test/minAppVersion.test.ts`)
 - [ ] `isDesktopOnly: true` if any Node.js/Electron API is used (grep for `fs`, `path`, `electron`, `require(`)
 
 ### Code
 
 - [ ] `pnpm lint` passes with zero warnings (same rules as the review bot)
+- [ ] `pnpm quality` passes (full fallow analysis; CI only audits PRs)
 - [ ] No sample/placeholder code left (`MyPlugin`, `SampleSettingTab`, demo commands)
 - [ ] Command IDs don't include the plugin ID (Obsidian prefixes them)
 - [ ] No `innerHTML`/`outerHTML`/`insertAdjacentHTML` with untrusted input
@@ -49,18 +51,18 @@ Use this when preparing a release or when asked "is the plugin ready for release
 
 ## Interactive Checks (ask the user)
 
-Before the release, on the development machine only (the agent runs these, no question needed):
+Before every release, beta or stable, on the development machine only (the agent runs these, no question needed; both are mandatory):
 
 - [ ] Mobile layout covered by desktop emulation (`pnpm mobile:smoke`), or `isDesktopOnly: true`
-- [ ] `pnpm smoke` against `hoard-test-vault` when Obsidian is running
+- [ ] `pnpm smoke` against `hoard-test-vault`; if Obsidian is not running, the agent starts it with `pnpm vault:open` and asks only when that fails
 
-After the release (other desktops and mobile devices install plugins only from a published release, through BRAT or the directory, so none of this can be a precondition):
+After the release (other desktops and mobile devices install plugins only from a published release, through BRAT or the directory, so none of this can be a precondition). After a beta these tests decide whether it is promoted to stable; after a direct stable release they follow it:
 
-- [ ] Release created with tag = version, assets `main.js`, `manifest.json`, `styles.css` attached individually
+- [ ] Release created with tag = version, assets `main.js`, `manifest.json`, `styles.css` attached individually; a beta is a pre-release whose `manifest.json` asset carries the beta version
 - [ ] Tested on the other desktop platforms (Windows / macOS / Linux) from that release
 - [ ] Tested on Android / iOS from that release
 - [ ] Tested with a large vault and with other plugins disabled
-- [ ] A regression found there gets a patch release
+- [ ] A regression found there goes out as the next beta or a patch release
 
 ## Agent workflow
 
