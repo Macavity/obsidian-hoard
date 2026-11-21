@@ -59,8 +59,10 @@ describe("checkConsistency", () => {
 		expect(checkConsistency({ packageVersion: "0.5.0", manifest, versions })).not.toEqual([]));
 	it("rejects a manifest version missing from versions.json", () =>
 		expect(checkConsistency({ packageVersion: "0.4.0", manifest, versions: {} })).not.toEqual([]));
-	it("rejects a wrong minAppVersion in versions.json", () =>
-		expect(checkConsistency({ packageVersion: "0.4.0", manifest, versions: { "0.4.0": "1.11.0" } })).not.toEqual([]));
+	it("rejects a versions.json minimum above the manifest's", () =>
+		expect(checkConsistency({ packageVersion: "0.4.0", manifest, versions: { "0.4.0": "1.12.0" } })).not.toEqual([]));
+	it("accepts a minAppVersion raised ahead of the next stable release", () =>
+		expect(checkConsistency({ packageVersion: "0.5.0-beta.0", manifest: { version: "0.4.0", minAppVersion: "1.13.0" }, versions })).toEqual([]));
 	it("rejects a prerelease key in versions.json", () =>
 		expect(checkConsistency({ packageVersion: "0.4.0", manifest, versions: { ...versions, "0.5.0-beta.0": "1.11.5" } })).not.toEqual([]));
 	it("holds for the repository files", () =>
@@ -91,8 +93,10 @@ describe("decideRelease", () => {
 		expect(decideRelease({ ...base, latest: "0.5.0-beta.1", ref: { type: "tag", name: "0.5.0-beta.1" } })).toEqual({ kind: "beta", version: "0.5.0-beta.1" }));
 	it("fails on a mismatching tag", () =>
 		expect(decideRelease({ ...base, ref: { type: "tag", name: "0.3.9" } }).error).toBeTruthy());
-	it("re-uploads stable on a manual run with nothing new", () =>
-		expect(decideRelease({ ...base, event: "workflow_dispatch" })).toEqual({ kind: "stable", version: "0.4.0" }));
+	it("publishes nothing on a manual run with nothing new", () =>
+		expect(decideRelease({ ...base, event: "workflow_dispatch" })).toEqual({ kind: "none", version: null }));
+	it("releases an untagged stable on a manual run", () =>
+		expect(decideRelease({ ...base, stable: "0.4.1", latest: "0.4.1", event: "workflow_dispatch" })).toEqual({ kind: "stable", version: "0.4.1" }));
 });
 
 describe("parseLsRemoteTags", () => {

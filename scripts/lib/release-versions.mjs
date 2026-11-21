@@ -65,8 +65,12 @@ export function checkConsistency({ packageVersion, manifest, versions }) {
 	} else if (packageVersion !== manifest.version) {
 		problems.push(`package.json ${packageVersion} differs from manifest.json ${manifest.version}`);
 	}
-	if (versions[manifest.version] !== manifest.minAppVersion)
-		problems.push(`versions.json must map ${manifest.version} to ${manifest.minAppVersion}`);
+	// minAppVersion may be raised ahead of the next stable release; versions.json keeps the minimum the
+	// released version shipped with, which Obsidian's fallback for older apps relies on.
+	const shipped = versions[manifest.version];
+	if (!shipped) problems.push(`versions.json lacks the stable version ${manifest.version}`);
+	else if (compareVersions(shipped, manifest.minAppVersion) > 0)
+		problems.push(`versions.json maps ${manifest.version} to ${shipped}, above manifest.json's minAppVersion ${manifest.minAppVersion}`);
 	for (const key of Object.keys(versions))
 		if (isPrerelease(key)) problems.push(`versions.json lists the beta ${key}`);
 	return problems;
@@ -83,10 +87,12 @@ export function parseLsRemoteTags(text) {
 
 /**
  * Which release a workflow run publishes. Stable comes from manifest.json, beta from a prerelease in package.json.
+ * A run with every version tagged publishes nothing, also when started by hand: rebuilding main would replace
+ * the assets of a published release with code it was never tested with.
  * @param {{ stable: string, latest: string, tags: readonly string[], ref: { type: "branch" | "tag", name: string }, event: "push" | "workflow_dispatch" }} input
  * @returns {{ kind: "stable" | "beta" | "none", version: string | null, error?: string }}
  */
-export function decideRelease({ stable, latest, tags, ref, event }) {
+export function decideRelease({ stable, latest, tags, ref }) {
 	const beta = isPrerelease(latest) ? latest : null;
 	if (ref.type === "tag") {
 		if (ref.name === stable) return { kind: "stable", version: stable };
@@ -95,6 +101,5 @@ export function decideRelease({ stable, latest, tags, ref, event }) {
 	}
 	if (!tags.includes(stable)) return { kind: "stable", version: stable };
 	if (beta && !tags.includes(beta)) return { kind: "beta", version: beta };
-	if (event === "workflow_dispatch") return { kind: "stable", version: stable };
 	return { kind: "none", version: null };
 }

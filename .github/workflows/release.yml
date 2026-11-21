@@ -152,6 +152,13 @@ jobs:
           CHANNEL_FLAGS=""
           [ "$KIND" = beta ] && CHANNEL_FLAGS="--prerelease --latest=false"
           if gh release view "$VERSION" >/dev/null 2>&1; then
+            # Re-upload only assets built from the tagged commit (a rerun or a
+            # tag push); never replace a published release with a newer main.
+            TAGGED=$(git rev-parse "refs/tags/$VERSION^{commit}" 2>/dev/null || true)
+            if [ "$TAGGED" != "$GITHUB_SHA" ]; then
+              echo "::error::Release $VERSION exists for ${TAGGED:-an unknown commit}, this run built $GITHUB_SHA; not replacing its assets"
+              exit 1
+            fi
             echo "Release $VERSION already exists; re-uploading assets"
             gh release upload "$VERSION" $ASSETS --clobber
           else
