@@ -26,7 +26,7 @@ source:
   - src/design-system/IconButton.ts
   - src/styles/icon-button.css
   - src/styles/index.css
-source_commit: 5f7a103
+source_commit: bfb2f29
 ---
 
 # Design system
@@ -97,7 +97,11 @@ inside the tab has focus the height is pinned to the smallest value seen and rel
   (pure: image size, poster source, text classes, meta, progress width, menu) decides what `buildPosterCard`
   then draws; `POSTER_CARD_TEXT_H` must match the CSS. A card built elsewhere reuses its parts:
   `createPosterPlaceholder` (letter tile) and `loadCardPoster` (sets the image, marks the card
-  `has-poster` on load, hands a broken image to the caller).
+  `has-poster` on load, hands a broken image to the caller). `openCardMenu` builds the ⋮ menu as a
+  child of its card under one literal block, `hoard-card-menu`, for every card kind: it closes any
+  other open menu in the tab's container, swallows clicks so they do not open the card, and dismisses
+  on an outside click on the card's own document. Poster cards clip, so the menu stays inside the
+  card's box and scrolls; tracker cards open it upward ([CSS blocks](css-blocks.md)).
 - **Search language** (`searchItems` in [SearchQuery.ts](../../src/shared/domain/SearchQuery.ts), `shared/domain`): Fuse index
   over declared fields; bare tokens fuzzy and ANDed, `"quoted"` exact, `field:value` scoped (an
   unknown prefix stays text, so `Re:Zero` works), `field:>n` and friends numeric, `a | b` ORs,

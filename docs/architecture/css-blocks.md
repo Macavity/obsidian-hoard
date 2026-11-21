@@ -8,7 +8,7 @@ source:
   - scripts/check-css-classes.mjs
   - eslint.config.mjs
   - stylelint.config.mjs
-source_commit: 5f7a103
+source_commit: bfb2f29
 ---
 
 # CSS blocks
@@ -98,6 +98,7 @@ Stylesheets are listed by file name under `src/styles/`, without extension.
 | Block | Stylesheet | Purpose |
 |---|---|---|
 | `hoard-card` | airtime, collections, detail-rating | The poster card and its parts (not the size and style settings). |
+| `hoard-card-menu` | detail-rating, airtime | The ⋮ menu inside a card (`openCardMenu`); stays in the card's box and scrolls, opens upward on tracker cards. |
 | `hoard-card-grid` | airtime, collections | The grid that lays cards out. |
 | `hoard-group-header` | add-button, utilities | Header of a collapsible group. |
 | `hoard-rows-view` | custom-lists-views, title-detail | The rows view with shelves and strips. |
