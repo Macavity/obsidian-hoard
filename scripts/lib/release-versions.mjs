@@ -71,3 +71,30 @@ export function checkConsistency({ packageVersion, manifest, versions }) {
 		if (isPrerelease(key)) problems.push(`versions.json lists the beta ${key}`);
 	return problems;
 }
+
+/** Tag names from `git ls-remote --tags origin`, without peeled `^{}` duplicates. @param {string} text @returns {string[]} */
+export function parseLsRemoteTags(text) {
+	return text
+		.split("\n")
+		.map((line) => line.split("\t")[1] ?? "")
+		.filter((ref) => ref.startsWith("refs/tags/") && !ref.endsWith("^{}"))
+		.map((ref) => ref.slice("refs/tags/".length));
+}
+
+/**
+ * Which release a workflow run publishes. Stable comes from manifest.json, beta from a prerelease in package.json.
+ * @param {{ stable: string, latest: string, tags: readonly string[], ref: { type: "branch" | "tag", name: string }, event: "push" | "workflow_dispatch" }} input
+ * @returns {{ kind: "stable" | "beta" | "none", version: string | null, error?: string }}
+ */
+export function decideRelease({ stable, latest, tags, ref, event }) {
+	const beta = isPrerelease(latest) ? latest : null;
+	if (ref.type === "tag") {
+		if (ref.name === stable) return { kind: "stable", version: stable };
+		if (ref.name === beta) return { kind: "beta", version: beta };
+		return { kind: "none", version: null, error: `Tag ${ref.name} matches neither manifest.json ${stable} nor package.json ${latest}` };
+	}
+	if (!tags.includes(stable)) return { kind: "stable", version: stable };
+	if (beta && !tags.includes(beta)) return { kind: "beta", version: beta };
+	if (event === "workflow_dispatch") return { kind: "stable", version: stable };
+	return { kind: "none", version: null };
+}

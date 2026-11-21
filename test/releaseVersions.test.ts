@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
-import { compareVersions, isPrerelease, bumpFiles, checkConsistency } from "../scripts/lib/release-versions.mjs";
+import { compareVersions, isPrerelease, bumpFiles, checkConsistency, decideRelease, parseLsRemoteTags } from "../scripts/lib/release-versions.mjs";
 
 const json = <T>(p: string): T => JSON.parse(readFileSync(p, "utf8")) as T;
 
@@ -69,4 +69,33 @@ describe("checkConsistency", () => {
 			manifest: json<{ version: string; minAppVersion: string }>("manifest.json"),
 			versions: json<Record<string, string>>("versions.json"),
 		})).toEqual([]));
+});
+
+describe("decideRelease", () => {
+	const push = { type: "branch", name: "main" } as const;
+	const base = { stable: "0.4.0", latest: "0.4.0", tags: ["0.4.0"], ref: push, event: "push" } as const;
+
+	it("does nothing on a dependency-only package.json change", () =>
+		expect(decideRelease(base)).toEqual({ kind: "none", version: null }));
+	it("releases a new beta", () =>
+		expect(decideRelease({ ...base, latest: "0.5.0-beta.0" })).toEqual({ kind: "beta", version: "0.5.0-beta.0" }));
+	it("does not re-release a tagged beta", () =>
+		expect(decideRelease({ ...base, latest: "0.5.0-beta.0", tags: ["0.4.0", "0.5.0-beta.0"] }).kind).toBe("none"));
+	it("releases a promoted stable", () =>
+		expect(decideRelease({ ...base, stable: "0.5.0", latest: "0.5.0", tags: ["0.4.0", "0.5.0-beta.0"] })).toEqual({ kind: "stable", version: "0.5.0" }));
+	it("releases a stable without a beta", () =>
+		expect(decideRelease({ ...base, stable: "0.4.1", latest: "0.4.1" })).toEqual({ kind: "stable", version: "0.4.1" }));
+	it("accepts a pushed stable tag", () =>
+		expect(decideRelease({ ...base, ref: { type: "tag", name: "0.4.0" } })).toEqual({ kind: "stable", version: "0.4.0" }));
+	it("accepts a pushed beta tag", () =>
+		expect(decideRelease({ ...base, latest: "0.5.0-beta.1", ref: { type: "tag", name: "0.5.0-beta.1" } })).toEqual({ kind: "beta", version: "0.5.0-beta.1" }));
+	it("fails on a mismatching tag", () =>
+		expect(decideRelease({ ...base, ref: { type: "tag", name: "0.3.9" } }).error).toBeTruthy());
+	it("re-uploads stable on a manual run with nothing new", () =>
+		expect(decideRelease({ ...base, event: "workflow_dispatch" })).toEqual({ kind: "stable", version: "0.4.0" }));
+});
+
+describe("parseLsRemoteTags", () => {
+	it("drops peeled refs", () =>
+		expect(parseLsRemoteTags("a\trefs/tags/0.4.0\nb\trefs/tags/0.4.0^{}\nc\trefs/tags/0.5.0-beta.0\n")).toEqual(["0.4.0", "0.5.0-beta.0"]));
 });
