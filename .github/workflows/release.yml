@@ -1,13 +1,17 @@
 name: Release
 
-# Merging a release PR is the release approval: a push to main that changes
-# manifest.json to a version without a tag runs the gate, creates the tag on
-# that commit and publishes. Pushing a tag by hand still works; workflow_dispatch
-# is the recovery path (it builds whatever ref you select from the Actions tab).
+# Two channels from main. manifest.json holds the stable version, the only one
+# the community directory reads; package.json holds the newest version, which
+# may be a beta (0.5.0-beta.1). Merging a release PR is the release approval: a
+# push to main that leaves either version without a tag runs the gate, creates
+# the tag on that commit and publishes, a beta as a pre-release for BRAT. The
+# decision lives in scripts/release-decide.mjs. Pushing a tag by hand still
+# works; workflow_dispatch is the recovery path (it builds whatever ref you
+# select from the Actions tab).
 on:
   push:
     branches: [main]
-    paths: [manifest.json]
+    paths: [manifest.json, package.json]
     tags: ["*"]
   workflow_dispatch:
 
@@ -28,31 +32,19 @@ jobs:
       contents: read
     outputs:
       version: ${{ steps.decide.outputs.version }}
-      release: ${{ steps.decide.outputs.release }}
+      kind: ${{ steps.decide.outputs.kind }}
     steps:
       - uses: actions/checkout@v7
-      # manifest.json is the source of truth for the version, so the tag and
-      # the release title always match what Obsidian's plugin loader sees.
-      - name: Compare manifest version with tags
+      # Stable when manifest.json has no tag yet, beta when package.json holds
+      # an untagged prerelease, otherwise nothing (a dependency-only change to
+      # package.json). A pushed tag must equal one of the two versions.
+      - name: Compare versions with tags
         id: decide
-        run: |
-          VERSION=$(jq -r .version manifest.json)
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          RELEASE=true
-          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$VERSION" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match manifest.json version $VERSION"
-            exit 1
-          fi
-          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = branch ] \
-            && git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null; then
-            echo "Tag $VERSION already exists; nothing to release"
-            RELEASE=false
-          fi
-          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+        run: git ls-remote --tags origin | node scripts/release-decide.mjs
 
   release:
     needs: check
-    if: needs.check.outputs.release == 'true'
+    if: needs.check.outputs.kind != 'none'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -92,6 +84,16 @@ jobs:
         id: version
         run: echo "version=${{ needs.check.outputs.version }}" >> "$GITHUB_OUTPUT"
 
+      # The build copies manifest.json, which holds the stable version. A beta
+      # ships its own version in the asset so BRAT and Obsidian see it.
+      - name: Stamp beta version into the manifest asset
+        if: needs.check.outputs.kind == 'beta'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          jq --arg v "$VERSION" '.version = $v' dist/manifest.json > dist/manifest.tmp
+          mv dist/manifest.tmp dist/manifest.json
+
       # Collect the release assets from dist/ that actually exist. main.js and manifest.json
       # are always present; styles.css is optional, so a plugin that needs no
       # stylesheet doesn't have to ship an empty one just to satisfy the release.
@@ -108,14 +110,15 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       # Release notes come from CHANGELOG.md: the section headed
-      # "## [<version>]" up to the next "## " heading or the link reference
-      # block at the end of the file. A missing section only warns (a hotfix
-      # may go out without an entry); the release then carries the compare
-      # link alone and the notes can be edited on GitHub afterwards.
+      # "## [<version>]" (a beta: "## [Unreleased]") up to the next "## "
+      # heading or the link reference block at the end of the file. A missing
+      # section only warns (a hotfix may go out without an entry); the release
+      # then carries the compare link alone and the notes can be edited on
+      # GitHub afterwards.
       - name: Read release notes from CHANGELOG
         id: notes
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.check.outputs.kind == 'beta' && 'Unreleased' || steps.version.outputs.version }}
         run: |
           SECTION=$(awk -v v="$VERSION" '
             /^## \[/ { if (found) exit; found = ($0 ~ "^## \\[" v "\\]"); next }
@@ -142,8 +145,20 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           ASSETS: ${{ steps.assets.outputs.list }}
           CHANGELOG_NOTES: ${{ steps.notes.outputs.body }}
+          KIND: ${{ needs.check.outputs.kind }}
         run: |
+          # A beta is a pre-release and never "Latest", so the stable release
+          # stays the one GitHub and the directory point at.
+          CHANNEL_FLAGS=""
+          [ "$KIND" = beta ] && CHANNEL_FLAGS="--prerelease --latest=false"
           if gh release view "$VERSION" >/dev/null 2>&1; then
+            # Re-upload only assets built from the tagged commit (a rerun or a
+            # tag push); never replace a published release with a newer main.
+            TAGGED=$(git rev-parse "refs/tags/$VERSION^{commit}" 2>/dev/null || true)
+            if [ "$TAGGED" != "$GITHUB_SHA" ]; then
+              echo "::error::Release $VERSION exists for ${TAGGED:-an unknown commit}, this run built $GITHUB_SHA; not replacing its assets"
+              exit 1
+            fi
             echo "Release $VERSION already exists; re-uploading assets"
             gh release upload "$VERSION" $ASSETS --clobber
           else
@@ -151,7 +166,10 @@ jobs:
             # run built. Release notes are the CHANGELOG.md section for this version,
             # followed by a Full Changelog compare link against the previous
             # tag (when one exists).
-            PREV_TAG=$(git tag --sort=-creatordate --merged HEAD | grep -v "^${VERSION}$" | head -n 1 || true)
+            # A stable release compares against the previous stable, not its last beta.
+            PREV_TAGS=$(git tag --sort=-creatordate --merged HEAD | grep -v "^${VERSION}$" || true)
+            [ "$KIND" = stable ] && PREV_TAGS=$(echo "$PREV_TAGS" | grep -v -- - || true)
+            PREV_TAG=$(echo "$PREV_TAGS" | head -n 1)
             if [ -n "$PREV_TAG" ]; then
               COMPARE="**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${VERSION}"
             else
@@ -166,5 +184,6 @@ jobs:
               --title="$VERSION" \
               --target "$GITHUB_SHA" \
               --notes "$NOTES" \
+              $CHANNEL_FLAGS \
               $ASSETS
           fi

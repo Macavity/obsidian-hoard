@@ -1,17 +1,14 @@
 import { readFileSync, writeFileSync } from "fs";
+import { bumpFiles } from "./scripts/lib/release-versions.mjs";
 
-const targetVersion = process.env.npm_package_version;
+// Runs from `pnpm version`. A beta (0.5.0-beta.1) only changes package.json; a stable version is written
+// to manifest.json and always gets its own versions.json entry with the current minAppVersion.
+const target = process.env.npm_package_version;
+if (!target) throw new Error("npm_package_version is not set; run through `pnpm version`");
 
-// read minAppVersion from manifest.json and bump version to target version
-const manifest = JSON.parse(readFileSync("manifest.json", "utf8"));
-const { minAppVersion } = manifest;
-manifest.version = targetVersion;
-writeFileSync("manifest.json", JSON.stringify(manifest, null, "\t"));
-
-// update versions.json with target version and minAppVersion from manifest.json
-// but only if the target version is not already in versions.json
-const versions = JSON.parse(readFileSync('versions.json', 'utf8'));
-if (!Object.values(versions).includes(minAppVersion)) {
-    versions[targetVersion] = minAppVersion;
-    writeFileSync('versions.json', JSON.stringify(versions, null, '\t'));
+const read = (file) => JSON.parse(readFileSync(file, "utf8"));
+const next = bumpFiles({ target, manifest: read("manifest.json"), versions: read("versions.json") });
+if (next) {
+	writeFileSync("manifest.json", JSON.stringify(next.manifest, null, "\t"));
+	writeFileSync("versions.json", JSON.stringify(next.versions, null, "\t"));
 }
